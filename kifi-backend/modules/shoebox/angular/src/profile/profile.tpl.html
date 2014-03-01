@@ -1,5 +1,5 @@
 <div ng-controller="ProfileCtrl">
-  <div kf-profile-page class="profile" data-template>
+  <div class="profile" data-template>
     <div class="antiscroll-inner">
       <h2>Settings</h2>
       <div class="profile-container">
@@ -18,20 +18,25 @@
         </div>
         <div class="profile-input-wrapper" data-name="description">
           <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-          <div class="profile-input-box">
-            <div kf-profile-email-input></div>
-            <input class="profile-input-input profile-description-input" ng-disabled="!isDescriptionEditingEnabled()" kf-focus-if focus-cond="isDescriptionEditingEnabled()" type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
-            <a class="profile-input-edit" href="javascript:" ng-click="activateDescriptionEditing()">Edit</a>
-            <a class="profile-input-save" href="javascript:">Save</a>
-          </div>
+          <script type="text/ng-template" id="profileInputDescription.html">
+            <div class="profile-input-box">
+              <input class="profile-input-input profile-description-input" ng-disabled="!enabled" kf-focus-if focus-cond="enabled" ng-blur="disableEditing()" ng-keydown="onKeydown($event)" type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
+              <a class="profile-input-edit" href="javascript:" ng-click="enableEditing()">Edit</a>
+              <a class="profile-input-save" href="javascript:">Save</a>
+            </div>
+          </script>
+          <div kf-profile-input template-url="profileInputDescription.html"></div>
         </div>
         <div class="profile-input-wrapper profile-email" data-name="email">
           <div class="profile-input-title">Contact email</div>
-          <div class="profile-input-box">
-            <input class="profile-input-input profile-email-input" ng-disabled="!isEmailEditingEnabled()" kf-focus-if focus-cond="isEmailEditingEnabled()" type="text" name="email" placeholder="Enter your email address" required novalidate>
-            <a class="profile-input-edit" href="javascript:" ng-click="activateEmailEditing()">Edit</a>
-            <a class="profile-input-save" href="javascript:">Save</a>
-          </div>
+          <script type="text/ng-template" id="profileInputEmail.html">
+            <div class="profile-input-box">
+              <input class="profile-input-input profile-email-input" ng-disabled="!enabled" kf-focus-if focus-cond="enabled" ng-blur="disableEditing()" ng-keydown="onKeydown($event)" type="text" name="email" placeholder="Enter your email address" value="{{defaultValue}}" required novalidate>
+              <a class="profile-input-edit" href="javascript:" ng-click="enableEditing()">Edit</a>
+              <a class="profile-input-save" href="javascript:">Save</a>
+            </div>
+          </script>
+          <div kf-profile-input template-url="profileInputEmail.html" default-value="{{primaryEmail.address}}"></div>
         </div>
         <div class="profile-email-address-unverified">
           Your email is pending your verification

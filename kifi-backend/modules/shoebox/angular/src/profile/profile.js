@@ -32,62 +32,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
   }
 ])
 
-.directive('kfProfilePage', [
-  '$document', 'keyIndices',
-  function($document, keyIndices) {
-    return {
-      restrict: 'A',
-      link: function(scope, element) {
-        var descriptionInput;
-        var emailInput;
-        //descriptionInput = element.find('input.profile-description-input');
-        //emailInput = element.find('input.profile-email-input');
-        //console.log(descriptionInput);
-        scope.inputState = {
-          descriptionEditingEnabled: false,
-          emailEditingEnabled: false
-        };
-
-        scope.isDescriptionEditingEnabled = function () {
-          return scope.inputState.descriptionEditingEnabled;
-        }
-        scope.isEmailEditingEnabled = function () {
-          return scope.inputState.emailEditingEnabled === true;
-        }
-        scope.activateDescriptionEditing = function () {
-          //descriptionInput.focus();
-          scope.inputState.descriptionEditingEnabled = true;
-        }
-        scope.activateEmailEditing = function () {
-          //emailInput.focus();
-          scope.inputState.emailEditingEnabled = true;
-        }
-        scope.disableDescriptionEditing = function () {
-          //descriptionInput.blur();
-          scope.inputState.descriptionEditingEnabled = false;
-        }
-        scope.disableEmailEditing = function () {
-          //emailInput.blur();
-          scope.inputState.emailEditingEnabled = false;
-        }
-
-        $document.keydown(function (e) {
-          switch (e.keyCode) {
-            case keyIndices.KEY_ESC:
-              console.log('disabling');
-              scope.$apply(function () {
-                scope.disableDescriptionEditing();
-                scope.disableEmailEditing();
-              });
-              break;
-          }
-        });
-      }
-    }
-  }
-])
-
-
 .directive('kfProfileImage', [
   '$compile', '$templateCache', '$window', '$q', '$http', 'env',
   function ($compile, $templateCache, $window, $q, $http, env) {
@@ -177,5 +121,46 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
         };
       }
     };
+  }
+])
+
+.directive('kfProfileInput', [
+  '$timeout', 'keyIndices',
+  function($timeout, keyIndices) {
+    return {
+      restrict: 'A',
+      scope: {
+        templateUrl: '@',
+        defaultValue: '@'
+      },
+      template: '<div ng-include="templateUrl"></div>',
+      link: function(scope, element) {
+        scope.onKeydown = function (e) {
+          switch (e.keyCode) {
+            case keyIndices.KEY_ESC:
+              scope.disableEditing();
+              break;
+          }
+        };
+
+        scope.shouldFocus = false;
+        scope.enabled = false;
+
+        scope.enableEditing = function () {
+          scope.saveButton.css('display', 'block');
+          scope.shouldFocus = true;
+          scope.enabled = true;
+        }
+
+        scope.disableEditing = function () {
+          scope.saveButton.css('display', 'none');
+          scope.enabled = false;
+        }
+        $timeout(function () {
+          scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
+          scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
+        });
+      }
+    }
   }
 ]);
