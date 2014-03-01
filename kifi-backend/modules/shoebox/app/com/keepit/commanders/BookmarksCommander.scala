@@ -98,15 +98,13 @@ class BookmarksCommander @Inject() (
     }
 
     infosFuture.map { infos =>
-      log.info(s"got sharingUserInfo: $infos")
       val idToBasicUser = db.readOnly { implicit s =>
         basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
       }
-      (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
+      val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
         FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
       }
-    } map { keepsInfo =>
       (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
     }
   }
