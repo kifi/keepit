@@ -32,14 +32,12 @@ angular.module('kifi.focus', [])
     return {
       restrict: 'A',
       scope: {
-        focusCond: '&'
+        focusCond: '='
       },
       link: function(scope, element) {
-        scope.$watch(scope.focusCond, function(val) {
+        scope.$watch('focusCond', function(val) {
           if (val) {
             element.focus();
-          } else {
-            element.blur();
           }
         });
       }
