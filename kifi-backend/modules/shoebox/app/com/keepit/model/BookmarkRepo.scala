@@ -42,7 +42,6 @@ class BookmarkRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val countCache: BookmarkCountCache,
-  collectionRepo: CollectionRepo,
   bookmarkUriUserCache: BookmarkUriUserCache,
   latestBookmarkUriCache: LatestBookmarkUriCache
 ) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {

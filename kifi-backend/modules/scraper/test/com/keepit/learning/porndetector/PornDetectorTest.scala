@@ -25,4 +25,20 @@ class PornDetectorTest extends Specification {
       1 === 1
     }
   }
+
+  "sliding window porn detector" should {
+    "work" in {
+      val ratio = Map("xxx" -> 10f, "porn" -> 10f, "sex" -> 10f, "clean" -> 0.1f, "text" -> 0.1f)
+      val detector = new SlidingWindowPornDetector(new NaiveBayesPornDetector(ratio))
+      val pornText = (1 to 100).map{ i => "xxx porn text"}.mkString(" ")
+      val cleanText = (1 to 100).map{ i => "clean text"}.mkString(" ")
+      val (blocks, bad) = detector.detectBlocks(pornText)
+      blocks === bad
+      detector.isPorn(pornText) === true
+      detector.isPorn(cleanText) === false
+      detector.detectBlocks(cleanText)._2 == 0
+      detector.isPorn("") === false
+      detector.isPorn("*&^%$#@#$ *&^%$$#") === false
+    }
+  }
 }

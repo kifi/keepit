@@ -38,8 +38,8 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
 
   @Singleton
   @Provides
-  def bookmarksForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BookmarksForCollectionCache(stats, accessLog, (outerRepo, 1 day))
+  def bookmarkCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new BookmarkCountForCollectionCache(stats, accessLog, (outerRepo, 1 day))
 
   @Singleton
   @Provides
@@ -115,6 +115,10 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserValueCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SystemValueCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides

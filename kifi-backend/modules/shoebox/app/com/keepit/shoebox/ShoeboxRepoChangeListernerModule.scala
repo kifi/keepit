@@ -8,15 +8,23 @@ import com.keepit.model.{
   Invitation,
   SocialUserInfo
 }
-import com.keepit.common.queue.{
-  CreateRichConnection
-}
-import com.keepit.commanders.ShoeboxRichConnectionCommander
+
+// import com.keepit.commanders.{
+//   SocialConnectionModification,
+//   SocialConnectionModificationActor,
+//   UserConnectionModification,
+//   UserConnectionModificationActor,
+//   InvitationModification,
+//   InvitationModificationActor,
+//   SocialUserInfoModification,
+//   SocialUserInfoModificationActor
+// }
+
 
 import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Provides, Singleton}
-
+import com.keepit.common.actor.ActorInstance
 
 case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   def configure(): Unit = {}
@@ -24,26 +32,26 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def socialConnectionChangeListener(richConnectionCommander: ShoeboxRichConnectionCommander): Option[RepoModification.Listener[SocialConnection]] = Some(
-    repoModification => richConnectionCommander.processSocialConnectionChange(repoModification)
+  def socialConnectionChangeListener(/*socialConnectionModificationActor: ActorInstance[SocialConnectionModificationActor]*/): Option[RepoModification.Listener[SocialConnection]] = Some(
+    repoModification => {} //socialConnectionModificationActor.ref ! SocialConnectionModification(repoModification)
   )
 
   @Provides
   @Singleton
-  def userConnectionChangeListener(richConnectionCommander: ShoeboxRichConnectionCommander): Option[RepoModification.Listener[UserConnection]] = Some({
-    repoModification => richConnectionCommander.processUserConnectionChange(repoModification)
+  def userConnectionChangeListener(/*userConnectionModificationActor: ActorInstance[UserConnectionModificationActor]*/): Option[RepoModification.Listener[UserConnection]] = Some({
+    repoModification => {} //userConnectionModificationActor.ref ! UserConnectionModification(repoModification)
   })
 
   @Provides
   @Singleton
-  def invitationChangeListener(richConnectionCommander: ShoeboxRichConnectionCommander): Option[RepoModification.Listener[Invitation]] = Some({
-    repoModification => richConnectionCommander.processInvitationChange(repoModification)
+  def invitationChangeListener(/*invitationModificationActor: ActorInstance[InvitationModificationActor]*/): Option[RepoModification.Listener[Invitation]] = Some({
+    repoModification => {} //invitationModificationActor.ref ! InvitationModification(repoModification)
   })
 
   @Provides
   @Singleton
-  def socialUserChangeListener(richConnectionCommander: ShoeboxRichConnectionCommander): Option[RepoModification.Listener[SocialUserInfo]] = Some({
-    repoModification => richConnectionCommander.processSocialUserChange(repoModification)
+  def socialUserChangeListener(/*socialUserInfoMoficationActor: ActorInstance[SocialUserInfoModificationActor]*/): Option[RepoModification.Listener[SocialUserInfo]] = Some({
+    repoModification => {} //socialUserInfoMoficationActor.ref ! SocialUserInfoModification(repoModification)
   })
 
 }

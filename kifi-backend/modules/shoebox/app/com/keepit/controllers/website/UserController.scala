@@ -170,32 +170,18 @@ class UserController @Inject() (
   }
 
   def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    db.readWrite { implicit s =>
-      val friendIdOpt = userRepo.getOpt(id) collect {
-        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
-      }
-      friendIdOpt map { friendId =>
-        val changed = searchFriendRepo.excludeFriend(request.userId, friendId)
-        searchClient.updateSearchFriendGraph()
-        Ok(Json.obj("changed" -> changed))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
-      }
+    userCommander.excludeFriend(request.userId, id) map { changed =>
+      Ok(Json.obj("changed" -> changed))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
     }
   }
 
   def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    db.readWrite { implicit s =>
-      val friendIdOpt = userRepo.getOpt(id) collect {
-        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
-      }
-      friendIdOpt map { friendId =>
-        val changed = searchFriendRepo.includeFriend(request.userId, friendId)
-        searchClient.updateSearchFriendGraph()
-        Ok(Json.obj("changed" -> changed))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
-      }
+    userCommander.includeFriend(request.userId, id) map { changed =>
+      Ok(Json.obj("changed" -> changed))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
     }
   }
 
@@ -220,7 +206,7 @@ class UserController @Inject() (
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
-          val pendingPrimary = userValueRepo.getValue(request.user.id.get, "pending_primary_email")
+          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
           if (emailRecord.userId == request.userId) {
             Ok(Json.toJson(EmailInfo(
               address = emailRecord.address,
@@ -289,8 +275,9 @@ class UserController @Inject() (
 
   def getPrefs() = JsonAction.authenticated { request =>
     Ok(db.readOnly { implicit s =>
+      val values = userValueRepo.getValues(request.userId, SitePrefNames.toSeq: _*)
       JsObject(SitePrefNames.toSeq.map { name =>
-        name -> userValueRepo.getValue(request.userId, name).map(value => {
+        name -> values(name).map(value => {
           if (value == "false") JsBoolean(false)
           else if (value == "true") JsBoolean(true)
           else if (value == "null") JsNull
@@ -320,7 +307,7 @@ class UserController @Inject() (
 
   def getInviteCounts() = JsonAction.authenticated { request =>
     db.readOnly { implicit s =>
-      val availableInvites = userValueRepo.getValue(request.userId, "availableInvites").map(_.toInt).getOrElse(1000)
+      val availableInvites = userValueRepo.getValue(request.userId, UserValues.availableInvites)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
       Ok(Json.obj(
         "total" -> availableInvites,
@@ -425,11 +412,11 @@ class UserController @Inject() (
   // todo: Combine this and next (abook import)
   def checkIfImporting(network: String, callback: String) = HtmlAction.authenticated { implicit request =>
     val startTime = clock.now
-    var importHasHappened = new AtomicBoolean(false)
-    var finishedImportAnnounced = new AtomicBoolean(false)
+    val importHasHappened = new AtomicBoolean(false)
+    val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
       val v = db.readOnly { implicit session =>
-        userValueRepo.getValue(request.userId, s"import_in_progress_${network}")
+        userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
         None

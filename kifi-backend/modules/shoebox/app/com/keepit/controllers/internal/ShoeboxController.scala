@@ -263,13 +263,22 @@ class ShoeboxController @Inject() (
   }
 
   def recordScrapedNormalization() = Action(parse.json) { request =>
-    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
-    val signature = Signature((request.body \ "signature").as[String])
+
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
+    val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
 
-    val uri = db.readOnly { implicit session => normUriRepo.get(uriId) }
-    normalizationServiceProvider.get.update(NormalizationReference(uri, signature = Some(signature)), ScrapedCandidate(candidateUrl, candidateNormalization))
+    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+    val signature = Signature((request.body \ "signature").as[String])
+    val scrapedUri = db.readOnly { implicit session => normUriRepo.get(uriId) }
+
+    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate)
+    // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
+    scrapedUri.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { scrapedUriCandidate =>
+      val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
+      val alternateUris = db.readOnly { implicit session => alternateUrls.flatMap(normUriRepo.getByUri(_)) }
+      alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), scrapedUriCandidate))
+    }
     Ok
   }
 
@@ -587,7 +596,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
-    val value = db.readOnly { implicit session => userValueRepo.getValue(userId, key) } //using cache
+    val value = db.readOnly { implicit session => userValueRepo.getValueStringOpt(userId, key) } //using cache
     Ok(Json.toJson(value))
   }
 

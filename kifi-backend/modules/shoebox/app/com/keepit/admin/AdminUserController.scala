@@ -228,7 +228,7 @@ class AdminUserController @Inject() (
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      val allowedInvites = userValueRepo.getValue(userId, "availableInvites").getOrElse("1000").toInt
+      val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
@@ -384,7 +384,7 @@ class AdminUserController @Inject() (
   def setInvitesCount(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("1000")
     db.readWrite{ implicit session =>
-      userValueRepo.setValue(userId, "availableInvites", count)
+      userValueRepo.setValue(userId, UserValues.availableInvites.name, count)
     }
     Redirect(routes.AdminUserController.userView(userId))
   }
@@ -471,7 +471,7 @@ class AdminUserController @Inject() (
           })
         case (Some(name), _, _) => // get it
           db.readOnly { implicit session =>
-            userValueRepo.getValue(userId, name)
+            userValueRepo.getValueStringOpt(userId, name)
           }
         case _=>
           None.asInstanceOf[Option[String]]
@@ -625,7 +625,7 @@ class AdminUserController @Inject() (
 
         val allInstallations = kifiInstallationRepo.all(userId)
         if (allInstallations.nonEmpty) { properties += ("installedExtension", allInstallations.maxBy(_.updatedAt).version.toString) }
-        userValueRepo.getValue(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
+        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }

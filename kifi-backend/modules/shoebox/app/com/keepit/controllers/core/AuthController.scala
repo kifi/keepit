@@ -151,7 +151,7 @@ class AuthController @Inject() (
   // --
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
-    db.readOnly { implicit s => userValueRepo.getValue(request.userId, "has_seen_install").exists(_.toBoolean) }
+    db.readOnly { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
   def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>

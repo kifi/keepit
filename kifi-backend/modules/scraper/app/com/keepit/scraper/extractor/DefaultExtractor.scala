@@ -12,7 +12,6 @@ import play.api.http.MimeTypes
 import com.keepit.common.net.URI
 import scala.collection.mutable
 
-
 object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = apply(uri.toString)
@@ -38,7 +37,7 @@ class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
 
   protected def getContentHandler: ContentHandler = handler
 
-  def getLink(key: String): Option[String] = handler.links.get(key)
+  def getLinks(key: String): Set[String] = handler.links(key).toSet
 
   override def getKeywords(): Option[String] = {
     val str = (handler.getKeywords.map{ _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")
@@ -82,7 +81,8 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
   private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
 
   def getKeywords:Option[Seq[String]] = keywordValidatorContentHandler.map{ _.keywords }
-  private[extractor] val links = mutable.HashMap[String, String]()
+
+  private[extractor] val links = new mutable.HashMap[String, mutable.Set[String]] with mutable.MultiMap[String, String]
 
   override def startDocument() {
     // enable boilerpipe only for HTML
@@ -119,7 +119,7 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
     super.startElement(uri, localName, qName, atts)
     val rel = atts.getValue("rel")
     val href = atts.getValue("href")
-    links(rel) = href
+    links.addBinding(rel, href)
   }
 
   // option tag
@@ -131,11 +131,12 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
     inOption = false
   }
 
-  private val startElemProcs: Map[String, (String, String, String, Attributes)=>Unit] = Map(
+  private val startElemProcs: Map[String, (String, String, String, Attributes) => Unit] = Map(
     "a" -> startAnchor,
     "option" -> startOption,
     "link" -> startLink
   )
+
   private val endElemProcs: Map[String, (String, String, String)=>Unit] = Map(
     "a" -> endAnchor,
     "option" -> endOption

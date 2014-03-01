@@ -1,15 +1,14 @@
 package com.keepit.typeahead
 
 import com.keepit.common.db.Id
-import com.keepit.common.store.ObjectStore
-import com.keepit.common.store.S3Bucket
+import com.keepit.common.store._
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.store.S3BlobStore
-import com.keepit.common.store.InMemoryObjectStore
 import com.amazonaws.services.s3.AmazonS3
 import java.nio.ByteBuffer
+import com.amazonaws.services.s3.model.ObjectMetadata
+import com.keepit.common.store.S3Bucket
 
-trait PrefixFilterStore[T] extends ObjectStore[Id[T], Array[Long]]
+trait PrefixFilterStore[T] extends ObjectStore[Id[T], Array[Long]] with MetadataAccess[Id[T], Array[Long]]
 
 class S3PrefixFilterStoreImpl[T](val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3BlobStore[Id[T], Array[Long]] with PrefixFilterStore[T] {
 

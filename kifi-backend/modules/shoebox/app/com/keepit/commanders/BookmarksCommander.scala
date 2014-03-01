@@ -87,17 +87,24 @@ class BookmarksCommander @Inject() (
       }
       (keeps, collectionOpt)
     }
-    searchClient.sharingUserInfo(userId, keeps.map(_.uriId)) map { infos =>
+    val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+
+    val keepsWithCollIds = db.readOnly { implicit s =>
+      val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      keeps.map{ keep =>
+        val collIds = keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
+        (keep, collIds)
+      }
+    }
+
+    infosFuture.map { infos =>
       log.info(s"got sharingUserInfo: $infos")
-      db.readOnly { implicit s =>
-        val idToBasicUser = basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
-        val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
-        (keeps zip infos).map { case (keep, info) =>
-          val collIds =
-            keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
-          val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-          FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
-        }
+      val idToBasicUser = db.readOnly { implicit s =>
+        basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
+      }
+      (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
+        val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
       }
     } map { keepsInfo =>
       (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
@@ -124,15 +131,18 @@ class BookmarksCommander @Inject() (
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
 
     val deactivatedBookmarks = db.readWrite { implicit s =>
-      keepInfos.map { ki =>
+      val bms = keepInfos.map { ki =>
         val url = ki.url
-        uriRepo.getByUri(url).flatMap { uri =>
+        uriRepo.getByUri(ki.url).flatMap { uri =>
           bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
             bookmarkRepo.save(b withActive false)
           }
         }
-      }
-    }.flatten
+      }.flatten
+      val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForBookmark(bm.id.get)).toSet
+      collIds.foreach{ cid => collectionRepo.collectionChanged(cid) }
+      bms
+    }
 
     val deactivatedKeepInfos = deactivatedBookmarks.map(KeepInfo.fromBookmark(_))
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
