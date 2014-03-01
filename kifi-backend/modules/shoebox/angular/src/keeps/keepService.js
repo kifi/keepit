@@ -389,6 +389,12 @@ angular.module('kifi.keepService', ['kifi.undo'])
           */
           _.forEach(keeps, function (keep) {
             keep.unkept = true;
+            if (previewed === keep) {
+              api.togglePreview(keep);
+            }
+            if (api.isSelected(keep)) {
+              api.unselect(keep);
+            }
           });
 
           var message = keeps.length > 1 ? keeps.length + ' Keeps deleted.' : 'Keep deleted.';
