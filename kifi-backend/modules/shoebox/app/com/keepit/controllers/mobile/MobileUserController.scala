@@ -33,11 +33,10 @@ class MobileUserController @Inject() (
 
   // copied/factored from UserController.friends -- inefficient impl
   def getFriendsDetails = JsonAction.authenticated { request =>
-    val res = userCommander.getFriendsDetails(request.userId).map { case (basicUser, searchFriend, unfriended, connectionCount) =>
+    val res = userCommander.getFriendsDetails(request.userId, false).map { case (basicUser, searchFriend, unfriended, _) =>
       (Json.toJson(basicUser)).asInstanceOf[JsObject] ++ Json.obj(
         "searchFriend" -> searchFriend,
-        "unfriended" -> unfriended,
-        "friendCount" -> connectionCount
+        "unfriended" -> unfriended
       )
     }
     Ok(Json.obj("friends" -> res))
