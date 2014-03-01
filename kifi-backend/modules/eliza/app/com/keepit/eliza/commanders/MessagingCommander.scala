@@ -366,7 +366,7 @@ class MessagingCommander @Inject() (
     val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(urls), 10 seconds)} // todo: Remove Await
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds)} // todo: Remove Await
     Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite{ implicit session =>
@@ -502,7 +502,7 @@ class MessagingCommander @Inject() (
     urlOpt.foreach { url =>
       (nUriOpt match {
         case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(Json.obj("url" -> url)) //Note, this also needs to include canonical/og when we have detached threads
+        case None => shoebox.internNormalizedURI(url, scrapeWanted = true) //Note, this also needs to include canonical/og when we have detached threads
       }) foreach { nUri =>
         db.readWrite { implicit session =>
           messageRepo.updateUriId(message, nUri.id.get)

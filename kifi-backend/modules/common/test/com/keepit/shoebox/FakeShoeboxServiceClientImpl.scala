@@ -296,8 +296,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
 
 
-  def internNormalizedURI(urls: JsObject): Future[NormalizedURI] = {
-    val url = (urls \ "url").as[String]
+  def internNormalizedURI(url: String, scrapeWanted: Boolean): Future[NormalizedURI] = {
     val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
       NormalizedURI(
         id = Some(Id[NormalizedURI](url.hashCode)),
@@ -306,7 +305,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         screenshotUpdatedAt=None
       )
     }
-
     Future.successful(uri)
   }
 

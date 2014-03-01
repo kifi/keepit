@@ -357,7 +357,7 @@ class ShoeboxController @Inject() (
     val uri = db.readWrite(attempts = 2) { implicit s =>  //using cache
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
-    val scrapeWanted = (o \ "scrapedWanted").asOpt[Boolean] getOrElse false
+    val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
     if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }}
     Ok(Json.toJson(uri))
   }
