@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.scraper.{ScrapeRequest, Signature, ScraperConfig, HttpRedirect}
+import com.keepit.scraper._
 import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType}
 
 import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
@@ -32,6 +32,7 @@ import com.keepit.model.KifiInstallation
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import scala.util.{Try, Failure, Success}
+import com.keepit.common.akka.SafeFuture
 
 
 class ShoeboxController @Inject() (
@@ -64,7 +65,8 @@ class ShoeboxController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
-  scraperHelper: ScraperCallbackHelper
+  scraperHelper: ScraperCallbackHelper,
+  scrapeScheduler: ScrapeSchedulerPlugin
 )
   (implicit private val clock: Clock,
    implicit private val scraperConfig: ScraperConfig,
@@ -352,10 +354,12 @@ class ShoeboxController @Inject() (
   def internNormalizedURI() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
-    val uriId = db.readWrite(attempts = 2) { implicit s =>  //using cache
+    val uri = db.readWrite(attempts = 2) { implicit s =>  //using cache
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
-    Ok(Json.toJson(uriId))
+    val scrapeWanted = (o \ "scrapedWanted").asOpt[Boolean] getOrElse false
+    if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }}
+    Ok(Json.toJson(uri))
   }
 
   def assignScrapeTasks(zkId:Id[ScraperWorker], max:Int) = SafeAsyncAction { request =>
