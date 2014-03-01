@@ -58,6 +58,10 @@ object NormalizedURI {
 
   val TitleMaxLen = 2040
 
+  val handleDeprecatedScrapeWantedState: State[NormalizedURI] => State[NormalizedURI] = {
+    case State("scrape_wanted") => NormalizedURIStates.ACTIVE
+    case state => state
+  }
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -66,7 +70,7 @@ object NormalizedURI {
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'urlHash).format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply)) and
-    (__ \ 'state).format(State.format[NormalizedURI]) and
+    (__ \ 'state).format(State.format[NormalizedURI]).inmap(handleDeprecatedScrapeWantedState, identity[State[NormalizedURI]]) and
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI]) and
     (__ \ 'screenshotUpdatedAt).formatNullable[DateTime] and
     (__ \ 'restriction).formatNullable[Restriction] and
