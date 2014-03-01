@@ -1,6 +1,7 @@
 package com.keepit.common.store
 
 import com.keepit.common.db.Id
+import org.joda.time.DateTime
 
 trait ObjectStore[A, B] {
 
@@ -26,4 +27,12 @@ trait ObjectStore[A, B] {
    */
   def get(key: A): Option[B]
 
+}
+
+trait ObjMetadata extends Any { // WIP; if proved useful can be folded into main abstraction
+  def lastModified:DateTime
+}
+
+trait MetadataAccess[A,B] { self:ObjectStore[A,B] =>
+  def getWithMetadata(key: A):Option[(B, Option[ObjMetadata])] = get(key) map { v => (v, None) }
 }

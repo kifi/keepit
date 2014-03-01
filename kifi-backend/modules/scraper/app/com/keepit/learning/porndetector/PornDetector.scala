@@ -36,6 +36,24 @@ class NaiveBayesPornDetector(
   override def isPorn(text: String): Boolean = logPosteriorRatio(text) >= 0f
 }
 
+class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector {
+  if (windowSize <= 4) throw new IllegalArgumentException(s"window size for SlidingWindowPornDetector too small: get ${windowSize}, need at least 4")
+  def detectBlocks(text: String): (Int, Int) = {
+    val blocks = PornDetectorUtil.tokenize(text).sliding(windowSize, windowSize/2).toArray
+    val bad = blocks.filter{ b => detector.isPorn(b.mkString(" "))}
+    (blocks.size, bad.size)
+  }
+
+  override def isPorn(text: String): Boolean = posterior(text) > 0.5f
+
+  override def posterior(text: String): Float = {
+    val (blocks, badBlocks) = detectBlocks(text)
+    if (blocks == 0) return 0f
+    val r = badBlocks / blocks.toFloat
+    if (r > 0.02) return 1f else 0f       // not smooth (for performance reason). could use more Bayesian style
+  }
+}
+
 object PornDetectorUtil {
   def tokenize(text: String): Array[String] = {
     text.split("[^a-zA-Z0-9]").filter(!_.isEmpty).map{_.toLowerCase}

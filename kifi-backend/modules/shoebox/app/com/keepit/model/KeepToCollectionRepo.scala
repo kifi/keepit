@@ -17,7 +17,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getByCollection(collId: Id[Collection],
                       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                      (implicit session: RSession): Seq[KeepToCollection]
-  def count(collId: Id[Collection])(implicit session: RSession): Int
+  private[model] def count(collId: Id[Collection])(implicit session: RSession): Int
   def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit
   def getOpt(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
 }
@@ -25,8 +25,6 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
    collectionsForBookmarkCache: CollectionsForBookmarkCache,
-   bookmarksForCollectionCache: BookmarksForCollectionCache,
-   collectionRepo: CollectionRepo,
    bookmarkRepoProvider: Provider[BookmarkRepoImpl],
    val db: DataBaseComponent,
    val clock: Clock)
@@ -40,14 +38,10 @@ class KeepToCollectionRepoImpl @Inject() (
     collectionsForBookmarkCache.set(CollectionsForBookmarkKey(ktc.bookmarkId),
       (for (c <- rows if c.bookmarkId === ktc.bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list)
-    bookmarksForCollectionCache.set(BookmarksForCollectionKey(ktc.collectionId),
-      (for (c <- rows if c.collectionId === ktc.collectionId && c.state === KeepToCollectionStates.ACTIVE)
-      yield c.bookmarkId).list)
   }
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
-    bookmarksForCollectionCache.remove(BookmarksForCollectionKey(ktc.collectionId))
   }
 
   type RepoImpl = KeepToCollectionTable
@@ -81,7 +75,7 @@ class KeepToCollectionRepoImpl @Inject() (
                      (implicit session: RSession): Seq[KeepToCollection] =
     (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
 
-  def count(collId: Id[Collection])(implicit session: RSession): Int = {
+  private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
     import bookmarkRepo.db.Driver.simple._
     Query((for {
       c <- this.rows

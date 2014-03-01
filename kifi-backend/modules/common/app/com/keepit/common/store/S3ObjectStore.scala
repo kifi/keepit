@@ -11,17 +11,16 @@ import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
 import play.api.libs.json._
 import play.api.Play.current
-import play.api.Logger
 import play.api.Play
 import java.io._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
 import org.apache.commons.io.{IOUtils, FileUtils}
-
+import com.keepit.common.time._
 
 case class S3Bucket(name: String)
 
-trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
+trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] with Logging {
 
   val bucketName: S3Bucket
   val amazonS3Client: AmazonS3
@@ -98,6 +97,25 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
       val value = s3obj map unpackValue
       accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
       value
+    }
+  }
+
+  override def getWithMetadata(id: A): Option[(B, Option[ObjMetadata])] = { // WIP; dup code so get() not affected
+    val timer = accessLog.timer(S3)
+    doWithS3Client("getting an item from S3BStore"){ s3Client =>
+      val key = idToKey(id)
+      val s3obj = try {
+        Some(s3Client.getObject(bucketName, key))
+      } catch {
+        case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
+      }
+      val t:Option[(B, Option[ObjMetadata])] = s3obj map { o =>
+        (unpackValue(o), Some(new ObjMetadata {
+          def lastModified = o.getObjectMetadata.getLastModified.toDateTime
+        }))
+      }
+      accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
+      t
     }
   }
 

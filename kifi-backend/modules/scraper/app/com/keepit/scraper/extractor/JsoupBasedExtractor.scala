@@ -1,5 +1,7 @@
 package com.keepit.scraper.extractor
 
+import scala.collection.JavaConversions._
+
 import com.keepit.common.logging.Logging
 import com.keepit.scraper.HttpInputStream
 
@@ -29,7 +31,10 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
   def getMetadata(name: String): Option[String] = toOption(doc.select("meta[name=" + name + "]").attr("content"))
                                           .orElse(toOption(doc.select("meta[property=" + name + "]").attr("content")))
 
-  def getLink(name: String): Option[String] = toOption(doc.select("link[ref=" + name + "]").attr("href"))
+  def getLinks(name: String): Set[String] = {
+    val urls = doc.select("link[ref=" + name + "]").iterator() map {e => e.attr("href")}
+    urls filterNot {str => str == null || str.isEmpty} toSet
+  }
 
   private def toOption(str: String): Option[String] = if (str == null || str.isEmpty) None else Some(str)
 

@@ -20,12 +20,13 @@ object RichConnectionUpdateMessage {
   implicit val format = new Format[RichConnectionUpdateMessage] {
     def writes(event: RichConnectionUpdateMessage) = event match {
       case e: CreateRichConnection => Companion.writes(e)
+      case e: RemoveRichConnection => Companion.writes(e)
       case e: RecordKifiConnection => Companion.writes(e)
       case e: RecordInvitation => Companion.writes(e)
       case e: RecordFriendUserId => Companion.writes(e)
       case e: Block => Companion.writes(e)
     }
-    private val readsFunc = Companion.reads(CreateRichConnection, RecordKifiConnection, RecordInvitation, RecordFriendUserId, Block)
+    private val readsFunc = Companion.reads(CreateRichConnection, RemoveRichConnection, RecordKifiConnection, RecordInvitation, RecordFriendUserId, Block)
     def reads(json: JsValue) = readsFunc(json)
   }
 }
@@ -39,6 +40,14 @@ object CreateRichConnection extends Companion[CreateRichConnection] {
   implicit val typeCode = TypeCode("create_rich_connection")
 }
 
+case class RemoveRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friendSocialId: Id[SocialUserInfo]) extends RichConnectionUpdateMessage
+object RemoveRichConnection extends Companion[RemoveRichConnection] {
+  private implicit val userIdFormat = Id.format[User]
+  private implicit val socialIdFormat = Id.format[SocialUserInfo]
+  implicit val format = Json.format[RemoveRichConnection]
+  implicit val typeCode = TypeCode("remove_rich_connection")
+}
+
 //Propages changes to UserConnectionRepo. Will usually be a queued call.
 case class RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage
 object RecordKifiConnection extends Companion[RecordKifiConnection] {
@@ -47,6 +56,13 @@ object RecordKifiConnection extends Companion[RecordKifiConnection] {
   implicit val typeCode = TypeCode("record_kifi_connection")
 }
 
+
+case class RemoveKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage
+object RemoveKifiConnection extends Companion[RemoveKifiConnection] {
+  private implicit val userIdFormat = Id.format[User]
+  implicit val format = Json.format[RemoveKifiConnection]
+  implicit val typeCode = TypeCode("remove_kifi_connection")
+}
 
 //Propages changes to InvitationRepo (needs sequence number).
 case class RecordInvitation(userId: Id[User], invitation: Id[Invitation], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) extends RichConnectionUpdateMessage

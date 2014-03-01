@@ -74,6 +74,9 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
         }
         db.readOnly { implicit s =>
+          collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 2, coll2.id.get -> 0, coll3.id.get -> 1)
+        }
+        db.readOnly { implicit s =>
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
@@ -84,6 +87,13 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
         db.readOnly { implicit s =>
           keepToCollectionRepo.count(coll1.id.get) === 1
+        }
+        db.readWrite { implicit s =>
+          keepToCollectionRepo.getCollectionsForBookmark(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_))
+        }
+        db.readOnly { implicit s =>
+          collectionRepo.getBookmarkCount(coll1.id.get) === 1
+          collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 1, coll2.id.get -> 0, coll3.id.get -> 1)
         }
         sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s =>

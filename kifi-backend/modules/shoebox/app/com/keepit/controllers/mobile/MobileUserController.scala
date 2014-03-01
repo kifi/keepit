@@ -144,6 +144,24 @@ class MobileUserController @Inject() (
     }
   }
 
+  def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+    userCommander.excludeFriend(request.userId, id) map { changed =>
+      val msg = if (changed) "changed" else "no_change"
+      Ok(Json.obj("code" -> msg))
+    } getOrElse {
+      BadRequest(Json.obj("code" -> "not_friend"))
+    }
+  }
+
+  def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+    userCommander.includeFriend(request.userId, id) map { changed =>
+      val msg = if (changed) "changed" else "no_change"
+      Ok(Json.obj("code" -> msg))
+    } getOrElse {
+      BadRequest(Json.obj("code" -> "not_friend"))
+    }
+  }
+
 }
 
 
