@@ -360,6 +360,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           _.forEach(keeps, function (keep) {
             keep.isMyBookmark = true;
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
+            keep.unkept = false;
           });
           return keeps;
         });
@@ -376,6 +377,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             url: keep.url
           };
         })).then(function () {
+          /*
           var map = _.reduce(keeps, function (map, keep) {
             map[keep.id] = true;
             return map;
@@ -383,6 +385,16 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
           _.remove(list, function (keep) {
             return map[keep.id];
+          });
+          */
+          _.forEach(keeps, function (keep) {
+            keep.unkept = true;
+            if (previewed === keep) {
+              api.togglePreview(keep);
+            }
+            if (api.isSelected(keep)) {
+              api.unselect(keep);
+            }
           });
 
           var message = keeps.length > 1 ? keeps.length + ' Keeps deleted.' : 'Keep deleted.';
@@ -454,7 +466,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             end = true;
           }
 
-          hits.forEach(processHit);
+          _.forEach(hits, processHit);
 
           list.push.apply(list, hits);
 
