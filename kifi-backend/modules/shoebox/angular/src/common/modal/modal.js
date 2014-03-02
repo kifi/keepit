@@ -9,7 +9,7 @@ angular.module('kifi.modal', [])
       restrict: 'A',
       replace: true,
       scope: {
-        show: '=',
+        show: '='
       },
       templateUrl: 'common/modal/plainModal.tpl.html',
       transclude: true,

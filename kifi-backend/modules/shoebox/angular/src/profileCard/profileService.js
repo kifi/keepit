@@ -3,8 +3,8 @@
 angular.module('kifi.profileService', [])
 
 .factory('profileService', [
-  '$http', 'env',
-  function ($http, env) {
+  '$http', 'env', '$q',
+  function ($http, env, $q) {
     var me = {
       seqNum: 0
     };
