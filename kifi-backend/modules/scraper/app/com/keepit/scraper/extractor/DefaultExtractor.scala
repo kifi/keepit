@@ -37,7 +37,7 @@ class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
 
   protected def getContentHandler: ContentHandler = handler
 
-  def getLinks(key: String): Set[String] = handler.links(key).toSet
+  def getLinks(key: String): Set[String] = handler.links.getOrElse(key, Set.empty).toSet
 
   override def getKeywords(): Option[String] = {
     val str = (handler.getKeywords.map{ _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")

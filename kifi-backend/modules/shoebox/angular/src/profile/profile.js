@@ -122,4 +122,45 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
       }
     };
   }
+])
+
+.directive('kfProfileInput', [
+  '$timeout', 'keyIndices',
+  function($timeout, keyIndices) {
+    return {
+      restrict: 'A',
+      scope: {
+        templateUrl: '@',
+        defaultValue: '@'
+      },
+      template: '<div ng-include="templateUrl"></div>',
+      link: function(scope, element) {
+        scope.onKeydown = function (e) {
+          switch (e.keyCode) {
+            case keyIndices.KEY_ESC:
+              scope.disableEditing();
+              break;
+          }
+        };
+
+        scope.shouldFocus = false;
+        scope.enabled = false;
+
+        scope.enableEditing = function () {
+          scope.saveButton.css('display', 'block');
+          scope.shouldFocus = true;
+          scope.enabled = true;
+        }
+
+        scope.disableEditing = function () {
+          scope.saveButton.css('display', 'none');
+          scope.enabled = false;
+        }
+        $timeout(function () {
+          scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
+          scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
+        });
+      }
+    }
+  }
 ]);

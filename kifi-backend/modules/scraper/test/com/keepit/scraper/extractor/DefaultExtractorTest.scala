@@ -20,6 +20,7 @@ class DefaultExtractorTest extends Specification {
       val extractor = setup("https://cnn.com/url1", "money.cnn.com.dimon-pay.txt")
       extractor.getCanonicalUrl() === Some("http://money.cnn.com/2014/01/24/news/companies/dimon-pay/index.html")
       extractor.getLinks("canonical") === Set("http://money.cnn.com/2014/01/24/news/companies/dimon-pay/index.html")
+      extractor.getLinks("alternate") === Set()
       extractor.getMetadata("og:url") === Some("http://money.cnn.com/2014/01/24/news/companies/dimon-pay/index.html")
     }
 
@@ -27,6 +28,7 @@ class DefaultExtractorTest extends Specification {
       val extractor = setup("https://cnn.com/url2", "www.cnn.com.health.txt")
       extractor.getCanonicalUrl() === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
       extractor.getLinks("canonical") === Set("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
+      extractor.getLinks("alternate") === Set()
       extractor.getMetadata("og:url") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
     }
 
@@ -34,6 +36,7 @@ class DefaultExtractorTest extends Specification {
       val extractor = setup("https://cnn.com/url3", "www.cnn.com.pregnant-brain-dead-woman-texas.txt")
       extractor.getCanonicalUrl() === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
       extractor.getLinks("canonical") === Set("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
+      extractor.getLinks("alternate") === Set("http://rss.cnn.com/rss/cnn_health.rss")
       extractor.getMetadata("og:url") === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
     }
 
@@ -47,5 +50,3 @@ class DefaultExtractorTest extends Specification {
 
   }
 }
-
-
