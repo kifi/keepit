@@ -74,7 +74,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
     (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
 
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) = {
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[EmailAddress], Boolean) = {
     // returns (verifiedEmailOption, isFirstTimeUsed)
     getByUserAndCode(userId, verificationCode) match {
       case Some(verifiedAddress) if verifiedAddress.state == EmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
