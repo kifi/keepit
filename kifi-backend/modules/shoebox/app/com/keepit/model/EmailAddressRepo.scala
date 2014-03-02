@@ -81,7 +81,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
       .map(e => (e.verifiedAt, e.updatedAt, e.state)).update((now, now, EmailAddressStates.VERIFIED))
 
     if (updateCount > 0) (true, true)
-    else (getByUserAndCode(userId, verificationCode).isDefined, false)
+    else (getByUserAndCode(userId, verificationCode).exists(_.state == EmailAddressStates.VERIFIED), false)
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {
