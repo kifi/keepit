@@ -2,7 +2,7 @@ package com.keepit.common.concurrent
 
 import com.keepit.inject.AppScoped
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.Provides
 
 trait ForkJoinContextMonitorModule extends ScalaModule
 
