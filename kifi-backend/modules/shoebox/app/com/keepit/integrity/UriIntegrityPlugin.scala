@@ -18,6 +18,7 @@ import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.commanders.BookmarkInterner
+import com.keepit.scraper.ScrapeSchedulerPlugin
 
 trait UriChangeMessage
 
@@ -35,6 +36,7 @@ class UriIntegrityActor @Inject()(
   bookmarkInterner: BookmarkInterner,
   deepLinkRepo: DeepLinkRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
+  scraper: ScrapeSchedulerPlugin,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -103,9 +105,8 @@ class UriIntegrityActor @Inject()(
   private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {
     val (oldInfoOpt, newInfoOpt) = (scrapeInfoRepo.getByUriId(oldUri.id.get), scrapeInfoRepo.getByUriId(newUri.id.get))
     (oldInfoOpt, newInfoOpt) match {
-      case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => bookmarkInterner.internUri(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
-      case (Some(oldInfo), Some(newInfo)) if ( oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE ) && (newUri.state != NormalizedURIStates.UNSCRAPABLE)  =>
-        bookmarkInterner.internUri(newUri.withState(NormalizedURIStates.SCRAPE_WANTED))
+      case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => scraper.scheduleScrape(newUri)
+      case (Some(oldInfo), Some(newInfo)) if (oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE ) && (newUri.state != NormalizedURIStates.UNSCRAPABLE) => scraper.scheduleScrape(newUri)
       case _ =>
     }
   }

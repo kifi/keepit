@@ -58,6 +58,10 @@ object NormalizedURI {
 
   val TitleMaxLen = 2040
 
+  val handleDeprecatedScrapeWantedState: State[NormalizedURI] => State[NormalizedURI] = {
+    case State("scrape_wanted") => NormalizedURIStates.ACTIVE
+    case state => state
+  }
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -66,7 +70,7 @@ object NormalizedURI {
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'urlHash).format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply)) and
-    (__ \ 'state).format(State.format[NormalizedURI]) and
+    (__ \ 'state).format(State.format[NormalizedURI]).inmap(handleDeprecatedScrapeWantedState, identity[State[NormalizedURI]]) and
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI]) and
     (__ \ 'screenshotUpdatedAt).formatNullable[DateTime] and
     (__ \ 'restriction).formatNullable[Restriction] and
@@ -115,19 +119,17 @@ object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
-  val SCRAPE_WANTED = State[NormalizedURI]("scrape_wanted")
   val REDIRECTED = State[NormalizedURI]("redirected")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPE_WANTED, REDIRECTED)),
-      (SCRAPE_WANTED -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE, REDIRECTED)),
-      (SCRAPED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
-      (SCRAPE_FAILED -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
-      (UNSCRAPABLE -> Set(SCRAPE_WANTED, INACTIVE, REDIRECTED)),
-      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)),
-      (REDIRECTED -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE, REDIRECTED)))
+      (ACTIVE -> Set(REDIRECTED)),
+      (SCRAPED -> Set(INACTIVE, REDIRECTED)),
+      (SCRAPE_FAILED -> Set(INACTIVE, REDIRECTED)),
+      (UNSCRAPABLE -> Set(INACTIVE, REDIRECTED)),
+      (INACTIVE -> Set(ACTIVE, INACTIVE, REDIRECTED)),
+      (REDIRECTED -> Set(ACTIVE, INACTIVE, REDIRECTED)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),
@@ -136,7 +138,7 @@ object NormalizedURIStates extends States[NormalizedURI] {
       (UNSCRAPABLE -> Set(ACTIVE)),
       (INACTIVE -> Set.empty))
 
-  val DO_NOT_SCRAPE = Set(ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
+  val DO_NOT_SCRAPE = Set(INACTIVE, UNSCRAPABLE, REDIRECTED)
 
   def transitionByAdmin[T](transition: (State[NormalizedURI], Set[State[NormalizedURI]]))(f:State[NormalizedURI]=>T) = {
     f(validate(transition, ADMIN_TRANSITIONS))

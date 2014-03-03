@@ -9,12 +9,15 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.scraper.ScrapeSchedulerPlugin
 
 class OrphanCleaner @Inject() (
   db: Database,
   changedURIRepo: ChangedURIRepo,
   renormalizedURLRepo: RenormalizedURLRepo,
   nuriRepo: NormalizedURIRepo,
+  scrapeInfoRepo: ScrapeInfoRepo,
+  scraper: ScrapeSchedulerPlugin,
   bookmarkRepo: BookmarkRepo,
   bookmarkInterner: BookmarkInterner,
   centralConfig: CentralConfig,
@@ -49,32 +52,51 @@ class OrphanCleaner @Inject() (
     cleanNormalizedURIsByNormalizedURIs(readOnly)
   }
 
-  private def getNormalizedURI(id: Id[NormalizedURI])(implicit session: RSession): Option[NormalizedURI] = {
-    try { Some(nuriRepo.get(id)) } catch { case e: Throwable => None }
-  }
+  private def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
+    val currentUri = nuriRepo.get(uriId)
+    val activeScrapeInfoOption = scrapeInfoRepo.getByUriId(uriId).filterNot(_.state == ScrapeInfoStates.INACTIVE)
+    val isActuallyKept = hasKnownKeep || bookmarkRepo.exists(uriId)
 
-  private def tryMakeActive(id: Id[NormalizedURI], readOnly: Boolean)(implicit session: RWSession): Boolean = {
-    getNormalizedURI(id) match {
-      case Some(uri) => return tryMakeActive(uri, readOnly)
-      case None => false
-    }
-  }
-
-  private def tryMakeActive(uri: NormalizedURI, readOnly: Boolean)(implicit session: RWSession): Boolean = {
-    if (uri.state == NormalizedURIStates.SCRAPED || uri.state == NormalizedURIStates.SCRAPE_FAILED) {
-      if (!bookmarkRepo.exists(uri.id.get)) {
-        if (!readOnly) {
-          nuriRepo.save(uri.withState(NormalizedURIStates.ACTIVE)) // this will fix ScrapeInfo as well
-        }
-        return true
+    if (isActuallyKept) {
+      // Make sure the uri is not inactive and has a scrape info
+      val (updatedUri, turnedUriActive) = currentUri match {
+        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) => (
+          if (readOnly) uriToBeActive else nuriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE)),
+          true
+        )
+        case _ => (currentUri, false)
       }
+
+      val createdScrapeInfo = activeScrapeInfoOption match {
+        case None =>
+          if (!readOnly) scraper.scheduleScrape(updatedUri)
+          true
+        case _ => false
+      }
+      (turnedUriActive, createdScrapeInfo)
+
+    } else {
+      // Remove any existing scrape info and make the uri active
+      val turnedUriActive = currentUri match {
+        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
+          if (!readOnly) nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
+          true
+        case uri => false
+      }
+
+      activeScrapeInfoOption match {
+        case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE && !readOnly => scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+        case _ => // all good
+      }
+      (turnedUriActive, false)
     }
-    false
   }
+
 
   private[integrity] def cleanNormalizedURIsByRenormalizedURL(readOnly: Boolean = true): Unit = {
     var numProcessed = 0
     var numUrisChangedToActive = 0
+    var numScrapeInfoCreated = 0
     var seq = getSequenceNumber(renormalizedURLSeqKey)
     var done = false
 
@@ -85,7 +107,9 @@ class OrphanCleaner @Inject() (
 
       db.readWrite{ implicit s =>
         renormalizedURLs.foreach{ renormalizedURL =>
-          if (tryMakeActive(renormalizedURL.oldUriId, readOnly)) numUrisChangedToActive += 1
+          val (turnedActive, fixedScrapeInfo) = checkIntegrity(renormalizedURL.oldUriId, readOnly)
+          if (turnedActive) numUrisChangedToActive += 1
+          if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = renormalizedURL.seq
         }
@@ -93,16 +117,13 @@ class OrphanCleaner @Inject() (
       if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq) // update high watermark
     }
 
-    if (readOnly) {
-      log.info(s"seq=${seq.value}, ${numProcessed} RenormalizedURL processed. Would have changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    } else {
-      log.info(s"seq=${seq.value}, ${numProcessed} RenormalizedURL processed. Changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    }
+    logProgress(seq.value, numProcessed, numUrisChangedToActive, numScrapeInfoCreated, readOnly)
   }
 
   private[integrity] def cleanNormalizedURIsByChangedURIs(readOnly: Boolean = true): Unit = {
     var numProcessed = 0
     var numUrisChangedToActive = 0
+    var numScrapeInfoCreated = 0
     var seq = getSequenceNumber(changedURISeqKey)
     var done = false
 
@@ -113,7 +134,9 @@ class OrphanCleaner @Inject() (
 
       db.readWrite{ implicit s =>
         changedURIs.foreach{ changedUri =>
-          if (tryMakeActive(changedUri.oldUriId, readOnly)) numUrisChangedToActive += 1
+          val (turnedActive, fixedScrapeInfo) = checkIntegrity(changedUri.oldUriId, readOnly)
+          if (turnedActive) numUrisChangedToActive += 1
+          if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = changedUri.seq
         }
@@ -121,17 +144,13 @@ class OrphanCleaner @Inject() (
       if (!done && !readOnly) centralConfig.update(changedURISeqKey, seq) // update high watermark
     }
 
-    if (readOnly) {
-      log.info(s"seq=${seq.value}, ${numProcessed} ChangedURIs processed. Would have changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    } else {
-      log.info(s"seq=${seq.value}, ${numProcessed} ChangedURIs processed. Changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    }
+    logProgress(seq.value, numProcessed, numUrisChangedToActive, numScrapeInfoCreated, readOnly)
   }
 
   private[integrity] def cleanNormalizedURIsByBookmarks(readOnly: Boolean = true): Unit = {
     var numProcessed = 0
     var numUrisChangedToActive = 0
-    var numUrisChangedToScrapeWanted = 0
+    var numScrapeInfoCreated = 0
     var seq = getSequenceNumber(bookmarkSeqKey)
     var done = false
 
@@ -141,23 +160,13 @@ class OrphanCleaner @Inject() (
       done = bookmarks.isEmpty
 
       db.readWrite{ implicit s =>
-        bookmarks.foreach{ bookmark =>
-          val uri = getNormalizedURI(bookmark.uriId)
-          if (!uri.isDefined) airbrake.notify("error getting NormalizedURI in OrphanCleaner")
-
-          uri.foreach{ u =>
-            bookmark.state match {
-              case BookmarkStates.ACTIVE =>
-                if (u.state == NormalizedURIStates.ACTIVE || u.state == NormalizedURIStates.INACTIVE) {
-                  numUrisChangedToScrapeWanted += 1
-                  if (!readOnly) {
-                    bookmarkInterner.internUri(u.withState(NormalizedURIStates.SCRAPE_WANTED))
-                  }
-                }
-              case BookmarkStates.INACTIVE =>
-                if (tryMakeActive(u, readOnly)) numUrisChangedToActive += 1
-            }
+        bookmarks.foreach { case bookmark =>
+          val (turnedActive, fixedScrapeInfo) = bookmark.state match {
+            case BookmarkStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
+            case BookmarkStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
           }
+          if (turnedActive) numUrisChangedToActive += 1
+          if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = bookmark.seq
         }
@@ -165,17 +174,14 @@ class OrphanCleaner @Inject() (
       if (!done && !readOnly) centralConfig.update(bookmarkSeqKey, seq) // update high watermark
     }
 
-    if (readOnly) {
-      log.info(s"seq=${seq.value}, ${numProcessed} Bookmarks processed. Would have changed ${numUrisChangedToScrapeWanted} NormalizedURIs to SCRAPE_WANTED, ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    } else {
-      log.info(s"seq=${seq.value}, ${numProcessed} Bookmarks processed. Changed ${numUrisChangedToScrapeWanted} NormalizedURIs to SCRAPE_WANTED, ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    }
+    logProgress(seq.value, numProcessed, numUrisChangedToActive, numScrapeInfoCreated, readOnly)
   }
 
 
   private[integrity] def cleanNormalizedURIsByNormalizedURIs(readOnly: Boolean = true): Unit = {
     var numProcessed = 0
     var numUrisChangedToActive = 0
+    var numScrapeInfoCreated = 0
     var seq = getSequenceNumber(normalizedURISeqKey)
     var done = false
 
@@ -186,26 +192,26 @@ class OrphanCleaner @Inject() (
 
       db.readWrite{ implicit s =>
         normalizedURIs.foreach{ uri =>
-          if (tryMakeActive(uri.id.get, readOnly)) numUrisChangedToActive += 1
+          val (turnedActive, fixedScrapeInfo) = checkIntegrity(uri.id.get, readOnly)
+          if (turnedActive) numUrisChangedToActive += 1
+          if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = uri.seq
         }
       }
       if (numProcessed % 1000 == 0) {
-        if (readOnly) {
-          log.info(s"in progress: seq=${seq.value}, ${numProcessed} NormalizedURIs processed. Would have changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-        } else {
-          log.info(s"in progress: seq=${seq.value}, ${numProcessed} NormalizedURIs processed. Changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-        }
+        logProgress(seq.value, numProcessed, numUrisChangedToActive, numScrapeInfoCreated, readOnly)
       }
 
       if (!done && !readOnly) centralConfig.update(normalizedURISeqKey, seq) // update high watermark
     }
 
-    if (readOnly) {
-      log.info(s"seq=${seq.value}, ${numProcessed} NormalizedURIs processed. Would have changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    } else {
-      log.info(s"seq=${seq.value}, ${numProcessed} NormalizedURIs processed. Changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
-    }
+    logProgress(seq.value, numProcessed, numUrisChangedToActive, numScrapeInfoCreated, readOnly)
+  }
+
+  private def logProgress(seqValue: Long, numProcessed: Int, numUrisChangedToActive: Int, numScrapeInfoCreated: Int, readOnly: Boolean): Unit = if (readOnly) {
+    log.info(s"in progress: seq=${seqValue}, ${numProcessed} NormalizedURIs processed. Would have created ${numScrapeInfoCreated} ScrapeInfos and changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
+  } else {
+    log.info(s"in progress: seq=${seqValue}, ${numProcessed} NormalizedURIs processed. Created ${numScrapeInfoCreated} ScrapeInfos and changed ${numUrisChangedToActive} NormalizedURIs to ACTIVE.")
   }
 }

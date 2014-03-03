@@ -15,12 +15,8 @@ import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.normalizer.NormalizationReference
-import scala.slick.lifted.Tag
-import com.keepit.common.db.{Model, Id}
+import com.keepit.common.db.Id
 import com.keepit.queue._
-import play.api.libs.json._
-import play.api.Play._
-import play.api.Play
 import com.keepit.common.aws.AwsConfig
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -136,7 +132,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
             scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
           case _ => // do nothing
         }
-      case SCRAPE_WANTED => // do nothing
+      case ACTIVE => // do nothing
       case _ =>
         throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
     }
