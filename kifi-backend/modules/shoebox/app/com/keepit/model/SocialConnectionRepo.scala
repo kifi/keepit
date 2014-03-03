@@ -41,20 +41,27 @@ class SocialConnectionRepoImpl @Inject() (
   override protected val changeListener: Option[RepoModification.Listener[SocialConnection]],
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialRepo: SocialUserInfoRepoImpl)
-  extends DbRepo[SocialConnection] with SocialConnectionRepo {
+  extends DbRepo[SocialConnection] with SeqNumberDbFunction[SocialConnection] with SocialConnectionRepo {
 
     import scala.slick.jdbc.StaticQuery
   import db.Driver.simple._
   import DBSession._
 
   type RepoImpl = SocialConnectionTable
-  case class SocialConnectionTable(tag: Tag) extends RepoTable[SocialConnection](db, tag, "social_connection") {
+  case class SocialConnectionTable(tag: Tag) extends RepoTable[SocialConnection](db, tag, "social_connection") with SeqNumberColumn[SocialConnection] {
     def socialUser1 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
     def socialUser2 = column[Id[SocialUserInfo]]("social_user_2", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, socialUser1, socialUser2, state) <> (SocialConnection.tupled, SocialConnection.unapply _)
+    def * = (id.?, createdAt, updatedAt, socialUser1, socialUser2, state, seq) <> (SocialConnection.tupled, SocialConnection.unapply _)
   }
 
   def table(tag: Tag) = new SocialConnectionTable(tag)
+
+  private val sequence = db.getSequence[SocialConnection]("social_connection_sequence")
+
+  override def save(socialConnection: SocialConnection)(implicit session: RWSession): SocialConnection = {
+    val toSave = socialConnection.copy(seq = sequence.incrementAndGet())
+    super.save(toSave)
+  }
 
   override def invalidateCache(conn: SocialConnection)(implicit session: RSession): Unit = {
     socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser1))
