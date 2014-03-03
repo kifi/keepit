@@ -69,6 +69,7 @@
       <th>Creation</th>
       <th>State</th>
       <th>Last Scrape</th>
+      <th>URI Restriction</th>
     </tr>
     @for(((user, (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
@@ -103,6 +104,7 @@
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       <td>@adminHelper.uriStateDisplay(uri)</td>
       <td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
+      <td>@uri.restriction.map{ r => r.context}.getOrElse("")</td>
     </tr>
   }
   </table>
