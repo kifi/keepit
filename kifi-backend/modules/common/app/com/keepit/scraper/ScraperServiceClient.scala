@@ -49,8 +49,9 @@ case class ScraperTaskType(value: String)
 object ScraperTaskType {
   val SCRAPE = ScraperTaskType("scrape")
   val FETCH_BASIC = ScraperTaskType("fetch_basic")
+  val SCRAPE_ARTICLE = ScraperTaskType("scrape_article")
   val UNKNOWN = ScraperTaskType("unknown")
-  val ALL:Seq[ScraperTaskType] = Seq(SCRAPE, FETCH_BASIC)
+  val ALL:Seq[ScraperTaskType] = Seq(SCRAPE, FETCH_BASIC, SCRAPE_ARTICLE)
   implicit val format = new Format[ScraperTaskType] {
     def reads(json: JsValue) = JsSuccess(ALL.find(_.value == json.asOpt[String].getOrElse("")) getOrElse UNKNOWN)
     def writes(taskType: ScraperTaskType) = JsString(taskType.value)
