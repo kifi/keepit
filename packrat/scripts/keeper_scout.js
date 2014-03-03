@@ -316,9 +316,10 @@ function withUrls(o) {
 }
 
 function authoredTitle() {
-  var title = document.title.trim();
-  if (title) {
-    var el = document.body.firstElementChild;
+  var el = document.querySelector('meta[property="og:title"]');
+  var title = el && el.content.trim() || document.title.trim();
+  if (title && !el) {
+    el = document.body.firstElementChild;
     if (el && el.tagName === 'IMG' && el.src === document.URL) {
       title = '';  // discard browser-generated title for image file
     }

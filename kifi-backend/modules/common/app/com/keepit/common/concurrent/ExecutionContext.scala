@@ -18,7 +18,15 @@ object ExecutionContext extends Logging {
 
   val singleThread: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
 
-  val fjPool = new scala.concurrent.forkjoin.ForkJoinPool(Runtime.getRuntime.availableProcessors * 4) // tweak
+  val fjParallelism = { // todo(ray):remove play dependency
+    import play.api.Play
+    import play.api.Play.current
+    (for {
+      app <- Play.maybeApplication
+      p <- Play.configuration.getInt("fork-join-pool.parallelism")
+    } yield p) getOrElse 4
+  }
+  val fjPool = new scala.concurrent.forkjoin.ForkJoinPool(Runtime.getRuntime.availableProcessors * fjParallelism) // tweak
   val fj = scala.concurrent.ExecutionContext.fromExecutor(fjPool)
 
 }

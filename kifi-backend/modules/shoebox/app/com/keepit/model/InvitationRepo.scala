@@ -32,24 +32,31 @@ class InvitationRepoImpl @Inject() (
                                      val socialUserInfoRepo: SocialUserInfoRepoImpl,
                                      val clock: Clock,
                                      override protected val changeListener: Option[RepoModification.Listener[Invitation]])
-  extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
+  extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] with SeqNumberDbFunction[Invitation] {
 
   import DBSession._
     import db.Driver.simple._
 
   type RepoImpl = InvitationTable
-  case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] {
+  case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] with SeqNumberColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
     def recipientEContactId   = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, state) <> ((Invitation.apply _).tupled, Invitation.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
   }
 
   def table(tag: Tag) = new InvitationTable(tag)
 
+  private val sequence = db.getSequence[Invitation]("invitation_sequence")
+
   private implicit val userIdTypeMapper = userRepo.idMapper
   private implicit val userStateMapper = userRepo.stateTypeMapper
+
+  override def save(invitation: Invitation)(implicit session: RWSession): Invitation = {
+    val toSave = invitation.copy(seq = sequence.incrementAndGet())
+    super.save(toSave)
+  }
 
   override def deleteCache(model: Invitation)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: Invitation)(implicit session: RSession): Unit = {}

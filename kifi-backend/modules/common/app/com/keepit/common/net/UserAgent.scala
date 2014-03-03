@@ -28,15 +28,22 @@ object UserAgent extends Logging {
   lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
   lazy val iPhonePattern = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
 
+  private def normalize(str: String): String = if (str == "unknown") "" else str
+  private def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
+
   def fromString(userAgent: String): UserAgent = {
-    def normalize(str: String) = if (str == "unknown") "" else str
-    val agent: SFUserAgent = parser.parse(userAgent)
-    UserAgent(trim(userAgent),
-      normalize(agent.getName),
-      normalize(agent.getOperatingSystem.getFamilyName),
-      normalize(agent.getOperatingSystem.getName),
-      normalize(agent.getTypeName),
-      normalize(agent.getVersionNumber.toVersionString))
+    userAgent match {
+      case iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
+        UserAgent(userAgent, appName, os, device, "kifi app", appVersion)
+      case _ =>
+        val agent: SFUserAgent = parser.parse(userAgent)
+        UserAgent(trim(userAgent),
+          normalizeChrome(normalize(agent.getName)),
+          normalize(agent.getOperatingSystem.getFamilyName),
+          normalize(agent.getOperatingSystem.getName),
+          normalize(agent.getTypeName),
+          normalize(agent.getVersionNumber.toVersionString))
+    }
   }
 
   private def trim(str: String) = if(str.length > MAX_USER_AGENT_LENGTH) {
