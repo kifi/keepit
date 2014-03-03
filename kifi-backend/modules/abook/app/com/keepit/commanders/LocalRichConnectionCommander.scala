@@ -6,7 +6,9 @@ import com.keepit.common.queue.{
   RecordKifiConnection,
   RecordInvitation,
   RecordFriendUserId,
-  Block
+  Block,
+  RemoveRichConnection,
+  RemoveKifiConnection
 }
 import com.keepit.common.db.Id
 import com.keepit.model.{User, SocialUserInfo, Invitation}
@@ -115,7 +117,12 @@ class LocalRichConnectionCommander @Inject() (
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.block(userId, friendId) }
         }
-        case _ => //ZZZ Deal with new message types
+        case RemoveRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo]) => {
+          db.readWrite { implicit session => repo.removeRichConnection(userId, userSocialId, friend) }
+        }
+        case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => {
+          db.readWrite { implicit session => repo.removeKifiConnection(user1, user2) }
+        }
       }
       Future.successful(())
     } catch {
