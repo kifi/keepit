@@ -222,11 +222,11 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
-    log.info(s"[ScrapeArticle] message received; url=${uri.url}")
-    val ts = System.currentTimeMillis
-    val res = worker.safeProcessURI(uri, info, proxyOpt)
-    log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
-    Future.successful(res)
+    SafeFuture {
+      timing(s"scrapeArticle(${uri.id},${info.id})") {
+        worker.safeProcessURI(uri, info, proxyOpt) // todo: traceable
+      }
+    }(ExecutionContext.fj)
   }
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
@@ -248,10 +248,12 @@ class QueuedScrapeProcessor @Inject() (
     }
     val jf = fjPool.submit(callable)
     SafeFuture{
-     jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
-       case Success(articleOpt) => articleOpt
-       case Failure(t) => None
-     }
+      timing(s"fetchBasicArticle($url)]") {
+        jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
+          case Success(articleOpt) => articleOpt
+          case Failure(t) => None
+        }
+      }
     }(ExecutionContext.fj)
   }
 }
