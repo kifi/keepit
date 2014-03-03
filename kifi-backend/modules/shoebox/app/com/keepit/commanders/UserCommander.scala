@@ -34,6 +34,7 @@ import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.common.concurrent.ExecutionContext
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -105,19 +106,24 @@ class UserCommander @Inject() (
   heimdalClient: HeimdalServiceClient,
   fortytwoConfig: FortyTwoConfig) extends Logging {
 
-  // factored/copied from UserController.friends() for mobile
-  def getFriendsDetails(userId:Id[User], connCount:Boolean):Seq[(BasicUser, Boolean, Boolean, Int)] = { // todo(ray): inefficient impl -- optimize
-    timing(s"friends($userId) ALL") {
-      db.readOnly { implicit s =>
-        val searchFriends = timing(s"friends($userId) searchFriends") { searchFriendRepo.getSearchFriends(userId) }
-        val connectionIds = timing(s"friends($userId) connectionIds") { userConnectionRepo.getConnectedUsers(userId) }
-        val unfriendedIds = timing(s"friends($userId) unfriendedIds") { userConnectionRepo.getUnfriendedUsers(userId) }
-        timing(s"friends($userId) post-processing++") {
-          (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true)).map{ case (userId, unfriended) =>
-            (basicUserRepo.load(userId), searchFriends.contains(userId), unfriended, if (connCount) userConnectionRepo.getConnectionCount(userId) else -1)
-          }
-        }
-      }
+  def getFriendsDetails(userId:Id[User]):Future[Seq[(BasicUser, Boolean, Boolean)]] = {
+    val (searchFriends, connectionIds, unfriendedIds) = db.readOnly { implicit s =>
+      (searchFriendRepo.getSearchFriends(userId),
+        userConnectionRepo.getConnectedUsers(userId),
+        userConnectionRepo.getUnfriendedUsers(userId))
+    }
+    implicit val fj = ExecutionContext.fj
+    val connectedF = SafeFuture {
+      db.readOnly { implicit ro => basicUserRepo.loadAll(connectionIds).toSeq.map { case (userId, basicUser) => (basicUser, searchFriends.contains(userId), false) } }
+    }
+    val unfriendedF = SafeFuture {
+      db.readOnly { implicit ro => basicUserRepo.loadAll(unfriendedIds).toSeq.map { case (userId, basicUser) => (basicUser, searchFriends.contains(userId), true) } }
+    }
+    for {
+      connected <- connectedF
+      unfriended <- unfriendedF
+    } yield {
+      connected ++ unfriended
     }
   }
 
