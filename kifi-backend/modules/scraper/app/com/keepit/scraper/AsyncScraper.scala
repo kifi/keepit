@@ -24,6 +24,8 @@ import akka.util.Timeout
 import akka.actor._
 import akka.pattern.ask
 import play.api.Play.current
+import com.keepit.learning.porndetector.PornDetectorFactory
+import com.keepit.learning.porndetector.SlidingWindowPornDetector
 
 trait AsyncScrapeProcessor extends ScrapeProcessor
 
@@ -128,6 +130,7 @@ class AsyncScraper @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
+  pornDetectorFactory: PornDetectorFactory,
   helper: ShoeboxDbCallbackHelper
 ) extends Logging {
 
@@ -331,6 +334,12 @@ class AsyncScraper @Inject() (
                 case None => LangDetector.detect(content)
               }
               val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
+
+              val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+              if (detector.isPorn(title + " " + content + " " + description)){
+                helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = Some(Restriction.ADULT)))
+              }
+
               val article: Article = Article(
                 id = normalizedUri.id.get,
                 title = title,

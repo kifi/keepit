@@ -25,6 +25,7 @@ import com.keepit.common.plugin.SchedulingProperties
 import java.util.concurrent.{Callable, TimeUnit, Executors, ConcurrentLinkedQueue, ExecutorCompletionService, Executor, ExecutorService}
 import scala.concurrent.forkjoin.{ForkJoinTask, ForkJoinPool}
 import scala.concurrent.{ExecutionContext}
+import com.keepit.learning.porndetector.PornDetectorFactory
 
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
@@ -89,6 +90,7 @@ class QueuedScrapeProcessor @Inject() (
   serviceDiscovery: ServiceDiscovery,
   asyncHelper: ShoeboxDbCallbacks,
   schedulingProperties: SchedulingProperties,
+  pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else config.queueConfig.terminateThreshold
@@ -205,7 +207,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, helper)
+  private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, pornDetectorFactory, helper)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
