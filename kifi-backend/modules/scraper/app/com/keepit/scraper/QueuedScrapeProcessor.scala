@@ -230,9 +230,11 @@ class QueuedScrapeProcessor @Inject() (
     }
     val jf = fjPool.submit(callable)
     SafeFuture {
-      jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
-        case Success(t) => t
-        case Failure(e) => (uri, None)
+      timing(s"scrapeArticle(${uri.id},${info.id},${proxyOpt}") {
+        jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
+          case Success(t) => t
+          case Failure(e) => (uri, None)
+        }
       }
     }
   }
