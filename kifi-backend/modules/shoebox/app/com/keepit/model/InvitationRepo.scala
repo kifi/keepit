@@ -32,13 +32,13 @@ class InvitationRepoImpl @Inject() (
                                      val socialUserInfoRepo: SocialUserInfoRepoImpl,
                                      val clock: Clock,
                                      override protected val changeListener: Option[RepoModification.Listener[Invitation]])
-  extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
+  extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] with SeqNumberDbFunction[Invitation] {
 
   import DBSession._
     import db.Driver.simple._
 
   type RepoImpl = InvitationTable
-  case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] {
+  case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] with SeqNumberColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
     def recipientEContactId   = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
