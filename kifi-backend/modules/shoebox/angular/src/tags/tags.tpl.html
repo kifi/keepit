@@ -5,7 +5,7 @@
     <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
   </label>
 </div>
-<span class="kf-tag-list-hidden"></span>
+<div class="kf-tag-list-hidden"></div>
 <ul class="kf-tag-list" antiscroll="{ autoHide: false }">
   <li class="kf-nav-item kf-tag" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew, renaming: isRenaming(tag) }" ng-repeat="tag in shownTags = (tags | filter: filter)">
     <a class="kf-nav-link" ng-href="/tag/{{tag.id}}">
