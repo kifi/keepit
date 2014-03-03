@@ -69,7 +69,7 @@ class ArticleIndexer(
 }
 
 object ArticleIndexer extends Logging {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE, REDIRECTED)
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
 
   class ArticleIndexable(

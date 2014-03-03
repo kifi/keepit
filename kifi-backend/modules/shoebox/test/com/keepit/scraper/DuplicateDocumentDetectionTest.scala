@@ -27,11 +27,11 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val documentSignatures2 = inject[Database].readWrite { implicit s =>
-          val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/1", state = NormalizedURIStates.SCRAPE_WANTED))
-          val nuri2 = uriRepo.save(NormalizedURI.withHash("http://google.com/2", state = NormalizedURIStates.SCRAPE_WANTED))
-          val nuri3 = uriRepo.save(NormalizedURI.withHash("http://google.com/3", state = NormalizedURIStates.SCRAPE_WANTED))
-          val nuri4 = uriRepo.save(NormalizedURI.withHash("http://google.com/4", state = NormalizedURIStates.SCRAPE_WANTED))
-          val nuri5 = uriRepo.save(NormalizedURI.withHash("http://google.com/5", state = NormalizedURIStates.SCRAPE_WANTED))
+          val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/1"))
+          val nuri2 = uriRepo.save(NormalizedURI.withHash("http://google.com/2"))
+          val nuri3 = uriRepo.save(NormalizedURI.withHash("http://google.com/3"))
+          val nuri4 = uriRepo.save(NormalizedURI.withHash("http://google.com/4"))
+          val nuri5 = uriRepo.save(NormalizedURI.withHash("http://google.com/5"))
 
           scrapeRepo.save(ScrapeInfo(uriId = nuri1.id.get))
           scrapeRepo.save(ScrapeInfo(uriId = nuri2.id.get))
