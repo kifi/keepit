@@ -9,7 +9,7 @@ import play.api.libs.functional.syntax._
 
 
 sealed trait NormalizationCandidate {
-  val candidateType:String
+  val candidateType: String
   val url: String
   val normalization: Normalization
   def isTrusted: Boolean
