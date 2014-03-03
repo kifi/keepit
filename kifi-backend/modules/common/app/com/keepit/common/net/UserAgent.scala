@@ -29,10 +29,13 @@ object UserAgent extends Logging {
   lazy val iPhonePattern = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
 
   def fromString(userAgent: String): UserAgent = {
-    def normalize(str: String) = if (str == "unknown") "" else str
+
+    def normalize(str: String): String = if (str == "unknown") "" else str
+    def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
+
     val agent: SFUserAgent = parser.parse(userAgent)
     UserAgent(trim(userAgent),
-      normalize(agent.getName),
+      normalizeChrome(normalize(agent.getName)),
       normalize(agent.getOperatingSystem.getFamilyName),
       normalize(agent.getOperatingSystem.getName),
       normalize(agent.getTypeName),
