@@ -216,7 +216,10 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   private def iteratee(streamSession: StreamSession, versionOpt: Option[String], socketInfo: SocketInfo, channel: Concurrent.Channel[JsArray]) = {
     val handlers = websocketHandlers(socketInfo)
-    val agentFamily = UserAgent.fromString(streamSession.userAgent).name
+    val agentFamily = UserAgent.fromString(streamSession.userAgent).name match {
+      case maybeEmpty if maybeEmpty == null || maybeEmpty.isEmpty => "unknown"
+      case other => other
+    }
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
