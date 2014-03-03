@@ -18,13 +18,12 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.net.HttpClient
 import com.keepit.common.plugin.SchedulingProperties
-import java.util.concurrent.{Callable, TimeUnit, Executors, ConcurrentLinkedQueue, ExecutorCompletionService, Executor, ExecutorService}
+import java.util.concurrent.{Callable, TimeUnit, Executors, ConcurrentLinkedQueue}
 import scala.concurrent.forkjoin.{ForkJoinTask, ForkJoinPool}
-import scala.concurrent.{ExecutionContext}
+import com.keepit.common.akka.SafeFuture
 
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
@@ -93,8 +92,9 @@ class QueuedScrapeProcessor @Inject() (
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
-  val pSize = Runtime.getRuntime.availableProcessors * 64
-  val fjPool = new ForkJoinPool(pSize) // some niceties afforded by this class, but could ditch it if need be
+  val pSize = Runtime.getRuntime.availableProcessors * 128
+  val fjPool = new ForkJoinPool(pSize)
+  implicit val fjCtx = scala.concurrent.ExecutionContext.fromExecutor(fjPool) // consider merge with ExecutionContext.fj
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
 
   log.info(s"[QScraper.ctr] nrInstances=$pSize, pool=$fjPool")
@@ -128,9 +128,9 @@ class QueuedScrapeProcessor @Inject() (
   override def pull():Unit = {
     log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${PULL_THRESHOLD}")
     if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
-      serviceDiscovery.thisInstance map { inst =>
+      serviceDiscovery.thisInstance.map{ inst =>
         if (inst.isHealthy) {
-          asyncHelper.assignTasks(inst.id.id, PULL_MAX) onComplete { trRequests =>
+          asyncHelper.assignTasks(inst.id.id, PULL_MAX).onComplete{ trRequests =>
             trRequests match {
               case Failure(t) =>
                 log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
@@ -222,14 +222,22 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
-    log.info(s"[ScrapeArticle] message received; url=${uri.url}")
-    val ts = System.currentTimeMillis
-    val res = worker.safeProcessURI(uri, info, proxyOpt)
-    log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
-    Future.successful(res)
+    val callable = new TracedCallable[(NormalizedURI, Option[Article])] {
+      def doWork: (NormalizedURI, Option[Article]) = {
+        worker.safeProcessURI(uri, info, proxyOpt)
+      }
+      def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE_ARTICLE, None, None, None, None)
+    }
+    val jf = fjPool.submit(callable)
+    SafeFuture {
+      timing(s"scrapeArticle(${uri.id},${info.id},${proxyOpt}") {
+        jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
+          case Success(t) => t
+          case Failure(e) => (uri, None)
+        }
+      }
+    }
   }
-
-  val compSvc = new ExecutorCompletionService[Try[Option[BasicArticle]]](fjPool)
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     val extractor = extractorProviderTypeOpt match {
@@ -248,12 +256,14 @@ class QueuedScrapeProcessor @Inject() (
       }
       override def getTaskDetails(name:String) = ScraperTaskDetails(name, url, submitDateTime, callDateTime, ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map {_.name})
     }
-    compSvc.submit(callable)
-    val res = compSvc.take().get() match {
-      case Success(articleOpt) => articleOpt
-      case Failure(t) =>
-        None
+    val jf = fjPool.submit(callable)
+    SafeFuture{
+      timing(s"fetchBasicArticle($url)]") {
+        jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
+          case Success(articleOpt) => articleOpt
+          case Failure(t) => None
+        }
+      }
     }
-    Future.successful(res)
   }
 }
