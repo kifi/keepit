@@ -21,5 +21,21 @@ angular.module('dom', [])
     else if (elemTop < viewTop) {
       view.scrollTop = elemTop - (padding || 0);
     }
+  },
+
+  absOffsets: function (el) {
+    var x = 0,
+      y = 0;
+
+    while (el) {
+      x += el.offsetLeft;
+      y += el.offsetTop;
+      el = el.offsetParent;
+    }
+
+    return {
+      x: x,
+      y: y
+    };
   }
 });

@@ -40,8 +40,8 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 ])
 
 .directive('kfTags', [
-  '$timeout', '$location', 'util', 'dom', 'tagService', 'profileService',
-  function ($timeout, $location, util, dom, tagService, profileService) {
+  '$timeout', '$window', '$location', 'util', 'dom', 'tagService', 'profileService',
+  function ($timeout, $window, $location, util, dom, tagService, profileService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,
@@ -320,9 +320,12 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
         scope.$watch(function () {
           return profileService.me.seqNum;
-        }, function () {
+        }, positionTagsList);
+
+        angular.element($window).resize(_.throttle(function () {
           positionTagsList();
-        });
+          scope.refreshScroll();
+        }, 150));
 
         scope.$watch('filter.name', function () {
           $timeout(scope.refreshHighlight);
