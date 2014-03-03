@@ -10,8 +10,9 @@ case class SocialConnection(
   updatedAt: DateTime = currentDateTime,
   socialUser1: Id[SocialUserInfo],
   socialUser2: Id[SocialUserInfo],
-  state: State[SocialConnection] = SocialConnectionStates.ACTIVE
-) extends ModelWithState[SocialConnection] {
+  state: State[SocialConnection] = SocialConnectionStates.ACTIVE,
+  seq: SequenceNumber[SocialConnection] = SequenceNumber.ZERO
+) extends ModelWithState[SocialConnection] with ModelWithSeqNumber[SocialConnection] {
   def withId(id: Id[SocialConnection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SocialConnection]) = copy(state = state)
