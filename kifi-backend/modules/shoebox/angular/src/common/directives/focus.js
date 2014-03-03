@@ -27,6 +27,24 @@ angular.module('kifi.focus', [])
   }
 ])
 
+.directive('kfFocusIf', [
+  function() {
+    return {
+      restrict: 'A',
+      scope: {
+        focusCond: '='
+      },
+      link: function(scope, element) {
+        scope.$watch('focusCond', function(val) {
+          if (val) {
+            element.focus();
+          }
+        });
+      }
+    }
+  }
+])
+
 .directive('withFocus', [
   function () {
     return {

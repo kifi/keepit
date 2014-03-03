@@ -2,17 +2,17 @@ var snapshot = function () {
   'use strict';
   return {
   // Characters that must not be considered part of names/tokens.
-  delim: /[#\.:> ]/,
+  delim: /[#\.:>\t]/,
 
-  // HTML IDs and class names may not contain spaces.
-  // http://www.w3.org/TR/html5/global-attributes.html#the-id-attribute
-  // http://www.w3.org/TR/html5/global-attributes.html#classes
-  // http://www.w3.org/TR/html5/common-microsyntaxes.html#space-character
+  // HTML IDs and class names may not contain any space characters.
+  // www.w3.org/TR/html5/dom.html#the-id-attribute
+  // www.w3.org/TR/html5/dom.html#classes
+  // www.w3.org/TR/html5/infrastructure.html#space-character
   space: /\s/,
 
   // Names in selectors must have all ASCII characters except [_a-zA-Z0-9-] escaped.
   // Non-ASCII characters do not require escaping.
-  // http://www.w3.org/TR/selectors/#lex
+  // www.w3.org/TR/selectors/#lex
   escapeChar: /[\0-,.\/:-@[-^`{-~]/g,
 
   // Escapes a selector name/token.
@@ -28,7 +28,9 @@ var snapshot = function () {
 
   // Uses unicode escapes instead of simple backslash escapes to keep selector parsing simpler.
   escapeReplace: function(ch) {
-    return "\\0000" + ch.charCodeAt(0).toString(16);
+    // terminating space used because any trailing space is greedily assumed to be part of the
+    // escape sequence and we don't want a descendant combinator to be mistaken for part of a sequence
+    return '\\' + ch.charCodeAt(0).toString(16) + ' ';
   },
 
   // Generates a detailed CSS selector for an element including, at a minimum, the tag name,
@@ -72,13 +74,18 @@ var snapshot = function () {
       default: return null;
     }
 
+    // use tab instead of space to terminate unicode escape sequences so that space can always signify
+    // the descendant combinator
+    sel = sel.replace(/ /g, '\t');
+
     // We loosen up the selector slowly because multiple matches is failure.
 
     // 1. Allow a new ancestor to have been inserted in the parent chain.
-    var sel1 = sel.replace(/>/g, " "), ancDelim;
+    //    Note: using \t for descendant combinator and space to terminate unicode escape sequences
+    var sel1 = sel.replace(/>/g, "\t"), ancDelim;
     els = doc.querySelectorAll(sel1);
     switch (els.length) {
-      case 0: sel = sel1; ancDelim = " "; break;
+      case 0: sel = sel1; ancDelim = "\t"; break;
       case 1: return els[0];
       default: ancDelim = ">";
     }

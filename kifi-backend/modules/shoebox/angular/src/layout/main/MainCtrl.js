@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.layout.main', [])
+angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$location', '$timeout',
-  function ($scope, $location, $timeout) {
+  '$scope', '$location', '$timeout', 'undoService',
+  function ($scope, $location, $timeout, undoService) {
     var KEY_ESC = 27;
 
     $scope.search = {};
@@ -31,14 +31,6 @@ angular.module('kifi.layout.main', [])
       $scope.search.text = '';
     };
 
-    $scope.undoAction = {
-      message: 'hi'
-    };
-
-    $scope.undo = function () {
-      $scope.undoAction = null;
-    };
-
     $scope.onChange = _.throttle(function () {
       var text = $scope.search.text || '';
       text = _.str.trim(text);
@@ -55,5 +47,7 @@ angular.module('kifi.layout.main', [])
         $scope.$apply();
       });
     }, 500);
+
+    $scope.undo = undoService;
   }
 ]);

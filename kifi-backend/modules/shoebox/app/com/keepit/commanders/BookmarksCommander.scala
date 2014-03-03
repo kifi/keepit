@@ -87,19 +87,24 @@ class BookmarksCommander @Inject() (
       }
       (keeps, collectionOpt)
     }
-    searchClient.sharingUserInfo(userId, keeps.map(_.uriId)) map { infos =>
-      log.info(s"got sharingUserInfo: $infos")
-      db.readOnly { implicit s =>
-        val idToBasicUser = basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
-        val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
-        (keeps zip infos).map { case (keep, info) =>
-          val collIds =
-            keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
-          val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-          FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
-        }
+    val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+
+    val keepsWithCollIds = db.readOnly { implicit s =>
+      val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      keeps.map{ keep =>
+        val collIds = keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
+        (keep, collIds)
       }
-    } map { keepsInfo =>
+    }
+
+    infosFuture.map { infos =>
+      val idToBasicUser = db.readOnly { implicit s =>
+        basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
+      }
+      val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
+        val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
+      }
       (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
     }
   }

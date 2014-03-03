@@ -31,6 +31,16 @@ class MobileUserController @Inject() (
   typeaheadCommander: TypeaheadCommander)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
+  def getFriendsDetails = JsonAction.authenticatedAsync { request =>
+    userCommander.getFriendsDetails(request.userId).map { res =>
+      val arr = res.map { case (basicUser, searchFriend, unfriended) =>
+        (Json.toJson(basicUser)).asInstanceOf[JsObject] ++ Json.obj(
+          "searchFriend" -> searchFriend,
+          "unfriended" -> unfriended) }
+      Ok(Json.obj("friends" -> arr))
+    }
+  }
+
   def getFriends() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
   }
@@ -141,6 +151,24 @@ class MobileUserController @Inject() (
               .withCookies(authenticator.toCookie)
           }
         )
+    }
+  }
+
+  def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+    userCommander.excludeFriend(request.userId, id) map { changed =>
+      val msg = if (changed) "changed" else "no_change"
+      Ok(Json.obj("code" -> msg))
+    } getOrElse {
+      BadRequest(Json.obj("code" -> "not_friend"))
+    }
+  }
+
+  def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+    userCommander.includeFriend(request.userId, id) map { changed =>
+      val msg = if (changed) "changed" else "no_change"
+      Ok(Json.obj("code" -> msg))
+    } getOrElse {
+      BadRequest(Json.obj("code" -> "not_friend"))
     }
   }
 

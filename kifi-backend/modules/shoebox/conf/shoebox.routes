@@ -109,6 +109,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 # Mobile V1
 ##########################################
 GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
+GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.getFriendsDetails()
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
@@ -121,6 +122,9 @@ GET     /m/1/user/me                        @com.keepit.controllers.mobile.Mobil
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
+
+POST    /m/1/user/:id/include               @com.keepit.controllers.mobile.MobileUserController.includeFriend(id: ExternalId[User])
+POST    /m/1/user/:id/exclude               @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
 
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
@@ -400,7 +404,7 @@ POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
 GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminController.getClassifications(domain: Option[String])
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)

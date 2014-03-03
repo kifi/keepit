@@ -8,9 +8,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.data = {};
 
     // onboarding.js are using this functions
-    $window.getMe = function() {
-      return profileService.me ? $q.when(profileService.me) : profileService.fetchMe();
-    };
+    $window.getMe = profileService.getMe;
 
     $window.exitOnboarding = function () {
       $scope.data.showGettingStarted = false;

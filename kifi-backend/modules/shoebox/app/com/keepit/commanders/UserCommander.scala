@@ -34,6 +34,7 @@ import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.common.concurrent.ExecutionContext
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -87,6 +88,7 @@ class UserCommander @Inject() (
   socialUserRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
   friendRequestRepo: FriendRequestRepo,
+  searchFriendRepo: SearchFriendRepo,
   userCache: SocialUserInfoUserCache,
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialGraphPlugin: SocialGraphPlugin,
@@ -104,6 +106,26 @@ class UserCommander @Inject() (
   heimdalClient: HeimdalServiceClient,
   fortytwoConfig: FortyTwoConfig) extends Logging {
 
+  def getFriendsDetails(userId:Id[User]):Future[Seq[(BasicUser, Boolean, Boolean)]] = {
+    val (searchFriends, connectionIds, unfriendedIds) = db.readOnly { implicit s =>
+      (searchFriendRepo.getSearchFriends(userId),
+        userConnectionRepo.getConnectedUsers(userId),
+        userConnectionRepo.getUnfriendedUsers(userId))
+    }
+    implicit val fj = ExecutionContext.fj
+    val connectedF = SafeFuture {
+      db.readOnly { implicit ro => basicUserRepo.loadAll(connectionIds).toSeq.map { case (userId, basicUser) => (basicUser, searchFriends.contains(userId), false) } }
+    }
+    val unfriendedF = SafeFuture {
+      db.readOnly { implicit ro => basicUserRepo.loadAll(unfriendedIds).toSeq.map { case (userId, basicUser) => (basicUser, searchFriends.contains(userId), true) } }
+    }
+    for {
+      connected <- connectedF
+      unfriended <- unfriendedF
+    } yield {
+      connected ++ unfriended
+    }
+  }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
     val basicUsers = db.readOnly { implicit s =>
@@ -599,6 +621,33 @@ class UserCommander @Inject() (
     }
   }
 
+  def includeFriend(userId:Id[User], id:ExternalId[User]):Option[Boolean] = {
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.includeFriend(userId, friendId)
+        log.info(s"[includeFriend($userId,$id)] friendId=$friendId changed=$changed")
+        searchClient.updateSearchFriendGraph()
+        changed
+      }
+    }
+  }
+
+  def excludeFriend(userId:Id[User], id:ExternalId[User]):Option[Boolean] = {
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.excludeFriend(userId, friendId)
+        log.info(s"[excludeFriend($userId, $id)] friendId=$friendId changed=$changed")
+        searchClient.updateSearchFriendGraph()
+        changed
+      }
+    }
+  }
 
   def delay(f: => Unit) = {
     import scala.concurrent.duration._

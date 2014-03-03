@@ -13,7 +13,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
 function lookMouseDown(e) {
   if (e.which != 1) return;
   e.preventDefault();
-  var el = snapshot.fuzzyFind(this.href.substr(11));
+  var el = snapshot.fuzzyFind(unescape(this.href).substr(11));  // spaces need unescaping in Firefox
   if (el) {
     // make absolute positioning relative to document instead of viewport
     document.documentElement.style.position = "relative";

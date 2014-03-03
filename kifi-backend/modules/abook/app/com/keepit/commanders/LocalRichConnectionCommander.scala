@@ -115,6 +115,7 @@ class LocalRichConnectionCommander @Inject() (
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.block(userId, friendId) }
         }
+        case _ => //ZZZ Deal with new message types
       }
       Future.successful(())
     } catch {
