@@ -17,7 +17,7 @@ trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddre
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) // returns (isValidVerificationCode, isFirstTimeUsed)
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[EmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
 }
 
@@ -74,14 +74,13 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
     (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
 
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Boolean, Boolean) = {
-    // returns (isValidVerificationCode, isFirstTimeUsed)
-    val now = clock.now()
-    val updateCount = rows.filter(e => e.userId === userId && e.verificationCode === verificationCode && e.state === EmailAddressStates.UNVERIFIED)
-      .map(e => (e.verifiedAt, e.updatedAt, e.state)).update((now, now, EmailAddressStates.VERIFIED))
-
-    if (updateCount > 0) (true, true)
-    else (getByUserAndCode(userId, verificationCode).isDefined, false)
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[EmailAddress], Boolean) = {
+    // returns (verifiedEmailOption, isFirstTimeUsed)
+    getByUserAndCode(userId, verificationCode) match {
+      case Some(verifiedAddress) if verifiedAddress.state == EmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
+      case Some(unverifiedAddress) if unverifiedAddress.state == EmailAddressStates.UNVERIFIED => (Some(save(unverifiedAddress.withState(EmailAddressStates.VERIFIED))), true)
+      case None => (None, false)
+    }
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {

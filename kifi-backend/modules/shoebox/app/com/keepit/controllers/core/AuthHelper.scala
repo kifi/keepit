@@ -340,17 +340,17 @@ class AuthHelper @Inject() (
   def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): SimpleResult = {
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
-        val user = userRepo.get(address.userId)
-        val (isVerified, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
         lazy val isPendingPrimaryEmail = {
           val pendingEmail = userValueRepo.getValueStringOpt(address.userId, "pending_primary_email")
           pendingEmail.isDefined && address.address == pendingEmail.get
         }
+        val user = userRepo.get(address.userId)
+        val (verifiedEmailOpt, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
+        verifiedEmailOpt.collect { case verifiedEmail if isVerifiedForTheFirstTime && (user.primaryEmailId.isEmpty || isPendingPrimaryEmail) =>
+          userCommander.updateUserPrimaryEmail(verifiedEmail)
+        }
 
-        val shouldUpdatePrimaryEmail = isVerifiedForTheFirstTime && (user.primaryEmailId.isEmpty || isPendingPrimaryEmail)
-        if (shouldUpdatePrimaryEmail) userCommander.updateUserPrimaryEmail(address)
-
-        (isVerified, isVerifiedForTheFirstTime) match {
+        (verifiedEmailOpt.isDefined, isVerifiedForTheFirstTime) match {
           case (true, _) if user.state == UserStates.PENDING =>
             Redirect(s"/?m=3&email=${address.address}")
           case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>

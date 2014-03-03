@@ -79,7 +79,7 @@ object MessagesForThread {
 }
 
 case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
-  override val version = 2
+  override val version = 3
   val namespace = "messages_for_thread_id"
   def toKey():String = threadId.id.toString
 }
