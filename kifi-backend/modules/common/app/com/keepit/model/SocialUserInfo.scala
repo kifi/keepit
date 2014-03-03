@@ -133,7 +133,7 @@ class SocialUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlu
   extends JsonCacheImpl[SocialUserKey, Seq[SocialUser]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
-  override val version = 4
+  override val version = 5
   val namespace = "social_user_info_by_network_and_id"
   def toKey(): String = networkType.name.toString + "_" + id.id
 }
