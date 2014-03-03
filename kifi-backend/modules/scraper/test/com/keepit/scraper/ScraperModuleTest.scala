@@ -18,10 +18,12 @@ import scala.reflect.ManifestFactory.classType
 import com.keepit.test.{DeprecatedTestRemoteGlobal, DeprecatedTestApplication}
 import java.io.File
 import com.keepit.common.controller.{ScraperServiceController, ShoeboxServiceController, ServiceController}
+import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
 
 case class ScraperTestModule() extends ScraperServiceModule (
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperTestStoreModule(),
+  fjMonitorModule = DevForkJoinContextMonitorModule(),
   scrapeProcessorModule = ProdScraperProcessorModule()
 ) with CommonDevModule { }
 
