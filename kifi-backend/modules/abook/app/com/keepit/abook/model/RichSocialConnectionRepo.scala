@@ -135,7 +135,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def incrementCommonKifiFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
-    val kifiFriendsIdSet = sql"SELECT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND friend_user_id IS NOT NULL AND state='ACTIVE'".as[Long].list().toSet
+    val kifiFriendsIdSet = sql"SELECT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND friend_user_id IS NOT NULL AND state='active'".as[Long].list().toSet
     if (kifiFriendsIdSet.isEmpty) {
       0
     } else {
@@ -156,7 +156,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def decrementCommonKifiFriendsCounts(userId: Id[User], friendId: Id[SocialUserInfo])(implicit session: RWSession): Int = {
-    val kifiFriendsIdSet = sql"SELECT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND friend_user_id IS NOT NULL AND state='ACTIVE'".as[Long].list().toSet
+    val kifiFriendsIdSet = sql"SELECT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND friend_user_id IS NOT NULL AND state='active'".as[Long].list().toSet
     if (kifiFriendsIdSet.isEmpty) {
       0
     } else {
@@ -179,7 +179,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def recordDirectedKifiConnection(userId: Id[User], kifiFriend: Id[User])(implicit session: RWSession): Unit = {
-    val socialFriendIdSet = sql"SELECT friend_social_id FROM rich_social_connection WHERE user_id = $kifiFriend AND friend_social_id IS NOT NULL AND state='ACTIVE'".as[Long].list().toSet
+    val socialFriendIdSet = sql"SELECT friend_social_id FROM rich_social_connection WHERE user_id = $kifiFriend AND friend_social_id IS NOT NULL AND state='active'".as[Long].list().toSet
     if (!socialFriendIdSet.isEmpty) {
       sqlu"""
         UPDATE rich_social_connection
@@ -189,7 +189,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
 
 
-    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='ACTIVE'".as[String].list().toSet.map{s : String => "'" + s + "'" }
+    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='active'".as[String].list().toSet.map{s : String => "'" + s + "'" }
     if (!emailFriendSet.isEmpty) {
       val q = sqlu"""
         UPDATE rich_social_connection
@@ -201,7 +201,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def removeDirectedKifiConnection(userId: Id[User], kifiFriend: Id[User])(implicit session: RWSession): Unit = {
-    val socialFriendIdSet = sql"SELECT friend_social_id FROM rich_social_connection WHERE user_id = $kifiFriend AND friend_social_id IS NOT NULL AND state='ACTIVE'".as[Long].list().toSet
+    val socialFriendIdSet = sql"SELECT friend_social_id FROM rich_social_connection WHERE user_id = $kifiFriend AND friend_social_id IS NOT NULL AND state='active'".as[Long].list().toSet
     if (!socialFriendIdSet.isEmpty) {
       sqlu"""
         UPDATE rich_social_connection
@@ -211,7 +211,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
 
 
-    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='ACTIVE'".as[String].list().toSet.map{s : String => "'" + s + "'" }
+    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='active'".as[String].list().toSet.map{s : String => "'" + s + "'" }
     if (!emailFriendSet.isEmpty) {
       val q = sqlu"""
         UPDATE rich_social_connection
