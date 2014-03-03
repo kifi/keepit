@@ -4,13 +4,13 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{WebsiteController, ScraperServiceController, ActionAuthenticator}
 import com.keepit.model._
 import play.api.mvc.Action
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import com.keepit.scraper.extractor.ExtractorProviderTypes
 import com.keepit.common.logging.Logging
 import com.keepit.model.ScrapeInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
+import com.keepit.common.concurrent.ExecutionContext
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -20,12 +20,12 @@ class ScraperController @Inject() (
 
   def getBasicArticle() = Action.async(parse.json) { request =>
     log.info(s"getBasicArticle body=${request.body}")
-    processBasicArticleRequest(request.body).map { articleOption =>
+    processBasicArticleRequest(request.body).map{ articleOption =>
       val json = Json.toJson(articleOption)
       val url = (request.body \ "url").as[String]
       log.info(s"[getBasicArticle($url})] result: $json")
       Ok(json)
-    }
+    }(ExecutionContext.fj)
   }
 
   def getSignature() = Action.async(parse.json) { request =>
@@ -36,7 +36,7 @@ class ScraperController @Inject() (
       val url = (request.body \ "url").as[String]
       log.info(s"[getSignature($url)] result: ${json}")
       Ok(json)
-    }
+    }(ExecutionContext.fj)
   }
 
   private def processBasicArticleRequest(parameters: JsValue): Future[Option[BasicArticle]] = {
@@ -57,7 +57,7 @@ class ScraperController @Inject() (
       val res = ScrapeTuple(t._1, t._2)
       log.info(s"[asyncScrapeWithInfo(${uri.url})] result=${t._1}")
       Ok(Json.toJson(res))
-    }
+    }(ExecutionContext.fj)
   }
 
   def asyncScrapeWithRequest() = Action.async(parse.json) { request =>
@@ -68,7 +68,7 @@ class ScraperController @Inject() (
       val res = ScrapeTuple(t._1, t._2)
       log.info(s"[asyncScrapeWithInfo(${scrapeRequest.uri.url})] result=${t._1}")
       Ok(Json.toJson(res))
-    }
+    }(ExecutionContext.fj)
   }
 
   // todo: removeme
