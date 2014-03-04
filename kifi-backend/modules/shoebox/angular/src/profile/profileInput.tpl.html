@@ -1,0 +1,7 @@
+<div class="profile-input-box">
+  <div kf-validated-input is-invalid="isInvalid" header="errorHeader" body="errorBody">
+    <div ng-include="templateUrl"></div>
+  </div>
+  <a class="profile-input-edit" href="javascript:" ng-if="!enabled" ng-click="enableEditing()">Edit</a>
+  <a class="profile-input-save" href="javascript:" ng-click="saveInput()">Save</a>
+</div>
