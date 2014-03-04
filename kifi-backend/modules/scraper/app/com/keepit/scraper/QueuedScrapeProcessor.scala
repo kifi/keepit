@@ -18,13 +18,12 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.plugin.SchedulingProperties
-import java.util.concurrent.{Callable, TimeUnit, Executors, ConcurrentLinkedQueue}
+import java.util.concurrent._
 import scala.concurrent.forkjoin.{ForkJoinTask, ForkJoinPool}
 import com.keepit.learning.porndetector.PornDetectorFactory
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
 
@@ -38,6 +37,9 @@ abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) e
   val killCount = new AtomicInteger
 
   val trRef = new AtomicReference[Try[T]]
+
+  val promise:Promise[T] = Promise[T]()
+  def future:Future[T] = promise.future
 
   lazy val submitDateTime = new DateTime(submitTS)
   def callDateTime = new DateTime(callTS.get)
@@ -55,6 +57,10 @@ abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) e
     try {
       val r = Try(doWork)
       trRef.set(r)
+      r match {
+        case Success(res) => promise.success(res)
+        case Failure(t) => promise.failure(t)
+      }
       r
     } finally {
       threadRef.set(null)
@@ -229,15 +235,8 @@ class QueuedScrapeProcessor @Inject() (
       }
       def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE_ARTICLE, None, None, None, None)
     }
-    val jf = fjPool.submit(callable)
-    SafeFuture {
-      timing(s"scrapeArticle(${uri.id},${info.id},${proxyOpt}") {
-        jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
-          case Success(t) => t
-          case Failure(e) => (uri, None)
-        }
-      }
-    }(ExecutionContext.fj)
+    fjPool.submit(callable)
+    callable.future
   }
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
@@ -257,14 +256,7 @@ class QueuedScrapeProcessor @Inject() (
       }
       override def getTaskDetails(name:String) = ScraperTaskDetails(name, url, submitDateTime, callDateTime, ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map {_.name})
     }
-    val jf = fjPool.submit(callable)
-    SafeFuture{
-      timing(s"fetchBasicArticle($url)]") {
-        jf.get(LONG_RUNNING_THRESHOLD, TimeUnit.MILLISECONDS) match {
-          case Success(articleOpt) => articleOpt
-          case Failure(t) => None
-        }
-      }
-    }(ExecutionContext.fj)
+    fjPool.submit(callable)
+    callable.future
   }
 }
