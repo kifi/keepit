@@ -71,7 +71,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
     scheduledFlush = None
     val thisBatchId = batchId.incrementAndGet
     log.info(s"Processing ${events.size} events: $events")
-    events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed ($i/${events.size} in batch #$thisBatchId)") }
+    events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed (${i+1}/${events.size} in batch #$thisBatchId)") }
     processBatch(events)
     events = Vector.empty
   }
@@ -80,7 +80,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
     val timeSinceEventStarted = clock.getMillis - getEventTime(event).getMillis
     if (timeSinceEventStarted > timeout.toMillis) {
       val msg = s"Event started ${timeSinceEventStarted}ms ago but was $action only now (timeout: ${timeout}ms): $event"
-      log.error(msg, new Exception(msg))
+      //log.error(msg, new Exception(msg))
       //airbrakeNotifier.notify(msg)
     }
   }
