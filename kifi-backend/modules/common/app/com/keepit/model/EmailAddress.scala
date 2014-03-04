@@ -20,7 +20,7 @@ case class EmailAddress (
   lastVerificationSent: Option[DateTime] = None,
   verificationCode: Option[String] = None,
   seq: SequenceNumber[EmailAddress] = SequenceNumber.ZERO
-) extends ModelWithState[EmailAddress] with EmailAddressHolder {
+) extends ModelWithState[EmailAddress] with EmailAddressHolder with ModelWithSeqNumber[EmailAddress] {
   def withId(id: Id[EmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def sameAddress(otherAddress: String) = otherAddress == address
