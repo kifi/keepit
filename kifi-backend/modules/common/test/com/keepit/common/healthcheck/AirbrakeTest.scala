@@ -90,7 +90,7 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
         (xml \ "error" \ "class").head === <class>java.lang.IllegalArgumentException</class>
         (xml \ "error" \ "message").head === <message>[0L] java.lang.IllegalArgumentException: hi there</message>
-        (xml \ "error" \ "backtrace" \ "line").size === 62
+        (xml \ "error" \ "backtrace" \ "line").size === 63
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
         (xml \ "request" \ "action").head === <action>POST</action>
@@ -165,7 +165,7 @@ class AirbrakeTest extends Specification with TestInjector {
             val lines = (xml \\ "line").toVector
             lines.head === <line method="java.lang.IllegalArgumentException: me iae" file="InjectorProvider.scala" number="39"/>
             lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
-            lines.size === 125
+            lines.size === 127
         }
       }
     }
