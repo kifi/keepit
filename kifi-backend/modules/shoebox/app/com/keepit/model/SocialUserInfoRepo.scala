@@ -12,7 +12,7 @@ import scala.reflect.ClassTag
 
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
-trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] {
+trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]

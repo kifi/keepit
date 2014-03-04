@@ -1,25 +1,13 @@
 package com.keepit.commanders
 
 import com.keepit.abook.ABookServiceClient
-import com.keepit.common.queue.{
-  RichConnectionUpdateMessage,
-  CreateRichConnection,
-  RecordKifiConnection,
-  RecordInvitation,
-  RecordFriendUserId
-}
+import com.keepit.common.queue._
 import com.keepit.common.db.slick.{
   RepoModification,
   RepoEntryAdded,
   RepoEntryUpdated
 }
-import com.keepit.model.{
-  SocialConnection,
-  UserConnection,
-  Invitation,
-  SocialUserInfo,
-  SocialUserInfoRepo
-}
+import com.keepit.model._
 import com.keepit.common.db.slick.Database
 
 import com.kifi.franz.FormattedSQSQueue
@@ -29,80 +17,114 @@ import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration}
 import scala.concurrent.duration._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.reflect.ClassTag
-import com.keepit.common.db.Model
+import com.keepit.common.db.{SequenceNumber, Model}
 import akka.actor.Scheduler
 import com.keepit.common.time.Clock
+import com.keepit.model.SocialConnection
+import com.keepit.social.SocialNetworks
 
 @Singleton
 class ShoeboxRichConnectionCommander @Inject() (
     abook: ABookServiceClient,
     queue: FormattedSQSQueue[RichConnectionUpdateMessage],
+    socialConnectionRepo: Provider[SocialConnectionRepo],
+    userConnectionRepo: Provider[UserConnectionRepo],
+    invitationRepo: Provider[InvitationRepo],
     socialUserInfoRepo: Provider[SocialUserInfoRepo],
+    systemValueRepo: SystemValueRepo,
     db: Database
   ) extends RemoteRichConnectionCommander(abook, queue) {
 
+  private val sqsSocialConnectionSeq = Name[SequenceNumber[SocialConnection]]("sqs_social_connection")
+  private val sqsUserConnectionSeq = Name[SequenceNumber[UserConnection]]("sqs_user_connection")
+  private val sqsSocialUserInfoSeq = Name[SequenceNumber[SocialUserInfo]]("sqs_social_user_info")
+  private val sqsInvitationSeq = Name[SequenceNumber[Invitation]]("sqs_invitation")
+  private val sqsBatchSize = 500
+
   def sendSocialConnections(): Unit = { // @todo(Léo) to be implemented
+    val (updateRichConnections, highestSeq) = db.readOnly() { implicit session =>
+      val currentSeq = systemValueRepo.getSequenceNumber[SocialConnection](sqsSocialConnectionSeq) getOrElse SequenceNumber.ZERO
+      val socialConnections = socialConnectionRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+      val updateRichConnections = socialConnections.flatMap { case socialConnection =>
+        val sUser1 = socialUserInfoRepo.get.get(socialConnection.socialUser1)
+        val sUser2 = socialUserInfoRepo.get.get(socialConnection.socialUser2)
+        socialConnection.state match {
+          case SocialConnectionStates.ACTIVE => Seq(
+            sUser1.userId.map(InternRichConnection(_, sUser1.id.get, sUser2)),
+            sUser2.userId.map(InternRichConnection(_, sUser2.id.get, sUser1))
+          ).flatten
+          case SocialConnectionStates.INACTIVE => Seq(
+            sUser1.userId.map(RemoveRichConnection(_, sUser1.id.get, sUser2.id.get)),
+            sUser2.userId.map(RemoveRichConnection(_, sUser2.id.get, sUser1.id.get))
+          ).flatten
+        }
+      }
+      val highestSeq = socialConnections.map(_.seq).max
+      (updateRichConnections, highestSeq)
+    }
+
+    updateRichConnections.foreach(processUpdate)
+
+    db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(sqsSocialConnectionSeq, highestSeq)
+    }
   }
+
   def sendUserConnections(): Unit= { // @todo(Léo) to be implemented
+    val userConnections = db.readOnly() { implicit session =>
+      val currentSeq = systemValueRepo.getSequenceNumber[UserConnection](sqsUserConnectionSeq) getOrElse SequenceNumber.ZERO
+      userConnectionRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+    }
+
+    userConnections.foreach { userConnection =>
+      val updateKifiConnection = userConnection.state match {
+        case UserConnectionStates.ACTIVE => RecordKifiConnection(userConnection.user1, userConnection.user2)
+        case UserConnectionStates.INACTIVE => RemoveKifiConnection(userConnection.user1, userConnection.user2)
+      }
+      processUpdate(updateKifiConnection)
+    }
+
+    db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(sqsUserConnectionSeq, userConnections.map(_.seq).max)
+    }
   }
+
   def sendSocialUsers(): Unit = { // @todo(Léo) to be implemented
+    val socialUserInfos = db.readOnly() { implicit session =>
+      val currentSeq = systemValueRepo.getSequenceNumber[SocialUserInfo](sqsSocialUserInfoSeq) getOrElse SequenceNumber.ZERO
+      socialUserInfoRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+    }
+
+    socialUserInfos.foreach { socialUserInfo => socialUserInfo.state match {
+      case SocialUserInfoStates.INACTIVE => ???
+      case _ => socialUserInfo.userId.foreach { friendUserId => processUpdate(RecordFriendUserId(socialUserInfo.networkType, socialUserInfo.id, None, friendUserId)) }
+    }}
+
+    db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(sqsSocialUserInfoSeq, socialUserInfos.map(_.seq).max)
+    }
   }
   def sendInvitations(): Unit = { // @todo(Léo) to be implemented
-  }
+    val (recordInvitations, highestSeq) = db.readOnly() { implicit session =>
+      val currentSeq = systemValueRepo.getSequenceNumber[Invitation](sqsInvitationSeq) getOrElse SequenceNumber.ZERO
+      val invitations = invitationRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+      val recordInvitations = invitations.flatMap { invitation => invitation.state match {
+        case InvitationStates.INACTIVE => None
+        case _ => invitation.senderUserId.map { case userId =>
+          val networkType = invitation.recipientSocialUserId.map(socialUserInfoRepo.get.get(_).networkType) getOrElse SocialNetworks.EMAIL
+          RecordInvitation(userId, invitation.id.get, networkType, invitation.recipientSocialUserId, invitation.recipientEContactId)
+        }
+      }}
+      val highestSeq = invitations.map(_.seq).max
+      (recordInvitations, highestSeq)
+    }
 
-  def processSocialConnectionChange(change: RepoModification[SocialConnection]): Unit = {
-    change match {
-      case RepoEntryAdded(socialConnection) => {
-        val (sUser1, sUser2) = db.readOnly { implicit session =>
-          (socialUserInfoRepo.get.get(socialConnection.socialUser1), socialUserInfoRepo.get.get(socialConnection.socialUser2))
-        }
-        sUser1.userId.map { userId =>
-          processUpdate(CreateRichConnection(userId, sUser1.id.get, sUser2))
-        }
-        sUser2.userId.map { userId =>
-          processUpdate(CreateRichConnection(userId, sUser2.id.get, sUser1))
-        }
-      }
-      case _ =>
+    recordInvitations.foreach(processUpdate)
+
+    db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(sqsInvitationSeq, highestSeq)
     }
   }
-
-  def processUserConnectionChange(change: RepoModification[UserConnection]): Unit = {
-    change match {
-      case RepoEntryAdded(userConnection) => {
-        processUpdate(RecordKifiConnection(userConnection.user1, userConnection.user2))
-      }
-      case _ =>
-    }
-  }
-
-  def processInvitationChange(change: RepoModification[Invitation]): Unit = { //ZZZ incomplete. Need to deal with networkType (unused on the other end right now) and email invites
-    change match {
-      case RepoEntryAdded(invitation) => {
-        invitation.senderUserId.map { userId =>
-          processUpdateImmediate(RecordInvitation(userId, invitation.id.get, "thisisthenetworktype", invitation.recipientSocialUserId, None))
-        }
-      }
-      case _ =>
-    }
-  }
-
-  def processSocialUserChange(change: RepoModification[SocialUserInfo]): Unit = { //ZZZ incomplete. Need to deal with networkType (unused on the other end right now) and email
-    change match {
-      case RepoEntryAdded(socialUserInfo) => {
-        socialUserInfo.userId.map{ userId =>
-          processUpdate(RecordFriendUserId("thisisthenetworktype", socialUserInfo.id, None, userId))
-        }
-      }
-      case RepoEntryUpdated(socialUserInfo) => {
-        socialUserInfo.userId.map{ userId =>
-          processUpdate(RecordFriendUserId("thisisthenetworktype", socialUserInfo.id, None, userId))
-        }
-      }
-      case _ =>
-    }
-  }
-
 }
 
 case class DefaultRepoModificationBatchingConfiguration[A <: RepoModificationActor[_]]() extends BatchingActorConfiguration[A] {
