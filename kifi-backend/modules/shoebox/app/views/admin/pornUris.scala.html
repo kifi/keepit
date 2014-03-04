@@ -59,7 +59,9 @@
       <th>Title</th>
       <th>Restriction</th>
       <th>State</th>
-  </table>
+
+    </tr>
+
 
   @for( (uri, i) <- uris.zipWithIndex ){
     <tr>
@@ -70,5 +72,7 @@
       <td>@{uri.state}</td>
     </tr>
   }
+
+  </table>
 
 }
