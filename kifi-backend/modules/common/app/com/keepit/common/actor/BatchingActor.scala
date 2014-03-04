@@ -52,7 +52,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
         events.size match {
           case s if s >= batchingConf.MaxBatchSize =>
             flush() //flushing without taking in account events in the mailbox
-          case s if s >= batchingConf.LowWatermarkBatchSize && !flushIsPending.getAndSet(true) =>
+          case s if s >= batchingConf.LowWatermarkBatchSize =>
             flushPlease() //flush with the events in the actor mailbox
           case _ =>
             //ignore
