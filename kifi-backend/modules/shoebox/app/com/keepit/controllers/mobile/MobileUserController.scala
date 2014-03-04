@@ -91,17 +91,17 @@ class MobileUserController @Inject() (
   }
 
   // legacy
-  def queryAll(search: Option[String], network: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryAll(request.userId, search, network, limit) map { r =>
+  def queryAll(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticatedAsync { request =>
+    typeaheadCommander.queryAll(request.userId, search, network, limit, pictureUrl) map { r =>
       Ok(Json.toJson(r))
     }
   }
 
-  def querySocial(search: Option[String], network: Option[String], limit: Int) = JsonAction.authenticated { request =>
-    Ok(Json.toJson(typeaheadCommander.querySocialInviteStatus(request.userId, search, network, limit)))
+  def querySocial(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticated { request =>
+    Ok(Json.toJson(typeaheadCommander.querySocialInviteStatus(request.userId, search, network, limit, pictureUrl)))
   }
 
-  def queryContacts(search: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
+  def queryContacts(search: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticatedAsync { request =>
     typeaheadCommander.queryContactsInviteStatus(request.userId, search, limit) map { r =>
       Ok(Json.toJson(r))
     }
