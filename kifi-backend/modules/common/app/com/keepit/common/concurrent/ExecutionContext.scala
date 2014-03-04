@@ -24,7 +24,7 @@ object ExecutionContext extends Logging {
     (for {
       app <- Play.maybeApplication
       p <- Play.configuration.getInt("fork-join-pool.parallelism")
-    } yield p) getOrElse 4
+    } yield p) getOrElse 16
   }
   val fjPool = new scala.concurrent.forkjoin.ForkJoinPool(Runtime.getRuntime.availableProcessors * fjParallelism) // tweak
   val fj = scala.concurrent.ExecutionContext.fromExecutor(fjPool)

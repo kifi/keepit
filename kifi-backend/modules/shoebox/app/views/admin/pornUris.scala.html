@@ -1,0 +1,74 @@
+@(uris: Seq[NormalizedURI], count: Int, page: Int, pageCount: Int)
+
+@import com.keepit.controllers.admin.routes
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@routes.AdminPornDetectorController.pornUrisView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @if(page - 20 > 0) {
+        <li class="disabled">
+          <a href="@routes.AdminPornDetectorController.pornUrisView(0)">...</a>
+        </li>
+      }
+      @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      @if(page + 20 < pageCount - 1) {
+        <li class="disabled">
+          <a href="@routes.AdminPornDetectorController.pornUrisView(pageCount - 1)">...</a>
+        </li>
+      }
+      <li>
+        @if(uris.size > 0) {
+          <a href="@routes.AdminPornDetectorController.pornUrisView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin(count + " Total Adult URIs") {
+
+  @pagination(page, pageCount)
+
+  <table class="table table-bordered">
+    <tr>
+      <th>#</th>
+      <th>URI Id</th>
+      <th>Title</th>
+      <th>Restriction</th>
+      <th>State</th>
+  </table>
+
+  @for( (uri, i) <- uris.zipWithIndex ){
+    <tr>
+      <td>@{i + 1}</td>
+      <td>@{uri.id}</td>
+      <td><a href = "@uri.url">@uri.title.getOrElse("No Title")</td>
+      <td>@{uri.restriction.map{ r => r.context}.getOrElse("")}</td>
+      <td>@{uri.state}</td>
+    </tr>
+  }
+
+}

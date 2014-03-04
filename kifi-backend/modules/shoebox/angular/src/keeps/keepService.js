@@ -3,8 +3,8 @@
 angular.module('kifi.keepService', ['kifi.undo'])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log) {
 
     var list = [],
       selected = {},
@@ -239,6 +239,8 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       reset: function () {
+        $log.log('keepService.reset()');
+
         before = null;
         end = false;
         list.length = 0;
@@ -259,6 +261,8 @@ angular.module('kifi.keepService', ['kifi.undo'])
         var config = {
           params: params
         };
+
+        $log.log('keepService.getList()', params);
 
         return $http.get(url, config).then(function (res) {
           var data = res.data,
@@ -309,6 +313,8 @@ angular.module('kifi.keepService', ['kifi.undo'])
             url: keep.url
           };
 
+          $log.log('keepService.getChatter()', data);
+
           return $http.post(url, data).then(function (res) {
             var data = res.data;
             keep.conversationCount = data.threads;
@@ -320,10 +326,14 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       fetchScreenshotUrls: function (keeps) {
         if (keeps && keeps.length) {
-          var url = env.xhrBase + '/keeps/screenshot';
-          return $http.post(url, {
-            urls: _.pluck(keeps, 'url')
-          }).then(function (res) {
+          var url = env.xhrBase + '/keeps/screenshot',
+            data = {
+              urls: _.pluck(keeps, 'url')
+            };
+
+          $log.log('keepService.fetchScreenshotUrls()', data);
+
+          return $http.post(url, data).then(function (res) {
             return res.data.urls;
           });
         }
@@ -347,16 +357,20 @@ angular.module('kifi.keepService', ['kifi.undo'])
         var keepPrivacy = isPrivate == null;
         isPrivate = !! isPrivate;
 
-        var url = env.xhrBase + '/keeps/add';
-        return $http.post(url, {
-          keeps: keeps.map(function (keep) {
-            return {
-              title: keep.title,
-              url: keep.url,
-              isPrivate: keepPrivacy ? !! keep.isPrivate : isPrivate
-            };
-          })
-        }).then(function () {
+        var url = env.xhrBase + '/keeps/add',
+          data = {
+            keeps: keeps.map(function (keep) {
+              return {
+                title: keep.title,
+                url: keep.url,
+                isPrivate: keepPrivacy ? !! keep.isPrivate : isPrivate
+              };
+            })
+          };
+
+        $log.log('keepService.keep()', data);
+
+        return $http.post(url, data).then(function () {
           _.forEach(keeps, function (keep) {
             keep.isMyBookmark = true;
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
@@ -371,12 +385,16 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return $q.when(keeps || []);
         }
 
-        var url = env.xhrBase + '/keeps/remove';
-        return $http.post(url, _.map(keeps, function (keep) {
-          return {
-            url: keep.url
-          };
-        })).then(function () {
+        var url = env.xhrBase + '/keeps/remove',
+            data = _.map(keeps, function (keep) {
+              return {
+                url: keep.url
+              };
+            });
+
+        $log.log('keepService.unkeep()', data);
+
+        return $http.post(url, data).then(function () {
           /*
           var map = _.reduce(keeps, function (map, keep) {
             map[keep.id] = true;
@@ -450,15 +468,19 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return $q.when([]);
         }
 
-        var url = env.xhrBaseSearch;
-        return $http.get(url, {
-          params: {
-            q: query || void 0,
-            f: filter || 'm',
-            maxHits: 30,
-            context: context || void 0
-          }
-        }).then(function (res) {
+        var url = env.xhrBaseSearch,
+          data = {
+            params: {
+              q: query || void 0,
+              f: filter || 'm',
+              maxHits: 30,
+              context: context || void 0
+            }
+          };
+
+        $log.log('keepService.unkeep()', data);
+
+        return $http.get(url, data).then(function (res) {
           var data = res.data,
             hits = data.hits || [];
 

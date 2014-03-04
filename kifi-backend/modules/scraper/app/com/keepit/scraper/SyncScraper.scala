@@ -15,6 +15,11 @@ import com.keepit.common.net.{DirectUrl, HttpClient, URI}
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
 import scala.util.Success
+import com.keepit.learning.porndetector.PornDetectorFactory
+import com.keepit.learning.porndetector.SlidingWindowPornDetector
+import com.keepit.common.akka.SafeFuture
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 
 // straight port from original (local) code
 class SyncScraper @Inject() (
@@ -25,6 +30,7 @@ class SyncScraper @Inject() (
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
+  pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks
 ) extends Logging {
 
@@ -199,6 +205,14 @@ class SyncScraper @Inject() (
               case None => LangDetector.detect(content)
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
+
+            SafeFuture{
+            val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+            detector.isPorn(content.take(100000)) match {
+              case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT))
+              case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+              case _ =>
+            }}
 
             val article: Article = Article(
               id = normalizedUri.id.get,

@@ -233,6 +233,20 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         uri1Scraped.redirect === Some(Id[NormalizedURI](2))
       }
     }
+
+    "can update restriction" in {
+      withDb() { implicit injector =>
+        db.readWrite{ implicit s =>
+          val uri1 = uriRepo.save(createUri(title = "old", url = "http://www.keepit.com/bad"))
+          uriRepo.updateURIRestriction(uri1.id.get, Some(Restriction.ADULT))
+          uriRepo.get(uri1.id.get).restriction === Some(Restriction.ADULT)
+          uriRepo.getRestrictedURIs(Restriction.ADULT).size === 1
+          uriRepo.updateURIRestriction(uri1.id.get, None)
+          uriRepo.get(uri1.id.get).restriction === None
+          uriRepo.getRestrictedURIs(Restriction.ADULT).size === 0
+        }
+      }
+    }
   }
 
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit

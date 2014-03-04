@@ -84,14 +84,14 @@ class SearchConfigTest extends Specification with TestInjector {
             "recencyBoost" -> "2.0",
             "percentMatch" -> "70",
             "tailCutting" -> "0.30"
-          ), weight = 0, state = SearchConfigExperimentStates.ACTIVE
+          ), weight = 0.01, state = SearchConfigExperimentStates.ACTIVE
         ))
 
         fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
           "recencyBoost" -> "1.0",
           "percentMatch" -> "90",
           "tailCutting" -> "0.10"
-        ), weight = 1000, state = SearchConfigExperimentStates.ACTIVE
+        ), weight = 0.99, state = SearchConfigExperimentStates.ACTIVE
         ))
 
         searchConfigManager.syncActiveExperiments

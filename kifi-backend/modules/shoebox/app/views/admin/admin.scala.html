@@ -52,7 +52,15 @@
               <li><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.getEventDescriptors">All Events</a>
             </ul>
 
-		  <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Keeps</a>
+
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" >Keeps</a>
+              <ul class="dropdown-menu" role="menu">
+                <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Bookmarks</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.pornUrisView(0)">Sensitive URIs</a>
+            </ul>
+
+
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Users</a>
             <ul class="dropdown-menu" role="menu">
