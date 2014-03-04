@@ -206,12 +206,12 @@ class SyncScraper @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-//            SafeFuture{
-//            val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-//            detector.isPorn(content.take(100000)) match {
-//              case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT))
-//              case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
-//            }}
+            SafeFuture{
+            val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+            detector.isPorn(content.take(100000)) match {
+              case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT))
+              case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+            }}
 
             val article: Article = Article(
               id = normalizedUri.id.get,
