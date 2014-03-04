@@ -3,8 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$window', 'profileService', '$q', '$http', 'env',
-  function ($scope, $window, profileService, $q, $http, env) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout) {
     $scope.data = {};
 
     // onboarding.js are using this functions
@@ -19,5 +19,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       //initBookmarkImport();
     };
 
+    var updateHeight = _.throttle(function () {
+      $element.css('height', $window.innerHeight + 'px');
+    }, 100);
+    angular.element($window).resize(updateHeight);
+
+    $timeout(updateHeight);
   }
 ]);
