@@ -21,7 +21,7 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
 
         scope.cancelTimeout = function () {
           $timeout.cancel(timeout);
-        }
+        };
 
         scope.$on('$destroy', scope.cancelTimeout);
 
