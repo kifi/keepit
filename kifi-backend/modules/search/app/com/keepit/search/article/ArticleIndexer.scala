@@ -104,7 +104,7 @@ object ArticleIndexer extends Logging {
         log.info("failed to get article from ArticleStore. retry in {$sleepTime}ms")
         Thread.sleep(sleepTime)
         sleepTime *= 2 // exponential back off
-        retry -= 0
+        retry -= 1
       }
       articleStore.get(id)
     }
