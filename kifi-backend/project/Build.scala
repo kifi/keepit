@@ -60,7 +60,7 @@ object ApplicationBuild extends Build {
 
   private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
     Command.args(name, "<" + name + "-command>") { (state, args) =>
-      Process(command :: (namedArgs ++ args.toList), base) !;
+      Process(command :: (namedArgs ++ args.toList), base).!;
       state
     }
   }

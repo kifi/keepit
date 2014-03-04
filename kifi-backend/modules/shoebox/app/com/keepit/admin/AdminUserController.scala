@@ -136,9 +136,9 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(toUserId))
   }
 
-  def moreUserInfoView(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def moreUserInfoView(userId: Id[User], showPrivates:Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val econtactsF = abookClient.getEContacts(userId, 40000000)
+    val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 40000000) else Future.successful(Seq.empty[EContact])
     val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
@@ -213,10 +213,10 @@ class AdminUserController @Inject() (
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val econtactsF = abookClient.getEContacts(userId, 500)
+    val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
 
     if (showPrivates) {
-      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps")
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }
 
     val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
