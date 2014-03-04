@@ -41,11 +41,8 @@ case class SearchConfigExperiment(
 object SearchConfigExperiment {
   val probabilisticGenerator = Name[ProbabilisticExperimentGenerator]("searchConfigExperiment")
   def getDensity(searchExperiments: Seq[SearchConfigExperiment]): ProbabilityDensity[ExperimentType] = {
-    val norm = searchExperiments.map(_.weight).sum
-    if (norm == 0) ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => se.experiment -> 0.0 }) // All non-negative weights must be 0
-    else ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => se.experiment -> se.weight / norm })
+    ProbabilityDensity(searchExperiments.sortBy(_.id.get.id).map { se => se.experiment -> se.weight })
   }
-
   private implicit val idFormat = Id.format[SearchConfigExperiment]
   private implicit val stateFormat = State.format[SearchConfigExperiment]
   private implicit val searchConfigFormat = new Format[SearchConfig] {
