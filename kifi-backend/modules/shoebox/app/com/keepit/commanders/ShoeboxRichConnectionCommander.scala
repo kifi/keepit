@@ -2,13 +2,8 @@ package com.keepit.commanders
 
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.queue._
-import com.keepit.common.db.slick.{
-  RepoModification,
-  RepoEntryAdded,
-  RepoEntryUpdated
-}
 import com.keepit.model._
-import com.keepit.common.db.slick.Database
+import com.keepit.common.db.slick.{RepoModification, Database}
 
 import com.kifi.franz.FormattedSQSQueue
 
@@ -105,24 +100,19 @@ class ShoeboxRichConnectionCommander @Inject() (
     }
   }
   def sendInvitations(): Unit = { // @todo(Léo) to be implemented
-    val (recordInvitations, highestSeq) = db.readOnly() { implicit session =>
+    val invitations = db.readOnly() { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber[Invitation](sqsInvitationSeq) getOrElse SequenceNumber.ZERO
-      val invitations = invitationRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
-      val recordInvitations = invitations.flatMap { invitation => invitation.state match {
-        case InvitationStates.INACTIVE => None
-        case _ => invitation.senderUserId.map { case userId =>
-          val networkType = invitation.recipientSocialUserId.map(socialUserInfoRepo.get.get(_).networkType) getOrElse SocialNetworks.EMAIL
-          RecordInvitation(userId, invitation.id.get, networkType, invitation.recipientSocialUserId, invitation.recipientEContactId)
-        }
-      }}
-      val highestSeq = invitations.map(_.seq).max
-      (recordInvitations, highestSeq)
+      invitationRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
     }
 
-    recordInvitations.foreach(processUpdate)
+    invitations.collect { case invitation if invitation.state != InvitationStates.INACTIVE =>
+      invitation.senderUserId.foreach { userId =>
+        processUpdate(RecordInvitation(userId, invitation.id.get, invitation.recipientSocialUserId, invitation.recipientEContactId))
+      }
+    }
 
     db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(sqsInvitationSeq, highestSeq)
+      systemValueRepo.setSequenceNumber(sqsInvitationSeq, invitations.map(_.seq).max)
     }
   }
 }
