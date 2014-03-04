@@ -211,6 +211,7 @@ class SyncScraper @Inject() (
             detector.isPorn(content.take(100000)) match {
               case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT))
               case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+              case _ =>
             }}
 
             val article: Article = Article(
