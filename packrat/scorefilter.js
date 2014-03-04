@@ -105,7 +105,7 @@
   }
 
   function intComparator(a, b) {
-    return b - a;
+    return a - b;
   }
 
   function getCandidate(o) {
