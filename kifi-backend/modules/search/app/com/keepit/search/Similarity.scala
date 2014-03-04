@@ -35,8 +35,8 @@ object Similarity extends Logging {
   }
 
   private[this] val similarities: Map[String, DefaultSimilarity] = Map(
-    ("default" -> new DefaultSimilarity with DocCountBasedIDF with NewTF with NoCoord),
-    ("coord" -> new DefaultSimilarity with DocCountBasedIDF with NewTF),
+    ("default" -> new DefaultSimilarity with DocCountBasedIDF with NewTF),
+    ("noCoord" -> new DefaultSimilarity with DocCountBasedIDF with NewTF with NoCoord),
     ("noTF" -> new DefaultSimilarity with DocCountBasedIDF with NoTF with NoCoord)
   )
 

@@ -584,4 +584,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def isSensitiveURI(uri: String): Future[Boolean] = {
     Future.successful(uri.contains("isSensitive"))
   }
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
 }
