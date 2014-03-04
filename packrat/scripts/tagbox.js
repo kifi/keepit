@@ -490,18 +490,6 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Returns an index of a tag with the given id.
-		 * Returns -1 if not found.
-		 *
-		 * @param {string} tagId - An tag id to search for
-		 *
-		 * @return {number} An index of a tag. -1 if not found.
-		 */
-		indexOfTagById: function (tagId) {
-			return indexOfTag(this.tags, tagId);
-		},
-
-		/**
 		 * Returns an index of a tag with the given tag name.
 		 * Returns -1 if not found.
 		 *
@@ -608,7 +596,7 @@ this.tagbox = (function ($, win) {
 				if (!(tags || (tags = this.tags))) {
 					return [];
 				}
-				if (text) {
+				if (text) {  // TODO: delegate filtering to background page
 					return win.scorefilter.filter(text, tags, options).map(extractData);
 				}
 				return tags;
