@@ -336,8 +336,9 @@ class AsyncScraper @Inject() (
               val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
               val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-              if (detector.isPorn(title + " " + content + " " + description)){
-                helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = Some(Restriction.ADULT)))
+              if (true || detector.isPorn(title + " " + content.take(10000) + " " + description) && normalizedUri.restriction != Some(Restriction.ADULT)){
+                println("\n\n==================\n\n updating uri restriction")
+                helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT))
               }
 
               val article: Article = Article(

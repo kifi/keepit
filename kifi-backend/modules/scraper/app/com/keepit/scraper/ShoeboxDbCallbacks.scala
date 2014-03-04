@@ -45,6 +45,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
     shoeboxServiceClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls)
   }
+  def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Unit = shoeboxServiceClient.updateURIRestriction(uriId, r)
 }
 
 trait SyncShoeboxDbCallbacks {
@@ -58,7 +59,7 @@ trait SyncShoeboxDbCallbacks {
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
   def syncSaveBookmark(bookmark:Bookmark):Bookmark
   def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Unit
-
+  def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Unit
 }
 
 trait ShoeboxDbCallbacks {

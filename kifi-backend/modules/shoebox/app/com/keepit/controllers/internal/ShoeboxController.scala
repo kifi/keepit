@@ -623,4 +623,16 @@ class ShoeboxController @Inject() (
       Ok("0")
     }
   }
+
+  def updateURIRestriction() = SafeAsyncAction(parse.json){ request =>
+    val uriId = Json.fromJson[Id[NormalizedURI]](request.body \ "uriId").get
+    val r = request.body \ "restriction" match {
+      case JsNull => None
+      case x => Some(Json.fromJson[Restriction](x).get)
+    }
+    db.readWrite{ implicit s =>
+      normUriRepo.updateURIRestriction(uriId, r)
+    }
+    Ok
+  }
 }

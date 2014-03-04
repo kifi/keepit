@@ -37,6 +37,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
   }
 
 @Singleton
@@ -236,5 +237,11 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") {
     normalizationServiceProvider.get.prenormalize(uriString)
+  }
+
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession) = {
+    val q = for {t <- rows if t.id === id} yield t.restriction
+    q.update(r.getOrElse(null))
+    invalidateCache(get(id))
   }
 }
