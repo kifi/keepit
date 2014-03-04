@@ -5,11 +5,12 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.{Future, Await, Awaitable}
 import com.keepit.model._
 import com.keepit.common.db.{State, Id}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
+import com.keepit.common.concurrent.ExecutionContext
 
 class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) extends SyncShoeboxDbCallbacks with ShoeboxDbCallbacks {
   implicit val serviceCallTimeout = config.serviceCallTimeout
+  implicit val fjCtx = ExecutionContext.fj
 
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 

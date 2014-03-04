@@ -5,10 +5,12 @@ import com.keepit.scraper.{DevScraperProcessorModule, ScraperServiceModule}
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperDevStoreModule
+import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
 
 case class ScraperDevModule() extends ScraperServiceModule (
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperDevStoreModule(),
+  fjMonitorModule = DevForkJoinContextMonitorModule(),
   scrapeProcessorModule = DevScraperProcessorModule()
 ) with CommonDevModule {
 

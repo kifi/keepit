@@ -10,20 +10,20 @@ import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, ProdScrapeSchedulerModule, FakeScrapeSchedulerModule}
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
 class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
 
   "OphanCleaner" should {
 
     "clean up uris by changed uris" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val changedUriRepo = inject[ChangedURIRepo]
         val bmRepo = inject[BookmarkRepo]
         val cleaner = inject[OrphanCleaner]
 
@@ -42,6 +42,9 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           val nuri5 = uriRepo.save(NormalizedURI.withHash("http://www.lycos.com/", Some("Lycos")).withState(NormalizedURIStates.SCRAPE_FAILED))
           val nuri6 = uriRepo.save(NormalizedURI.withHash("http://www.infoseek.com/", Some("Infoseek")).withState(NormalizedURIStates.ACTIVE))
           val nuri7 = uriRepo.save(NormalizedURI.withHash("http://www.altavista.com/", Some("AltaVista")).withState(NormalizedURIStates.INACTIVE))
+
+          scrapeInfoRepo.save(ScrapeInfo(uriId = nuri0.id.get))
+          scrapeInfoRepo.save(ScrapeInfo(uriId = nuri1.id.get))
 
           Seq(nuri0, nuri1, nuri2, nuri3, nuri4, nuri5, nuri6, nuri7)
         }
@@ -78,27 +81,45 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.get(uris(5).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(6).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(7).id.get).state === NormalizedURIStates.INACTIVE
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(3).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(5).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(6).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(7).id.get) === None
         }
 
         db.readWrite { implicit session =>
           uris.drop(1).map{ uri => changedURIRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uris(0).id.get, state=ChangedURIStates.APPLIED)) }
         }
         cleaner.cleanNormalizedURIsByChangedURIs(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnly { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPED
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(4).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(5).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(6).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(7).id.get).state === NormalizedURIStates.INACTIVE
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(5).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(6).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(7).id.get) === None
         }
       }
     }
 
     "clean up uris by bookmarks" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -138,29 +159,54 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         // initial states
-        cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
           uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(1).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(2).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(3).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
+        }
+
+        cleaner.clean(readOnly = false)
+        db.readOnly{ implicit s =>
+          uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(3).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
 
         // test: ACTIVE to SCRAPE_WANTED
         bms ++= db.readWrite { implicit session =>
+          uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
+          uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
           Seq(bmRepo.save(Bookmark(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover)))
-        }
-        db.readOnly{ implicit s =>
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
         }
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPE_WANTED
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
           uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
 
         // test: INACTIVE to SCRAPE_WANTED
@@ -174,9 +220,15 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPE_WANTED
-          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.SCRAPE_WANTED
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
 
         // test: to ACTIVE
@@ -187,18 +239,21 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPE_WANTED
-          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.SCRAPE_WANTED
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
 
         // test: to ACTIVE (first two uris are kept by other)
-        uris.foreach{ nuri =>
-          db.readWrite{ implicit s => uriRepo.save(nuri.withState(NormalizedURIStates.SCRAPED)) }
-        }
-        db.readWrite { implicit session =>
-          bms.foreach{ bm => bmRepo.save(bm.copy(state = BookmarkStates.INACTIVE)) }
-        }
         val obms = db.readWrite{ implicit s =>
+          uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
+          uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
           Seq(
             bmRepo.save(Bookmark(title = Some("google"), userId = other.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover)),
             bmRepo.save(Bookmark(title = Some("bing"), userId = other.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
@@ -207,9 +262,16 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
-          uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPED
+          uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
 
         // test: sequence of changes
@@ -221,9 +283,16 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
-          uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPED
+          uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
         db.readWrite { implicit session =>
           bmRepo.save(bms(0).copy(state = BookmarkStates.INACTIVE))
@@ -237,12 +306,19 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
+          uriRepo.get(uris(4).id.get).state === NormalizedURIStates.REDIRECTED
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get).get.state === ScrapeInfoStates.INACTIVE
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
       }
     }
 
     "clean up uris by normalized uris" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -299,18 +375,41 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.get(uris(5).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(6).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(7).id.get).state === NormalizedURIStates.INACTIVE
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(1).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(2).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(3).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(5).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(6).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(7).id.get) === None
+        }
+
+        db.readWrite { implicit session =>
+          scrapeInfoRepo.save(ScrapeInfo(uriId = uris(0).id.get))
+          scrapeInfoRepo.save(ScrapeInfo(uriId = uris(1).id.get))
         }
 
         cleaner.cleanNormalizedURIsByNormalizedURIs(readOnly = false)
         db.readOnly{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
-          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPED
+          uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(4).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(5).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(6).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(7).id.get).state === NormalizedURIStates.INACTIVE
+
+          scrapeInfoRepo.getByUriId(uris(0).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(1).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(2).id.get).get.state === ScrapeInfoStates.ACTIVE
+          scrapeInfoRepo.getByUriId(uris(3).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(4).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(5).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(6).id.get) === None
+          scrapeInfoRepo.getByUriId(uris(7).id.get) === None
         }
       }
     }

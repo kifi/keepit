@@ -27,8 +27,9 @@ case class SocialUserInfo(
   socialId: SocialId,
   networkType: SocialNetworkType,
   credentials: Option[SocialUser] = None,
-  lastGraphRefresh: Option[DateTime] = Some(currentDateTime)
-) extends ModelWithState[SocialUserInfo] {
+  lastGraphRefresh: Option[DateTime] = Some(currentDateTime),
+  seq: SequenceNumber[SocialUserInfo] = SequenceNumber.ZERO
+) extends ModelWithState[SocialUserInfo] with ModelWithSeqNumber[SocialUserInfo] {
   def withId(id: Id[SocialUserInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def reset() = copy(state = SocialUserInfoStates.CREATED, credentials = None)
@@ -62,7 +63,8 @@ object SocialUserInfo {
     (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
     (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
     (__ \ 'credentials).formatNullable[SocialUser] and
-    (__ \ 'lastGraphRefresh).formatNullable[DateTime]
+    (__ \ 'lastGraphRefresh).formatNullable[DateTime] and
+    (__ \ 'seq).format(SequenceNumber.format[SocialUserInfo])
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
 
@@ -114,7 +116,7 @@ class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 5
+  override val version = 6
   def toKey(): String = userId.id.toString
 }
 
@@ -131,7 +133,7 @@ class SocialUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlu
   extends JsonCacheImpl[SocialUserKey, Seq[SocialUser]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
-  override val version = 4
+  override val version = 5
   val namespace = "social_user_info_by_network_and_id"
   def toKey(): String = networkType.name.toString + "_" + id.id
 }

@@ -240,7 +240,6 @@ class AsyncScraper @Inject() (
       // check if document is not changed or does not need to be reindexed
       if (latestUri.title == Option(article.title) && // title change should always invoke indexing
         latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
-        latestUri.state != NormalizedURIStates.SCRAPE_WANTED &&
         latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
         signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
       ) {

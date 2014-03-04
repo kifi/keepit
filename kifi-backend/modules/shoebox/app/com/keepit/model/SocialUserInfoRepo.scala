@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time._
 import securesocial.core.SocialUser
 import org.joda.time.DateTime
@@ -36,12 +36,12 @@ class SocialUserInfoRepoImpl @Inject() (
     val basicInfoCache: SocialUserBasicInfoCache,
     val socialUserNetworkCache: SocialUserNetworkCache,
     override protected val changeListener: Option[RepoModification.Listener[SocialUserInfo]])
-  extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SocialUserInfoRepo {
+  extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SeqNumberDbFunction[SocialUserInfo] with SocialUserInfoRepo {
 
   import db.Driver.simple._
 
   type RepoImpl = SocialUserInfoTable
-  class SocialUserInfoTable(tag: Tag) extends RepoTable[SocialUserInfo](db, tag, "social_user_info") {
+  class SocialUserInfoTable(tag: Tag) extends RepoTable[SocialUserInfo](db, tag, "social_user_info") with SeqNumberColumn[SocialUserInfo] {
     def userId = column[Id[User]]("user_id", O.Nullable)
     def fullName = column[String]("full_name", O.NotNull)
     def socialId = column[SocialId]("social_id", O.NotNull)
@@ -51,7 +51,7 @@ class SocialUserInfoRepoImpl @Inject() (
     def pictureUrl = column[String]("picture_url", O.Nullable)
     def profileUrl = column[String]("profile_url", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId.?, fullName, pictureUrl.?, profileUrl.?, state, socialId,
-      networkType, credentials.?, lastGraphRefresh.?) <> ((SocialUserInfo.apply _).tupled, SocialUserInfo.unapply _)
+      networkType, credentials.?, lastGraphRefresh.?, seq) <> ((SocialUserInfo.apply _).tupled, SocialUserInfo.unapply _)
   }
 
   def table(tag: Tag) = new SocialUserInfoTable(tag)
@@ -61,6 +61,12 @@ class SocialUserInfoRepoImpl @Inject() (
   private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
   private val REFRESH_FREQUENCY = 15 // days
 
+  private val sequence = db.getSequence[SocialUserInfo]("social_user_info_sequence")
+
+  override def save(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo = {
+    val toSave = socialUserInfo.copy(seq = sequence.incrementAndGet())
+    super.save(toSave)
+  }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
 

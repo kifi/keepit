@@ -404,7 +404,7 @@ POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
 GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminController.getClassifications(domain: Option[String])
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
 POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)

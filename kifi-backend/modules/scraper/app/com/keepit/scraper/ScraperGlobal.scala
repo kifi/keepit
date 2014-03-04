@@ -6,6 +6,7 @@ import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
 import com.keepit.learning.porndetector.PornDetectorFactory
+import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 
 object ScraperGlobal extends FortyTwoGlobal(Prod) with ScraperServices {
   val module = ProdScraperServiceModule()
@@ -24,6 +25,7 @@ trait ScraperServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null)//make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null)//make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null)//make sure its not lazy loaded
+    require(injector.instance[ForkJoinExecContextPlugin] != null)
     require(injector.instance[PullerPlugin] != null)
     require(injector.instance[PornDetectorFactory] != null)
     log.info("ScraperService started")
