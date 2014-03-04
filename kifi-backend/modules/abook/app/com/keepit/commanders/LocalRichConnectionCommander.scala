@@ -1,15 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.common.queue.{
-  RichConnectionUpdateMessage,
-  InternRichConnection,
-  RecordKifiConnection,
-  RecordInvitation,
-  RecordFriendUserId,
-  Block,
-  RemoveRichConnection,
-  RemoveKifiConnection
-}
+import com.keepit.common.queue._
 import com.keepit.common.db.Id
 import com.keepit.model.{EContact, User, SocialUserInfo, Invitation}
 import com.keepit.abook.model.RichSocialConnectionRepo
@@ -31,6 +22,10 @@ import scala.util.{Success, Failure, Left, Right}
 import akka.actor.Scheduler
 import com.keepit.social.SocialNetworkType
 import com.keepit.abook.EContactRepo
+import scala.util.Left
+import scala.util.Failure
+import scala.util.Right
+import scala.util.Success
 
 
 @Singleton
@@ -132,6 +127,10 @@ class LocalRichConnectionCommander @Inject() (
         }
         case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => {
           db.readWrite { implicit session => repo.removeKifiConnection(user1, user2) }
+        }
+
+        case RecordVerifiedEmail(userId: Id[User], email: String) => {
+          db.readWrite { implicit session => eContactRepo.recordVerifiedEmail(email: String, userId) }
         }
       }
       Future.successful(())

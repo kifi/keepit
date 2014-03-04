@@ -26,6 +26,7 @@ class ShoeboxRichConnectionCommander @Inject() (
     userConnectionRepo: Provider[UserConnectionRepo],
     invitationRepo: Provider[InvitationRepo],
     socialUserInfoRepo: Provider[SocialUserInfoRepo],
+    emailAddressRepo: Provider[EmailAddressRepo],
     systemValueRepo: SystemValueRepo,
     db: Database,
     serviceDiscovery: ServiceDiscovery
@@ -35,10 +36,11 @@ class ShoeboxRichConnectionCommander @Inject() (
   private val sqsUserConnectionSeq = Name[SequenceNumber[UserConnection]]("sqs_user_connection")
   private val sqsSocialUserInfoSeq = Name[SequenceNumber[SocialUserInfo]]("sqs_social_user_info")
   private val sqsInvitationSeq = Name[SequenceNumber[Invitation]]("sqs_invitation")
+  private val sqsEmailAddressSeq = Name[SequenceNumber[EmailAddress]]("sqs_email_address")
 
   def sendSocialConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val (updateRichConnections, socialConnectionCount, highestSeq) = db.readOnly() { implicit session =>
-      val currentSeq = systemValueRepo.getSequenceNumber[SocialConnection](sqsSocialConnectionSeq) getOrElse SequenceNumber.ZERO
+      val currentSeq = systemValueRepo.getSequenceNumber(sqsSocialConnectionSeq) getOrElse SequenceNumber.ZERO
       val socialConnections = socialConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
       val updateRichConnections = socialConnections.map { case socialConnection =>
         val sUser1 = socialUserInfoRepo.get.get(socialConnection.socialUser1)
@@ -61,7 +63,7 @@ class ShoeboxRichConnectionCommander @Inject() (
 
   def sendUserConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val userConnections = db.readOnly() { implicit session =>
-      val currentSeq = systemValueRepo.getSequenceNumber[UserConnection](sqsUserConnectionSeq) getOrElse SequenceNumber.ZERO
+      val currentSeq = systemValueRepo.getSequenceNumber(sqsUserConnectionSeq) getOrElse SequenceNumber.ZERO
       userConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
@@ -81,7 +83,7 @@ class ShoeboxRichConnectionCommander @Inject() (
 
   def sendSocialUsers(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val socialUserInfos = db.readOnly() { implicit session =>
-      val currentSeq = systemValueRepo.getSequenceNumber[SocialUserInfo](sqsSocialUserInfoSeq) getOrElse SequenceNumber.ZERO
+      val currentSeq = systemValueRepo.getSequenceNumber(sqsSocialUserInfoSeq) getOrElse SequenceNumber.ZERO
       socialUserInfoRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
@@ -98,7 +100,7 @@ class ShoeboxRichConnectionCommander @Inject() (
 
   def sendInvitations(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val invitations = db.readOnly() { implicit session =>
-      val currentSeq = systemValueRepo.getSequenceNumber[Invitation](sqsInvitationSeq) getOrElse SequenceNumber.ZERO
+      val currentSeq = systemValueRepo.getSequenceNumber(sqsInvitationSeq) getOrElse SequenceNumber.ZERO
       invitationRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
@@ -112,6 +114,22 @@ class ShoeboxRichConnectionCommander @Inject() (
       systemValueRepo.setSequenceNumber(sqsInvitationSeq, invitations.map(_.seq).max)
     }
     invitations.length
+  }
+
+  def sendEmailAddresses(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
+    val emails = db.readOnly() { implicit session =>
+      val currentSeq = systemValueRepo.getSequenceNumber(sqsEmailAddressSeq) getOrElse SequenceNumber.ZERO
+      emailAddressRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
+    }
+
+    emails.collect { case verifiedEmail if verifiedEmail.state == EmailAddressStates.VERIFIED =>
+      processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address))
+    }
+
+    db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(sqsEmailAddressSeq, emails.map(_.seq).max)
+    }
+    emails.length
   }
 }
 
@@ -179,6 +197,19 @@ class InvitationModificationActor @Inject() (
   ) extends RepoModificationActor[InvitationModification](airbrake) {
   def getEventTime(modification: InvitationModification) = modification.modif.model.updatedAt
   def processBatch(modifications: Seq[InvitationModification]) = if (richConnectionCommander.sendInvitations(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
+    flushPlease()
+  }
+}
+
+case class EmailAddressModification(modif: RepoModification[EmailAddress]) extends RepoModificationEvent[EmailAddress]
+class EmailAddressModificationActor @Inject() (
+  val clock: Clock,
+  val scheduler: Scheduler,
+  airbrake: AirbrakeNotifier,
+  richConnectionCommander: ShoeboxRichConnectionCommander
+  ) extends RepoModificationActor[EmailAddressModification](airbrake) {
+  def getEventTime(modification: EmailAddressModification) = modification.modif.model.updatedAt
+  def processBatch(modifications: Seq[EmailAddressModification]) = if (richConnectionCommander.sendEmailAddresses(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
     flushPlease()
   }
 }

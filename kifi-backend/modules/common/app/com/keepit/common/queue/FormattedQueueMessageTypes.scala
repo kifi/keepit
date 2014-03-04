@@ -13,7 +13,7 @@ trait RichConnectionUpdateMessage
 
 object RichConnectionUpdateMessage {
   private val typeCodeMap = TypeCode.typeCodeMap[RichConnectionUpdateMessage](
-    InternRichConnection.typeCode, RecordKifiConnection.typeCode, RecordInvitation.typeCode, RecordFriendUserId.typeCode, Block.typeCode
+    InternRichConnection.typeCode, RecordKifiConnection.typeCode, RecordInvitation.typeCode, RecordFriendUserId.typeCode, Block.typeCode, RecordVerifiedEmail.typeCode
   )
   def getTypeCode(code: String) = typeCodeMap(code.toLowerCase)
 
@@ -25,8 +25,9 @@ object RichConnectionUpdateMessage {
       case e: RecordInvitation => Companion.writes(e)
       case e: RecordFriendUserId => Companion.writes(e)
       case e: Block => Companion.writes(e)
+      case e: RecordVerifiedEmail => Companion.writes(e)
     }
-    private val readsFunc = Companion.reads(InternRichConnection, RemoveRichConnection, RecordKifiConnection, RecordInvitation, RecordFriendUserId, Block)
+    private val readsFunc = Companion.reads(InternRichConnection, RemoveRichConnection, RecordKifiConnection, RecordInvitation, RecordFriendUserId, Block, RecordVerifiedEmail)
     def reads(json: JsValue) = readsFunc(json)
   }
 }
@@ -93,6 +94,14 @@ object Block extends Companion[Block] {
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[Block]
   implicit val typeCode = TypeCode("block")
+}
+
+//Propages changes to EmailAddressRepo (needs sequence number).
+case class RecordVerifiedEmail(userId: Id[User], email: String) extends RichConnectionUpdateMessage
+object RecordVerifiedEmail extends Companion[RecordVerifiedEmail] {
+  private implicit val userIdFormat = Id.format[User]
+  implicit val format = Json.format[RecordVerifiedEmail]
+  implicit val typeCode = TypeCode("record_email_address")
 }
 
 
