@@ -32,7 +32,6 @@ angular.module('kifi.modal', [])
         };
 
         function exitModal(evt) {
-          var modal;
           if (evt.which === 27) {
             scope.hideModal(evt);
             scope.$apply();
@@ -63,7 +62,7 @@ angular.module('kifi.modal', [])
       scope: {
         show: '='
       },
-      templateUrl: 'common/modal/plainModal.tpl.html',
+      templateUrl: 'common/modal/basicModal.tpl.html',
       transclude: true,
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
@@ -76,6 +75,12 @@ angular.module('kifi.modal', [])
           scope.dialogStyle.height = attrs.kfHeight;
         }
 
+        scope.title = attrs.title || "";
+        scope.singleAction = attrs.singleAction || true;
+        scope.actionText = attrs.actionText;
+
+        console.log(attrs.actionText)
+
         scope.backdropStyle.opacity = attrs.kfOpacity || .3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
 
@@ -84,7 +89,6 @@ angular.module('kifi.modal', [])
         };
 
         function exitModal(evt) {
-          var modal;
           if (evt.which === 27) {
             scope.hideModal(evt);
             scope.$apply();

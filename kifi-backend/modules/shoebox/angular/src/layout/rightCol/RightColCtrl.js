@@ -7,7 +7,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
   function ($scope, $element, $window, profileService, $q, $http, env, $timeout) {
     $scope.data = {};
 
-    // onboarding.js are using this functions
+    // onboarding.js is using these functions
     $window.getMe = function() {
       return (profileService.me ? $q.when(profileService.me) : profileService.fetchMe()).done(function (me) {
         me.pic200 = me.picUrl;
