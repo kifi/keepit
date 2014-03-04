@@ -29,11 +29,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
       $scope.me = data;
       $scope.primaryEmail = getPrimaryEmail(data.emails);
     });
-    $scope.getPrimaryEmail = function () {
-      if ($scope.primaryEmail) {
-        return $scope.primaryEmail.address;
-      }
-    }
   }
 ])
 
