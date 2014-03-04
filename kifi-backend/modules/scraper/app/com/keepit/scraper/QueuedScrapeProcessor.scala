@@ -27,6 +27,39 @@ import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
 
+class TracedRunnable[T](name:String, cb: => T) extends Runnable { // WIP
+
+  val submitTS = System.currentTimeMillis
+  val callTS = new AtomicLong
+  val threadRef = new AtomicReference[Thread]
+  val killCount = new AtomicInteger
+
+  val promise:Promise[T] = Promise[T]()
+  def future:Future[T] = promise.future
+
+  def run = {
+    threadRef.set(Thread.currentThread())
+    callTS.set(System.currentTimeMillis)
+    // add check for long wait
+    val prev = Thread.currentThread.getName
+    Thread.currentThread().setName(name+"##"+prev)
+    try {
+      promise success cb
+    } catch {
+      case t:Throwable => promise failure t
+    } finally {
+      threadRef.set(null)
+      Thread.currentThread().setName(prev)
+    }
+  }
+
+  override def toString = s"[TracedRunnable($name)]"
+}
+
+object TracedRunnable {
+  def apply[T](name:String)(cb: => T) = new TracedRunnable[T](name, cb)
+}
+
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
   def doWork:T
