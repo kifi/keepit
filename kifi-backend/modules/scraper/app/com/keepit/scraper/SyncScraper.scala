@@ -209,8 +209,8 @@ class SyncScraper @Inject() (
             SafeFuture{
             val detector = new SlidingWindowPornDetector(pornDetectorFactory())
             detector.isPorn(content.take(100000)) match {
-              case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT))
-              case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+              case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = Some(Restriction.ADULT)))
+              case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = None))
               case _ =>
             }}
 
