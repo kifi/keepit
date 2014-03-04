@@ -141,13 +141,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		initAndAsyncFocusInput: function () {
 			var $input = this.$input;
 			if (!$input) {
-				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput({}, {
-					// The delay, in milliseconds, between the user finishing typing and the search being performed. default: 300
-					searchDelay: 0,
-
-					// The minimum number of characters the user must enter before a search is performed.
-					minChars: 1,
-
+				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput(function search(query, withResults) {
+					api.port.emit('search_friends', {q: query}, withResults);
+				}, {
 					placeholder: 'Type a name...',
 					hintText: '',
 					searchingText: '',
@@ -175,8 +171,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 					},
 					zindex: 999999999992,
 					resultsFormatter: function (f) {
-						return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
-							Mustache.escape(f.name) + '</li>';
+						var html = Mustache.escape(f.parts[0]);
+						for (var i = 1; i < f.parts.length; i++) {
+							html += i % 2 ? '<b>' : '</b>';
+							html += Mustache.escape(f.parts[i]);
+						}
+						return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
 					},
 					onAdd: function () {
 						this.getAddDialog().addClass('kifi-non-empty');
@@ -189,14 +189,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 					onTip: function () {
 						api.port.emit('invite_friends', 'threadPane');
 					}
-				});
-
-				api.port.emit('get_friends', function (friends) {
-					friends.forEach(function (f) {
-						f.name = f.firstName + ' ' + f.lastName;
-					});
-					$input.data('settings').local_data = friends;
-					$input.data('friends', friends);
 				});
 			}
 

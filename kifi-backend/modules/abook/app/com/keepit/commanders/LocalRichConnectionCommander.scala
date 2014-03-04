@@ -1,17 +1,8 @@
 package com.keepit.commanders
 
-import com.keepit.common.queue.{
-  RichConnectionUpdateMessage,
-  CreateRichConnection,
-  RecordKifiConnection,
-  RecordInvitation,
-  RecordFriendUserId,
-  Block,
-  RemoveRichConnection,
-  RemoveKifiConnection
-}
+import com.keepit.common.queue._
 import com.keepit.common.db.Id
-import com.keepit.model.{User, SocialUserInfo, Invitation}
+import com.keepit.model.{EContact, User, SocialUserInfo, Invitation}
 import com.keepit.abook.model.RichSocialConnectionRepo
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -29,6 +20,12 @@ import scala.concurrent.duration._
 import scala.util.{Success, Failure, Left, Right}
 
 import akka.actor.Scheduler
+import com.keepit.social.SocialNetworkType
+import com.keepit.abook.EContactRepo
+import scala.util.Left
+import scala.util.Failure
+import scala.util.Right
+import scala.util.Success
 
 
 @Singleton
@@ -38,6 +35,7 @@ class LocalRichConnectionCommander @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     repo: RichSocialConnectionRepo,
+    eContactRepo: EContactRepo,
     scheduler: Scheduler
   ) extends RichConnectionCommander with Logging {
 
@@ -99,29 +97,40 @@ class LocalRichConnectionCommander @Inject() (
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = synchronized {
     try {
       message match {
-        case CreateRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: SocialUserInfo) => {
-          db.readWrite { implicit session => repo.internRichConnection(userId, Some(userSocialId), Left(friend)) }
+        case InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
+          db.readWrite { implicit session =>
+            user1.userId.foreach { userId1 => repo.internRichConnection(userId1, user1.id, Left(user2)) }
+            user2.userId.foreach { userId2 => repo.internRichConnection(userId2, user2.id, Left(user1)) }
+          }
         }
         case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => {
           db.readWrite { implicit session =>  repo.recordKifiConnection(firstUserId, secondUserId) }
         }
-        case RecordInvitation(userId: Id[User], invitation: Id[Invitation], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
-          val friend = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
-          db.readWrite { implicit session => repo.recordInvitation(userId, invitation, friend) }
+        case RecordInvitation(userId: Id[User], invitation: Id[Invitation], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) => {
+          db.readWrite { implicit session =>
+            val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get(friendEContact.get).email))
+            repo.recordInvitation(userId, invitation, friend) }
         }
-        case RecordFriendUserId(networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) => {
+        case RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) => {
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.recordFriendUserId(friendId, friendUserId) }
         }
-        case Block(userId: Id[User], networkType: String, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
+        case Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.block(userId, friendId) }
         }
-        case RemoveRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo]) => {
-          db.readWrite { implicit session => repo.removeRichConnection(userId, userSocialId, friend) }
+        case RemoveRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
+          db.readWrite { implicit session =>
+            user1.userId.foreach { userId1 => repo.removeRichConnection(userId1, user1.id.get, user2.id.get) }
+            user2.userId.foreach { userId2 => repo.removeRichConnection(userId2, user2.id.get, user1.id.get) }
+          }
         }
         case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => {
           db.readWrite { implicit session => repo.removeKifiConnection(user1, user2) }
+        }
+
+        case RecordVerifiedEmail(userId: Id[User], email: String) => {
+          db.readWrite { implicit session => eContactRepo.recordVerifiedEmail(email: String, userId) }
         }
       }
       Future.successful(())
@@ -129,5 +138,4 @@ class LocalRichConnectionCommander @Inject() (
       case t: Throwable => Future.failed(t)
     }
   }
-
 }

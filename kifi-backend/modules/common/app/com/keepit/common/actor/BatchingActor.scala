@@ -10,7 +10,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.reflect._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-object FlushEventQueue
 object FlushEventQueueAndClose
 
 trait BatchingActorConfiguration[A <: BatchingActor[_]] {
@@ -27,6 +26,8 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
   protected val batchingConf: BatchingActorConfiguration[_ <: BatchingActor[E]]
   protected def getEventTime(event: E): DateTime
   protected def processBatch(events: Seq[E]): Unit
+  object FlushEventQueue
+  final def flushPlease() = if (!flushIsPending.getAndSet(true)) { self ! FlushEventQueue }
 
   private val batchId: AtomicInteger = new AtomicInteger(0)
   private var events: Vector[E] = Vector.empty
@@ -42,9 +43,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
       events = events :+ event
 
       if (scheduledFlush.isEmpty && !flushIsPending.get) {
-        scheduledFlush = Some(scheduler.scheduleOnce(batchingConf.MaxBatchFlushInterval) {
-          if (!flushIsPending.getAndSet(true)) { self ! FlushEventQueue }
-        })
+        scheduledFlush = Some(scheduler.scheduleOnce(batchingConf.MaxBatchFlushInterval) { flushPlease() })
       }
 
       if (closing) {
@@ -54,14 +53,14 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
           case s if s >= batchingConf.MaxBatchSize =>
             flush() //flushing without taking in account events in the mailbox
           case s if s >= batchingConf.LowWatermarkBatchSize && !flushIsPending.getAndSet(true) =>
-            self ! FlushEventQueue //flush with the events in the actor mailbox
+            flushPlease() //flush with the events in the actor mailbox
           case _ =>
             //ignore
         }
       }
     case FlushEventQueueAndClose =>
       closing = true
-      sender ! flush()
+      flushPlease()
     case FlushEventQueue =>
       flush()
       flushIsPending.set(false)
@@ -71,12 +70,10 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
     scheduledFlush.foreach(_.cancel())
     scheduledFlush = None
     val thisBatchId = batchId.incrementAndGet
-    if (events.nonEmpty) {
-      log.info(s"Processing ${events.size} events: $events")
-      events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed ($i/${events.size} in batch #$thisBatchId)") }
-      processBatch(events)
-      events = Vector.empty
-    }
+    log.info(s"Processing ${events.size} events: $events")
+    events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed ($i/${events.size} in batch #$thisBatchId)") }
+    processBatch(events)
+    events = Vector.empty
   }
 
   private def verifyEventStaleTime(event: E, timeout: Duration, action: String): Unit = {
