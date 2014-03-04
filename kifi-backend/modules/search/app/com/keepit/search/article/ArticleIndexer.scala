@@ -113,7 +113,7 @@ object ArticleIndexer extends Logging {
       } catch {
         case e: Throwable =>
           log.error(s"failed to get article from ArticleStore id=${id}", e)
-          airbrake.notify(s"failed to get article from ArticleStore id=${id}", e)
+          airbrake.notify(s"failed to get article from ArticleStore id=${id}")
           None // skip this doc
       }
     }
