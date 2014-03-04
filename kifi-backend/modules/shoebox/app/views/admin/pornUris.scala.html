@@ -21,14 +21,14 @@
       }
       @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
-	        <li class="disabled">
-	          <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
-	        </li>
+          <li class="disabled">
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+          </li>
         } else {
-	        <li class="active">
-	          <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
-	        </li>
-	      }
+          <li class="active">
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+          </li>
+        }
       }
       @if(page + 20 < pageCount - 1) {
         <li class="disabled">
@@ -53,7 +53,7 @@
   @pagination(page, pageCount)
 
   <table class="table table-bordered">
-  	<tr>
+    <tr>
       <th>#</th>
       <th>URI Id</th>
       <th>Title</th>
@@ -62,14 +62,13 @@
   </table>
 
   @for( (uri, i) <- uris.zipWithIndex ){
-  	<tr>
-  		<td>@{i + 1}</td>
-  		<td>@{uri.id}</td>
-  		<td><a href = "@uri.url">@uri.title.getOrElse("No Title")</td>
-  		<td>@{uri.restriction.map{ r => r.context}.getOrElse("")}</td>
-  		<td>@{uri.state}</td>
-  	</tr>
-	}
+    <tr>
+      <td>@{i + 1}</td>
+      <td>@{uri.id}</td>
+      <td><a href = "@uri.url">@uri.title.getOrElse("No Title")</td>
+      <td>@{uri.restriction.map{ r => r.context}.getOrElse("")}</td>
+      <td>@{uri.state}</td>
+    </tr>
+  }
 
 }
-
