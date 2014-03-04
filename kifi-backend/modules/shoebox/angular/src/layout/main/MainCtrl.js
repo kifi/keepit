@@ -3,8 +3,8 @@
 angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$location', '$timeout', 'undoService',
-  function ($scope, $location, $timeout, undoService) {
+  '$scope', '$element', '$window', '$location', '$timeout', 'undoService',
+  function ($scope, $element, $window, $location, $timeout, undoService) {
     var KEY_ESC = 27;
 
     $scope.search = {};
@@ -49,5 +49,12 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     }, 500);
 
     $scope.undo = undoService;
+
+    var updateHeight = _.throttle(function () {
+      $element.css('height', $window.innerHeight + 'px');
+    }, 100);
+    angular.element($window).resize(updateHeight);
+
+    $timeout(updateHeight);
   }
 ]);
