@@ -7,9 +7,14 @@ import views.html
 import com.keepit.scraper.ScraperServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.common.db.slick.Database
+import com.keepit.model.Restriction
 
 class AdminPornDetectorController @Inject()(
   scraper: ScraperServiceClient,
+  db: Database,
+  uriRepo: NormalizedURIRepo,
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
 
@@ -29,5 +34,13 @@ class AdminPornDetectorController @Inject()(
     val badInfo = badTexts.map{ x => x._1 + " ---> " + x._2}.mkString("\n")
     val msg = if (badTexts.size == 0) "input text is clean" else s"${badTexts.size} out of ${numBlocks} blocks look suspicious:\n" + badInfo
     Ok(msg.replaceAll("\n","\n<br>"))
+  }
+
+  def pornUrisView(page: Int) = AdminHtmlAction.authenticated{ implicit request =>
+    val uris = db.readOnly{implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT)}.sortBy(-_.updatedAt.getMillis())
+    val PAGE_SIZE = 50
+    val pageCount = (uris.size*1.0 / PAGE_SIZE).ceil.toInt
+
+    Ok(html.admin.pornUris(uris, uris.size, page, pageCount))
   }
 }
