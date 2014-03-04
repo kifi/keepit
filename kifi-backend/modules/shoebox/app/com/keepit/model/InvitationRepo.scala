@@ -10,7 +10,7 @@ import scala.slick.jdbc.{StaticQuery => Q}
 import scala.slick.util.CloseableIterator
 
 @ImplementedBy(classOf[InvitationRepoImpl])
-trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] {
+trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] with SeqNumberFunction[Invitation] {
   def getAdminAccepted()(implicit session: RSession): Seq[Invitation]
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
                      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
