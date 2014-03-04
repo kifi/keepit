@@ -44,7 +44,7 @@ class AirbrakeTest extends Specification with TestInjector {
         val lines = (xml \\ "line").toVector
         lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
         lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
-        lines.size === 188
+        lines.size === 191
       }
     }
 
