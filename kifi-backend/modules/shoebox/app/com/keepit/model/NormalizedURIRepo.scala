@@ -34,7 +34,8 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
-  }
+  def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
+}
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (
@@ -240,4 +241,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     q.update(r)
     invalidateCache(get(id).copy(restriction = r))
   }
+
+  def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {
+    {for( r <- rows if r.restriction === targetRestriction) yield r}.list
+  }
+
 }
