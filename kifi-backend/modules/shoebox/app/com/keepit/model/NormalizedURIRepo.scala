@@ -33,6 +33,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
   }
 
 @Singleton
@@ -60,11 +61,11 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
-    def restriction = column[Restriction]("restriction", O.Nullable)
+    def restriction = column[Option[Restriction]]("restriction")
     def normalization = column[Normalization]("normalization", O.Nullable)
     def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
     def redirectTime = column[DateTime]("redirect_time", O.Nullable)
-    def * = (id.?,createdAt,updatedAt,externalId,title.?,url,urlHash,state,seq,screenshotUpdatedAt.?,restriction.?,normalization.?,redirect.?,redirectTime.?) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
+    def * = (id.?,createdAt,updatedAt,externalId,title.?,url,urlHash,state,seq,screenshotUpdatedAt.?,restriction, normalization.?,redirect.?,redirectTime.?) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
   }
 
   def table(tag:Tag) = new NormalizedURITable(tag)
@@ -232,5 +233,11 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   private def prenormalize(uriString: String)(implicit session: RSession): String = Statsd.time(key = "normalizedURIRepo.prenormalize") {
     normalizationServiceProvider.get.prenormalize(uriString)
+  }
+
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession) = {
+    val q = for {t <- rows if t.id === id} yield t.restriction
+    q.update(r)
+    invalidateCache(get(id).copy(restriction = r))
   }
 }

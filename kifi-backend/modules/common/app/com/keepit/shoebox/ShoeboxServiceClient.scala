@@ -119,6 +119,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserConnectionsChanged(seq: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -805,5 +806,13 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.isSensitiveURI(), payload).map{ r =>
       Json.fromJson[Boolean](r.json).get
     }
+  }
+
+  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]) = {
+    val payload = r match {
+      case Some(res) => Json.obj("uriId" -> id, "restriction" -> res)
+      case None => Json.obj("uriId" -> id, "restriction" -> JsNull)
+    }
+    call(Shoebox.internal.updateURIRestriction(), payload).map{ r => }
   }
 }
