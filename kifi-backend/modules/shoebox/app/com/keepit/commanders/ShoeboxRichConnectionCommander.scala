@@ -16,7 +16,7 @@ import com.keepit.common.db.{SequenceNumber, Model}
 import akka.actor.Scheduler
 import com.keepit.common.time.Clock
 import com.keepit.model.SocialConnection
-import com.keepit.social.SocialNetworks
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 @Singleton
 class ShoeboxRichConnectionCommander @Inject() (
@@ -27,19 +27,19 @@ class ShoeboxRichConnectionCommander @Inject() (
     invitationRepo: Provider[InvitationRepo],
     socialUserInfoRepo: Provider[SocialUserInfoRepo],
     systemValueRepo: SystemValueRepo,
-    db: Database
-  ) extends RemoteRichConnectionCommander(abook, queue) {
+    db: Database,
+    serviceDiscovery: ServiceDiscovery
+) extends RemoteRichConnectionCommander(abook, queue) {
 
   private val sqsSocialConnectionSeq = Name[SequenceNumber[SocialConnection]]("sqs_social_connection")
   private val sqsUserConnectionSeq = Name[SequenceNumber[UserConnection]]("sqs_user_connection")
   private val sqsSocialUserInfoSeq = Name[SequenceNumber[SocialUserInfo]]("sqs_social_user_info")
   private val sqsInvitationSeq = Name[SequenceNumber[Invitation]]("sqs_invitation")
-  private val sqsBatchSize = 500
 
-  def sendSocialConnections(): Unit = { // @todo(Léo) to be implemented
-    val (updateRichConnections, highestSeq) = db.readOnly() { implicit session =>
+  def sendSocialConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
+    val (updateRichConnections, socialConnectionCount, highestSeq) = db.readOnly() { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber[SocialConnection](sqsSocialConnectionSeq) getOrElse SequenceNumber.ZERO
-      val socialConnections = socialConnectionRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+      val socialConnections = socialConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
       val updateRichConnections = socialConnections.map { case socialConnection =>
         val sUser1 = socialUserInfoRepo.get.get(socialConnection.socialUser1)
         val sUser2 = socialUserInfoRepo.get.get(socialConnection.socialUser2)
@@ -48,8 +48,7 @@ class ShoeboxRichConnectionCommander @Inject() (
           case SocialConnectionStates.INACTIVE => RemoveRichConnection(sUser1, sUser2)
         }
       }
-      val highestSeq = socialConnections.map(_.seq).max
-      (updateRichConnections, highestSeq)
+      (updateRichConnections, socialConnections.length, socialConnections.map(_.seq).max)
     }
 
     updateRichConnections.foreach(processUpdate)
@@ -57,12 +56,13 @@ class ShoeboxRichConnectionCommander @Inject() (
     db.readWrite { implicit session =>
       systemValueRepo.setSequenceNumber(sqsSocialConnectionSeq, highestSeq)
     }
+    socialConnectionCount
   }
 
-  def sendUserConnections(): Unit= { // @todo(Léo) to be implemented
+  def sendUserConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val userConnections = db.readOnly() { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber[UserConnection](sqsUserConnectionSeq) getOrElse SequenceNumber.ZERO
-      userConnectionRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+      userConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
     userConnections.foreach { userConnection =>
@@ -76,12 +76,13 @@ class ShoeboxRichConnectionCommander @Inject() (
     db.readWrite { implicit session =>
       systemValueRepo.setSequenceNumber(sqsUserConnectionSeq, userConnections.map(_.seq).max)
     }
+    userConnections.length
   }
 
-  def sendSocialUsers(): Unit = { // @todo(Léo) to be implemented
+  def sendSocialUsers(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val socialUserInfos = db.readOnly() { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber[SocialUserInfo](sqsSocialUserInfoSeq) getOrElse SequenceNumber.ZERO
-      socialUserInfoRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+      socialUserInfoRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
     socialUserInfos.foreach { socialUserInfo => socialUserInfo.state match {
@@ -92,11 +93,13 @@ class ShoeboxRichConnectionCommander @Inject() (
     db.readWrite { implicit session =>
       systemValueRepo.setSequenceNumber(sqsSocialUserInfoSeq, socialUserInfos.map(_.seq).max)
     }
+    socialUserInfos.length
   }
-  def sendInvitations(): Unit = { // @todo(Léo) to be implemented
+
+  def sendInvitations(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val invitations = db.readOnly() { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber[Invitation](sqsInvitationSeq) getOrElse SequenceNumber.ZERO
-      invitationRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
+      invitationRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
     invitations.collect { case invitation if invitation.state != InvitationStates.INACTIVE =>
@@ -108,6 +111,7 @@ class ShoeboxRichConnectionCommander @Inject() (
     db.readWrite { implicit session =>
       systemValueRepo.setSequenceNumber(sqsInvitationSeq, invitations.map(_.seq).max)
     }
+    invitations.length
   }
 }
 
@@ -135,7 +139,9 @@ class SocialConnectionModificationActor @Inject() (
   richConnectionCommander: ShoeboxRichConnectionCommander
 ) extends RepoModificationActor[SocialConnectionModification](airbrake) {
   def getEventTime(modification: SocialConnectionModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[SocialConnectionModification]) = richConnectionCommander.sendSocialConnections()
+  def processBatch(modifications: Seq[SocialConnectionModification]) = if (richConnectionCommander.sendSocialConnections(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
+    flushPlease()
+  }
 }
 
 case class UserConnectionModification(modif: RepoModification[UserConnection]) extends RepoModificationEvent[UserConnection]
@@ -146,7 +152,9 @@ class UserConnectionModificationActor @Inject() (
   richConnectionCommander: ShoeboxRichConnectionCommander
   ) extends RepoModificationActor[UserConnectionModification](airbrake) {
   def getEventTime(modification: UserConnectionModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[UserConnectionModification]) = richConnectionCommander.sendUserConnections()
+  def processBatch(modifications: Seq[UserConnectionModification]) = if (richConnectionCommander.sendUserConnections(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
+    flushPlease()
+  }
 }
 
 case class SocialUserInfoModification(modif: RepoModification[SocialUserInfo]) extends RepoModificationEvent[SocialUserInfo]
@@ -157,7 +165,9 @@ class SocialUserInfoModificationActor @Inject() (
   richConnectionCommander: ShoeboxRichConnectionCommander
   ) extends RepoModificationActor[SocialUserInfoModification](airbrake) {
   def getEventTime(modification: SocialUserInfoModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[SocialUserInfoModification]) = richConnectionCommander.sendSocialUsers()
+  def processBatch(modifications: Seq[SocialUserInfoModification]) = if (richConnectionCommander.sendSocialUsers(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
+    flushPlease()
+  }
 }
 
 case class InvitationModification(modif: RepoModification[Invitation]) extends RepoModificationEvent[Invitation]
@@ -168,6 +178,8 @@ class InvitationModificationActor @Inject() (
   richConnectionCommander: ShoeboxRichConnectionCommander
   ) extends RepoModificationActor[InvitationModification](airbrake) {
   def getEventTime(modification: InvitationModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[InvitationModification]) = richConnectionCommander.sendInvitations()
+  def processBatch(modifications: Seq[InvitationModification]) = if (richConnectionCommander.sendInvitations(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
+    flushPlease()
+  }
 }
 
