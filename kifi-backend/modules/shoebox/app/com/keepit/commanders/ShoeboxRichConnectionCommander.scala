@@ -40,18 +40,12 @@ class ShoeboxRichConnectionCommander @Inject() (
     val (updateRichConnections, highestSeq) = db.readOnly() { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber[SocialConnection](sqsSocialConnectionSeq) getOrElse SequenceNumber.ZERO
       val socialConnections = socialConnectionRepo.get.getBySequenceNumber(currentSeq, sqsBatchSize)
-      val updateRichConnections = socialConnections.flatMap { case socialConnection =>
+      val updateRichConnections = socialConnections.map { case socialConnection =>
         val sUser1 = socialUserInfoRepo.get.get(socialConnection.socialUser1)
         val sUser2 = socialUserInfoRepo.get.get(socialConnection.socialUser2)
         socialConnection.state match {
-          case SocialConnectionStates.ACTIVE => Seq(
-            sUser1.userId.map(InternRichConnection(_, sUser1.id.get, sUser2)),
-            sUser2.userId.map(InternRichConnection(_, sUser2.id.get, sUser1))
-          ).flatten
-          case SocialConnectionStates.INACTIVE => Seq(
-            sUser1.userId.map(RemoveRichConnection(_, sUser1.id.get, sUser2.id.get)),
-            sUser2.userId.map(RemoveRichConnection(_, sUser2.id.get, sUser1.id.get))
-          ).flatten
+          case SocialConnectionStates.ACTIVE => InternRichConnection(sUser1, sUser2)
+          case SocialConnectionStates.INACTIVE => RemoveRichConnection(sUser1, sUser2)
         }
       }
       val highestSeq = socialConnections.map(_.seq).max

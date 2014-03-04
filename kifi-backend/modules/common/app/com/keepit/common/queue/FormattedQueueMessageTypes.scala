@@ -32,7 +32,7 @@ object RichConnectionUpdateMessage {
 }
 
 //Propages changes to SocialConnectionRepo (needs sequence number). Will usually be a queued call.
-case class InternRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: SocialUserInfo) extends RichConnectionUpdateMessage
+case class InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) extends RichConnectionUpdateMessage
 object InternRichConnection extends Companion[InternRichConnection] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
@@ -40,7 +40,7 @@ object InternRichConnection extends Companion[InternRichConnection] {
   implicit val typeCode = TypeCode("intern_rich_connection")
 }
 
-case class RemoveRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friendSocialId: Id[SocialUserInfo]) extends RichConnectionUpdateMessage
+case class RemoveRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) extends RichConnectionUpdateMessage
 object RemoveRichConnection extends Companion[RemoveRichConnection] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]

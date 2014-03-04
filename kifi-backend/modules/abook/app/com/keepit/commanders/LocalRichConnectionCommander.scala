@@ -102,8 +102,11 @@ class LocalRichConnectionCommander @Inject() (
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = synchronized {
     try {
       message match {
-        case InternRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: SocialUserInfo) => {
-          db.readWrite { implicit session => repo.internRichConnection(userId, Some(userSocialId), Left(friend)) }
+        case InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
+          db.readWrite { implicit session =>
+            user1.userId.foreach { userId1 => repo.internRichConnection(userId1, user1.id, Left(user2)) }
+            user2.userId.foreach { userId2 => repo.internRichConnection(userId2, user2.id, Left(user1)) }
+          }
         }
         case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => {
           db.readWrite { implicit session =>  repo.recordKifiConnection(firstUserId, secondUserId) }
@@ -121,8 +124,11 @@ class LocalRichConnectionCommander @Inject() (
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.block(userId, friendId) }
         }
-        case RemoveRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo]) => {
-          db.readWrite { implicit session => repo.removeRichConnection(userId, userSocialId, friend) }
+        case RemoveRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
+          db.readWrite { implicit session =>
+            user1.userId.foreach { userId1 => repo.removeRichConnection(userId1, user1.id.get, user2.id.get) }
+            user2.userId.foreach { userId2 => repo.removeRichConnection(userId2, user2.id.get, user1.id.get) }
+          }
         }
         case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => {
           db.readWrite { implicit session => repo.removeKifiConnection(user1, user2) }
