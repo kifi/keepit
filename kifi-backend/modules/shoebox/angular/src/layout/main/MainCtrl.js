@@ -3,8 +3,8 @@
 angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', 'undoService',
-  function ($scope, $element, $window, $location, $timeout, undoService) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService) {
     var KEY_ESC = 27;
 
     $scope.search = {};
@@ -56,5 +56,7 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     angular.element($window).resize(updateHeight);
 
     $timeout(updateHeight);
+
+    if (/^Mac/.test(navigator.platform)) $rootElement.find('body').addClass('mac');
   }
 ]);
