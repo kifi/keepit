@@ -92,7 +92,7 @@ class QueuedScrapeProcessor @Inject() (
   schedulingProperties: SchedulingProperties,
   helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
-  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 200 else config.queueConfig.terminateThreshold
+  val LONG_RUNNING_THRESHOLD = if (Play.isDev) 120000 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
   val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
 
