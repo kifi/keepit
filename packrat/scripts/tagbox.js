@@ -316,7 +316,7 @@ this.tagbox = (function ($, win) {
 				var $input = this.$input;
 				$input.on('focus', onFocus);
 				$input.on('blur', onBlur);
-				$input.on('input', _.debounce(onInput.bind(this), 1)).triggerHandler('input');
+				$input.on('input', _.debounce(onInput.bind(this), 1));
 				$input.on('keydown', onKeydown.bind(this));
 			};
 		})(),
@@ -404,7 +404,7 @@ this.tagbox = (function ($, win) {
 				.then(this.moveKeeperToBottom.bind(this))
 				.then(this.setLoaded.bind(this, false))
 				.then(this.initScroll.bind(this))
-				.then(this.updateSuggestion.bind(this))
+				.then(this.$input.triggerHandler.bind(this.$input, 'input'))
 				.then(this.focusInput.bind(this))
 				.fail(function (err) {
 					this.hide('error:failed to init');
@@ -487,18 +487,6 @@ this.tagbox = (function ($, win) {
 
 				this.onHide.dispatch();
 			}
-		},
-
-		/**
-		 * Returns an index of a tag with the given id.
-		 * Returns -1 if not found.
-		 *
-		 * @param {string} tagId - An tag id to search for
-		 *
-		 * @return {number} An index of a tag. -1 if not found.
-		 */
-		indexOfTagById: function (tagId) {
-			return indexOfTag(this.tags, tagId);
 		},
 
 		/**
@@ -608,7 +596,7 @@ this.tagbox = (function ($, win) {
 				if (!(tags || (tags = this.tags))) {
 					return [];
 				}
-				if (text) {
+				if (text) {  // TODO: delegate filtering to background page
 					return win.scorefilter.filter(text, tags, options).map(extractData);
 				}
 				return tags;

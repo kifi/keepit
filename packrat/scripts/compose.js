@@ -101,9 +101,9 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    $t.tokenInput({}, {
-      searchDelay: 0,
-      minChars: 1,
+    $t.tokenInput(function search(query, withResults) {
+      api.port.emit('search_friends', {q: query, includeSelf: !$t.tokenInput('get').length}, withResults);
+    }, {
       placeholder: 'To',
       hintText: '',
       searchingText: '',
@@ -131,34 +131,37 @@ var initCompose = (function() {
       },
       zindex: 999999999992,
       resultsFormatter: function (f) {
-        return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' +
-          Mustache.escape(f.name) + '</li>';
+        var html = Mustache.escape(f.parts[0]);
+        for (var i = 1; i < f.parts.length; i++) {
+          html += i % 2 ? '<b>' : '</b>';
+          html += Mustache.escape(f.parts[i]);
+        }
+        return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
       },
       onAdd: function () {
         if (defaultText && !$d.text()) {
           $f.removeClass('kifi-empty');
           $d.text(defaultText);
         }
+        if ($t.tokenInput('get').length === 1) {
+          $t.tokenInput('flushCache');
+        }
         throttledSaveDraft();
       },
       onDelete: function () {
         if (!$f.is($composes)) return;
-        if (defaultText && !$t.tokenInput('get').length && $d.text() === defaultText) {
-          $d.empty();
-          $f.addClass('kifi-empty');
+        if ($t.tokenInput('get').length === 0) {
+          if (defaultText && $d.text() === defaultText) {
+            $d.empty();
+            $f.addClass('kifi-empty');
+          }
+          $t.tokenInput('flushCache');
         }
         throttledSaveDraft();
       },
       onTip: function () {
         api.port.emit('invite_friends', 'composePane');
       }
-    });
-    api.port.emit('get_friends', function (friends) {
-      friends.forEach(function (f) {
-        f.name = f.firstName + ' ' + f.lastName;
-      });
-      $t.data('settings').local_data = friends;
-      $t.data('friends', friends);
     });
   }
 

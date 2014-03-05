@@ -16,7 +16,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService'])
 .controller('HomeCtrl', [
   '$scope', 'tagService', 'keepService', '$q',
   function ($scope, tagService, keepService, $q) {
-    keepService.unselectAll();
+    keepService.reset();
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;

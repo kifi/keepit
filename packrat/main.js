@@ -377,14 +377,13 @@ var socketHandlers = {
     log('[socket:new_friends]', fr)();
     if (friends) {
       for (var i = 0; i < fr.length; i++) {
-        var f = fr[i];
+        var f = standardizeUser(fr[i]);
         if (friendsById[f.id]) {
           friends = friends.filter(idIsNot(f.id))
         }
         friends.push(f)
         friendsById[f.id] = f;
       }
-      // TODO: push friends to interested tabs
     }
   },
   lost_friends: function (fr) {
@@ -397,7 +396,6 @@ var socketHandlers = {
         }
         delete friendsById[f.id];
       }
-      // TODO: push friends to interested tabs
     }
   },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
@@ -940,8 +938,23 @@ api.port.on({
   web_base_uri: function(_, respond) {
     respond(webBaseUri());
   },
-  get_friends: function(_, respond) {
-    respond(friends || [SUPPORT]);
+  search_friends: function(data, respond) {
+    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    var candidates = data.includeSelf ?
+     friends ? [me].concat(friends) : [me, SUPPORT] :
+     friends || [SUPPORT];
+    var allResults = sf.filter(data.q, candidates, getName);  // cache q -> allResults?
+    var results = allResults.length > 4 ? allResults.slice(0, 4) : allResults;
+    for (var i = 0; i < results.length; i++) {
+      var result = results[i];
+      results[i] = {
+        id: result.id,
+        name: result.name,
+        pictureName: result.pictureName,
+        parts: sf.splitOnMatches(data.q, result.name)
+      };
+    }
+    respond(results);
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
@@ -1104,6 +1117,11 @@ function onTagChangeFromServer(op, tag) {
   tabsTagging.forEach(function (tab) {
     api.tabs.emit(tab, 'tag_change', this);
   }, {op: op, tag: tag});
+}
+
+function standardizeUser(u) {
+  u.name = (u.firstName + ' ' + u.lastName).trim();
+  return u;
 }
 
 function removeNotificationPopups(threadId) {
@@ -1990,16 +2008,19 @@ function compilePatterns(arr) {
 }
 
 function reTest(s) {
-  return function(re) {return re.test(s)};
+  return function (re) {return re.test(s)};
 }
 function hasId(id) {
-  return function(o) {return o.id === id};
+  return function (o) {return o.id === id};
 }
 function idIsNot(id) {
-  return function(o) {return o.id !== id};
+  return function (o) {return o.id !== id};
 }
 function getId(o) {
   return o.id;
+}
+function getName(o) {
+  return o.name;
 }
 function getThreadId(n) {
   return n.thread;
@@ -2038,10 +2059,9 @@ function getFriends(next) {
     friends = fr;
     friendsById = {};
     for (var i = 0; i < fr.length; i++) {
-      var f = fr[i];
+      var f = standardizeUser(fr[i]);
       friendsById[f.id] = f;
     }
-    // TODO: push friends to potentially interested tabs
     if (next) next();
   });
 }
@@ -2133,7 +2153,7 @@ function startSession(callback, retryMs) {
     unstore('logout');
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
-    me = data.user;
+    me = standardizeUser(data.user);
     experiments = data.experiments;
     eip = data.eip;
     socket = socket || api.socket.open(

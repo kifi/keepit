@@ -112,14 +112,14 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def querySocialInviteStatus(userId:Id[User], search:Option[String], network:Option[String], limit:Int):Seq[ConnectionWithInviteStatus] = {
+  def querySocialInviteStatus(userId:Id[User], search:Option[String], network:Option[String], limit:Int, pictureUrl:Boolean):Seq[ConnectionWithInviteStatus] = {
     @inline def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
     querySocial(userId, search, network, limit) map { case (c, s) =>
-      ConnectionWithInviteStatus(c.fullName, c.getPictureUrl(75, 75), socialId(c), s)
+      ConnectionWithInviteStatus(c.fullName, if (pictureUrl) c.getPictureUrl(75, 75) else None, socialId(c), s)
     }
   }
 
-  def queryAll(userId:Id[User], search: Option[String], network: Option[String], limit: Int):Future[Seq[ConnectionWithInviteStatus]] = {
+  def queryAll(userId:Id[User], search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
     val abookF = {
       if (network.isEmpty || network.exists(_ == "email")) queryContactsInviteStatus(userId, search, limit) // deviate from UserCommander.getAllConnections
       else Future.successful(Seq.empty[ConnectionWithInviteStatus])
@@ -128,7 +128,7 @@ class TypeaheadCommander @Inject()(
     val socialF = {
       if (network.isEmpty || network.exists(_ != "email")) {
         SafeFuture {
-          querySocialInviteStatus(userId, search, network, limit)
+          querySocialInviteStatus(userId, search, network, limit, pictureUrl)
         }
       } else Future.successful(Seq.empty[ConnectionWithInviteStatus])
     }

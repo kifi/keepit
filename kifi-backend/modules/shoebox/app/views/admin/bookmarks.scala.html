@@ -104,7 +104,7 @@
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       <td>@adminHelper.uriStateDisplay(uri)</td>
       <td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
-      <td>@uri.restriction.map{ r => r.context}.getOrElse("")</td>
+      <td>@{uri.restriction.map{ r => r.context}.getOrElse("")}</td>
     </tr>
   }
   </table>

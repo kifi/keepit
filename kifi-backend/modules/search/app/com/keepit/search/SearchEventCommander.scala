@@ -18,7 +18,6 @@ class SearchEventCommander @Inject() (
   clickHistoryTracker: ClickHistoryTracker,
   browsingHistoryTracker: BrowsingHistoryTracker,
   resultClickedTracker: ResultClickTracker,
-  articleSearchResultStore: ArticleSearchResultStore,
   searchAnalytics: SearchAnalytics) extends Logging {
 
   def searched(userId: Id[User], searchedAt: DateTime, searchContext: BasicSearchContext, endedWith: String)(implicit context: HeimdalContext) = {

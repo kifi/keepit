@@ -24,10 +24,10 @@ angular.module('kifi.modal', [])
           scope.dialogStyle.height = attrs.kfHeight;
         }
 
-        scope.backdropStyle.opacity = attrs.kfOpacity || .3;
+        scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
 
-        scope.hideModal = function($event) {
+        scope.hideModal = function () {
           scope.show = false;
         };
 
@@ -75,14 +75,14 @@ angular.module('kifi.modal', [])
           scope.dialogStyle.height = attrs.kfHeight;
         }
 
-        scope.title = attrs.title || "";
+        scope.title = attrs.title || '';
         scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
 
-        scope.backdropStyle.opacity = attrs.kfOpacity || .3;
+        scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
 
-        scope.hideModal = function($event) {
+        scope.hideModal = function () {
           scope.show = false;
         };
 

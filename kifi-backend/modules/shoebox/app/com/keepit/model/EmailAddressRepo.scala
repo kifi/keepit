@@ -9,7 +9,7 @@ import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
 
 @ImplementedBy(classOf[EmailAddressRepoImpl])
-trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddress] {
+trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddress] with SeqNumberFunction[EmailAddress] {
   def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[EmailAddress]
   def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
@@ -23,23 +23,30 @@ trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddre
 
 @Singleton
 class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo)
-  extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with EmailAddressRepo {
+  extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with SeqNumberDbFunction[EmailAddress] with EmailAddressRepo {
 
   import db.Driver.simple._
 
   type RepoImpl = EmailAddressTable
-  class EmailAddressTable(tag: Tag) extends RepoTable[EmailAddress](db, tag, "email_address") {
+  class EmailAddressTable(tag: Tag) extends RepoTable[EmailAddress](db, tag, "email_address") with SeqNumberColumn[EmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[String]("address", O.NotNull)
     def verifiedAt = column[DateTime]("verified_at", O.NotNull)
     def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt.?, lastVerificationSent.?,
-      verificationCode) <> ((EmailAddress.apply _).tupled, EmailAddress.unapply _)
+      verificationCode, seq) <> ((EmailAddress.apply _).tupled, EmailAddress.unapply _)
   }
 
   def table(tag: Tag) = new EmailAddressTable(tag)
   initTable()
+
+  private val sequence = db.getSequence[EmailAddress]("email_address_sequence")
+
+  override def save(emailAddress: EmailAddress)(implicit session: RWSession): EmailAddress = {
+    val toSave = emailAddress.copy(seq = sequence.incrementAndGet())
+    super.save(toSave)
+  }
 
   override def deleteCache(emailAddr: EmailAddress)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: EmailAddress)(implicit session: RSession): Unit = {}

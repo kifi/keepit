@@ -60,7 +60,8 @@ class ArticleIndexer(
       sequenceNumber = uri.seq,
       isDeleted = ArticleIndexer.shouldDelete(uri),
       uri = uri,
-      articleStore = articleStore)
+      articleStore = articleStore,
+      airbrake = airbrake)
   }
 
   override def indexInfos(name: String): Seq[IndexInfo] = {
@@ -77,7 +78,8 @@ object ArticleIndexer extends Logging {
     override val sequenceNumber: SequenceNumber[NormalizedURI],
     override val isDeleted: Boolean,
     val uri: IndexableUri,
-    articleStore: ArticleStore
+    articleStore: ArticleStore,
+    airbrake: AirbrakeNotifier
   ) extends Indexable[NormalizedURI, NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
@@ -101,12 +103,19 @@ object ArticleIndexer extends Logging {
         } catch {
           case e: Throwable =>
         }
-        log.info("failed to get article from ArticleStore. retry in {$sleepTime}ms")
+        log.info(s"failed to get article from ArticleStore. retry in {$sleepTime}ms")
         Thread.sleep(sleepTime)
         sleepTime *= 2 // exponential back off
-        retry -= 0
+        retry -= 1
       }
-      articleStore.get(id)
+      try {
+        articleStore.get(id)
+      } catch {
+        case e: Throwable =>
+          log.error(s"failed to get article from ArticleStore id=${id}", e)
+          airbrake.notify(s"failed to get article from ArticleStore id=${id}")
+          None // skip this doc
+      }
     }
 
     override def buildDocument = {

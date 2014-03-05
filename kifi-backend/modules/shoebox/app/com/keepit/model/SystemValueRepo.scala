@@ -5,12 +5,10 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import org.joda.time.DateTime
 import com.keepit.common.db.slick.Repo
-import com.keepit.common.db.Id
+import com.keepit.common.db.{SequenceNumber, Id, LargeString, State}
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
 import com.keepit.common.db.slick.DBSession
-import com.keepit.common.db.LargeString
-import com.keepit.common.db.State
 
 @ImplementedBy(classOf[SystemValueRepoImpl])
 trait SystemValueRepo extends Repo[SystemValue] {
@@ -18,6 +16,8 @@ trait SystemValueRepo extends Repo[SystemValue] {
   def getSystemValue(name: Name[SystemValue])(implicit session: RSession): Option[SystemValue]
   def setValue(name: Name[SystemValue], value: String)(implicit session: RWSession): String
   def clearValue(name: Name[SystemValue])(implicit session: RWSession): Boolean
+  def getSequenceNumber[T](name: Name[SequenceNumber[T]])(implicit session: RSession): Option[SequenceNumber[T]]
+  def setSequenceNumber[T](name: Name[SequenceNumber[T]], seq: SequenceNumber[T])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -85,5 +85,8 @@ class SystemValueRepoImpl @Inject() (
     changed
   }
 
+  private def toSystemValueName[T](name: Name[SequenceNumber[T]]): Name[SystemValue] = Name(name.name + "_sequence")
+  def getSequenceNumber[T](name: Name[SequenceNumber[T]])(implicit session: RSession): Option[SequenceNumber[T]] = getValue(toSystemValueName(name)).map(value => SequenceNumber[T](value.toLong))
+  def setSequenceNumber[T](name: Name[SequenceNumber[T]], seq: SequenceNumber[T])(implicit session: RWSession): Unit = setValue(toSystemValueName(name), seq.value.toString)
 }
 
