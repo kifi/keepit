@@ -449,7 +449,8 @@ GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedCon
 GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
 POST    /admin/learning/pornDetect/detect   @com.keepit.controllers.admin.AdminPornDetectorController.detect
-GET     /admin/learning/pornDetect/uris/:page          @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int)
+GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int)
+POST    /admin/learning/pornDetect/removeRestrictions      @com.keepit.controllers.admin.AdminPornDetectorController.removeRestrictions
 
 ##########################################
 # Common Healthcheck / service routes
