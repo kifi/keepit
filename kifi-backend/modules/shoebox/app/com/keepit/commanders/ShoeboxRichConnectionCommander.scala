@@ -50,14 +50,17 @@ class ShoeboxRichConnectionCommander @Inject() (
           case SocialConnectionStates.INACTIVE => RemoveRichConnection(sUser1, sUser2)
         }
       }
-      (updateRichConnections, socialConnections.length, socialConnections.map(_.seq).max)
+      val highestSeq = if (socialConnections.nonEmpty) socialConnections.map(_.seq).max else currentSeq
+      (updateRichConnections, socialConnections.length, highestSeq)
     }
 
-    updateRichConnections.foreach(processUpdate) //ZZZ deal with failed SQS calls
-
-    db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(sqsSocialConnectionSeq, highestSeq)
+    if (socialConnectionCount > 0) {
+      updateRichConnections.foreach(processUpdate)
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(sqsSocialConnectionSeq, highestSeq)
+      }
     }
+
     socialConnectionCount
   }
 
@@ -67,17 +70,20 @@ class ShoeboxRichConnectionCommander @Inject() (
       userConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
-    userConnections.foreach { userConnection =>
-      val updateKifiConnection = userConnection.state match {
-        case UserConnectionStates.ACTIVE => RecordKifiConnection(userConnection.user1, userConnection.user2)
-        case UserConnectionStates.INACTIVE => RemoveKifiConnection(userConnection.user1, userConnection.user2)
+    if (userConnections.nonEmpty) {
+      userConnections.foreach { userConnection =>
+        val updateKifiConnection = userConnection.state match {
+          case UserConnectionStates.ACTIVE => RecordKifiConnection(userConnection.user1, userConnection.user2)
+          case UserConnectionStates.INACTIVE => RemoveKifiConnection(userConnection.user1, userConnection.user2)
+        }
+        processUpdate(updateKifiConnection)
       }
-      processUpdate(updateKifiConnection)
+
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(sqsUserConnectionSeq, userConnections.map(_.seq).max)
+      }
     }
 
-    db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(sqsUserConnectionSeq, userConnections.map(_.seq).max)
-    }
     userConnections.length
   }
 
@@ -87,14 +93,16 @@ class ShoeboxRichConnectionCommander @Inject() (
       socialUserInfoRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
-    socialUserInfos.foreach { socialUserInfo => socialUserInfo.state match {
-      case SocialUserInfoStates.INACTIVE => ???
-      case _ => socialUserInfo.userId.foreach { friendUserId => processUpdate(RecordFriendUserId(socialUserInfo.networkType, socialUserInfo.id, None, friendUserId)) }
-    }}
+    if (socialUserInfos.nonEmpty) {
+      socialUserInfos.collect { case socialUserInfo if socialUserInfo.state != SocialUserInfoStates.INACTIVE =>
+        socialUserInfo.userId.foreach { friendUserId => processUpdate(RecordFriendUserId(socialUserInfo.networkType, socialUserInfo.id, None, friendUserId)) }
+      }
 
-    db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(sqsSocialUserInfoSeq, socialUserInfos.map(_.seq).max)
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(sqsSocialUserInfoSeq, socialUserInfos.map(_.seq).max)
+      }
     }
+
     socialUserInfos.length
   }
 
@@ -104,15 +112,18 @@ class ShoeboxRichConnectionCommander @Inject() (
       invitationRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
-    invitations.collect { case invitation if invitation.state != InvitationStates.INACTIVE =>
-      invitation.senderUserId.foreach { userId =>
-        processUpdate(RecordInvitation(userId, invitation.id.get, invitation.recipientSocialUserId, invitation.recipientEContactId))
+    if (invitations.nonEmpty) {
+      invitations.collect { case invitation if invitation.state != InvitationStates.INACTIVE =>
+        invitation.senderUserId.foreach { userId =>
+          processUpdate(RecordInvitation(userId, invitation.id.get, invitation.recipientSocialUserId, invitation.recipientEContactId))
+        }
+      }
+
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(sqsInvitationSeq, invitations.map(_.seq).max)
       }
     }
 
-    db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(sqsInvitationSeq, invitations.map(_.seq).max)
-    }
     invitations.length
   }
 
@@ -122,13 +133,16 @@ class ShoeboxRichConnectionCommander @Inject() (
       emailAddressRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
 
-    emails.collect { case verifiedEmail if verifiedEmail.state == EmailAddressStates.VERIFIED =>
-      processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address))
+    if (emails.nonEmpty) {
+      emails.collect { case verifiedEmail if verifiedEmail.state == EmailAddressStates.VERIFIED =>
+        processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address))
+      }
+
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(sqsEmailAddressSeq, emails.map(_.seq).max)
+      }
     }
 
-    db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(sqsEmailAddressSeq, emails.map(_.seq).max)
-    }
     emails.length
   }
 }
