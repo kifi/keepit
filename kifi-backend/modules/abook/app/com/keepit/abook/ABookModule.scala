@@ -18,4 +18,6 @@ abstract class ABookModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
   val abookSlickModule = ABookSlickModule()
+
+  val repoChangeListenerModule = AbookRepoChangeListenerModule()
 }
