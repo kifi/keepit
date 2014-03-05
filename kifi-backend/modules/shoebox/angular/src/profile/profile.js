@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService'])
+angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput', 'kifi.routeService'])
 
 .config([
   '$routeProvider',
@@ -22,7 +22,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
-      $scope.primaryEmail = getPrimaryEmail(data.emails);
     });
 
     console.log('emailInput');
@@ -147,8 +146,8 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
 ])
 
 .directive('kfProfileInput', [
-  '$timeout', 'keyIndices', 'util',
-  function ($timeout, keyIndices, util) {
+  '$timeout', '$http', 'keyIndices', 'util', 'profileService', 'routeService',
+  function ($timeout, $http, keyIndices, util, profileService, routeService) {
     return {
       restrict: 'A',
       scope: {
@@ -175,17 +174,21 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
 
         console.log(scope, scope.state);
 
-        scope.state.editing = false;
-        scope.state.isInvalid = false;
+        var disableInputTimeout = null;
+        var fallbackValue = null;
 
-        scope.edit = function () {
-          scope.state.editing = true;
-        };
+        function updateValue(value) {
+          scope.input.value = value;
+          scope.currentValue = value;
+        }
 
-        scope.cancel = function () {
-          scope.state.value = scope.currentValue;
-          scope.state.editing = false;
-        };
+        function setFallbackValue(value) {
+          fallbackValue = value;
+        }
+
+        function revertInput() {
+          updateValue(fallbackValue);
+        }
 
         function setInvalid(header, body) {
           scope.state.isInvalid = true;
@@ -197,7 +200,24 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
           scope.state.isInvalid = false;
         }
 
-        scope.save = function () {
+        scope.$watch('defaultValue', updateValue);
+
+        scope.enableEditing = function () {
+          if (disableInputTimeout) {
+            $timeout.cancel(disableInputTimeout);
+          }
+          scope.saveButton.css('display', 'block');
+          scope.shouldFocus = true;
+          scope.enabled = true;
+        };
+
+        scope.disableEditing = function () {
+          scope.input.value = scope.currentValue;
+          scope.saveButton.css('display', 'none');
+          scope.enabled = false;
+        };
+
+        scope.saveInput = function () {
           // Validate input
           var value = scope.state.value ? scope.state.value.trim().replace(/\s+/g, ' ') : '';
           if (scope.isEmail) {
@@ -205,22 +225,85 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
               setInvalid('This field is required', '');
               return;
             } else if (!util.validateEmail(value)) {
-              setInvalid('Invalid email address', 'Please enter a valid email address');
+              setInvalidEmailAddressError();
               return;
             } else {
               setValid();
             }
           }
 
-          scope.state.value = value;
-          scope.currentValue = value;
-
+          setFallbackValue(scope.currentValue);
+          updateValue(value);
           if (scope.isEmail) {
-            // todo(martin) saveNewPrimaryEmail($input, function () { revertInput($input); });
+            saveNewPrimaryEmail(value);
           } else {
-            // todo(martin) saveProfileInfo()
+            profileService.postMe({description: scope.input.value});
           }
         };
+
+        scope.blurInput = function () {
+          // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
+          disableInputTimeout = $timeout(function () {
+            scope.disableEditing();
+          }, 100);
+        };
+
+        $timeout(function () {
+          scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
+          scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
+        });
+
+        // Email input utility functions
+
+        function setInvalidEmailAddressError() {
+          setInvalid('Invalid email address', 'Please enter a valid email address');
+        }
+
+        function checkCandidateEmailSuccess(me, emailInfo) {
+          if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+            profileService.fetchMe();
+            return;
+          }
+          if (emailInfo.isVerified) {
+            return profileService.setNewPrimaryEmail(me, emailInfo.address);
+          }
+          // email is available || (not primary && not pending primary && not verified)
+          //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+        }
+
+        function checkCandidateEmailError(status) {
+          switch (status) {
+            case 400: // bad format
+              setInvalidEmailAddressError();
+              break;
+            case 403: // belongs to another user
+              setInvalid(
+                'This email address is already taken',
+                'This email address belongs to another user.<br>Please enter another email address.'
+              );
+              break;
+          }
+          revertInput();
+        }
+
+        function saveNewPrimaryEmail(email) {
+          profileService.getMe().then(function (me) {
+            if (me.primaryEmail.address === email) {
+              return;
+            }
+            // todo(martin) move this http call outside of the directive
+            $http({
+              url: routeService.emailInfoUrl,
+              method: 'GET',
+              params: {email: email}
+            }).success(function (data) {
+              checkCandidateEmailSuccess(me, data);
+            }).error(function (data, status) {
+              checkCandidateEmailError(status);
+            });
+          });
+        }
+>>>>>>> 3a4e7705b8572b03f20813ec6d21fc829ada0f8b
       }
     };
   }

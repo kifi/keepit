@@ -74,7 +74,7 @@ class ShoeboxRichConnectionCommander @Inject() (
       userConnections.foreach { userConnection =>
         val updateKifiConnection = userConnection.state match {
           case UserConnectionStates.ACTIVE => RecordKifiConnection(userConnection.user1, userConnection.user2)
-          case UserConnectionStates.INACTIVE => RemoveKifiConnection(userConnection.user1, userConnection.user2)
+          case UserConnectionStates.INACTIVE | UserConnectionStates.UNFRIENDED => RemoveKifiConnection(userConnection.user1, userConnection.user2)
         }
         processUpdate(updateKifiConnection)
       }
