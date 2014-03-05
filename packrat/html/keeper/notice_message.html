@@ -1,4 +1,4 @@
-<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="message">
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSelf}} kifi-notice-self{{/isSelf}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="message">
   <div class="kifi-notice-mosaic kifi-notice-mosaic-{{picturedParticipants.length}}">
   {{#picturedParticipants}}
     <div class="kifi-notice-pic kifi-notice-pic-{{picIndex}}" style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"></div>

@@ -166,12 +166,16 @@ var methods = {
         this.data("tokenInputObject").toggleDisabled(disable);
         return this;
     },
-    setOptions: function(options){
+    setOptions: function(options) {
         $(this).data("settings", $.extend({}, $(this).data("settings"), options || {}));
         return this;
     },
+    flushCache: function () {
+        this.data("tokenInputObject").flushCache();
+        return this;
+    },
     destroy: function () {
-        if(this.data("tokenInputObject")){
+        if (this.data("tokenInputObject")) {
             this.data("tokenInputObject").destroy();
             this.removeData("tokenInputObject settings");
         }
@@ -489,6 +493,10 @@ $.TokenList = function (input, dataProvider, settings) {
 
     this.toggleDisabled = function(disable) {
         toggleDisabled(disable);
+    };
+
+    this.flushCache = function() {
+        cache.flush();
     };
 
     this.destroy = function() {
@@ -908,28 +916,14 @@ $.TokenList = function (input, dataProvider, settings) {
 };
 
 // Really basic cache for the results
-$.TokenList.Cache = function (options) {
-    var settings = $.extend({
-        max_size: 500
-    }, options);
-
+$.TokenList.Cache = function () {
     var data = {};
-    var size = 0;
 
-    var flush = function () {
+    this.flush = function () {
         data = {};
-        size = 0;
     };
 
     this.add = function (query, results) {
-        if(size > settings.max_size) {
-            flush();
-        }
-
-        if(!data[query]) {
-            size += 1;
-        }
-
         data[query] = results;
     };
 

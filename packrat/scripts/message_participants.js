@@ -240,19 +240,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 
 		/**
 		 * Returns a boolean value representing whether
-		 * the conversation is a group conversation.
-		 *
-		 * true - group conversation
-		 * false - 1:1 conversation
-		 *
-		 * @return {boolean} Whether the conversation is a group conversation
-		 */
-		isGroup: function () {
-			return this.getParticipants().length > 2;
-		},
-
-		/**
-		 * Returns a boolean value representing whether
 		 * the conversation has more number of people than the threshold.
 		 *
 		 * true - n > threshold
@@ -262,15 +249,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 */
 		isOverflowed: function () {
 			return this.getParticipants().length > OVERFLOW_LENGTH;
-		},
-
-		/**
-		 * Returns the other participant of a 1:1 conversation.
-		 */
-		getOtherParticipant: function () {
-			return this.getParticipants().filter(function (user) {
-				return user.id !== win.me.id;
-			})[0];
 		},
 
 		/**
@@ -291,11 +269,14 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * @return {Object} A state object
 		 */
 		getView: function () {
+			var participants = this.getParticipants();
+			var other = participants.length === 2 ? participants.filter(function (user) {
+				return user.id !== win.me.id;
+			})[0] : null;
 			return {
-				isGroup: this.isGroup(),
-				participantName: this.getFullName(this.getOtherParticipant()),
+				participantName: other ? this.getFullName(other) : null,
 				isOverflowed: this.isOverflowed(),
-				participantCount: this.getParticipants().length,
+				participantCount: participants.length,
 				avatars: this.renderAvatars(),
 				participants: this.renderParticipants()
 			};
@@ -550,9 +531,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		updateView: function () {
-			var view = this.getView(),
-				$el = this.get$();
-			$el.toggleClass('kifi-group-conversation', view.isGroup);
+			var view = this.getView();
+			var $el = this.get$();
+			$el.attr('data-kifi-participants', view.participantCount);
 			$el.toggleClass('kifi-overflow', view.isOverflowed);
 			$el.find('.kifi-message-participant-name').text(view.participantName);
 			$el.find('.kifi-participant-count').text(view.participantCount);

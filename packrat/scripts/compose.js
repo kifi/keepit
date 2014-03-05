@@ -102,7 +102,7 @@ var initCompose = (function() {
 
   if ($t.length) {
     $t.tokenInput(function search(query, withResults) {
-      api.port.emit('search_friends', {q: query}, withResults);
+      api.port.emit('search_friends', {q: query, includeSelf: !$t.tokenInput('get').length}, withResults);
     }, {
       placeholder: 'To',
       hintText: '',
@@ -143,13 +143,19 @@ var initCompose = (function() {
           $f.removeClass('kifi-empty');
           $d.text(defaultText);
         }
+        if ($t.tokenInput('get').length === 1) {
+          $t.tokenInput('flushCache');
+        }
         throttledSaveDraft();
       },
       onDelete: function () {
         if (!$f.is($composes)) return;
-        if (defaultText && !$t.tokenInput('get').length && $d.text() === defaultText) {
-          $d.empty();
-          $f.addClass('kifi-empty');
+        if ($t.tokenInput('get').length === 0) {
+          if (defaultText && $d.text() === defaultText) {
+            $d.empty();
+            $f.addClass('kifi-empty');
+          }
+          $t.tokenInput('flushCache');
         }
         throttledSaveDraft();
       },
