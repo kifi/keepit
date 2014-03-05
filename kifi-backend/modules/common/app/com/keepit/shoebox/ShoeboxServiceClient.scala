@@ -120,7 +120,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
-  def getVerifiedAddressOwner(emailAddress: String): Future[Option[Id[User]]]
+  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -819,10 +819,9 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.updateURIRestriction(), payload).map{ r => }
   }
 
-  def getVerifiedAddressOwner(emailAddress: String): Future[Option[Id[User]]] = {
-    cacheProvider.verifiedEmailUserIdCache.getOrElseFutureOpt(VerifiedEmailUserIdKey(emailAddress)) {
-      val payload = Json.obj("address" -> emailAddress)
-      call(Shoebox.internal.getVerifiedAddressOwner(), payload).map(_.json.asOpt(Id.format[User]))
-    }
+  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = {
+    val payload = Json.obj("addresses" -> emailAddresses)
+    implicit val userIdFormat = Id.format[User]
+    call(Shoebox.internal.getVerifiedAddressOwners(), payload).map(_.json.as[Map[String, Id[User]]])
   }
 }

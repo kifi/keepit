@@ -66,7 +66,8 @@ class ShoeboxController @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scraperHelper: ScraperCallbackHelper,
-  scrapeScheduler: ScrapeSchedulerPlugin
+  scrapeScheduler: ScrapeSchedulerPlugin,
+  verifiedEmailUserIdCache: VerifiedEmailUserIdCache
 )
   (implicit private val clock: Clock,
    implicit private val scraperConfig: ScraperConfig,
@@ -640,12 +641,17 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  def getVerifiedAddressOwner() = SafeAsyncAction(parse.json) { request =>
-    val address = (request.body \ "address").as[String]
-    val ownerIdOpt = db.readOnly { implicit session =>
-      emailAddressRepo.getVerifiedOwner(address)
+  def getVerifiedAddressOwners() = SafeAsyncAction(parse.json) { request =>
+    val addresses = (request.body \ "addresses").as[Seq[String]]
+    val owners = db.readOnly { implicit session =>
+      for {
+        address <- addresses
+        userId <- verifiedEmailUserIdCache.getOrElseOpt(VerifiedEmailUserIdKey(address)) {
+          emailAddressRepo.getVerifiedOwner(address)
+        }
+      } yield (address -> userId)
     }
     implicit val userIdFormat = Id.format[User]
-    Ok(Json.toJson(ownerIdOpt))
+    Ok(Json.toJson(owners.toMap))
   }
 }

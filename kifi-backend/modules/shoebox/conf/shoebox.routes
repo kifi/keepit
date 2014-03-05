@@ -553,7 +553,7 @@ POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controll
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
-POST     /internal/shoebox/database/getVerifiedAddressOwner  @com.keepit.controllers.internal.ShoeboxController.getVerifiedAddressOwner()
+POST     /internal/shoebox/database/getVerifiedAddressOwners  @com.keepit.controllers.internal.ShoeboxController.getVerifiedAddressOwners()
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home
