@@ -10,19 +10,24 @@ angular.module('kifi.profileService', [])
     };
     var addressBooks = [];
 
+    var profileUrl = env.xhrBase + '/user/me';
+
     function formatPicUrl(userId, pictureName, size) {
       return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
     }
 
+    function updateMe(data) {
+      angular.forEach(data, function (val, key) {
+        me[key] = val;
+      });
+      me.picUrl = formatPicUrl(me.id, me.pictureName);
+      me.seqNum++;
+      return me;
+    }
+
     function fetchMe() {
-      var url = env.xhrBase + '/user/me';
-      return $http.get(url).then(function (res) {
-        angular.forEach(res.data, function (val, key) {
-          me[key] = val;
-        });
-        me.picUrl = formatPicUrl(me.id, me.pictureName);
-        me.seqNum++;
-        return me;
+      return $http.get(profileUrl).then(function (res) {
+        return updateMe(res.data);
       });
     }
 
@@ -42,11 +47,18 @@ angular.module('kifi.profileService', [])
       return addressBooks.length > 0 ? $q.when(addressBooks) : fetchAddressBooks();
     }
 
+    function postMe(data) {
+      $http.post(profileUrl, data).then(function (res) {
+        return updateMe(res.data);
+      });
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
-      getAddressBooks: getAddressBooks
+      getAddressBooks: getAddressBooks,
+      postMe: postMe
     };
   }
 ]);

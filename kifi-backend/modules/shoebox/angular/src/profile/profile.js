@@ -144,8 +144,8 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 ])
 
 .directive('kfProfileInput', [
-  '$timeout', 'keyIndices', 'util',
-  function ($timeout, keyIndices, util) {
+  '$timeout', 'keyIndices', 'util', 'profileService',
+  function ($timeout, keyIndices, util, profileService) {
     return {
       restrict: 'A',
       scope: {
@@ -216,7 +216,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
           if (scope.isEmail) {
             // todo(martin) saveNewPrimaryEmail($input, function () { revertInput($input); });
           } else {
-            // todo(martin) saveProfileInfo()
+            profileService.postMe({description: scope.input.value});
           }
 
         };
