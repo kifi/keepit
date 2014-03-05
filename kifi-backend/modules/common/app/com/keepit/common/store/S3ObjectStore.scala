@@ -37,7 +37,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
     case false => ""
   }
 
-  protected def doWithS3Client[T](what: =>String)(body: AmazonS3 => Option[T]): Option[T] = try {
+  protected def doWithS3Client[T](what: =>String)(body: AmazonS3 => T): T = try {
     body(amazonS3Client)
   } catch {
     case ex: Exception =>
@@ -47,15 +47,13 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
 
   def += (kv: (A, B)) = {
     kv match {
-      case (key, value) =>
+      case (id, value) =>
         val timer = accessLog.timer(S3)
+        val key = idToKey(id)
         doWithS3Client("adding an item to S3Store"){ s3Client =>
           val (inputStream, metadata) = packValue(value)
           try {
-            Some(s3Client.putObject(bucketName,
-              idToKey(key),
-              inputStream,
-              metadata))
+            s3Client.putObject(bucketName, key, inputStream, metadata)
           } catch {
             case ase: AmazonServiceException =>
               val error = """Error Message: %s    " + );
@@ -71,52 +69,51 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
             try { inputStream.close() } catch {case e: Exception => log.error("error closing content stream.", e)}
           }
         }
-        accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "PUT"))
+        accessLog.add(timer.done(space = bucketName.name, key = key, method = "PUT"))
     }
     this
   }
 
-  def -= (key: A) = {
+  def -= (id: A) = {
     val timer = accessLog.timer(S3)
-    doWithS3Client("removing an item from S3BStore"){ s3Client =>
-      Some(s3Client.deleteObject(bucketName, idToKey(key)))
-    }
-    accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "DEL"))
+    val key = idToKey(id)
+    doWithS3Client("removing an item from S3BStore"){ s3Client => s3Client.deleteObject(bucketName, key) }
+    accessLog.add(timer.done(space = bucketName.name, key = key, method = "DEL"))
     this
   }
 
   def get(id: A): Option[B] = {
     val timer = accessLog.timer(S3)
-    doWithS3Client("getting an item from S3BStore"){ s3Client =>
-      val key = idToKey(id)
+    val key = idToKey(id)
+    val value = doWithS3Client[Option[B]]("getting an item from S3BStore"){ s3Client =>
       val s3obj = try {
         Some(s3Client.getObject(bucketName, key))
       } catch {
         case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
       }
-      val value = s3obj map unpackValue
-      accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
-      value
+      s3obj map unpackValue
     }
+    accessLog.add(timer.done(space = bucketName.name, key = key, method = "GET"))
+    value
   }
 
   override def getWithMetadata(id: A): Option[(B, Option[ObjMetadata])] = { // WIP; dup code so get() not affected
     val timer = accessLog.timer(S3)
-    doWithS3Client("getting an item from S3BStore"){ s3Client =>
-      val key = idToKey(id)
+    val key = idToKey(id)
+    val t = doWithS3Client[Option[(B, Option[ObjMetadata])]]("getting an item from S3BStore"){ s3Client =>
       val s3obj = try {
         Some(s3Client.getObject(bucketName, key))
       } catch {
         case e: AmazonS3Exception if (e.getMessage().contains("The specified key does not exist")) => None
       }
-      val t:Option[(B, Option[ObjMetadata])] = s3obj map { o =>
+      s3obj map { o =>
         (unpackValue(o), Some(new ObjMetadata {
           def lastModified = o.getObjectMetadata.getLastModified.toDateTime
         }))
       }
-      accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
-      t
     }
+    accessLog.add(timer.done(space = bucketName.name, key = key.toString, method = "GET"))
+    t
   }
 
 }
