@@ -30,6 +30,28 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
   }
 ])
 
+.directive('kfEmailImport', [
+  'profileService', '$window', 'env',
+  function (profileService, $window, env) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {},
+      templateUrl: 'profile/emailImport.tpl.html',
+      link: function (scope, element) {
+
+        profileService.getAddressBooks().then(function (data) {
+          scope.addressBooks = data;
+        });
+
+        scope.importGmailContacts = function () {
+          $window.location = env.origin + '/importContacts';
+        }
+      }
+    };
+  }
+])
+
 .directive('kfProfileImage', [
   '$compile', '$templateCache', '$window', '$q', '$http', 'env',
   function ($compile, $templateCache, $window, $q, $http, env) {
