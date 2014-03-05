@@ -1,14 +1,19 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.AdminController
-import com.google.inject.Inject
-import com.keepit.common.controller.ActionAuthenticator
-import views.html
-import com.keepit.scraper.ScraperServiceClient
 import scala.concurrent.Await
-import scala.concurrent.duration._
-import com.keepit.model.NormalizedURIRepo
+import scala.concurrent.duration.DurationInt
+import com.google.inject.ImplementedBy
+import com.google.inject.Inject
+import com.google.inject.Singleton
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.AdminController
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.model.NormalizedURI
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.model.NormalizedURIRepoImpl
+import com.keepit.scraper.ScraperServiceClient
+import views.html
 import com.keepit.model.Restriction
 
 class AdminPornDetectorController @Inject()(
@@ -38,9 +43,21 @@ class AdminPornDetectorController @Inject()(
 
   def pornUrisView(page: Int) = AdminHtmlAction.authenticated{ implicit request =>
     val uris = db.readOnly{implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT)}.sortBy(-_.updatedAt.getMillis())
-    val PAGE_SIZE = 50
+    val PAGE_SIZE = 100
     val pageCount = (uris.size*1.0 / PAGE_SIZE).ceil.toInt
 
-    Ok(html.admin.pornUris(uris, uris.size, page, pageCount))
+    Ok(html.admin.pornUris(uris.drop(page * PAGE_SIZE).take(PAGE_SIZE), uris.size, page, pageCount))
+  }
+
+  def removeRestrictions() = AdminHtmlAction.authenticated{ implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val ids = body.get("uriIds").get.split(",").map{ id => Id[NormalizedURI](id.toLong)}
+    db.readWrite{implicit s =>
+      ids.foreach{ id =>
+        val uri = uriRepo.get(id)
+        if (uri.restriction == Some(Restriction.ADULT)) uriRepo.save(uri.copy(restriction = None))
+      }
+    }
+    Ok(s"${ids.size} uris' adult restriction removed")
   }
 }
