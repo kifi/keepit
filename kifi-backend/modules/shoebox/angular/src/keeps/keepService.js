@@ -342,7 +342,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       prefetchImages: function (urls) {
         _.forEach(urls, function (imgUrl, key) {
-          if (!(key in previewUrls)) {
+          if (!(key in previewUrls) && imgUrl) {
             previewUrls[key] = imgUrl;
             doc.createElement('img').src = imgUrl;
           }
