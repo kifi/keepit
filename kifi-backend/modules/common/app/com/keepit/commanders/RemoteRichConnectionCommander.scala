@@ -3,6 +3,7 @@ package com.keepit.commanders
 
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.queue.RichConnectionUpdateMessage
+import com.keepit.common.akka.SafeFuture
 
 import com.kifi.franz.FormattedSQSQueue
 
@@ -19,8 +20,8 @@ class RemoteRichConnectionCommander @Inject() (
     queue: FormattedSQSQueue[RichConnectionUpdateMessage]
   ) extends RichConnectionCommander {
 
-  def processUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
-    queue.send(message).map(_ => ())
+  def processUpdate(message: RichConnectionUpdateMessage): Future[Unit] = { //ZZZ safe future
+    SafeFuture{queue.send(message)}.map(_ => ())
   }
 
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = {

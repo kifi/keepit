@@ -53,7 +53,7 @@ class ShoeboxRichConnectionCommander @Inject() (
       (updateRichConnections, socialConnections.length, socialConnections.map(_.seq).max)
     }
 
-    updateRichConnections.foreach(processUpdate)
+    updateRichConnections.foreach(processUpdate) //ZZZ deal with failed SQS calls
 
     db.readWrite { implicit session =>
       systemValueRepo.setSequenceNumber(sqsSocialConnectionSeq, highestSeq)
