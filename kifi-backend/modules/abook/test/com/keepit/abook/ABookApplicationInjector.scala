@@ -26,7 +26,8 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
     TestSlickModule(TestDbInfo.dbInfo),
     FakeActionAuthenticatorModule(),
     FakeABookStoreModule(),
-    TestContactsUpdaterPluginModule()
+    TestContactsUpdaterPluginModule(),
+    FakeAbookRepoChangeListenerModule()
   ), overridingModules
 )) {
   println(s"[ABookApplication] path=$path canonicalPath=${path.getCanonicalPath}")
@@ -42,6 +43,7 @@ trait ABookTestInjector extends EmptyInjector with DbInjectionHelper with ABookI
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     ABookCacheModule(HashMapMemoryCacheModule()),
-    TestSchedulerModule()
+    TestSchedulerModule(),
+    FakeAbookRepoChangeListenerModule()
   )
 }
