@@ -195,7 +195,7 @@ class AsyncScraper @Inject() (
       title = latestUri.title.getOrElse(""),
       description = None,
       canonicalUrl = None,
-      alternateUrls = Set.empty,
+      alternateUrls = Some(Set.empty),
       keywords = None,
       media = None,
       content = "",
@@ -254,7 +254,7 @@ class AsyncScraper @Inject() (
         val scrapedInfo = info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64)
         helper.scraped(scrapedUri, scrapedInfo)
         // Report canonical url
-        article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls)) // todo: make part of "scraped" call
+        article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls.getOrElse(Set.empty[String]))) // todo: make part of "scraped" call
         if (shouldUpdateScreenshot(scrapedUri)) {
           s3ScreenshotStore.updatePicture(scrapedUri) onComplete { tr =>
             tr match {
@@ -346,7 +346,7 @@ class AsyncScraper @Inject() (
                 title = title,
                 description = description,
                 canonicalUrl = canonicalUrl,
-                alternateUrls = alternateUrls,
+                alternateUrls = Some(alternateUrls),
                 keywords = keywords,
                 media = media,
                 content = content,

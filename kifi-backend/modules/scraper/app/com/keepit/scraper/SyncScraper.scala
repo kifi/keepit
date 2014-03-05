@@ -91,7 +91,7 @@ class SyncScraper @Inject() (
           }
 
           // Report canonical url
-          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
+          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls.getOrElse(Set.empty[String])))
 
           log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
@@ -125,7 +125,7 @@ class SyncScraper @Inject() (
           title = latestUri.title.getOrElse(""),
           description = None,
           canonicalUrl = None,
-          alternateUrls = Set.empty,
+          alternateUrls = Some(Set.empty),
           keywords = None,
           media = None,
           content = "",
@@ -219,7 +219,7 @@ class SyncScraper @Inject() (
               title = title,
               description = description,
               canonicalUrl = canonicalUrl,
-              alternateUrls = alternateUrls,
+              alternateUrls = Some(alternateUrls),
               keywords = keywords,
               media = media,
               content = content,
