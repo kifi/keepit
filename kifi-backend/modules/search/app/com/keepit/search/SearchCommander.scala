@@ -218,7 +218,7 @@ class SearchCommanderImpl @Inject() (
   private class Prefetcher(userId: Id[User]) {
     var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
     SafeFuture{
-      futures = mainSearcherFactory.warmUp(userId, logging = false)
+      futures = mainSearcherFactory.warmUp(userId)
     }
   }
 
