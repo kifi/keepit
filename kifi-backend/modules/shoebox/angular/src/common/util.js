@@ -27,7 +27,7 @@ angular.module('util', [])
       delete oldObj[key];
     });
     _.forOwn(newObj || {}, function (num, key) {
-      oldArray[key] = newObj[key];
+      oldObj[key] = newObj[key];
     });
   }
 })

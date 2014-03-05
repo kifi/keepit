@@ -27,7 +27,7 @@
                    ng-model="input.value"
                    type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
           </script>
-          <div kf-profile-input template-url="profileInputDescription.html"></div>
+          <div kf-profile-input template-url="profileInputDescription.html" data-default-value="me.description"></div>
         </div>
         <div class="profile-input-wrapper profile-email" data-name="email">
           <div class="profile-input-title">Contact email</div>
@@ -40,14 +40,14 @@
                    ng-model="input.value"
                    type="text" name="email" placeholder="Enter your email address" novalidate>
           </script>
-          <div kf-profile-input template-url="profileInputEmail.html" data-default-value="primaryEmail.address" data-is-email="true"></div>
+          <div kf-profile-input template-url="profileInputEmail.html" data-default-value="me.primaryEmail.address" data-is-email="true"></div>
         </div>
         <div class="profile-email-address-unverified">
           Your email is pending your verification
           (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>).
         </div>
         <div class="profile-email-address-pending">
-          Your new primary email, <span class="profile-email-address-pending-email">{{primaryEmail.address}}</span>, is pending your verification
+          Your new primary email, <span class="profile-email-address-pending-email">{{me.primaryEmail.address}}</span>, is pending your verification
           (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>,
           <a class="profile-email-pending-cancel" href="javascript:">Cancel</a>).
         </div>
