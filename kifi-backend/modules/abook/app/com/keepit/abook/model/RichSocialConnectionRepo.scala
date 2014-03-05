@@ -225,12 +225,16 @@ class RichSocialConnectionRepoImpl @Inject() (
   def recordInvitation(userId: Id[User], invitation: Id[Invitation], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => {
-        (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row.invitation).update(invitation)
-        sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE friend_social_id = $friendSocialId".execute()
+        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitation.isNull} yield row.invitation).update(invitation)
+        if (updated == 1) {
+          sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE friend_social_id = $friendSocialId".execute()
+        }
       }
       case Right(friendEmailAddress) => {
-        (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row.invitation).update(invitation)
-        sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
+        val updated = (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress && row.invitation.isNull } yield row.invitation).update(invitation)
+        if (updated == 1) {
+          sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
+        }
       }
     }
   }

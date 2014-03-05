@@ -11,6 +11,7 @@ import com.keepit.model.ScrapeInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.performance.timing
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -43,7 +44,9 @@ class ScraperController @Inject() (
     val url = (parameters \ "url").as[String]
     val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
     val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
-    scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
+    timing(s"fetchBasicArticle($url,$proxyOpt,$extractorProviderTypeOpt)") {
+      scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
+    }
   }
 
   def asyncScrapeWithInfo() = Action.async(parse.json) { request =>

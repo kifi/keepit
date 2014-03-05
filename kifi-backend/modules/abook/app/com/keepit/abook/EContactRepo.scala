@@ -31,6 +31,7 @@ trait EContactRepo extends Repo[EContact] {
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
+  def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -175,4 +176,7 @@ class EContactRepoImpl @Inject() (
     }
   }
 
+  def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int = {
+    (for { row <- rows if row.email === email && row.contactUserId.isNull } yield row.contactUserId).update(contactUserId)
+  }
 }

@@ -61,7 +61,7 @@ object SocialUserInfo {
     (__ \ 'profileUrl).formatNullable[String] and
     (__ \ 'state).format(State.format[SocialUserInfo]) and
     (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
-    (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
+    (__ \ 'networkType).format[SocialNetworkType] and
     (__ \ 'credentials).formatNullable[SocialUser] and
     (__ \ 'lastGraphRefresh).formatNullable[DateTime] and
     (__ \ 'seq).format(SequenceNumber.format[SocialUserInfo])

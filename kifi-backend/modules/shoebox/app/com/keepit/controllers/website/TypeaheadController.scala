@@ -28,8 +28,8 @@ class TypeaheadController @Inject() (
  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   // incompatible with UserCommander.getAllConnections
-  def getAllConnections(search: Option[String], network: Option[String], limit: Int) = JsonAction.authenticatedAsync {  request =>
-    commander.queryAll(request.userId, search, network, limit) map { res =>
+  def getAllConnections(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean) = JsonAction.authenticatedAsync {  request =>
+    commander.queryAll(request.userId, search, network, limit, pictureUrl) map { res =>
       Ok(Json.toJson(res))
     }
   }

@@ -13,7 +13,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SocialConnectionRepoImpl])
-trait SocialConnectionRepo extends Repo[SocialConnection] {
+trait SocialConnectionRepo extends Repo[SocialConnection] with SeqNumberFunction[SocialConnection] {
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit session: RSession): Option[SocialConnection]
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]

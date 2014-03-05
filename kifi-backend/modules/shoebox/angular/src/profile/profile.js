@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService'])
+angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput'])
 
 .config([
   '$routeProvider',
@@ -84,7 +84,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
             return {file: file, promise: deferred.promise};
           } else {
             //todo(martin): Notify user
-            //console.log("bad file");
           }
         }
 
@@ -125,15 +124,16 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
 ])
 
 .directive('kfProfileInput', [
-  '$timeout', 'keyIndices',
-  function($timeout, keyIndices) {
+  '$timeout', 'keyIndices', 'util',
+  function($timeout, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
         templateUrl: '@',
-        defaultValue: '@'
+        defaultValue: '=',
+        isEmail: '='
       },
-      template: '<div ng-include="templateUrl"></div>',
+      templateUrl: 'profile/profileInput.tpl.html',
       link: function(scope, element) {
         scope.onKeydown = function (e) {
           switch (e.keyCode) {
@@ -145,17 +145,69 @@ angular.module('kifi.profile', ['util', 'kifi.profileService'])
 
         scope.shouldFocus = false;
         scope.enabled = false;
+        scope.isInvalid = false;
+        scope.input = {};
+
+        function updateValue(value) {
+          scope.input.value = value;
+          scope.currentValue = value;
+        }
+
+        function setInvalid(header, body) {
+          scope.isInvalid = true;
+          scope.errorHeader = header;
+          scope.errorBody = body;
+        }
+
+        function setValid() {
+          scope.isInvalid = false;
+        }
+
+        scope.$watch('defaultValue', updateValue);
 
         scope.enableEditing = function () {
           scope.saveButton.css('display', 'block');
           scope.shouldFocus = true;
           scope.enabled = true;
-        }
+        };
 
         scope.disableEditing = function () {
+          scope.input.value = scope.currentValue;
           scope.saveButton.css('display', 'none');
           scope.enabled = false;
+        };
+        
+        scope.saveInput = function () {
+          // Validate input
+          var value = scope.input.value ? scope.input.value.trim().replace(/\s+/g, ' ') : '';
+          if (scope.isEmail) {
+            if (!value) {
+              setInvalid('This field is required', '');
+              return;
+            } else if (!util.validateEmail(value)) {
+              setInvalid('Invalid email address', 'Please enter a valid email address');
+              return;
+            } else {
+              setValid();
+            }
+          }
+
+          updateValue(value);
+          if (scope.isEmail) {
+            // todo(martin) saveNewPrimaryEmail($input, function () { revertInput($input); });
+          } else {
+            // todo(martin) saveProfileInfo()
+          }
+
+        };
+
+        scope.blurInput = function () {
+          // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
+          $timeout(function () {
+            scope.disableEditing();
+          }, 100);
         }
+        
         $timeout(function () {
           scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
           scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));

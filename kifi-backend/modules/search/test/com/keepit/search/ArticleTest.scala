@@ -62,6 +62,41 @@ class ArticleTest extends Specification {
       val newArticle = json.as[Article]
       article === newArticle
     }
+
+    "be compatible with old Article" in {
+      val now = currentDateTime
+      val article = Article(
+        id = Id(22),
+        title = "my title",
+        description = None,
+        canonicalUrl = None,
+        alternateUrls = Set.empty,
+        keywords = None,
+        media = None,
+        content = "my content",
+        scrapedAt = now,
+        httpContentType = None,
+        httpOriginalContentCharset = None,
+        state = SCRAPED,
+        message = None,
+        titleLang = None,
+        contentLang = None
+      )
+
+      val json = Json.parse(s"""
+        {
+          "normalizedUriId":22,
+          "title":"my title",
+          "content":"my content",
+          "alternateUrls":[],
+          "scrapedAt":"${now.toStandardTimeString}",
+          "state":"scraped"
+        }"""
+      )
+      val newArticle = json.as[Article]
+
+      newArticle === article
+    }
   }
 
 }
