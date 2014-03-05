@@ -88,7 +88,6 @@ class ArticleTest extends Specification {
           "normalizedUriId":22,
           "title":"my title",
           "content":"my content",
-          "alternateUrls":[],
           "scrapedAt":"${now.toStandardTimeString}",
           "state":"scraped"
         }"""

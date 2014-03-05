@@ -35,7 +35,7 @@ object Article {
       (__ \ 'content).format[String] and
       (__ \ 'description).formatNullable[String] and
       (__ \ 'canonicalUrl).formatNullable[String] and
-      (__ \ 'alternateUrls).format(Writes.of[Set[String]])(Reads.of[Set[String]] orElse Reads.pure(Set.empty[String])) and
+      (__ \ 'alternateUrls).formatNullable[Set[String]].inmap[Set[String]](_.getOrElse(Set.empty), Some(_)) and
       (__ \ 'keywords).formatNullable[String] and
       (__ \ 'media).formatNullable[String] and
       (__ \ 'scrapedAt).format[DateTime] and
