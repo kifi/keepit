@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput', 'kifi.routeService'])
+angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeService'])
 
 .config([
   '$routeProvider',
@@ -16,18 +16,14 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
   '$scope', 'profileService',
   function ($scope, profileService) {
 
-    function getPrimaryEmail(emails) {
-      return _.find(emails, 'isPrimary') || emails[0] || null;
-    }
-
     profileService.getMe().then(function (data) {
       $scope.me = data;
     });
 
-    console.log('emailInput');
     $scope.emailInput = {};
-    $scope.$watch('primaryEmail.address', function (val) {
+    $scope.$watch('me.address', function (val) {
       $scope.emailInput.value = val || '';
+      console.log('updatePrimary', val || '');
     });
   }
 ])
@@ -174,6 +170,18 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
         console.log(scope, scope.state);
 
+        scope.state.editing = false;
+        scope.state.isInvalid = false;
+
+        scope.edit = function () {
+          scope.state.editing = true;
+        };
+
+        scope.cancel = function () {
+          scope.state.value = scope.currentValue;
+          scope.state.editing = false;
+        };
+
         var disableInputTimeout = null;
         var fallbackValue = null;
 
@@ -202,22 +210,20 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
         scope.$watch('defaultValue', updateValue);
 
-        scope.enableEditing = function () {
+        scope.edit = function () {
           if (disableInputTimeout) {
             $timeout.cancel(disableInputTimeout);
           }
-          scope.saveButton.css('display', 'block');
           scope.shouldFocus = true;
           scope.enabled = true;
         };
 
-        scope.disableEditing = function () {
+        scope.cancel = function () {
           scope.input.value = scope.currentValue;
-          scope.saveButton.css('display', 'none');
           scope.enabled = false;
         };
 
-        scope.saveInput = function () {
+        scope.save = function () {
           // Validate input
           var value = scope.state.value ? scope.state.value.trim().replace(/\s+/g, ' ') : '';
           if (scope.isEmail) {
@@ -232,6 +238,9 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             }
           }
 
+          scope.state.value = value;
+          scope.currentValue = value;
+
           setFallbackValue(scope.currentValue);
           updateValue(value);
           if (scope.isEmail) {
@@ -244,14 +253,9 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
         scope.blurInput = function () {
           // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
           disableInputTimeout = $timeout(function () {
-            scope.disableEditing();
+            scope.cancel();
           }, 100);
         };
-
-        $timeout(function () {
-          scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
-          scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
-        });
 
         // Email input utility functions
 
@@ -273,15 +277,15 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
         function checkCandidateEmailError(status) {
           switch (status) {
-            case 400: // bad format
-              setInvalidEmailAddressError();
-              break;
-            case 403: // belongs to another user
-              setInvalid(
-                'This email address is already taken',
-                'This email address belongs to another user.<br>Please enter another email address.'
-              );
-              break;
+          case 400: // bad format
+            setInvalidEmailAddressError();
+            break;
+          case 403: // belongs to another user
+            setInvalid(
+              'This email address is already taken',
+              'This email address belongs to another user.<br>Please enter another email address.'
+            );
+            break;
           }
           revertInput();
         }
@@ -303,7 +307,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             });
           });
         }
->>>>>>> 3a4e7705b8572b03f20813ec6d21fc829ada0f8b
       }
     };
   }
