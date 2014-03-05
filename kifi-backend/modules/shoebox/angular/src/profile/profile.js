@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput'])
+angular.module('kifi.profile', ['util', 'kifi.profileService'])
 
 .config([
   '$routeProvider',
@@ -24,6 +24,12 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
       $scope.me = data;
       $scope.primaryEmail = getPrimaryEmail(data.emails);
     });
+
+    console.log('emailInput');
+    $scope.emailInput = {};
+    $scope.$watch('primaryEmail.address', function (val) {
+      $scope.emailInput.value = val || '';
+    });
   }
 ])
 
@@ -35,7 +41,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
       replace: true,
       scope: {},
       templateUrl: 'profile/emailImport.tpl.html',
-      link: function (scope, element) {
+      link: function (scope) {
 
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
@@ -43,7 +49,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
         scope.importGmailContacts = function () {
           $window.location = env.origin + '/importContacts';
-        }
+        };
       }
     };
   }
@@ -146,57 +152,54 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
     return {
       restrict: 'A',
       scope: {
-        templateUrl: '@',
-        defaultValue: '=',
-        isEmail: '='
+        isEmail: '=inputIsEmail',
+        state: '=inputState'
       },
+      transclude: true,
       templateUrl: 'profile/profileInput.tpl.html',
       link: function (scope, element) {
-        scope.onKeydown = function (e) {
-          switch (e.keyCode) {
-          case keyIndices.KEY_ESC:
-            scope.disableEditing();
-            break;
-          }
+        element.find('input')
+          .on('keydown', function (e) {
+            switch (e.keyCode) {
+            case keyIndices.KEY_ESC:
+              scope.cancel();
+              break;
+            }
+          })
+          .on('blur', function () {
+            // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
+            $timeout(function () {
+              scope.cancel();
+            }, 100);
+          });
+
+        console.log(scope, scope.state);
+
+        scope.state.editing = false;
+        scope.state.isInvalid = false;
+
+        scope.edit = function () {
+          scope.state.editing = true;
         };
 
-        scope.shouldFocus = false;
-        scope.enabled = false;
-        scope.isInvalid = false;
-        scope.input = {};
-
-        function updateValue(value) {
-          scope.input.value = value;
-          scope.currentValue = value;
-        }
+        scope.cancel = function () {
+          scope.state.value = scope.currentValue;
+          scope.state.editing = false;
+        };
 
         function setInvalid(header, body) {
-          scope.isInvalid = true;
+          scope.state.isInvalid = true;
           scope.errorHeader = header;
           scope.errorBody = body;
         }
 
         function setValid() {
-          scope.isInvalid = false;
+          scope.state.isInvalid = false;
         }
 
-        scope.$watch('defaultValue', updateValue);
-
-        scope.enableEditing = function () {
-          scope.saveButton.css('display', 'block');
-          scope.shouldFocus = true;
-          scope.enabled = true;
-        };
-
-        scope.disableEditing = function () {
-          scope.input.value = scope.currentValue;
-          scope.saveButton.css('display', 'none');
-          scope.enabled = false;
-        };
-
-        scope.saveInput = function () {
+        scope.save = function () {
           // Validate input
-          var value = scope.input.value ? scope.input.value.trim().replace(/\s+/g, ' ') : '';
+          var value = scope.state.value ? scope.state.value.trim().replace(/\s+/g, ' ') : '';
           if (scope.isEmail) {
             if (!value) {
               setInvalid('This field is required', '');
@@ -209,26 +212,15 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             }
           }
 
-          updateValue(value);
+          scope.state.value = value;
+          scope.currentValue = value;
+
           if (scope.isEmail) {
             // todo(martin) saveNewPrimaryEmail($input, function () { revertInput($input); });
           } else {
             // todo(martin) saveProfileInfo()
           }
-
         };
-
-        scope.blurInput = function () {
-          // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
-          $timeout(function () {
-            scope.disableEditing();
-          }, 100);
-        };
-
-        $timeout(function () {
-          scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
-          scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
-        });
       }
     };
   }
