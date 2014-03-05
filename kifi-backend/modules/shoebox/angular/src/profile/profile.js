@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput', 'kifi.routeService'])
+angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput', 'kifi.routeService', 'kifi.modal'])
 
 .config([
   '$routeProvider',
@@ -16,10 +16,15 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 .controller('ProfileCtrl', [
   '$scope', 'profileService',
   function ($scope, profileService) {
+    $scope.showEmailChangeDialog = {value: false};
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
     });
+
+    $scope.saveEmail = function () {
+      $scope.showEmailChangeDialog.value = true;
+    }
   }
 ])
 
@@ -144,6 +149,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
       scope: {
         templateUrl: '@',
         defaultValue: '=',
+        submitAction: '&',
         isEmail: '='
       },
       templateUrl: 'profile/profileInput.tpl.html',
@@ -242,6 +248,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
         });
 
         // Email input utility functions
+        // todo(martin) try to move all this logic in the profile controller
 
         function setInvalidEmailAddressError() {
           setInvalid('Invalid email address', 'Please enter a valid email address');
@@ -256,6 +263,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             return profileService.setNewPrimaryEmail(me, emailInfo.address);
           }
           // email is available || (not primary && not pending primary && not verified)
+          scope.submitAction();
           //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
         }
 

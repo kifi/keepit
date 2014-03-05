@@ -44,29 +44,39 @@
     -webkit-font-smoothing: antialiased
     text-align: center
 
-  button:hover {
-    background-color: #7faeef;
-  }
-  button {
-    width: 200px;
-    height: 58px;
-    line-height: 58px;
-    padding: 0;
-    background-color: #6fa5ef;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 17px;
-    font-weight: 300;
-    -webkit-font-smoothing: antialiased;
-    cursor: pointer;
-    transition: background-color .1s;
-  }
+  button:hover
+    background-color: #7faeef
+
+  button
+    width: 200px
+    height: 58px
+    line-height: 58px
+    padding: 0
+    background-color: #6fa5ef
+    color: #fff
+    border: none
+    border-radius: 6px
+    font-size: 17px
+    font-weight: 300
+    -webkit-font-smoothing: antialiased
+    cursor: pointer
+    transition: background-color .1s
+
+    &.dialog-cancel
+      background-color: #b8c5d1
+    &.dialog-cancel:focus
+    &.dialog-cancel:hover
+      background-color: #C5D2DE
+    &.dialog-cancel:active
+      background-color: #9FACB8
 
   .action-wrap
     margin: 0 auto 15px
     width: 100%
     text-align: center
+
+  .email-address
+    color: #73787f;
 
 .dialog-title
   color: #515051
@@ -87,8 +97,6 @@
 
     &:hover
       color: #000
-
-
 
 .dialog-body-wrap
   min-width: 400px
