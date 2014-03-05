@@ -639,4 +639,13 @@ class ShoeboxController @Inject() (
     }
     Ok
   }
+
+  def getVerifiedAddressOwner() = SafeAsyncAction(parse.json) { request =>
+    val address = (request.body \ "address").as[String]
+    val ownerIdOpt = db.readOnly { implicit session =>
+      emailAddressRepo.getVerifiedOwner(address)
+    }
+    implicit val userIdFormat = Id.format[User]
+    Ok(Json.toJson(ownerIdOpt))
+  }
 }
