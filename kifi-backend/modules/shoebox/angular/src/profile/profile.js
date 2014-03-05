@@ -23,13 +23,11 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
       $scope.descInput.value = val || '';
-      console.log('updateDesc', val);
     });
 
     $scope.emailInput = {};
     $scope.$watch('me.primaryEmail.address', function (val) {
       $scope.emailInput.value = val || '';
-      console.log('updatePrimary', val);
     });
   }
 ])
@@ -161,29 +159,21 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
       link: function (scope, element) {
         scope.state.editing = scope.state.invalid = false;
 
-        console.log('profile input', scope.state, scope.isEmail);
-
         var cancelEditPromise;
 
         element.find('input')
           .on('keydown', function (e) {
-            console.log('keydown', e.which);
             switch (e.which) {
             case keyIndices.KEY_ESC:
-              scope.$apply(function () {
-                scope.cancel();
-              });
+              scope.$apply(scope.cancel);
               break;
             case keyIndices.KEY_ENTER:
-              scope.$apply(function () {
-                scope.save();
-              });
+              scope.$apply(scope.save);
               break;
             }
           })
           .on('blur', function () {
             // give enough time for save() to fire. todo(martin): find a more reliable solution
-            console.log('blur');
             cancelEditPromise = $timeout(scope.cancel, 100);
           });
 
@@ -205,14 +195,12 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
         }
 
         scope.edit = function () {
-          console.log('edit', scope.state.value);
           cancelCancelEdit();
           scope.state.currentValue = scope.state.value;
           scope.state.editing = true;
         };
 
         scope.cancel = function () {
-          console.log('cancel', scope.state.value, scope.state.currentValue);
           scope.state.value = scope.state.currentValue;
           scope.state.editing = false;
         };
@@ -220,7 +208,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
         scope.save = function () {
           // Validate input
           var value = scope.state.value ? scope.state.value.trim().replace(/\s+/g, ' ') : '';
-          console.log('save', value, scope.state.currentValue);
           if (scope.isEmail) {
             if (!value) {
               setInvalid('This field is required');
