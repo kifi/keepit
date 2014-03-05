@@ -70,7 +70,7 @@ class ArticleTest extends Specification {
         title = "my title",
         description = None,
         canonicalUrl = None,
-        alternateUrls = Set.empty,
+        alternateUrls = Some(Set.empty),
         keywords = None,
         media = None,
         content = "my content",
@@ -88,7 +88,6 @@ class ArticleTest extends Specification {
           "normalizedUriId":22,
           "title":"my title",
           "content":"my content",
-          "alternateUrls":[],
           "scrapedAt":"${now.toStandardTimeString}",
           "state":"scraped"
         }"""
