@@ -60,7 +60,7 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI],Id[User]), URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
-  private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](3 seconds)
+  private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
 
   def apply(
     shard: Shard[NormalizedURI],
@@ -71,12 +71,11 @@ class MainSearcherFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig
   ) = {
-    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
-
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
     val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
+    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
 
     new MainSearcher(
         userId,
@@ -97,7 +96,7 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def warmUp(userId: Id[User], logging: Boolean = true): Seq[Future[Any]] = {
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
@@ -147,8 +146,7 @@ class MainSearcherFactory @Inject() (
 
   def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    val uriGraphSearcher = URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)
+    val uriGraphSearcher = getURIGraphSearcher(shard, userId)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 

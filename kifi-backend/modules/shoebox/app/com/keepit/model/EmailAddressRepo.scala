@@ -22,7 +22,7 @@ trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddre
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo)
+class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo, override protected val changeListener: Option[RepoModification.Listener[EmailAddress]])
   extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with SeqNumberDbFunction[EmailAddress] with EmailAddressRepo {
 
   import db.Driver.simple._

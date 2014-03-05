@@ -12,6 +12,23 @@ angular.module('util', [])
   validateEmail: function (input) {
     var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailAddrRe.test(input);
+  },
+  replaceArrayInPlace: function (oldArray, newArray) {
+    // empties oldArray, loads newArray values into it, keeping the same reference.
+    oldArray = oldArray || [];
+    oldArray.length = 0;
+    _.each(newArray, function (elem) {
+      oldArray.push(elem);
+    });
+  },
+  replaceObjectInPlace: function (oldObj, newObj) {
+    // empties oldObj, loads newObj key/values into it, keeping the same reference.
+    _.forOwn(oldObj || {}, function (num, key) {
+      delete oldObj[key];
+    });
+    _.forOwn(newObj || {}, function (num, key) {
+      oldObj[key] = newObj[key];
+    });
   }
 })
 

@@ -57,8 +57,9 @@ class UrlPatternRuleRepoImpl @Inject() (
       val result = urlPatternRuleAllCache.getOrElse(UrlPatternRuleAllKey()) {
         (for(f <- rows if f.state === UrlPatternRuleStates.ACTIVE) yield f).list
       }
-      allMemCache = Some(result)
-      result.sortBy(_.id.get.id)
+      val sortedResult = result.sortBy(_.id.get.id)
+      allMemCache = Some(sortedResult)
+      sortedResult
     }
 
   def findAll(url: String)(implicit session: RSession): Seq[UrlPatternRule] = allActive().filter(rule => url.matches(rule.pattern))
