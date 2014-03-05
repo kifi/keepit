@@ -20,9 +20,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
     var PRIMARY_INDEX = 0;
 
     function getPrimaryEmail(emails) {
-      return _.find(emails, function (info) {
-        return info.isPrimary;
-      }) || emails[PRIMARY_INDEX] || null;
+      return _.find(emails, 'isPrimary') || emails[PRIMARY_INDEX] || null;
     }
 
     profileService.getMe().then(function (data) {
@@ -58,7 +56,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             if (photoXhr2) {
               photoXhr2.abort();
             }
-            var xhr = new XMLHttpRequest();
+            var xhr = new $window.XMLHttpRequest();
             photoXhr2 = xhr;
             var deferred = $q.defer();
             xhr.withCredentials = true;
@@ -82,9 +80,9 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             xhr.open('POST', PHOTO_BINARY_UPLOAD_URL, true);
             xhr.send(file);
             return {file: file, promise: deferred.promise};
-          } else {
-            //todo(martin): Notify user
           }
+
+          //todo(martin): Notify user
         }
 
         function isImage(file) {
@@ -99,7 +97,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
           var upload = uploadPhotoXhr2(files);
           if (upload) {
             var localPhotoUrl = URL.createObjectURL(upload.file);
-            var img = new Image();
+            var img = new $window.Image();
             img.onload = function () {
               var image = this;
               upload.promise.then(function (result) {
@@ -125,7 +123,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
 .directive('kfProfileInput', [
   '$timeout', 'keyIndices', 'util',
-  function($timeout, keyIndices, util) {
+  function ($timeout, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
@@ -134,12 +132,12 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
         isEmail: '='
       },
       templateUrl: 'profile/profileInput.tpl.html',
-      link: function(scope, element) {
+      link: function (scope, element) {
         scope.onKeydown = function (e) {
           switch (e.keyCode) {
-            case keyIndices.KEY_ESC:
-              scope.disableEditing();
-              break;
+          case keyIndices.KEY_ESC:
+            scope.disableEditing();
+            break;
           }
         };
 
@@ -176,7 +174,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
           scope.saveButton.css('display', 'none');
           scope.enabled = false;
         };
-        
+
         scope.saveInput = function () {
           // Validate input
           var value = scope.input.value ? scope.input.value.trim().replace(/\s+/g, ' ') : '';
@@ -206,13 +204,13 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
           $timeout(function () {
             scope.disableEditing();
           }, 100);
-        }
-        
+        };
+
         $timeout(function () {
           scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
           scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
         });
       }
-    }
+    };
   }
 ]);

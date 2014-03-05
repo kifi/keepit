@@ -3,7 +3,7 @@
 angular.module('kifi.validatedInput', [])
 
 .directive('kfValidatedInput', [
-  function() {
+  function () {
     return {
       restrict: 'A',
       scope: {
@@ -13,6 +13,6 @@ angular.module('kifi.validatedInput', [])
       },
       transclude: true,
       templateUrl: 'common/directives/validatedInput.tpl.html'
-    }
+    };
   }
 ]);
