@@ -11,6 +11,7 @@ import scala.reflect._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 object FlushEventQueueAndClose
+object FlushPlease
 
 trait BatchingActorConfiguration[A <: BatchingActor[_]] {
   val MaxBatchSize: Int
@@ -64,6 +65,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
     case FlushEventQueue =>
       flushIsPending.set(false)
       flush()
+    case FlushPlease => flushPlease()
   }
 
   private def flush(): Unit = {
