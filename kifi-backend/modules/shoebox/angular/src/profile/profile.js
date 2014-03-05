@@ -5,8 +5,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 .config([
   '$routeProvider',
   function ($routeProvider) {
-    $routeProvider
-    .when('/profile', {
+    $routeProvider.when('/profile', {
       templateUrl: 'profile/profile.tpl.html',
       controller: 'ProfileCtrl'
     });
@@ -17,10 +16,8 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
   '$scope', 'profileService',
   function ($scope, profileService) {
 
-    var PRIMARY_INDEX = 0;
-
     function getPrimaryEmail(emails) {
-      return _.find(emails, 'isPrimary') || emails[PRIMARY_INDEX] || null;
+      return _.find(emails, 'isPrimary') || emails[0] || null;
     }
 
     profileService.getMe().then(function (data) {
