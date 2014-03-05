@@ -63,7 +63,7 @@ class ArticleTest extends Specification {
       article === newArticle
     }
 
-    "compatible with old Article" in {
+    "be compatible with old Article" in {
       val now = currentDateTime
       val article = Article(
         id = Id(22),
