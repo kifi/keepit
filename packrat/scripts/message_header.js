@@ -129,9 +129,9 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * Destroys a message header.
 		 * It removes all event listeners and caches to elements.
 		 */
-		destroy: function () {
-			log('[message_header:destroy]', this.initialized, this.threadId)();
-			if (this.initialized) {
+		destroy: function ($el) {
+			log('[message_header:destroy]', this.initialized, this.threadId, $el || '')();
+			if (this.initialized && (!$el || $el.is(this.$el))) {
 				this.initialized = false;
 				this.threadId = null;
 
