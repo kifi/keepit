@@ -41,54 +41,54 @@ class LocalRichConnectionCommander @Inject() (
 
 
   def startUpdateProcessing(): Unit = {
-    // log.info("RConn: Triggered queued update processing")
-    // if (serviceDiscovery.isLeader()) {
-    //   log.info("RConn: I'm the leader, let's go")
-    //   processQueueItems()
-    // } else {
-    //   log.info("RConn: I'm not the leader, nothing to do yet")
-    //   scheduler.scheduleOnce(1 minute){
-    //     startUpdateProcessing()
-    //   }
-    // }
+    log.info("RConn: Triggered queued update processing")
+    if (serviceDiscovery.isLeader()) {
+      log.info("RConn: I'm the leader, let's go")
+      processQueueItems()
+    } else {
+      log.info("RConn: I'm not the leader, nothing to do yet")
+      scheduler.scheduleOnce(1 minute){
+        startUpdateProcessing()
+      }
+    }
   }
 
-  // private def processQueueItems(): Unit = {
-  //   log.info("RConn: Fetching one item from the queue")
-  //   val fut = queue.nextWithLock(1 minute)
-  //   fut.onComplete{
-  //     case Success(queueMessageOpt) => {
-  //       log.info("RConn: Queue call returned")
-  //       queueMessageOpt.map { queueMessage =>
-  //         log.info("RConn: Got something")
-  //         try {
-  //           processUpdateImmediate(queueMessage.body).onComplete{
-  //             case Success(_) => {
-  //               queueMessage.consume()
-  //               log.info("RConn: Consumed message")
-  //               processQueueItems()
-  //             }
-  //             case Failure(t) => {
-  //               airbrake.notify("Error processing RichConnectionUpdate from queue", t)
-  //               processQueueItems()
-  //             }
-  //           }
-  //         } catch {
-  //           case t: Throwable => airbrake.notify("Fatal error processing RichConnectionUpdate from queue", t)
-  //           processQueueItems()
-  //         }
-  //       } getOrElse {
-  //         log.info("RConn: Got nothing")
-  //         processQueueItems()
-  //       }
-  //     }
-  //     case Failure(t) => {
-  //       log.info("RConn: Queue call failed")
-  //       airbrake.notify("Failed getting RichConnectionUpdate from queue", t)
-  //       processQueueItems()
-  //     }
-  //   }
-  // }
+  private def processQueueItems(): Unit = {
+    log.info("RConn: Fetching one item from the queue")
+    val fut = queue.nextWithLock(1 minute)
+    fut.onComplete{
+      case Success(queueMessageOpt) => {
+        log.info("RConn: Queue call returned")
+        queueMessageOpt.map { queueMessage =>
+          log.info("RConn: Got something")
+          try {
+            processUpdateImmediate(queueMessage.body).onComplete{
+              case Success(_) => {
+                queueMessage.consume()
+                log.info("RConn: Consumed message")
+                processQueueItems()
+              }
+              case Failure(t) => {
+                airbrake.notify("Error processing RichConnectionUpdate from queue", t)
+                processQueueItems()
+              }
+            }
+          } catch {
+            case t: Throwable => airbrake.notify("Fatal error processing RichConnectionUpdate from queue", t)
+            processQueueItems()
+          }
+        } getOrElse {
+          log.info("RConn: Got nothing")
+          processQueueItems()
+        }
+      }
+      case Failure(t) => {
+        log.info("RConn: Queue call failed")
+        airbrake.notify("Failed getting RichConnectionUpdate from queue", t)
+        processQueueItems()
+      }
+    }
+  }
 
   def processUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
     queue.send(message).map(_ => ())
