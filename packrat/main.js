@@ -940,11 +940,10 @@ api.port.on({
   },
   search_friends: function(data, respond) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-    var candidates = friends || [SUPPORT];
-    var allResults = sf.filter(data.q, candidates, getName);
-
-    // TODO: cache raw matches for 30s
-
+    var candidates = data.includeSelf ?
+     friends ? [me].concat(friends) : [me, SUPPORT] :
+     friends || [SUPPORT];
+    var allResults = sf.filter(data.q, candidates, getName);  // cache q -> allResults?
     var results = allResults.length > 4 ? allResults.slice(0, 4) : allResults;
     for (var i = 0; i < results.length; i++) {
       var result = results[i];
@@ -2009,13 +2008,13 @@ function compilePatterns(arr) {
 }
 
 function reTest(s) {
-  return function(re) {return re.test(s)};
+  return function (re) {return re.test(s)};
 }
 function hasId(id) {
-  return function(o) {return o.id === id};
+  return function (o) {return o.id === id};
 }
 function idIsNot(id) {
-  return function(o) {return o.id !== id};
+  return function (o) {return o.id !== id};
 }
 function getId(o) {
   return o.id;

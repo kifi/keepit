@@ -6,25 +6,32 @@
   border-bottom: 1px solid #e1e8e9;
 }
 .kifi-message-participants-1 {
+  text-align: center;
   position: relative;
+  top: 3px;
+}
+:not([data-kifi-participants="1"]) > .kifi-message-participants-1 {
+  display: none;
+}
+.kifi-message-participants-2 {
   text-align: center;
   padding: 3px 0;
 }
-.kifi-group-conversation .kifi-message-participants-1 {
+:not([data-kifi-participants="2"]) > .kifi-message-participants-2 {
   display: none;
 }
 .kifi-message-participants-n {
-  display: none;
   position: relative;
 }
-.kifi-group-conversation .kifi-message-participants-n {
-  display: block;
+[data-kifi-participants="1"] > .kifi-message-participants-n,
+[data-kifi-participants="2"] > .kifi-message-participants-n {
+  display: none;
 }
 .kifi-message-participants-title {
   font-size: 13px;
   margin-bottom: 6px;
 }
-.kifi-message-participants-1 .kifi-message-participants-title {
+.kifi-message-participants-2 .kifi-message-participants-title {
   font-weight: 200;
   margin-bottom: 2px;
   color: #67829c;

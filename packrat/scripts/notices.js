@@ -183,7 +183,7 @@ panes.notices = function () {
       var nParticipants = participants.length;
       notice.author = notice.author || notice.participants[0];
       if (notice.authors === 1) {
-        notice[notice.author.id === me.id ? 'isSent' : 'isReceived'] = true;
+        notice[nParticipants === 1 ? 'isSelf' : notice.author.id === me.id ? 'isSent' : 'isReceived'] = true;
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }

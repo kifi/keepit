@@ -298,6 +298,9 @@
   position: relative;
   top: 2px;
 }
+.kifi-notice-self .kifi-notice-dir {
+  display: none;
+}
 .kifi-notice-sent .kifi-notice-dir {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAICAYAAADA+m62AAAAUklEQVR4AWNABlfuPGYE4lwgvgXEDMgYmSMHxHuB+D8I41IYD8QfQArwKVwKkiCAX4IUbiBC4VuYBzKB+Ashq2FYGYgP41eIwExAXArEj9AVAgCpkepYKFbU1AAAAABJRU5ErkJggg==);
   height: 8px;
@@ -323,6 +326,9 @@
 }
 .kifi-notice-kicker::after {
   content: 'Conversation with';
+}
+.kifi-notice-self>.kifi-notice-kicker::after {
+  content: 'Notes';
 }
 .kifi-notice-sent>.kifi-notice-kicker::after {
   content: 'Sent to';
