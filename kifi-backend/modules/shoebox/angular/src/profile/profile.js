@@ -20,10 +20,16 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
       $scope.me = data;
     });
 
+    $scope.descInput = {};
+    $scope.$watch('me.description', function (val) {
+      $scope.descInput.value = val || '';
+      console.log('updateDesc', val);
+    });
+
     $scope.emailInput = {};
-    $scope.$watch('me.address', function (val) {
+    $scope.$watch('me.primaryEmail.address', function (val) {
       $scope.emailInput.value = val || '';
-      console.log('updatePrimary', val || '');
+      console.log('updatePrimary', val);
     });
   }
 ])
@@ -153,108 +159,92 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
       transclude: true,
       templateUrl: 'profile/profileInput.tpl.html',
       link: function (scope, element) {
+        scope.state.editing = scope.state.invalid = false;
+
+        console.log('profile input', scope.state, scope.isEmail);
+
+        var cancelEditPromise;
+
         element.find('input')
           .on('keydown', function (e) {
-            switch (e.keyCode) {
+            console.log('keydown', e.which);
+            switch (e.which) {
             case keyIndices.KEY_ESC:
-              scope.cancel();
+              scope.$apply(function () {
+                scope.cancel();
+              });
+              break;
+            case keyIndices.KEY_ENTER:
+              scope.$apply(function () {
+                scope.save();
+              });
               break;
             }
           })
           .on('blur', function () {
-            // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
-            $timeout(function () {
-              scope.cancel();
-            }, 100);
+            // give enough time for save() to fire. todo(martin): find a more reliable solution
+            console.log('blur');
+            cancelEditPromise = $timeout(scope.cancel, 100);
           });
 
-        console.log(scope, scope.state);
+        function cancelCancelEdit() {
+          if (cancelEditPromise) {
+            cancelEditPromise = null;
+            $timeout.cancel(cancelEditPromise);
+          }
+        }
 
-        scope.state.editing = false;
-        scope.state.isInvalid = false;
+        function updateValue(value) {
+          scope.state.value = scope.state.currentValue = value;
+        }
+
+        function setInvalid(header, body) {
+          scope.state.invalid = true;
+          scope.errorHeader = header || '';
+          scope.errorBody = body || '';
+        }
 
         scope.edit = function () {
+          console.log('edit', scope.state.value);
+          cancelCancelEdit();
+          scope.state.currentValue = scope.state.value;
           scope.state.editing = true;
         };
 
         scope.cancel = function () {
-          scope.state.value = scope.currentValue;
+          console.log('cancel', scope.state.value, scope.state.currentValue);
+          scope.state.value = scope.state.currentValue;
           scope.state.editing = false;
-        };
-
-        var disableInputTimeout = null;
-        var fallbackValue = null;
-
-        function updateValue(value) {
-          scope.input.value = value;
-          scope.currentValue = value;
-        }
-
-        function setFallbackValue(value) {
-          fallbackValue = value;
-        }
-
-        function revertInput() {
-          updateValue(fallbackValue);
-        }
-
-        function setInvalid(header, body) {
-          scope.state.isInvalid = true;
-          scope.errorHeader = header;
-          scope.errorBody = body;
-        }
-
-        function setValid() {
-          scope.state.isInvalid = false;
-        }
-
-        scope.$watch('defaultValue', updateValue);
-
-        scope.edit = function () {
-          if (disableInputTimeout) {
-            $timeout.cancel(disableInputTimeout);
-          }
-          scope.shouldFocus = true;
-          scope.enabled = true;
-        };
-
-        scope.cancel = function () {
-          scope.input.value = scope.currentValue;
-          scope.enabled = false;
         };
 
         scope.save = function () {
           // Validate input
           var value = scope.state.value ? scope.state.value.trim().replace(/\s+/g, ' ') : '';
+          console.log('save', value, scope.state.currentValue);
           if (scope.isEmail) {
             if (!value) {
-              setInvalid('This field is required', '');
+              setInvalid('This field is required');
               return;
             } else if (!util.validateEmail(value)) {
               setInvalidEmailAddressError();
               return;
             } else {
-              setValid();
+              scope.state.invalid = false;
             }
           }
 
-          scope.state.value = value;
-          scope.currentValue = value;
-
-          setFallbackValue(scope.currentValue);
+          scope.state.prevValue = scope.state.currentValue;
           updateValue(value);
+
+          scope.state.editing = false;
+
           if (scope.isEmail) {
             saveNewPrimaryEmail(value);
           } else {
-            profileService.postMe({description: scope.input.value});
+            profileService.postMe({
+              description: scope.state.value
+            });
           }
-        };
-
-        scope.blurInput = function () {
-          // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
-          disableInputTimeout = $timeout(function () {
-            scope.cancel();
-          }, 100);
         };
 
         // Email input utility functions
@@ -287,7 +277,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
             );
             break;
           }
-          revertInput();
+          updateValue(scope.state.prevValue);
         }
 
         function saveNewPrimaryEmail(email) {
@@ -295,14 +285,19 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.routeServic
             if (me.primaryEmail.address === email) {
               return;
             }
+
             // todo(martin) move this http call outside of the directive
             $http({
               url: routeService.emailInfoUrl,
               method: 'GET',
-              params: {email: email}
-            }).success(function (data) {
+              params: {
+                email: email
+              }
+            })
+            .success(function (data) {
               checkCandidateEmailSuccess(me, data);
-            }).error(function (data, status) {
+            })
+            .error(function (data, status) {
               checkCandidateEmailError(status);
             });
           });

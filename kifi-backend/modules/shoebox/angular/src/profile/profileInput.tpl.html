@@ -1,7 +1,7 @@
 <div class="profile-input-box">
-  <div ng-class="{ error: state.isInvalid }">
+  <div ng-class="{ error: state.invalid }">
     <div ng-transclude></div>
-    <div class="input-error" ng-show="state.isInvalid">
+    <div class="input-error" ng-show="state.invalid">
       <div class="error-header">{{errorHeader}}</div>
       <div class="error-body">{{errorBody}}</div>
     </div>
