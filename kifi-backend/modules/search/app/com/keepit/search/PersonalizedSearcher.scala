@@ -78,10 +78,11 @@ extends Searcher(indexReader) with SearchSemanticContext with Logging {
       val idMapper = subReader.getIdMapper
       val tp = subReader.termPositionsEnum(term)
       if (tp != null) {
+        val cf = clickFilter
         while (tp.nextDoc() < NO_MORE_DOCS) {
           val id = idMapper.getId(tp.docID())
           val weight = {
-            if (clickFilter.mayContain(id, 2)) {
+            if (cf.mayContain(id, 2)) {
               scaledWeightClickHistory
             } else if (myUris.contains(id)) {
               scaledWeightMyBookMarks
