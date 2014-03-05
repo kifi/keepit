@@ -28,20 +28,20 @@ angular.module('kifi.focus', [])
 ])
 
 .directive('kfFocusIf', [
-  function() {
+  function () {
     return {
       restrict: 'A',
       scope: {
         focusCond: '='
       },
-      link: function(scope, element) {
-        scope.$watch('focusCond', function(val) {
+      link: function (scope, element) {
+        scope.$watch('focusCond', function (val) {
           if (val) {
             element.focus();
           }
         });
       }
-    }
+    };
   }
 ])
 

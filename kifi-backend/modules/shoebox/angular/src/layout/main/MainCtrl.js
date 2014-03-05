@@ -57,6 +57,8 @@ angular.module('kifi.layout.main', ['kifi.undo'])
 
     $timeout(updateHeight);
 
-    if (/^Mac/.test(navigator.platform)) $rootElement.find('body').addClass('mac');
+    if (/^Mac/.test($window.navigator.platform)) {
+      $rootElement.find('body').addClass('mac');
+    }
   }
 ]);
