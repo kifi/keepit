@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput'])
+angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput', 'kifi.routeService'])
 
 .config([
   '$routeProvider',
@@ -17,15 +17,8 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
   '$scope', 'profileService',
   function ($scope, profileService) {
 
-    var PRIMARY_INDEX = 0;
-
-    function getPrimaryEmail(emails) {
-      return _.find(emails, 'isPrimary') || emails[PRIMARY_INDEX] || null;
-    }
-
     profileService.getMe().then(function (data) {
       $scope.me = data;
-      $scope.primaryEmail = getPrimaryEmail(data.emails);
     });
   }
 ])
@@ -38,7 +31,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
       replace: true,
       scope: {},
       templateUrl: 'profile/emailImport.tpl.html',
-      link: function (scope, element) {
+      link: function (scope) {
 
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
@@ -46,7 +39,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
         scope.importGmailContacts = function () {
           $window.location = env.origin + '/importContacts';
-        }
+        };
       }
     };
   }
@@ -144,8 +137,8 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 ])
 
 .directive('kfProfileInput', [
-  '$timeout', 'keyIndices', 'util', 'profileService',
-  function ($timeout, keyIndices, util, profileService) {
+  '$timeout', '$http', 'keyIndices', 'util', 'profileService', 'routeService',
+  function ($timeout, $http, keyIndices, util, profileService, routeService) {
     return {
       restrict: 'A',
       scope: {
@@ -168,9 +161,20 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
         scope.isInvalid = false;
         scope.input = {};
 
+        var disableInputTimeout = null;
+        var fallbackValue = null;
+
         function updateValue(value) {
           scope.input.value = value;
           scope.currentValue = value;
+        }
+
+        function setFallbackValue(value) {
+          fallbackValue = value;
+        }
+
+        function revertInput() {
+          updateValue(fallbackValue);
         }
 
         function setInvalid(header, body) {
@@ -186,6 +190,9 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
         scope.$watch('defaultValue', updateValue);
 
         scope.enableEditing = function () {
+          if (disableInputTimeout) {
+            $timeout.cancel(disableInputTimeout);
+          }
           scope.saveButton.css('display', 'block');
           scope.shouldFocus = true;
           scope.enabled = true;
@@ -205,16 +212,17 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
               setInvalid('This field is required', '');
               return;
             } else if (!util.validateEmail(value)) {
-              setInvalid('Invalid email address', 'Please enter a valid email address');
+              setInvalidEmailAddressError();
               return;
             } else {
               setValid();
             }
           }
 
+          setFallbackValue(scope.currentValue);
           updateValue(value);
           if (scope.isEmail) {
-            // todo(martin) saveNewPrimaryEmail($input, function () { revertInput($input); });
+            saveNewPrimaryEmail(value);
           } else {
             profileService.postMe({description: scope.input.value});
           }
@@ -223,7 +231,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
         scope.blurInput = function () {
           // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
-          $timeout(function () {
+          disableInputTimeout = $timeout(function () {
             scope.disableEditing();
           }, 100);
         };
@@ -232,6 +240,57 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
           scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
           scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
         });
+
+        // Email input utility functions
+
+        function setInvalidEmailAddressError() {
+          setInvalid('Invalid email address', 'Please enter a valid email address');
+        }
+
+        function checkCandidateEmailSuccess(me, emailInfo) {
+          if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+            profileService.fetchMe();
+            return;
+          }
+          if (emailInfo.isVerified) {
+            return profileService.setNewPrimaryEmail(me, emailInfo.address);
+          }
+          // email is available || (not primary && not pending primary && not verified)
+          //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+        }
+
+        function checkCandidateEmailError(status) {
+          switch (status) {
+            case 400: // bad format
+              setInvalidEmailAddressError();
+              break;
+            case 403: // belongs to another user
+              setInvalid(
+                'This email address is already taken',
+                'This email address belongs to another user.<br>Please enter another email address.'
+              );
+              break;
+          }
+          revertInput();
+        }
+
+        function saveNewPrimaryEmail(email) {
+          profileService.getMe().then(function (me) {
+            if (me.primaryEmail.address === email) {
+              return;
+            }
+            // todo(martin) move this http call outside of the directive
+            $http({
+              url: routeService.emailInfoUrl,
+              method: 'GET',
+              params: {email: email}
+            }).success(function (data) {
+              checkCandidateEmailSuccess(me, data);
+            }).error(function (data, status) {
+              checkCandidateEmailError(status);
+            });
+          });
+        }
       }
     };
   }
