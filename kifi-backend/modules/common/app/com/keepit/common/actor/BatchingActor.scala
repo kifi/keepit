@@ -62,8 +62,8 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
       closing = true
       flushPlease()
     case FlushEventQueue =>
-      flush()
       flushIsPending.set(false)
+      flush()
   }
 
   private def flush(): Unit = {
