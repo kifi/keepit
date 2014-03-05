@@ -32,6 +32,28 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
   }
 ])
 
+.directive('kfEmailImport', [
+  'profileService', '$window', 'env',
+  function (profileService, $window, env) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {},
+      templateUrl: 'profile/emailImport.tpl.html',
+      link: function (scope, element) {
+
+        profileService.getAddressBooks().then(function (data) {
+          scope.addressBooks = data;
+        });
+
+        scope.importGmailContacts = function () {
+          $window.location = env.origin + '/importContacts';
+        }
+      }
+    };
+  }
+])
+
 .directive('kfProfileImage', [
   '$compile', '$templateCache', '$window', '$q', '$http', 'env',
   function ($compile, $templateCache, $window, $q, $http, env) {
@@ -176,7 +198,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
           scope.saveButton.css('display', 'none');
           scope.enabled = false;
         };
-        
+
         scope.saveInput = function () {
           // Validate input
           var value = scope.input.value ? scope.input.value.trim().replace(/\s+/g, ' ') : '';
@@ -207,7 +229,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             scope.disableEditing();
           }, 100);
         }
-        
+
         $timeout(function () {
           scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
           scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));

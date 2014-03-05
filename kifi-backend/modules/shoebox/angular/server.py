@@ -21,7 +21,7 @@ class Handler( SimpleHTTPServer.SimpleHTTPRequestHandler ):
             self.wfile.write( open('index.html').read() )
 
 port = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_PORT
-httpd = SocketServer.TCPServer( ('127.0.0.1', port), Handler )
+httpd = SocketServer.TCPServer( ('0.0.0.0', port), Handler )
 
 print "Server started on port %d" % port
 try:

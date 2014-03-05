@@ -79,8 +79,6 @@ angular.module('kifi.modal', [])
         scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
 
-        console.log(attrs.actionText)
-
         scope.backdropStyle.opacity = attrs.kfOpacity || .3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
 
