@@ -96,7 +96,7 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def warmUp(userId: Id[User], logging: Boolean = true): Seq[Future[Any]] = {
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
