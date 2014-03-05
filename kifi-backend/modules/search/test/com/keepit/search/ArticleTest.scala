@@ -70,7 +70,7 @@ class ArticleTest extends Specification {
         title = "my title",
         description = None,
         canonicalUrl = None,
-        alternateUrls = Some(Set.empty),
+        alternateUrls = None,
         keywords = None,
         media = None,
         content = "my content",
