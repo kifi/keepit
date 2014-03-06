@@ -36,7 +36,7 @@ class AdminPornDetectorController @Inject()(
   def detect() = AdminHtmlAction.authenticated{ implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val text = body.get("query").get
-    val numBlocks = tokenize(text).sliding(10, 5).size
+    val numBlocks = tokenize(text).sliding(10, 10).size
     val badTexts = Await.result(scraper.detectPorn(text), 15 seconds)
     val badInfo = badTexts.map{ x => x._1 + " ---> " + x._2}.mkString("\n")
     val msg = if (badTexts.size == 0) "input text is clean" else s"${badTexts.size} out of ${numBlocks} blocks look suspicious:\n" + badInfo
