@@ -15,7 +15,6 @@ import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
 import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import com.keepit.common.analytics.{Event, EventFamilies, Events}
@@ -120,7 +119,7 @@ class MobileUserController @Inject() (
       NotFound(Json.obj("code" -> "user_not_found"))
     }
   }
-  
+
   def ignoreFriendRequest(externalId:ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
     val res = Json.obj("code" -> code)

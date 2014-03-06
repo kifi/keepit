@@ -16,7 +16,6 @@ import play.api.libs.json.{JsObject, Json}
 
 import com.google.inject.Inject
 import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.social.BasicUser
 import com.keepit.common.analytics.{Event, EventFamilies, Events}
@@ -26,7 +25,6 @@ class ExtUserController @Inject() (
   db: Database,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
-  networkInfoLoader: NetworkInfoLoader,
   userCommander: UserCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -39,10 +37,6 @@ class ExtUserController @Inject() (
   }, unauthenticatedAction = { request =>
     Forbidden("0").as(JSON) // TODO: change to Ok("false") once all extensions are at 2.6.37 or later
   })
-
-  def getNetworks(friendExtId: ExternalId[User]) = JsonAction.authenticated { request =>
-    Ok(Json.toJson(networkInfoLoader.load(request.user.id.get, friendExtId)))
-  }
 
   def getFriends() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
