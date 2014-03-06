@@ -1,4 +1,4 @@
-@(isLoggedIn: Boolean)
+@(isLoggedIn: Boolean, hideHeader: Boolean)
 
 @styles = {
   <link rel="stylesheet" href="/assets/css/privacy.css">
@@ -248,4 +248,4 @@
 }
 @scripts = {
 }
-@views.html.marketing.helper.page(title = "Kifi • Privacy", styles = styles, content = content, scripts = scripts, dataTrack="privacy", htmlClass="privacy", isLoggedIn = isLoggedIn)
+@views.html.marketing.helper.page(title = "Kifi • Privacy", styles = styles, content = content, scripts = scripts, dataTrack="privacy", htmlClass="privacy", isLoggedIn = isLoggedIn, headerType = if(hideHeader) {"none"} else "")
