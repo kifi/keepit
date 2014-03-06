@@ -33,7 +33,7 @@ class NaiveBayesPornDetector(
     else { val ratio = exp(logProb); (ratio/(ratio + 1)).toFloat }
   }
 
-  override def isPorn(text: String): Boolean = logPosteriorRatio(text) >= 0f
+  override def isPorn(text: String): Boolean = posterior(text) >= 0.75f    // shifted threshold
 }
 
 class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector {
