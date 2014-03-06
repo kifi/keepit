@@ -10,7 +10,7 @@ import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsArray}
+import play.api.libs.json.{Json, JsArray, JsObject, JsString, JsValue}
 
 import com.google.inject.Inject
 
@@ -33,9 +33,16 @@ class ExtNonUserSearchController @Inject() (
     } yield {
       val socialResN = socialRes.filterNot(_.userId.isDefined).take(n);
       val contactResN = contactRes.filterNot(_.contactUserId.isDefined).take(n - socialResN.size)
-      Ok(Json.arr(socialResN) ++
-         JsArray(contactResN.map {c => Json.obj("name" -> c.name, "email" -> c.email)}))
+      Ok(serializeResults(socialResN, contactResN))
     }
+  }
+
+  def serializeResults(infos: Seq[SocialUserBasicInfo], contacts: Seq[EContact]): JsArray = {
+    JsArray(infos.map {i => JsObject(Seq[(String, JsValue)](
+      "name" -> JsString(i.fullName),
+      "id" -> JsString(i.socialId.id)) ++
+      i.pictureUrl.map {url => "pic" -> JsString(url)})}) ++
+    JsArray(contacts.map {c => Json.obj("name" -> c.name, "email" -> c.email)})
   }
 
 }
