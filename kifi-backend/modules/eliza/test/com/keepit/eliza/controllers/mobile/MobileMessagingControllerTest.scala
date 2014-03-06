@@ -102,7 +102,6 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
             "extVersion": "2.6.65"
           }
           """)
-        println(s">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $input")
         val request = FakeRequest("POST", path).withJsonBody(input)
         val result = route(request).get
         status(result) must equalTo(OK)
@@ -215,19 +214,17 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
             "uri": "https://admin.kifi.com/admin/searchExperiments",
             "nUrl": "https://admin.kifi.com/admin/searchExperiments",
             "participants": [
-              [
-                {
-                  "id": "${shanee.externalId.id}",
-                  "firstName": "Shanee",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg"
-                },{
-                  "id": "${shachaf.externalId.id}",
-                  "firstName": "Shachaf",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg"
-                }
-              ]
+              {
+                "id": "${shanee.externalId.id}",
+                "firstName": "Shanee",
+                "lastName": "Smith",
+                "pictureName": "0.jpg"
+              },{
+                "id": "${shachaf.externalId.id}",
+                "firstName": "Shachaf",
+                "lastName": "Smith",
+                "pictureName": "0.jpg"
+              }
             ],
             "messages": [
               {
@@ -320,19 +317,17 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
             "uri": "https://admin.kifi.com/admin/searchExperiments",
             "nUrl": "https://admin.kifi.com/admin/searchExperiments",
             "participants": [
-              [
-                {
-                  "id": "${shanee.externalId.id}",
-                  "firstName": "Shanee",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg"
-                },{
-                  "id": "${shachaf.externalId.id}",
-                  "firstName": "Shachaf",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg"
-                }
-              ]
+              {
+                "id": "${shanee.externalId.id}",
+                "firstName": "Shanee",
+                "lastName": "Smith",
+                "pictureName": "0.jpg"
+              },{
+                "id": "${shachaf.externalId.id}",
+                "firstName": "Shachaf",
+                "lastName": "Smith",
+                "pictureName": "0.jpg"
+              }
             ],
             "messages": [
               {
