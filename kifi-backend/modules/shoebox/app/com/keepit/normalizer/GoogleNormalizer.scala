@@ -12,6 +12,7 @@ object GoogleNormalizer extends StaticNormalizer {
           case "groups" => true
           case "drive" => true
           case "docs" => true
+          case "www" => true
           case _ => false
         }
       case _ => false
