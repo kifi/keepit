@@ -1,4 +1,4 @@
-@(uris: Seq[NormalizedURI], count: Int, page: Int, pageCount: Int)
+@(uris: Seq[NormalizedURI], count: Int, page: Int, pageCount: Int, publicOnly: Boolean)
 
 @import com.keepit.controllers.admin.routes
 
@@ -8,7 +8,7 @@
     <ul>
       <li>
         @if(page > 0) {
-          <a href="@routes.AdminPornDetectorController.pornUrisView(page - 1)">
+          <a href="@routes.AdminPornDetectorController.pornUrisView(page - 1, publicOnly)">
         } else {
          <a href="#">
         }
@@ -17,28 +17,28 @@
       </li>
       @if(page - 20 > 0) {
         <li class="disabled">
-          <a href="@routes.AdminPornDetectorController.pornUrisView(0)">...</a>
+          <a href="@routes.AdminPornDetectorController.pornUrisView(0, publicOnly)">...</a>
         </li>
       }
       @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
           <li class="disabled">
-            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i, publicOnly)">@{i + 1}</a>
           </li>
         } else {
           <li class="active">
-            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i, publicOnly)">@{i + 1}</a>
           </li>
         }
       }
       @if(page + 20 < pageCount - 1) {
         <li class="disabled">
-          <a href="@routes.AdminPornDetectorController.pornUrisView(pageCount - 1)">...</a>
+          <a href="@routes.AdminPornDetectorController.pornUrisView(pageCount - 1, publicOnly)">...</a>
         </li>
       }
       <li>
         @if(uris.size > 0) {
-          <a href="@routes.AdminPornDetectorController.pornUrisView(page + 1)">
+          <a href="@routes.AdminPornDetectorController.pornUrisView(page + 1, publicOnly)">
         } else {
          <a href="#">
         }
@@ -49,7 +49,7 @@
   </div>
 }
 
-@admin(count + " Total Adult URIs") {
+@admin(count + {if (publicOnly) " Total Public Adult URIs" else " Total Adult URIs"} ) {
 
   @pagination(page, pageCount)
 

@@ -47,8 +47,6 @@ class MobileMessagingController @Inject() (
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "mobile")
 
-    println(s">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $userExtRecipients")
-
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
         userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
       Ok(Json.obj(
@@ -100,7 +98,7 @@ class MobileMessagingController @Inject() (
         "id" -> threadId,
         "uri" -> url,
         "nUrl" -> nUrl,
-        "participants" -> Json.arr(participants),
+        "participants" -> participants,
         "messages" -> (completeMsgs.reverse map { m =>
           Json.obj(
             "id" -> m.id.toString,

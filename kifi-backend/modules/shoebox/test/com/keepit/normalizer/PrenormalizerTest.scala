@@ -159,6 +159,12 @@ class PrenormalizerTest extends Specification {
       Prenormalizer("https://docs.google.com/a/42go.com/file/d/0B17Ux0DwquOwOVNWRGJLcEt6SW8/edit") === "https://docs.google.com/file/d/0B17Ux0DwquOwOVNWRGJLcEt6SW8/edit"
       Prenormalizer("https://docs.google.com/spreadsheet/ccc?authkey=CKqfiacO&hl=en_US&key=0AmrEm2VP6NfgdGU5czBIdnBYUHBYSE9wRzd6Q3VvakE&ndplr=1") === "https://docs.google.com/spreadsheet/ccc?authkey=CKqfiacO&key=0AmrEm2VP6NfgdGU5czBIdnBYUHBYSE9wRzd6Q3VvakE"
 
+      // google search
+      Prenormalizer("https://www.google.com/search?q=kifi&oq=kifi&aqs=chrome..69i57j69i60l3j69i65l2.3958j0j7&sourceid=chrome&espv=210&es_sm=91&ie=UTF-8") ===
+        "https://www.google.com/search?q=kifi"
+      Prenormalizer("https://www.google.com/search?q=kifi&oq=kifi&aqs=chrome..69i57j69i60l3j69i65l2.3958j0j7&sourceid=chrome&espv=210&es_sm=91&ie=UTF-8#q=find+engine") ===
+        "https://www.google.com/search?q=find+engine"
+
       // youtube
       Prenormalizer("http://www.youtube.com/watch?NR=1&feature=endscreen&v=ill6RQDN5zI") === "http://www.youtube.com/watch?v=ill6RQDN5zI"
       Prenormalizer("https://www.youtube.com/watch?feature=player_embedded&v=DHEOF_rcND8") === "https://www.youtube.com/watch?v=DHEOF_rcND8"
