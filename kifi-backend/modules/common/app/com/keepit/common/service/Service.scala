@@ -45,14 +45,7 @@ object ServiceType {
   case object SEARCH extends ServiceType("SEARCH", "SR") {
     override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
       val capabilities = instance.capabilities
-      if (capabilities.nonEmpty) {
-        if (capabilities.contains("backup") && !capabilities.contains("search")) ServiceStatus.BACKING_UP else ServiceStatus.UP
-      } else {
-        instance.instantTypeInfo match {
-          case AmazonInstanceType.M1Small => ServiceStatus.BACKING_UP
-          case _ => ServiceStatus.UP
-        }
-      }
+      if (capabilities.contains("backup") && !capabilities.contains("search")) ServiceStatus.BACKING_UP else ServiceStatus.UP
     }
 
     override val minInstances = 2

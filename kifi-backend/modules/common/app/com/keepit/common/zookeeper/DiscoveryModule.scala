@@ -47,7 +47,7 @@ object DiscoveryModule {
     amiId = "ami-1bf9de5e",
     amiLaunchIndex = "0",
     loadBalancer = None,
-    tags = Map("capabilities" -> "foo, backup , bar"))
+    tags = Map("Capabilities" -> "foo, bar"))
 }
 
 abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {

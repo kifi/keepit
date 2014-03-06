@@ -53,7 +53,7 @@ case class AmazonInstanceInfo (
 ) {
 
   lazy val capabilities: Set[String] = {
-    tags.get("capabilities") match {
+    tags.get("Capabilities") match {
       case Some(c) => c.split(",").map(_.trim).filter(_.length > 0).toSet
       case _ => Set()
     }
