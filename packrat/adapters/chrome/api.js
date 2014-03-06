@@ -347,7 +347,7 @@ var api = (function createApi() {
     }
     page.injecting = true;
 
-    var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
+    var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
 
     var injected;
     chrome.tabs.executeScript(page.id, {
