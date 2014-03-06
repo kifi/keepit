@@ -19,11 +19,18 @@ trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddre
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[EmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
+  def getVerifiedOwner(address: String)(implicit session: RSession): Option[Id[User]]
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, userValueRepo: UserValueRepo, userRepo: UserRepo, override protected val changeListener: Option[RepoModification.Listener[EmailAddress]])
-  extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with SeqNumberDbFunction[EmailAddress] with EmailAddressRepo {
+class EmailAddressRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  userValueRepo: UserValueRepo,
+  userRepo: UserRepo,
+  verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
+  override protected val changeListener: Option[RepoModification.Listener[EmailAddress]]
+) extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with SeqNumberDbFunction[EmailAddress] with EmailAddressRepo {
 
   import db.Driver.simple._
 
@@ -48,8 +55,16 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     super.save(toSave)
   }
 
-  override def deleteCache(emailAddr: EmailAddress)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: EmailAddress)(implicit session: RSession): Unit = {}
+  override def deleteCache(emailAddress: EmailAddress)(implicit session: RSession): Unit = {
+    if (emailAddress.verified) {
+      verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
+    }
+  }
+  override def invalidateCache(emailAddress: EmailAddress)(implicit session: RSession): Unit = {
+    if (emailAddress.verified) {
+      verifiedEmailUserIdCache.set(VerifiedEmailUserIdKey(emailAddress.address), emailAddress.userId)
+    }
+  }
 
   def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[EmailAddress] =
@@ -92,5 +107,9 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {
     (for (e <- rows if e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
+  }
+
+  def getVerifiedOwner(address: String)(implicit session: RSession): Option[Id[User]] = {
+    getByAddress(address).find(_.verified).map(_.userId)
   }
 }
