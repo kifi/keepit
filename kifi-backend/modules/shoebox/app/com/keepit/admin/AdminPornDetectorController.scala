@@ -15,11 +15,13 @@ import com.keepit.model.NormalizedURIRepoImpl
 import com.keepit.scraper.ScraperServiceClient
 import views.html
 import com.keepit.model.Restriction
+import com.keepit.model.BookmarkRepo
 
 class AdminPornDetectorController @Inject()(
   scraper: ScraperServiceClient,
   db: Database,
   uriRepo: NormalizedURIRepo,
+  bmRepo: BookmarkRepo,
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
 
@@ -41,12 +43,25 @@ class AdminPornDetectorController @Inject()(
     Ok(msg.replaceAll("\n","\n<br>"))
   }
 
-  def pornUrisView(page: Int) = AdminHtmlAction.authenticated{ implicit request =>
+  def pornUrisView(page: Int, publicOnly: Boolean) = AdminHtmlAction.authenticated{ implicit request =>
     val uris = db.readOnly{implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT)}.sortBy(-_.updatedAt.getMillis())
     val PAGE_SIZE = 100
-    val pageCount = (uris.size*1.0 / PAGE_SIZE).ceil.toInt
 
-    Ok(html.admin.pornUris(uris.drop(page * PAGE_SIZE).take(PAGE_SIZE), uris.size, page, pageCount))
+    val retUris = publicOnly match {
+      case false => uris
+      case true => {
+        db.readOnly { implicit s =>
+          uris.flatMap { uri =>
+            val bms = bmRepo.getByUri(uri.id.get)
+            if (bms.exists(_.isPrivate == false)) Some(uri) else None
+          }
+        }
+      }
+    }
+
+    val pageCount = (retUris.size*1.0 / PAGE_SIZE).ceil.toInt
+
+    Ok(html.admin.pornUris(retUris.drop(page * PAGE_SIZE).take(PAGE_SIZE), retUris.size, page, pageCount, publicOnly))
   }
 
   def removeRestrictions() = AdminHtmlAction.authenticated{ implicit request =>
