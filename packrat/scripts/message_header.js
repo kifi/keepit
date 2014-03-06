@@ -15,37 +15,18 @@
 var messageHeader = this.messageHeader = (function ($, win) {
 	'use strict';
 
-	// receive
-	/*
-	api.port.on({
-		friends: function (friends) {}
-	});
-  */
-
 	api.onEnd.push(function () {
 		messageHeader.destroy();
 		messageHeader = win.messageHeader = null;
 	});
 
 	return {
-
-		/**
-		 * Whether this is initialized
-		 *
-		 * @property {boolean}
-		 */
 		initialized: false,
-
 		plugins: [win.messageParticipants, win.messageMuter],
-
 		status: null,
-
 		threadId: null,
-
 		participants: null,
-
 		escHandler: null,
-
 		onDocClick: null,
 
 		/**
@@ -59,10 +40,14 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.participants = participants;
 			this.initialized = true;
 			this.status = {};
-			this.claimPlugins();
+			this.plugins.forEach(function (plugin) {
+				plugin.parent = this;
+			}, this);
 			this.$el = $el;
 			this.render();
-			this.initPlugins();
+			this.plugins.forEach(function (plugin) {
+				plugin.init();
+			});
 			this.initEvents();
 		},
 
@@ -144,15 +129,17 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		 * Destroys a message header.
 		 * It removes all event listeners and caches to elements.
 		 */
-		destroy: function () {
-			log('[message_header:destroy]', this.initialized, this.threadId)();
-			if (this.initialized) {
+		destroy: function ($el) {
+			log('[message_header:destroy]', this.initialized, this.threadId, $el || '')();
+			if (this.initialized && (!$el || $el.is(this.$el))) {
 				this.initialized = false;
 				this.threadId = null;
 
 				this.unshadePane();
 
-				this.destroyPlugins();
+				this.plugins.forEach(function (plugin) {
+					plugin.destroy();
+				});
 
 				$(document).data('esc').remove(this.escHandler);
 				this.escHandler = null;
@@ -223,30 +210,10 @@ var messageHeader = this.messageHeader = (function ($, win) {
 			this.$el.find('.kifi-message-header-content').html(this.renderPlugins('content'));
 		},
 
-		claimPlugins: function () {
-			this.plugins.forEach(function (plugin) {
-				plugin.parent = this;
-			}, this);
-		},
-
 		renderPlugins: function (compName) {
 			return this.plugins.map(function (plugin) {
-				var html = plugin.render(compName);
-				return html == null ? '' : html;
+				return plugin.render(compName) || '';
 			}).join('');
 		},
-
-		initPlugins: function () {
-			this.plugins.forEach(function (plugin) {
-				plugin.init();
-			});
-		},
-
-		destroyPlugins: function () {
-			this.plugins.forEach(function (plugin) {
-				plugin.destroy();
-			});
-		}
 	};
-
 })(jQuery, this);

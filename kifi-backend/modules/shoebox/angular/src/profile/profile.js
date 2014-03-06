@@ -1,12 +1,11 @@
 'use strict';
 
-angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedInput', 'kifi.routeService', 'kifi.modal'])
+angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput'])
 
 .config([
   '$routeProvider',
   function ($routeProvider) {
-    $routeProvider
-    .when('/profile', {
+    $routeProvider.when('/profile', {
       templateUrl: 'profile/profile.tpl.html',
       controller: 'ProfileCtrl'
     });
@@ -25,6 +24,16 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
     $scope.saveEmail = function () {
       $scope.showEmailChangeDialog.value = true;
     };
+
+    $scope.descInput = {};
+    $scope.$watch('me.description', function (val) {
+      $scope.descInput.value = val || '';
+    });
+
+    $scope.emailInput = {};
+    $scope.$watch('me.primaryEmail.address', function (val) {
+      $scope.emailInput.value = val || '';
+    });
   }
 ])
 
@@ -136,169 +145,6 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
             img.src = localPhotoUrl;
           }
         };
-      }
-    };
-  }
-])
-
-.directive('kfProfileInput', [
-  '$timeout', '$http', 'keyIndices', 'util', 'profileService', 'routeService',
-  function ($timeout, $http, keyIndices, util, profileService, routeService) {
-    return {
-      restrict: 'A',
-      scope: {
-        templateUrl: '@',
-        defaultValue: '=',
-        submitAction: '&',
-        isEmail: '='
-      },
-      templateUrl: 'profile/profileInput.tpl.html',
-      link: function (scope, element) {
-        scope.onKeydown = function (e) {
-          switch (e.keyCode) {
-          case keyIndices.KEY_ESC:
-            scope.disableEditing();
-            break;
-          }
-        };
-
-        scope.shouldFocus = false;
-        scope.enabled = false;
-        scope.isInvalid = false;
-        scope.input = {};
-
-        var disableInputTimeout = null;
-        var fallbackValue = null;
-
-        function updateValue(value) {
-          scope.input.value = value;
-          scope.currentValue = value;
-        }
-
-        function setFallbackValue(value) {
-          fallbackValue = value;
-        }
-
-        function revertInput() {
-          updateValue(fallbackValue);
-        }
-
-        function setInvalid(header, body) {
-          scope.isInvalid = true;
-          scope.errorHeader = header;
-          scope.errorBody = body;
-        }
-
-        function setValid() {
-          scope.isInvalid = false;
-        }
-
-        scope.$watch('defaultValue', updateValue);
-
-        scope.enableEditing = function () {
-          if (disableInputTimeout) {
-            $timeout.cancel(disableInputTimeout);
-          }
-          scope.saveButton.css('display', 'block');
-          scope.shouldFocus = true;
-          scope.enabled = true;
-        };
-
-        scope.disableEditing = function () {
-          scope.input.value = scope.currentValue;
-          scope.saveButton.css('display', 'none');
-          scope.enabled = false;
-        };
-
-        scope.saveInput = function () {
-          // Validate input
-          var value = scope.input.value ? scope.input.value.trim().replace(/\s+/g, ' ') : '';
-          if (scope.isEmail) {
-            if (!value) {
-              setInvalid('This field is required', '');
-              return;
-            } else if (!util.validateEmail(value)) {
-              setInvalidEmailAddressError();
-              return;
-            } else {
-              setValid();
-            }
-          }
-
-          setFallbackValue(scope.currentValue);
-          updateValue(value);
-          if (scope.isEmail) {
-            saveNewPrimaryEmail(value);
-          } else {
-            profileService.postMe({description: scope.input.value});
-          }
-
-        };
-
-        scope.blurInput = function () {
-          // give enough time for saveInput() to fire. todo(martin): find a more reliable solution
-          disableInputTimeout = $timeout(function () {
-            scope.disableEditing();
-          }, 100);
-        };
-
-        $timeout(function () {
-          scope.editButton = angular.element(element[0].querySelector('.profile-input-edit'));
-          scope.saveButton = angular.element(element[0].querySelector('.profile-input-save'));
-        });
-
-        // Email input utility functions
-        // todo(martin) try to move all this logic in the profile controller
-
-        function setInvalidEmailAddressError() {
-          setInvalid('Invalid email address', 'Please enter a valid email address');
-        }
-
-        function checkCandidateEmailSuccess(me, emailInfo) {
-          if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
-            profileService.fetchMe();
-            return;
-          }
-          if (emailInfo.isVerified) {
-            return profileService.setNewPrimaryEmail(me, emailInfo.address);
-          }
-          // email is available || (not primary && not pending primary && not verified)
-          scope.submitAction();
-          //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
-        }
-
-        function checkCandidateEmailError(status) {
-          switch (status) {
-            case 400: // bad format
-              setInvalidEmailAddressError();
-              break;
-            case 403: // belongs to another user
-              setInvalid(
-                'This email address is already taken',
-                'This email address belongs to another user.<br>Please enter another email address.'
-              );
-              break;
-          }
-          revertInput();
-        }
-
-        function saveNewPrimaryEmail(email) {
-          profileService.getMe().then(function (me) {
-            if (me.primaryEmail.address === email) {
-              return;
-            }
-            // todo(martin) move this http call outside of the directive
-            $http({
-              url: routeService.emailInfoUrl,
-              method: 'GET',
-              params: {email: email}
-            }).success(function (data) {
-              checkCandidateEmailSuccess(me, data);
-            }).error(function (data, status) {
-              checkCandidateEmailError(status);
-            });
-          });
-        }
       }
     };
   }

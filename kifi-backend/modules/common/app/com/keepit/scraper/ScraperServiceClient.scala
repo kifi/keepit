@@ -128,6 +128,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
   def getPornDetectorModel(): Future[Map[String, Float]]
   def detectPorn(query: String): Future[Map[String, Float]]
+  def whitelist(words: String): Future[String]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -200,6 +201,13 @@ class ScraperServiceClientImpl @Inject() (
       Json.fromJson[Map[String, Float]](r.json).get
     }
   }
+
+  def whitelist(words: String): Future[String] = {
+    val payload = Json.obj("whitelist" -> words)
+    call(Scraper.internal.whitelist(), payload).map{ r =>
+      Json.fromJson[String](r.json).get
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
@@ -227,4 +235,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def getPornDetectorModel(): Future[Map[String, Float]] = ???
 
   def detectPorn(query: String): Future[Map[String, Float]] = ???
+
+  def whitelist(words: String): Future[String] = ???
 }

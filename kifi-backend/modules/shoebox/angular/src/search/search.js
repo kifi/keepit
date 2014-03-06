@@ -18,6 +18,10 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
   function ($scope, keepService, $routeParams) {
     keepService.reset();
 
+    if ($scope.search) {
+      $scope.search.text = $routeParams.q;
+    }
+
     var query = $routeParams.q || '',
       filter = $routeParams.f || 'm',
       lastResult = null;
