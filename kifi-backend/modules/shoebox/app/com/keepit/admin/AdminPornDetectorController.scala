@@ -60,4 +60,11 @@ class AdminPornDetectorController @Inject()(
     }
     Ok(s"${ids.size} uris' adult restriction removed")
   }
+
+  def whitelist() = AdminHtmlAction.authenticated{ implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val whitelist = body.get("whitelist").get
+    val cleaned = Await.result(scraper.whitelist(whitelist), 5 seconds)
+    Ok(s"following words are cleaned: " + cleaned)
+  }
 }

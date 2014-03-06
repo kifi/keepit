@@ -8,6 +8,22 @@
 
 	<p id = "detectResult"></p>
 
+	<br><br><br>
+	<div>
+		Enter words that should be considered as non sensitive. Spaces are fine. No special characters.
+		Already non sensitive words will be ignored.
+	</div>
+	<div>
+		To test sensitivity level of a single word, put it in the box above and detect. If returned score is significantly higher than 0.5 (e.g between 0.8 and 1), then it's a good idea to whitelist it.
+	</div>
+
+	<form id = "whitelist">
+		<textarea id = "cleanWords"></textarea>
+		<button type = "submit">Make them clean</button>
+	</form>
+
+	<p id = "cleanResult"></p>
+
 
 	<script type="text/javascript">
 
@@ -20,6 +36,19 @@
 				).done(done).fail(fail);
 
 				function done(data) { $("#detectResult").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+			})
+
+
+
+			$("#whitelist").submit(function(){
+				event.preventDefault();
+				$.post('@com.keepit.controllers.admin.routes.AdminPornDetectorController.whitelist',
+					{whitelist: $("#cleanWords").val()}
+				).done(done).fail(fail);
+
+				function done(data) { $("#cleanResult").empty().prepend(data); $("#cleanWords").empty() }
         function fail() { alert("bad things happened") }
 
 			})
