@@ -18,6 +18,7 @@ import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
 import com.keepit.typeahead.abook.{EContactTypeaheadStore, EContactTypeahead}
 import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
@@ -26,6 +27,8 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
   val modules = Seq(
     FakeABookStoreModule(),
     TestContactsUpdaterPluginModule(),
+    TestABookServiceClientModule(),
+    FakeShoeboxServiceModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
     FakeAirbrakeModule(),
