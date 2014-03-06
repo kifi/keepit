@@ -1,6 +1,8 @@
 package com.keepit.search.index
 
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.amazon.MyAmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -69,9 +71,17 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def activeShards: ActiveShards = {
+  def activeShards(myAmazonInstanceInfo: MyAmazonInstanceInfo): ActiveShards = {
     (new ActiveShardsSpecParser).parse(
-      Option(System.getProperty("index.shards")) orElse current.configuration.getString("index.shards")
+      myAmazonInstanceInfo.info.tags.get("shards") match {
+        case spec @ Some(_) =>
+          log.info(s"using the shard spec [${spec.get}] from ec2 tag")
+          spec
+        case _ =>
+          current.configuration.getString("index.shards") tap { spec =>
+            if (spec.isDefined) log.info(s"using the shard spec [$spec] from config") else log.info(s"no shard spec found")
+          }
+      }
     )
   }
 
