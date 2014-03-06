@@ -83,19 +83,8 @@ panes.thread = function () {
     $(window).on('resize.thread', scroller.refresh.bind(scroller));
 
     $paneBox
-    .on('kifi:removing', function () {
-      compose.save();
-    })
-    .on('kifi:remove', function () {
-      if ($holder.length && this.contains($holder[0])) {
-        window.messageHeader.destroy();
-        $holder = $();
-        $(window).off('resize.thread');
-        compose.destroy();
-        heighter.destroy();
-        api.port.off(handlers);
-      }
-    });
+    .on('kifi:removing', onRemoving.bind(null, compose))
+    .on('kifi:remove', onRemoved.bind(null, $who.find('.kifi-message-header'), compose, heighter));
     if ($paneBox.data('shown')) {
       compose.focus();
     } else {
@@ -103,6 +92,18 @@ panes.thread = function () {
     }
 
     return $holder;
+  }
+
+  function onRemoving(compose) {
+    compose.save();
+    api.port.off(handlers);
+    $(window).off('resize.thread');
+  }
+
+  function onRemoved($header, compose, heighter) {
+    window.messageHeader.destroy($header);
+    compose.destroy();
+    heighter.destroy();
   }
 
   function update(threadId, message) {

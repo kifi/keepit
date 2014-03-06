@@ -55,7 +55,7 @@ abstract class ShoeboxModule(
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
 
-  val repoChangeListenerRepo = ShoeboxRepoChangeListenerModule()
+  val repoChangeListenerModule = ShoeboxRepoChangeListenerModule()
 
   val mailerModule = PlayMailerModule()
 }

@@ -18,29 +18,23 @@
         </div>
         <div class="profile-input-wrapper" data-name="description">
           <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-          <script type="text/ng-template" id="profileInputDescription.html">
+          <div kf-profile-input input-state="descInput">
             <input class="profile-input-input profile-description-input"
-                   ng-disabled="!enabled"
-                   kf-focus-if focus-cond="enabled"
-                   ng-keydown="onKeydown($event)"
-                   ng-blur="blurInput()"
-                   ng-model="input.value"
-                   type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
-          </script>
-          <div kf-profile-input template-url="profileInputDescription.html" data-default-value="me.description"></div>
+              ng-disabled="!descInput.editing"
+              kf-focus-if focus-cond="descInput.editing"
+              ng-model="descInput.value"
+              type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
+          </div>
         </div>
         <div class="profile-input-wrapper profile-email" data-name="email">
           <div class="profile-input-title">Contact email</div>
-          <script type="text/ng-template" id="profileInputEmail.html">
+          <div kf-profile-input input-state="emailInput" input-is-email="true">
             <input class="profile-input-input profile-email-input"
-                   ng-disabled="!enabled"
-                   kf-focus-if focus-cond="enabled"
-                   ng-keydown="onKeydown($event)"
-                   ng-blur="blurInput()"
-                   ng-model="input.value"
-                   type="text" name="email" placeholder="Enter your email address" novalidate>
-          </script>
-          <div kf-profile-input template-url="profileInputEmail.html" data-default-value="me.primaryEmail.address" data-is-email="true"></div>
+                   ng-disabled="!emailInput.editing"
+                   kf-focus-if focus-cond="emailInput.editing"
+                   ng-model="emailInput.value"
+                   type="email" name="email" placeholder="Enter your email address" novalidate>
+          </div>
         </div>
         <div class="profile-email-address-unverified">
           Your email is pending your verification
