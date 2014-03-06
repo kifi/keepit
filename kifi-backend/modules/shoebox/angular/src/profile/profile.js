@@ -65,9 +65,7 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       },
       templateUrl: 'profile/profileImage.tpl.html',
       link: function (scope, element) {
-        var fileInput = angular.element($templateCache.get('profileImageFile.html'));
-        element.append(fileInput);
-        $compile(fileInput)(scope);
+        var fileInput = element.find('input');
 
         var URL = $window.URL || $window.webkitURL;
         var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload';
