@@ -19,7 +19,6 @@ import play.api.libs.json.{JsObject, Json, JsValue}
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import com.keepit.common.net.URI
-import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.social.BasicUser
 import com.keepit.common.analytics.{Event, EventFamilies, Events}
 import play.api.libs.concurrent.Akka
