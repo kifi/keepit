@@ -1,23 +1,23 @@
 package com.keepit.eliza.controllers.mobile
 
+import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.model.MessageThread
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.heimdal._
-import com.keepit.common.akka.SafeFuture
 
 import play.modules.statsd.api.Statsd
 
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.ExternalId
 
-import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
 import scala.concurrent.Future
 
 import com.google.inject.Inject
+import com.keepit.social.{BasicUserLikeEntity, BasicUser}
 
 
 class MobileMessagingController @Inject() (
@@ -35,7 +35,6 @@ class MobileMessagingController @Inject() (
 
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
-    val tStart = currentDateTime
     val o = request.body
     val (title, text) = (
       (o \ "title").asOpt[String],
@@ -47,6 +46,8 @@ class MobileMessagingController @Inject() (
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "mobile")
+
+    println(s">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $userExtRecipients")
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
         userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
@@ -84,6 +85,32 @@ class MobileMessagingController @Inject() (
           Ok(Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse))
         }
       }
+  }
+
+  def getCompactThread(threadId: String) = JsonAction.authenticatedAsync { request =>
+    messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) flatMap { case (thread, msgs) =>
+      val url = thread.url.getOrElse("")  // needs to change when we have detached threads
+      val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
+      val msgsWithModifiedAuxData = msgs.map { m =>
+        messagingCommander.modifyMessageWithAuxData(m)
+      }
+      Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
+        val participants: Set[BasicUserLikeEntity] = completeMsgs.map(_.participants).flatten.toSet
+        Ok(Json.obj(
+        "id" -> threadId,
+        "uri" -> url,
+        "nUrl" -> nUrl,
+        "participants" -> Json.arr(participants),
+        "messages" -> (completeMsgs.reverse map { m =>
+          Json.obj(
+            "id" -> m.id.toString,
+            "time" -> m.createdAt.getMillis,
+            "text" -> m.text,
+            "userId" -> m.user.map(_.externalId.toString)
+          )
+        })))
+      }
+    }
   }
 
   def getThreadsByUrl(url: String) = JsonAction.authenticatedAsync { request =>
