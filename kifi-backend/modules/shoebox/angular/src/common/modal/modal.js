@@ -14,9 +14,12 @@ angular.module('kifi.modal', [])
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: function ($scope) {
-        $scope.hideModal = function () {
+
+        this.hideModal = function () {
           $scope.show = false;
         };
+
+        $scope.hideModal = this.hideModal;
 
         function exitModal(evt) {
           if (evt.which === 27) {
@@ -61,12 +64,13 @@ angular.module('kifi.modal', [])
       templateUrl: 'common/modal/basicModalContent.tpl.html',
       transclude: true,
       require: '^kfModal',
-      link: function (scope, element, attrs) {
+      link: function (scope, element, attrs, kfModalCtrl) {
         scope.title = attrs.title || '';
         scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
         scope.withCancel = (attrs.withCancel !== undefined) || false;
         scope.cancelText = attrs.cancelText;
+        scope.hideModal = kfModalCtrl.hideModal;
       }
     };
   }

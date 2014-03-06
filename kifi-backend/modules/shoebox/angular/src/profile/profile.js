@@ -24,7 +24,7 @@ angular.module('kifi.profile', ['util', 'kifi.profileService', 'kifi.validatedIn
 
     $scope.saveEmail = function () {
       $scope.showEmailChangeDialog.value = true;
-    }
+    };
   }
 ])
 
