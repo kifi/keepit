@@ -585,4 +585,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(uri.contains("isSensitive"))
   }
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
+
+  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = Future.successful(Map.empty)
 }

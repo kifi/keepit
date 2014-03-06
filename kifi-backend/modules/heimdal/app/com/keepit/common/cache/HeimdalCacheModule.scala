@@ -134,4 +134,8 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, Duration.Inf))
+
+  @Provides @Singleton
+  def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
 }

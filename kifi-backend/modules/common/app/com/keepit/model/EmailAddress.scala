@@ -8,6 +8,9 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.mail.EmailAddressHolder
 import com.keepit.abook.{EmailParserUtils, EmailParser}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.logging.AccessLog
+import scala.concurrent.duration.Duration
 
 case class EmailAddress (
   id: Option[Id[EmailAddress]] = None,
@@ -43,3 +46,12 @@ object EmailAddressStates {
   val UNVERIFIED = State[EmailAddress]("unverified")
   val INACTIVE = State[EmailAddress]("inactive")
 }
+
+case class VerifiedEmailUserIdKey(address: String) extends Key[Id[User]] {
+  override val version = 1
+  val namespace = "user_id_by_verified_email"
+  def toKey(): String = address
+}
+
+class VerifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[VerifiedEmailUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])

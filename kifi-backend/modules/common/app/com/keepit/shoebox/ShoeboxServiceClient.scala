@@ -120,6 +120,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
+  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -140,7 +141,9 @@ case class ShoeboxCacheProvider @Inject() (
     userConnCountCache: UserConnectionCountCache,
     userBookmarkCountCache: BookmarkCountCache,
     userSegmentCache: UserSegmentCache,
-    extensionVersionCache: ExtensionVersionInstallationIdCache)
+    extensionVersionCache: ExtensionVersionInstallationIdCache,
+    verifiedEmailUserIdCache: VerifiedEmailUserIdCache
+  )
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -814,5 +817,11 @@ class ShoeboxServiceClientImpl @Inject() (
       case None => Json.obj("uriId" -> id, "restriction" -> JsNull)
     }
     call(Shoebox.internal.updateURIRestriction(), payload).map{ r => }
+  }
+
+  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = {
+    val payload = Json.obj("addresses" -> emailAddresses)
+    implicit val userIdFormat = Id.format[User]
+    call(Shoebox.internal.getVerifiedAddressOwners(), payload).map(_.json.as[Map[String, Id[User]]])
   }
 }

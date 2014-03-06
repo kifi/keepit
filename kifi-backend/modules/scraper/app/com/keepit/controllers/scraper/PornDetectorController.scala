@@ -23,7 +23,7 @@ class PornDetectorController @Inject()(
   def detect() = Action(parse.json) { request =>
     val query = (request.body \ "query").as[String]
     val detector = factory()
-    val windows = PornDetectorUtil.tokenize(query).sliding(10, 5)
+    val windows = PornDetectorUtil.tokenize(query).sliding(10, 10)
     val badTexts = windows.map{ w => val block = w.mkString(" "); (block, detector.posterior(block)) }.filter(_._2 > 0.5f)
     Ok(Json.toJson(badTexts.toMap))
   }

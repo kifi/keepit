@@ -24,6 +24,7 @@ import play.api.libs.iteratee.{Step, Iteratee}
 import com.keepit.common.performance._
 import scala.util.{Try, Failure, Success}
 import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.shoebox.ShoeboxServiceClient
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -72,7 +73,8 @@ class ContactsUpdater @Inject() (
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   airbrake:AirbrakeNotifier,
-  abookUploadConf:ABookUploadConf) extends Logging {
+  abookUploadConf:ABookUploadConf,
+  shoeboxClient: ShoeboxServiceClient) extends Logging {
 
   implicit class RichOptString(o:Option[String]) {
     def trimOpt = o collect { case s:String if (s!= null && !s.trim.isEmpty) => s }
@@ -102,6 +104,16 @@ class ContactsUpdater @Inject() (
     }
     log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${existingEmailSet.size}): ${existingEmailSet.mkString(",")}")
     existingEmailSet
+  }
+
+  private def recordContactUserIds(contactAddresses: Seq[String]): Unit = {
+    shoeboxClient.getVerifiedAddressOwners(contactAddresses).foreach { case owners =>
+      if (owners.nonEmpty) db.readWrite { implicit session =>
+        owners.foreach { case (address, contactUserId) =>
+          econtactRepo.recordVerifiedEmail(address, contactUserId)
+        }
+      }
+    }
   }
 
   def processABookUpload(userId:Id[User], origin:ABookOriginType, abookInfo:ABookInfo, s3Key:String, rawJsonRef:WeakReference[JsValue]) = timing(s"upload($userId,$origin,$abookInfo,$s3Key)") {
@@ -168,6 +180,7 @@ class ContactsUpdater @Inject() (
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
               try {
                 econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
+                s.onTransactionSuccess { recordContactUserIds(econtactsToAdd.map(_.email)) }
                 log.infoP(s"added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
               } catch {
                 case ex:MySQLIntegrityConstraintViolationException => {
