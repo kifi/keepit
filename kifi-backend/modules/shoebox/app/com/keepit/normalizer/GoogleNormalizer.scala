@@ -1,6 +1,6 @@
 package com.keepit.normalizer
 
-import com.keepit.common.net.{Query, Host, URI}
+import com.keepit.common.net.{Query, Param, Host, URI}
 
 object GoogleNormalizer extends StaticNormalizer {
 
@@ -12,6 +12,7 @@ object GoogleNormalizer extends StaticNormalizer {
           case "groups" => true
           case "drive" => true
           case "docs" => true
+          case "www" => true
           case _ => false
         }
       case _ => false
@@ -22,6 +23,8 @@ object GoogleNormalizer extends StaticNormalizer {
   val file = """(.*)(/file/d/[^/]+/)(.*)""".r
   val gmail = """(/mail/)(.*)""".r
   val driveTabs = Set[String]("my-drive", "shared-with-me", "starred", "recent", "activity", "offline", "all", "trash")
+
+  val searchDropParams = Set[String]("aqs", "sourceid", "espv", "ie", "oq", "es_sm")
 
   def apply(uri: URI) = {
     uri match {
@@ -47,6 +50,12 @@ object GoogleNormalizer extends StaticNormalizer {
         } else {
           uri
         }
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "www")), port, path @ Some("/search"), query, fragment) =>
+        val q = fragment match {
+          case Some(f) => Some(Query.parse(f))
+          case _ => query.map{ qry => Query(qry.params.filterNot{ case Param(name, _) => searchDropParams.contains(name) }) }
+        }
+        URI(scheme, userInfo, host, port, path, q, None)
       case _ => uri
     }
   }
