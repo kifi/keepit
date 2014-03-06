@@ -39,7 +39,7 @@ class NaiveBayesPornDetector(
 class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector {
   if (windowSize <= 4) throw new IllegalArgumentException(s"window size for SlidingWindowPornDetector too small: get ${windowSize}, need at least 4")
   def detectBlocks(text: String): (Int, Int) = {
-    val blocks = PornDetectorUtil.tokenize(text).sliding(windowSize, windowSize/2).toArray
+    val blocks = PornDetectorUtil.tokenize(text).sliding(windowSize, windowSize).toArray
     val bad = blocks.filter{ b => detector.isPorn(b.mkString(" "))}
     (blocks.size, bad.size)
   }
