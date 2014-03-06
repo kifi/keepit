@@ -15,10 +15,15 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
 .controller('ProfileCtrl', [
   '$scope', 'profileService',
   function ($scope, profileService) {
+    $scope.showEmailChangeDialog = {value: false};
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
     });
+
+    $scope.saveEmail = function () {
+      $scope.showEmailChangeDialog.value = true;
+    };
 
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {

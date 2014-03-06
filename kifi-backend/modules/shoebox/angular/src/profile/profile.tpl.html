@@ -30,10 +30,16 @@
           <div class="profile-input-title">Contact email</div>
           <div kf-profile-input input-state="emailInput" input-is-email="true">
             <input class="profile-input-input profile-email-input"
-                   ng-disabled="!emailInput.editing"
-                   kf-focus-if focus-cond="emailInput.editing"
-                   ng-model="emailInput.value"
-                   type="email" name="email" placeholder="Enter your email address" novalidate>
+              ng-disabled="!emailInput.editing"
+              kf-focus-if focus-cond="emailInput.editing"
+              ng-model="emailInput.value"
+              type="email" name="email" placeholder="Enter your email address" novalidate>
+          <div kf-profile-input template-url="profileInputEmail.html" submit-action="saveEmail()" data-default-value="me.primaryEmail.address" data-is-email="true"></div>
+          <div kf-modal show="showEmailChangeDialog.value">
+            <div kf-basic-modal-content with-cancel action-text="Continue">
+              <p>You are about to change your primary email to <span class="email-address">{{me.primaryEmail.address}}</span>.</p>
+              <p>We will send a verification email to this email address to prove that you own it. To verify, please click on a verification link on the email.</p>
+            </div>
           </div>
         </div>
         <div class="profile-email-address-unverified">
