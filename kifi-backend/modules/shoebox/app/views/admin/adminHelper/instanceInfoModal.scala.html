@@ -12,6 +12,9 @@
         <th>Service</th><td>@{amazonInstanceInfo.service.getOrElse("-")}</td>
     </tr>
     <tr>
+        <th>Tags</th><td>@{amazonInstanceInfo.tags.mkString(", ")}</td>
+    </tr>
+    <tr>
         <th>Local Hostname</th><td>@{amazonInstanceInfo.localHostname}</td>
     </tr>
     <tr>

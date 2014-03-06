@@ -29,7 +29,9 @@ object AmazonInstanceInfo {
     (__ \ 'securityGroups).format[String] and
     (__ \ 'amiId).format[String] and
     (__ \ 'amiLaunchIndex).format[String] and
-    (__ \ 'loadBalancer).formatNullable[String]
+    (__ \ 'loadBalancer).formatNullable[String] and
+    (__ \ 'tags).formatNullable[Map[String, String]].inmap[Map[String, String]](_.getOrElse(Map.empty), Some(_))
+
   )(AmazonInstanceInfo.apply, unlift(AmazonInstanceInfo.unapply))
 }
 
@@ -46,8 +48,16 @@ case class AmazonInstanceInfo (
   securityGroups: String,
   amiId: String,
   amiLaunchIndex: String,
-  loadBalancer: Option[String]
+  loadBalancer: Option[String],
+  tags: Map[String, String] = Map()
 ) {
+
+  lazy val capabilities: Set[String] = {
+    tags.get("capabilities") match {
+      case Some(c) => c.split(",").map(_.trim).filter(_.length > 0).toSet
+      case _ => Set()
+    }
+  }
 
   lazy val instantTypeInfo: AmazonInstanceType = instanceType match {
     case AmazonInstanceType.C1XLarge.name => AmazonInstanceType.C1XLarge
