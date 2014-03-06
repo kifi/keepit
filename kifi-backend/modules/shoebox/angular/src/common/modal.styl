@@ -1,24 +1,23 @@
-.modal-dialog
-  &.modal-dialog
-    position: fixed
-    left: 50%
-    top: 50%
+.modal-dialog.modal-dialog
+  position: fixed
+  left: 50%
+  top: 50%
+  transform: translate(-50%, -50%)
+  width: auto
+  margin: 0
+
+  .modal.in &
     transform: translate(-50%, -50%)
-    width: auto
-    margin: 0
 
-    .modal.in &
-      transform: translate(-50%, -50%)
+  .modal.fade &
+    transform: translate(-50%, -50%)
 
-    .modal.fade &
-      transform: translate(-50%, -50%)
 
-.modal-content
-  &.modal-content
-    width: 100%
-    height: 100%
-    border: 1px solid #f2eeed
-    box-shadow: 12px 12px 0 rgba(0, 40, 90, 0.2)
+.modal-content.modal-content
+  width: 100%
+  height: 100%
+  border: 1px solid #f2eeed
+  box-shadow: 12px 12px 0 rgba(0, 40, 90, 0.2)
 
 
 .kifi-onboarding-iframe
@@ -41,11 +40,8 @@
     font-size: 28px
     font-weight: 300
     color: #333
-    -webkit-font-smoothing: antialiased
+    font-smoothing: antialiased
     text-align: center
-
-  button:hover
-    background-color: #7faeef
 
   button
     width: 200px
@@ -58,17 +54,22 @@
     border-radius: 6px
     font-size: 17px
     font-weight: 300
-    -webkit-font-smoothing: antialiased
+    font-smoothing: antialiased
     cursor: pointer
     transition: background-color .1s
 
+    &:hover
+      background-color: #7faeef
+
     &.dialog-cancel
       background-color: #b8c5d1
-    &.dialog-cancel:focus
-    &.dialog-cancel:hover
-      background-color: #C5D2DE
-    &.dialog-cancel:active
-      background-color: #9FACB8
+
+      &:focus
+      &:hover
+        background-color: #C5D2DE
+
+      &:active
+        background-color: #9FACB8
 
   .action-wrap
     margin: 0 auto 15px
