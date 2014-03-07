@@ -16,7 +16,7 @@
         </div>
         <div class="profile-input-wrapper">
           <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-          <div kf-profile-input input-state="descInput">
+          <div kf-profile-input input-state="descInput" input-save-action="saveDescription(value)">
             <input class="profile-input-input profile-description-input"
               ng-disabled="!descInput.editing"
               kf-focus-if focus-cond="descInput.editing"
@@ -26,7 +26,7 @@
         </div>
         <div class="profile-input-wrapper profile-email">
           <div class="profile-input-title">Contact email</div>
-          <div kf-profile-input input-state="emailInput" input-is-email="true">
+          <div kf-profile-input input-state="emailInput" input-validate-action="validateEmail(value)"  input-save-action="saveEmail(value)">
             <input class="profile-input-input profile-email-input"
               ng-disabled="!emailInput.editing"
               kf-focus-if focus-cond="emailInput.editing"
@@ -34,19 +34,19 @@
               type="text" name="email" placeholder="Enter your email address" novalidate>
           </div>
           <div kf-modal show="showEmailChangeDialog.value">
-            <div kf-basic-modal-content with-cancel action-text="Continue">
+            <div kf-basic-modal-content with-cancel action-text="Continue" action="confirmSaveEmail()" cancel="cancelSaveEmail()">
               <p>You are about to change your primary email to <span class="email-address">{{me.primaryEmail.address}}</span>.</p>
               <p>We will send a verification email to this email address to prove that you own it. To verify, please click on a verification link on the email.</p>
             </div>
           </div>
         </div>
-        <div class="profile-email-address-unverified">
+        <div class="profile-email-address-unverified" ng-if="isUnverified({value: me.primaryEmail})">
           Your email is pending your verification
-          (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>).
+          (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>).
         </div>
-        <div class="profile-email-address-pending">
+        <div class="profile-email-address-pending" ng-if="me.primaryEmail.isPendingPrimary">
           Your new primary email, <span class="profile-email-address-pending-email">{{me.primaryEmail.address}}</span>, is pending your verification
-          (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>,
+          (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>,
           <a class="profile-email-pending-cancel" href="javascript:">Cancel</a>).
         </div>
         <div class="profile-email-addresses">
@@ -66,6 +66,12 @@
               <input class="profile-email-address-add-input" type="text" name="new_email" placeholder="Type a new email address">
               <a class="profile-email-address-add-save" href="javascript:">Add</a>
             </div>
+          </div>
+        </div>
+        <div kf-modal show="showResendVerificationEmailDialog.value">
+          <div kf-basic-modal-content title="{{emailForVerificationModalTitle}}">
+            <p>You will shortly receive a verification email from us at the following address: <span class="email-address">{{emailForVerification}}</span>.</p>
+            <p>To verify, please click on a verification link on the email.</p>
           </div>
         </div>
         <div class="dialog email-delete-dialog" style="display:none">

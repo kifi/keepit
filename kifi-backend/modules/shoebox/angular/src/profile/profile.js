@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput'])
+angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput', 'kifi.routeService', 'util'])
 
 .config([
   '$routeProvider',
@@ -13,19 +13,15 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', 'profileService',
-  function ($scope, profileService) {
-    $scope.showEmailChangeDialog = {
-      value: false
-    };
+  '$scope', '$http', 'profileService', 'routeService', 'util',
+  function ($scope, $http, profileService, routeService, util) {
+
+    $scope.showEmailChangeDialog = {value: false};
+    $scope.showResendVerificationEmailDialog = {value: false};
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
     });
-
-    $scope.saveEmail = function () {
-      $scope.showEmailChangeDialog.value = true;
-    };
 
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
@@ -36,6 +32,108 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
     $scope.$watch('me.primaryEmail.address', function (val) {
       $scope.emailInput.value = val || '';
     });
+
+    function failureInputActionResult(errorHeader, errorBody) {
+      return {
+        isSuccess: false,
+        error: {
+          header: errorHeader,
+          body: errorBody
+        }
+      };
+    }
+
+    function successInputActionResult() {
+      return {isSuccess: true};
+    }
+
+    $scope.saveDescription = function (value) {
+      profileService.postMe({
+        description: value
+      });
+    };
+
+    $scope.validateEmail = function (value) {
+      if (!value) {
+        return failureInputActionResult('This field is required');
+      } else if (!util.validateEmail(value)) {
+        return invalidEmailValidationResult();
+      }
+      return successInputActionResult();
+    };
+
+    $scope.saveEmail = function (email) {
+      if ($scope.me && $scope.me.primaryEmail.address === email) {
+        return successInputActionResult();
+      }
+
+      return $http({
+        url: routeService.emailInfoUrl,
+        method: 'GET',
+        params: {
+          email: email
+        }
+      })
+      .then(function (result) {
+        return checkCandidateEmailSuccess(email, result.data);
+      }, function (result) {
+        return checkCandidateEmailError(result.status);
+      });
+    };
+
+    $scope.isUnverified = function (email) {
+      return email.value && !email.value.isPendingPrimary && email.value.isPrimary && !email.value.isVerified;
+    };
+
+    $scope.resendVerificationEmail = function (email) {
+      if (!email && $scope.me && $scope.me.primaryEmail) {
+        email = $scope.me.primaryEmail.address;
+      }
+      $scope.emailForVerification = email;
+      $scope.showResendVerificationEmailDialog.value = true;
+      profileService.resendVerificationEmail(email);
+    };
+
+    // Profile email utility functions
+    var emailToBeSaved;
+
+    $scope.cancelSaveEmail = function () {
+      $scope.emailInput.value = $scope.me.primaryEmail.address;
+    };
+
+    $scope.confirmSaveEmail = function () {
+      profileService.setNewPrimaryEmail(emailToBeSaved);
+    };
+
+    function invalidEmailValidationResult() {
+      return failureInputActionResult('Invalid email address', 'Please enter a valid email address');
+    }
+
+    function checkCandidateEmailSuccess(email, emailInfo) {
+      if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+        profileService.fetchMe();
+        return;
+      }
+      if (emailInfo.isVerified) {
+        return profileService.setNewPrimaryEmail($scope.me, emailInfo.address);
+      }
+      // email is available || (not primary && not pending primary && not verified)
+      emailToBeSaved = email;
+      $scope.showEmailChangeDialog.value = true;
+      return successInputActionResult();
+    }
+
+    function checkCandidateEmailError(status) {
+      switch (status) {
+      case 400: // bad format
+        return invalidEmailValidationResult();
+      case 403: // belongs to another user
+        return failureInputActionResult(
+          'This email address is already taken',
+          'This email address belongs to another user.<br>Please enter another email address.'
+        );
+      }
+    }
   }
 ])
 

@@ -17,6 +17,7 @@ angular.module('kifi.routeService', [])
       profileUrl: route('/user/me'),
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
+      resendVerificationUrl: route('/user/resend-verification'),
       formatPicUrl: formatPicUrl
     };
   }

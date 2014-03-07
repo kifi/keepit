@@ -9,6 +9,9 @@ angular.module('util', [])
   endsWith: function (str, suffix) {
     return str === suffix || str.indexOf(suffix, str.length - suffix.length) !== -1;
   },
+  trimInput: function (input) {
+    return input ? input.trim().replace(/\s+/g, ' ') : '';
+  },
   validateEmail: function (input) {
     var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailAddrRe.test(input);

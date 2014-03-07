@@ -336,8 +336,8 @@ class AsyncScraper @Inject() (
 
               val detector = new SlidingWindowPornDetector(pornDetectorFactory())
               detector.isPorn(content.take(100000)) match {
-                case true if normalizedUri.restriction == None => helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = Some(Restriction.ADULT)))
-                case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = None))
+                case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+                case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
                 case _ =>
               }
 
