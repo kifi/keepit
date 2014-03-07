@@ -24,6 +24,9 @@ import org.apache.lucene.analysis.hu.HungarianLightStemFilter
 import org.apache.lucene.analysis.id.IndonesianStemFilter
 import org.apache.lucene.analysis.in.IndicNormalizationFilter
 import org.apache.lucene.analysis.it.ItalianLightStemFilter
+import org.apache.lucene.analysis.ja.JapaneseTokenizer
+import org.apache.lucene.analysis.ja.JapaneseKatakanaStemFilter
+import org.apache.lucene.analysis.ja.JapaneseReadingFormFilter
 import org.apache.lucene.analysis.lv.LatvianStemFilter
 import org.apache.lucene.analysis.no.NorwegianLightStemFilter
 import org.apache.lucene.analysis.pt.PortugueseLightStemFilter
@@ -59,6 +62,7 @@ object DefaultAnalyzer {
   import LuceneVersion.version
 
   private val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None)
+  private val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None)
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
@@ -78,6 +82,7 @@ object DefaultAnalyzer {
     "hu" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Hungarian),
     "id" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Indonesian),
     "it" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Italian),
+    "ja" -> jaAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Japanese).withFilter[JapaneseKatakanaStemFilter],
     "lv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Latvian),
     "nl" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Dutch),
     "no" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Norwegian),
@@ -104,6 +109,7 @@ object DefaultAnalyzer {
     "hu" -> langAnalyzers("hu").withFilter[HungarianLightStemFilter],
     "id" -> langAnalyzers("id").withFilter[IndonesianStemFilter],
     "it" -> langAnalyzers("it").withFilter[ItalianLightStemFilter],
+    "ja" -> langAnalyzers("ja").withFilter[JapaneseReadingFormFilter],
     "lv" -> langAnalyzers("lv").withFilter[LatvianStemFilter],
     "nl" -> langAnalyzers("nl").withStemFilter(_.Dutch),
     "no" -> langAnalyzers("no").withFilter[NorwegianLightStemFilter],
@@ -135,6 +141,12 @@ class DefaultTokenizerFactory extends TokenizerFactory {
     var tokenizer = new StandardTokenizer(version, reader)
     tokenizer.setMaxTokenLength(256)
     tokenizer
+  }
+}
+
+class JapaneseTokenizerFactory extends TokenizerFactory {
+  override def create(reader: Reader): Tokenizer = {
+    new JapaneseTokenizer(reader, null, true, JapaneseTokenizer.Mode.SEARCH)
   }
 }
 
