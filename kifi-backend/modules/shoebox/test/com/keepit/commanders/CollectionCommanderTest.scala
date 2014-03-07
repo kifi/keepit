@@ -11,12 +11,16 @@ import scala.Some
 import com.keepit.model.KeepToCollection
 import com.keepit.normalizer.NormalizationService
 import com.keepit.search.FakeSearchServiceClientModule
+import com.google.inject.Injector
+import com.keepit.common.db.slick.DBSession.RSession
 
 class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
 
   def modules = FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
+
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url) getOrElse url
 
   "CollectionCommander" should {
 
@@ -28,9 +32,8 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
         val (user, collections, bookmark1, bookmark2) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-          val normalizationService = inject[NormalizationService]
-          val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))

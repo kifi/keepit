@@ -52,7 +52,8 @@ class ExtPreferenceController @Inject() (
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = JsonAction.authenticated { request =>
-    val json = db.readOnly { implicit session => Json.arr(normalizationService.normalize(url)) }
+    val normalizedUrl: String = db.readOnly { implicit session => normalizationService.normalize(url) getOrElse url }
+    val json = Json.arr(normalizedUrl)
     Ok(json)
   }
 

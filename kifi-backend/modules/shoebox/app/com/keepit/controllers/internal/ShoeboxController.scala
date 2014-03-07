@@ -345,8 +345,12 @@ class ShoeboxController @Inject() (
     val url = Json.fromJson[String](request.body).get
     val normalizedUriOrPrenormStr = db.readOnly { implicit s => //using cache
       normUriRepo.getByUriOrPrenormalize(url) match {
-        case Right(url) => Json.obj("url" -> url)
-        case Left(nuri) => Json.obj("normalizedURI" -> nuri)
+        case Success(Right(prenormalizedUrl)) => Json.obj("url" -> prenormalizedUrl)
+        case Success(Left(nuri)) => Json.obj("normalizedURI" -> nuri)
+        case Failure(ex) => {
+          log.error("Could not get normalized uri or prenormalized url", ex)
+          Json.obj("url" -> url)
+        }
       }
     }
     Ok(normalizedUriOrPrenormStr)

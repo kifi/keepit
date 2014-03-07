@@ -9,10 +9,15 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import scala.Some
 import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeNotifier}
+import com.google.inject.Injector
+import com.keepit.common.db.slick.DBSession.RSession
 
 class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
 
   "KeepsAbuseControl" should {
+
+    def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url) getOrElse url
+
 
     "check for global abuse not triggered" in {
       withDb() { implicit injector =>
@@ -39,10 +44,9 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
           inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
 
-          val normalizationService = inject[NormalizationService]
-          val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
-          val uri3 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.kifi.com/"), Some("kifi")))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.kifi.com/"), Some("kifi")))
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
@@ -72,10 +76,9 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
           inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
 
-          val normalizationService = inject[NormalizationService]
-          val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
-          val uri3 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.kifi.com/"), Some("kifi")))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.kifi.com/"), Some("kifi")))
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
