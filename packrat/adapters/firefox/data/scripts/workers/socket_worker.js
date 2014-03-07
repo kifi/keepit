@@ -25,8 +25,7 @@ if (self.options) {
 
 function openSocket(socketId, url) {
   log("[worker:openSocket]", socketId, url)();
-  sockets[socketId] = new ReconnectingWebSocket({
-    url: url,
+  sockets[socketId] = new ReconnectingWebSocket(url, {
     onConnect: function() {
       self.port.emit("socket_connect", socketId);
     },
