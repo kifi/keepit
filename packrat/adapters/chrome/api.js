@@ -579,8 +579,7 @@ var api = (function createApi() {
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
         log('[api.socket.open]', url)();
-        var sc, rws = new ReconnectingWebSocket({
-          url: url,
+        var sc, rws = new ReconnectingWebSocket(url, {
           onConnect: errors.wrap(function () {
             sc.onConnect();
           }),
