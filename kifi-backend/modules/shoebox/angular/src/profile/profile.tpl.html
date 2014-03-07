@@ -40,13 +40,13 @@
             </div>
           </div>
         </div>
-        <div class="profile-email-address-unverified">
+        <div class="profile-email-address-unverified" ng-if="isUnverified({value: me.primaryEmail})">
           Your email is pending your verification
-          (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>).
+          (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>).
         </div>
-        <div class="profile-email-address-pending">
+        <div class="profile-email-address-pending" ng-if="me.primaryEmail.isPendingPrimary">
           Your new primary email, <span class="profile-email-address-pending-email">{{me.primaryEmail.address}}</span>, is pending your verification
-          (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>,
+          (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>,
           <a class="profile-email-pending-cancel" href="javascript:">Cancel</a>).
         </div>
         <div class="profile-email-addresses">
@@ -66,6 +66,12 @@
               <input class="profile-email-address-add-input" type="text" name="new_email" placeholder="Type a new email address">
               <a class="profile-email-address-add-save" href="javascript:">Add</a>
             </div>
+          </div>
+        </div>
+        <div kf-modal show="showResendVerificationEmailDialog.value">
+          <div kf-basic-modal-content title="{{emailForVerificationModalTitle}}">
+            <p>You will shortly receive a verification email from us at the following address: <span class="email-address">{{emailForVerification}}</span>.</p>
+            <p>To verify, please click on a verification link on the email.</p>
           </div>
         </div>
         <div class="dialog email-delete-dialog" style="display:none">
