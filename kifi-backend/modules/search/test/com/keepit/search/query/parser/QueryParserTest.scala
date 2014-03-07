@@ -23,12 +23,11 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
-import com.keepit.search.index.DefaultAnalyzer
 
 class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
-    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_41) //DefaultAnalyzer.forParsing(Lang("en"))
+    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_41)
     val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
   }
 
