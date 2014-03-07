@@ -1,10 +1,10 @@
 <div ng-controller="ProfileCtrl">
-  <div class="profile" data-template>
+  <div class="profile">
     <div class="antiscroll-inner">
       <h2>Settings</h2>
       <div class="profile-container">
         <div kf-profile-image pic-url="me.picUrl"></div>
-        <div class="profile-input-wrapper" data-name="name">
+        <div class="profile-input-wrapper">
           <div class="profile-input-title">Name</div>
           <div class="profile-input-box profile-input-box-name">
             <span class="profile-input-placeholder">
@@ -16,7 +16,7 @@
             <a class="profile-input-save" href="javascript:">Save</a>
           </div>
         </div>
-        <div class="profile-input-wrapper" data-name="description">
+        <div class="profile-input-wrapper">
           <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
           <div kf-profile-input input-state="descInput">
             <input class="profile-input-input profile-description-input"
@@ -26,7 +26,7 @@
               type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
           </div>
         </div>
-        <div class="profile-input-wrapper profile-email" data-name="email">
+        <div class="profile-input-wrapper profile-email">
           <div class="profile-input-title">Contact email</div>
           <div kf-profile-input input-state="emailInput" input-is-email="true">
             <input class="profile-input-input profile-email-input"
@@ -34,7 +34,7 @@
               kf-focus-if focus-cond="emailInput.editing"
               ng-model="emailInput.value"
               type="email" name="email" placeholder="Enter your email address" novalidate>
-          <div kf-profile-input template-url="profileInputEmail.html" submit-action="saveEmail()" data-default-value="me.primaryEmail.address" data-is-email="true"></div>
+          </div>
           <div kf-modal show="showEmailChangeDialog.value">
             <div kf-basic-modal-content with-cancel action-text="Continue">
               <p>You are about to change your primary email to <span class="email-address">{{me.primaryEmail.address}}</span>.</p>
@@ -71,7 +71,7 @@
           </div>
         </div>
         <div class="dialog email-delete-dialog" style="display:none">
-          <form method="POST" action="{{url}}" class="dialog-content" data-template>
+          <form method="POST" action="{{url}}" class="dialog-content">
             <div class="dialog-header">Delete {{email}}?</div>
             <a href="javascript:" class="dialog-cancel">×</a>
             <div class="dialog-content-body">
@@ -93,13 +93,13 @@
             <span class="profile-change-password-title">Change your password</span>
           </a>
           <div class="profile-change-password-change">
-            <div class="profile-input-wrapper profile-old-password" data-name="old-password">
+            <div class="profile-input-wrapper profile-old-password">
               <div class="profile-input-title">Enter your current password</div>
               <div class="profile-input-box">
                 <input class="profile-input-input" type="password" name="old-password" placeholder="Existing Password" value="" required novalidate>
               </div>
             </div>
-            <div class="profile-input-wrapper profile-new-password" data-name="new-password">
+            <div class="profile-input-wrapper profile-new-password">
               <div class="profile-input-title">New Password</div>
               <div class="profile-input-box">
                 <input class="profile-input-input" type="password" name="new-password1" placeholder="Choose a new password" value="" required novalidate>
