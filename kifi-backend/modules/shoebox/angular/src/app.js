@@ -33,6 +33,8 @@ angular.module('kifi', [
   'kifi.undo'
 ])
 
+// fix for when ng-view is inside of ng-include:
+// http://stackoverflow.com/questions/16674279/how-to-nest-ng-view-inside-ng-include
 .run(['$route', angular.noop])
 
 .config([
@@ -67,6 +69,39 @@ angular.module('kifi', [
       xhrBaseSearch: origin.replace('www', 'search') + '/search',
       picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
     };
+  }
+])
+
+.factory('injectedState', [
+  '$location', 'util',
+  function ($location, util) {
+    var state = {};
+
+    if (_.size($location.search()) > 0) {
+      // There may be URL parameters that we're interested in extracting.
+      _.forOwn($location.search(), function (value, key) {
+        state[key] = value;
+      });
+
+      if ($location.path() == '/find') {
+        // leave parameters attached.
+      } else {
+        // For now, remove all URL parameters
+        $location.search({});
+      }
+    }
+
+    function pushState(obj) {
+      _.forOwn(obj, function (value, key) {
+        state[key] = value;
+      });
+      return state;
+    }
+
+    return {
+      state: state,
+      pushState: pushState
+    }
   }
 ])
 
