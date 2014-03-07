@@ -70,6 +70,7 @@ angular.module('kifi.modal', [])
         scope.actionText = attrs.actionText;
         scope.withCancel = (attrs.withCancel !== undefined) || false;
         scope.cancelText = attrs.cancelText;
+        scope.centered = attrs.centered;
         scope.hideModal = kfModalCtrl.hideModal;
       }
     };

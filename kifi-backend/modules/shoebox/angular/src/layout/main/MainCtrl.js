@@ -48,6 +48,12 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       });
     }, 500);
 
+    $scope.$on('$routeChangeSuccess', function(event, current, previous) {
+      if (previous && current && previous.controller === 'SearchCtrl' && current.controller !== 'SearchCtrl') {
+        $scope.search.text = '';
+      }
+    });
+
     $scope.undo = undoService;
 
     var updateHeight = _.throttle(function () {
