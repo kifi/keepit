@@ -39,24 +39,31 @@ class ExtDeepLinkController @Inject() (
   def handle(token: String) = HtmlAction(
     authenticatedAction = { request =>
       getDeepLinkAndUrl(token) map { case (deepLink, url) =>
-        val isIphoneApp = request.request.headers.get(USER_AGENT) exists { agentString =>
+        val agent = request.request.headers.get(USER_AGENT)
+        val isIphoneApp = agent exists { agentString =>
           UserAgent.fromString(agentString).isIphone
         }
+        log.info(s"handling user ${request.userId} with agent $agent & iphone app: $isIphoneApp")
         if (isIphoneApp && request.experiments.contains(ExperimentType.MOBILE_REDITECT)) {
+          log.info(s"sending user ${request.userId} to $url via iphone app page")
           Ok(views.html.iphoneDeeplink(url, deepLink.deepLocator.value))
         } else {
           deepLink.recipientUserId match {
-            case Some(request.userId) => Ok(
-              views.html.deeplink(url, deepLink.deepLocator.value)
-            )
-            case _ => Redirect(url)
+            case Some(request.userId) =>
+              log.info(s"sending user ${request.userId} to $url")
+              Ok(views.html.deeplink(url, deepLink.deepLocator.value))
+            case _ =>
+              log.info(s"sending unknown user to $url with authenticated session")//is that possible ???
+              Redirect(url)
           }
         }
       } getOrElse NotFound
     },
     unauthenticatedAction = { request =>
       getDeepLinkAndUrl(token) map {
-        case (_, url) => Redirect(url)
+        case (_, url) =>
+          log.info(s"sending unknown user to $url")
+          Redirect(url)
       } getOrElse NotFound
     })
 
