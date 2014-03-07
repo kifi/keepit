@@ -73,8 +73,8 @@ angular.module('kifi', [
 ])
 
 .factory('injectedState', [
-  '$location', 'util',
-  function ($location, util) {
+  '$location',
+  function ($location) {
     var state = {};
 
     if (_.size($location.search()) > 0) {
@@ -83,9 +83,7 @@ angular.module('kifi', [
         state[key] = value;
       });
 
-      if ($location.path() == '/find') {
-        // leave parameters attached.
-      } else {
+      if ($location.path() !== '/find') {
         // For now, remove all URL parameters
         $location.search({});
       }
@@ -101,7 +99,7 @@ angular.module('kifi', [
     return {
       state: state,
       pushState: pushState
-    }
+    };
   }
 ])
 
