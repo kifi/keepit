@@ -85,14 +85,10 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
 
     $scope.cancelSaveEmail = function () {
       $scope.emailInput.value = $scope.me.primaryEmail.address;
-    }
+    };
 
     $scope.confirmSaveEmail = function () {
-      var data = {
-        emails: _.cloneDeep($scope.me.emails)
-      };
-      profileService.setNewPrimaryEmail(data, emailToBeSaved)
-      profileService.postMe(data);
+      profileService.setNewPrimaryEmail(emailToBeSaved);
     };
 
     function invalidEmailValidationResult() {
