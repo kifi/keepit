@@ -61,7 +61,7 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           val request = FakeRequest("GET", path)
           val result = route(request).get
           status(result) must equalTo(SEE_OTHER)
-          redirectLocation(result) must equalTo("http://www.google.com")
+          redirectLocation(result) must equalTo(Some("http://www.google.com"))
 
         }
       }
