@@ -347,7 +347,7 @@ var api = (function createApi() {
     }
     page.injecting = true;
 
-    var scripts = meta.contentScripts.filter(function(cs) { return !cs[2] && cs[1].test(page.url) });
+    var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
 
     var injected;
     chrome.tabs.executeScript(page.id, {
@@ -579,13 +579,12 @@ var api = (function createApi() {
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
         log('[api.socket.open]', url)();
-        var sc, rws = new ReconnectingWebSocket({
-          url: url,
+        var sc, rws = new ReconnectingWebSocket(url, {
           onConnect: errors.wrap(function () {
             sc.onConnect();
           }),
-          onDisconnect: errors.wrap(function () {
-            sc.onDisconnect();
+          onDisconnect: errors.wrap(function (why, sec) {
+            sc.onDisconnect(why, sec);
           }),
           onMessage: errors.wrap(function (e) {
             sc.onMessage(e.data);

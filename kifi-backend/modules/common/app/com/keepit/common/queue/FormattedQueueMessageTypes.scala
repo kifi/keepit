@@ -22,6 +22,7 @@ object RichConnectionUpdateMessage {
       case e: InternRichConnection => Companion.writes(e)
       case e: RemoveRichConnection => Companion.writes(e)
       case e: RecordKifiConnection => Companion.writes(e)
+      case e: RemoveKifiConnection => Companion.writes(e)
       case e: RecordInvitation => Companion.writes(e)
       case e: RecordFriendUserId => Companion.writes(e)
       case e: Block => Companion.writes(e)

@@ -1,13 +1,14 @@
-@(uris: Seq[NormalizedURI], count: Int, page: Int, pageCount: Int)
+@(uris: Seq[NormalizedURI], count: Int, page: Int, pageCount: Int, publicOnly: Boolean)
 
 @import com.keepit.controllers.admin.routes
+
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
     <ul>
       <li>
         @if(page > 0) {
-          <a href="@routes.AdminPornDetectorController.pornUrisView(page - 1)">
+          <a href="@routes.AdminPornDetectorController.pornUrisView(page - 1, publicOnly)">
         } else {
          <a href="#">
         }
@@ -16,28 +17,28 @@
       </li>
       @if(page - 20 > 0) {
         <li class="disabled">
-          <a href="@routes.AdminPornDetectorController.pornUrisView(0)">...</a>
+          <a href="@routes.AdminPornDetectorController.pornUrisView(0, publicOnly)">...</a>
         </li>
       }
       @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
         @if(i == page) {
           <li class="disabled">
-            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i, publicOnly)">@{i + 1}</a>
           </li>
         } else {
           <li class="active">
-            <a href="@routes.AdminPornDetectorController.pornUrisView(i)">@{i + 1}</a>
+            <a href="@routes.AdminPornDetectorController.pornUrisView(i, publicOnly)">@{i + 1}</a>
           </li>
         }
       }
       @if(page + 20 < pageCount - 1) {
         <li class="disabled">
-          <a href="@routes.AdminPornDetectorController.pornUrisView(pageCount - 1)">...</a>
+          <a href="@routes.AdminPornDetectorController.pornUrisView(pageCount - 1, publicOnly)">...</a>
         </li>
       }
       <li>
         @if(uris.size > 0) {
-          <a href="@routes.AdminPornDetectorController.pornUrisView(page + 1)">
+          <a href="@routes.AdminPornDetectorController.pornUrisView(page + 1, publicOnly)">
         } else {
          <a href="#">
         }
@@ -48,12 +49,13 @@
   </div>
 }
 
-@admin(count + " Total Adult URIs") {
+@admin(count + {if (publicOnly) " Total Public Adult URIs" else " Total Adult URIs"} ) {
 
   @pagination(page, pageCount)
 
   <table class="table table-bordered">
     <tr>
+      <th><input type="checkbox" id = "selectAll"></th>
       <th>#</th>
       <th>URI Id</th>
       <th>Title</th>
@@ -65,8 +67,9 @@
 
   @for( (uri, i) <- uris.zipWithIndex ){
     <tr>
+      <td><input type="checkbox" name = "selectUris" value ="@uri.id.get"></td>
       <td>@{i + 1}</td>
-      <td>@{uri.id}</td>
+      <td><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getScraped(uri.id.get)">@{uri.id.get}</td>
       <td><a href = "@uri.url">@uri.title.getOrElse("No Title")</td>
       <td>@{uri.restriction.map{ r => r.context}.getOrElse("")}</td>
       <td>@{uri.state}</td>
@@ -74,5 +77,45 @@
   }
 
   </table>
+
+  <p id = "resultsSaved"></p>
+
+  <form id = "removeRestrictions">
+    <button type = "submit">Remove Restrictions</button>
+  <form>
+
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+
+      $("#removeRestrictions").submit(function(event){
+        event.preventDefault();
+        var selectedIds = Array()
+
+        $("input:[name=selectUris]:checked").each(function(){ selectedIds.push($(this).val()) })
+
+        if (selectedIds.length == 0){
+          alert("nothing to change!")
+        } else{
+          $.post(
+              '@com.keepit.controllers.admin.routes.AdminPornDetectorController.removeRestrictions',
+              {uriIds: selectedIds.join()}
+            ).done(done).fail(fail);
+
+          function done(data) { $("#resultsSaved").empty().prepend(data) }
+          function fail() { alert("bad things happened") }
+        }
+
+      })
+
+
+      $("#selectAll").change(function(event){
+        var ck = $("#selectAll").prop("checked")
+        $("input:[name=selectUris]").each(function(){$(this).prop("checked", ck)})
+      })
+
+    });
+
+  </script>
 
 }

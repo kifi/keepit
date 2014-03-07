@@ -62,16 +62,16 @@ object BasicUser {
   }
 
   def toByteArray(basicUser: BasicUser): Array[Byte] = {
-    val bos = new ByteArrayOutputStream();
-    val oos = new OutputStreamDataOutput(bos);
+    val bos = new ByteArrayOutputStream()
+    val oos = new OutputStreamDataOutput(bos)
     oos.writeByte(1)      // version
     oos.writeString(basicUser.externalId.toString)
     oos.writeString(basicUser.firstName)
     oos.writeString(basicUser.lastName)
     oos.writeString(basicUser.pictureName)
-    oos.close();
-    bos.close();
-    bos.toByteArray();
+    oos.close()
+    bos.close()
+    bos.toByteArray()
   }
 
   def fromByteArray(bytes: Array[Byte], offset: Int, length: Int): BasicUser = {

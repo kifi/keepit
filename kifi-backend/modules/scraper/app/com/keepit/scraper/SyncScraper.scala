@@ -19,6 +19,7 @@ import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.search.Lang
 
 
 // straight port from original (local) code
@@ -206,13 +207,16 @@ class SyncScraper @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-//            SafeFuture{
-//            val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-//            detector.isPorn(content.take(100000)) match {
-//              case true if normalizedUri.restriction != Some(Restriction.ADULT) => helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = Some(Restriction.ADULT)))
-//              case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.syncSaveNormalizedUri(normalizedUri.copy(restriction = None))
-//              case _ =>
-//            }}
+            SafeFuture {
+              if (contentLang == Lang("en") && content.size > 100) {
+                val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+                detector.isPorn(content.take(100000)) match {
+                  case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+                  case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+                  case _ =>
+                }
+              }
+            }
 
             val article: Article = Article(
               id = normalizedUri.id.get,

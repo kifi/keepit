@@ -244,9 +244,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession) = {
-    val q = for {t <- rows if t.id === id} yield t.restriction
-    q.update(r)
-    invalidateCache(get(id).copy(restriction = r))
+    val q = for {t <- rows if t.id === id} yield (t.restriction, t.seq)
+    val newSeq = sequence.incrementAndGet()
+    q.update(r, newSeq)
+    invalidateCache(get(id).copy(restriction = r, seq = newSeq))
   }
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {

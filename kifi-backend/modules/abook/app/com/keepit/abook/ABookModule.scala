@@ -19,4 +19,6 @@ abstract class ABookModule(
   val abookServiceClientModule: ABookServiceClientModule = ProdABookServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
   val abookSlickModule = ABookSlickModule()
+
+  val repoChangeListenerModule = AbookRepoChangeListenerModule()
 }

@@ -3,7 +3,7 @@ package com.keepit.common.db
 import play.api.libs.json._
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
-case class Id[T](id: Long) {
+case class Id[T](id: Long) { //use "extends AnyVal" at Scala 2.11.0 https://issues.scala-lang.org/browse/SI-6260
   override def toString = id.toString
 }
 

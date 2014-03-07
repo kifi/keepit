@@ -1,17 +1,18 @@
 package com.keepit.normalizer
 
-import com.keepit.common.net.{Query, Host, URI}
+import com.keepit.common.net.{Query, Param, Host, URI, URIParserUtil}
 
 object GoogleNormalizer extends StaticNormalizer {
 
   def isDefinedAt(uri: URI) = {
     uri.host match {
-      case Some(Host("com", "google", name)) =>
+      case Some(Host("com", "google", name)) => //todo: international domains
         name match {
           case "mail" => true
           case "groups" => true
           case "drive" => true
           case "docs" => true
+          case "www" => true
           case _ => false
         }
       case _ => false
@@ -22,6 +23,9 @@ object GoogleNormalizer extends StaticNormalizer {
   val file = """(.*)(/file/d/[^/]+/)(.*)""".r
   val gmail = """(/mail/)(.*)""".r
   val driveTabs = Set[String]("my-drive", "shared-with-me", "starred", "recent", "activity", "offline", "all", "trash")
+
+  val searchParamsToDrop = Set[String]("aqs", "sourceid", "espv", "oq", "es_sm")
+  val searchParamsToTake = Set[String]("ie", "safe")
 
   def apply(uri: URI) = {
     uri match {
@@ -47,6 +51,21 @@ object GoogleNormalizer extends StaticNormalizer {
         } else {
           uri
         }
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "www")), port, path @ Some("/search"), query, fragment) =>
+        val q = fragment match {
+          case Some(f) =>
+            val newParams = Query.parse(f).params
+            val finalParams = query match {
+              case Some(qry) =>
+                URIParserUtil.normalizeParams(qry.params.filter{ case Param(name, _) => searchParamsToTake.contains(name) } ++ newParams)
+              case None =>
+                URIParserUtil.normalizeParams(newParams)
+            }
+            Some(Query(finalParams))
+          case _ =>
+            query.map{ qry => Query(qry.params.filterNot{ case Param(name, _) => searchParamsToDrop.contains(name) }) }
+        }
+        URI(scheme, userInfo, host, port, path, q, None)
       case _ => uri
     }
   }

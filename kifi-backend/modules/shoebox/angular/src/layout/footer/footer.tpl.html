@@ -7,7 +7,7 @@
         Quick guide to get started
       </a>
       <div ng-if="data.showGettingStarted">
-        <iframe class="kifi-onboarding-iframe" src="https://www.kifi.com/assets/onboarding.html" frameborder="0"></iframe>
+        <iframe class="kifi-onboarding-iframe" ng-src="https://www.kifi.com/assets/onboarding.html" frameborder="0"></iframe>
       </div>
     </li>
     <li class="install-kifi">
@@ -15,8 +15,10 @@
         <span class="kf-footer-item-icon kf-footer-item-icon-install"></span>
         Install the extension
       </a>
-      <div kf-basic-modal show="data.showInstall" title="Email verified" action-text="Continue">
-        Thanks for verifying your email address, George. You're good to go! Tell your friends, yo. Hahah, nah don't. You just verified your email. Thanks for verifying your email address, George. You're good to go! Tell your friends, yo. Hahah, nah don't. You just verified your email.
+      <div kf-modal show="data.showInstall">
+        <div kf-basic-modal-content centered="true" title="Email verified" action-text="Continue">
+          Thanks for verifying your email address.
+        </div>
       </div>
     </li>
     <li>

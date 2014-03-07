@@ -12,7 +12,7 @@ import java.net.InetAddress
 import scala.collection.mutable.WeakHashMap
 
 case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, isLeader: Boolean, instanceInfo: AmazonInstanceInfo,
-        localHostName:String, state: ServiceStatus, capabilities: List[String], version: ServiceVersion, name: String)
+        localHostName:String, state: ServiceStatus, version: ServiceVersion, name: String)
 
 class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -36,11 +36,10 @@ class AdminClusterController @Inject() (
       val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
       serviceCluster.allMembers.map { serviceInstance =>
         val isLeader = serviceCluster.leader.exists(_ == serviceInstance)
-        val testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email")
         val serviceVersion = serviceVersionMap(serviceInstance)
         val publicHostName = InetAddress.getByName(serviceInstance.instanceInfo.localIp.ip).getHostName
         val name = machineNames.get(serviceInstance.instanceInfo.publicIp.toString()).getOrElse("NA")
-        ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, testCapabilities, serviceVersion, name)
+        ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, publicHostName, serviceInstance.remoteService.status, serviceVersion, name)
       }
     }
 

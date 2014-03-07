@@ -284,8 +284,8 @@ function onSocketConnect() {
   getRules(getPrefs.bind(null, getTags.bind(null, getFriends)));
 }
 
-function onSocketDisconnect(why) {
-  log('[onSocketDisconnect]', why)();
+function onSocketDisconnect(why, sec) {
+  log('[onSocketDisconnect]', why, sec || '')();
 }
 
 function getLatestThreads() {
@@ -754,7 +754,7 @@ api.port.on({
     socket.send(['set_message_unread', o.messageId]);
   },
   get_page_thread_count: function(_, __, tab) {
-    sendPageThreadCount(tab);
+    sendPageThreadCount(tab, null, true);
   },
   thread: function(id, _, tab) {
     var th = threadsById[id];
@@ -808,11 +808,8 @@ api.port.on({
       // TODO: remember that this tab needs the kind threadlist until it gets it or its pane changes?
     }
     if (o.first) {
-      if (!threadLists[uri]) {
-        socket.send(['get_page_threads', tab.url, THREAD_BATCH_SIZE], gotPageThreads.bind(null, uri));
-      }
       sendUnreadThreadCount(tab);
-      sendPageThreadCount(tab);
+      sendPageThreadCount(tab, null, true);
     }
   },
   get_older_threads: function(o, respond, tab) {
@@ -1349,11 +1346,14 @@ function sendUnreadThreadCount(tab) {
   } // else will be pushed to tab when known
 }
 
-function sendPageThreadCount(tab, tl) {
-  tl = tl || threadLists[tab.nUri || tab.url];
+function sendPageThreadCount(tab, tl, load) {
+  var uri = tab.nUri || tab.url;
+  tl = tl || threadLists[uri];
   if (tl) {
     api.tabs.emit(tab, 'page_thread_count', {count: tl.numTotal, id: tl.numTotal === 1 ? tl.ids[0] : undefined}, {queue: 1});
-  } // else will be pushed to tab when known
+  } else if (load) {
+    socket.send(['get_page_threads', tab.url, THREAD_BATCH_SIZE], gotPageThreads.bind(null, uri));
+  } // will be pushed to tab when known
 }
 
 function awaitDeepLink(link, tabId, retrySec) {

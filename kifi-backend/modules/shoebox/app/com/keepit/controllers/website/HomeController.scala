@@ -82,9 +82,15 @@ class HomeController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else None
-    }.flatten.getOrElse(Ok(views.html.marketing.terms(isLoggedIn)))
+        None
+      } else if (agent.isMobile) {
+        Some(true)
+      } else {
+        Some(false)
+      }
+    }.getOrElse(Some(false)).map { hideHeader =>
+      Ok(views.html.marketing.terms(isLoggedIn, hideHeader))
+    }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
   def privacyPolicy = HtmlAction(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
@@ -92,9 +98,15 @@ class HomeController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else None
-    }.flatten.getOrElse(Ok(views.html.marketing.privacy(isLoggedIn)))
+        None
+      } else if (agent.isMobile) {
+        Some(true)
+      } else {
+        Some(false)
+      }
+    }.getOrElse(Some(false)).map { hideHeader =>
+      Ok(views.html.marketing.privacy(isLoggedIn, hideHeader))
+    }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))

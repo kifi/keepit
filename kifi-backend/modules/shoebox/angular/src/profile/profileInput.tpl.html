@@ -1,7 +1,11 @@
 <div class="profile-input-box">
-  <div kf-validated-input is-invalid="isInvalid" header="errorHeader" body="errorBody">
-    <div ng-include="templateUrl"></div>
+  <div ng-class="{ error: state.invalid }">
+    <div ng-transclude></div>
+    <div class="input-error" ng-show="state.invalid">
+      <div class="error-header" ng-bind-html="errorHeader"></div>
+      <div class="error-body" ng-bind-html="errorBody"></div>
+    </div>
   </div>
-  <a class="profile-input-edit" href="javascript:" ng-if="!enabled" ng-click="enableEditing()">Edit</a>
-  <a class="profile-input-save" href="javascript:" ng-click="saveInput()">Save</a>
+  <a class="profile-input-edit" href="javascript:" ng-hide="state.editing" ng-click="edit()">Edit</a>
+  <a class="profile-input-save" href="javascript:" ng-show="state.editing" ng-click="save()">Save</a>
 </div>

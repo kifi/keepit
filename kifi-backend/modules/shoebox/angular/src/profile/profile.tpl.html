@@ -1,10 +1,10 @@
 <div ng-controller="ProfileCtrl">
-  <div class="profile" data-template>
+  <div class="profile">
     <div class="antiscroll-inner">
       <h2>Settings</h2>
       <div class="profile-container">
         <div kf-profile-image pic-url="me.picUrl"></div>
-        <div class="profile-input-wrapper" data-name="name">
+        <div class="profile-input-wrapper">
           <div class="profile-input-title">Name</div>
           <div class="profile-input-box profile-input-box-name">
             <span class="profile-input-placeholder">
@@ -12,43 +12,41 @@
             </span>
             <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{me.firstName}}" required novalidate>
             <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{me.lastName}}" required novalidate>
-            <a class="profile-input-edit" href="javascript:" style="display:none">Edit</a>
-            <a class="profile-input-save" href="javascript:">Save</a>
           </div>
         </div>
-        <div class="profile-input-wrapper" data-name="description">
+        <div class="profile-input-wrapper">
           <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-          <script type="text/ng-template" id="profileInputDescription.html">
+          <div kf-profile-input input-state="descInput" input-save-action="saveDescription(value)">
             <input class="profile-input-input profile-description-input"
-                   ng-disabled="!enabled"
-                   kf-focus-if focus-cond="enabled"
-                   ng-keydown="onKeydown($event)"
-                   ng-blur="blurInput()"
-                   ng-model="input.value"
-                   type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
-          </script>
-          <div kf-profile-input template-url="profileInputDescription.html"></div>
+              ng-disabled="!descInput.editing"
+              kf-focus-if focus-cond="descInput.editing"
+              ng-model="descInput.value"
+              type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
+          </div>
         </div>
-        <div class="profile-input-wrapper profile-email" data-name="email">
+        <div class="profile-input-wrapper profile-email">
           <div class="profile-input-title">Contact email</div>
-          <script type="text/ng-template" id="profileInputEmail.html">
+          <div kf-profile-input input-state="emailInput" input-validate-action="validateEmail(value)"  input-save-action="saveEmail(value)">
             <input class="profile-input-input profile-email-input"
-                   ng-disabled="!enabled"
-                   kf-focus-if focus-cond="enabled"
-                   ng-keydown="onKeydown($event)"
-                   ng-blur="blurInput()"
-                   ng-model="input.value"
-                   type="text" name="email" placeholder="Enter your email address" novalidate>
-          </script>
-          <div kf-profile-input template-url="profileInputEmail.html" data-default-value="primaryEmail.address" data-is-email="true"></div>
+              ng-disabled="!emailInput.editing"
+              kf-focus-if focus-cond="emailInput.editing"
+              ng-model="emailInput.value"
+              type="text" name="email" placeholder="Enter your email address" novalidate>
+          </div>
+          <div kf-modal show="showEmailChangeDialog.value">
+            <div kf-basic-modal-content with-cancel action-text="Continue" action="confirmSaveEmail()" cancel="cancelSaveEmail()">
+              <p>You are about to change your primary email to <span class="email-address">{{me.primaryEmail.address}}</span>.</p>
+              <p>We will send a verification email to this email address to prove that you own it. To verify, please click on a verification link on the email.</p>
+            </div>
+          </div>
         </div>
-        <div class="profile-email-address-unverified">
+        <div class="profile-email-address-unverified" ng-if="isUnverified({value: me.primaryEmail})">
           Your email is pending your verification
-          (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>).
+          (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>).
         </div>
-        <div class="profile-email-address-pending">
-          Your new primary email, <span class="profile-email-address-pending-email">{{primaryEmail.address}}</span>, is pending your verification
-          (<a class="profile-email-pending-resend" href="javascript:">Resend verification</a>,
+        <div class="profile-email-address-pending" ng-if="me.primaryEmail.isPendingPrimary">
+          Your new primary email, <span class="profile-email-address-pending-email">{{me.primaryEmail.address}}</span>, is pending your verification
+          (<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail()">Resend verification</a>,
           <a class="profile-email-pending-cancel" href="javascript:">Cancel</a>).
         </div>
         <div class="profile-email-addresses">
@@ -70,8 +68,14 @@
             </div>
           </div>
         </div>
+        <div kf-modal show="showResendVerificationEmailDialog.value">
+          <div kf-basic-modal-content title="{{emailForVerificationModalTitle}}">
+            <p>You will shortly receive a verification email from us at the following address: <span class="email-address">{{emailForVerification}}</span>.</p>
+            <p>To verify, please click on a verification link on the email.</p>
+          </div>
+        </div>
         <div class="dialog email-delete-dialog" style="display:none">
-          <form method="POST" action="{{url}}" class="dialog-content" data-template>
+          <form method="POST" action="{{url}}" class="dialog-content">
             <div class="dialog-header">Delete {{email}}?</div>
             <a href="javascript:" class="dialog-cancel">×</a>
             <div class="dialog-content-body">
@@ -93,13 +97,13 @@
             <span class="profile-change-password-title">Change your password</span>
           </a>
           <div class="profile-change-password-change">
-            <div class="profile-input-wrapper profile-old-password" data-name="old-password">
+            <div class="profile-input-wrapper profile-old-password">
               <div class="profile-input-title">Enter your current password</div>
               <div class="profile-input-box">
                 <input class="profile-input-input" type="password" name="old-password" placeholder="Existing Password" value="" required novalidate>
               </div>
             </div>
-            <div class="profile-input-wrapper profile-new-password" data-name="new-password">
+            <div class="profile-input-wrapper profile-new-password">
               <div class="profile-input-title">New Password</div>
               <div class="profile-input-box">
                 <input class="profile-input-input" type="password" name="new-password1" placeholder="Choose a new password" value="" required novalidate>

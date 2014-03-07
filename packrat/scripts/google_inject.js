@@ -279,9 +279,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       if ($res[0].nextElementSibling !== ires) {
         $res.insertBefore(ires);
         $res.find('.kifi-res-sub:not(.kifi-fitted)').each(makeDescAndTagsFit);
-        if (bindResHandlers) {
+        if (!boundResHandlers) {
           setTimeout(bindResHandlers);
-          bindResHandlers = null;
+          boundResHandlers = true;
         }
       }
       return true;
@@ -434,7 +434,9 @@ if (searchUrlRe.test(document.URL)) !function () {
     this.style.tableLayout = 'fixed';
   }
 
-  var bindResHandlers = function() {
+  var boundResHandlers;
+  function bindResHandlers() {
+    log('[bindResHandlers]')();
     $status.click(function (e) {
       if (e.which > 1 || !this.href) return;
       e.preventDefault();
