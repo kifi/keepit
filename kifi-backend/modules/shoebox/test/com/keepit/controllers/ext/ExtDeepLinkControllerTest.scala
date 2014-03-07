@@ -30,7 +30,7 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           (
             userRepo.save(User(firstName = "Robert", lastName = "Heinlein")),
             userRepo.save(User(firstName = "Larry", lastName = "Niven")),
-            uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
+            uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/").get, Some("Google")))
           )
         }
 

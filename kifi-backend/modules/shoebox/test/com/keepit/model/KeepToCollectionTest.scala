@@ -12,7 +12,7 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
 
   val hover = BookmarkSource.keeper
   val initLoad = BookmarkSource.bookmarkImport
-  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url) getOrElse url
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
 
   "KeepToCollectionTest " should {
     "load uris from db" in {

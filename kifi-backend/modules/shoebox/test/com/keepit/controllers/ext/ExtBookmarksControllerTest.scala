@@ -37,7 +37,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
     TestHeimdalServiceClientModule()
   )
 
-  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url) getOrElse url
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
 
 
   "BookmarksController" should {

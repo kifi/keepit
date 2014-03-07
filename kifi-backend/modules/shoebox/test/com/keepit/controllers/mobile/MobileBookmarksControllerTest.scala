@@ -82,7 +82,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
     }
   }
 
-  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url) getOrElse url
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
 
   "remove tag" in {
     running(new ShoeboxApplication(controllerTestModules:_*)) {
