@@ -87,6 +87,20 @@ class DefaultAnalyzerTest extends Specification {
       stopWords.get.contains("scala") === false
       stopWords.get.contains("is") === true
     }
+
+    "tokenize Japanese text" in {
+      val ja = DefaultAnalyzer.forIndexing(Lang("ja"))
+      toJaTokenList(ja.tokenStream("b", "茄子とししとうの煮浸し")).map(_.tokenText) ===
+        List("茄子", "ししとう", "煮浸し")
+      toJaTokenList(ja.tokenStream("b", "コンピューター")).map(_.tokenText) ===
+        List("コンピュータ")
+    }
+
+    "tokenize Japanese text with stemming" in {
+      val ja = DefaultAnalyzer.forIndexingWithStemmer(Lang("ja"))
+      toJaTokenList(ja.tokenStream("b", "茄子とししとうの煮浸し")).map(_.tokenText) ===
+        List("ナスビ", "シシトウ", "ニビタシ")
+    }
   }
 
   def toTokenList(ts: TokenStream) = {
@@ -103,5 +117,18 @@ class DefaultAnalyzerTest extends Specification {
     ret.reverse
   }
 
-  case class Token(tokenText: String, tokenType: String, positionIncrement: Int)
+  case class Token(tokenType: String, tokenText: String, positionIncrement: Int)
+
+  def toJaTokenList(ts: TokenStream) = {
+    val termAttr = ts.getAttribute(classOf[CharTermAttribute])
+    val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
+    val typeAcc = new TypeAttributeAccessor
+
+    var ret: List[Token] = Nil
+    ts.reset()
+    while (ts.incrementToken) {
+      ret = Token(null, new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
+    }
+    ret.reverse
+  }
 }

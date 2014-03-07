@@ -92,7 +92,10 @@ object DefaultAnalyzer {
     "sv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Swedish),
     "th" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[ThaiWordFilter].withStopFilter(_.Thai),
     "tr" -> stdAnalyzer.withFilter[TurkishLowerCaseFilter].withStopFilter(_.Turkish)
-  ).mapValues(_.withFilter[SymbolDecompounder])
+  ).map{
+    case ("ja", analyzer) => "ja" -> analyzer
+    case (lang, analyzer) => lang -> analyzer.withFilter[SymbolDecompounder]
+  }
 
   val langAnalyzerWithStemmer = Map[String, Analyzer](
     "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
