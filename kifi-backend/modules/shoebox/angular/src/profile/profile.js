@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput'])
+angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput', 'kifi.routeService', 'util'])
 
 .config([
   '$routeProvider',
@@ -13,16 +13,48 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', 'profileService',
-  function ($scope, profileService) {
+  '$scope', '$http', 'profileService', 'routeService', 'util',
+  function ($scope, $http, profileService, routeService, util) {
+
     $scope.showEmailChangeDialog = {value: false};
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
     });
 
-    $scope.saveEmail = function () {
-      $scope.showEmailChangeDialog.value = true;
+    $scope.saveDescription = function (value) {
+      profileService.postMe({
+        description: value
+      });
+    }
+
+    $scope.validateEmail = function (value) {
+      if (!value) {
+        return failureInputActionResult('This field is required');
+      } else if (!util.validateEmail(value)) {
+        return invalidEmailValidationResult();
+      }
+      return successInputActionResult();
+    }
+
+    $scope.saveEmail = function (email) {
+      if ($scope.me && $scope.me.primaryEmail.address === email) {
+        return successInputActionResult();
+      }
+
+      $http({
+        url: routeService.emailInfoUrl,
+        method: 'GET',
+        params: {
+          email: email
+        }
+      })
+      .success(function (data) {
+        return checkCandidateEmailSuccess(data);
+      })
+      .error(function (data, status) {
+        return checkCandidateEmailError(status);
+      });
     };
 
     $scope.descInput = {};
@@ -34,6 +66,50 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
     $scope.$watch('me.primaryEmail.address', function (val) {
       $scope.emailInput.value = val || '';
     });
+
+    function failureInputActionResult(errorHeader, errorBody) {
+      return {
+        isSuccess: false,
+        errorHeader: errorHeader,
+        errorBody: errorBody
+      }
+    }
+
+    function successInputActionResult() {
+      return {isSuccess: true};
+    }
+
+    // Profile email utility functions
+
+    function invalidEmailValidationResult() {
+      return failureInputActionResult('Invalid email address', 'Please enter a valid email address');
+    }
+
+    function checkCandidateEmailSuccess(emailInfo) {
+      if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
+        profileService.fetchMe();
+        return;
+      }
+      if (emailInfo.isVerified) {
+        return profileService.setNewPrimaryEmail($scope.me, emailInfo.address);
+      }
+      // email is available || (not primary && not pending primary && not verified)
+      //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+      $scope.showEmailChangeDialog.value = true;
+      return successInputActionResult();
+    }
+
+    function checkCandidateEmailError(status) {
+      switch (status) {
+        case 400: // bad format
+          return invalidEmailValidationResult();
+        case 403: // belongs to another user
+          return failureInputActionResult(
+            'This email address is already taken',
+            'This email address belongs to another user.<br>Please enter another email address.'
+          );
+      }
+    }
   }
 ])
 
