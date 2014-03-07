@@ -6,11 +6,8 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.db.Id
 
-import scala.concurrent.future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import play.api.mvc.Action
-import play.api.libs.json.{JsObject}
+import play.api.libs.json.JsObject
 
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -18,8 +15,6 @@ class ExtDeepLinkController @Inject() (
   deepLinkRepo: DeepLinkRepo,
   normalizedURIRepo: NormalizedURIRepo)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
-
-
   
   def createDeepLink() = Action(parse.tolerantJson) { request =>
     val req = request.body.asInstanceOf[JsObject]
@@ -27,7 +22,6 @@ class ExtDeepLinkController @Inject() (
     val recipient = Id[User]((req \ "recipient").as[Long])
     val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
     val locator = (req \ "locator").as[String]
-
 
     db.readWrite{ implicit session => deepLinkRepo.save(
       DeepLink(
@@ -49,7 +43,9 @@ class ExtDeepLinkController @Inject() (
       }
     } getOrElse NotFound
   }, unauthenticatedAction = { request =>
-    getDeepLinkAndUrl(token) map { case (_, url) => Redirect(url) } getOrElse NotFound
+    getDeepLinkAndUrl(token) map {
+      case (_, url) => Redirect(url)
+    } getOrElse NotFound
   })
 
   private def getDeepLinkAndUrl(token: String): Option[(DeepLink, String)] = {
