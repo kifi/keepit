@@ -61,7 +61,8 @@ module.exports = function (grunt) {
           'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
           'lib/moment/moment.js',
           'lib/angular-moment/angular-moment.js',
-          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js'
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
+          'lib/angular-facebook-utils/src/facebookUtils.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
@@ -81,7 +82,8 @@ module.exports = function (grunt) {
           'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
           'lib/moment/min/moment.min.js',
           'lib/angular-moment/angular-moment.min.js',
-          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js'
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
+          'lib/angular-facebook-utils/src/facebookUtils.min.js'
         ],
         src: 'src',
         common: 'src/common/build-css',

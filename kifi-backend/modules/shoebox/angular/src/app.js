@@ -30,7 +30,8 @@ angular.module('kifi', [
   'kifi.layout.main',
   'kifi.layout.nav',
   'kifi.layout.rightCol',
-  'kifi.undo'
+  'kifi.undo',
+  'facebookUtils'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -51,6 +52,10 @@ angular.module('kifi', [
     $httpProvider.defaults.withCredentials = true;
   }
 ])
+
+.constant('facebookConfigSettings', {
+  appID: '104629159695560'
+})
 
 .factory('env', [
   '$location',
