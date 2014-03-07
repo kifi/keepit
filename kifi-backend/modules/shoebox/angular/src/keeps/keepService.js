@@ -57,9 +57,6 @@ angular.module('kifi.keepService', ['kifi.undo'])
     function fetchScreenshots(keeps) {
       if (keeps && keeps.length) {
         api.fetchScreenshotUrls(keeps).then(function (urls) {
-          $timeout(function () {
-            api.prefetchImages(urls);
-          });
 
           _.forEach(keeps, function (keep) {
             keep.screenshot = urls[keep.url];
@@ -324,7 +321,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
         return $q.when({'threads': 0});
       },
 
-      fetchScreenshotUrls: function (keeps) {
+      fetchScreenshotUrls: _.debounce(function (keeps) {
         if (keeps && keeps.length) {
           var url = env.xhrBase + '/keeps/screenshot',
             data = {
@@ -334,11 +331,17 @@ angular.module('kifi.keepService', ['kifi.undo'])
           $log.log('keepService.fetchScreenshotUrls()', data);
 
           return $http.post(url, data).then(function (res) {
+            $timeout(function () {
+              api.prefetchImages(res.data.urls);
+            });
             return res.data.urls;
           });
         }
         return $q.when(keeps || []);
-      },
+      }, 1000, {
+        'leading': true,
+        'trailing': false
+      }),
 
       prefetchImages: function (urls) {
         _.forEach(urls, function (imgUrl, key) {
