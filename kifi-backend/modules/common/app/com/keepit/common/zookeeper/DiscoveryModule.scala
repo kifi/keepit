@@ -46,8 +46,8 @@ object DiscoveryModule {
     securityGroups = "default",
     amiId = "ami-1bf9de5e",
     amiLaunchIndex = "0",
-    loadBalancer = None)
-
+    loadBalancer = None,
+    tags = Map("Capabilities" -> "foo, bar"))
 }
 
 abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
@@ -101,7 +101,8 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
         securityGroups = get("security-groups"),
         amiId = get("ami-id"),
         amiLaunchIndex = get("ami-launch-index"),
-        loadBalancer = loadBalancer
+        loadBalancer = loadBalancer,
+        tags = tags.map(tag => tag.getKey -> tag.getValue).toMap
       )
     }
     log.info(s"my amazon instance is ${instance.toString}")

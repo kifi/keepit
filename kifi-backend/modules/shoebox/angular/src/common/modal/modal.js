@@ -14,8 +14,18 @@ angular.module('kifi.modal', [])
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: function ($scope) {
+        var defaultHideAction = null;
 
-        this.hideModal = function () {
+        this.setDefaultHideAction = function (action) {
+          defaultHideAction = action;
+        };
+
+        this.hideModal = function (hideAction) {
+          if (hideAction) {
+            hideAction();
+          } else if (defaultHideAction) {
+            defaultHideAction();
+          }
           $scope.show = false;
         };
 
@@ -36,6 +46,10 @@ angular.module('kifi.modal', [])
           } else {
             $document.off('keydown', exitModal);
           }
+        });
+
+        $scope.$on('$destroy', function () {
+          $document.off('keydown', exitModal);
         });
       },
       link: function (scope, element, attrs) {
@@ -61,6 +75,11 @@ angular.module('kifi.modal', [])
     return {
       restrict: 'A',
       replace: true,
+      scope: {
+        action: '&',
+        cancel: '&',
+        title: '@'
+      },
       templateUrl: 'common/modal/basicModalContent.tpl.html',
       transclude: true,
       require: '^kfModal',
@@ -68,9 +87,15 @@ angular.module('kifi.modal', [])
         scope.title = attrs.title || '';
         scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
-        scope.withCancel = (attrs.withCancel !== undefined) || false;
+        scope.withCancel = (attrs.withCancel !== void 0) || false;
         scope.cancelText = attrs.cancelText;
-        scope.hideModal = kfModalCtrl.hideModal;
+        scope.centered = attrs.centered;
+        kfModalCtrl.setDefaultHideAction(scope.cancel);
+
+        scope.hideAndCancel = kfModalCtrl.hideModal;
+        scope.hideAndAction = function () {
+          kfModalCtrl.hideModal(scope.action);
+        };
       }
     };
   }

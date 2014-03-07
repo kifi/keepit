@@ -26,6 +26,8 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
 
   val modules = Seq(
     ABookCacheModule(HashMapMemoryCacheModule()),
+    TestABookServiceClientModule(),
+    FakeShoeboxServiceModule(),
     FakeSimpleQueueModule()
   )
 

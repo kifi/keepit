@@ -1,5 +1,5 @@
 <div class="profile-image-wrapper">
-  <div class="profile-image" href="javascript:" ng-click="selectFile()" ng-style="{'background-image': 'url(' + picUrl + ')'}"></div>
+  <div class="profile-image" ng-click="selectFile()" ng-style="{'background-image': 'url(' + picUrl + ')'}"></div>
   <label class="profile-image-label">
     <a class="profile-image-change" href="javascript:" ng-click="selectFile()">Change photo</a>
     <input class="profile-image-file" type="file" name="photo" onchange="angular.element(this).scope().fileChosen(this.files)">

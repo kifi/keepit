@@ -3,13 +3,14 @@
 angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
 
 .directive('kfProfileInput', [
-  '$timeout', '$http', 'keyIndices', 'util', 'profileService', 'routeService',
-  function ($timeout, $http, keyIndices, util, profileService, routeService) {
+  '$timeout', '$q', 'keyIndices', 'util',
+  function ($timeout, $q, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
-        isEmail: '=inputIsEmail',
-        state: '=inputState'
+        state: '=inputState',
+        validateAction: '&inputValidateAction',
+        saveAction: '&inputSaveAction'
       },
       transclude: true,
       templateUrl: 'profile/profileInput.tpl.html',
@@ -45,10 +46,10 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           scope.state.value = scope.state.currentValue = value;
         }
 
-        function setInvalid(header, body) {
+        function setInvalid(error) {
           scope.state.invalid = true;
-          scope.errorHeader = header || '';
-          scope.errorBody = body || '';
+          scope.errorHeader = error.header || '';
+          scope.errorBody = error.body || '';
         }
 
         scope.edit = function () {
@@ -64,88 +65,27 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
 
         scope.save = function () {
           // Validate input
-          var value = scope.state.value ? scope.state.value.trim().replace(/\s+/g, ' ') : '';
-          if (scope.isEmail) {
-            if (!value) {
-              setInvalid('This field is required');
-              return;
-            } else if (!util.validateEmail(value)) {
-              setInvalidEmailAddressError();
-              return;
-            } else {
-              scope.state.invalid = false;
-            }
-          }
-
-          scope.state.prevValue = scope.state.currentValue;
-          updateValue(value);
-
-          scope.state.editing = false;
-
-          if (scope.isEmail) {
-            saveNewPrimaryEmail(value);
-          } else {
-            profileService.postMe({
-              description: scope.state.value
-            });
-          }
-        };
-
-        // Email input utility functions
-
-        function setInvalidEmailAddressError() {
-          setInvalid('Invalid email address', 'Please enter a valid email address');
-        }
-
-        function checkCandidateEmailSuccess(me, emailInfo) {
-          if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
-            profileService.fetchMe();
+          var value = util.trimInput(scope.state.value);
+          var validationResult = scope.validateAction({value: value});
+          if (validationResult && !validationResult.isSuccess && validationResult.error) {
+            setInvalid(validationResult.error);
             return;
           }
-          if (emailInfo.isVerified) {
-            return profileService.setNewPrimaryEmail(me, emailInfo.address);
-          }
-          // email is available || (not primary && not pending primary && not verified)
-          //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
-        }
+          scope.state.invalid = false;
+          scope.state.prevValue = scope.state.currentValue;
+          updateValue(value);
+          scope.state.editing = false;
 
-        function checkCandidateEmailError(status) {
-          switch (status) {
-          case 400: // bad format
-            setInvalidEmailAddressError();
-            break;
-          case 403: // belongs to another user
-            setInvalid(
-              'This email address is already taken',
-              'This email address belongs to another user.<br>Please enter another email address.'
-            );
-            break;
-          }
-          updateValue(scope.state.prevValue);
-        }
-
-        function saveNewPrimaryEmail(email) {
-          profileService.getMe().then(function (me) {
-            if (me.primaryEmail.address === email) {
-              return;
-            }
-
-            // todo(martin) move this http call outside of the directive
-            $http({
-              url: routeService.emailInfoUrl,
-              method: 'GET',
-              params: {
-                email: email
+          // Save input
+          $q.when(scope.saveAction({value: value})).then(function (result) {
+            if (result && !result.isSuccess) {
+              if (result.error) {
+                setInvalid(result.error);
               }
-            })
-            .success(function (data) {
-              checkCandidateEmailSuccess(me, data);
-            })
-            .error(function (data, status) {
-              checkCandidateEmailError(status);
-            });
+              updateValue(scope.state.prevValue);
+            }
           });
-        }
+        };
       }
     };
   }

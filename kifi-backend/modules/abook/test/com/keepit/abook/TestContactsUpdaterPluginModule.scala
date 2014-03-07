@@ -5,6 +5,7 @@ import com.keepit.model.{ABookInfo, ABookOriginType, User}
 import scala.ref.WeakReference
 import play.api.libs.json.JsValue
 import com.google.inject.{Singleton, Provides, Inject}
+import com.keepit.shoebox.{FakeShoeboxServiceModule}
 
 
 class TestContactsUpdaterPlugin @Inject() (contactsUpdater:ContactsUpdater) extends ContactsUpdaterPlugin {
@@ -14,10 +15,6 @@ class TestContactsUpdaterPlugin @Inject() (contactsUpdater:ContactsUpdater) exte
 }
 
 case class TestContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
-  def configure(): Unit = {
-    install(TestABookServiceClientModule())
-  }
-
   @Provides
   @Singleton
   def contactsUpdaterPlugin(cUpdater:ContactsUpdater):ContactsUpdaterPlugin = new TestContactsUpdaterPlugin(cUpdater)
