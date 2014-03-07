@@ -16,6 +16,7 @@ import com.keepit.scraper.ScraperServiceClient
 import views.html
 import com.keepit.model.Restriction
 import com.keepit.model.BookmarkRepo
+import scala.collection.mutable.ArrayBuffer
 
 class AdminPornDetectorController @Inject()(
   scraper: ScraperServiceClient,
@@ -48,14 +49,22 @@ class AdminPornDetectorController @Inject()(
     val PAGE_SIZE = 100
 
     val retUris = publicOnly match {
-      case false => uris
+      case false => uris.toArray
       case true => {
-        db.readOnly { implicit s =>
-          uris.flatMap { uri =>
-            val bms = bmRepo.getByUri(uri.id.get)
-            if (bms.exists(_.isPrivate == false)) Some(uri) else None
+        val need = (page + 1) * PAGE_SIZE
+        val buf = new ArrayBuffer[NormalizedURI]()
+        var (i, cnt) = (0, 0)
+        db.readOnly{ implicit s =>
+          while (i < uris.size && cnt < need){
+            val bms = bmRepo.getByUri(uris(i).id.get)
+            if (bms.exists(_.isPrivate == false)){
+              buf.append(uris(i))
+              cnt += 1
+            }
+            i += 1
           }
         }
+        buf.toArray
       }
     }
 
