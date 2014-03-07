@@ -18,17 +18,18 @@ import com.keepit.search.SearchServiceClient
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.store.S3ScreenshotStore
+import com.keepit.common.store.{ImageInfo, S3ScreenshotStore}
 import play.api.mvc.{SimpleResult, Action}
 import com.keepit.social.BasicUser
 import scala.util.Try
 import com.keepit.model.KeepToCollection
 import org.joda.time.Seconds
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
+import scala.concurrent.duration.Duration
 
 class BookmarksController @Inject() (
     db: Database,
@@ -81,6 +82,51 @@ class BookmarksController @Inject() (
         }
       }
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
+  }
+
+  def getImageUrl() = JsonAction.authenticatedParseJson { request =>
+    val urlOpt = (request.body \ "url").asOpt[String]
+    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
+    val resOpt = for {
+      url <- urlOpt
+      uri <- db.readOnly { implicit ro => uriRepo.getByUri(url) }
+      imgUrl <- s3ScreenshotStore.getImageUrl(uri)
+    } yield {
+      (url, imgUrl)
+    }
+    resOpt match {
+      case None => NotFound(Json.obj("code" -> "not_found"))
+      case Some((url, imgUrl)) => Ok(Json.obj("url" -> url, "imgUrl" -> imgUrl))
+    }
+  }
+
+  def getImageUrls() = JsonAction.authenticatedParseJson { request =>
+    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
+    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
+    val resOpt = urlsOpt.map { urls =>
+      val tuples = db.readOnly { implicit ro =>
+        urls.map { s =>
+          s -> uriRepo.getByUri(s)
+        }
+      }
+      tuples map { case (url, uriOpt) =>
+        val resOpt = for {
+          uri <- uriOpt
+          imgUrl <- s3ScreenshotStore.getImageUrl(uri)
+        } yield {
+          url -> imgUrl
+        }
+        resOpt.getOrElse(url -> "")
+      }
+    }
+    resOpt match {
+      case Some(tuples) =>
+        val js = tuples map { case(url, imgUrl) =>
+          Json.obj("url" -> url, "imgUrl" -> imgUrl)
+        }
+        Ok(JsArray(js))
+      case None => BadRequest(Json.obj("code" -> "illegal_argument"))
+    }
   }
 
   def keepMultiple() = JsonAction.authenticated { request =>

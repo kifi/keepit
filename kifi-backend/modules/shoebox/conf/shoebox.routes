@@ -204,6 +204,8 @@ POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksCon
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.BookmarksController.getScreenshotUrl()
+POST    /site/keeps/imageUrl        @com.keepit.controllers.website.BookmarksController.getImageUrl()
+POST    /site/keeps/imageUrls       @com.keepit.controllers.website.BookmarksController.getImageUrls()
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
@@ -277,6 +279,10 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
+
+GET     /admin/images                @com.keepit.controllers.admin.AdminScreenshotController.images()
+GET     /admin/imageInfos            @com.keepit.controllers.admin.AdminScreenshotController.imageInfos(uriId: Id[NormalizedURI])
+POST    /admin/imagesCompare         @com.keepit.controllers.admin.AdminScreenshotController.imagesCompare()
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
 
