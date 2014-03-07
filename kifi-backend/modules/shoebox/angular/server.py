@@ -12,7 +12,7 @@ DEFAULT_PORT = 8080
 class Handler( SimpleHTTPServer.SimpleHTTPRequestHandler ):
     def do_GET( self ):
         urlParams = urlparse.urlparse(self.path)
-        if os.access( '.' + os.sep + urlParams.path, os.R_OK ):
+        if urlParams.path != '/' and os.access( '.' + os.sep + urlParams.path, os.R_OK ):
             SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self);
         else:
             self.send_response(200)
