@@ -23,7 +23,7 @@ case class SystemValue(
 }
 
 case class SystemValueKey(name: Name[SystemValue]) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "system_value"
   def toKey(): String = name.name
 }
