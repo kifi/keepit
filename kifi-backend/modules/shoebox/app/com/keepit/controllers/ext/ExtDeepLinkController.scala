@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 
 import play.api.mvc.Action
 import play.api.libs.json.JsObject
+import com.keepit.common.net.UserAgent
 
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -34,19 +35,30 @@ class ExtDeepLinkController @Inject() (
     )}
     Ok("")
   }
-  
-  def handle(token: String) = HtmlAction(authenticatedAction = { request =>
-    getDeepLinkAndUrl(token) map { case (deepLink, url) =>
-      deepLink.recipientUserId match {
-        case Some(request.userId) => Ok(views.html.deeplink(url, deepLink.deepLocator.value))
-        case _ => Redirect(url)
-      }
-    } getOrElse NotFound
-  }, unauthenticatedAction = { request =>
-    getDeepLinkAndUrl(token) map {
-      case (_, url) => Redirect(url)
-    } getOrElse NotFound
-  })
+
+  def handle(token: String) = HtmlAction(
+    authenticatedAction = { request =>
+      getDeepLinkAndUrl(token) map { case (deepLink, url) =>
+        val isIphoneApp = request.request.headers.get(USER_AGENT) exists { agentString =>
+          UserAgent.fromString(agentString).isIphone
+        }
+        if (isIphoneApp && request.experiments.contains(ExperimentType.MOBILE_REDITECT)) {
+          Ok(views.html.iphoneDeeplink(url, deepLink.deepLocator.value))
+        } else {
+          deepLink.recipientUserId match {
+            case Some(request.userId) => Ok(
+              views.html.deeplink(url, deepLink.deepLocator.value)
+            )
+            case _ => Redirect(url)
+          }
+        }
+      } getOrElse NotFound
+    },
+    unauthenticatedAction = { request =>
+      getDeepLinkAndUrl(token) map {
+        case (_, url) => Redirect(url)
+      } getOrElse NotFound
+    })
 
   private def getDeepLinkAndUrl(token: String): Option[(DeepLink, String)] = {
     db.readOnly { implicit s =>

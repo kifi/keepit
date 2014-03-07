@@ -181,7 +181,6 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
         val result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        println(s"thread = $thread")
 
         val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
         messages.size === 2

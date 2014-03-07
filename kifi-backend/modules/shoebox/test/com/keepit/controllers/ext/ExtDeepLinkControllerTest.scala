@@ -34,10 +34,11 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           )
         }
 
+        inject[FakeActionAuthenticator].setUser(heinlein)
+
         {
           val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.createDeepLink().toString()
           path === "/internal/shoebox/database/createDeepLink"
-          inject[FakeActionAuthenticator].setUser(heinlein)
 
           val request = FakeRequest("POST", path).withJsonBody(Json.obj(
             "initiator" -> heinlein.id.get.id,
@@ -62,7 +63,31 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           val result = route(request).get
           status(result) must equalTo(SEE_OTHER)
           redirectLocation(result) must equalTo(Some("http://www.google.com"))
+        }
 
+        inject[FakeActionAuthenticator].setUser(niven)
+
+        {
+          val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(deepLink.token.value).toString()
+          path === s"/r/${deepLink.token.value}"
+
+          val request = FakeRequest("GET", path)
+          val result = route(request).get
+          status(result) must equalTo(OK)
+          contentAsString(result).contains("itunes.apple.com") === false
+        }
+
+        inject[FakeActionAuthenticator].setUser(niven, Set(ExperimentType.MOBILE_REDITECT))
+
+        {
+          val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(deepLink.token.value).toString()
+          path === s"/r/${deepLink.token.value}"
+
+          val request = FakeRequest("GET", path).withHeaders(USER_AGENT -> "Mozilla/5.0 (iPhone; U; CPU iPhone OS 5_1_1 like Mac OS X; en) AppleWebKit/534.46.0 (KHTML, like Gecko) CriOS/19.0.1084.60 Mobile/9B206 Safari/7534.48.3")
+          val result = route(request).get
+          status(result) must equalTo(OK)
+          val content = contentAsString(result)
+          content.contains("itunes.apple.com") === true
         }
       }
     }
