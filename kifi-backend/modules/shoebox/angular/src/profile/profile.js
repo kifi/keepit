@@ -73,18 +73,10 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
           email: email
         }
       })
-      .success(function (data) {
-        return checkCandidateEmailSuccess(email, data)
-      })
-      .error(function (data, status) {
-        return checkCandidateEmailError(status);
-      })
       .then(function (result) {
-        if (result.status == 200) {
-          return checkCandidateEmailSuccess(email, result.data);
-        } else {
-          return checkCandidateEmailError(result.status);
-        }
+        return checkCandidateEmailSuccess(email, result.data);
+      }, function (result) {
+        return checkCandidateEmailError(result.status);
       });
     };
 
