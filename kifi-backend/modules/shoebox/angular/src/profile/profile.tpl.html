@@ -12,8 +12,6 @@
             </span>
             <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{me.firstName}}" required novalidate>
             <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{me.lastName}}" required novalidate>
-            <a class="profile-input-edit" href="javascript:" style="display:none">Edit</a>
-            <a class="profile-input-save" href="javascript:">Save</a>
           </div>
         </div>
         <div class="profile-input-wrapper">
@@ -33,7 +31,7 @@
               ng-disabled="!emailInput.editing"
               kf-focus-if focus-cond="emailInput.editing"
               ng-model="emailInput.value"
-              type="email" name="email" placeholder="Enter your email address" novalidate>
+              type="text" name="email" placeholder="Enter your email address" novalidate>
           </div>
           <div kf-modal show="showEmailChangeDialog.value">
             <div kf-basic-modal-content with-cancel action-text="Continue">
