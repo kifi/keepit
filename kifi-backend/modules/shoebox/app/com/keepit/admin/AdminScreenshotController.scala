@@ -16,6 +16,7 @@ import play.api.libs.json.{JsValue, JsArray, Json}
 import play.api.data._
 import play.api.data.Forms._
 import views.html
+import scala.util.{Failure, Success, Try}
 
 class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -57,24 +58,37 @@ class AdminScreenshotController @Inject() (
   }
 
   def imageInfos(uriId:Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
-    val uri = db.readOnly { implicit ro => uriRepo.get(uriId) }
-    s3ScreenshotStore.getImageInfos(uri) map { infos =>
-      Ok(html.admin.imageInfos(uri, s3ScreenshotStore.getScreenshotUrl(uri), infos))
+    Try {
+      db.readOnly { implicit ro =>
+        uriRepo.get(uriId)
+      }
+    } match {
+      case Success(uri) =>
+        s3ScreenshotStore.getImageInfos(uri) map { infos =>
+          Ok(html.admin.imageInfos(uri, s3ScreenshotStore.getScreenshotUrl(uri), infos))
+        }
+      case Failure(t) =>
+        Future.successful(BadRequest(s"uriId($uriId) not found"))
     }
   }
 
   val compareForm = Form("uriIds" -> text)
   def imagesCompare() = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val uriIds = compareForm.bindFromRequest.get.split(',').map(s => Id[NormalizedURI](s.toLong)).toSeq
-    val tuplesF = uriIds map { uriId =>
-      val uri = db.readOnly { implicit ro => uriRepo.get(uriId) }
-      val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri)
-      s3ScreenshotStore.asyncGetImageUrl(uri) map { imgUrl =>
-        (uri, screenshotUrl, imgUrl)
+    try {
+      val uriIds = compareForm.bindFromRequest.get.split(',').map(s => Id[NormalizedURI](s.toLong)).toSeq
+      val tuplesF = uriIds map { uriId =>
+        val uri = db.readOnly { implicit ro => uriRepo.get(uriId) }
+        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri)
+        s3ScreenshotStore.asyncGetImageUrl(uri) map { imgUrl =>
+          (uri, screenshotUrl, imgUrl)
+        }
       }
-    }
-    Future.sequence(tuplesF) map { tuples =>
-      Ok(html.admin.imagesCompare(tuples))
+      Future.sequence(tuplesF) map { tuples =>
+        Ok(html.admin.imagesCompare(tuples))
+      }
+    } catch {
+      case t:Throwable =>
+        Future.successful(BadRequest("Invalid Arguments"))
     }
   }
 
