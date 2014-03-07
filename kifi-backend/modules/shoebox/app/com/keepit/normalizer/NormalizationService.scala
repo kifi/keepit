@@ -45,13 +45,14 @@ class NormalizationServiceImpl @Inject() (
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     val relevantCandidates = getRelevantCandidates(currentReference, candidates)
     log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
-    for {
+    val futureResult = for {
       betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
       betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
     } yield betterReferenceOptionAfterAdditionalUpdates.map(_.uriId)
-  } tap(_.onFailure {
-    case e => airbrake.notify(s"Normalization update failed for ${currentReference.url} on candidates ${candidates mkString ", "}", e)
-  })
+    futureResult tap (_.onFailure {
+      case e => airbrake.notify(s"Normalization update failed for ${currentReference.url}. Supplied candidates: ${candidates mkString ", "} - Relevant candidates: ${relevantCandidates mkString ", "}", e)
+    })
+  }
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = {
     log.info(s"[processUpdate($currentReference,${candidates.mkString(",")})")
