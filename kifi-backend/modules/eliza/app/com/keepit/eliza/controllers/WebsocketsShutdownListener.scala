@@ -31,7 +31,7 @@ class WebsocketsShutdownListener(websocketRouter: WebSocketRouter, accessLog: Ac
           log.info(s"Closing socket $socketInfo because of server shutdown, $count to go")
           println(s"Closing socket $socketInfo because of server shutdown, $count to go")
           val timer = accessLog.timer(WS_IN)
-          socketInfo.channel.push(Json.arr("goodbye", "server shutdown"))
+          socketInfo.channel.push(Json.arr("bye", "shutdown"))
           socketInfo.channel.eofAndEnd()
           accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "disconnect on server shutdown"))
         case None =>

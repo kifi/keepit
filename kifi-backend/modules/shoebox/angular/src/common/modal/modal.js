@@ -37,6 +37,10 @@ angular.module('kifi.modal', [])
             $document.off('keydown', exitModal);
           }
         });
+
+        $scope.$on('$destroy', function () {
+          $document.off('keydown', exitModal);
+        });
       },
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
@@ -68,7 +72,7 @@ angular.module('kifi.modal', [])
         scope.title = attrs.title || '';
         scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
-        scope.withCancel = (attrs.withCancel !== undefined) || false;
+        scope.withCancel = (attrs.withCancel !== void 0) || false;
         scope.cancelText = attrs.cancelText;
         scope.centered = attrs.centered;
         scope.hideModal = kfModalCtrl.hideModal;

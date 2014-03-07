@@ -16,6 +16,7 @@ import com.keepit.scraper.ScraperServiceClient
 import views.html
 import com.keepit.model.Restriction
 import com.keepit.model.BookmarkRepo
+import scala.collection.mutable.ArrayBuffer
 
 class AdminPornDetectorController @Inject()(
   scraper: ScraperServiceClient,
@@ -36,7 +37,7 @@ class AdminPornDetectorController @Inject()(
   def detect() = AdminHtmlAction.authenticated{ implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val text = body.get("query").get
-    val numBlocks = tokenize(text).sliding(10, 5).size
+    val numBlocks = tokenize(text).sliding(10, 10).size
     val badTexts = Await.result(scraper.detectPorn(text), 15 seconds)
     val badInfo = badTexts.map{ x => x._1 + " ---> " + x._2}.mkString("\n")
     val msg = if (badTexts.size == 0) "input text is clean" else s"${badTexts.size} out of ${numBlocks} blocks look suspicious:\n" + badInfo
@@ -48,14 +49,22 @@ class AdminPornDetectorController @Inject()(
     val PAGE_SIZE = 100
 
     val retUris = publicOnly match {
-      case false => uris
+      case false => uris.toArray
       case true => {
-        db.readOnly { implicit s =>
-          uris.flatMap { uri =>
-            val bms = bmRepo.getByUri(uri.id.get)
-            if (bms.exists(_.isPrivate == false)) Some(uri) else None
+        val need = (page + 1) * PAGE_SIZE
+        val buf = new ArrayBuffer[NormalizedURI]()
+        var (i, cnt) = (0, 0)
+        db.readOnly{ implicit s =>
+          while (i < uris.size && cnt < need){
+            val bms = bmRepo.getByUri(uris(i).id.get)
+            if (bms.exists(_.isPrivate == false)){
+              buf.append(uris(i))
+              cnt += 1
+            }
+            i += 1
           }
         }
+        buf.toArray
       }
     }
 

@@ -72,29 +72,35 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       link: function (scope, element) {
         var fileInput = element.find('input');
 
-        var URL = $window.URL || $window.webkitURL;
-        var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload';
-        var PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
+        var URL = $window.URL || $window.webkitURL,
+          PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
+          PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
 
         var photoXhr2;
+
         function uploadPhotoXhr2(files) {
           var file = Array.prototype.filter.call(files, isImage)[0];
           if (file) {
             if (photoXhr2) {
               photoXhr2.abort();
             }
+
             var xhr = new $window.XMLHttpRequest();
             photoXhr2 = xhr;
+
             var deferred = $q.defer();
+
             xhr.withCredentials = true;
             xhr.upload.addEventListener('progress', function (e) {
               if (e.lengthComputable) {
                 deferred.notify(e.loaded / e.total);
               }
             });
+
             xhr.addEventListener('load', function () {
               deferred.resolve(JSON.parse(xhr.responseText));
             });
+
             xhr.addEventListener('loadend', function () {
               if (photoXhr2 === xhr) {
                 photoXhr2 = null;
@@ -104,9 +110,14 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
                 deferred.reject();
               }*/
             });
+
             xhr.open('POST', PHOTO_BINARY_UPLOAD_URL, true);
             xhr.send(file);
-            return {file: file, promise: deferred.promise};
+
+            return {
+              file: file,
+              promise: deferred.promise
+            };
           }
 
           //todo(martin): Notify user
@@ -135,7 +146,8 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
                   cropX: image.x,
                   cropY: image.y,
                   cropSize: Math.min(image.width, image.height)
-                }).then(function () {
+                })
+                .then(function () {
                   scope.picUrl = result.url;
                 });
               });
