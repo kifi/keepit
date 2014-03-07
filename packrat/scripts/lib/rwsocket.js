@@ -1,7 +1,7 @@
 function ReconnectingWebSocket(opts) {
   'use strict';
   var idlePingDelayMs = 10000, lastRecOrPingTime = 0;
-  var ws, self = this, buffer = [], timers = {};
+  var ws, self = this, outbox = [], timers = {};
 
   this.send = function(data) {
     if (ws && ws.readyState === WebSocket.OPEN && !timers.disconnect) {
@@ -10,13 +10,13 @@ function ReconnectingWebSocket(opts) {
         ping();
       }
     } else {
-      buffer.push([data, Date.now()]);
+      outbox.push([data, Date.now()]);
     }
   };
   this.close = function() {
     log("#0bf", "[RWS.close]")();
     disconnect('close');
-    this.send = this.close = buffer = null;
+    this.send = this.close = outbox = null;
     window.removeEventListener('online', onOnlineConnect);
   };
 
@@ -39,7 +39,7 @@ function ReconnectingWebSocket(opts) {
 
   function disconnect(why, secWaited, retryPolicy, prevRetryDelayMs) {
     var retryDelayMs = why === 'close' ? null : calcRetryConnectDelay[retryPolicy || 'standard'](prevRetryDelayMs);
-    log('#0bf', '[RWS.disconnect] why:', why, 'readyState:', ws && ws.readyState, 'buffered:', buffer.length, 'retry:', retryDelayMs || 'no')();
+    log('#0bf', '[RWS.disconnect] why:', why, 'readyState:', ws && ws.readyState, 'outbox:', outbox.length, 'retry:', retryDelayMs || 'no')();
     if (ws) {
       ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
       ws.close();  // noop if already closed
@@ -76,7 +76,7 @@ function ReconnectingWebSocket(opts) {
       log('#0bf', '[RWS.onMessage1]', e.data)();
       ws.onmessage = onMessageN;
       opts.onConnect();
-      sendBuffer();
+      sendOutboxMessages();
     } else if (e.data === '["denied"]') {
       log("#a00", "[RWS.onMessage1]", e.data)();
       disconnect('denied');
@@ -95,7 +95,7 @@ function ReconnectingWebSocket(opts) {
     lastRecOrPingTime = Date.now();
     if (e.data === '["pong"]') {
       log('#0ac', '[RWS.pong]')();
-      sendBuffer();
+      sendOutboxMessages();
     } else if (e.data.lastIndexOf('["bye"', 0) === 0) {
       log("#0ac", "[RWS.onMessageN]", e.data)();
       disconnect('bye', null, 'polite');
@@ -104,10 +104,10 @@ function ReconnectingWebSocket(opts) {
     }
   }
 
-  function sendBuffer() {
-    while (buffer.length) {
-      var a = buffer.shift();
-      log('#0bf', '[RWS] sending, buffered for %i ms: %s', Date.now() - a[1], (/\w+/.exec(a[0]) || a)[0])();
+  function sendOutboxMessages() {
+    while (outbox.length) {
+      var a = outbox.shift();
+      log('#0bf', '[RWS] sending, delayed %i ms: %s', Date.now() - a[1], (/\w+/.exec(a[0]) || a)[0])();
       ws.send(a[0]);
     }
   }
