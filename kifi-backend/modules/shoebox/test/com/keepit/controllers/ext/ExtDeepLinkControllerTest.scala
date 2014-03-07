@@ -34,10 +34,11 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           )
         }
 
+        inject[FakeActionAuthenticator].setUser(heinlein)
+
         {
           val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.createDeepLink().toString()
           path === "/internal/shoebox/database/createDeepLink"
-          inject[FakeActionAuthenticator].setUser(heinlein)
 
           val request = FakeRequest("POST", path).withJsonBody(Json.obj(
             "initiator" -> heinlein.id.get.id,
@@ -62,7 +63,17 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           val result = route(request).get
           status(result) must equalTo(SEE_OTHER)
           redirectLocation(result) must equalTo(Some("http://www.google.com"))
+        }
 
+        inject[FakeActionAuthenticator].setUser(niven)
+
+        {
+          val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(deepLink.token.value).toString()
+          path === s"/r/${deepLink.token.value}"
+
+          val request = FakeRequest("GET", path)
+          val result = route(request).get
+          status(result) must equalTo(OK)
         }
       }
     }

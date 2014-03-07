@@ -34,19 +34,21 @@ class ExtDeepLinkController @Inject() (
     )}
     Ok("")
   }
-  
-  def handle(token: String) = HtmlAction(authenticatedAction = { request =>
-    getDeepLinkAndUrl(token) map { case (deepLink, url) =>
-      deepLink.recipientUserId match {
-        case Some(request.userId) => Ok(views.html.deeplink(url, deepLink.deepLocator.value))
-        case _ => Redirect(url)
-      }
-    } getOrElse NotFound
-  }, unauthenticatedAction = { request =>
-    getDeepLinkAndUrl(token) map {
-      case (_, url) => Redirect(url)
-    } getOrElse NotFound
-  })
+
+  def handle(token: String) = HtmlAction(
+    authenticatedAction = { request =>
+      getDeepLinkAndUrl(token) map { case (deepLink, url) =>
+        deepLink.recipientUserId match {
+          case Some(request.userId) => Ok(views.html.deeplink(url, deepLink.deepLocator.value))
+          case _ => Redirect(url)
+        }
+      } getOrElse NotFound
+    },
+    unauthenticatedAction = { request =>
+      getDeepLinkAndUrl(token) map {
+        case (_, url) => Redirect(url)
+      } getOrElse NotFound
+    })
 
   private def getDeepLinkAndUrl(token: String): Option[(DeepLink, String)] = {
     db.readOnly { implicit s =>
