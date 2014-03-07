@@ -69,16 +69,18 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       }
     }
 
-    function setNewPrimaryEmail(me, email) {
-      var props = {};
-      props.emails = _.clone(me.emails, true);
-      removeEmailInfo(props.emails, email);
-      unsetPrimary(props.emails);
-      props.emails.unshift({
-        address: email,
-        isPrimary: true
+    function setNewPrimaryEmail(email) {
+      getMe().then(function (me) {
+        var props = {};
+        props.emails = _.clone(me.emails, true);
+        removeEmailInfo(props.emails, email);
+        unsetPrimary(props.emails);
+        props.emails.unshift({
+          address: email,
+          isPrimary: true
+        });
+        return postMe(props);
       });
-      return postMe(props);
     }
 
     return {
