@@ -1,6 +1,7 @@
 package com.keepit.search.query.parser
 
 import com.keepit.classify.Domain
+import com.keepit.search.Lang
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.MediaQuery
 import com.keepit.search.query.SiteQuery
@@ -8,13 +9,24 @@ import com.keepit.search.query.TextQuery
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause.Occur._
+import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
 
+
+object QueryExpansion {
+  private[this] val langsToUseBoolean = Set[Lang](Lang("ja"))
+
+  def useBooleanForPhrase(lang: Lang) = langsToUseBoolean.contains(lang)
+}
+
 trait QueryExpansion extends QueryParser {
+
+  val lang: Lang
+  val useBooleanForPhrase = QueryExpansion.useBooleanForPhrase(lang)
 
   val siteBoost: Float
   val concatBoost: Float
@@ -31,12 +43,32 @@ trait QueryExpansion extends QueryParser {
 
   protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Option(SiteQuery(domain)) else None
 
+  private def mayConvertQuery(query: Query): Query = {
+    println("\n\n\t\ttrying convesion...\n\n")
+    if (useBooleanForPhrase) {
+      query match {
+        case phrase: PhraseQuery =>
+          val terms = phrase.getTerms()
+          val booleanQuery = new BooleanQuery(false)
+          terms.foreach{ term => booleanQuery.add(new TermQuery(term), SHOULD) }
+          println("\n\n\t\tconverted\n\n")
+          booleanQuery
+        case _ =>
+          println("\n\n\t\tnot converted\n\n")
+          query
+      }
+    } else {
+      query
+    }
+  }
+
   protected def getTextQuery(queryText: String, quoted: Boolean): Option[Query] = {
     def copyFieldQuery(query:Query, field: String) = {
       query match {
         case null => null
         case query: TermQuery => copy(query, field)
         case query: PhraseQuery => copy(query, field)
+        case query: BooleanQuery => copy(query, field)
         case _ => throw new QueryParserException(s"failed to copy query: ${query.toString}")
       }
     }
@@ -53,8 +85,9 @@ trait QueryExpansion extends QueryParser {
     val textQuery = new TextQuery
     textQueries += textQuery
 
-    super.getFieldQuery("t", queryText, quoted).foreach{ query =>
-      textQuery.terms = extractTerms(query)
+    super.getFieldQuery("t", queryText, quoted).foreach{ q =>
+      textQuery.terms = extractTerms(q)
+      val query = if (quoted) q else mayConvertQuery(q)
       textQuery.addRegularQuery(query)
       textQuery.addRegularQuery(copyFieldQuery(query, "c"))
       textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
@@ -62,9 +95,10 @@ trait QueryExpansion extends QueryParser {
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
-    getStemmedFieldQuery("ts", queryText).foreach{ query =>
-      textQuery.stems = extractTerms(query)
+    getStemmedFieldQuery("ts", queryText).foreach{ q =>
+      textQuery.stems = extractTerms(q)
       if(!quoted) {
+        val query = mayConvertQuery(q)
         textQuery.addRegularQuery(query)
         textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
         textQuery.addPersonalQuery(copyFieldQuery(query, "title_stemmed"))

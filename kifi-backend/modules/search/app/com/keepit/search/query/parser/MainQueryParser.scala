@@ -27,7 +27,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 class MainQueryParser(
-  lang: Lang,
+  override val lang: Lang,
   analyzer: Analyzer,
   stemmingAnalyzer: Analyzer,
   proximityBoost: Float,

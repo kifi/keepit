@@ -52,11 +52,11 @@ class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSear
 
 object BookmarkQueryParser {
   def apply(lang: Lang): BookmarkQueryParser = {
-    new BookmarkQueryParser(DefaultAnalyzer.forParsing(lang), DefaultAnalyzer.forParsingWithStemmer(lang))
+    new BookmarkQueryParser(DefaultAnalyzer.forParsing(lang), DefaultAnalyzer.forParsingWithStemmer(lang), lang)
   }
 }
 
-class BookmarkQueryParser(defaultAnalyzer: Analyzer, stemmingAnalyzer: Analyzer)
+class BookmarkQueryParser(defaultAnalyzer: Analyzer, stemmingAnalyzer: Analyzer, override val lang: Lang)
 extends QueryParser(defaultAnalyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
   override val siteBoost = 1.0f
   override val concatBoost = 1.0f

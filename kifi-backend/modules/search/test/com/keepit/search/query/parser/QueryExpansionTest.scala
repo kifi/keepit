@@ -29,9 +29,11 @@ import com.keepit.search.query.TextQuery
 class QueryExpansionTest extends Specification {
 
   private class QueryParserScope(concatBoostValue: Float) extends Scope {
-    val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
-    val stemmingAnalyzer = DefaultAnalyzer.forParsingWithStemmer(Lang("en"))
+    val english = Lang("en")
+    val analyzer = DefaultAnalyzer.forParsing(english)
+    val stemmingAnalyzer = DefaultAnalyzer.forParsingWithStemmer(english)
     val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with QueryExpansion {
+      override val lang = english
       override val siteBoost: Float = 1.0f
       override val concatBoost: Float = concatBoostValue
     }
