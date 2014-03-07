@@ -584,8 +584,8 @@ var api = (function createApi() {
           onConnect: errors.wrap(function () {
             sc.onConnect();
           }),
-          onDisconnect: errors.wrap(function () {
-            sc.onDisconnect();
+          onDisconnect: errors.wrap(function (why, sec) {
+            sc.onDisconnect(why, sec);
           }),
           onMessage: errors.wrap(function (e) {
             sc.onMessage(e.data);

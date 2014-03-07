@@ -284,8 +284,8 @@ function onSocketConnect() {
   getRules(getPrefs.bind(null, getTags.bind(null, getFriends)));
 }
 
-function onSocketDisconnect(why) {
-  log('[onSocketDisconnect]', why)();
+function onSocketDisconnect(why, sec) {
+  log('[onSocketDisconnect]', why, sec || '')();
 }
 
 function getLatestThreads() {

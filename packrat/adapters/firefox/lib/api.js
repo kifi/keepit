@@ -332,12 +332,12 @@ var onSocketConnect = errors.wrap(function onSocketConnect(socketId) {
     log('[onSocketConnect] no SocketCommander', socketId);
   }
 });
-var onSocketDisconnect = errors.wrap(function onSocketDisconnect(socketId, why) {
+var onSocketDisconnect = errors.wrap(function onSocketDisconnect(socketId, why, sec) {
   var sc = socketCommanders[socketId];
   if (sc) {
-    sc.onDisconnect(why);
+    sc.onDisconnect(why, sec);
   } else {
-    log('[onSocketDisconnect] no SocketCommander', socketId, why);
+    log('[onSocketDisconnect] no SocketCommander', socketId, why, sec);
   }
 });
 var onSocketMessage = errors.wrap(function onSocketMessage(socketId, data) {
