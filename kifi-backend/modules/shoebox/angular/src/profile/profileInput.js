@@ -46,10 +46,10 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           scope.state.value = scope.state.currentValue = value;
         }
 
-        function setInvalid(header, body) {
+        function setInvalid(error) {
           scope.state.invalid = true;
-          scope.errorHeader = header || '';
-          scope.errorBody = body || '';
+          scope.errorHeader = error.header || '';
+          scope.errorBody = error.body || '';
         }
 
         scope.edit = function () {
@@ -67,8 +67,8 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           // Validate input
           var value = util.trimInput(scope.state.value);
           var validationResult = scope.validateAction({value: value});
-          if (validationResult && !validationResult.isSuccess) {
-            setInvalid(validationResult.errorHeader, validationResult.errorBody);
+          if (validationResult && !validationResult.isSuccess && validationResult.error) {
+            setInvalid(validationResult.error);
             return;
           }
           scope.state.invalid = false;
@@ -79,10 +79,10 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           // Save input
           $q.when(scope.saveAction({value: value})).then(function (result) {
             if (result && !result.isSuccess) {
-              setInvalid(result.errorHeader, result.errorBody);
+              if (result.error) {
+                setInvalid(result.error);
+              }
               updateValue(scope.state.prevValue);
-            } else {
-              updateValue(value);
             }
           });
         };

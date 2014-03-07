@@ -1,11 +1,11 @@
 <div class="dialog-content">
-  <div class="dialog-title">kifi<span class="dialog-x" ng-click="hideModal()">✕</span></div>
+  <div class="dialog-title">kifi<span class="dialog-x" ng-click="hideAndCancel()">✕</span></div>
   <h1 ng-if="title">{{title}}</h1>
   <div class="dialog-body-wrap">
     <div class="dialog-body" ng-transclude ng-class="{'dialog-centered': centered}"></div>
   </div>
   <div class="action-wrap" ng-if="singleAction">
-    <button class="dialog-cancel" ng-click="hideModal()" ng-if="withCancel">{{cancelText || 'Cancel'}}</button>
-    <button ng-click="hideModal()">{{actionText || 'Okay'}}</button>
+    <button class="dialog-cancel" ng-click="hideAndCancel()" ng-if="withCancel">{{cancelText || 'Cancel'}}</button>
+    <button ng-click="hideAndAction()">{{actionText || 'Okay'}}</button>
   </div>
 </div>

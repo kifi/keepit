@@ -22,41 +22,6 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       $scope.me = data;
     });
 
-    $scope.saveDescription = function (value) {
-      profileService.postMe({
-        description: value
-      });
-    }
-
-    $scope.validateEmail = function (value) {
-      if (!value) {
-        return failureInputActionResult('This field is required');
-      } else if (!util.validateEmail(value)) {
-        return invalidEmailValidationResult();
-      }
-      return successInputActionResult();
-    }
-
-    $scope.saveEmail = function (email) {
-      if ($scope.me && $scope.me.primaryEmail.address === email) {
-        return successInputActionResult();
-      }
-
-      $http({
-        url: routeService.emailInfoUrl,
-        method: 'GET',
-        params: {
-          email: email
-        }
-      })
-      .success(function (data) {
-        return checkCandidateEmailSuccess(data);
-      })
-      .error(function (data, status) {
-        return checkCandidateEmailError(status);
-      });
-    };
-
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
       $scope.descInput.value = val || '';
@@ -70,22 +35,79 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
     function failureInputActionResult(errorHeader, errorBody) {
       return {
         isSuccess: false,
-        errorHeader: errorHeader,
-        errorBody: errorBody
-      }
+        error: {
+          header: errorHeader,
+          body: errorBody
+        }
+      };
     }
 
     function successInputActionResult() {
       return {isSuccess: true};
     }
 
+    $scope.saveDescription = function (value) {
+      profileService.postMe({
+        description: value
+      });
+    };
+
+    $scope.validateEmail = function (value) {
+      if (!value) {
+        return failureInputActionResult('This field is required');
+      } else if (!util.validateEmail(value)) {
+        return invalidEmailValidationResult();
+      }
+      return successInputActionResult();
+    };
+
+    $scope.saveEmail = function (email) {
+      if ($scope.me && $scope.me.primaryEmail.address === email) {
+        return successInputActionResult();
+      }
+
+      return $http({
+        url: routeService.emailInfoUrl,
+        method: 'GET',
+        params: {
+          email: email
+        }
+      })
+      .success(function (data) {
+        return checkCandidateEmailSuccess(email, data)
+      })
+      .error(function (data, status) {
+        return checkCandidateEmailError(status);
+      })
+      .then(function (result) {
+        if (result.status == 200) {
+          return checkCandidateEmailSuccess(email, result.data);
+        } else {
+          return checkCandidateEmailError(result.status);
+        }
+      });
+    };
+
     // Profile email utility functions
+    var emailToBeSaved;
+
+    $scope.cancelSaveEmail = function () {
+      $scope.emailInput.value = $scope.me.primaryEmail.address;
+    }
+
+    $scope.confirmSaveEmail = function () {
+      var data = {
+        emails: _.cloneDeep($scope.me.emails)
+      };
+      profileService.setNewPrimaryEmail(data, emailToBeSaved)
+      profileService.postMe(data);
+    };
 
     function invalidEmailValidationResult() {
       return failureInputActionResult('Invalid email address', 'Please enter a valid email address');
     }
 
-    function checkCandidateEmailSuccess(emailInfo) {
+    function checkCandidateEmailSuccess(email, emailInfo) {
       if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
         profileService.fetchMe();
         return;
@@ -94,7 +116,7 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
         return profileService.setNewPrimaryEmail($scope.me, emailInfo.address);
       }
       // email is available || (not primary && not pending primary && not verified)
-      //todo showEmailChangeDialog(email, setNewPrimaryEmail(email), cancel);
+      emailToBeSaved = email;
       $scope.showEmailChangeDialog.value = true;
       return successInputActionResult();
     }

@@ -34,7 +34,7 @@
               type="text" name="email" placeholder="Enter your email address" novalidate>
           </div>
           <div kf-modal show="showEmailChangeDialog.value">
-            <div kf-basic-modal-content with-cancel action-text="Continue">
+            <div kf-basic-modal-content with-cancel action-text="Continue" action="confirmSaveEmail()" cancel="cancelSaveEmail()">
               <p>You are about to change your primary email to <span class="email-address">{{me.primaryEmail.address}}</span>.</p>
               <p>We will send a verification email to this email address to prove that you own it. To verify, please click on a verification link on the email.</p>
             </div>
