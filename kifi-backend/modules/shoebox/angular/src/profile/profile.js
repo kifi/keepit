@@ -17,6 +17,7 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
   function ($scope, $http, profileService, routeService, util) {
 
     $scope.showEmailChangeDialog = {value: false};
+    $scope.showResendVerificationEmailDialog = {value: false};
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
@@ -78,6 +79,19 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       }, function (result) {
         return checkCandidateEmailError(result.status);
       });
+    };
+
+    $scope.isUnverified = function (email) {
+      return email.value && !email.value.isPendingPrimary && email.value.isPrimary && !email.value.isVerified;
+    };
+
+    $scope.resendVerificationEmail = function (email) {
+      if (!email && $scope.me && $scope.me.primaryEmail) {
+        email = $scope.me.primaryEmail.address;
+      }
+      $scope.emailForVerification = email;
+      $scope.showResendVerificationEmailDialog.value = true;
+      profileService.resendVerificationEmail(email);
     };
 
     // Profile email utility functions

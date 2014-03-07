@@ -83,13 +83,22 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       });
     }
 
+    function resendVerificationEmail(email) {
+      return $http({
+        url: routeService.resendVerificationUrl,
+        method: 'POST',
+        params: {email: email}
+      });
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
       getAddressBooks: getAddressBooks,
-      setNewPrimaryEmail: setNewPrimaryEmail
+      setNewPrimaryEmail: setNewPrimaryEmail,
+      resendVerificationEmail: resendVerificationEmail
     };
   }
 ]);

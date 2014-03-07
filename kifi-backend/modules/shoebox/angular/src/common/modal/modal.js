@@ -18,7 +18,7 @@ angular.module('kifi.modal', [])
 
         this.setDefaultHideAction = function (action) {
           defaultHideAction = action;
-        }
+        };
 
         this.hideModal = function (hideAction) {
           if (hideAction) {
@@ -77,7 +77,8 @@ angular.module('kifi.modal', [])
       replace: true,
       scope: {
         action: '&',
-        cancel: '&'
+        cancel: '&',
+        title: '@'
       },
       templateUrl: 'common/modal/basicModalContent.tpl.html',
       transclude: true,
