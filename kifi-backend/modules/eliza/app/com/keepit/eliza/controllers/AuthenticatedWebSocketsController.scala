@@ -174,7 +174,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     if (shutdownCommander.shuttingDown) {
       Future.successful {
         accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
-        (Iteratee.ignore, Enumerator(Json.arr("goodbye", "server unavailable")) >>> Enumerator.eof)
+        (Iteratee.ignore, Enumerator(Json.arr("bye", "shutdown")) >>> Enumerator.eof)
       }
     } else {
       authenticate(request) match {
@@ -236,7 +236,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       } getOrElse {
         airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr)
       }
-    }.map(_ => endSession("Session ended", streamSession, socketInfo))
+    }.map(_ => endSession(streamSession, socketInfo))
   }
 
   private def needsToUpdate(streamSession: StreamSession, versionOpt: Option[String]) = {
@@ -261,12 +261,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }
   }
 
-  private def endSession(reason: String, streamSession: StreamSession, socketInfo: SocketInfo) = {
+  private def endSession(streamSession: StreamSession, socketInfo: SocketInfo) = {
     val timer = accessLog.timer(WS_IN)
-    socketInfo.channel.push(Json.arr("goodbye", reason))
+    socketInfo.channel.push(Json.arr("bye", "session"))
     socketInfo.channel.eofAndEnd()
     onDisconnect(socketInfo)
-    accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = reason))
+    accessLog.add(timer.done(trackingId = socketInfo.trackingId, method = "DISCONNECT", body = "Session ended"))
   }
 
   protected def authenticatedWebSocketsContextBuilder(socketInfo: SocketInfo, request: Option[RequestHeader] = None) = {
