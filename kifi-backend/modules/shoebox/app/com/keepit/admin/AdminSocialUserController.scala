@@ -67,8 +67,10 @@ class AdminSocialUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfoId))
   }
 
-  def ripestFruitView() = AdminHtmlAction.authenticatedAsync { implicit request =>
-    abook.ripestFruit().map{ socialIds =>
+  def ripestFruitView(userId: Long, howMany: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val user: Id[User] = if (userId==0) request.userId else Id[User](userId)
+    val howManyReally = if (howMany==0) 20 else howMany
+    abook.ripestFruit(user, howManyReally).map{ socialIds =>
       val socialUsers = db.readOnly { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
       Ok(html.admin.socialUsers(socialUsers, 0))
     }

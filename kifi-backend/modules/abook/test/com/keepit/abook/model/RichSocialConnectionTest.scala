@@ -151,6 +151,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
     "have correct queries" in { //This is for running straight up sql queries to make sure they are correctly formatted
       db.readOnly { implicit session => richConnectionRepo.getRipestFruit()}
+      db.readOnly { implicit session => richConnectionRepo.dedupedWTIForUser(Id[User](243), 50)}
       1===1
     }
   }

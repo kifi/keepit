@@ -31,7 +31,7 @@ POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.aboo
 GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.ABookController.refreshAllPrefixFilters
 
 POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.ABookController.richConnectionUpdate()
-GET      /internal/abook/ripestFruit                            @com.keepit.abook.ABookWTIController.ripestFruit
+GET      /internal/abook/ripestFruit                            @com.keepit.abook.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
 
 
 ->  / common.Routes
