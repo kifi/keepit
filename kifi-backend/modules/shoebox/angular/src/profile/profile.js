@@ -1,6 +1,14 @@
 'use strict';
 
-angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput', 'kifi.routeService', 'kifi.profileEmailAddresses', 'util'])
+angular.module('kifi.profile', [
+  'util',
+  'kifi.profileService',
+  'kifi.routeService',
+  'kifi.profileInput',
+  'kifi.routeService',
+  'kifi.profileEmailAddresses',
+  'kifi.profileChangePassword'
+])
 
 .config([
   '$routeProvider',
