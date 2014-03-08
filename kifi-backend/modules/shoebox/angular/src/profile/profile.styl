@@ -236,13 +236,12 @@ a.profile-email-pending-cancel
 .profile-email-address-pending-email
   color: #777c87
 
-.profile-email-addresses-arrow
-.profile-change-password-arrow
+.profile-email-addresses-arrow-right
+.profile-email-addresses-arrow-down
+.profile-change-password-arrow-right
+.profile-change-password-arrow-down
   display: block
-  background-image: url(../img/arrow-gray-right.png)
   background-repeat: no-repeat
-  background-position: 4px 4px
-  background-size: 6px 10px
   float: left
   width: 10px
   height: 10px
@@ -250,26 +249,17 @@ a.profile-email-pending-cancel
   padding-right: 2px
   vertical-align: middle
 
-.profile-email-addresses.opened .profile-email-addresses-arrow
-.profile-change-password.opened .profile-change-password-arrow
+.profile-email-addresses-arrow-right
+.profile-change-password-arrow-right
+  background-image: url(../img/arrow-gray-right.png)
+  background-position: 4px 4px
+  background-size: 6px 10px
+
+.profile-email-addresses-arrow-down
+.profile-change-password-arrow-down
   background-image: url(../img/arrow-gray-down.png)
   background-size: 10px 6px
   background-position: 0 7px
-
-.profile-email-address-manage
-  display: none
-
-  .profile-email-addresses.opened &
-    display: block
-
-.profile-email-address-add-box
-  display: none
-
-  .profile-email-address-manage.add &
-    display: block
-
-.profile-email-address-manage.add .profile-email-address-add
-  display: none
 
 a.profile-email-addresses-title-wrapper
   display: block
@@ -303,38 +293,12 @@ a.profile-email-address-add
   position: relative
   padding: 4px 0
 
-  &.primary-email .profile-email-address-item-email
-    font-weight: bold
-
 .profile-email-address-item-primary
-  display: none
-
-.profile-email-address-item.primary-email .profile-email-address-item-primary
-  display: inline
-
-.profile-email-address-item.primary-email .profile-email-address-item-arrow
-  display: none
-
-.profile-email-address-item.verified-email .profile-email-address-item-unverified
-  display: none
-
 .profile-email-address-item-pending-primary
-  display: none
-
-.profile-email-address-item.pending-primary-email .profile-email-address-item-pending-primary
   display: inline
 
-.profile-email-address-item.primary-email .profile-email-address-item-pending-primary
-  display: none
-
-.profile-email-address-item .profile-email-address-item-make-primary
-  display: none
-
-.profile-email-address-item.verified-email .profile-email-address-item-make-primary
-  display: block
-
-.profile-email-address-item.pending-primary-email .profile-email-address-item-make-primary
-  display: none
+.profile-email-address-item-email-important
+  font-weight: bold
 
 .profile-email-address-item-unverified a
   color: #a7aaa9
@@ -359,16 +323,13 @@ a.profile-email-address-add
   cursor: pointer
 
 .profile-email-address-item-dropdown
-  display: none
   position: absolute
   top: 100%
   right: -1px
   background: white
   border: 1px solid #cccccc
   z-index: 1
-
-  .profile-email-address-item-arrow.opened &
-    display: block
+  display: block
 
   & a
     display: block
