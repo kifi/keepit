@@ -167,6 +167,13 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       return failureInputActionResult('Invalid email address', 'Please enter a valid email address');
     }
 
+    function sendChangePassword(oldPassword, newPassword) {
+      return $http.post(routeService.userPasswordUrl, {
+        oldPassword: oldPassword,
+        newPassword: newPassword
+      });
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
@@ -182,7 +189,8 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       validateEmailFormat: validateEmailFormat,
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
-      getEmailValidationError: getEmailValidationError
+      getEmailValidationError: getEmailValidationError,
+      sendChangePassword: sendChangePassword
     };
   }
 ]);
