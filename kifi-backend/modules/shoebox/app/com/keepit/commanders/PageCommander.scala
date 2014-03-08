@@ -23,6 +23,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 class PageCommander @Inject() (
     db: Database,
@@ -52,8 +53,9 @@ class PageCommander @Inject() (
 
     val (nUriStr, nUri, keepersFutureOpt, domain, bookmark, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
       val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {
-        case Left(nUri) => (nUri.url, Some(nUri))
-        case Right(pUri) => (pUri, None)
+        case Success(Left(nUri)) => (nUri.url, Some(nUri))
+        case Success(Right(pUri)) => (pUri, None)
+        case Failure(ex) => (url, None)
       }
 
       val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }

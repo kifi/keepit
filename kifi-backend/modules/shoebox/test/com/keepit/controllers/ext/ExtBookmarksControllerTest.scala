@@ -22,6 +22,8 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.google.inject.Injector
+import com.keepit.common.db.slick.DBSession.RSession
 
 class ExtBookmarksControllerTest extends Specification with ApplicationInjector {
 
@@ -34,6 +36,8 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule()
   )
+
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
 
 
   "BookmarksController" should {
@@ -51,9 +55,8 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
 
         val (user, collections) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-          val normalizationService = inject[NormalizationService]
-          val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
@@ -119,9 +122,8 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
 
           uriRepo.count === 0
-          val normalizationService = inject[NormalizationService]
-          val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))

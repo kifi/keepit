@@ -12,13 +12,15 @@ import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._
 import com.keepit.common.db.Id
+import scala.util.{Failure, Success, Try}
+
+case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
-  def normalize(uriString: String)(implicit session: RSession): String
-  def prenormalize(uriString: String)(implicit session: RSession): String
-  def prenormalizeMaybe(uriString: String)(implicit session: RSession): Option[String]
+  def normalize(uriString: String)(implicit session: RSession): Try[String]
+  def prenormalize(uriString: String)(implicit session: RSession): Try[String]
 }
 
 @Singleton
@@ -30,31 +32,27 @@ class NormalizationServiceImpl @Inject() (
   priorKnowledge: PriorKnowledge,
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  def normalize(uriString: String)(implicit session: RSession): String = normalizedURIRepo.getByUri(uriString).map(_.url) getOrElse prenormalize(uriString)
-  def prenormalize(uriString: String)(implicit session: RSession): String = prenormalizeMaybe(uriString) getOrElse uriString
-
-    //using readonly db when exist, don't use cache
-  def prenormalizeMaybe(uriString: String)(implicit session: RSession): Option[String] = {
-    val withStandardPrenormalizationOption = URI.safelyParse(uriString).map(Prenormalizer)
-    val withPreferredSchemeOption = for {
-      prenormalized <- withStandardPrenormalizationOption
-      schemeNormalizer <- priorKnowledge.getPreferredSchemeNormalizer(uriString)
-    } yield schemeNormalizer(prenormalized)
-
-    val prenormalizedURIOption = withPreferredSchemeOption orElse withStandardPrenormalizationOption
-    prenormalizedURIOption.map(_.toString())
+  def normalize(uriString: String)(implicit session: RSession): Try[String] = normalizedURIRepo.getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
+  def prenormalize(uriString: String)(implicit session: RSession): Try[String] = {
+    URI.parse(uriString).map { uri =>
+      val uriWithStandardPrenormalization = Prenormalizer(uri)
+      val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(uriWithStandardPrenormalization))
+      val prenormalizedUri = uriWithPreferredSchemeOption getOrElse uriWithStandardPrenormalization
+      prenormalizedUri.toString
+    }.recoverWith { case cause: Throwable => Failure(PrenormalizationException(cause)) }
   }
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     val relevantCandidates = getRelevantCandidates(currentReference, candidates)
     log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
-    for {
+    val futureResult = for {
       betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
       betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
     } yield betterReferenceOptionAfterAdditionalUpdates.map(_.uriId)
-  } tap(_.onFailure {
-    case e => airbrake.notify(s"Normalization update failed for ${currentReference.url} on candidates ${candidates mkString ", "}", e)
-  })
+    futureResult tap (_.onFailure {
+      case e => airbrake.notify(s"Normalization update failed for ${currentReference.url}. Supplied candidates: ${candidates mkString ", "} - Relevant candidates: ${relevantCandidates mkString ", "}", e)
+    })
+  }
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = {
     log.info(s"[processUpdate($currentReference,${candidates.mkString(",")})")
@@ -72,11 +70,11 @@ class NormalizationServiceImpl @Inject() (
 
   private def getRelevantCandidates(currentReference: NormalizationReference, candidates: Seq[NormalizationCandidate]) = {
 
-    val prenormalizedCandidates = candidates.flatMap {
-      case verifiedCandidate: VerifiedCandidate => Some(verifiedCandidate)
-      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => prenormalizeMaybe(url).map(ScrapedCandidate(_, normalization)) }
-      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => prenormalizeMaybe(url).map(UntrustedCandidate(_, normalization)) }
-    }
+    val prenormalizedCandidates = candidates.map {
+      case verifiedCandidate: VerifiedCandidate => Success(verifiedCandidate)
+      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(ScrapedCandidate(_, normalization)) }
+      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(UntrustedCandidate(_, normalization)) }
+    }.map(_.toOption).flatten
 
     val allCandidates =
       if (currentReference.isNew || currentReference.normalization.isEmpty)
