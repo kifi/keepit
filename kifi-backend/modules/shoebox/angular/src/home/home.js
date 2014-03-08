@@ -14,8 +14,8 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 ])
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', 'injectedState',
-  function ($scope, tagService, keepService, $q, injectedState) {
+  '$scope', 'tagService', 'keepService', '$q', 'injectedState', '$timeout',
+  function ($scope, tagService, keepService, $q, injectedState, $timeout) {
     keepService.reset();
 
 
@@ -32,7 +32,6 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
           $scope.modal = 'email';
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];
-          console.log(state, state.m, msg)
           $scope.tooltipMessage = msg;
           $timeout(function () {
             delete $scope.tooltipMessage;

@@ -15,7 +15,8 @@ angular.module('kifi.keepService', ['kifi.undo'])
       isDetailOpen = false,
       singleKeepBeingPreviewed = false,
       previewUrls = {},
-      doc = $document[0];
+      doc = $document[0],
+      screenshotDebouncePromise = false;
 
     $rootScope.$on('tags.remove', function (tagId) {
       _.forEach(list, function (keep) {
@@ -57,12 +58,30 @@ angular.module('kifi.keepService', ['kifi.undo'])
     function fetchScreenshots(keeps) {
       if (keeps && keeps.length) {
         api.fetchScreenshotUrls(keeps).then(function (urls) {
-
           _.forEach(keeps, function (keep) {
             keep.screenshot = urls[keep.url];
           });
         });
       }
+    }
+
+    function lookupScreenshotUrls(keeps) {
+      if (keeps && keeps.length) {
+        var url = env.xhrBase + '/keeps/screenshot',
+          data = {
+            urls: _.pluck(keeps, 'url')
+          };
+
+        $log.log('keepService.lookupScreenshotUrls()', data);
+
+        return $http.post(url, data).then(function (res) {
+          $timeout(function () {
+            api.prefetchImages(res.data.urls);
+          });
+          return res.data.urls;
+        });
+      }
+      return $q.when(keeps || []);
     }
 
     function processHit(hit) {
@@ -321,27 +340,21 @@ angular.module('kifi.keepService', ['kifi.undo'])
         return $q.when({'threads': 0});
       },
 
-      fetchScreenshotUrls: _.debounce(function (keeps) {
-        if (keeps && keeps.length) {
-          var url = env.xhrBase + '/keeps/screenshot',
-            data = {
-              urls: _.pluck(keeps, 'url')
-            };
+      fetchScreenshotUrls: function (urls) {
+        var previousCancelled = screenshotDebouncePromise && $timeout.cancel(screenshotDebouncePromise);
 
-          $log.log('keepService.fetchScreenshotUrls()', data);
-
-          return $http.post(url, data).then(function (res) {
-            $timeout(function () {
-              api.prefetchImages(res.data.urls);
-            });
-            return res.data.urls;
+        if (previousCancelled) {
+          // We cancelled an existing call that was in a timeout. User is likely typing actively.
+          screenshotDebouncePromise = $timeout(angular.noop, 1000);
+          return screenshotDebouncePromise.then(function () {
+            return lookupScreenshotUrls(urls);
           });
         }
-        return $q.when(keeps || []);
-      }, 1000, {
-        'leading': true,
-        'trailing': false
-      }),
+
+        // No previous request was going. Start a timer, but go ahead and run the screenshot lookup.
+        screenshotDebouncePromise = $timeout(angular.noop, 1000);
+        return lookupScreenshotUrls(urls);
+      },
 
       prefetchImages: function (urls) {
         _.forEach(urls, function (imgUrl, key) {
@@ -481,7 +494,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             }
           };
 
-        $log.log('keepService.unkeep()', data);
+        $log.log('keepService.find()', data, +new Date());
 
         return $http.get(url, data).then(function (res) {
           var data = res.data,
