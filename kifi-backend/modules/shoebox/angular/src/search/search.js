@@ -14,12 +14,17 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 ])
 
 .controller('SearchCtrl', [
-  '$scope', 'keepService', '$routeParams',
-  function ($scope, keepService, $routeParams) {
+  '$scope', 'keepService', '$routeParams', '$location',
+  function ($scope, keepService, $routeParams, $location) {
     keepService.reset();
 
     if ($scope.search) {
       $scope.search.text = $routeParams.q;
+    }
+
+    if (!$routeParams.q) {
+      // No or blank query
+      $location.path('/');
     }
 
     var query = $routeParams.q || '',
