@@ -5,11 +5,14 @@ import org.specs2.mutable._
 import com.keepit.test._
 import scala.Some
 import com.keepit.normalizer.NormalizationService
+import com.google.inject.Injector
+import com.keepit.common.db.slick.DBSession.RSession
 
 class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
 
   val hover = BookmarkSource.keeper
   val initLoad = BookmarkSource.bookmarkImport
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
 
   "KeepToCollectionTest " should {
     "load uris from db" in {
@@ -17,11 +20,10 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
 
         val (bookmark1, bookmark2, collections) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C"))
-          val normalizationService = inject[NormalizationService]
-          val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-          val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
-          val uri3 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/2"), Some("Amazon1")))
-          val uri4 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/3"), Some("Amazon2")))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/2"), Some("Amazon1")))
+          val uri4 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/3"), Some("Amazon2")))
 
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))

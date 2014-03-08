@@ -39,8 +39,8 @@ SocketCommander.prototype = {
   onConnect: function () {
     this._onConnect();
   },
-  onDisconnect: function () {
-    this._onDisconnect();
+  onDisconnect: function (why, sec) {
+    this._onDisconnect(why, sec);
   },
   onMessage: function (data) {
     var msg = JSON.parse(data);

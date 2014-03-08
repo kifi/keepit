@@ -51,12 +51,12 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
 
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
-
+        val googleUrl = "http://www.google.com"
         val (user1, uri) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName="Shanee", lastName="Smith", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           val user2 = userRepo.save(User(firstName="Shachaf", lastName="Smith", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
 
-          val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com", Some("Google")))
+          val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
 
           val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
@@ -75,11 +75,11 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
         }
 
         db.readOnly {implicit s =>
-          uriRepo.getByUriOrPrenormalize("http://www.google.com") match {
-            case Left(nUri) =>
+          uriRepo.getByUri(googleUrl) match {
+            case Some(nUri) =>
               nUri === uri
-            case Right(pUri) =>
-              failure(s"on $pUri")
+            case None =>
+              failure(s"on $googleUrl")
           }
         }
 

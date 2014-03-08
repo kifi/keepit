@@ -35,6 +35,7 @@ import play.api.libs.json.JsNumber
 import com.keepit.common.usersegment.UserSegmentKey
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import scala.util.{Success, Try}
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -367,10 +368,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] =
     call(Shoebox.internal.getNormalizedUriByUrlOrPrenormalize(), JsString(url.take(MaxUrlLength))).map { r =>
-      (r.json \ "url").asOpt[String] match {
-        case Some(url) => Right(url)
-        case None => Left(Json.fromJson[NormalizedURI](r.json \ "normalizedURI").get)
-      }
+      (r.json \ "normalizedURI").asOpt[NormalizedURI].map(Left(_)) getOrElse Right((r.json \ "url").as[String])
     }
 
   def internNormalizedURI(url: String, scrapeWanted: Boolean): Future[NormalizedURI] = {

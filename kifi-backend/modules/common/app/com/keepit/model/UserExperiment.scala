@@ -47,24 +47,15 @@ object ExperimentType {
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
   val SELF_MESSAGE = ExperimentType("self_message")
+  val MOBILE_REDITECT = ExperimentType("mobile_redirect")
 
-  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE :: CAN_INVITE :: GMAIL_INVITE :: CAN_CONNECT :: CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SELF_MESSAGE :: Nil
+  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE :: CAN_INVITE :: GMAIL_INVITE ::
+             CAN_CONNECT :: CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SELF_MESSAGE ::
+             MOBILE_REDITECT:: Nil
 
-  def get(str: String): ExperimentType = str.toLowerCase.trim match {
-    case ADMIN.value => ADMIN
-    case AUTO_GEN.value => AUTO_GEN
-    case FAKE.value => FAKE
-    case NOT_SENSITIVE.value => NOT_SENSITIVE
-    case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
-    case CAN_INVITE.value => CAN_INVITE
-    case GMAIL_INVITE.value => GMAIL_INVITE
-    case CAN_CONNECT.value => CAN_CONNECT
-    case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
-    case DEMO.value => DEMO
-    case EXTENSION_LOGGING.value => EXTENSION_LOGGING
-    case SHOW_HIT_SCORES.value => SHOW_HIT_SCORES
-    case SELF_MESSAGE.value => SELF_MESSAGE
-  }
+  val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
+
+  def get(str: String): ExperimentType = _ALL_MAP(str.toLowerCase.trim)
 
   def getUserStatus(experiments: Set[ExperimentType]): String =
     if (experiments.contains(FAKE)) FAKE.value

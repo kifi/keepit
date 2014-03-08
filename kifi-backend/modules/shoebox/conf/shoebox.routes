@@ -103,7 +103,7 @@ GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserControlle
 GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findNonUsers(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 
-GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
+GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
 
 ##########################################
 # Mobile V1
@@ -204,6 +204,8 @@ POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksCon
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.BookmarksController.getScreenshotUrl()
+POST    /site/keeps/imageUrl        @com.keepit.controllers.website.BookmarksController.getImageUrl()
+POST    /site/keeps/imageUrls       @com.keepit.controllers.website.BookmarksController.getImageUrls()
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
@@ -277,6 +279,10 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
+
+GET     /admin/images                @com.keepit.controllers.admin.AdminScreenshotController.images()
+GET     /admin/imageInfos            @com.keepit.controllers.admin.AdminScreenshotController.imageInfos(uriId: Id[NormalizedURI])
+POST    /admin/imagesCompare         @com.keepit.controllers.admin.AdminScreenshotController.imagesCompare()
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
 
@@ -514,7 +520,7 @@ GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.in
 GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int)
 GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)
 
-POST    /internal/shoebox/database/createDeepLink      @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
+POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments

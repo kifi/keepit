@@ -579,13 +579,12 @@ var api = (function createApi() {
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
         log('[api.socket.open]', url)();
-        var sc, rws = new ReconnectingWebSocket({
-          url: url,
+        var sc, rws = new ReconnectingWebSocket(url, {
           onConnect: errors.wrap(function () {
             sc.onConnect();
           }),
-          onDisconnect: errors.wrap(function () {
-            sc.onDisconnect();
+          onDisconnect: errors.wrap(function (why, sec) {
+            sc.onDisconnect(why, sec);
           }),
           onMessage: errors.wrap(function (e) {
             sc.onMessage(e.data);
