@@ -88,6 +88,7 @@ angular.module('kifi.modal', [])
         scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
         scope.withCancel = (attrs.withCancel !== void 0) || false;
+        scope.withWarning = (attrs.withWarning !== void 0) || false;
         scope.cancelText = attrs.cancelText;
         scope.centered = attrs.centered;
         kfModalCtrl.setDefaultHideAction(scope.cancel);

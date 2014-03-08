@@ -18,6 +18,7 @@
   height: 100%
   border: 1px solid #f2eeed
   box-shadow: 12px 12px 0 rgba(0, 40, 90, 0.2)
+  background: #faf8f7
 
 
 .kifi-onboarding-iframe
@@ -34,6 +35,7 @@
 .dialog-content
   color: #66829b
   line-height: 1.5
+  padding: 0 0 10px
 
   h1
     margin: 0 0 0
@@ -44,10 +46,10 @@
     text-align: center
 
   button
-    width: 200px
-    height: 58px
-    line-height: 58px
-    padding: 0
+    width: 150px
+    height: 28px
+    line-height: 28px
+    padding: 11px 15px
     background-color: #6fa5ef
     color: #fff
     border: none
@@ -60,6 +62,14 @@
 
     &:hover
       background-color: #7faeef
+
+    &.dialog-warn
+      background-color: #ce6159
+
+      &:focus
+      &:hover
+        background-color: #D3716A
+
 
     &.dialog-cancel
       background-color: #b8c5d1
@@ -77,7 +87,34 @@
     text-align: center
 
   .email-address
-    color: #73787f;
+    color: #73787f
+
+.dialog-header
+  font-size: 18px
+  font-weight: 300
+  padding: 19px 6px 8px
+  border-bottom: 2px solid #ecf0f1
+  margin: 0 11px
+  color: #3a495b
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+      
+.dialog-x
+  position: absolute
+  color: #bcc1c7
+  font-weight: normal
+  padding: 15px 20px
+  right: 0
+  top: 0
+  font-size: 16px
+  text-decoration: none
+  cursor: pointer
+
+.dialog-buttons
+  text-align: center
+  margin: 0 auto
+
 
 .dialog-title
   color: #515051
@@ -103,12 +140,12 @@
   min-width: 400px
   margin: 20px 35px
   color: #333
-  font-size: 18px
+  font-size: 14px
 
   .dialog-body
     margin: 0 auto
 
 
 .dialog-centered
-  text-align: center;
+  text-align: center
 
