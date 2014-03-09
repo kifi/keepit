@@ -40,26 +40,54 @@ object URI extends Logging {
     (uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment)
   }
 
-  def isRelative(uriString: String): Boolean = uriString.startsWith("/")
+  /**
+   * http://www.w3.org/TR/WD-html40-970917/htmlweb.html#h-5.1.2
+   */
+  def isRelative(uriString: String): Boolean = !uriString.contains("://")
+
   def isAbsolute(uriString : String): Boolean = !isRelative(uriString)
 
   def absoluteUrl(baseUri: URI, targetUrl: String): Option[String] =
     if (isRelative(targetUrl)) {
-      val absoluteTargetUrl = for {
+      val basePort = if (baseUri.port >= 0) s":${baseUri.port.toString}" else ""
+      for {
         scheme <- baseUri.scheme
-        host <- baseUri.host }
-      yield scheme + "://" + host.name + targetUrl
-      absoluteTargetUrl
+        host <- baseUri.host
+      } yield {
+        if (targetUrl.startsWith("#")) {
+          new URI(None, baseUri.scheme, baseUri.userInfo, baseUri.host, baseUri.port, baseUri.path, baseUri.query, Some(targetUrl.substring(1))).toString()
+        } else if (targetUrl.startsWith("/")) {
+          s"$scheme://$host$basePort$targetUrl"
+        } else if (targetUrl.startsWith("./")) {
+          absoluteUrl(baseUri, targetUrl.substring(2)).get
+        } else if (targetUrl.startsWith("../")) {
+          val basePath = baseUri.path.map{p =>
+            val base = if (p.endsWith("/")) p.substring(0, p.length - 1) else p
+            base.substring(0, p.lastIndexOf("/"))
+          }
+          absoluteUrl(new URI(None, baseUri.scheme, baseUri.userInfo, baseUri.host, baseUri.port, basePath, None, None), targetUrl.substring(3)).get
+        } else {
+          val basePath = baseUri.path.map{path =>
+            path.substring(0, path.lastIndexOf("/") + 1)
+          } getOrElse "/"
+          s"$scheme://$host$basePort$basePath$targetUrl"
+        }
+      }
+    } else {
+      Some(targetUrl)
     }
-    else Some(targetUrl)
 
   def absoluteUrl(baseUrl: String, targetUrl: String): Option[String] =
-    if (isAbsolute(targetUrl)) Some(targetUrl)
-    else if (isAbsolute(baseUrl)) for {
-      baseUri <- safelyParse(baseUrl)
-      absoluteTargetUrl <- absoluteUrl(baseUri, targetUrl)
-    } yield absoluteTargetUrl
-    else None
+    if (isAbsolute(targetUrl)) {
+      Some(targetUrl)
+    } else if (isAbsolute(baseUrl)) {
+      for {
+        baseUri <- safelyParse(baseUrl)
+        absoluteTargetUrl <- absoluteUrl(baseUri, targetUrl)
+      } yield absoluteTargetUrl
+    } else {
+      None
+    }
 }
 
 class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Option[String], val host: Option[Host], val port: Int, val path: Option[String], val query: Option[Query], val fragment: Option[String]) {
