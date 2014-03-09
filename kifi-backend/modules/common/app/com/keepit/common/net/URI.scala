@@ -62,13 +62,17 @@ object URI extends Logging {
           absoluteUrl(baseUri, targetUrl.substring(2)).get
         } else if (targetUrl.startsWith("../")) {
           val basePath = baseUri.path.map{p =>
-            val base = if (p.endsWith("/")) p.substring(0, p.length - 1) else p
-            base.substring(0, p.lastIndexOf("/"))
+            if (p.isEmpty) "" else {
+              val base = if (p.endsWith("/")) p.substring(0, p.length - 1) else p
+              val lastSlashIndex = p.lastIndexOf("/")
+              if (lastSlashIndex > 0) base.substring(0, p.lastIndexOf("/")) else base
+            }
           }
           absoluteUrl(new URI(None, baseUri.scheme, baseUri.userInfo, baseUri.host, baseUri.port, basePath, None, None), targetUrl.substring(3)).get
         } else {
           val basePath = baseUri.path.map{path =>
-            path.substring(0, path.lastIndexOf("/") + 1)
+            val headEndIndex = path.lastIndexOf("/") + 1
+            if (headEndIndex > 0) path.substring(0, headEndIndex) else path
           } getOrElse "/"
           s"$scheme://$host$basePort$basePath$targetUrl"
         }
