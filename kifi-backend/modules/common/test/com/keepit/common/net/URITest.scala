@@ -121,6 +121,7 @@ class URITest extends Specification {
       URI.absoluteUrl("http://www.kifi.com/home/foo.html#fragment", "../welcome.html").get === "http://www.kifi.com/welcome.html"
       URI.absoluteUrl("http://www.kifi.com/home/foo.html#fragment", "welcome.html").get === "http://www.kifi.com/home/welcome.html"
       URI.absoluteUrl("http://www.kifi.com/home/foo.html", "./welcome.html").get === "http://www.kifi.com/home/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "compmodels.aspx?modelid=730310").get === "http://www.kifi.com/home/compmodels.aspx?modelid=730310"
     }
   }
 }
