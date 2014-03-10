@@ -82,6 +82,19 @@ trait QueryExpansion extends QueryParser {
       case _ => false
     }
 
+    def equivalent(a: Array[Term], b: Array[Term]): Boolean = {
+      if (a.length == b.length) {
+        var i = 0
+        while (i < a.length) {
+          if (a(i) != b(i)) return false
+          i += 1
+        }
+        true
+      } else {
+        false
+      }
+    }
+
     val textQuery = new TextQuery
     textQueries += textQuery
 
@@ -97,7 +110,7 @@ trait QueryExpansion extends QueryParser {
 
     altAnalyzer.foreach{ alt =>
       super.getFieldQuery("t", queryText, quoted, alt).foreach{ q =>
-        if (textQuery.terms != extractTerms(q)) {
+        if (!equivalent(textQuery.terms, extractTerms(q))) {
           val query = if (quoted) q else mayConvertQuery(q, alt.lang)
           textQuery.addRegularQuery(query)
           textQuery.addRegularQuery(copyFieldQuery(query, "c"))
@@ -119,7 +132,7 @@ trait QueryExpansion extends QueryParser {
     if(!quoted) {
       altStemmingAnalyzer.foreach{ alt =>
         getFieldQuery("ts", queryText, false, alt).foreach{ q =>
-        if (textQuery.stems != extractTerms(q)) {
+        if (equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
             textQuery.addRegularQuery(query)
             textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
