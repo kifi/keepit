@@ -187,7 +187,6 @@ class SearchCommanderImpl @Inject() (
       if (lang == "zh") Set(Lang("zh-cn"), Lang("zh-tw")) else Set(Lang(lang))
     }
     val langProf = getLangProfile(userId, 3)
-    println(s"\n\t\t langProf=$langProf \n")
     val firstLangSet = acceptLangs ++ langProf.keySet
 
     val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(firstLangSet, 0.9d))
@@ -213,7 +212,7 @@ class SearchCommanderImpl @Inject() (
       val newProf = results.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
         m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f).toFloat))
       }
-      newProf.filter{ case (_, prob) => prob > 0.1f }.toSeq.sortBy(p => - p._2).take(limit).toMap
+      newProf.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(limit).toMap // top N with prob > 0.05
     } else {
       Map()
     }
