@@ -132,7 +132,7 @@ trait QueryExpansion extends QueryParser {
     if(!quoted) {
       altStemmingAnalyzer.foreach{ alt =>
         getFieldQuery("ts", queryText, false, alt).foreach{ q =>
-        if (equivalent(textQuery.stems, extractTerms(q))) {
+        if (!equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
             textQuery.addRegularQuery(query)
             textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
