@@ -3,17 +3,15 @@ package com.keepit.common.store
 import java.net.URLEncoder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Await, Future, Promise}
-import scala.util.Failure
-import scala.util.Success
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
-import com.keepit.model.NormalizedURI
+import com.keepit.model._
 import play.api.libs.ws.WS
 import scala.util.Try
 import play.modules.statsd.api.Statsd
@@ -29,6 +27,9 @@ import java.io.{InputStream, ByteArrayInputStream}
 import com.keepit.common.akka.SafeFuture
 import collection.JavaConversions._
 import scala.concurrent.duration._
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
 
 trait S3ScreenshotStore {
   def config: S3ImageConfig
@@ -36,61 +37,41 @@ trait S3ScreenshotStore {
 
   def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String]
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String]
+
   def getImageInfos(normalizedUri: NormalizedURI):Future[Seq[ImageInfo]]
   def processImage(uri:NormalizedURI, imageInfo:ImageInfo):Future[Boolean]
-  def asyncGetImageUrl(uri:NormalizedURI):Future[Option[String]]
+  def asyncGetImageUrl(uri:NormalizedURI, pageInfoOpt:Option[PageInfo], cb:Option[PageInfo => Unit]):Future[Option[String]]
   def getImageUrl(normalizedUri: NormalizedURI):Option[String]
   def updatePicture(normalizedUri: NormalizedURI): Future[Boolean]
 }
 
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
-case class ImageInfo(
-  url:String,
-  caption:Option[String],
-  height:Option[Int],
-  width:Option[Int],
-  size:Option[Int])
-
-object ImageInfo {
-  implicit val format = (
-      (__ \ 'url).format[String] and
-      (__ \ 'caption).formatNullable[String] and
-      (__ \ 'height).formatNullable[Int] and
-      (__ \ 'weight).formatNullable[Int] and
-      (__ \ 'size).formatNullable[Int]
-    )(ImageInfo.apply _, unlift(ImageInfo.unapply))
-}
-
-trait SafetyInfo {
-  def safe:Option[Boolean]
-}
-
-trait PageInfo {
-  def originalUrl:Option[String]
-  def url:Option[String]
-  def title:Option[String]
-  def description:Option[String]
-  def content:Option[String]
-  def favicon_url:Option[String]
-  def images:Seq[ImageInfo]
-}
-
 case class EmbedlyExtractResponse(
-  originalUrl:Option[String],
+  originalUrl:String,
   url:Option[String],
   title:Option[String],
   description:Option[String],
   content:Option[String],
   safe:Option[Boolean],
-  favicon_url:Option[String],
-  images:Seq[ImageInfo]) extends PageInfo with SafetyInfo
+  faviconUrl:Option[String],
+  images:Seq[ImageInfo]) extends PageGenericInfo with PageSafetyInfo {
+  def toPageInfo(nuriId:Id[NormalizedURI]):PageInfo =
+    PageInfo(
+      id = None,
+      uriId = nuriId,
+      description = this.description,
+      safe = this.safe,
+      faviconUrl = this.faviconUrl,
+      imageAvail = Some(images.nonEmpty),
+      screenshotAvail = None)
+}
 
 object EmbedlyExtractResponse {
-  val EMPTY = EmbedlyExtractResponse(None, None, None, None, None, None, None, Seq.empty[ImageInfo])
+  val EMPTY = EmbedlyExtractResponse("", None, None, None, None, None, None, Seq.empty[ImageInfo])
 
   implicit val format = (
-    (__ \ 'original_url).formatNullable[String] and
+    (__ \ 'original_url).format[String] and
     (__ \ 'url).formatNullable[String] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
@@ -135,7 +116,7 @@ class S3ScreenshotStoreImpl(
     }
   }
 
-  private def getPageInfo(url:String):Future[Option[PageInfo]] = {
+  private def getPageInfo(url:String):Future[Option[EmbedlyExtractResponse]] = {
     WS.url(url).withRequestTimeout(120000).get().map { resp =>
       log.info(s"[getPageInfo($url)] resp.status=${resp.statusText} body=${resp.body}")
       resp.status match {
@@ -158,27 +139,49 @@ class S3ScreenshotStoreImpl(
     }
   }
 
-  def asyncGetImageUrl(uri:NormalizedURI):Future[Option[String]] = {
+  def asyncGetImageUrl(uri:NormalizedURI, pageInfoOpt:Option[PageInfo], cb:Option[PageInfo => Unit]):Future[Option[String]] = {
+    log.info(s"[asyncGetImageUrl] uri=$uri pageInfo=$pageInfoOpt")
     if (config.isLocal) Future.successful(None)
     else {
-      // todo: check table
-      updateImage(uri) map { res =>
-        if (res) mkImgUrl(uri.externalId) else None
+      pageInfoOpt match {
+        case None =>
+          fetchAndUpdatePageInfo(uri, cb) map { res =>
+            if (res) mkImgUrl(uri.externalId) else None
+          }
+        case Some(pageInfo) => pageInfo.imageAvail match {
+          case Some(imgAvail) if imgAvail => Future.successful(mkImgUrl(uri.externalId))
+          case _ => Future.successful(None)
+        }
       }
     }
   }
 
-  def getImageUrl(uri: NormalizedURI):Option[String] = Await.result(asyncGetImageUrl(uri), 5 minutes)
+  def getImageUrl(uri: NormalizedURI):Option[String] = Await.result(asyncGetImageUrl(uri, None, None), 5 minutes) // todo(ray): fixme
 
-  private def updateImage(uri:NormalizedURI):Future[Boolean] = {
-    getImageInfos(uri) flatMap { infos =>
-      infos.headOption match {
-        case Some(info) => processImage(uri, info)
-        case None => Future.successful(false)
+  private def fetchAndUpdatePageInfo(uri:NormalizedURI, cb:Option[PageInfo => Unit]) = {
+    getPageInfo(embedlyUrl(uri.url)) map { pageInfoOpt =>
+      pageInfoOpt match {
+        case Some(pageInfo) =>
+          val future = pageInfo.images.headOption match {
+            case Some(imgInfo) => processImage(uri, imgInfo)
+            case None => Future.successful(true)
+          }
+          future onComplete { trRes =>
+            cb map { f => SafeFuture { f(pageInfo.toPageInfo(uri.id.get)) } }
+          }
+          true
+        case None => false
       }
     }
   }
 
+  private def withInputStream[T](is:java.io.InputStream)(f:InputStream => T):T = {
+    try {
+      f(is)
+    } finally {
+      if (is != null) is.close
+    }
+  }
   def processImage(uri:NormalizedURI, imageInfo:ImageInfo):Future[Boolean] = {
     val trace = new StackTrace()
     val url = imageInfo.url
@@ -186,7 +189,9 @@ class S3ScreenshotStoreImpl(
       log.info(s"[processImage(${uri.id},${imageInfo.url})] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
-          resizeAndPersist(trace, url, uri, resp.getAHCResponse.getResponseBodyAsStream)
+          withInputStream[Boolean](resp.getAHCResponse.getResponseBodyAsStream) { is =>
+            resizeAndPersist(trace, url, uri, is)
+          }
         case _ =>
           log.error(s"[processImage(${uri.id},${imageInfo.url})] Failed to retrieve image. Response: ${resp.statusText}")
           false
@@ -209,7 +214,7 @@ class S3ScreenshotStoreImpl(
     resizedImages
   }
 
-  private def resizeAndPersist(trace:StackTrace, url:String, uri:NormalizedURI, originalStream:InputStream) = {
+  private def resizeAndPersist(trace:StackTrace, url:String, uri:NormalizedURI, originalStream:InputStream):Boolean = {
     val resizedImages = resize(originalStream)
     val storedObjects = resizedImages map { case resizeAttempt =>
       resizeAttempt match {
@@ -234,7 +239,6 @@ class S3ScreenshotStoreImpl(
           None
       }
     }
-    originalStream.close()
     storedObjects.forall(_.nonEmpty)
   }
 

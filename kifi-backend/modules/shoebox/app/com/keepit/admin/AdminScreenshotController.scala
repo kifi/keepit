@@ -23,6 +23,7 @@ class AdminScreenshotController @Inject() (
   s3ScreenshotStore: S3ScreenshotStore,
   db: Database,
   bookmarkRepo: BookmarkRepo,
+  pageInfoRepo: PageInfoRepo,
   uriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
@@ -72,14 +73,23 @@ class AdminScreenshotController @Inject() (
     }
   }
 
+  private def updatePageInfo(pageInfo:PageInfo):Unit = {
+    db.readWrite { implicit rw =>
+      pageInfoRepo.save(pageInfo)
+    }
+  }
   val compareForm = Form("uriIds" -> text)
   def imagesCompare() = AdminHtmlAction.authenticatedAsync { implicit request =>
     try {
       val uriIds = compareForm.bindFromRequest.get.split(',').map(s => Id[NormalizedURI](s.toLong)).toSeq
       val tuplesF = uriIds map { uriId =>
-        val uri = db.readOnly { implicit ro => uriRepo.get(uriId) }
+        val (uri, pageInfoOpt) = db.readOnly { implicit ro =>
+          val uri = uriRepo.get(uriId)
+          val pageInfoOpt = pageInfoRepo.getByUri(uriId)
+          (uri, pageInfoOpt)
+        }
         val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri)
-        s3ScreenshotStore.asyncGetImageUrl(uri) map { imgUrl =>
+        s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(updatePageInfo)) map { imgUrl =>
           (uri, screenshotUrl, imgUrl)
         }
       }
@@ -88,6 +98,7 @@ class AdminScreenshotController @Inject() (
       }
     } catch {
       case t:Throwable =>
+        t.printStackTrace
         Future.successful(BadRequest("Invalid Arguments"))
     }
   }
