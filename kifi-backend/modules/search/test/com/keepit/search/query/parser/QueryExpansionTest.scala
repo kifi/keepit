@@ -34,6 +34,8 @@ class QueryExpansionTest extends Specification {
     val stemmingAnalyzer = DefaultAnalyzer.forParsingWithStemmer(english)
     val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with QueryExpansion {
       override val lang = english
+      override val altAnalyzer = None
+      override val altStemmingAnalyzer = None
       override val siteBoost: Float = 1.0f
       override val concatBoost: Float = concatBoostValue
     }

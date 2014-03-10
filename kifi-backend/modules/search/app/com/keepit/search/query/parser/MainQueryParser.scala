@@ -4,7 +4,6 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
-import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.PhraseQuery
@@ -15,6 +14,7 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.search.Lang
+import com.keepit.search.index.Analyzer
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.query.ExistenceBoostQuery
@@ -25,11 +25,11 @@ import com.keepit.search.query.TextQuery
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
-
 class MainQueryParser(
-  override val lang: Lang,
   analyzer: Analyzer,
   stemmingAnalyzer: Analyzer,
+  override val altAnalyzer: Option[Analyzer],
+  override val altStemmingAnalyzer: Option[Analyzer],
   proximityBoost: Float,
   semanticBoost: Float,
   phraseBoost: Float,
@@ -44,6 +44,8 @@ class MainQueryParser(
   phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
   monitoredAwait: MonitoredAwait
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
+
+  override val lang: Lang = analyzer.lang
 
   var collectionIds = Set.empty[Long]
 

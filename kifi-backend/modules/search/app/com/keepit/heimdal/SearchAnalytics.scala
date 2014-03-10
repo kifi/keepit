@@ -182,7 +182,7 @@ class SearchAnalytics @Inject() (
     searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
     contextBuilder += ("queryTerms", initialSearchResult.query.split(" ").length)
     contextBuilder += ("queryCharacters", initialSearchResult.query.length)
-    contextBuilder += ("language", initialSearchResult.lang.lang)
+    contextBuilder += ("language", initialSearchResult.lang)
     searchContext.filterByPeople.foreach { filter => contextBuilder += ("filterByPeople", filter) }
     searchContext.filterByTime.foreach { filter => contextBuilder += ("filterByTime", filter) }
 

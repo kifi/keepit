@@ -2,6 +2,7 @@ package com.keepit.search.query.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
+import com.keepit.search.index.Analyzer
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.MediaQuery
 import com.keepit.search.query.SiteQuery
@@ -25,8 +26,10 @@ object QueryExpansion {
 
 trait QueryExpansion extends QueryParser {
 
-  val lang: Lang
-  val useBooleanForPhrase = QueryExpansion.useBooleanForPhrase(lang)
+  val lang: Lang // primary language
+
+  val altAnalyzer: Option[Analyzer]
+  val altStemmingAnalyzer: Option[Analyzer]
 
   val siteBoost: Float
   val concatBoost: Float
@@ -43,18 +46,15 @@ trait QueryExpansion extends QueryParser {
 
   protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Option(SiteQuery(domain)) else None
 
-  private def mayConvertQuery(query: Query): Query = {
-    println("\n\n\t\ttrying convesion...\n\n")
-    if (useBooleanForPhrase) {
+  private def mayConvertQuery(query: Query, language: Lang): Query = {
+    if (QueryExpansion.useBooleanForPhrase(language)) {
       query match {
         case phrase: PhraseQuery =>
           val terms = phrase.getTerms()
           val booleanQuery = new BooleanQuery(false)
           terms.foreach{ term => booleanQuery.add(new TermQuery(term), SHOULD) }
-          println("\n\n\t\tconverted\n\n")
           booleanQuery
         case _ =>
-          println("\n\n\t\tnot converted\n\n")
           query
       }
     } else {
@@ -87,7 +87,7 @@ trait QueryExpansion extends QueryParser {
 
     super.getFieldQuery("t", queryText, quoted).foreach{ q =>
       textQuery.terms = extractTerms(q)
-      val query = if (quoted) q else mayConvertQuery(q)
+      val query = if (quoted) q else mayConvertQuery(q, lang)
       textQuery.addRegularQuery(query)
       textQuery.addRegularQuery(copyFieldQuery(query, "c"))
       textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
@@ -95,15 +95,40 @@ trait QueryExpansion extends QueryParser {
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
+    altAnalyzer.foreach{ alt =>
+      super.getFieldQuery("t", queryText, quoted, alt).foreach{ q =>
+        if (textQuery.terms != extractTerms(q)) {
+          val query = if (quoted) q else mayConvertQuery(q, alt.lang)
+          textQuery.addRegularQuery(query)
+          textQuery.addRegularQuery(copyFieldQuery(query, "c"))
+          textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
+        }
+      }
+    }
+
     getStemmedFieldQuery("ts", queryText).foreach{ q =>
       textQuery.stems = extractTerms(q)
       if(!quoted) {
-        val query = mayConvertQuery(q)
+        val query = mayConvertQuery(q, lang)
         textQuery.addRegularQuery(query)
         textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
         textQuery.addPersonalQuery(copyFieldQuery(query, "title_stemmed"))
       }
     }
+
+    if(!quoted) {
+      altStemmingAnalyzer.foreach{ alt =>
+        getFieldQuery("ts", queryText, false, alt).foreach{ q =>
+        if (textQuery.stems != extractTerms(q)) {
+            val query = mayConvertQuery(q, alt.lang)
+            textQuery.addRegularQuery(query)
+            textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
+            textQuery.addPersonalQuery(copyFieldQuery(query, "title_stemmed"))
+          }
+        }
+      }
+    }
+
     if (textQuery.isEmpty) None else Some(textQuery)
   }
 

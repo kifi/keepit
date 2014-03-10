@@ -61,8 +61,10 @@ object LuceneVersion {
 object DefaultAnalyzer {
   import LuceneVersion.version
 
-  private val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None)
-  private val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None)
+  implicit def langCodeToLang(langCode: String): Lang = Lang(langCode)
+
+  private val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, "en")
+  private val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja")
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
@@ -94,7 +96,7 @@ object DefaultAnalyzer {
     "tr" -> stdAnalyzer.withFilter[TurkishLowerCaseFilter].withStopFilter(_.Turkish)
   ).map{
     case ("ja", analyzer) => "ja" -> analyzer
-    case (lang, analyzer) => lang -> analyzer.withFilter[SymbolDecompounder]
+    case (lang, analyzer) => lang -> analyzer.withFilter[SymbolDecompounder].withLang(lang)
   }
 
   val langAnalyzerWithStemmer = Map[String, Analyzer](
@@ -155,8 +157,11 @@ class JapaneseTokenizerFactory extends TokenizerFactory {
 
 class Analyzer(tokenizerFactory: TokenizerFactory,
                factories: List[TokenFilterFactory],
-               charFilterConstructor: Option[Constructor[CharFilter]]) extends LAnalyzer with Logging {
+               charFilterConstructor: Option[Constructor[CharFilter]],
+               val lang: Lang) extends LAnalyzer with Logging {
   import LuceneVersion.version
+
+  def withLang(newLang: Lang): Analyzer = new Analyzer(tokenizerFactory, factories, charFilterConstructor, newLang)
 
   def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): Analyzer = {
     try {
@@ -177,11 +182,11 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
   def withStopFilter(f: StopFilterFactories=>TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stopFilter))
   def withStemFilter(f: StemFilterFactories=>TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stemFilter))
 
-  def withFilter(factory: TokenFilterFactory): Analyzer = new Analyzer(tokenizerFactory, factory::factories, charFilterConstructor)
+  def withFilter(factory: TokenFilterFactory): Analyzer = new Analyzer(tokenizerFactory, factory::factories, charFilterConstructor, lang)
 
   def withCharFilter[T <: CharFilter](implicit m : ClassTag[T]): Analyzer = {
     val constructor = m.runtimeClass.getConstructor(classOf[Reader]).asInstanceOf[Constructor[CharFilter]]
-    new Analyzer(tokenizerFactory, factories, Some(constructor))
+    new Analyzer(tokenizerFactory, factories, Some(constructor), lang)
   }
 
   override protected def initReader(fieldName: String, reader: Reader): Reader = {
