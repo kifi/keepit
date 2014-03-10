@@ -263,7 +263,9 @@ class RichSocialConnectionRepoImpl @Inject() (
 
   private def sanityCheck(userId: Id[User])(implicit session: RSession): Unit = {
     (for { row <- rows if row.userId === userId } yield row).iterator().foreach { connection =>
-      require(connection.commonKifiFriendsCount <= connection.kifiFriendsCount, s"[WTI] Inconsistent bookeeping on rich connection ${connection.id.get}")
+      if (connection.commonKifiFriendsCount > connection.kifiFriendsCount) {
+        log.error(s"[WTI] Inconsistent bookkeeping on rich connection ${connection}")
+      }
     }
   }
 }
