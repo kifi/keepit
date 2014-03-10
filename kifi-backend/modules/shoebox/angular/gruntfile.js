@@ -62,7 +62,7 @@ module.exports = function (grunt) {
           'lib/moment/moment.js',
           'lib/angular-moment/angular-moment.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
-          'lib/angular-facebook-utils/src/facebookUtils.js'
+          'lib/angular-facebook-api/dist/angular-facebook-api.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
@@ -83,7 +83,7 @@ module.exports = function (grunt) {
           'lib/moment/min/moment.min.js',
           'lib/angular-moment/angular-moment.min.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
-          'lib/angular-facebook-utils/src/facebookUtils.min.js'
+          'lib/angular-facebook-api/dist/angular-facebook-api.min.js'
         ],
         src: 'src',
         common: 'src/common/build-css',

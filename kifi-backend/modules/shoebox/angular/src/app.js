@@ -31,7 +31,7 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
-  'facebookUtils'
+  'jun.facebook'
 ])
 
 // fix for when ng-view is inside of ng-include:
