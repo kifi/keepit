@@ -70,14 +70,6 @@
 .kifi-res-bar-status[href][data-n='1']::after {
   content: 'Top keep for you';
 }
-.kifi-res-bar-status[href][data-n='0'][data-of]::after {
-  content: attr(data-of) ' matching keeps';
-  margin-left: 0;
-  color: #929496;
-}
-.kifi-res-bar-status[href][data-n='0'][data-of='1']::after {
-  content: attr(data-of) ' matching keep';
-}
 .kifi-res-bar:hover>.kifi-res-bar-status[href]::after {
   color: inherit;
 }
@@ -267,29 +259,23 @@ div.kifi-res-menu-item {
 .kifi-filter-all {
   float: left;
 }
-.kifi-filter-all[data-of]::before {
-  content: attr(data-of) ' keeps';
-}
-.kifi-filter-all[data-of='1']::before {
-  content: attr(data-of) ' keep';
-}
 .kifi-filter-all[data-top][href]::before {
   content: attr(data-top) ' top keeps';
 }
 .kifi-filter-all[data-top='1'][href]::before {
   content: attr(data-top) ' top keep';
 }
-.kifi-filter-all[data-of][data-top]:not([href])::before {
-  content: attr(data-top) ' top keeps (out of ' attr(data-of) ' total)';
+.kifi-filter-all[data-top]:not([href])::before {
+  content: attr(data-top) ' top keeps';
 }
-.kifi-filter-all[data-of][data-top='1']:not([href])::before {
-  content: attr(data-top) ' top keep (out of ' attr(data-of) ' total)';
+.kifi-filter-all[data-top='1']:not([href])::before {
+  content: attr(data-top) ' top keep';
 }
-.kifi-filter-all[data-of][data-n]::before {
-  content: attr(data-n) ' of ' attr(data-of) ' keeps';
+.kifi-filter-all[data-n]::before {
+  content: attr(data-n) ' keeps';
 }
-.kifi-filter-all[data-of='1'][data-n]::before {
-  content: attr(data-n) ' of ' attr(data-of) ' keep';
+.kifi-filter-all[data-n='1']::before {
+  content: attr(data-n) ' keep';
 }
 .kifi-filter-yours::after,
 .kifi-filter-friends::after {

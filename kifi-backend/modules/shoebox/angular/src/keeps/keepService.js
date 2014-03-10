@@ -494,7 +494,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             }
           };
 
-        $log.log('keepService.find()', data, +new Date());
+        $log.log('keepService.find()', data);
 
         return $http.get(url, data).then(function (res) {
           var data = res.data,
