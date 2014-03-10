@@ -53,19 +53,22 @@ angular.module('kifi', [
   }
 ])
 
-.config([
-  '$FBProvider',
-  function ($FBProvider) {
-    $FBProvider
-      .appId('530357056981814')
-      //.appId(dev ? '530357056981814' : '104629159695560')
-      .cookie(true);
-  }
-])
-
 .constant('linkedinConfigSettings', {
   appKey: 'r11loldy9zlg'
 })
+
+.config([
+  '$FBProvider',
+  function ($FBProvider) {
+    /* global window */
+    // We cannot inject `env` here since factories are not available in config blocks
+    var host = window.location.host || window.location.hostname,
+      dev = /^dev\.ezkeep\.com|localhost$/.test(host);
+    $FBProvider
+      .appId(dev ? '530357056981814' : '104629159695560')
+      .cookie(true);
+  }
+])
 
 .factory('env', [
   '$location',
