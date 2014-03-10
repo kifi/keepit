@@ -166,7 +166,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val prof = searcher.getDecodedDocValue[String](URIGraphFields.langProfField, myUserId.id)((arr, offset, length) => new String(arr, offset, length))
     prof match {
       case Some(prof) =>
-        prof.split(",").map{ p =>
+        prof.split(",").filter(_.indexOf(":") > 0).map{ p =>
           val len = p.indexOf(":")
           (Lang(p.substring(0, len)) -> p.substring(len + 1).toInt)
         }.toMap
