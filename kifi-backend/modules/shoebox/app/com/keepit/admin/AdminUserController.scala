@@ -1,13 +1,12 @@
 package com.keepit.controllers.admin
 
-import scala.Some
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{AuthCommander, UserCommander}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
 import com.keepit.common.db._
@@ -36,6 +35,7 @@ import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import com.keepit.typeahead.abook.EContactTypeahead
+import securesocial.core.Registry
 
 case class UserStatistics(
     user: User,
@@ -98,7 +98,8 @@ class AdminUserController @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
-    heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
+    heimdal: HeimdalServiceClient,
+    authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 
@@ -715,4 +716,48 @@ class AdminUserController @Inject() (
     }
   }
 
+  def fixMissingFortyTwoSocialUsers(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    val toBeCreated = db.readOnly { implicit s =>
+      val allUsers = userRepo.getAllActiveIds()
+      allUsers.flatMap { userId =>
+        val (fortytwoUser, otherSocialUsers) = socialUserInfoRepo.getByUser(userId).partition(_.networkType == SocialNetworks.FORTYTWO)
+        if (fortytwoUser.isEmpty) Some(otherSocialUsers.head) else None
+      }
+    }
+
+    if (!readOnly) {
+      toBeCreated.foreach { sui =>
+        val currentHasher = Registry.hashers.currentHasher
+        val pInfo = currentHasher.hash(ExternalId[Nothing]().toString)
+        authCommander.saveUserPasswordIdentity(
+          userIdOpt = Some(sui.userId.get),
+          identityOpt = sui.credentials,
+          email = sui.credentials.get.email.get,
+          passwordInfo = pInfo,
+          firstName = sui.credentials.get.firstName,
+          lastName = sui.credentials.get.lastName,
+          isComplete = true
+        )
+      }
+    }
+    Ok(Json.toJson(toBeCreated))
+  }}
+
+  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    val toBeCreated = db.readWrite { implicit session =>
+      userConnectionRepo.all().collect { case activeConnection if activeConnection.state == UserConnectionStates.ACTIVE =>
+        val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+        val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+        if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
+          if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
+          Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
+        } else None
+      }.flatten
+    }
+
+    implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
+    implicit val userIdFormat = Id.format[User]
+    val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
+    Ok(json)
+  }}
 }
