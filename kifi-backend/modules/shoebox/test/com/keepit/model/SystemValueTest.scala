@@ -24,7 +24,7 @@ class SystemValueTest extends Specification with ShoeboxTestInjector {
 
         db.readOnly { implicit s =>
           systemValueRepo.getValue(test).isDefined === true
-          systemValueRepo.valueCache.get(SystemValueKey(test)).get === "this right here!"
+          // systemValueRepo.valueCache.get(SystemValueKey(test)).get === "this right here!"
         }
         db.readWrite { implicit s =>
           systemValueRepo.save(systemValueRepo.get(value.id.get).withState(SystemValueStates.INACTIVE))
@@ -42,9 +42,9 @@ class SystemValueTest extends Specification with ShoeboxTestInjector {
         } should throwAn[IllegalStateException]
 
         db.readOnly { implicit s => systemValueRepo.getValue(test) } === Some("this right here!")
-        sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s => systemValueRepo.getValue(test) } === Some("this right here!")
-        }
+        // sessionProvider.doWithoutCreatingSessions {
+        //   db.readOnly { implicit s => systemValueRepo.getValue(test) } === Some("this right here!")
+        // }
       }
     }
   }
