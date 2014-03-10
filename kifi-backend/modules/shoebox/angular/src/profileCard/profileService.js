@@ -174,7 +174,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       });
     }
 
-    function updateFacebookStatus() {
+    function getFacebookStatus() {
       return $FB.getLoginStatus().then(function (res) {
         me.facebookStatusResponse = res;
         me.facebookStatus = res.status;
@@ -199,7 +199,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
       sendChangePassword: sendChangePassword,
-      updateFacebookStatus: updateFacebookStatus
+      getFacebookStatus: getFacebookStatus
     };
   }
 ]);

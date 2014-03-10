@@ -31,7 +31,7 @@ angular.module('kifi.profile', [
       $scope.me = data;
     });
 
-    profileService.updateFacebookStatus();
+    profileService.getFacebookStatus();
 
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
