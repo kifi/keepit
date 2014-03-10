@@ -1515,7 +1515,6 @@ function searchOnServer(request, respond) {
     resp.admBaseUri = admBaseUri();
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
-    resp.othersTotal = resp.othersTotal || 0;
     resp.hits.forEach(processSearchHit);
     if (resp.hits.length < maxHits && (params.context || params.f)) {
       resp.mayHaveMore = false;
