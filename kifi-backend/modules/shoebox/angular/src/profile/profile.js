@@ -7,7 +7,8 @@ angular.module('kifi.profile', [
   'kifi.profileInput',
   'kifi.routeService',
   'kifi.profileEmailAddresses',
-  'kifi.profileChangePassword'
+  'kifi.profileChangePassword',
+  'jun.facebook'
 ])
 
 .config([
@@ -21,8 +22,15 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService',
-  function ($scope, $http, profileService, routeService) {
+  '$scope', '$http', 'profileService', 'routeService', '$FB',
+  function ($scope, $http, profileService, routeService, $FB) {
+
+    console.log('$FB', $FB);
+    $FB.getLoginStatus().then(function (res) {
+      console.log('getLoginStatus.success', res);
+    }, function (err) {
+      console.log('getLoginStatus.error', err);
+    });
 
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};

@@ -57,7 +57,7 @@ angular.module('kifi', [
   '$FBProvider',
   function ($FBProvider) {
     $FBProvider
-      .appId(104629159695560)
+      .appId('104629159695560')
       .cookie(true);
   }
 ])
