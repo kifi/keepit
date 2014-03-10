@@ -95,6 +95,7 @@ class LocalRichConnectionCommander @Inject() (
   }
 
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = synchronized {
+    log.info(s"[WTI] Processing $message")
     try {
       message match {
         case InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
