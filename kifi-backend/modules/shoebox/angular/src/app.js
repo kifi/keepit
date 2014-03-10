@@ -53,9 +53,14 @@ angular.module('kifi', [
   }
 ])
 
-.constant('facebookConfigSettings', {
-  appID: '104629159695560'
-})
+.config([
+  '$FBProvider',
+  function ($FBProvider) {
+    $FBProvider
+      .appId(104629159695560)
+      .cookie(true);
+  }
+])
 
 .constant('linkedinConfigSettings', {
   appKey: 'r11loldy9zlg'
