@@ -95,18 +95,28 @@ class MobileMessagingController @Inject() (
       Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
         val participants: Set[BasicUserLikeEntity] = completeMsgs.map(_.participants).flatten.toSet
         Ok(Json.obj(
-        "id" -> threadId,
-        "uri" -> url,
-        "nUrl" -> nUrl,
-        "participants" -> participants,
-        "messages" -> (completeMsgs.reverse map { m =>
-          Json.obj(
-            "id" -> m.id.toString,
-            "time" -> m.createdAt.getMillis,
-            "text" -> m.text,
-            "userId" -> m.user.map(_.externalId.toString)
-          )
-        })))
+          "id" -> threadId,
+          "uri" -> url,
+          "nUrl" -> nUrl,
+          "participants" -> participants,
+          "messages" -> (completeMsgs.reverse map { m =>
+            val added: Option[Seq[String]] = m.auxData match {
+              case Some(JsArray(Seq(JsString("add_participants"), _, addedBasicUsers))) => Some(addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id))
+              case _ => None
+            }
+            val msgJson = Json.obj(
+              "id" -> m.id.toString,
+              "time" -> m.createdAt.getMillis,
+              "text" -> m.text,
+              "userId" -> m.user.map(_.externalId.toString)
+            )
+            added.map { seq =>
+              msgJson.deepMerge(Json.obj("added" -> seq))
+            } getOrElse{
+              msgJson
+            }
+          })
+        ))
       }
     }
   }
