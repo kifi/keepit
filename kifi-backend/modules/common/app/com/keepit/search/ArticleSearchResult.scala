@@ -42,7 +42,7 @@ case class ArticleSearchResult(
   svExistenceVar: Float = -1.0f,
   toShow: Boolean = true,
   collections: Set[Long] = Set.empty[Long],
-  lang: Lang = Lang("en"))
+  lang: String = "en")
 
 object ArticleSearchResult extends Logging {
   implicit val format: Format[ArticleSearchResult] = (
@@ -64,7 +64,7 @@ object ArticleSearchResult extends Logging {
     (__ \ 'svExistenceVar).format[Float] and
     (__ \ 'toShow).formatNullable[Boolean].inmap(_.getOrElse(true), Some.apply[Boolean]) and
     (__ \ 'collections).format[Set[Long]] and
-    (__ \ 'lang).format[Lang]
+    (__ \ 'lang).format[String]
   )(ArticleSearchResult.apply, unlift(ArticleSearchResult.unapply))
 }
 

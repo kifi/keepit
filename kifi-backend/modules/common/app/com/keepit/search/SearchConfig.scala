@@ -6,9 +6,6 @@ import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ExperimentType, UserExperimentGenerator, User}
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.query.QueryHash
-import com.keepit.search.query.StringHash64
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -101,8 +98,6 @@ object SearchConfig {
 }
 
 class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging {
-
-  private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Unit](ttl = 30 seconds)
   @volatile private[this] var _activeExperiments: Map[ExperimentType, SearchConfig] = Map()

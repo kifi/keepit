@@ -93,14 +93,16 @@ class SearchCommanderImpl @Inject() (
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // TODO: use user profile info as a bias
-    val lang = LangDetector.detectShortText(query, getLangsPriorProbabilities(acceptLangs))
+    val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
 
     val mergedResult = {
       timing.factory
       val future = Future.traverse(shards.shards){ shard =>
-        val searcher = mainSearcherFactory(shard, userId, query, lang, maxHits, searchFilter, config)
-        debug.foreach{ searcher.debug(_) }
-        SafeFuture{ searcher.search() }
+        SafeFuture{
+          val searcher = mainSearcherFactory(shard, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+          debug.foreach{ searcher.debug(_) }
+          searcher.search()
+        }
       }
 
       timing.search
@@ -116,7 +118,7 @@ class SearchCommanderImpl @Inject() (
     val res = ResultDecorator.decorate(
       userId,
       query,
-      lang,
+      firstLang,
       mergedResult,
       mayHaveMoreHits,
       searchExperimentId,
@@ -132,6 +134,7 @@ class SearchCommanderImpl @Inject() (
 
       val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val numPreviousHits = searchFilter.idFilter.size
+      val lang = firstLang.lang + secondLang.map("," + _.lang).getOrElse("")
       val articleSearchResult = ResultUtil.toArticleSearchResult(
         res.uuid,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
@@ -171,6 +174,51 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
+  private def getLangs(userId: Id[User], query: String, acceptLangCodes: Seq[String]): (Lang, Option[Lang]) = {
+    def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
+      val numberOfLangs = majorLangs.size
+      val eachLangProb = (majorLangProb / numberOfLangs)
+      majorLangs.map(_ -> eachLangProb).toMap
+    }
+
+    // TODO: use user profile info as a bias
+    val acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
+      val lang = code.substring(0,2)
+      if (lang == "zh") Set(Lang("zh-cn"), Lang("zh-tw")) else Set(Lang(lang))
+    }
+    val langProf = getLangProfile(userId, 3)
+    println(s"\n\t\t langProf=$langProf \n")
+    val firstLangSet = acceptLangs ++ langProf.keySet
+
+    val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(firstLangSet, 0.9d))
+    val secondLangSet = (firstLangSet - firstLang)
+    val secondLang = if (secondLangSet.nonEmpty) {
+      Some(LangDetector.detectShortText(query, getLangsPriorProbabilities(secondLangSet, 1.0d)))
+    } else {
+      None
+    }
+    (firstLang, secondLang)
+  }
+
+  private def getLangProfile(userId: Id[User], limit: Int): Map[Lang, Float] = { // todo: cache
+    val future = Future.traverse(shards.shards){ shard =>
+      SafeFuture{
+        val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
+        searcher.getLangProfile()
+      }
+    }
+    val results = monitoredAwait.result(future, 10 seconds, "slow getting lang profile")
+    val total = results.map(_.values.sum).sum.toFloat
+    if (total > 0) {
+      val newProf = results.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
+        m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f).toFloat))
+      }
+      newProf.filter{ case (_, prob) => prob > 0.1f }.toSeq.sortBy(p => - p._2).take(limit).toMap
+    } else {
+      Map()
+    }
+  }
+
   private def getSearchFilter(
     userId: Id[User],
     filter: Option[String],
@@ -197,18 +245,6 @@ class SearchCommanderImpl @Inject() (
         if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
         else SearchFilter.default(context)
     }
-  }
-
-  private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
-    val majorLangs = acceptLangs.toSet.flatMap{ code: String =>
-      val lang = code.substring(0,2)
-      if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
-    } + "en" // always include English
-
-    val majorLangProb = 0.99999d
-    val numberOfLangs = majorLangs.size
-    val eachLangProb = (majorLangProb / numberOfLangs)
-    majorLangs.map{ (Lang(_) -> eachLangProb) }.toMap
   }
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
