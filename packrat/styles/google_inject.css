@@ -70,9 +70,13 @@
 .kifi-res-bar-status[href][data-n='1']::after {
   content: 'Top keep for you';
 }
-.kifi-res-bar-status[href][data-n='0']::after {
-  content: 'No matching keeps';
+.kifi-res-bar-status[href][data-n='0'][data-of]::after {
+  content: attr(data-of) ' matching keeps';
+  margin-left: 0;
   color: #929496;
+}
+.kifi-res-bar-status[href][data-n='0'][data-of='1']::after {
+  content: attr(data-of) ' matching keep';
 }
 .kifi-res-bar:hover>.kifi-res-bar-status[href]::after {
   color: inherit;
