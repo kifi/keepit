@@ -717,30 +717,26 @@ class AdminUserController @Inject() (
   }
 
   def fixMissingFortyTwoSocialUsers(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    val toBeCreated = db.readOnly { implicit s =>
-      val allUsers = userRepo.getAllActiveIds()
-      allUsers.flatMap { userId =>
-        val (fortytwoUser, otherSocialUsers) = socialUserInfoRepo.getByUser(userId).partition(_.networkType == SocialNetworks.FORTYTWO)
-        if (fortytwoUser.isEmpty) Some(otherSocialUsers.head) else None
-      }
+    val problematicUsers = db.readOnly { implicit s =>
+      userRepo.all().filter(user => !socialUserInfoRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO))
     }
 
     if (!readOnly) {
-      toBeCreated.foreach { sui =>
+      problematicUsers.foreach { user =>
         val currentHasher = Registry.hashers.currentHasher
         val pInfo = currentHasher.hash(ExternalId[Nothing]().toString)
         authCommander.saveUserPasswordIdentity(
-          userIdOpt = Some(sui.userId.get),
-          identityOpt = sui.credentials,
-          email = sui.credentials.get.email.get,
+          userIdOpt = Some(user.id.get),
+          identityOpt = None,
+          email = db.readOnly { implicit session => emailRepo.getByUser(user.id.get).address },
           passwordInfo = pInfo,
-          firstName = sui.credentials.get.firstName,
-          lastName = sui.credentials.get.lastName,
+          firstName = user.firstName,
+          lastName = user.lastName,
           isComplete = true
         )
       }
     }
-    Ok(Json.toJson(toBeCreated))
+    Ok(Json.toJson(problematicUsers))
   }}
 
   def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
