@@ -60,12 +60,16 @@ angular.module('kifi', [
 .config([
   '$FBProvider',
   function ($FBProvider) {
+    // We cannot inject `env` here since factories are not yet available in config blocks
+    // We can make `env` a constant if we want to remove duplicate codes, but
+    // then we cannot use $location inside `env` initialization
     /* global window */
-    // We cannot inject `env` here since factories are not available in config blocks
     var host = window.location.host || window.location.hostname,
       dev = /^dev\.ezkeep\.com|localhost$/.test(host);
     $FBProvider
       .appId(dev ? '530357056981814' : '104629159695560')
+      // https://developers.facebook.com/docs/facebook-login/permissions
+      .scope('email')
       .cookie(true);
   }
 ])

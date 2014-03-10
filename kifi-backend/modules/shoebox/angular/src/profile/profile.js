@@ -22,22 +22,16 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$FB',
-  function ($scope, $http, profileService, routeService, $FB) {
-
-    console.log('$FB', $FB);
-    $FB.getLoginStatus().then(function (res) {
-      console.log('getLoginStatus.success', res);
-    }, function (err) {
-      console.log('getLoginStatus.error', err);
-    });
-
+  '$scope', '$http', 'profileService', 'routeService',
+  function ($scope, $http, profileService, routeService) {
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
 
     profileService.getMe().then(function (data) {
       $scope.me = data;
     });
+
+    profileService.updateFacebookStatus();
 
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {
