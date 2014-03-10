@@ -9,6 +9,7 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType}
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.KestrelCombinator
 
 
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])
@@ -27,8 +28,8 @@ trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
 @Singleton
 class RichSocialConnectionRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock)
-  extends DbRepo[RichSocialConnection] with RichSocialConnectionRepo {
+    val clock: Clock
+) extends DbRepo[RichSocialConnection] with RichSocialConnectionRepo {
 
   import db.Driver.simple._
 
@@ -111,7 +112,7 @@ class RichSocialConnectionRepoImpl @Inject() (
         ))
       }
     }
-  }
+  } tap { _ => sanityCheck(userId) }
 
   def removeRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo])(implicit session: RWSession): Unit = {
     getByUserAndSocialFriend(userId, Left(friend)) match {
@@ -258,5 +259,13 @@ class RichSocialConnectionRepoImpl @Inject() (
         SELECT friend_name FROM rich_social_connection WHERE user_id=$user AND friend_user_id is NOT NULL
       ) ORDER BY kifi_friends_count DESC LIMIT $howMany
     """.as[(Id[SocialUserInfo], Long)].list().map(_._1)
+  }
+
+  private def sanityCheck(userId: Id[User])(implicit session: RSession): Unit = {
+    (for { row <- rows if row.userId === userId } yield row).iterator().foreach { connection =>
+      if (connection.commonKifiFriendsCount > connection.kifiFriendsCount) {
+        log.error(s"[WTI] Inconsistent bookkeeping on rich connection ${connection}")
+      }
+    }
   }
 }
