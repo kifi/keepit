@@ -12,22 +12,29 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
     val kifiLéo = Id[User](134)
     val facebookLéo = Id[SocialUserInfo](53716)
+    val fortytwoLéo = SocialUserInfo(
+      id = Some(Id(260178)),
+      socialId = SocialId("iDoNotMatter"),
+      userId = Some(kifiLéo),
+      networkType = SocialNetworks.FORTYTWO,
+      fullName = "Léo Grimaldi"
+    )
 
     val kifiStephen = Id[User](243)
     val facebookStephen = Id[SocialUserInfo](94667)
-
-    val léoFacebookFriend = SocialUserInfo(
-      id = Some(Id(12)),
+    val fortytwoStephen = SocialUserInfo(
+      id = Some(Id(260283)),
       socialId = SocialId("iDoNotMatter"),
-      networkType = SocialNetworks.FACEBOOK,
-      fullName = "Le Douze"
+      userId = Some(kifiStephen),
+      networkType = SocialNetworks.FORTYTWO,
+      fullName = "Stephen Kemmerling"
     )
 
-    val stephenFacebookFriend = SocialUserInfo(
-      id = Some(Id(22)),
+    val facebookEishay = SocialUserInfo(
+      id = Some(Id(1)),
       socialId = SocialId("iDoNotMatter"),
       networkType = SocialNetworks.FACEBOOK,
-      fullName = "How do you say 22 in German?"
+      fullName = "Eishay Smith"
     )
 
     val facebookMarvin = SocialUserInfo(
@@ -55,10 +62,56 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, Some(facebookLéo), Left(facebookMarvin)) === léoToMarvin
-        richConnectionRepo.getByUserAndFriend(kifiLéo, Left(facebookMarvin.id.get)) === Some(léoToMarvin)
+        richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)) === Some(léoToMarvin)
       }
     }
 
+    "increment friends counts on new social connections with no existing kifi connection" in {
+      val stephenToMarvin = db.readWrite { implicit session =>
+        richConnectionRepo.internRichConnection(kifiStephen, Some(facebookStephen), Left(facebookMarvin))
+      }
+
+      stephenToMarvin.kifiFriendsCount === 2
+      stephenToMarvin.commonKifiFriendsCount === 0
+
+      val léoToMarvin = db.readOnly { implicit session => richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get }
+      léoToMarvin.kifiFriendsCount === 2
+      léoToMarvin.commonKifiFriendsCount === 0
+    }
+
+    "increment friends counts on new kifi connections" in {
+      db.readWrite { implicit session =>
+        richConnectionRepo.internRichConnection(kifiLéo, fortytwoLéo.id, Left(fortytwoStephen))
+        richConnectionRepo.internRichConnection(kifiStephen, fortytwoStephen.id, Left(fortytwoLéo))
+      }
+
+      db.readOnly { implicit session =>
+        val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
+        val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
+        stephenToMarvin.kifiFriendsCount === 2
+        stephenToMarvin.commonKifiFriendsCount === 1
+        léoToMarvin.kifiFriendsCount === 2
+        léoToMarvin.commonKifiFriendsCount === 1
+      }
+    }
+
+    "increment friends counts on new social connections with existing kifi connection" in {
+      val stephenToEishay = db.readWrite { implicit session =>
+        richConnectionRepo.internRichConnection(kifiStephen, Some(facebookStephen), Left(facebookEishay))
+      }
+      stephenToEishay.kifiFriendsCount === 1
+      stephenToEishay.commonKifiFriendsCount === 0
+
+      val léoToEishay = db.readWrite { implicit session =>
+        richConnectionRepo.internRichConnection(kifiLéo, Some(facebookLéo), Left(facebookEishay))
+      }
+      léoToEishay.kifiFriendsCount === 2
+      léoToEishay.commonKifiFriendsCount === 1
+
+      val updatedStephenToEishay = db.readOnly { implicit session => richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookEishay.id.get)).get }
+      updatedStephenToEishay.kifiFriendsCount === 2
+      updatedStephenToEishay.commonKifiFriendsCount === 1
+    }
 
     "intern and retrieve rich social email connections" in {
 
@@ -78,33 +131,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, None, Right(contact42)) === léoToGrassfed42
-        richConnectionRepo.getByUserAndFriend(kifiLéo, Right(contact42.email)) === Some(léoToGrassfed42)
-      }
-    }
-
-    "increment friends counts on new social connections" in {
-      val stephenToMarvin = db.readWrite { implicit session =>
-        richConnectionRepo.internRichConnection(kifiStephen, Some(facebookStephen), Left(facebookMarvin))
-      }
-
-      stephenToMarvin.kifiFriendsCount === 2
-      stephenToMarvin.commonKifiFriendsCount === 0
-
-      val léoToMarvin = db.readOnly { implicit session => richConnectionRepo.getByUserAndFriend(kifiLéo, Left(facebookMarvin.id.get)).get }
-      léoToMarvin.kifiFriendsCount === 2
-      léoToMarvin.commonKifiFriendsCount === 0
-    }
-
-    "increment friends counts on new kifi connections" in {
-      db.readWrite { implicit session => richConnectionRepo.recordKifiConnection(kifiLéo, kifiStephen) }
-
-      db.readOnly { implicit session =>
-        val léoToMarvin = richConnectionRepo.getByUserAndFriend(kifiLéo, Left(facebookMarvin.id.get)).get
-        val stephenToMarvin = richConnectionRepo.getByUserAndFriend(kifiStephen, Left(facebookMarvin.id.get)).get
-        stephenToMarvin.kifiFriendsCount === 2
-        stephenToMarvin.commonKifiFriendsCount === 1
-        léoToMarvin.kifiFriendsCount === 2
-        léoToMarvin.commonKifiFriendsCount === 1
+        richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(contact42.email)) === Some(léoToGrassfed42)
       }
     }
 
@@ -113,11 +140,11 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, léoToMarvinInvitation, Left(facebookMarvin.id.get)) }
 
       db.readOnly { implicit session =>
-        val stephenToMarvin = richConnectionRepo.getByUserAndFriend(kifiStephen, Left(facebookMarvin.id.get)).get
+        val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
         stephenToMarvin.invitation === None
         stephenToMarvin.invitationCount === 1
 
-        val léoToMarvin = richConnectionRepo.getByUserAndFriend(kifiLéo, Left(facebookMarvin.id.get)).get
+        val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
         léoToMarvin.invitation === Some(léoToMarvinInvitation)
         léoToMarvin.invitationCount === 1
       }
@@ -126,11 +153,11 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiStephen, stephenToMarvinInvitation, Left(facebookMarvin.id.get)) }
 
       db.readOnly { implicit session =>
-        val stephenToMarvin = richConnectionRepo.getByUserAndFriend(kifiStephen, Left(facebookMarvin.id.get)).get
+        val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
         stephenToMarvin.invitation === Some(stephenToMarvinInvitation)
         stephenToMarvin.invitationCount === 2
 
-        val léoToMarvin = richConnectionRepo.getByUserAndFriend(kifiLéo, Left(facebookMarvin.id.get)).get
+        val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
         léoToMarvin.invitation === Some(léoToMarvinInvitation)
         léoToMarvin.invitationCount === 2
       }
@@ -139,11 +166,11 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, léoToGrassfed42Invitation, Right(contact42.email)) }
 
       db.readOnly { implicit session =>
-        val léoToGrassfed42 = richConnectionRepo.getByUserAndFriend(kifiLéo, Right(contact42.email)).get
+        val léoToGrassfed42 = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(contact42.email)).get
         léoToGrassfed42.invitation === Some(léoToGrassfed42Invitation)
         léoToGrassfed42.invitationCount === 1
 
-        val léoToMarvin = richConnectionRepo.getByUserAndFriend(kifiLéo, Left(facebookMarvin.id.get)).get
+        val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
         léoToMarvin.invitation === Some(léoToMarvinInvitation)
         léoToMarvin.invitationCount === 2
       }
