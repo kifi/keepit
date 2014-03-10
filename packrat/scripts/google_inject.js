@@ -166,7 +166,6 @@ if (searchUrlRe.test(document.URL)) !function () {
 
       if (!newFilter || newFilter.who === 'a') {
         var numTop = resp.numTop = resp.show ? resp.hits.length : 0;
-        var allTotal = insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal);
         if (!newFilter) {
           $status
             .attr('data-n', numTop)
