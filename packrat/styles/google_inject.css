@@ -72,6 +72,7 @@
 }
 .kifi-res-bar-status[href][data-n='0']::after {
   content: 'No matching keeps';
+  margin-left: 0;
   color: #929496;
 }
 .kifi-res-bar:hover>.kifi-res-bar-status[href]::after {
