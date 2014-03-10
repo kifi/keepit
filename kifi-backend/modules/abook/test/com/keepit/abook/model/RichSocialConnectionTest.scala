@@ -16,20 +16,6 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
     val kifiStephen = Id[User](243)
     val facebookStephen = Id[SocialUserInfo](94667)
 
-    val léoFacebookFriend = SocialUserInfo(
-      id = Some(Id(12)),
-      socialId = SocialId("iDoNotMatter"),
-      networkType = SocialNetworks.FACEBOOK,
-      fullName = "Le Douze"
-    )
-
-    val stephenFacebookFriend = SocialUserInfo(
-      id = Some(Id(22)),
-      socialId = SocialId("iDoNotMatter"),
-      networkType = SocialNetworks.FACEBOOK,
-      fullName = "How do you say 22 in German?"
-    )
-
     val facebookMarvin = SocialUserInfo(
       id = Some(Id(42)),
       socialId = SocialId("iDoNotMatter"),
