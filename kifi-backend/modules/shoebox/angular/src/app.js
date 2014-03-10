@@ -57,6 +57,10 @@ angular.module('kifi', [
   appID: '104629159695560'
 })
 
+.constant('linkedinConfigSettings', {
+  appKey: 'r11loldy9zlg'
+})
+
 .factory('env', [
   '$location',
   function ($location) {

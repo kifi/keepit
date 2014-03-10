@@ -34,7 +34,8 @@
     "antiscroll": "*",
     "angular-smart-scroll": "*",
     "underscore.string": "~2.3.3",
-    "angular-facebook-utils": "~1.1.0"
+    "angular-facebook-utils": "~1.1.0",
+    "angular-facebook-api": "*"
   },
   "devDependencies": {
     "angular-mocks": "1.2.x"
