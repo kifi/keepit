@@ -231,7 +231,7 @@ class ShoeboxController @Inject() (
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
-    require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
+    require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
