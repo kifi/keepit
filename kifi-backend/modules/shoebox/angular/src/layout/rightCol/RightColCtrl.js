@@ -5,11 +5,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
   function ($scope, $element, $window, profileService, $q, $http, env, $timeout) {
-    $scope.data = {};
+    $scope.data = $scope.data || {};
 
     // onboarding.js is using these functions
     $window.getMe = function () {
-      return (profileService.me ? $q.when(profileService.me) : profileService.fetchMe()).done(function (me) {
+      return (profileService.me ? $q.when(profileService.me) : profileService.fetchMe()).then(function (me) {
         me.pic200 = me.picUrl;
         return me;
       });

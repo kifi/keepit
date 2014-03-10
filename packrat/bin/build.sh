@@ -58,8 +58,8 @@ for f in $(find out/chrome/scripts -name '*.js' -not -path '*/iframes/*'); do
   echo "api.injected['${f:11}']=1;"$'\n'"//@ sourceURL=http://kifi/${f:19}" >> $f
 done
 
-cp main.js threadlist.js lzstring.min.js scorefilter.js out/chrome/
-cp main.js threadlist.js lzstring.min.js scorefilter.js out/firefox/lib/
+cp main.js threadlist.js lzstring.min.js scorefilter.js friend_search_cache.js out/chrome/
+cp main.js threadlist.js lzstring.min.js scorefilter.js friend_search_cache.js out/firefox/lib/
 
 matches=()
 cssDeps=()

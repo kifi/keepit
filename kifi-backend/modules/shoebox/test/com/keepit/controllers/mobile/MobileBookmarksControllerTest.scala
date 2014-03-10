@@ -44,6 +44,8 @@ import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
 
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import com.google.inject.Injector
+import com.keepit.common.db.slick.DBSession.RSession
 
 class MobileBookmarksControllerTest extends Specification with ApplicationInjector {
 
@@ -80,6 +82,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
     }
   }
 
+  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
+
   "remove tag" in {
     running(new ShoeboxApplication(controllerTestModules:_*)) {
       val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -95,9 +99,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite {implicit s =>
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-        val normalizationService = inject[NormalizationService]
-        val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-        val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
+        val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+        val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
@@ -164,9 +167,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
 
         uriRepo.count === 0
-        val normalizationService = inject[NormalizationService]
-        val uri1 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/"), Some("Google")))
-        val uri2 = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.amazon.com/"), Some("Amazon")))
+        val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+        val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
 
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
@@ -236,7 +238,6 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
 
         uriRepo.count === 0
-        val normalizationService = inject[NormalizationService]
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::

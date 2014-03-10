@@ -119,16 +119,15 @@ input.profile-input-input
   margin: 0
   width: 100%
   color: #818691
-  background-color: #e2edfb
-  padding: 6px 7px
+  padding: 6px 0
+  background-color: transparent
   box-sizing: border-box
   transition: all .3s ease
 
-.profile-input-placeholder
-input.profile-input-input:disabled
-  padding-left: 0
-  padding-right: 0
-  background-color: transparent
+input.profile-input-input:focus
+  padding-left: 7px
+  padding-right: 7px
+  background-color: #e2edfb
 
 .input-error
   position: absolute
@@ -236,13 +235,10 @@ a.profile-email-pending-cancel
 .profile-email-address-pending-email
   color: #777c87
 
-.profile-email-addresses-arrow
-.profile-change-password-arrow
+.profile-setting-arrow-right
+.profile-setting-arrow-down
   display: block
-  background-image: url(../img/arrow-gray-right.png)
   background-repeat: no-repeat
-  background-position: 4px 4px
-  background-size: 6px 10px
   float: left
   width: 10px
   height: 10px
@@ -250,26 +246,15 @@ a.profile-email-pending-cancel
   padding-right: 2px
   vertical-align: middle
 
-.profile-email-addresses.opened .profile-email-addresses-arrow
-.profile-change-password.opened .profile-change-password-arrow
+.profile-setting-arrow-right
+  background-image: url(../img/arrow-gray-right.png)
+  background-position: 4px 4px
+  background-size: 6px 10px
+
+.profile-setting-arrow-down
   background-image: url(../img/arrow-gray-down.png)
   background-size: 10px 6px
   background-position: 0 7px
-
-.profile-email-address-manage
-  display: none
-
-  .profile-email-addresses.opened &
-    display: block
-
-.profile-email-address-add-box
-  display: none
-
-  .profile-email-address-manage.add &
-    display: block
-
-.profile-email-address-manage.add .profile-email-address-add
-  display: none
 
 a.profile-email-addresses-title-wrapper
   display: block
@@ -303,38 +288,12 @@ a.profile-email-address-add
   position: relative
   padding: 4px 0
 
-  &.primary-email .profile-email-address-item-email
-    font-weight: bold
-
 .profile-email-address-item-primary
-  display: none
-
-.profile-email-address-item.primary-email .profile-email-address-item-primary
-  display: inline
-
-.profile-email-address-item.primary-email .profile-email-address-item-arrow
-  display: none
-
-.profile-email-address-item.verified-email .profile-email-address-item-unverified
-  display: none
-
 .profile-email-address-item-pending-primary
-  display: none
-
-.profile-email-address-item.pending-primary-email .profile-email-address-item-pending-primary
   display: inline
 
-.profile-email-address-item.primary-email .profile-email-address-item-pending-primary
-  display: none
-
-.profile-email-address-item .profile-email-address-item-make-primary
-  display: none
-
-.profile-email-address-item.verified-email .profile-email-address-item-make-primary
-  display: block
-
-.profile-email-address-item.pending-primary-email .profile-email-address-item-make-primary
-  display: none
+.profile-email-address-item-email-important
+  font-weight: bold
 
 .profile-email-address-item-unverified a
   color: #a7aaa9
@@ -359,16 +318,13 @@ a.profile-email-address-add
   cursor: pointer
 
 .profile-email-address-item-dropdown
-  display: none
   position: absolute
   top: 100%
   right: -1px
   background: white
   border: 1px solid #cccccc
   z-index: 1
-
-  .profile-email-address-item-arrow.opened &
-    display: block
+  display: block
 
   & a
     display: block
@@ -439,7 +395,6 @@ a.profile-change-password-title-wrapper
   letter-spacing: 0.8px
 
 .profile-change-password-change
-  display: none
   margin-left: 17px
 
   .profile-change-password.opened &
@@ -454,6 +409,7 @@ a.profile-change-password-save
   display: inline-block
   width: 132px
   padding: 6px 0
+  margin: 10px 0
   color: white
   background-color: #b8c5d1
   border-radius: 2px
@@ -464,18 +420,17 @@ a.profile-change-password-save
     background-color: #C5D2DE
 
 .profile-change-password-message
-  color: #333
-  margin-left: 20px
-  display: none
+.profile-change-password-error
 
-.profile-change-password span.error
+.profile-change-password-message
+  color: #333
+
+.profile-change-password-error
   color: #ed7071
 
 .profile-change-password-success
+  margin-left: 16px
   color: #b7ce84
-  margin-left: 17px
-  position: absolute
-  display: none
 
 .profile-section
   padding: 20px 0 20px 27px

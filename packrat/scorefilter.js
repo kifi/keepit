@@ -8,21 +8,19 @@
 
   var WORD_DELIMITER = /[\s,.]+/;
   var WORD_DELIMITER_CAPTURING = /([\s,.]+)/;
-  var LOCALE_COMPARE_OPTIONS = {
-    usage: 'search',
-    sensitivity: 'base'
-  };
-
-  function localeEquals(str1, str2) {
-    return str1.localeCompare(str2, void 0, LOCALE_COMPARE_OPTIONS) === 0;
-  }
+  var LOCALE_COMPARE_OPTIONS = {usage: 'search', sensitivity: 'base'};
+  var COLLATOR = typeof Intl === 'undefined' ? null : new Intl.Collator(navigator.language, LOCALE_COMPARE_OPTIONS);
 
   /**
    * Tests whether the first string starts with the second string in locale comparison.
    */
-  function localeStartsWith(str1, str2) {
-    return localeEquals(str1.substr(0, str2.length), str2);
-  }
+  var localeStartsWith = COLLATOR ?
+    function (str1, str2) {
+      return COLLATOR.compare(str1.substr(0, str2.length), str2) === 0;
+    } :
+    function (str1, str2) {
+      return str1.substr(0, str2.length).localeCompare(str2, void 0, LOCALE_COMPARE_OPTIONS) === 0;
+    };
 
   /**
    * Scores how well a candidate string matches a filter query.

@@ -31,7 +31,7 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       $scope.search.text = '';
     };
 
-    $scope.onChange = _.throttle(function () {
+    $scope.onChange = _.debounce(function () {
       var text = $scope.search.text || '';
       text = _.str.trim(text);
 

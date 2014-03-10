@@ -231,7 +231,7 @@ class ShoeboxController @Inject() (
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
-    require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
+    require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
@@ -345,8 +345,12 @@ class ShoeboxController @Inject() (
     val url = Json.fromJson[String](request.body).get
     val normalizedUriOrPrenormStr = db.readOnly { implicit s => //using cache
       normUriRepo.getByUriOrPrenormalize(url) match {
-        case Right(url) => Json.obj("url" -> url)
-        case Left(nuri) => Json.obj("normalizedURI" -> nuri)
+        case Success(Right(prenormalizedUrl)) => Json.obj("url" -> prenormalizedUrl)
+        case Success(Left(nuri)) => Json.obj("normalizedURI" -> nuri)
+        case Failure(ex) => {
+          log.error("Could not get normalized uri or prenormalized url", ex)
+          Json.obj("url" -> url)
+        }
       }
     }
     Ok(normalizedUriOrPrenormStr)

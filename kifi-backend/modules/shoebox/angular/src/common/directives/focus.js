@@ -43,20 +43,4 @@ angular.module('kifi.focus', [])
       }
     };
   }
-])
-
-.directive('withFocus', [
-  function () {
-    return {
-      restrict: 'A',
-      scope: {
-        withFocus: '&'
-      },
-      link: function (scope, element /*, attrs*/ ) {
-        if (scope.withFocus()) {
-          element.focus();
-        }
-      }
-    };
-  }
 ]);
