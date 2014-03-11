@@ -520,6 +520,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = ???
 
+  def savePageInfo(pageInfo: PageInfo)(implicit timeout: Int): Future[PageInfo] = ???
+
   def saveNormalizedURI(uri: NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = ???
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
