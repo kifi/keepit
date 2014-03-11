@@ -7,7 +7,8 @@ angular.module('kifi.profile', [
   'kifi.profileInput',
   'kifi.routeService',
   'kifi.profileEmailAddresses',
-  'kifi.profileChangePassword'
+  'kifi.profileChangePassword',
+  'jun.facebook'
 ])
 
 .config([
@@ -23,7 +24,6 @@ angular.module('kifi.profile', [
 .controller('ProfileCtrl', [
   '$scope', '$http', 'profileService', 'routeService',
   function ($scope, $http, profileService, routeService) {
-
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
 
@@ -141,6 +141,46 @@ angular.module('kifi.profile', [
         );
       }
     }
+
+    $scope.isLinkedInConnected = function () {
+      return $scope.me && $scope.me.linkedinStatus === 'connected';
+    };
+
+    $scope.connectLinkedIn = function () {
+      console.log('connectLinkedIn');
+    };
+
+    $scope.disconnectLinkedIn = function () {
+      console.log('disconnectLinkedIn');
+    };
+  }
+])
+
+.directive('kfFacebookConnectButton', [
+  'profileService', '$FB',
+  function (profileService, $FB) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        profileService.getFacebookStatus();
+
+        scope.isFacebookConnected = function () {
+          return profileService.me.facebookStatus === 'connected';
+        };
+
+        scope.connectFacebook = function () {
+          $FB.login()['finally'](profileService.getFacebookStatus);
+        };
+
+        scope.disconnectFacebook = function () {
+          $FB.disconnect()['finally'](profileService.getFacebookStatus);
+        };
+
+        scope.logoutFacebook = function () {
+          $FB.logout()['finally'](profileService.getFacebookStatus);
+        };
+      }
+    };
   }
 ])
 
