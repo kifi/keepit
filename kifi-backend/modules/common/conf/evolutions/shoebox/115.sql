@@ -23,6 +23,8 @@ CREATE TABLE contact (
 ) -- DEFAULT CHARSET=utf8mb4
 ;
 
+insert into evolutions (name, description) values('115.sql', 'adding contact');
+
 # --- !Downs
 
 DROP TABLE contact;
