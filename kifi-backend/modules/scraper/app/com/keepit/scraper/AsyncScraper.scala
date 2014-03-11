@@ -32,7 +32,7 @@ trait AsyncScrapeProcessor extends ScrapeProcessor
 class SimpleAsyncScrapeProcessor @Inject() (asyncScraper:AsyncScraper) extends AsyncScrapeProcessor with Logging {
   def fetchBasicArticle(url:String, proxy:Option[HttpProxy], extractorType:Option[ExtractorProviderType]) = asyncScraper.asyncFetchBasicArticle(url, proxy, extractorType)
   def scrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt: Option[HttpProxy]) = asyncScraper.asyncSafeProcessURI(uri, info, proxyOpt)
-  def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit = asyncScraper.asyncSafeProcessURI(uri, info, proxyOpt)
+  def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, pageInfo:Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit = asyncScraper.asyncSafeProcessURI(uri, info, proxyOpt)
 }
 
 class AsyncScrapeActorProcessor @Inject() (
@@ -57,8 +57,8 @@ class AsyncScrapeActorProcessor @Inject() (
     (actor ? ScrapeArticle(uri, info, proxyOpt)).mapTo[(NormalizedURI, Option[Article])]
   }
 
-  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit = {
-    actor ! AsyncScrape(uri, info, proxyOpt)
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Unit = {
+    actor ! AsyncScrape(uri, info, pageInfoOpt, proxyOpt)
   }
 }
 
@@ -108,7 +108,7 @@ class AsyncScraperActor @Inject() (
       }
     }
 
-    case AsyncScrape(nuri, info, proxyOpt) => {
+    case AsyncScrape(nuri, info, pageInfoOpt, proxyOpt) => {
       log.info(s"[async-AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
       asyncScraper.asyncSafeProcessURI(nuri, info, proxyOpt) onComplete {

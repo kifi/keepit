@@ -5,7 +5,7 @@ import akka.actor.{Props, ActorSystem}
 import akka.routing.SmallestMailboxRouter
 import akka.util.Timeout
 import akka.pattern.ask
-import com.keepit.model.{ScrapeInfo, NormalizedURI, HttpProxy}
+import com.keepit.model.{PageInfo, ScrapeInfo, NormalizedURI, HttpProxy}
 import com.keepit.scraper.extractor.{LinkedInIdExtractor, ExtractorProviderTypes, ExtractorFactory, ExtractorProviderType}
 import scala.concurrent.Future
 import com.keepit.search.{ArticleStore, Article}
@@ -31,12 +31,12 @@ class SyncScrapeProcessor @Inject() (config:ScraperConfig, sysProvider:Provider[
     (actor ? ScrapeArticle(uri, info, proxyOpt)).mapTo[(NormalizedURI, Option[Article])]
   }
 
-  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): Unit = {
-    actor ! AsyncScrape(uri, info, proxyOpt)
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Unit = {
+    actor ! AsyncScrape(uri, info, pageInfoOpt, proxyOpt)
   }
 }
 
-case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
+case class AsyncScrape(uri:NormalizedURI, info:ScrapeInfo, pageInfo:Option[PageInfo], proxyOpt:Option[HttpProxy])
 case class FetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType])
 case class ScrapeArticle(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy])
 
@@ -75,14 +75,14 @@ class SyncScraperActor @Inject() (
     case ScrapeArticle(uri, info, proxyOpt) => {
       log.info(s"[ScrapeArticle] message received; url=${uri.url}")
       val ts = System.currentTimeMillis
-      val res = syncScraper.safeProcessURI(uri, info, proxyOpt)
+      val res = syncScraper.safeProcessURI(uri, info, None, proxyOpt)
       log.info(s"[ScrapeArticle] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=${res._1.state}")
       sender ! res
     }
-    case AsyncScrape(nuri, info, proxyOpt) => timing(s"AsyncScrape: uri=(${nuri.id}, ${nuri.url}) info=(${info.id},${info.destinationUrl}) proxy=$proxyOpt") {
+    case AsyncScrape(nuri, info, pageInfoOpt, proxyOpt) => timing(s"AsyncScrape: uri=(${nuri.id}, ${nuri.url}) info=(${info.id},${info.destinationUrl}) proxy=$proxyOpt") {
       log.info(s"[AsyncScrape] message received; url=${nuri.url}")
       val ts = System.currentTimeMillis
-      val (uri, a) = syncScraper.safeProcessURI(nuri, info, proxyOpt)
+      val (uri, a) = syncScraper.safeProcessURI(nuri, info, pageInfoOpt, proxyOpt)
       log.info(s"[AsyncScrape] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=(${uri.id}, ${uri.state})")
     }
   }

@@ -32,15 +32,16 @@ object ScrapeTuple {
   )(ScrapeTuple.apply _, unlift(ScrapeTuple.unapply))
 }
 
-case class ScrapeRequest(uri:NormalizedURI, info:ScrapeInfo, proxyOpt:Option[HttpProxy]) {
-  override def toString = s"(${uri.toShortString},${info.toShortString},$proxyOpt)"
-  def toShortString = s"(${uri.id},${info.id},${uri.url.take(50)}"
+case class ScrapeRequest(uri:NormalizedURI, scrapeInfo:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]) {
+  override def toString = s"(${uri.toShortString},${scrapeInfo.toShortString},${pageInfoOpt},$proxyOpt)"
+  def toShortString = s"(${uri.id},${scrapeInfo.id},${pageInfoOpt.flatMap(_.id)},${uri.url.take(50)}"
 }
 
 object ScrapeRequest {
   implicit val format = (
     (__ \ 'normalizedUri).format[NormalizedURI] and
     (__ \ 'scrapeInfo).format[ScrapeInfo] and
+    (__ \ 'pageInfo).formatNullable[PageInfo] and
     (__ \ 'proxy).formatNullable[HttpProxy]
   )(ScrapeRequest.apply _, unlift(ScrapeRequest.unapply))
 }
