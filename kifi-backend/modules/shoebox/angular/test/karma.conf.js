@@ -8,7 +8,8 @@ module.exports = function (config) {
       'dist/lib.js',
       'lib/angular-mocks/angular-mocks.js',
       'dist/kifi-tpl.js',
-      'src/**/*.js'
+      'src/**/*.js',
+      'test/**/*.js'
     ],
     reporters: ['dots'],
     colors: true,
