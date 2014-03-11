@@ -22,7 +22,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data._
 import play.api.data.Forms._
@@ -775,7 +775,7 @@ class AdminUserController @Inject() (
         userConnectionRepo.deactivateAllConnections(userId)
         socialUsers.foreach { sui =>
           socialConnectionRepo.deactivateAllConnections(sui.id.get)
-          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None))
+          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId.inactive))
         }
         userRepo.save(user.withState(UserStates.INACTIVE))
       }
