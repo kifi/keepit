@@ -99,8 +99,9 @@ class S3ScreenshotStoreImpl(
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
 
-  val embedlyDefaultKey = "e46ecae2611d4cb29342fddb0e666a29"
-  val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) getOrElse embedlyDefaultKey
+  val imageSizes = Seq(ImageSize(500, 280), ImageSize(250, 140))
+  val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) get
+  val embedlyEnabled = (if (Play.maybeApplication.isDefined) Play.configuration.getBoolean("embedly.enabled") else None) get
   def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
 
   def mkImgBucket(extId: ExternalId[NormalizedURI], providerIdx:Int = 0) = s"images/$extId/$providerIdx"
@@ -141,7 +142,7 @@ class S3ScreenshotStoreImpl(
 
   def asyncGetImageUrl(uri:NormalizedURI, pageInfoOpt:Option[PageInfo], cb:Option[PageInfo => Unit]):Future[Option[String]] = {
     log.info(s"[asyncGetImageUrl] uri=$uri pageInfo=$pageInfoOpt")
-    if (config.isLocal) Future.successful(None)
+    if (config.isLocal || !embedlyEnabled) Future.successful(None)
     else {
       pageInfoOpt match {
         case None =>
@@ -203,7 +204,7 @@ class S3ScreenshotStoreImpl(
 
   private def resize(originalStream:InputStream):Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = {
     val rawImageTry = Try { ImageIO.read(originalStream) }
-    val resizedImages:Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = screenshotConfig.targetSizes.map { size =>
+    val resizedImages:Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = imageSizes.map { size =>
       for {
         rawImage <- rawImageTry
         resized <- Try {

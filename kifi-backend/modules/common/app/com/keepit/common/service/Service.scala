@@ -14,7 +14,7 @@ import com.keepit.common.amazon.{AmazonInstanceType, AmazonInstanceInfo}
 import com.keepit.inject.FortyTwoConfig
 
 object ServiceVersion {
-  val pattern = """([0-9]{8})-([0-9]{4})-([0-9a-zA-Z_]*)-([0-9a-z]*)""".r
+  val pattern = """([0-9]{8})-([0-9]{4})-([0-9a-zA-Z_\-]*)-([0-9a-z]*)""".r
 }
 
 case class ServiceVersion(val value: String) {

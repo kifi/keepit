@@ -346,7 +346,7 @@ class MainSearcher(
       // make sure there is at least one public keep in others
       othersHits.toSortedList.exists{ hit =>
         val h = hit.hit
-        if (getPublicBookmarkCount(h.id) > 0) {
+        if (hasPublicBookmarks(h.id)) {
           true
         } else {
           othersTotal -= 1
@@ -445,6 +445,7 @@ class MainSearcher(
   }
 
   @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
+  @inline private[this] def hasPublicBookmarks(id: Long) = !(uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).isEmpty)
 
   @inline private[this] def createQueue(sz: Int) = new ArticleHitQueue(sz)
 

@@ -205,8 +205,13 @@ angular.module('kifi.profile', [
       templateUrl: 'profile/emailImport.tpl.html',
       link: function (scope) {
 
+        scope.addressBookImportText = "Import a Gmail account";
+
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
+          if (data && data.length > 0) {
+            scope.addressBookImportText = "Import another Gmail account";
+          }
         });
 
         scope.importGmailContacts = function () {
