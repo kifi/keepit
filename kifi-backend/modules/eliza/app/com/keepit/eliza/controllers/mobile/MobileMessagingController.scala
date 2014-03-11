@@ -100,8 +100,8 @@ class MobileMessagingController @Inject() (
           "nUrl" -> nUrl,
           "participants" -> participants,
           "messages" -> (completeMsgs.reverse map { m =>
-            val addedAndAdderOpt: Option[(String,Seq[String])] = m.auxData match {
-              case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => Some( adderBasicUser.as[BasicUser].externalId.id ->  addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id) )
+            val adderAndAddedOpt: Option[(String,Seq[String])] = m.auxData match {
+              case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id) )
               case _ => None
             }
             val msgJson = Json.obj(
@@ -110,8 +110,8 @@ class MobileMessagingController @Inject() (
               "text" -> m.text,
               "userId" -> m.user.map(_.externalId.toString)
             )
-            addedAndAdderOpt.map { addedAndAdder =>
-              msgJson.deepMerge(Json.obj("added" -> addedAndAdder._1, "userId" -> addedAndAdder._2))
+            adderAndAddedOpt.map { adderAndAdded =>
+              msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
             } getOrElse{
               msgJson
             }
