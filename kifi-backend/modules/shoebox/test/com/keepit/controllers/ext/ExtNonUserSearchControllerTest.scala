@@ -24,7 +24,7 @@ class ExtNonUserSearchControllerTest extends Specification {
           id = Id[SocialUserInfo](3),
           userId = None,
           fullName = "Joe Bob",
-          pictureUrl = Some("http://fbcdn.net/p100x100/134_a.jpg"),
+          pictureUrl = None,
           socialId = SocialId("134"),
           networkType = FACEBOOK),
         SocialUserBasicInfo(
@@ -58,7 +58,7 @@ class ExtNonUserSearchControllerTest extends Specification {
 
       new ExtNonUserSearchController(null, null, null, null, null)
       .serializeResults(infos, contacts, infoInviteDates, contactInviteDates) === Json.arr(
-        Json.obj("name" -> "Joe Bob", "id" -> "facebook/134", "pic" -> "http://fbcdn.net/p100x100/134_a.jpg"),
+        Json.obj("name" -> "Joe Bob", "id" -> "facebook/134", "pic" -> "https://graph.facebook.com/134/picture?width=56&height=56"),
         Json.obj("name" -> "Mae Rae", "id" -> "linkedin/256", "invited" -> 88888888888L),
         Json.obj("email" -> "jim@davis.name", "name" -> "James R. Davis", "invited" -> 99999999999L),
         Json.obj("email" -> "bill@wattersons.org"))
