@@ -731,7 +731,8 @@ class AdminUserController @Inject() (
           email = db.readWrite { implicit session => {
             try { emailRepo.getByUser(user.id.get).address }
             catch { case ex: Throwable =>
-              emailRepo.save(EmailAddress(address = socialUserInfoRepo.getByUser(user.id.get).head.credentials.get.email.get, userId = user.id.get)).address
+              try { emailRepo.save(EmailAddress(address = socialUserInfoRepo.getByUser(user.id.get).head.credentials.get.email.get, userId = user.id.get)).address }
+              catch { case _: Throwable => throw ex }
             }
           }},
           passwordInfo = pInfo,
