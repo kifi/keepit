@@ -762,4 +762,30 @@ class AdminUserController @Inject() (
     val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
     Ok(json)
   }}
+
+  def deactivate(userId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    // todo(Léo): this procedure is incomplete
+    val json = db.readWrite { implicit session =>
+      val user = userRepo.get(userId)
+      val socialUsers = socialUserInfoRepo.getByUser(userId)
+      val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
+      val userConnections = userConnectionRepo.getConnectedUsers(userId)
+
+      if (!readOnly) {
+        userConnectionRepo.deactivateAllConnections(userId)
+        socialUsers.foreach { sui =>
+          socialConnectionRepo.deactivateAllConnections(sui.id.get)
+          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE))
+        }
+        userRepo.save(user.withState(UserStates.INACTIVE))
+      }
+      implicit val userIdFormat = Id.format[User]
+      Json.obj(
+        "user" -> user,
+        "socialUsers" -> socialUsers,
+        "socialConnections" -> JsObject(socialConnections.toSeq.map { case (network, connections) => network.name -> Json.toJson(connections) }),
+          "usersConnections" -> userConnections)
+    }
+    Ok(json)
+  }}
 }
