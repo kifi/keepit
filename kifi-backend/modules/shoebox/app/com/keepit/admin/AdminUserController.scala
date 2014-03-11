@@ -93,6 +93,7 @@ class AdminUserController @Inject() (
     imageStore: S3ImageStore,
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
+    userCredRepo: UserCredRepo,
     userCommander: UserCommander,
     econtactTypeahead: EContactTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
@@ -763,28 +764,53 @@ class AdminUserController @Inject() (
     Ok(json)
   }}
 
-  def deactivate(userId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    // todo(Léo): this procedure is incomplete
+  def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander
+    val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
     val json = db.readWrite { implicit session =>
+      if (doIt) {
+
+        // Social Graph
+        userConnectionRepo.deactivateAllConnections(userId) // User Connections
+        socialUserInfoRepo.getByUser(userId).foreach { sui =>
+          socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
+          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId.inactive)) // Social User Infos
+          socialUserInfoRepo.deleteCache(sui)
+        }
+
+        // URI Graph
+        bookmarkRepo.getByUser(userId).foreach { bookmark => bookmarkRepo.save(bookmark.withActive(false)) }
+        collectionRepo.getByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+
+        // Personal Info
+        userSessionRepo.invalidateByUser(userId) // User Session
+        kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
+        userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
+        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(EmailAddressStates.INACTIVE)) } // Email addresses
+        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmailId = None)) // User
+      }
+
       val user = userRepo.get(userId)
+      val emails = emailRepo.getAllByUser(userId)
+      val credentials = userCredRepo.findByUserIdOpt(userId)
+      val installations = kifiInstallationRepo.all(userId)
+      val tags = collectionRepo.getByUser(userId)
+      val keeps = bookmarkRepo.getByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
       val userConnections = userConnectionRepo.getConnectedUsers(userId)
-
-      if (!readOnly) {
-        userConnectionRepo.deactivateAllConnections(userId)
-        socialUsers.foreach { sui =>
-          socialConnectionRepo.deactivateAllConnections(sui.id.get)
-          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId.inactive))
-        }
-        userRepo.save(user.withState(UserStates.INACTIVE))
-      }
       implicit val userIdFormat = Id.format[User]
       Json.obj(
         "user" -> user,
+        "emails" -> emails.map(_.address),
+        "credentials" -> credentials.map(_.credentials),
+        "installations" -> JsObject(installations.map(installation => installation.userAgent.name -> JsString(installation.version.toString))),
+        "tags" -> tags,
+        "keeps" -> keeps,
         "socialUsers" -> socialUsers,
         "socialConnections" -> JsObject(socialConnections.toSeq.map { case (network, connections) => network.name -> Json.toJson(connections) }),
-          "usersConnections" -> userConnections)
+        "userConnections" -> userConnections
+      )
     }
     Ok(json)
   }}
