@@ -718,7 +718,7 @@ class AdminUserController @Inject() (
 
   def fixMissingFortyTwoSocialUsers(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
     val problematicUsers = db.readOnly { implicit s =>
-      userRepo.all().filter(user => !socialUserInfoRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO))
+      userRepo.all().filter(user => user.state == UserStates.ACTIVE && !socialUserInfoRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO))
     }
 
     if (!readOnly) {
