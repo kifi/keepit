@@ -203,7 +203,7 @@ class S3ScreenshotStoreImpl(
   }
 
   private def resize(originalStream:InputStream):Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = {
-    val rawImageTry = Try { ImageIO.read(originalStream) }
+    val rawImageTry = Try { ImageUtils.forceRGB(ImageIO.read(originalStream)) }
     val resizedImages:Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = imageSizes.map { size =>
       for {
         rawImage <- rawImageTry
