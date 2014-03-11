@@ -18,7 +18,7 @@ import com.keepit.search.SearchServiceClient
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.store.{ImageInfo, S3ScreenshotStore}
+import com.keepit.common.store.{S3ScreenshotStore}
 import play.api.mvc.{SimpleResult, Action}
 import com.keepit.social.BasicUser
 import scala.util.Try
