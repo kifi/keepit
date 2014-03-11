@@ -58,7 +58,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         users.foreach{ user =>
           val userId = user.id.get
           activeShards.shards.foreach{ shard =>
-            val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, 1000, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, None, 1000, SearchFilter.default(), allHitsConfig)
             val uriGraphSearcher = mainSearcher.uriGraphSearcher
             val collectionSearcher = mainSearcher.collectionSearcher
 
@@ -157,7 +157,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         val newCollSizes = activeShards.shards.map{ shard => (shard -> getCollectionSize(shard)) }.toMap
 
         activeShards.shards.foreach{ shard =>
-          val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, 1000, SearchFilter.default(), allHitsConfig)
+          val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, None, 1000, SearchFilter.default(), allHitsConfig)
           val uriGraphSearcher = mainSearcher.uriGraphSearcher
           val collectionSearcher = mainSearcher.collectionSearcher
 

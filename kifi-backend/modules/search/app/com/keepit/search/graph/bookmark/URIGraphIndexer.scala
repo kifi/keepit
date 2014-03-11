@@ -6,6 +6,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
+import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
@@ -34,6 +35,7 @@ object URIGraphFields {
   val stemmedField = "title_stemmed"
   val siteField = "site"
   val homePageField = "home_page"
+  val langProfField = "lang_prof"
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
@@ -181,6 +183,8 @@ object URIGraphIndexer {
       }
       doc.add(homePageField)
 
+      doc.add(buildLangProfileField(titles.filter(_._2.length > 16).map(_._3))) // take langs of titles longer than 16 chars
+
       doc
     }
 
@@ -234,6 +238,13 @@ object URIGraphIndexer {
       val arr = (publicBookmarks.map(_.id.get.id) ++ privateBookmarks.map(_.id.get.id)).toArray
       val packedBookmarkIds = Util.packLongArray(arr)
       buildExtraLongBinaryDocValuesField(URIGraphFields.bookmarkIdField, packedBookmarkIds)
+    }
+
+    private def buildLangProfileField(langs: Seq[Lang]): Field = {
+      val langFreq = langs.foldLeft(Map[Lang, Float]()){ (m, lang) => m + (lang -> (m.getOrElse(lang, 0.0f) + 1.0f)) }
+      val threshold  = langs.size.toFloat * 0.05f // 5%
+      val profile = langFreq.filter{ case (_, freq) => freq > threshold }.toSeq.sortBy(p => - p._2).take(8).map(p => s"${p._1.lang}:${p._2.toInt}").mkString(",")
+      buildBinaryDocValuesField(URIGraphFields.langProfField, profile.getBytes(UTF8))
     }
   }
 }

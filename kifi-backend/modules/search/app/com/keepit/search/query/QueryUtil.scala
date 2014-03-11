@@ -80,6 +80,26 @@ object QueryUtil extends Logging {
     }
   }
 
+  def copy(query: BooleanQuery, field: String): Query = {
+    if (query == null) null
+    else {
+      val newQuery = new BooleanQuery()
+      val clauses = query.getClauses()
+      clauses.map{ clause =>
+        val newSubQuery = clause.getQuery() match {
+          case null => null
+          case subq: TermQuery => copy(subq, field)
+          case subq: PhraseQuery => copy(subq, field)
+          case subq: BooleanQuery => copy(subq, field)
+          case subq => throw new Exception(s"failed to copy query: ${subq.toString}")
+        }
+        newQuery.add(newSubQuery, clause.getOccur())
+      }
+      newQuery.setBoost(query.getBoost())
+      newQuery
+    }
+  }
+
   def termDocsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits): DocsEnum = {
     val fields = context.reader.fields()
     if (fields != null) {

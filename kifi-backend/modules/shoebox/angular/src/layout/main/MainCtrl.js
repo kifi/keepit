@@ -46,7 +46,7 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       $timeout(function () {
         $scope.$apply();
       });
-    }, 500);
+    }, 350);
 
     $scope.$on('$routeChangeSuccess', function (event, current, previous) {
       if (previous && current && previous.controller === 'SearchCtrl' && current.controller !== 'SearchCtrl') {

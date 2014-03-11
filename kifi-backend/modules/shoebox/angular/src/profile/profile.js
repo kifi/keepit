@@ -7,7 +7,8 @@ angular.module('kifi.profile', [
   'kifi.profileInput',
   'kifi.routeService',
   'kifi.profileEmailAddresses',
-  'kifi.profileChangePassword'
+  'kifi.profileChangePassword',
+  'jun.facebook'
 ])
 
 .config([
@@ -23,7 +24,6 @@ angular.module('kifi.profile', [
 .controller('ProfileCtrl', [
   '$scope', '$http', 'profileService', 'routeService',
   function ($scope, $http, profileService, routeService) {
-
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
 
@@ -144,6 +144,57 @@ angular.module('kifi.profile', [
   }
 ])
 
+.directive('kfLinkedinConnectButton', [
+  'profileService', '$window',
+  function (profileService, $window) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        // TODO: implement this. look at how facebook is done
+        //profileService.getLinkedInStatus();
+
+        scope.isLinkedInConnected = function () {
+          return scope.me && scope.me.linkedinStatus === 'connected';
+        };
+
+        scope.connectLinkedIn = function () {
+          $window.location.href = '/link/linkedin';
+        };
+
+        scope.disconnectLinkedIn = function () {
+          console.log('disconnectLinkedIn');
+        };
+      }
+    };
+  }
+])
+
+.directive('kfFacebookConnectButton', [
+  'profileService', '$FB', '$window',
+  function (profileService, $FB, $window) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        profileService.getFacebookStatus();
+
+        scope.isFacebookConnected = function () {
+          return profileService.me.facebookStatus === 'connected';
+        };
+
+        scope.connectFacebook = function () {
+          $FB.login()['finally'](profileService.getFacebookStatus).then(function () {
+            $window.location.href = '/link/facebook';
+          });
+        };
+
+        scope.disconnectFacebook = function () {
+          $FB.disconnect()['finally'](profileService.getFacebookStatus);
+        };
+      }
+    };
+  }
+])
+
 .directive('kfEmailImport', [
   'profileService', '$window', 'env',
   function (profileService, $window, env) {
@@ -154,8 +205,13 @@ angular.module('kifi.profile', [
       templateUrl: 'profile/emailImport.tpl.html',
       link: function (scope) {
 
+        scope.addressBookImportText = "Import a Gmail account";
+
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
+          if (data && data.length > 0) {
+            scope.addressBookImportText = "Import another Gmail account";
+          }
         });
 
         scope.importGmailContacts = function () {

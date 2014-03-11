@@ -36,6 +36,7 @@ import org.tartarus.snowball.ext.TurkishStemmer
 import org.tartarus.snowball.SnowballProgram
 import com.keepit.search.index.LuceneVersion.version
 import scala.reflect.ClassTag
+import org.apache.lucene.analysis.ja.JapaneseAnalyzer
 
 trait TokenFilterFactory {
   def apply(tokenSteam: TokenStream): TokenStream
@@ -71,6 +72,7 @@ class StopFilterFactories {
   val Hungarian = loadFromSnowball("hungarian_stop.txt")
   val Indonesian = loadFrom[IndonesianAnalyzer]
   val Italian = loadFromSnowball("italian_stop.txt")
+  val Japanese = loadFrom[JapaneseAnalyzer]
   val Latvian = loadFrom[LatvianAnalyzer]
   val Norwegian = loadFromSnowball("norwegian_stop.txt")
   val Persian = loadFrom[PersianAnalyzer]

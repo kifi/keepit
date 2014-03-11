@@ -27,7 +27,7 @@ class ArticleSearchResultTest extends Specification {
     svVariance = 1.0f,
     svExistenceVar = 1.0f,
     toShow = false,
-    lang = Lang("fr")
+    lang = "fr"
   )
 
   val nextResult = ArticleSearchResult(
@@ -47,7 +47,7 @@ class ArticleSearchResultTest extends Specification {
     collections = Set(1L,10L,100L),
     svVariance = 1.0f,
     svExistenceVar = 1.0f,
-    lang = Lang("fr")
+    lang = "fr"
   )
 
   "ArticleSearchResult" should {

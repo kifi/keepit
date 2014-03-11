@@ -99,10 +99,14 @@ class SearchController @Inject()(
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     val (config, _) = searchConfigManager.getConfig(userId, userExperiments)
+    val langs = lang match {
+      case Some(str) => str.split(",").toSeq.map(Lang(_))
+      case None => Seq(Lang("en"))
+    }
 
     shards.find(uriId) match {
       case Some(shard) =>
-        val searcher = searcherFactory(shard, userId, query, Lang(lang.getOrElse("en")), 0, SearchFilter.default(), config)
+        val searcher = searcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
         val explanation = searcher.explain(uriId)
         Ok(html.admin.explainResult(query, userId, uriId, explanation))
       case None =>

@@ -166,11 +166,15 @@ if (searchUrlRe.test(document.URL)) !function () {
 
       if (!newFilter || newFilter.who === 'a') {
         var numTop = resp.numTop = resp.show ? resp.hits.length : 0;
-        var allTotal = insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal);
         if (!newFilter) {
           $status
             .attr('data-n', numTop)
             .attr('href', 'javascript:');
+          if (!numTop) {
+            $status.attr('data-of', resp.mayHaveMore ?
+              insertCommas(Math.max(resp.hits.length, resp.myTotal + resp.friendsTotal)) + '+' :
+              (resp.hits.length || 'No'));
+          }
         }
         $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length});
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));

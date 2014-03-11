@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.profileService', ['kifi.routeService'])
+angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService',
-  function ($http, env, $q, util, routeService) {
+  '$http', 'env', '$q', 'util', 'routeService', '$FB',
+  function ($http, env, $q, util, routeService, $FB) {
     var me = {
       seqNum: 0
     };
@@ -153,13 +153,13 @@ angular.module('kifi.profileService', ['kifi.routeService'])
 
     function getEmailValidationError(status) {
       switch (status) {
-        case 400: // bad format
-          return invalidEmailValidationResult();
-        case 403: // belongs to another user
-          return failureInputActionResult(
-            'This email address is already taken',
-            'This email address belongs to another user.<br>Please enter another email address.'
-          );
+      case 400: // bad format
+        return invalidEmailValidationResult();
+      case 403: // belongs to another user
+        return failureInputActionResult(
+          'This email address is already taken',
+          'This email address belongs to another user.<br>Please enter another email address.'
+        );
       }
     }
 
@@ -171,6 +171,15 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       return $http.post(routeService.userPasswordUrl, {
         oldPassword: oldPassword,
         newPassword: newPassword
+      });
+    }
+
+    function getFacebookStatus() {
+      return $FB.getLoginStatus().then(function (res) {
+        me.facebookStatusResponse = res || null;
+        me.facebookStatus = res && res.status || null;
+        me.seqNum++;
+        return res;
       });
     }
 
@@ -190,7 +199,8 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
-      sendChangePassword: sendChangePassword
+      sendChangePassword: sendChangePassword,
+      getFacebookStatus: getFacebookStatus
     };
   }
 ]);
