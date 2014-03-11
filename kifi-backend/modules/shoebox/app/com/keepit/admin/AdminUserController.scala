@@ -728,7 +728,12 @@ class AdminUserController @Inject() (
         authCommander.saveUserPasswordIdentity(
           userIdOpt = Some(user.id.get),
           identityOpt = None,
-          email = db.readOnly { implicit session => emailRepo.getByUser(user.id.get).address },
+          email = db.readOnly { implicit session => {
+            try { emailRepo.getByUser(user.id.get).address }
+            catch { case ex: Throwable =>
+              emailRepo.save(EmailAddress(address = socialUserInfoRepo.getByUser(user.id.get).head.credentials.get.email.get, userId = user.id.get)).address
+            }
+          }},
           passwordInfo = pInfo,
           firstName = user.firstName,
           lastName = user.lastName,
