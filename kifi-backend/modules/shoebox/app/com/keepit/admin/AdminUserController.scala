@@ -765,7 +765,7 @@ class AdminUserController @Inject() (
   }}
 
   def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    // todo(Léo): this procedure may be incomplete, and should probably be in UserCommander
+    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander
     val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
     val json = db.readWrite { implicit session =>
       if (doIt) {
@@ -775,6 +775,7 @@ class AdminUserController @Inject() (
         socialUserInfoRepo.getByUser(userId).foreach { sui =>
           socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
           socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId.inactive)) // Social User Infos
+          socialUserInfoRepo.deleteCache(sui)
         }
 
         // URI Graph
@@ -786,7 +787,7 @@ class AdminUserController @Inject() (
         kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
         userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
         emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(EmailAddressStates.INACTIVE)) } // Email addresses
-        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE)) // User
+        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmailId = None)) // User
       }
 
       val user = userRepo.get(userId)
