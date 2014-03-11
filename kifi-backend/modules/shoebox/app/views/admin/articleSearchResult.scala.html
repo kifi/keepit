@@ -13,7 +13,7 @@
         <th>Query</th><td>@result.query</td>
       </tr>
       <tr>
-        <th>Lang</th><td>@result.lang.lang</td>
+        <th>Lang</th><td>@result.lang</td>
       </tr>
       <tr>
         <th>Hit Count</th><td>@result.hits.size</td>
@@ -72,10 +72,10 @@
         <td>@{meta.hit.isPrivate}</td>
         <td>@{meta.hit.bookmarkCount}</td>
         <td>
-          <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explain(result.query, meta.uri.id.get, result.lang.lang)" method="GET" class="form-inline">
+          <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explain(result.query, meta.uri.id.get, result.lang)" method="GET" class="form-inline">
             <input type="hidden" name="query" value="@{result.query}"/>
             <input type="hidden" name="uriId" value="@{meta.uri.id}"/>
-            <input type="hidden" name="lang" value="@{result.lang.lang}"/>
+            <input type="hidden" name="lang" value="@{result.lang}"/>
             <button type="submit" class="btn">Explain</button> </td>
           </form>
       </tr>

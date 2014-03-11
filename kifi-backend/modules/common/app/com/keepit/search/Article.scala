@@ -23,9 +23,7 @@ case class Article(
     message: Option[String],
     titleLang: Option[Lang],
     contentLang: Option[Lang],
-    destinationUrl: Option[String] = None) {
-  println(implicitly[Format[DateTime]])
-}
+    destinationUrl: Option[String] = None)
 
 object Article {
 

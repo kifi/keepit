@@ -37,7 +37,7 @@ object ResultUtil {
     pageNumber: Int,
     previousHits: Int,
     time: DateTime,
-    lang: Lang
+    lang: String
   ): ArticleSearchResult = {
     ArticleSearchResult(
       last,

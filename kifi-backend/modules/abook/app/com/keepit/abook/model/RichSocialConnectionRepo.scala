@@ -9,27 +9,27 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType}
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.KestrelCombinator
 
 
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])
 trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection
-  def recordKifiConnection(firstUserId: Id[User], secondUserId: Id[User])(implicit session: RWSession): Unit
   def recordInvitation(userId: Id[User], invitation: Id[Invitation], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
   def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit
   def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
-  def getByUserAndFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection]
+  def getByUserAndSocialFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection]
+  def getByUserAndKifiFriend(userId: Id[User], kifiFriendId: Id[User])(implicit session: RSession): Seq[RichSocialConnection]
   def dedupedWTIForUser(user: Id[User], howMany: Int)(implicit session: RSession): Seq[Id[SocialUserInfo]]
   def removeRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo])(implicit session: RWSession): Unit
-  def removeKifiConnection(user1: Id[User], user2: Id[User])(implicit session: RWSession): Unit
 }
 
 
 @Singleton
 class RichSocialConnectionRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock)
-  extends DbRepo[RichSocialConnection] with RichSocialConnectionRepo {
+    val clock: Clock
+) extends DbRepo[RichSocialConnection] with RichSocialConnectionRepo {
 
   import db.Driver.simple._
 
@@ -57,10 +57,15 @@ class RichSocialConnectionRepoImpl @Inject() (
   def invalidateCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
 
   private val Email: SocialNetworkType = SocialNetworks.EMAIL
+  private val FortyTwo: SocialNetworkType = SocialNetworks.FORTYTWO
 
-  def getByUserAndFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection] = friendId match {
+  def getByUserAndSocialFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection] = friendId match {
     case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row).firstOption()
     case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row).firstOption()
+  }
+
+  def getByUserAndKifiFriend(userId: Id[User], kifiFriendId: Id[User])(implicit session: RSession): Seq[RichSocialConnection] = {
+    (for { row <- rows if row.userId === userId && row.friendUserId === kifiFriendId } yield row).list()
   }
 
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection = {
@@ -69,10 +74,11 @@ class RichSocialConnectionRepoImpl @Inject() (
       case Right(eContact) => (Email, eContact.name, eContact.contactUserId, Right(eContact.email))
     }
 
-    getByUserAndFriend(userId, friendId) match {
-      case Some(incompleteSocialConnection) if friendId.isLeft && incompleteSocialConnection.userSocialId.isEmpty && userSocialId.isDefined =>
-        save(incompleteSocialConnection.copy(userSocialId = userSocialId))
-      case Some(inactiveConnection) if inactiveConnection.state==RichSocialConnectionStates.INACTIVE => {
+    getByUserAndSocialFriend(userId, friendId) match {
+      case Some(incompleteSocialConnection) if incompleteSocialConnection.friendUserId.isEmpty && friendUserId.isDefined =>
+        save(incompleteSocialConnection.copy(friendUserId = friendUserId))
+      case Some(inactiveConnection) if inactiveConnection.state == RichSocialConnectionStates.INACTIVE => {
+        if (connectionType == FortyTwo) { recordDirectedKifiConnection(userId, friendUserId.get) }
         val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
         val commonKifiFriendsCount = incrementCommonKifiFriendsCounts(userId, friendId)
         val invitationCount = getInvitationCount(friendId)
@@ -85,6 +91,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       }
       case Some(richConnection) => richConnection
       case None => {
+        if (connectionType == FortyTwo) { recordDirectedKifiConnection(userId, friendUserId.get) }
         val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
         val commonKifiFriendsCount = incrementCommonKifiFriendsCounts(userId, friendId)
         val invitationCount = getInvitationCount(friendId)
@@ -105,11 +112,14 @@ class RichSocialConnectionRepoImpl @Inject() (
         ))
       }
     }
-  }
+  } tap { _ => sanityCheck(userId) }
 
   def removeRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo])(implicit session: RWSession): Unit = {
-    getByUserAndFriend(userId, Left(friend)) match {
+    getByUserAndSocialFriend(userId, Left(friend)) match {
       case Some(richConnection) if richConnection.state==RichSocialConnectionStates.ACTIVE => {
+        if (richConnection.connectionType == SocialNetworks.FORTYTWO) {
+          removeDirectedKifiConnection(richConnection.userId, richConnection.friendUserId.get)
+        }
         decrementKifiFriendsCounts(friend)
         decrementCommonKifiFriendsCounts(userId, friend)
         save(richConnection.copy(state=RichSocialConnectionStates.INACTIVE))
@@ -135,7 +145,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def incrementCommonKifiFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
-    val kifiFriendsIdSet = sql"SELECT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND friend_user_id IS NOT NULL AND state='active'".as[Long].list().toSet
+    val kifiFriendsIdSet = sql"SELECT DISTINCT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND connection_type = '#${FortyTwo}' AND friend_user_id IS NOT NULL AND state='active'".as[Long].list().toSet
     if (kifiFriendsIdSet.isEmpty) {
       0
     } else {
@@ -156,7 +166,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def decrementCommonKifiFriendsCounts(userId: Id[User], friendId: Id[SocialUserInfo])(implicit session: RWSession): Int = {
-    val kifiFriendsIdSet = sql"SELECT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND friend_user_id IS NOT NULL AND state='active'".as[Long].list().toSet
+    val kifiFriendsIdSet = sql"SELECT DISTINCT friend_user_id FROM rich_social_connection WHERE user_id = $userId AND connection_type = '#${FortyTwo}' and friend_user_id IS NOT NULL AND state='active'".as[Long].list().toSet
     if (kifiFriendsIdSet.isEmpty) {
       0
     } else {
@@ -166,16 +176,6 @@ class RichSocialConnectionRepoImpl @Inject() (
         WHERE friend_social_id = $friendId AND user_id IN (#${kifiFriendsIdSet.mkString(",")})
       """.first()
     }
-  }
-
-  def recordKifiConnection(firstUserId: Id[User], secondUserId: Id[User])(implicit session: RWSession): Unit = {
-    recordDirectedKifiConnection(firstUserId, secondUserId)
-    recordDirectedKifiConnection(secondUserId, firstUserId)
-  }
-
-  def removeKifiConnection(user1: Id[User], user2: Id[User])(implicit session: RWSession): Unit = {
-    removeDirectedKifiConnection(user1, user2)
-    removeDirectedKifiConnection(user2, user1)
   }
 
   private def recordDirectedKifiConnection(userId: Id[User], kifiFriend: Id[User])(implicit session: RWSession): Unit = {
@@ -259,5 +259,13 @@ class RichSocialConnectionRepoImpl @Inject() (
         SELECT friend_name FROM rich_social_connection WHERE user_id=$user AND friend_user_id is NOT NULL
       ) ORDER BY kifi_friends_count DESC LIMIT $howMany
     """.as[(Id[SocialUserInfo], Long)].list().map(_._1)
+  }
+
+  private def sanityCheck(userId: Id[User])(implicit session: RSession): Unit = {
+    (for { row <- rows if row.userId === userId } yield row).iterator().foreach { connection =>
+      if (connection.commonKifiFriendsCount > connection.kifiFriendsCount) {
+        log.error(s"[WTI] Inconsistent bookkeeping on rich connection ${connection}")
+      }
+    }
   }
 }

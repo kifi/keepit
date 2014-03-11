@@ -20,6 +20,7 @@ import com.keepit.search.graph.GraphTestHelper
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.search.graph.user._
+import com.keepit.search.Lang
 
 
 class URIGraphSearcherTest extends Specification with GraphTestHelper {
@@ -346,6 +347,27 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
           }
         }
         1===1
+      }
+    }
+
+    "retrieve language profile" in {
+       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+        val (users, uris) = initData
+        val store = setupArticleStore(uris)
+        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        saveBookmarksByEdges(edges)
+
+        val indexer = mkURIGraphIndexer()
+        indexer.update() === 1
+
+        addConnections(Map(users(0).id.get -> Set()))
+        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        userGraph.update()
+        userGraphsCommander.clear()
+
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander)
+
+        searcher.getLangProfile() === Map(Lang("en") -> 3)
       }
     }
   }

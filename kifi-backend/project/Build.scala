@@ -104,6 +104,7 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
       from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
+    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.2.1",
     "org.apache.lucene" % "lucene-suggest" % "4.2.1"
   )
 

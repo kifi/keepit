@@ -532,7 +532,7 @@ class MessagingCommander @Inject() (
   }
 
   private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)

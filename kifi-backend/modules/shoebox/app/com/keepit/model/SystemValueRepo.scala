@@ -57,9 +57,9 @@ class SystemValueRepoImpl @Inject() (
   }
 
   def getValue(name: Name[SystemValue])(implicit session: RSession): Option[String] = {
-    valueCache.getOrElseOpt(SystemValueKey(name)) {
+    //valueCache.getOrElseOpt(SystemValueKey(name)) {
       (for(f <- rows if f.state === SystemValueStates.ACTIVE && f.name === name) yield f.value).firstOption.map(_.value)
-    }
+    //}
   }
 
   def getSystemValue(name: Name[SystemValue])(implicit session: RSession): Option[SystemValue] =
