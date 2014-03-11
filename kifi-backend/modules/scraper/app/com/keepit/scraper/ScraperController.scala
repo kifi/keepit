@@ -66,7 +66,7 @@ class ScraperController @Inject() (
   def asyncScrapeWithRequest() = Action.async(parse.json) { request =>
     val scrapeRequest = request.body.as[ScrapeRequest]
     log.info(s"[asyncScrapeWithRequest] req=${scrapeRequest}")
-    val tupF = scrapeProcessor.scrapeArticle(scrapeRequest.uri, scrapeRequest.info, scrapeRequest.proxyOpt)
+    val tupF = scrapeProcessor.scrapeArticle(scrapeRequest.uri, scrapeRequest.scrapeInfo, scrapeRequest.proxyOpt)
     tupF.map { t =>
       val res = ScrapeTuple(t._1, t._2)
       log.info(s"[asyncScrapeWithInfo(${scrapeRequest.uri.url})] result=${t._1}")
@@ -81,14 +81,14 @@ class ScraperController @Inject() (
     val normalizedUri = jsValues(0).as[NormalizedURI]
     val info = jsValues(1).as[ScrapeInfo]
     log.info(s"[scheduleScrape] scheduling scraping job for (url=${normalizedUri.url}, info=$info)")
-    scrapeProcessor.asyncScrape(normalizedUri, info, None)
+    scrapeProcessor.asyncScrape(normalizedUri, info, None, None)
     Ok(JsBoolean(true))
   }
 
   def scheduleScrapeWithRequest() = Action(parse.json) { request =>
     val scrapeRequest = request.body.as[ScrapeRequest]
     log.info(s"[scheduleScrapeWithRequest] scheduling scraping job for request=${scrapeRequest}")
-    scrapeProcessor.asyncScrape(scrapeRequest.uri, scrapeRequest.info, scrapeRequest.proxyOpt)
+    scrapeProcessor.asyncScrape(scrapeRequest.uri, scrapeRequest.scrapeInfo, scrapeRequest.pageInfoOpt, scrapeRequest.proxyOpt)
     Ok(JsBoolean(true))
   }
 
