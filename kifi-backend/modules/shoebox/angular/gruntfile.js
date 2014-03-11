@@ -113,8 +113,8 @@ module.exports = function (grunt) {
         specs: 'src/**/*.spec.js',
         scenarios: 'src/**/*.scenario.js',
         client: ['<%= path.test.specs %>', '<%= path.test.scenarios %>'],
-        karma: 'test/karma',
-        karmaConfig: 'test/karma/karma.conf.js',
+        karma: 'test',
+        karmaConfig: 'test/karma.conf.js',
         jshintrc: 'test/.jshintrc'
       }
     },
