@@ -4,9 +4,9 @@
       <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
       <span class="kf-search-filters">
-        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">You ({{results.myTotal}})</a>
-        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ng-href="{{getFilterUrl('f')}}">Friends ({{results.friendsTotal}})</a>
-        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All ({{results.myTotal + results.friendsTotal + results.othersTotal}})</a>
+        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">Your keeps ({{results.myTotal}})</a>
+        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ng-href="{{getFilterUrl('f')}}">Friends keeps ({{results.friendsTotal}})</a>
+        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All keeps</a>
       </span>
     </div>
   </div>
