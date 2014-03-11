@@ -57,7 +57,7 @@ class ExtNonUserSearchController @Inject() (
       "name" -> JsString(i.fullName),
       "id" -> JsString(s"${i.networkType}/${i.socialId.id}")) ++
       infosInvitedAt.get(i.id).map {t => "invited" -> JsNumber(t.getMillis)} ++
-      i.pictureUrl.map {url => "pic" -> JsString(url)})}) ++
+      i.getPictureUrl(56, 56).map {url => "pic" -> JsString(url)})}) ++
     JsArray(contacts.map {c => JsObject(Seq[(String, JsValue)](
       "email" -> JsString(c.email)) ++
       c.name.map {name => "name" -> JsString(name)} ++
