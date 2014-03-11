@@ -176,8 +176,9 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
 
     function getFacebookStatus() {
       return $FB.getLoginStatus().then(function (res) {
-        me.facebookStatusResponse = res;
-        me.facebookStatus = res.status;
+        me.facebookStatusResponse = res || null;
+        me.facebookStatus = res && res.status || null;
+        me.seqNum++;
         return res;
       });
     }

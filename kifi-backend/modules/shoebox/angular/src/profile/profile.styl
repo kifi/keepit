@@ -603,10 +603,10 @@ a.profile-nw
 .profile-nw.nw-email:active
   background-color: #C84F50
 
-.not-connected > a.profile-nw
+.not-connected a.profile-nw
   background-color: #dbdee3
 
-.not-connected > .profile-nw-connected
+.not-connected .profile-nw-connected
   visibility: hidden
 
 .profile-nw-connected
@@ -625,22 +625,23 @@ a.profile-nw
   background-position: 0
   overflow: hidden
 
-.profile-placeholder
-
 .profile-connected
   position: absolute
+  top: 0
   color: #818691
   transition: top .3s ease
+  cursor: pointer
 
 .profile-disconnect
   position: absolute
   top: 100%
+  background-color: white
   transition: top .3s ease
 
 .profile-disconnect:hover
   text-decoration: underline
 
-.profile-networks > li:hover
+.profile-networks li:hover
   & .profile-connected
     top: -100%
 
