@@ -62,7 +62,7 @@
         <h3>Connect your social networks to Kifi</h3>
         <h5>Find which of your friends are using Kifi</h5>
         <ul class="profile-networks">
-          <li data-network="facebook" kf-facebook-connect-button ng-class="{ 'not-connected': !isFacebookConnected() }">
+          <li kf-facebook-connect-button data-network="facebook" ng-class="{ 'not-connected': !isFacebookConnected() }">
             <a class="profile-nw nw-facebook" href="javascript:" ng-click="connectFacebook()">Facebook</a>
             <span class="profile-nw-connected">
               <span class="profile-placeholder">&nbsp;</span>
@@ -70,7 +70,7 @@
               <a class="profile-disconnect" href="javascript:" ng-click="disconnectFacebook()">Disconnect?</a>
             </span>
           </li>
-          <li data-network="linkedin" ng-class="{ 'not-connected': !isLinkedInConnected() }">
+          <li kf-linkedin-connect-button data-network="linkedin" ng-class="{ 'not-connected': !isLinkedInConnected() }">
             <a class="profile-nw nw-linkedin" href="javascript:" ng-click="connectLinkedIn()">LinkedIn</a>
             <span class="profile-nw-connected">
               <span class="profile-placeholder">&nbsp;</span>
