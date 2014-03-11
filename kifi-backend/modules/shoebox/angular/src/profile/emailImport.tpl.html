@@ -1,8 +1,7 @@
-<div ng-if="addressBooks !== undefined">
+<div>
   <h3>Import your email contacts to Kifi</h3>
   <h5>Message your email contact directly from Kifi</h5>
-  <a class="profile-nw nw-email import-gmail" href="javascript:" ng-click="importGmailContacts()" ng-if="addressBooks">Import another Gmail account</a>
-  <a class="profile-nw nw-email import-gmail" href="javascript:" ng-click="importGmailContacts()" ng-if="!addressBooks || addressBooks.length === 0">Import a Gmail account</a>
+  <a class="profile-nw nw-email import-gmail" href="javascript:" ng-click="importGmailContacts()" ng-bind="addressBookImportText"></a>
   <div ng-if="addressBooks">
     <div class="profile-email-accounts-title">
       <span>Your imported accounts: </span>
