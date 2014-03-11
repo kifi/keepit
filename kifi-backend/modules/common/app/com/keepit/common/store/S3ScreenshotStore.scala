@@ -55,7 +55,7 @@ case class EmbedlyExtractResponse(
   content:Option[String],
   safe:Option[Boolean],
   faviconUrl:Option[String],
-  images:Seq[ImageInfo]) extends PageGenericInfo with PageSafetyInfo {
+  images:Seq[ImageInfo]) extends PageGenericInfo with PageSafetyInfo with PageMediaInfo {
   def toPageInfo(nuriId:Id[NormalizedURI]):PageInfo =
     PageInfo(
       id = None,
