@@ -27,6 +27,6 @@ CREATE TABLE page_info (
 CREATE SEQUENCE page_info_sequence;
 CREATE INDEX page_info_seq_index on page_info(seq);
 
-insert into evolutions (name, description) values('146.sql', 'adding page_info');
+insert into evolutions (name, description) values('145.sql', 'adding page_info');
 
 # --- !Downs
