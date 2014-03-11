@@ -99,7 +99,15 @@
           <input type="submit" value="Merge!">
         </form></td>
       </tr>
-      }
+      <tr>
+        <th>Deactivate User</th>
+        <td><form class="form-inline" method="post"
+        action="@com.keepit.controllers.admin.routes.AdminUserController.deactivate(user.id.get)">
+          <input type="submit" value="Deactivate!">
+          <input type="checkbox" name="doIt" value="true"> I know what I'm doing.
+        </form></td>
+      </tr>
+    }
     </table>
     <p>
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.moreUserInfoView(user.id.get)">More User Info</a>
