@@ -224,35 +224,15 @@ class UserController @Inject() (
   }
 
 
-  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+  //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     request.body.asOpt[UpdatableUserInfo] map { userData =>
-      val hasInvalidEmails = userData.emails.exists { addresses =>
-        addresses.map(em => emailRegex.findFirstIn(em.address).isEmpty).contains(true)
-      }
-      if (hasInvalidEmails) {
+      if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmailId, _))
-        db.readWrite { implicit session =>
-
-          userData.description foreach { description =>
-            val trimmed = description.trim
-            if (trimmed != "") {
-              userValueRepo.setValue(request.userId, "user_description", trimmed)
-            } else {
-              userValueRepo.clearValue(request.userId, "user_description")
-            }
-          }
-          // Users cannot change their name for now. When we're ready, use the code below:
-//          if ((userData.firstName.isDefined && userData.firstName.get.trim != "") || (userData.lastName.isDefined && userData.lastName.get.trim != "")) {
-//            val user = userRepo.get(request.userId)
-//            val cleanFirst = User.sanitizeName(userData.firstName getOrElse user.firstName)
-//            val cleanLast = User.sanitizeName(userData.lastName getOrElse user.lastName)
-//            val updatedUser = user.copy(firstName = cleanFirst, lastName = cleanLast)
-//            userRepo.save(updatedUser)
-//          }
-          userRepo.save(userRepo.getNoCache(request.userId)) // update user index sequence number
+        userData.description.foreach{ description =>
+          userCommander.updateUserDescription(request.userId, description)
         }
         getUserInfo(request.userId)
       }
