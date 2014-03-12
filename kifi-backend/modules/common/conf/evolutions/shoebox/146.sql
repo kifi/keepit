@@ -1,0 +1,9 @@
+# SHOEBOX
+
+# --- !Ups
+
+ALTER TABLE bookmark MODIFY url varchar(3072) NOT NULL;
+
+insert into evolutions (name, description) values('146.sql', 'updating url size of bookmark');
+
+# --- !Downs
