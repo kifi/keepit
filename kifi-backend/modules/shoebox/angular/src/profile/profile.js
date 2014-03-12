@@ -162,7 +162,7 @@ angular.module('kifi.profile', [
         };
 
         scope.disconnectLinkedIn = function () {
-          console.log('disconnectLinkedIn');
+          // todo: disconnect
         };
       }
     };
@@ -188,6 +188,7 @@ angular.module('kifi.profile', [
         };
 
         scope.disconnectFacebook = function () {
+          // todo: disconnect
           $FB.disconnect()['finally'](profileService.getFacebookStatus);
         };
       }
@@ -205,12 +206,12 @@ angular.module('kifi.profile', [
       templateUrl: 'profile/emailImport.tpl.html',
       link: function (scope) {
 
-        scope.addressBookImportText = "Import a Gmail account";
+        scope.addressBookImportText = 'Import a Gmail account';
 
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
           if (data && data.length > 0) {
-            scope.addressBookImportText = "Import another Gmail account";
+            scope.addressBookImportText = 'Import another Gmail account';
           }
         });
 
