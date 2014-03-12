@@ -311,7 +311,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'ngDragDrop'])
 
         scope.onKeepDrop = function (keep, tag) {
           tagService.addKeepToTag(tag, keep);
-        }
+        };
 
         function positionTagsList() {
           list.css({
