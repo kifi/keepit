@@ -752,7 +752,11 @@ class AdminUserController @Inject() (
 
   def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
     val toBeCreated = db.readWrite { implicit session =>
-      userConnectionRepo.all().collect { case activeConnection if activeConnection.state == UserConnectionStates.ACTIVE && userRepo.get(activeConnection.user1).state == UserStates.ACTIVE && userRepo.get(activeConnection.user2).state == UserStates.ACTIVE =>
+      userConnectionRepo.all().collect { case activeConnection if {
+        val user1State = userRepo.get(activeConnection.user1).state
+        val user2State = userRepo.get(activeConnection.user2).state
+        activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
+      } =>
         val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
         val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
         if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
