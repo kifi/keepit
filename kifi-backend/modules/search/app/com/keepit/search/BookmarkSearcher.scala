@@ -52,7 +52,7 @@ class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSear
 
 object BookmarkQueryParser {
   def apply(lang: Lang): BookmarkQueryParser = {
-    new BookmarkQueryParser(DefaultAnalyzer.forParsing(lang), DefaultAnalyzer.forParsingWithStemmer(lang), lang)
+    new BookmarkQueryParser(DefaultAnalyzer.getAnalyzer(lang), DefaultAnalyzer.getAnalyzerWithStemmer(lang), lang)
   }
 }
 

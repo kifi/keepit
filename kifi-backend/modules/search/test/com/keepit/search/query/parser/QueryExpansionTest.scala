@@ -30,8 +30,8 @@ class QueryExpansionTest extends Specification {
 
   private class QueryParserScope(concatBoostValue: Float) extends Scope {
     val english = Lang("en")
-    val analyzer = DefaultAnalyzer.forParsing(english)
-    val stemmingAnalyzer = DefaultAnalyzer.forParsingWithStemmer(english)
+    val analyzer = DefaultAnalyzer.getAnalyzer(english)
+    val stemmingAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(english)
     val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with QueryExpansion {
       override val lang = english
       override val altAnalyzer = None

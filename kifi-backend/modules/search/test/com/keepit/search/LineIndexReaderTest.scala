@@ -32,7 +32,7 @@ import com.keepit.search.Lang
 
 class LineIndexReaderTest extends Specification {
 
-  val indexingAnalyzer = DefaultAnalyzer.forIndexing
+  val indexingAnalyzer = DefaultAnalyzer.defaultAnalyzer
   val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
 
   val ramDir = new RAMDirectory

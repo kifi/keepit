@@ -19,7 +19,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 class SearchFriendIndexerTest extends Specification with ApplicationInjector {
 
   def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl) = {
-    new SearchFriendIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new SearchFriendIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   "searchFriend indexer" should {

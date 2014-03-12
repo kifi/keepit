@@ -18,7 +18,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 class UserGraphIndexTest extends Specification with ApplicationInjector{
 
   def mkUserGraphIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserGraphIndexer = {
-    new UserGraphIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new UserGraphIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   "UserGraphIndexer" should {
