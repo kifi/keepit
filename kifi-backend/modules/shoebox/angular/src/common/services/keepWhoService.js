@@ -6,14 +6,20 @@ angular.module('kifi.keepWhoService', [])
   function () {
     var api = {
       getPicUrl: function (user) {
-        if (user) {
+        if (user && user.id && user.pictureName) {
           return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/100/' + user.pictureName;
         }
         return '';
       },
 
       getName: function (user) {
-        return (user.firstName || '') + ' ' + (user.lastName || '');
+        if (!user) {
+          return '';
+        }
+        if (user.firstName && user.lastName) {
+          return user.firstName + ' ' + user.lastName;
+        }
+        return user.firstName || user.lastName || '';
       }
     };
 

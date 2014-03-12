@@ -3,7 +3,6 @@
 angular.module('kifi.profile', [
   'util',
   'kifi.profileService',
-  'kifi.routeService',
   'kifi.profileInput',
   'kifi.routeService',
   'kifi.profileEmailAddresses',
