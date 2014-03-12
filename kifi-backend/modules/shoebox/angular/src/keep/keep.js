@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
+angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagService'])
 
 .controller('KeepCtrl', [
   '$scope',
@@ -38,8 +38,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
 ])
 
 .directive('kfKeep', [
-  '$document',
-  function ($document) {
+  '$document', 'tagService',
+  function ($document, tagService) {
     return {
       restrict: 'A',
       scope: true,
@@ -164,6 +164,10 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText'])
           // needed to prevent previewing
           e.stopPropagation();
           return scope.toggleSelect(scope.keep);
+        };
+
+        scope.onTagDrop = function (tag) {
+          tagService.addKeepToTag(tag, scope.keep);
         };
       }
     };
