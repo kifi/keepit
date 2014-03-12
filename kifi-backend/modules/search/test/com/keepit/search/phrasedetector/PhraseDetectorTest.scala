@@ -45,7 +45,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
         indexer.indexDocuments(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), SequenceNumber(i), false, p, lang) }.iterator, 10)
 
         val detector = new PhraseDetector(indexer)
-        val analyzer = DefaultAnalyzer.getAnalyzer(Lang("en"))
+        val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("en"))
 
         def toTerms(text: String) = {
           indexer.getFieldDecoder("b").decodeTokenStream(analyzer.tokenStream("b", new StringReader(text))).map{ case (t, _, _) => new Term("b", t) }.toArray
