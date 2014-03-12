@@ -753,12 +753,18 @@ class AdminUserController @Inject() (
   def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
     val toBeCreated = db.readWrite { implicit session =>
       userConnectionRepo.all().collect { case activeConnection if activeConnection.state == UserConnectionStates.ACTIVE =>
-        val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-        val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-        if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
-          if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
-          Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
-        } else None
+        if (userRepo.get(activeConnection.user1).state == UserStates.INACTIVE || userRepo.get(activeConnection.user2).state == UserStates.INACTIVE) {
+          log.info(s"Found active user connection with inactive user: $activeConnection")
+          userConnectionRepo.save(activeConnection).withState(UserConnectionStates.INACTIVE)
+          None
+        } else {
+          val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+          val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+          if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
+            if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
+            Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
+          } else None
+        }
       }.flatten
     }
 
