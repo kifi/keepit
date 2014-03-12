@@ -27,12 +27,9 @@ object ResultUtil {
   }
 
   def toArticleSearchResult(
-    uuid: ExternalId[ArticleSearchResult],
+    res: DecoratedResult,
     last: Option[ExternalId[ArticleSearchResult]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
-    query: String,
     mergedResult: MergedSearchResult,
-    mayHaveMoreHits: Boolean,
-    filter: Set[Long],
     millisPassed: Int,
     pageNumber: Int,
     previousHits: Int,
@@ -41,18 +38,18 @@ object ResultUtil {
   ): ArticleSearchResult = {
     ArticleSearchResult(
       last,
-      query,
+      res.query,
       mergedResult.hits.map{ h => h.json.as[ArticleHit] },
       mergedResult.myTotal,
       mergedResult.friendsTotal,
       mergedResult.othersTotal,
-      mayHaveMoreHits,
+      res.mayHaveMoreHits,
       mergedResult.hits.map{ h => (h.json \ "scoring").as[Scoring] },
-      filter,
+      res.idFilter,
       millisPassed,
       pageNumber,
       previousHits,
-      uuid,
+      res.uuid,
       time,
       mergedResult.svVariance,
       -1.0f,
