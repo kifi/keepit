@@ -3,15 +3,6 @@ package com.keepit.commanders.emails
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.model._
-import com.keepit.heimdal.HeimdalContext
-import org.joda.time.DateTime
-import com.keepit.common.time._
-import com.keepit.scraper.FakeScrapeSchedulerModule
-import scala.Some
-import com.keepit.normalizer.NormalizationService
-import com.keepit.search.FakeSearchServiceClientModule
-import com.google.inject.Injector
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.eliza.model.ThreadItem
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -22,7 +13,7 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
 
   "EmailNotificationsCommander" should {
 
-    "remove tags and tags to keeps" in {
+    "send email" in {
       withDb(FakeMailModule()) { implicit injector =>
         val userRepo = inject[UserRepo]
         val deepLinkRepo = inject[DeepLinkRepo]
