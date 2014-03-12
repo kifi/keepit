@@ -778,7 +778,7 @@ class AdminUserController @Inject() (
         userConnectionRepo.deactivateAllConnections(userId) // User Connections
         socialUserInfoRepo.getByUser(userId).foreach { sui =>
           socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
-          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId.inactive)) // Social User Infos
+          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
           socialUserInfoRepo.deleteCache(sui)
         }
 
