@@ -106,6 +106,25 @@ class UserCommander @Inject() (
   heimdalClient: HeimdalServiceClient,
   fortytwoConfig: FortyTwoConfig) extends Logging {
 
+
+  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+  def validateEmails(addresses: EmailInfo*): Boolean = {
+    !addresses.map(em => emailRegex.findFirstIn(em.address).isDefined).contains(false)
+  }
+
+  def updateUserDescription(userId: Id[User], description: String): Unit = {
+    //ZZZ
+    db.readWrite { implicit session =>
+      val trimmed = description.trim
+      if (trimmed != "") {
+        userValueRepo.setValue(userId, "user_description", trimmed)
+      } else {
+        userValueRepo.clearValue(userId, "user_description")
+      }
+      userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+    }
+  }
+
   def getFriendsDetails(userId:Id[User]):Future[Seq[(BasicUser, Boolean, Boolean)]] = {
     val (searchFriends, connectionIds, unfriendedIds) = db.readOnly { implicit s =>
       (searchFriendRepo.getSearchFriends(userId),

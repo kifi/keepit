@@ -5,6 +5,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
 .factory('profileService', [
   '$http', 'env', '$q', 'util', 'routeService', '$FB',
   function ($http, env, $q, util, routeService, $FB) {
+
     var me = {
       seqNum: 0
     };
