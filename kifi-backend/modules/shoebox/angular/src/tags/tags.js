@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'ngDragDrop'])
+angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
 
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
