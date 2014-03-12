@@ -7,7 +7,7 @@
 </div>
 <div class="kf-tag-list-hidden"></div>
 <ul class="kf-tag-list" antiscroll="{ autoHide: false }">
-  <li class="kf-nav-item kf-tag" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew, renaming: isRenaming(tag) }" ng-repeat="tag in shownTags = (tags | filter: filter)">
+  <li class="kf-nav-item kf-tag" ui-draggable="true" drag="tag" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew, renaming: isRenaming(tag) }" ng-repeat="tag in shownTags = (tags | filter: filter)">
     <a class="kf-nav-link" ng-href="/tag/{{tag.id}}">
       <span class="kf-tag-icon"></span>
       <span class="kf-tag-name">{{tag.name}}</span>

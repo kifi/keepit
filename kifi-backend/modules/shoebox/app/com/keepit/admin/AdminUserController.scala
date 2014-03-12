@@ -729,13 +729,17 @@ class AdminUserController @Inject() (
         authCommander.saveUserPasswordIdentity(
           userIdOpt = Some(user.id.get),
           identityOpt = None,
-          email = db.readWrite { implicit session => {
-            try { emailRepo.getByUser(user.id.get).address }
-            catch { case ex: Throwable =>
-              try { emailRepo.save(EmailAddress(address = socialUserInfoRepo.getByUser(user.id.get).head.credentials.get.email.get, userId = user.id.get)).address }
-              catch { case _: Throwable => throw ex }
+          email = db.readWrite { implicit session =>
+            val currentEmail = emailRepo.getByUser(user.id.get)
+            if (currentEmail.verified) currentEmail.address
+            else {
+              val socialEmail = socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get
+              require(currentEmail.address == socialEmail, "No verified email")
+              val updatedEmail = emailRepo.save(currentEmail.withState(EmailAddressStates.VERIFIED))
+              userCommander.updateUserPrimaryEmail(updatedEmail)
+              updatedEmail.address
             }
-          }},
+          },
           passwordInfo = pInfo,
           firstName = user.firstName,
           lastName = user.lastName,
@@ -774,7 +778,7 @@ class AdminUserController @Inject() (
         userConnectionRepo.deactivateAllConnections(userId) // User Connections
         socialUserInfoRepo.getByUser(userId).foreach { sui =>
           socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
-          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId.inactive)) // Social User Infos
+          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
           socialUserInfoRepo.deleteCache(sui)
         }
 

@@ -7,10 +7,6 @@ case class SocialId(id: String) {
   override def toString = id
 }
 
-object SocialId {
-  val inactive = SocialId("inactive")
-}
-
 sealed abstract class SocialNetworkType(val name: String, val displayName: String, val authProvider: String) {
   override def toString: String = name
 }

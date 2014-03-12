@@ -10,9 +10,9 @@ case class HttpFetchStatus(statusCode: Int, message: Option[String], context: Ht
 }
 
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
-  def isPermanent = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
-  def isAbsolute = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
-  def isLocatedAt(url: String) = (currentLocation == url)
+  def isPermanent: Boolean = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
+  def isAbsolute: Boolean = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
+  def isLocatedAt(url: String): Boolean = (currentLocation == url)
 }
 
 object HttpRedirect {

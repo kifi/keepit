@@ -9,6 +9,10 @@ import com.keepit.common.db.Id
 import play.api.mvc.Action
 import play.api.libs.json.JsObject
 import com.keepit.common.net.UserAgent
+import scala.Some
+import com.keepit.model.DeepLink
+import play.api.libs.json.JsObject
+import com.keepit.model.DeepLocator
 
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -36,8 +40,9 @@ class ExtDeepLinkController @Inject() (
     Ok("")
   }
 
-  def handle(token: String) = HtmlAction(
+  def handle(tokenString: String) = HtmlAction(
     authenticatedAction = { request =>
+      val token = DeepLinkToken(tokenString)
       getDeepLinkAndUrl(token) map { case (deepLink, url) =>
         val agent = request.request.headers.get(USER_AGENT)
         val isIphoneApp = agent exists { agentString =>
@@ -60,6 +65,7 @@ class ExtDeepLinkController @Inject() (
       } getOrElse NotFound
     },
     unauthenticatedAction = { request =>
+      val token = DeepLinkToken(tokenString)
       getDeepLinkAndUrl(token) map {
         case (_, url) =>
           log.info(s"sending unknown user to $url")
@@ -67,10 +73,10 @@ class ExtDeepLinkController @Inject() (
       } getOrElse NotFound
     })
 
-  private def getDeepLinkAndUrl(token: String): Option[(DeepLink, String)] = {
+  private def getDeepLinkAndUrl(token: DeepLinkToken): Option[(DeepLink, String)] = {
     db.readOnly { implicit s =>
       for {
-        deepLink <- deepLinkRepo.getByToken(DeepLinkToken(token))
+        deepLink <- deepLinkRepo.getByToken(token)
         uriId <- deepLink.uriId
       } yield {
         (deepLink, normalizedURIRepo.get(uriId).url)
