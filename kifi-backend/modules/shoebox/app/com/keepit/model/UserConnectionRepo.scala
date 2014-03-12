@@ -109,7 +109,7 @@ class UserConnectionRepoImpl @Inject() (
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit = {
     val allConnections = (for { conn <- rows if conn.user1 === userId || conn.user2 === userId } yield conn).list
     val changedUsers: Set[Id[User]] = for {
-      conn <- allConnections.toSet
+      conn: UserConnection <- allConnections.toSet
       changedUser <- {
         save(conn.copy(state = UserConnectionStates.INACTIVE))
         Seq(conn.user1, conn.user2)
