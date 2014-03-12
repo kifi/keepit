@@ -114,8 +114,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       preview: function (keep) {
         if (keep == null) {
-          singleKeepBeingPreviewed = false;
-          isDetailOpen = false;
+          api.clearState();
         }
         else {
           singleKeepBeingPreviewed = true;
@@ -135,7 +134,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return null;
         }
         else if (api.isPreviewed(keep)) {
-          return api.preview(null);
+          return api.clearState();
         }
         return api.preview(keep);
       },
@@ -238,9 +237,13 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       clearState: function () {
-        previewed = null;
         isDetailOpen = false;
-        singleKeepBeingPreviewed = false;
+        $timeout(function () {
+          if (isDetailOpen === false) {
+            previewed = null;
+            singleKeepBeingPreviewed = false;
+          }
+        }, 500);
       },
 
       isSelectedAll: function () {
