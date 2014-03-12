@@ -22,6 +22,7 @@ trait EdgeSet[S,D] {
 
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator
   def size: Int
+  def isEmpty: Boolean = (size == 0)
 
   def accessor: EdgeSetAccessor[S, D] = new SimpleEdgeSetAccessor(this)
 
@@ -142,6 +143,7 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   override def destIdSet = lazyDestIdSet
 
   override def size = getDestDocIdSetIterator(searcher).size
+  override def isEmpty = getDestDocIdSetIterator(searcher).isEmpty
 
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = {
     val td = searcher.indexReader.asAtomicReader.termDocsEnum(createSourceTerm)

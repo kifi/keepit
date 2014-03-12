@@ -32,6 +32,7 @@ class AdminBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
+  pageInfoRepo: PageInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   s3ScreenshotStore: S3ScreenshotStore,
   clock: Clock)
@@ -40,29 +41,33 @@ class AdminBookmarksController @Inject() (
   implicit val dbMasterSlave = Database.Slave
 
   private def editBookmark(bookmark: Bookmark)(implicit request: AuthenticatedRequest[AnyContent]) = {
+    @inline def cb(pageInfo:PageInfo):Unit = db.readWrite { implicit rw => pageInfoRepo.save(pageInfo) }
     db.readOnly { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
-      Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, screenshotUrl))
+      val pageInfoOpt = pageInfoRepo.getByUri(bookmark.uriId)
+      s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(cb)) map { imgUrl =>
+        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imgUrl.getOrElse(""), screenshotUrl))
+      }
     }
   }
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    db.readOnlyAsync { implicit session =>
-      val bookmark = bookmarkRepo.get(id)
-      editBookmark(bookmark)
+    val bookmark = db.readOnly { implicit session =>
+      bookmarkRepo.get(id)
     }
+    editBookmark(bookmark)
   }
 
   def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    db.readOnlyAsync { implicit session =>
-      val bookmarkOpt = bookmarkRepo.getByUri(id).headOption
-      bookmarkOpt match {
-        case Some(bookmark) => editBookmark(bookmark)
-        case None => NotFound(s"No bookmark for id $id")
-      }
+    val bookmarkOpt = db.readOnly { implicit session =>
+      bookmarkRepo.getByUri(id).headOption
+    }
+    bookmarkOpt match {
+      case Some(bookmark) => editBookmark(bookmark)
+      case None => Future.successful(NotFound(s"No bookmark for id $id"))
     }
   }
 

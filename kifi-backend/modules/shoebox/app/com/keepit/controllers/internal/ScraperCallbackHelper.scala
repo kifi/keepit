@@ -17,6 +17,7 @@ class ScraperCallbackHelper @Inject()(
   airbrake:AirbrakeNotifier,
   urlPatternRuleRepo:UrlPatternRuleRepo,
   normUriRepo:NormalizedURIRepo,
+  pageInfoRepo:PageInfoRepo,
   scrapeInfoRepo:ScrapeInfoRepo
   ) extends Logging {
 
@@ -41,11 +42,12 @@ class ScraperCallbackHelper @Inject()(
         for (info <- overdues if count < max) {
           val nuri = normUriRepo.get(info.uriId)
           if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(nuri.state)) { // todo(ray): batch
+            val pageInfoOpt = pageInfoRepo.getByUri(nuri.id.get)
             val proxy = urlPatternRuleRepo.getProxy(nuri.url)
             val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
             log.info(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
             count += 1
-            builder += ScrapeRequest(nuri, savedInfo, proxy)
+            builder += ScrapeRequest(nuri, savedInfo, pageInfoOpt, proxy)
           } else {
             val saved = scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
             log.warn(s"[assignTasks($zkId,$max)] ${nuri.state} in DO_NOT_SCRAPE list; uri=$nuri; deactivated scrapeInfo=$saved")

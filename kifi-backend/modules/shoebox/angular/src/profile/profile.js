@@ -141,24 +141,37 @@ angular.module('kifi.profile', [
         );
       }
     }
+  }
+])
 
-    $scope.isLinkedInConnected = function () {
-      return $scope.me && $scope.me.linkedinStatus === 'connected';
-    };
+.directive('kfLinkedinConnectButton', [
+  'profileService', '$window',
+  function (profileService, $window) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        // TODO: implement this. look at how facebook is done
+        //profileService.getLinkedInStatus();
 
-    $scope.connectLinkedIn = function () {
-      console.log('connectLinkedIn');
-    };
+        scope.isLinkedInConnected = function () {
+          return scope.me && scope.me.linkedinStatus === 'connected';
+        };
 
-    $scope.disconnectLinkedIn = function () {
-      console.log('disconnectLinkedIn');
+        scope.connectLinkedIn = function () {
+          $window.location.href = '/link/linkedin';
+        };
+
+        scope.disconnectLinkedIn = function () {
+          console.log('disconnectLinkedIn');
+        };
+      }
     };
   }
 ])
 
 .directive('kfFacebookConnectButton', [
-  'profileService', '$FB',
-  function (profileService, $FB) {
+  'profileService', '$FB', '$window',
+  function (profileService, $FB, $window) {
     return {
       restrict: 'A',
       link: function (scope) {
@@ -169,15 +182,13 @@ angular.module('kifi.profile', [
         };
 
         scope.connectFacebook = function () {
-          $FB.login()['finally'](profileService.getFacebookStatus);
+          $FB.login()['finally'](profileService.getFacebookStatus).then(function () {
+            $window.location.href = '/link/facebook';
+          });
         };
 
         scope.disconnectFacebook = function () {
           $FB.disconnect()['finally'](profileService.getFacebookStatus);
-        };
-
-        scope.logoutFacebook = function () {
-          $FB.logout()['finally'](profileService.getFacebookStatus);
         };
       }
     };
@@ -194,8 +205,13 @@ angular.module('kifi.profile', [
       templateUrl: 'profile/emailImport.tpl.html',
       link: function (scope) {
 
+        scope.addressBookImportText = "Import a Gmail account";
+
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
+          if (data && data.length > 0) {
+            scope.addressBookImportText = "Import another Gmail account";
+          }
         });
 
         scope.importGmailContacts = function () {

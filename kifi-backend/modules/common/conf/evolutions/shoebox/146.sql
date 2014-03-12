@@ -2,8 +2,8 @@
 
 # --- !Ups
 
-ALTER TABLE bookmark MODIFY url varchar(3072) NOT NULL;
+ALTER TABLE user_cred add state varchar(20) NOT NULL DEFAULT 'active' ;
 
-insert into evolutions (name, description) values('146.sql', 'updating url size of bookmark');
+INSERT INTO evolutions (name, description) VALUES ('146.sql', 'add state to user_cred');
 
 # --- !Downs

@@ -68,6 +68,22 @@ class MobileUserController @Inject() (
     getUserInfo(request)
   }
 
+  def updateCurrentUser = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
+    request.body.asOpt[UpdatableUserInfo] map { userData =>
+      if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
+        BadRequest(Json.obj("error" -> "bad email addresses"))
+      } else {
+        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmailId, _))
+        userData.description.foreach{ description =>
+          userCommander.updateUserDescription(request.userId, description)
+        }
+        getUserInfo(request)
+      }
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "could not parse user info from body"))
+    }
+  }
+
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
     val user = userCommander.getUserInfo(request.user)
     Ok(toJson(user.basicUser).as[JsObject] ++

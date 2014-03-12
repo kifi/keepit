@@ -38,8 +38,8 @@ class SyncScraper @Inject() (
   implicit val myConfig = config
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = try {
-    processURI(uri, info, proxyOpt)
+  private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = try {
+    processURI(uri, info, pageInfoOpt, proxyOpt)
   } catch {
     case t: Throwable => {
       log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
@@ -57,7 +57,7 @@ class SyncScraper @Inject() (
     }
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
     log.info(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
@@ -101,7 +101,16 @@ class SyncScraper @Inject() (
               Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays() >= 5
             } getOrElse true
           }
-          if(shouldUpdateScreenshot(scrapedURI)) s3ScreenshotStore.updatePicture(scrapedURI)
+          if(shouldUpdateScreenshot(scrapedURI)) {
+            s3ScreenshotStore.updatePicture(scrapedURI)
+
+            // initial throttling by tying to screenshot; need to move out
+            if (pageInfoOpt.forall(p => Days.daysBetween(currentDateTime.withTimeAtStartOfDay, p.updatedAt.withTimeAtStartOfDay).getDays >= 5)) {
+              s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some({ pageInfo =>
+                helper.syncSavePageInfo(pageInfo)
+              }))
+            }
+          }
 
           log.info(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
           (scrapedURI, Some(article))

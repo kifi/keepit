@@ -2458,6 +2458,7 @@ $(function () {
 				.click(function (e) {
 					var email = $(e.target).closest('.invite-email').data('email');
 					submitInvite('email/' + email, '');
+					$(this).text('Invited ' + email).closest('.invite-email').addClass('invited');
 				});
 		}
 	}

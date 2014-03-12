@@ -94,6 +94,10 @@ class SearchCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
     val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
+    val resultDecorator = {
+      val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
+      new ResultDecorator(userId, query, firstLang, showExperts, shoeboxClient, monitoredAwait)
+    }
 
     val mergedResult = {
       timing.factory
@@ -112,20 +116,10 @@ class SearchCommanderImpl @Inject() (
 
     timing.decoration
 
-    val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
     val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
     val mayHaveMoreHits = (mergedResult.hits.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
-    val res = ResultDecorator.decorate(
-      userId,
-      query,
-      firstLang,
-      mergedResult,
-      mayHaveMoreHits,
-      searchExperimentId,
-      showExperts,
-      newIdFilter,
-      shoeboxClient,
-      monitoredAwait)
+    val res = resultDecorator.decorate(mergedResult, mayHaveMoreHits, searchExperimentId, newIdFilter)
+
     timing.end
 
     SafeFuture {
@@ -136,12 +130,9 @@ class SearchCommanderImpl @Inject() (
       val numPreviousHits = searchFilter.idFilter.size
       val lang = firstLang.lang + secondLang.map("," + _.lang).getOrElse("")
       val articleSearchResult = ResultUtil.toArticleSearchResult(
-        res.uuid,
+        res,
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
-        query,
         mergedResult,
-        mayHaveMoreHits,
-        newIdFilter,
         timing.getTotalTime.toInt,
         numPreviousHits/maxHits,
         numPreviousHits,
@@ -182,10 +173,20 @@ class SearchCommanderImpl @Inject() (
     }
 
     // TODO: use user profile info as a bias
-    val acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
-      val lang = code.substring(0,2)
-      if (lang == "zh") Set(Lang("zh-cn"), Lang("zh-tw")) else Set(Lang(lang))
+    var acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
+      val langCode = code.substring(0,2)
+      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+      else {
+        val lang = Lang(langCode)
+        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+      }
     }
+
+    if (acceptLangs.isEmpty) {
+      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+      acceptLangs = Set(Lang("en"))
+    }
+
     val langProf = getLangProfile(userId, 3)
     val firstLangSet = acceptLangs ++ langProf.keySet
 
