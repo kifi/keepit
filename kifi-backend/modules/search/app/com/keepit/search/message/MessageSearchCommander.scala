@@ -20,8 +20,8 @@ class MessageSearchCommander @Inject() (indexer: MessageIndexer){
     val searcher = new MessageSearcher(indexer.getSearcher)
 
     val parser = new MessageQueryParser(
-      DefaultAnalyzer.forParsing(lang),
-      DefaultAnalyzer.forParsingWithStemmer(lang)
+      DefaultAnalyzer.getAnalyzer(lang),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang)
     )
 
     parser.parse(query).map{ parsedQuery =>

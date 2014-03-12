@@ -47,7 +47,7 @@ class SemanticVectorSearcher(articleSearcher: Searcher) {
   }
 
   def getTerms(query: String, lang: Lang): Array[Term] = {
-    val analyzer = DefaultAnalyzer.forParsingWithStemmer(lang)
+    val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
     val ts = analyzer.tokenStream("b", new StringReader(query))
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val buf = new ArrayBuffer[Term]

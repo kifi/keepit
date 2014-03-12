@@ -151,13 +151,13 @@ object URIGraphIndexer {
       val titles = buildBookmarkTitleList(publicBookmarks.toSeq, privateBookmarks.toSeq, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
       val title = buildLineField(URIGraphFields.titleField, titles){ (fieldName, text, lang) =>
-        val analyzer = DefaultAnalyzer.forIndexing(lang)
+        val analyzer = DefaultAnalyzer.getAnalyzer(lang)
         analyzer.tokenStream(fieldName, new StringReader(text))
       }
       doc.add(title)
 
       val titleStemmed = buildLineField(URIGraphFields.stemmedField, titles){ (fieldName, text, lang) =>
-        val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
+        val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
         analyzer.tokenStream(fieldName, new StringReader(text))
       }
       doc.add(titleStemmed)

@@ -210,7 +210,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
           collections.find(_.name == name).get.id.get.id
         }
         def detect(text: String) = {
-          val stemmedTermSeq = new TermIterator("", text, DefaultAnalyzer.forParsingWithStemmer).toIndexedSeq
+          val stemmedTermSeq = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang)).toIndexedSeq
           searcher.detectCollectionNames(stemmedTermSeq, false)
         }
         detect("design") === Set((0, 1, getCollectionId("Design")))
@@ -252,7 +252,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
           collections.find(_.name == name).get.id.get.id
         }
         def detect(text: String) = {
-          val stemmedTermSeq = new TermIterator("", text, DefaultAnalyzer.forParsingWithStemmer).toIndexedSeq
+          val stemmedTermSeq = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang)).toIndexedSeq
           searcher.detectCollectionNames(stemmedTermSeq, true)
         }
         detect("design") === Set(

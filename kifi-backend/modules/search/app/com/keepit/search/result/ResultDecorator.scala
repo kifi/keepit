@@ -35,7 +35,7 @@ class ResultDecorator(
   monitoredAwait: MonitoredAwait
 ) extends Logging {
 
-  private[this] val analyzer = DefaultAnalyzer.forIndexing(lang)
+  private[this] val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
   private[this] val terms = Highlighter.getQueryTerms(query, analyzer)
 
   def decorate(

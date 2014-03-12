@@ -167,7 +167,7 @@ class ExtBookmarksController @Inject() (
       case BookmarkSource("plugin_start") => Forbidden
       case BookmarkSource.bookmarkImport =>
         SafeFuture {
-          log.debug("adding bookmarks import of user %s".format(userId))
+          log.debug(s"adding bookmarks import of user $userId")
 
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
           bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId))
@@ -175,7 +175,7 @@ class ExtBookmarksController @Inject() (
         Status(ACCEPTED)(JsNumber(0))
       case _ =>
         SafeFuture {
-          log.debug("adding bookmarks of user %s".format(userId))
+          log.debug(s"adding bookmarks of user $userId")
 
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
           bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)

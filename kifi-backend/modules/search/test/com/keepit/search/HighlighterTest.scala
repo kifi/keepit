@@ -18,7 +18,7 @@ class HighlighterTest extends Specification {
     "- the wheel, New York, wars and so on - whilst all the dolphins had ever done was muck about in the water having a good time. " +
     "But conversely, the dolphins had always believed that they were far more intelligent than man - for precisely the same reasons."
 
-  val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en"))
+  val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("en"))
 
   "Highlighter" should {
     "highlight terms" in {

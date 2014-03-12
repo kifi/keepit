@@ -106,7 +106,7 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     val indexer = new MessageIndexer(
       indexDirectory =  new VolatileIndexDirectoryImpl(),
-      indexWriterConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing),
+      indexWriterConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer),
       eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier], new FakeScheduler()),
       airbrake = inject[AirbrakeNotifier]
     )
@@ -125,8 +125,8 @@ class MessageSearcherTest extends Specification with TestInjector{
         val searcher = new MessageSearcher(indexer.getSearcher)
 
         val parser = new MessageQueryParser(
-          DefaultAnalyzer.forParsing(Lang("en")),
-          DefaultAnalyzer.forParsingWithStemmer(Lang("en"))
+          DefaultAnalyzer.getAnalyzer(Lang("en")),
+          DefaultAnalyzer.getAnalyzerWithStemmer(Lang("en"))
         )
 
         parser.parse("illogical good").map{ parsedQuery =>

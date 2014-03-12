@@ -28,8 +28,8 @@ class DefaultAnalyzerTest extends Specification {
   implicit def toToken(a: (String, String, Int)) = Token(a._1, a._2, a._3)
   implicit def toHighlightToken(a: (String, Int, Int)) = HighlightToken(a._1, a._2, a._3)
 
-  val analyzer = DefaultAnalyzer.forIndexing
-  val analyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer
+  val analyzer = DefaultAnalyzer.getAnalyzer(Lang("en"))
+  val analyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("en"))
 
   "DefaultAnalyzer" should {
     "tokenize a string nicely" in {
@@ -78,19 +78,19 @@ class DefaultAnalyzerTest extends Specification {
     }
 
     "tokenize a word with apostrophe as one word in query parsing" in {
-      toTokenList(DefaultAnalyzer.forParsing.tokenStream("b", "O'Reilly's books")) ===
+      toTokenList(analyzer.tokenStream("b", "O'Reilly's books")) ===
         List[Token](("<ALPHANUM>", "o'reilly's", 1),
                     ("<ALPHANUM>", "books", 1))
     }
 
     "tokenize a word with apostrophe as one word in query parsing (the possesive should be removed)" in {
-      toTokenList(DefaultAnalyzer.forParsingWithStemmer.tokenStream("b", "O'Reilly's books")) ===
+      toTokenList(analyzerWithStemmer.tokenStream("b", "O'Reilly's books")) ===
         List[Token](("<ALPHANUM>", "o'reilly", 1),
                     ("<ALPHANUM>", "book", 1))
     }
 
     "expose the stop word list" in {
-      val stopWords = DefaultAnalyzer.forIndexing.getStopWords
+      val stopWords = analyzer.getStopWords
 
       stopWords must beSome[CharArraySet]
       stopWords.get.contains("scala") === false
@@ -98,7 +98,7 @@ class DefaultAnalyzerTest extends Specification {
     }
 
     "tokenize Japanese text" in {
-      val ja = DefaultAnalyzer.forIndexing(Lang("ja"))
+      val ja = DefaultAnalyzer.getAnalyzer(Lang("ja"))
 
       toJaTokenList(ja.tokenStream("b", "茄子とししとうの煮浸し")) ===
         List[Token]("茄子", "ししとう", "煮浸し")
@@ -109,7 +109,7 @@ class DefaultAnalyzerTest extends Specification {
     }
 
     "tokenize Japanese text with stemming" in {
-      val ja = DefaultAnalyzer.forIndexingWithStemmer(Lang("ja"))
+      val ja = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("ja"))
 
       toJaTokenList(ja.tokenStream("b", "＜日本学術会議＞大震災など緊急事態発生時の対応指針")) ===
         List[Token]("ニッポン", "ガクジュツ", "カイギ", "ダイ", ("ダイシンサイ", 0), "シンサイ", "キンキュウ", "ジタイ", "ハッセイ", "ジ", "タイオウ", "シシン")
@@ -118,7 +118,7 @@ class DefaultAnalyzerTest extends Specification {
     }
 
     "tokenize Japanese text for highlighting" in {
-      val ja = DefaultAnalyzer.forIndexingWithStemmer(Lang("ja"))
+      val ja = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("ja"))
 
       toHighlightTokenList(ja.tokenStream("b", "＜日本学術会議＞大震災など緊急事態発生時の対応指針")) ===
         List[HighlightToken](

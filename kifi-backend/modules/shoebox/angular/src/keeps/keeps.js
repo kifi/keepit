@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.tagService'])
+angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
   '$scope', 'profileService', 'keepService', 'tagService',
@@ -21,8 +21,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 ])
 
 .directive('kfKeeps', [
-  'keepService', 'tagService',
-  function (keepService, tagService) {
+  'keepService',
+  function (keepService) {
 
     return {
       restrict: 'A',
@@ -64,10 +64,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
         if (scope.scrollDistance == null) {
           scope.scrollDistance = '100%';
         }
-
-        scope.onTagDrop = function (tag, keep) {
-          tagService.addKeepToTag(tag, keep);
-        };
       }
     };
   }

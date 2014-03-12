@@ -4,6 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.LargeString._
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
+import com.keepit.common.strings._
 import com.keepit.model.User
 
 import org.joda.time.DateTime
@@ -75,15 +76,20 @@ case class ElectronicMail (
 
   def sent(message: String, messageId: ElectronicMailMessageId): ElectronicMail = state match {
     case ElectronicMailStates.READY_TO_SEND =>
-      copy(state = ElectronicMailStates.SENT, responseMessage = Some(message), timeSubmitted = Some(currentDateTime), messageId = Some(messageId))
+      copy(state = ElectronicMailStates.SENT,
+        responseMessage = Some(message.abbreviate(1000)), timeSubmitted = Some(currentDateTime), messageId = Some(messageId))
     case ElectronicMailStates.SENT =>
       this
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
-  def error(message: String): ElectronicMail = copy(state = ElectronicMailStates.ERROR_CREATING, responseMessage = Some(message))
+  def error(message: String): ElectronicMail =
+    copy(state = ElectronicMailStates.ERROR_CREATING,
+      responseMessage = Some(message.abbreviate(1000)))
 
-  def errorSending(message: String): ElectronicMail = copy(state = ElectronicMailStates.ERROR_SENDING, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
+  def errorSending(message: String): ElectronicMail =
+    copy(state = ElectronicMailStates.ERROR_SENDING,
+      responseMessage = Some(message.abbreviate(1000)), timeSubmitted = Some(currentDateTime))
 }
 
 object ElectronicMail {

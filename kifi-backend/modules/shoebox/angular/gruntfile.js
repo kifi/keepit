@@ -84,7 +84,8 @@ module.exports = function (grunt) {
           'lib/moment/min/moment.min.js',
           'lib/angular-moment/angular-moment.min.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
-          'lib/angular-facebook-api/dist/angular-facebook-api.min.js'
+          'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
+          'lib/angular-dragdrop/draganddrop.js'
         ],
         src: 'src',
         common: 'src/common/build-css',
