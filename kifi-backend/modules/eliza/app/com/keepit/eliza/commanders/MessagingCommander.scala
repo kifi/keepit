@@ -296,7 +296,7 @@ class MessagingCommander @Inject() (
 
       if (!muted) {
         val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
-        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), trimAtBytes(notifText, 128, UTF_8))
+        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), Some(trimAtBytes(notifText, 128, UTF_8)))
       }
     }
 
