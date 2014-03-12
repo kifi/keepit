@@ -309,6 +309,10 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'ngDragDrop'])
         var list = element.find('.kf-tag-list');
         var hidden = element.find('.kf-tag-list-hidden');
 
+        scope.onKeepDrop = function (keep, tag) {
+          tagService.addKeepToTag(tag, keep);
+        }
+
         function positionTagsList() {
           list.css({
             position: 'absolute',
