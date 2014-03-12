@@ -6,8 +6,11 @@ import com.keepit.model._
 import com.keepit.eliza.model.ThreadItem
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail._
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.model.DeepLink
+import com.keepit.common.mail.FakeMailModule
 import com.keepit.model.DeepLocator
-import com.keepit.common.mail.{FakeOutbox, FakeMailModule}
 
 class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInjector {
 
@@ -20,6 +23,7 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
         val (link, william, abraham, george) = inject[Database].readWrite { implicit session =>
           val william = userRepo.save(User(firstName = "William", lastName = "Shakespeare"))
           val george = userRepo.save(User(firstName = "George", lastName = "Washington"))
+          inject[EmailAddressRepo].save(EmailAddress(userId = george.id.get, address = "joe@gmail.com"))
           val link = DeepLink(initiatorUserId = william.id, recipientUserId = george.id,
             uriId = None, deepLocator = DeepLocator("/foo/bar"))
           (deepLinkRepo.save(link),
@@ -39,6 +43,7 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
 
         val outbox = inject[FakeOutbox]
         println(outbox.head.htmlBody)
+        outbox.head.to.map(_.address) === Seq("joe@gmail.com")
         outbox.head.htmlBody.contains(s"https://www.kifi.com/users/${william.externalId}/pics/112/0.jpg") === true
         outbox.head.htmlBody.contains(s"https://www.kifi.com/users/${george.externalId}/pics/112/0.jpg") === true
         outbox.head.htmlBody.contains(s"https://www.kifi.com/users/${abraham.externalId}/pics/112/0.jpg") === false
