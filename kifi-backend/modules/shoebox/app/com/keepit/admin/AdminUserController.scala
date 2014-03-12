@@ -36,6 +36,7 @@ import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import com.keepit.typeahead.abook.EContactTypeahead
 import securesocial.core.Registry
+import com.keepit.common.healthcheck.SystemAdminMailSender
 
 case class UserStatistics(
     user: User,
@@ -97,6 +98,7 @@ class AdminUserController @Inject() (
     userCommander: UserCommander,
     econtactTypeahead: EContactTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
+    systemAdminMailSender: SystemAdminMailSender,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
@@ -769,6 +771,10 @@ class AdminUserController @Inject() (
     implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
     implicit val userIdFormat = Id.format[User]
     val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
+    val title = "FortyTwo Connections to be created"
+    val msg = toBeCreated.mkString("\n")
+    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.LÉO),
+      subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     Ok(json)
   }}
 
