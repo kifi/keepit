@@ -86,6 +86,7 @@
   // Globals
   "globals": {
     "angular": true,
+    "jasmine": true,
     "describe": true,
     "before": true,
     "beforeEach": true,
