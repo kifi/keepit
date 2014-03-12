@@ -36,6 +36,7 @@ import com.keepit.common.usersegment.UserSegmentKey
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import scala.util.{Success, Try}
+import com.keepit.eliza.model.ThreadItem
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -122,6 +123,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
+  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -821,5 +823,17 @@ class ShoeboxServiceClientImpl @Inject() (
     val payload = Json.obj("addresses" -> emailAddresses)
     implicit val userIdFormat = Id.format[User]
     call(Shoebox.internal.getVerifiedAddressOwners(), payload).map(_.json.as[Map[String, Id[User]]])
+  }
+
+  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator): Future[Unit] = {
+    implicit val userIdFormat = Id.format[User]
+    val payload = Json.obj(
+      "threadItems" -> threadItems,
+      "otherParticipants" -> otherParticipants.toSeq,
+      "userId" -> userId,
+      "title" -> title,
+      "deepLocator" -> deepLocator.value
+    )
+    call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
   }
 }

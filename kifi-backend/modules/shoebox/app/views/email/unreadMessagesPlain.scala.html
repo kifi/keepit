@@ -1,0 +1,11 @@
+@(recipient: User, authors: Seq[String], unreadMessages: Seq[com.keepit.eliza.model.ThreadItem], url: String, title: String, allUsers: Map[Id[User], User])
+Hi @recipient.firstName @recipient.lastName,
+
+There are @unreadMessages.size unread messages in a
+conversation between @authors.mkString(", ") and you on "@title".
+
+Here's what you missed:
+@for(message <- unreadMessages) {
+@{allUsers(message.userId).firstName + " " + allUsers(message.userId).lastName}
+}
+Visit the page at: @url

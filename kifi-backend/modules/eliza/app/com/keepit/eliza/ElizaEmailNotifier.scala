@@ -8,10 +8,11 @@ import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
+import com.keepit.common.strings._
 import com.keepit.model.{NotificationCategory, UserStates, User}
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.{ElectronicMail,EmailAddresses,PostOffice}
+import com.keepit.common.mail.{ElectronicMail,EmailAddresses}
 import com.keepit.inject.AppScoped
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -24,7 +25,6 @@ import scala.util.matching.Regex.Match
 
 import akka.util.Timeout
 
-
 object MessageLookHereRemover {
   private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
 
@@ -34,8 +34,6 @@ object MessageLookHereRemover {
 }
 
 case object SendEmails
-
-//case class UserMessageInfo(userName: String, userId: ExternalId[User], text: String)
 
 class ElizaEmailNotifierActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -54,10 +52,32 @@ class ElizaEmailNotifierActor @Inject() (
       }
       unseenUserThreads.foreach { userThread =>
         createEmailAndSend(userThread)
+        if (userThread.user.id == 1) {
+          sendEmailViaShoebox(userThread)
+        }
       }
     case m => throw new UnsupportedActorMessage(m)
   }
 
+  private def sendEmailViaShoebox(userThread: UserThread): Unit = {
+    val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
+
+    //everyone exception user who we about to email
+    val otherParticipants: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set()) - userThread.user
+
+    val threadItems: Seq[ThreadItem] =  db.readOnly { implicit session => userThread.lastSeen.map { lastSeen =>
+      messageRepo.getAfter(thread.id.get, lastSeen).filter(_.from.isDefined)
+    } getOrElse {
+      messageRepo.get(thread.id.get, 0, None).filter(_.from.isDefined)
+    }}.map { message =>
+      ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
+    } reverse
+
+    if (threadItems.nonEmpty) {
+      val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
+      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator)
+    }
+  }
 
   private def createEmailAndSend(userThread: UserThread): Unit = {
     val thread = db.readOnly { implicit session =>  threadRepo.get(userThread.thread) }

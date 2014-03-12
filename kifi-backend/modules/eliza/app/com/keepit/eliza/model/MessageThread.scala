@@ -8,7 +8,7 @@ import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.model.{DeepLocator, User, NormalizedURI}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.time.{DateTimeJsonFormat}
@@ -116,6 +116,7 @@ case class MessageThread(
     replyable: Boolean
   )
   extends ModelWithExternalId[MessageThread] {
+  def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
