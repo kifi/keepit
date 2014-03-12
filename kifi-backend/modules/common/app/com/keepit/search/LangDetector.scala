@@ -34,7 +34,7 @@ object LangDetector extends Logging {
     log.debug("completed profile loading")
   }
 
-  val languages: Seq[Lang] = DetectorFactory.getLangList().map(Lang(_)).toSeq
+  val languages: Set[Lang] = DetectorFactory.getLangList().filter(_ != null).map(Lang(_)).toSet
 
   val uniformPriorMap = {
     val langList = DetectorFactory.getLangList
