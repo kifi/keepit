@@ -34,7 +34,8 @@
     "antiscroll": "*",
     "angular-smart-scroll": "*",
     "underscore.string": "~2.3.3",
-    "angular-facebook-api": "*"
+    "angular-facebook-api": "*",
+    "angular-dragdrop": "ganarajpr/angular-dragdrop"
   },
   "devDependencies": {
     "angular-mocks": "1.2.x"

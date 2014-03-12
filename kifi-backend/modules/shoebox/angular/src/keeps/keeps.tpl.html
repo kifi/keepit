@@ -2,7 +2,7 @@
 	antiscroll="{ autoHide: false }">
   <div smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
     <ol class="kf-my-keeps">
-      <div kf-keep ng-repeat="keep in keeps" ng-click="onClickKeep(keep, $event)"></div>
+      <div kf-keep ui-on-drop="onTagDrop($data,keep)" ng-repeat="keep in keeps" ng-click="onClickKeep(keep, $event)"></div>
     </ol>
     <div class="kf-keep-group-title-fixed"></div>
     <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/wait.gif">
