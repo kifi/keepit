@@ -173,10 +173,20 @@ class SearchCommanderImpl @Inject() (
     }
 
     // TODO: use user profile info as a bias
-    val acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
-      val lang = code.substring(0,2)
-      if (lang == "zh") Set(Lang("zh-cn"), Lang("zh-tw")) else Set(Lang(lang))
+    var acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
+      val langCode = code.substring(0,2)
+      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+      else {
+        val lang = Lang(langCode)
+        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+      }
     }
+
+    if (acceptLangs.isEmpty) {
+      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+      acceptLangs = Set(Lang("en"))
+    }
+
     val langProf = getLangProfile(userId, 3)
     val firstLangSet = acceptLangs ++ langProf.keySet
 
