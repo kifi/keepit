@@ -765,7 +765,7 @@ class AdminUserController @Inject() (
   }}
 
   def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander
+    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
     val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
     val json = db.readWrite { implicit session =>
       if (doIt) {
