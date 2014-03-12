@@ -26,26 +26,30 @@ import com.keepit.search.SearchConfigExperiment
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 
-object ResultDecorator extends Logging {
+class ResultDecorator(
+  userId: Id[User],
+  query: String,
+  lang: Lang,
+  showExperts: Boolean,
+  shoeboxClient: ShoeboxServiceClient,
+  monitoredAwait: MonitoredAwait
+) extends Logging {
+
+  private[this] val analyzer = DefaultAnalyzer.forIndexing(lang)
+  private[this] val terms = Highlighter.getQueryTerms(query, analyzer)
 
   def decorate(
-    userId: Id[User],
-    query: String,
-    lang: Lang,
     result: MergedSearchResult,
     mayHaveMoreHits: Boolean,
     searchExperimentId: Option[Id[SearchConfigExperiment]],
-    showExperts: Boolean,
-    idFilter: Set[Long],
-    shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait
+    idFilter: Set[Long]
   ): DecoratedResult = {
     val hits = result.hits
     val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users.toSeq)
     val expertsFuture = if (showExperts) { suggestExperts(hits, shoeboxClient) } else { Promise.successful(List.empty[Id[User]]).future }
 
-    val highlightedHits = highlight(hits, query, lang)
+    val highlightedHits = highlight(hits)
 
     val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users").map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) }
     val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserMap)
@@ -67,13 +71,11 @@ object ResultDecorator extends Logging {
       experts)
   }
 
-  private def highlight(hits: Seq[DetailedSearchHit], query: String, lang: Lang): Seq[DetailedSearchHit] = {
-    val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
-    val terms = Highlighter.getQueryTerms(query, analyzer)
-    hits.map{ h => h.set("bookmark", highlight(h.bookmark, analyzer, terms).json) }
+  private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
+    hits.map{ h => h.set("bookmark", highlight(h.bookmark).json) }
   }
 
-  private def highlight(h: BasicSearchHit, analyzer: Analyzer, terms: Set[String]): BasicSearchHit = {
+  private def highlight(h: BasicSearchHit): BasicSearchHit = {
     val titleMatches = h.title.map(t => Highlighter.highlight(t, analyzer, "", terms))
     val urlMatches = Some(Highlighter.highlight(h.url, analyzer, "", terms))
     h.addMatches(titleMatches, urlMatches)
