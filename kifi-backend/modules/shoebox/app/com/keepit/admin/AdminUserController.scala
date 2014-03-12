@@ -733,7 +733,7 @@ class AdminUserController @Inject() (
             val currentEmail = emailRepo.getByUser(user.id.get)
             if (currentEmail.verified) currentEmail.address
             else {
-              val socialEmail = socialUserInfoRepo.getByUser(user.id.get).find(_.networkType == SocialNetworks.FACEBOOK).get.credentials.get.email.get
+              val socialEmail = socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get
               require(currentEmail.address == socialEmail, "No verified email")
               val updatedEmail = emailRepo.save(currentEmail.withState(EmailAddressStates.VERIFIED))
               userCommander.updateUserPrimaryEmail(updatedEmail)
