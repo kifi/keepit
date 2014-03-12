@@ -38,7 +38,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait])
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
     var indexer = new StandaloneArticleIndexer(ramDir, config, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))

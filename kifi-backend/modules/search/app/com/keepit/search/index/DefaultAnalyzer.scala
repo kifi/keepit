@@ -63,8 +63,9 @@ object DefaultAnalyzer {
 
   implicit def langCodeToLang(langCode: String): Lang = Lang(langCode)
 
-  private val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, "en")
-  private val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja")
+  val defaultLang = Lang("en")
+  private[this] val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, defaultLang)
+  private[this] val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja")
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
@@ -94,9 +95,12 @@ object DefaultAnalyzer {
     "sv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Swedish),
     "th" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[ThaiWordFilter].withStopFilter(_.Thai),
     "tr" -> stdAnalyzer.withFilter[TurkishLowerCaseFilter].withStopFilter(_.Turkish)
-  ).map{
-    case ("ja", analyzer) => "ja" -> analyzer
-    case (lang, analyzer) => lang -> analyzer.withFilter[SymbolDecompounder].withLang(lang)
+  ).map{ case (lang, analyzer) =>
+    if (lang == "ja") {
+      lang -> analyzer.withLang(lang)
+    } else {
+      lang -> analyzer.withFilter[SymbolDecompounder].withLang(lang)
+    }
   }
 
   val langAnalyzerWithStemmer = Map[String, Analyzer](
@@ -125,20 +129,8 @@ object DefaultAnalyzer {
     "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
   )
 
-  private def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
-  private def getAnalyzerWithStemmer(lang: Lang): Option[Analyzer] = langAnalyzerWithStemmer.get(lang.lang)
-
-  def forIndexing: Analyzer = forIndexing(Lang("en"))
-  def forIndexing(lang: Lang): Analyzer = getAnalyzer(lang)
-
-  def forIndexingWithStemmer: Analyzer = forIndexingWithStemmer(Lang("en"))
-  def forIndexingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).getOrElse(forIndexing(lang))
-
-  def forParsing: Analyzer = forParsing(Lang("en"))
-  def forParsing(lang: Lang): Analyzer = getAnalyzer(lang)
-
-  def forParsingWithStemmer: Analyzer = forParsingWithStemmer(Lang("en"))
-  def forParsingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).getOrElse(forParsing(lang))
+  def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
+  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.get(lang.lang).getOrElse(getAnalyzer(lang))
 }
 
 class DefaultTokenizerFactory extends TokenizerFactory {

@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 class NlpParserTest extends Specification {
   "NlpParser" should {
     "gives tagged segments" in {
-      NlpParser.enabled
+      NlpParser.enabled === true
       var t1 = System.currentTimeMillis()
       var sent = "Chinese restaurant in bay area"
       var tagged = NlpParser.getTaggedSegments(sent)

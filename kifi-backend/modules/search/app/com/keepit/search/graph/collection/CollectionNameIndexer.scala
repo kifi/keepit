@@ -74,13 +74,13 @@ class CollectionNameIndexer(
       val nameList = buildNameList(sortedCollections.toSeq, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
       val names = buildLineField(CollectionNameFields.nameField, nameList){ (fieldName, text, lang) =>
-        val analyzer = DefaultAnalyzer.forIndexing(lang)
+        val analyzer = DefaultAnalyzer.getAnalyzer(lang)
         new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = false)
       }
       doc.add(names)
 
       val stemmedNames = buildLineField(CollectionNameFields.stemmedNameField, nameList){ (fieldName, text, lang) =>
-        val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
+        val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
         new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = false)
       }
       doc.add(stemmedNames)

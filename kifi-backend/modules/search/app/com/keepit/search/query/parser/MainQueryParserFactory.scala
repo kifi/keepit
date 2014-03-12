@@ -30,10 +30,10 @@ class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitore
     val proximityPowerFactor = config.asFloat("proximityPowerFactor")
 
     new MainQueryParser(
-      DefaultAnalyzer.forParsing(lang1),
-      DefaultAnalyzer.forParsingWithStemmer(lang1),
-      lang2.map(DefaultAnalyzer.forParsing(_)),
-      lang2.map(DefaultAnalyzer.forParsingWithStemmer(_)),
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       proximityBoost,
       semanticBoost,
       phraseBoost,

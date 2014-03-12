@@ -13,8 +13,8 @@ import com.keepit.search.sharding.ShardedArticleIndexer
 
 class SemanticVectorController @Inject()(shards: ActiveShards, shardedArticleIndexer: ShardedArticleIndexer) extends SearchServiceController {
   val searcher = shardedArticleIndexer.getIndexer(shards.shards.head).getSearcher // TODO: support sharding
-  val analyzer = DefaultAnalyzer.defaultAnalyzer
-  val stemAnalyzer = DefaultAnalyzer.forParsingWithStemmer
+  val analyzer = DefaultAnalyzer.getAnalyzer(DefaultAnalyzer.defaultLang)
+  val stemAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang)
 
   // return: subQuery -> similarityScore
   def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = Action { request =>

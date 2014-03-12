@@ -16,7 +16,7 @@ import scala.math.abs
 class SpellCheckerTest extends Specification {
 
   val articles = Seq("abc abc abc def", "abc def", "abc abd deg xyz")
-  val analyzer = DefaultAnalyzer.forIndexing
+  val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   def mkDoc(content: String) = {
     val doc = new Document()

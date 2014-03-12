@@ -22,7 +22,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
   "PhraseDetectorTest" should {
     "detects all phrases in input text" in {
         running(new DeprecatedEmptyApplication()) {
-        val indexer = new PhraseIndexerImpl(new VolatileIndexDirectoryImpl(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+        val indexer = new PhraseIndexerImpl(new VolatileIndexDirectoryImpl(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
         val lang = Lang("en")
         val phrases = List(
           "classroom project",
@@ -45,7 +45,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
         indexer.indexDocuments(phrases.zipWithIndex.map{ case (p, i) => new PhraseIndexable(Id[Phrase](i), SequenceNumber(i), false, p, lang) }.iterator, 10)
 
         val detector = new PhraseDetector(indexer)
-        val analyzer = DefaultAnalyzer.forIndexingWithStemmer(Lang("en"))
+        val analyzer = DefaultAnalyzer.getAnalyzer(Lang("en"))
 
         def toTerms(text: String) = {
           indexer.getFieldDecoder("b").decodeTokenStream(analyzer.tokenStream("b", new StringReader(text))).map{ case (t, _, _) => new Term("b", t) }.toArray

@@ -9,7 +9,7 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 
 class FakePhraseIndexer extends PhraseIndexer(new VolatileIndexDirectoryImpl,
-    new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
+    new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)) {
   def update() = 0
   def getCommitBatchSize() = 0
 }

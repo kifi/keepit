@@ -130,10 +130,10 @@ object ArticleIndexer extends Logging {
           doc.add(buildKeywordField("cl", contentLang.lang))
           doc.add(buildKeywordField("tl", titleLang.lang))
 
-          val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
-          val titleAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(titleLang)
-          val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
-          val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
+          val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
+          val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
+          val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
+          val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
 
           val content = (Seq(article.content) ++ article.description ++ article.keywords).mkString("\n\n")
           val titleAndUrl = article.title + " " + urlToIndexableString(uri.url)

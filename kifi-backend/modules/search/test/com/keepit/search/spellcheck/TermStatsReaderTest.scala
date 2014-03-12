@@ -16,7 +16,7 @@ import scala.math.{log, abs}
 class TermStatsReaderTest extends Specification {
 
   val articles = Seq("abc abc abc", "abc def", "abc abd deg xyz")
-  val analyzer = DefaultAnalyzer.forIndexing
+  val analyzer = DefaultAnalyzer.defaultAnalyzer
   val EPSILON = 1e-8f
 
   def mkDoc(content: String) = {
