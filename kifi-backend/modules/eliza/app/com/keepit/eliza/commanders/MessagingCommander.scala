@@ -28,6 +28,7 @@ import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
 import com.keepit.realtime.UrbanAirship
@@ -295,7 +296,7 @@ class MessagingCommander @Inject() (
 
       if (!muted) {
         val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
-        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
+        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), trimAtBytes(notifText, 128, UTF_8))
       }
     }
 
