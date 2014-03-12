@@ -250,7 +250,7 @@ class MessagingCommander @Inject() (
     new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
-  private def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
+  private def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:Option[String]) = {
     val notification = PushNotification(extId, pendingNotificationCount, msg)
     urbanAirship.notifyUser(userId, notification)
     messagingAnalytics.sentPushNotificationForThread(userId, notification)
@@ -296,7 +296,7 @@ class MessagingCommander @Inject() (
 
       if (!muted) {
         val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
-        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
+        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), Some(trimAtBytes(notifText, 128, Charset.forName("UTF-8"))))
       }
     }
 
@@ -770,8 +770,10 @@ class MessagingCommander @Inject() (
     messagingAnalytics.clearedNotification(userId, message, thread, context)
 
     val nUrl: String = thread.nUrl.getOrElse("")
+    val unreadCount = getUnreadUnmutedThreadCount(userId)
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, thread.externalId.id, message.createdAt, msgExtId.id))
-    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
+    sendPushNotification(userId, thread.externalId, unreadCount, None)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
@@ -784,8 +786,10 @@ class MessagingCommander @Inject() (
     }
     if (changed) {
       val nUrl: String = thread.nUrl.getOrElse("")
+      val unreadCount = getUnreadUnmutedThreadCount(userId)
       notificationRouter.sendToUser(userId, Json.arr("message_unread", nUrl, thread.externalId.id, message.createdAt, msgExtId.id))
-      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
+      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
+      sendPushNotification(userId, thread.externalId, unreadCount, None)
     }
   }
 
@@ -795,13 +799,15 @@ class MessagingCommander @Inject() (
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
-    val lastTime = db.readWrite(attempts=2) { implicit session =>
+    val message = db.readWrite(attempts=2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
-      message.createdAt
+      message
     }
-    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(user)))
-    lastTime
+    val unreadCount = getUnreadUnmutedThreadCount(user)
+    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadCount))
+    sendPushNotification(user, message.threadExtId, unreadCount, None)
+    message.createdAt
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {

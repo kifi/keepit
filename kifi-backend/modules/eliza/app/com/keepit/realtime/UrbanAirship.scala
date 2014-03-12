@@ -85,7 +85,7 @@ object DeviceType {
 }
 
 // Add fields to this object and handle them properly for each platform
-case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: String)
+case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String])
 
 object UrbanAirship {
   val NotificationSound = "notification.aiff"
@@ -165,15 +165,25 @@ class UrbanAirshipImpl @Inject()(
 
   private def postIOS(device: Device, notification: PushNotification, retry: Boolean = false): Unit = authenticatedClient.postFuture(
     DirectUrl(s"${config.baseUrl}/api/push"),
-    Json.obj(
-      "device_tokens" -> Seq(device.token),
-      "aps" -> Json.obj(
-        "badge" -> notification.unvisitedCount,
-        "alert" -> notification.message,
-        "sound" -> UrbanAirship.NotificationSound
-      ),
-      "id" -> notification.id.id
-    ),
+    notification.message.map{ message =>
+      Json.obj(
+        "device_tokens" -> Seq(device.token),
+        "aps" -> Json.obj(
+          "badge" -> notification.unvisitedCount,
+          "alert" -> message,
+          "sound" -> UrbanAirship.NotificationSound
+        ),
+        "id" -> notification.id.id
+      )
+    } getOrElse {
+      Json.obj(
+        "device_tokens" -> Seq(device.token),
+        "aps" -> Json.obj(
+          "badge" -> notification.unvisitedCount
+        ),
+        "id" -> notification.id.id
+      )
+    },
     { req =>
       {
         case e: TimeoutException =>
