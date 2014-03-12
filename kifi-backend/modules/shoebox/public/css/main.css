@@ -2587,6 +2587,13 @@ input.user-filter {
   text-align: left;
 }
 
+.invite-email.invited {
+  background: #629eed;
+}
+.invite-email.invited a {
+  color: white;
+}
+
 .invite-friend::after,
 .found-user::after {
   content: " ";
