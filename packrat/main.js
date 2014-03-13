@@ -939,30 +939,41 @@ api.port.on({
   web_base_uri: function(_, respond) {
     respond(webBaseUri());
   },
-  search_friends: function(data, respond) {
-    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-    var results;
-    if (friendSearchCache) {
-      results = friendSearchCache.get(data);
-    } else {
-      friendSearchCache = new (global.FriendSearchCache || require('./friend_search_cache').FriendSearchCache)(3600000);
+  search_friends: function(data, respond, tab) {
+    var nHave = data.nHave || 0;
+    if (!nHave) {
+      var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+      var results;
+      if (friendSearchCache) {
+        results = friendSearchCache.get(data);
+      } else {
+        friendSearchCache = new (global.FriendSearchCache || require('./friend_search_cache').FriendSearchCache)(3600000);
+      }
+      if (!results) {
+        var candidates = friendSearchCache.get({includeSelf: data.includeSelf, q: data.q.substr(0, data.q.length - 1)}) ||
+          (data.includeSelf ?
+             friends ? [me].concat(friends) : [me, SUPPORT] :
+             friends || [SUPPORT]);
+        results = sf.filter(data.q, candidates, getName);
+        friendSearchCache.put(data, results);
+      }
+      nHave = results.length;
+      respond((nHave > data.n ? results.slice(0, data.n) : results).map(toFriendSearchResult, {sf: sf, q: data.q}));
     }
-    if (!results) {
-      var candidates = friendSearchCache.get({includeSelf: data.includeSelf, q: data.q.substr(0, data.q.length - 1)}) ||
-        (data.includeSelf ?
-           friends ? [me].concat(friends) : [me, SUPPORT] :
-           friends || [SUPPORT]);
-      results = sf.filter(data.q, candidates, getName);
-      friendSearchCache.put(data, results);
+    if (nHave < data.n) {
+      ajax('GET', '/ext/nonusers', {q: data.q, n: data.n - nHave}, function (nonusers) {
+        api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: nonusers});
+      }, function () {
+        api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: []});
+      });
     }
-    respond((results.length > 4 ? results.slice(0, 4) : results).map(toFriendSearchResult, {sf: sf, q: data.q}));
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page’s normalized URI may have changed
+      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // pageâ€™s normalized URI may have changed
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {

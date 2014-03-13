@@ -5,6 +5,18 @@
 // @require scripts/prevent_ancestor_scroll.js
 
 var initCompose = (function() {
+  'use strict';
+
+  api.port.on({
+    nonusers: function (o) {
+      $composes.each(function () {
+        var $f = $(this);
+        if (o.q === $f.find('.kifi-ti-token-for-input>input').val().trim()) {
+          $f.find('.kifi-compose-to').tokenInput('endSearch', constructActions(o.nonusers));
+        }
+      });
+    }
+  });
 
   var $composes = $();
   var prefix = CO_KEY + '-';
@@ -14,9 +26,9 @@ var initCompose = (function() {
     updateKeyTip($composes);
   });
 
-  return function ($c, opts) {
-  'use strict';
-  var $f = $c.find('.kifi-compose');
+  return function ($container, opts) {
+
+  var $f = $container.find('.kifi-compose');
   var $t = $f.find('.kifi-compose-to');
   var $d = $f.find('.kifi-compose-draft');
   var defaultText = $d.data('default');  // real text, not placeholder
@@ -101,42 +113,39 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    $t.tokenInput(function search(query, withResults) {
-      api.port.emit('search_friends', {q: query, includeSelf: !$t.tokenInput('get').length}, withResults);
+    $t.tokenInput(function search(query, cachedResults, withResults) {
+      var nWanted = 4, nHave = cachedResults ? cachedResults.length : 0;
+      if (nWanted > nHave) {
+        api.port.emit('search_friends', {
+          q: query,
+          n: nWanted,
+          nHave: nHave,
+          includeSelf: !$t.tokenInput('get').length
+        }, function (results) {
+          withResults(results);
+          if (results.length >= nWanted) {
+            $t.tokenInput('endSearch', constructActions([]));
+          }
+        });
+      } else {
+        setTimeout($.fn.tokenInput.bind($t, 'endSearch', constructActions([])));
+      }
     }, {
       placeholder: 'To',
-      hintText: '',
-      searchingText: '',
       resultsLimit: 4,
-      tipHtml: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
       preventDuplicates: true,
-      allowTabOut: true,
       tokenValue: 'id',
-      theme: 'Kifi',
-      classes: {
-        tokenList: 'kifi-ti-list',
-        token: 'kifi-ti-token',
-        tokenReadOnly: 'kifi-ti-token-readonly',
-        tokenDelete: 'kifi-ti-token-delete',
-        selectedToken: 'kifi-ti-token-selected',
-        highlightedToken: 'kifi-ti-token-highlighted',
-        dropdown: 'kifi-root kifi-ti-dropdown',
-        dropdownItem: 'kifi-ti-dropdown-item',
-        dropdownItem2: 'kifi-ti-dropdown-item',
-        dropdownTip: 'kifi-ti-dropdown-tip',
-        selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
-        inputToken: 'kifi-ti-token-input',
-        focused: 'kifi-ti-focused',
-        disabled: 'kifi-ti-disabled'
-      },
-      zindex: 999999999992,
-      resultsFormatter: function (f) {
-        var html = Mustache.escape(f.parts[0]);
+      classPrefix: 'kifi-ti-',
+      classForRoots: 'kifi-root',
+      formatResult: function (f) {
+        var html = [
+          '<li style="background-image:url(//', cdnBase, '/users/', f.id, '/pics/100/', f.pictureName, ')">',
+          Mustache.escape(f.parts[0])];
         for (var i = 1; i < f.parts.length; i++) {
-          html += i % 2 ? '<b>' : '</b>';
-          html += Mustache.escape(f.parts[i]);
+          html.push(i % 2 ? '<b>' : '</b>', Mustache.escape(f.parts[i]));
         }
-        return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
+        html.push('</li>');
+        return html.join('');
       },
       onAdd: function () {
         if (defaultText && !$d.text()) {
@@ -158,11 +167,9 @@ var initCompose = (function() {
           $t.tokenInput('flushCache');
         }
         throttledSaveDraft();
-      },
-      onTip: function () {
-        api.port.emit('invite_friends', 'composePane');
       }
     });
+    $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   }
 
   $f.keydown(function (e) {
@@ -198,7 +205,7 @@ var initCompose = (function() {
     if ($t.length) {
       var recipients = $t.tokenInput('get');
       if (!recipients.length) {
-        $f.find('#token-input-kifi-compose-to').focus();
+        $f.find('.kifi-ti-token-for-input>input').focus();
         return;
       }
     }
@@ -331,6 +338,10 @@ var initCompose = (function() {
     return sel.rangeCount ? sel.getRangeAt(0) : null;
   }
 
+  function getId(o) {
+    return o.id;
+  }
+
   // compose API
   return {
     form: function () {
@@ -346,7 +357,7 @@ var initCompose = (function() {
     focus: function () {
       log('[compose.focus]')();
       if ($t.length && !$t.tokenInput('get').length) {
-        $f.find('#token-input-kifi-compose-to').focus();
+        $f.find('.kifi-ti-token-for-input>input').focus();
       } else {
         $d.focus();
       }
@@ -368,5 +379,43 @@ var initCompose = (function() {
       $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
       $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
     }
+  }
+
+  function constructActions(nonusers) {
+    var actions = nonusers.map(function (nu) {
+      if (nu.email) {
+        return {
+          html: [
+            '<li class="kifi-ti-dropdown-invite-email', nu.invited ? ' kifi-ti-dropdown-invited' : '', '">',
+            '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(nu.name), '</div>',
+            '<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(nu.email), '</div>',
+            '</li>'].join(''),
+          handle: handleInvite,
+          nonuser: nu
+        };
+      } else {
+        return {
+          html: [
+            '<li class="kifi-ti-dropdown-invite-social', nu.invited ? ' kifi-ti-dropdown-invited' : '', '"',
+            ' style="background-image:url(', Mustache.escape(nu.pic || 'https://www.kifi.com/assets/img/ghost-linkedin.100.png'), ')">',
+            '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(nu.name), '</div>',
+            '<div class="kifi-ti-dropdown-invite-sub">', nu.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
+            '</li>'].join(''),
+          handle: handleInvite,
+          nonuser: nu
+        };
+      }
+    });
+    actions.push({
+      html: '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>',
+      handle: api.port.emit.bind(api.port, 'invite_friends', 'composePane')
+    });
+    return actions;
+  }
+
+  function handleInvite() {
+    api.port.emit('invite_friend', {who: this.nonuser, whence: 'composePane'}, function (data) {
+      // TODO: update UI to show invited?
+    });
   }
 }());

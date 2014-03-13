@@ -131,7 +131,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * after tokenInput construction.
 		 */
 		get$TokenInput: function () {
-			return this.get$('.kifi-ti-token-input input');
+			return this.get$('.kifi-ti-token-for-input>input');
 		},
 
 		/**
@@ -141,42 +141,36 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		initAndAsyncFocusInput: function () {
 			var $input = this.$input;
 			if (!$input) {
-				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput(function search(query, withResults) {
-					api.port.emit('search_friends', {q: query}, withResults);
+				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput(function search(query, cachedResults, withResults) {
+					var nWanted = 4, nHave = cachedResults ? cachedResults.length : 0;
+					if (nWanted > nHave) {
+						api.port.emit('search_friends', {
+							q: query,
+							n: nWanted,
+							nHave: nHave
+		        }, function (results) {
+		          withResults(results, results.length < nWanted);
+		        });
+						return true;
+					}
 				}, {
 					placeholder: 'Type a name...',
-					hintText: '',
-					searchingText: '',
 					resultsLimit: 4,
-					tipHtml: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
 					preventDuplicates: true,
-					allowTabOut: true,
 					tokenValue: 'id',
-					theme: 'Kifi',
-					classes: {
-						tokenList: 'kifi-ti-list',
-						token: 'kifi-ti-token',
-						tokenReadOnly: 'kifi-ti-token-readonly',
-						tokenDelete: 'kifi-ti-token-delete',
-						selectedToken: 'kifi-ti-token-selected',
-						highlightedToken: 'kifi-ti-token-highlighted',
-						dropdown: 'kifi-root kifi-ti-dropdown',
-						dropdownItem: 'kifi-ti-dropdown-item',
-						dropdownItem2: 'kifi-ti-dropdown-item',
-						dropdownTip: 'kifi-ti-dropdown-tip',
-						selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
-						inputToken: 'kifi-ti-token-input',
-						focused: 'kifi-ti-focused',
-						disabled: 'kifi-ti-disabled'
-					},
-					zindex: 999999999992,
-					resultsFormatter: function (f) {
-						var html = Mustache.escape(f.parts[0]);
-						for (var i = 1; i < f.parts.length; i++) {
-							html += i % 2 ? '<b>' : '</b>';
-							html += Mustache.escape(f.parts[i]);
-						}
-						return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
+					classPrefix: 'kifi-ti-',
+					classForRoots: 'kifi-root',
+					// tip: {
+					// 	html: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
+					// 	action: api.port.emit.bind(api.port, 'invite_friends', 'threadPane')
+					// },
+					formatResult: function (f) {
+						// var html = Mustache.escape(f.parts[0]);
+						// for (var i = 1; i < f.parts.length; i++) {
+						// 	html += i % 2 ? '<b>' : '</b>';
+						// 	html += Mustache.escape(f.parts[i]);
+						// }
+						// return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
 					},
 					onAdd: function () {
 						this.getAddDialog().addClass('kifi-non-empty');
@@ -185,11 +179,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						if (!$input.tokenInput('get').length) {
 							this.getAddDialog().removeClass('kifi-non-empty');
 						}
-					}.bind(this),
-					onTip: function () {
-						api.port.emit('invite_friends', 'threadPane');
-					}
+					}.bind(this)
 				});
+				$('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
 			}
 
 			setTimeout(function () {
