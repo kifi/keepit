@@ -106,6 +106,7 @@ module.exports = function (grunt) {
         minJs: 'dist/<%= pkg.name %>.min.js',
         libJs: 'dist/lib.js',
         libMinJs: 'dist/lib.min.js',
+        minTwiceJs: 'dist/lib.twice.min.js',
         tpl: 'dist/<%= pkg.name %>-tpl.js'
         //tplMin: 'dist/<%= pkg.name %>-tpl.min.js'
       },
@@ -222,6 +223,10 @@ module.exports = function (grunt) {
       dist: {
         src: ['<%= concat.dist.src %>'],
         dest: '<%= path.dist.minJs %>'
+      },
+      libMin: {
+        src: ['<%= path.dist.libMinJs %>'],
+        dest: '<%= path.dist.minTwiceJs %>'
       }
       /*
       tpl: {
@@ -379,8 +384,9 @@ module.exports = function (grunt) {
     'html2js',
     'copy',
     'jshint',
-    'uglify',
+    'uglify:dist',
     'concat'
+    //'uglify:libMin'
   ]);
 
   // Test task.
@@ -405,8 +411,9 @@ module.exports = function (grunt) {
     'html2js',
     'copy',
     'jshint',
-    'uglify',
+    'uglify:dist',
     'concat',
+    //'uglify:libMin',
     'karma:unit'
   ]);
 };
