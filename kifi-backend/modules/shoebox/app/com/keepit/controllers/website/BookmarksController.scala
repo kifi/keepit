@@ -37,6 +37,7 @@ class BookmarksController @Inject() (
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
     uriRepo: NormalizedURIRepo,
+    pageInfoRepo: PageInfoRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
@@ -84,48 +85,73 @@ class BookmarksController @Inject() (
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
   }
 
-  def getImageUrl() = JsonAction.authenticatedParseJson { request =>
-    val urlOpt = (request.body \ "url").asOpt[String]
-    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
-    val resOpt = for {
-      url <- urlOpt
-      uri <- db.readOnly { implicit ro => uriRepo.getByUri(url) }
-      imgUrl <- s3ScreenshotStore.getImageUrl(uri)
-    } yield {
-      (url, imgUrl)
-    }
-    resOpt match {
-      case None => NotFound(Json.obj("code" -> "not_found"))
-      case Some((url, imgUrl)) => Ok(Json.obj("url" -> url, "imgUrl" -> imgUrl))
+  private def cb(pageInfo:PageInfo):Unit = db.readWrite{ implicit rw => pageInfoRepo.save(pageInfo) }
+  // todo: add uriId, sizes, colors, etc.
+  private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
+    val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
+    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(cb)) map { imgUrlOpt =>
+      (screenshotUrlOpt, imgUrlOpt) match {
+        case (None, None) =>
+          Json.obj("url" -> url, "uriId" -> uri.id.get)
+        case (None, Some(imgUrl)) =>
+          Json.obj("url" -> url, "imgUrl" -> imgUrl)
+        case (Some(ssUrl), None) =>
+          Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
+        case (Some(ssUrl), Some(imgUrl)) =>
+          Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
+      }
     }
   }
 
-  def getImageUrls() = JsonAction.authenticatedParseJson { request =>
-    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
-    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
-    val resOpt = urlsOpt.map { urls =>
-      val tuples = db.readOnly { implicit ro =>
-        urls.map { s =>
-          s -> uriRepo.getByUri(s)
+  def getImageUrl() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+    val urlOpt = (request.body \ "url").asOpt[String]
+    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
+    urlOpt match {
+      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
+      case Some(url) => {
+        val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
+          val uriOpt = uriRepo.getByUri(url)
+          val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
+          (uriOpt, pageInfoOpt)
         }
-      }
-      tuples map { case (url, uriOpt) =>
-        val resOpt = for {
-          uri <- uriOpt
-          imgUrl <- s3ScreenshotStore.getImageUrl(uri)
-        } yield {
-          url -> imgUrl
+        uriOpt match {
+          case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
+          case Some(uri) => {
+            toJsObject(url, uri, pageInfoOpt) map { js => Ok(js) }
+          }
         }
-        resOpt.getOrElse(url -> "")
       }
     }
-    resOpt match {
-      case Some(tuples) =>
-        val js = tuples map { case(url, imgUrl) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl)
+  }
+
+  def getImageUrls() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
+    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
+    urlsOpt match {
+      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
+      case Some(urls) => {
+        val tuples = db.readOnly { implicit ro =>
+          urls.map { s =>
+            s -> uriRepo.getByUri(s)
+          }
         }
-        Ok(JsArray(js))
-      case None => BadRequest(Json.obj("code" -> "illegal_argument"))
+        val tuplesF = tuples map { case (url, uriOpt) =>
+          val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
+            val uriOpt = uriRepo.getByUri(url)
+            val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
+            (uriOpt, pageInfoOpt)
+          }
+          uriOpt match {
+            case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
+            case Some(uri) => {
+              toJsObject(url, uri, pageInfoOpt) // todo: batch
+            }
+          }
+        }
+        Future.sequence(tuplesF) map { res =>
+          Ok(Json.toJson(res))
+        }
+      }
     }
   }
 
