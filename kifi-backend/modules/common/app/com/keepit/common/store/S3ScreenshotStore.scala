@@ -41,7 +41,6 @@ trait S3ScreenshotStore {
   def getImageInfos(normalizedUri: NormalizedURI):Future[Seq[ImageInfo]]
   def processImage(uri:NormalizedURI, imageInfo:ImageInfo):Future[Boolean]
   def asyncGetImageUrl(uri:NormalizedURI, pageInfoOpt:Option[PageInfo], cb:Option[PageInfo => Unit]):Future[Option[String]]
-  def getImageUrl(normalizedUri: NormalizedURI):Option[String]
   def updatePicture(normalizedUri: NormalizedURI): Future[Boolean]
 }
 
@@ -83,12 +82,12 @@ object EmbedlyExtractResponse {
 }
 
 class S3ScreenshotStoreImpl(
-    s3Client: AmazonS3,
+    override val s3Client: AmazonS3,
     shoeboxServiceClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     clock: Clock,
     val config: S3ImageConfig
-  ) extends S3ScreenshotStore with Logging {
+  ) extends S3ScreenshotStore with S3Helper with Logging {
 
   val screenshotConfig = ScreenshotConfig("c", Seq(ImageSize(1000, 560), ImageSize(500, 280), ImageSize(250, 140)))
   val linkedSize = ImageSize(500, 280) // which size to link to, by default; todo: user configurable
@@ -99,7 +98,7 @@ class S3ScreenshotStoreImpl(
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
 
-  val imageSizes = Seq(ImageSize(500, 280), ImageSize(250, 140))
+  val imageSizes = Seq(ImageSize(500, 280))
   val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) get
   val embedlyEnabled = (if (Play.maybeApplication.isDefined) Play.configuration.getBoolean("embedly.enabled") else None) get
   def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
@@ -157,21 +156,19 @@ class S3ScreenshotStoreImpl(
     }
   }
 
-  def getImageUrl(uri: NormalizedURI):Option[String] = Await.result(asyncGetImageUrl(uri, None, None), 5 minutes) // todo(ray): fixme
-
-  private def fetchAndUpdatePageInfo(uri:NormalizedURI, cb:Option[PageInfo => Unit]) = {
-    getPageInfo(embedlyUrl(uri.url)) map { pageInfoOpt =>
+  private def fetchAndUpdatePageInfo(uri:NormalizedURI, cb:Option[PageInfo => Unit]):Future[Boolean] = {
+    getPageInfo(embedlyUrl(uri.url)) flatMap { pageInfoOpt =>
       pageInfoOpt match {
         case Some(pageInfo) =>
           val future = pageInfo.images.headOption match {
             case Some(imgInfo) => processImage(uri, imgInfo)
             case None => Future.successful(true)
           }
-          future onComplete { trRes =>
+          future map { trRes =>
             cb map { f => SafeFuture { f(pageInfo.toPageInfo(uri.id.get)) } }
+            true
           }
-          true
-        case None => false
+        case None => Future.successful(false)
       }
     }
   }
