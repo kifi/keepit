@@ -314,9 +314,8 @@ class MessagingCommander @Inject() (
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
-    "9c211915-2413-4030-8efa-d7a9cfc77359", // joon
-    "1714ac86-4ce5-4083-b4c7-bb1e8292c373",  // martin
-    "fd187ca1-2921-4c60-a8c0-955065d454ab" // jared (of the petker variety)
+    "1714ac86-4ce5-4083-b4c7-bb1e8292c373", // martin
+    "fd187ca1-2921-4c60-a8c0-955065d454ab"  // jared (of the petker variety)
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
@@ -324,7 +323,8 @@ class MessagingCommander @Inject() (
     "2d18cd0b-ef30-4759-b6c5-f5f113a30f08", // effi
     "73b1134d-02d4-443f-b99b-e8bc571455e2", // chandler
     "c82b0fa0-6438-4892-8738-7fa2d96f1365", // ketan
-    "ae139ae4-49ad-4026-b215-1ece236f1322"  // jen
+    "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
+    "c1ce2ab6-8211-40f7-8187-1522086f0c2e"  // mark
   )
   val family = engineers ++ product ++ Seq(
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb" // two-meals

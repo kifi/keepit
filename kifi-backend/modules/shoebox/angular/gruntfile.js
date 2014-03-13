@@ -385,8 +385,8 @@ module.exports = function (grunt) {
     'copy',
     'jshint',
     'uglify:dist',
-    'concat',
-    'uglify:libMin'
+    'concat'
+    //'uglify:libMin'
   ]);
 
   // Test task.
@@ -413,7 +413,7 @@ module.exports = function (grunt) {
     'jshint',
     'uglify:dist',
     'concat',
-    'uglify:libMin',
+    //'uglify:libMin',
     'karma:unit'
   ]);
 };
