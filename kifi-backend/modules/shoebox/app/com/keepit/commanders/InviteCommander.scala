@@ -1,35 +1,41 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
-import com.keepit.model._
-import com.keepit.social.{SocialId, SocialNetworkType, SocialNetworks}
-
-import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
-import scala.util.Try
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
+import com.keepit.common.store.S3ImageStore
+import com.keepit.controllers.website.routes
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal._
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.{EContact, EmailAddressRepo, Invitation, InvitationRepo, InvitationStates, NotificationCategory}
+import com.keepit.model.{SocialConnection, SocialConnectionRepo, SocialConnectionStates, SocialUserInfo, SocialUserInfoRepo}
+import com.keepit.model.{User, UserConnectionRepo, UserRepo, UserStates, UserValues, UserValueRepo}
+import com.keepit.social.{SecureSocialClientIds, SocialId, SocialNetworkType, SocialNetworks}
+
+import java.net.URLEncoder
+
+import play.api.http.Status
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
-import com.keepit.heimdal._
-import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.controllers.website.routes
-import com.keepit.common.logging.Logging
-import com.keepit.model.SocialConnection
-import scala.Some
-import com.keepit.model.Invitation
-import com.keepit.common.store.S3ImageStore
-import play.api.http.Status
-import com.keepit.common.healthcheck.AirbrakeNotifier
+
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
-case class FullSocialId(network:String, id:String)
+case class FullSocialId(network:String, id:String) {
+  def socialId: SocialId = SocialId(id)
+}
 object FullSocialId {
   def apply(s:String):FullSocialId = {
     val splitted = s.split("/")
@@ -49,6 +55,8 @@ object InviteInfo {
 class InviteCommander @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
+  fortytwoConfig: FortyTwoConfig,
+  secureSocialClientIds: SecureSocialClientIds,
   userRepo: UserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
@@ -67,7 +75,15 @@ class InviteCommander @Inject() (
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander) extends Logging {
 
-  def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
+  private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
+
+  def fbInviteUrl(invitation: Invitation, socialId: SocialId): String = {
+    val link = URLEncoder.encode(s"$baseUrl${routes.InviteController.acceptInvite(invitation.externalId)}", "UTF-8")
+    val confirmUri = URLEncoder.encode(s"$baseUrl${routes.InviteController.confirmInvite(invitation.externalId, None, None)}", "UTF-8")
+    s"https://www.facebook.com/dialog/send?app_id=${secureSocialClientIds.facebook}&link=$link&redirect_uri=$confirmUri&to=$socialId"
+  }
+
+  private def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     db.readOnly { implicit s =>
       val userSocialAccounts = socialUserInfoRepo.getByUser(userId)
       val cookieInvite = invId.flatMap { inviteExtId =>
@@ -157,8 +173,8 @@ class InviteCommander @Inject() (
     }
   }
 
-  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, url:String, inviteInfo:InviteInfo)(implicit rw:RWSession) {
-    val acceptLink = url + routes.InviteController.acceptInvite(invite.externalId).url
+  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, inviteInfo:InviteInfo)(implicit rw:RWSession) {
+    val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
 
     val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
@@ -180,13 +196,13 @@ class InviteCommander @Inject() (
     log.info(s"[inviteConnection-email] sent invitation to $c")
   }
 
-  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, url:String, inviteInfo:InviteInfo):Unit = {
+  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, inviteInfo:InviteInfo):Unit = {
     db.readWrite { implicit s =>
       val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(userId, c.id.get)
       log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
       inviteOpt match {
         case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
-          sendEmailInvitation(c, alreadyInvited, user, url, inviteInfo)
+          sendEmailInvitation(c, alreadyInvited, user, inviteInfo)
         }
         case inactiveOpt => {
           val totalAllowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
@@ -202,7 +218,7 @@ class InviteCommander @Inject() (
                 state = InvitationStates.INACTIVE
               )
             }
-            sendEmailInvitation(c, invite, user, url, inviteInfo)
+            sendEmailInvitation(c, invite, user, inviteInfo)
             invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
             reportSentInvitation(invite, SocialNetworks.EMAIL)
           }
@@ -213,7 +229,7 @@ class InviteCommander @Inject() (
 
   case class InviteStatus(sent:Boolean, savedInvite:Option[Invitation], code:String)
 
-  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, url:String, inviteInfo:InviteInfo):InviteStatus = {
+  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, inviteInfo:InviteInfo):InviteStatus = {
     val savedOpt:Option[Invitation] = db.readWrite(attempts = 2) { implicit s =>
       val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
       val path = routes.InviteController.acceptInvite(invite.externalId).url
@@ -234,7 +250,7 @@ class InviteCommander @Inject() (
           |expertise.
           | """.stripMargin
       )
-      val messageWithUrl = s"$message\n$url$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
+      val messageWithUrl = s"$message\n$baseUrl$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
       log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
       val resp = Await.result(linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl), Duration.Inf) // todo(ray): refactor; map future resp
       log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
@@ -257,14 +273,14 @@ class InviteCommander @Inject() (
     }
   }
 
-  def processSocialInvite(userId: Id[User], inviteInfo:InviteInfo, url:String):InviteStatus = {
+  def processSocialInvite(userId: Id[User], inviteInfo:InviteInfo):InviteStatus = {
     def sendInvitationCB(socialUserInfo:SocialUserInfo, invite:Invitation):InviteStatus = {
       socialUserInfo.networkType match {
         case SocialNetworks.FACEBOOK =>
           val saved = db.readWrite(attempts = 2) { implicit s => invitationRepo.save(invite) }
           InviteStatus(false, Some(saved), "client_handle")
         case SocialNetworks.LINKEDIN =>
-          sendInvitationForLinkedIn(userId, invite, socialUserInfo, url, inviteInfo)
+          sendInvitationForLinkedIn(userId, invite, socialUserInfo, inviteInfo)
         case _ =>
           InviteStatus(false, None, "unsupported_social_network")
       }

@@ -26,8 +26,6 @@ class MobileInviteController @Inject()(
   fortytwoConfig: FortyTwoConfig
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  private val url = fortytwoConfig.applicationBaseUrl // todo: removeme
-
   def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
     val inviteInfoOpt = Json.fromJson[InviteInfo](request.body).asOpt
     log.info(s"[inviteConnection(${request.userId})] invite=$inviteInfoOpt")
@@ -38,7 +36,7 @@ class MobileInviteController @Inject()(
         abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
           econtactTr match {
             case Success(c) =>
-              inviteCommander.sendInvitationForContact(userId, c, user, url, inviteInfo)
+              inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo)
               log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
               Ok(Json.obj("code" -> "invitation_sent"))
             case Failure(e) =>
@@ -47,7 +45,7 @@ class MobileInviteController @Inject()(
           }
         }
       } else {
-        val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, url)
+        val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo)
         log.info(s"[inviteConnection(${request.userId})] inviteStatus=$inviteStatus")
         if (inviteStatus.sent) resolve(Ok(Json.obj("code" -> "invitation_sent")))
         else if (inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") { // special handling
