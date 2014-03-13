@@ -47,6 +47,10 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
 
+    $scope.isMultiChecked = function () {
+      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
+    };
+
     $scope.isCheckEnabled = function () {
       return $scope.keeps.length;
     };
