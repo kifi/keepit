@@ -313,6 +313,10 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
           tagService.addKeepToTag(tag, keep);
         };
 
+        scope.navigateToTag = function (tag) {
+          $location.path('/tag/' + tag.id);
+        };
+
         function positionTagsList() {
           list.css({
             position: 'absolute',

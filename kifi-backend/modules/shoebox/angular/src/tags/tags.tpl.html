@@ -8,11 +8,11 @@
 <div class="kf-tag-list-hidden"></div>
 <ul class="kf-tag-list" antiscroll="{ autoHide: false }">
   <li class="kf-nav-item kf-tag" ui-on-drop="onKeepDrop($data,tag)" drop-channel="keepDragChannel" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew, renaming: isRenaming(tag) }" ng-repeat="tag in shownTags = (tags | filter: filter)">
-    <a class="kf-nav-link" ng-href="/tag/{{tag.id}}" ui-draggable="true" drag="tag" drag-channel="tagDragChannel">
+    <div class="kf-nav-link" ng-click="navigateToTag(tag)" ui-draggable="true" drag="tag" drag-channel="tagDragChannel">
       <span class="kf-tag-icon"></span>
       <span class="kf-tag-name">{{tag.name}}</span>
       <span class="kf-tag-count">{{tag.keeps}}</span>
-    </a>
+    </div>
     <input class="kf-tag-rename" type="text" placeholder="Type new tag name" ng-model="renameTag.value" ng-keydown="onRenameKeydown($event)" ng-if="isRenaming(tag)" autofocus>
     <div class="dropdown">
       <a class="dropdown-toggle"></a>
