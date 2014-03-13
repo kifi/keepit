@@ -1,5 +1,5 @@
 <li class="kf-keep"
-  ng-class="{ mine: isMyBookmark(keep), example: isExample(keep), private: isPrivate(keep), detailed: isPreviewed(keep), selected: isSelected(keep) }" ng-hide="keep.unkept"
+  ng-hide="keep.unkept"
   ui-draggable="true" drag="keep" drag-channel="keepDragChannel" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel">
   <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
   <div class="kf-keep-handle">

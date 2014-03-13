@@ -91,6 +91,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
       hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     }
 
+
     var api = {
       list: list,
 
