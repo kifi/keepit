@@ -104,6 +104,7 @@ GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 
 GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
+GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
 
 ##########################################
 # Mobile V1
