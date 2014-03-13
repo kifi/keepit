@@ -113,20 +113,5 @@ class MessagingController @Inject() (
     Status(ACCEPTED)
   }
 
-  def showMeSomeEmail() = Action { request =>
-    val authors = Seq[String]("Homer Simpson", "Peter Griffin")
-    val messages = Seq[(String,String,String)](
-      ("Peter Griffin", "597e6c13-5093-4cba-8acc-93318987d8ee", "Hello"),
-      ("Homer Simpson", "597e6c13-5093-4cba-8acc-93318987d8ee", "Sup?")
-    )
-    val recipient = BasicUser(
-      externalId = ExternalId[User]("597e6c13-5093-4cba-8acc-93318987d8ee"),
-      firstName = "Tester",
-      lastName = "MacTest",
-      pictureName = "0"
-    )
-    Ok(views.html.email.unreadMessages(recipient, authors, messages, "http://www.kifi.com", "Some random website"))
-  }
-
 }
 
