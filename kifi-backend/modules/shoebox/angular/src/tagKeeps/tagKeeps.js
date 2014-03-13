@@ -14,8 +14,9 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
 ])
 
 .controller('TagKeepsCtrl', [
-  '$scope', 'keepService', 'tagService', '$routeParams',
-  function ($scope, keepService, tagService, $routeParams) {
+  '$scope', 'keepService', 'tagService', '$routeParams', '$window',
+  function ($scope, keepService, tagService, $routeParams, $window) {
+
     keepService.reset();
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
@@ -91,6 +92,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
     $scope.getNextKeeps();
 
     tagService.promiseById(tagId).then(function (tag) {
+      $window.document.title = 'Kifi • ' + tag.name;
       $scope.tag = tag || null;
     });
 

@@ -21,8 +21,11 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService',
-  function ($scope, $http, profileService, routeService) {
+  '$scope', '$http', 'profileService', 'routeService', '$window',
+  function ($scope, $http, profileService, routeService, $window) {
+
+    $window.document.title = 'Kifi • Your Profile';
+
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
 
