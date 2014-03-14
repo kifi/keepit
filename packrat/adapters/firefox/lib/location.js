@@ -39,7 +39,7 @@ function change(callback, browser, progress, req, loc, flags) {
 
 function onFocus(win, callback) {
   for (let id of ['urlbar', 'searchbar']) {
-    win.document.getElementById(id).addEventListener('focus', callback);
+    win.document.getElementById(id).addEventListener('focus', callback.bind(null, id === 'urlbar' ? 'a' : 's'));
   }
 }
 
