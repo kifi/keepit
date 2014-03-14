@@ -1,9 +1,7 @@
 package com.keepit.search.query
 
 import org.specs2.mutable._
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.util.Version
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index._
@@ -14,9 +12,7 @@ import com.keepit.search.TstIndexer
 
 class SemanticVectorQueryTest extends Specification {
 
-  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-
-  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl, config)
+  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl)
   Array("abc", "abc def", "abc def ghi", "def ghi").zip(Array("", "", "", "jkl")).zipWithIndex.map{ case ((text, fallbackText), id) =>
     indexer.index(Id[Tst](id), text, fallbackText)
   }

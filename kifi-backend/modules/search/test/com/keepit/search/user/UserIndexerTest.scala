@@ -8,8 +8,6 @@ import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.IdFilterCompressor
@@ -44,7 +42,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   def filterFactory = inject[UserSearchFilterFactory]
 
   def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserIndexer = {
-    new UserIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new UserIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   "UserIndxer" should {

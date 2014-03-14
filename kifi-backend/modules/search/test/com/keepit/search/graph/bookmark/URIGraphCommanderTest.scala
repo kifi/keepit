@@ -12,8 +12,6 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ActiveShardsSpecParser
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -27,10 +25,8 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
       running(new TestApplication(FakeShoeboxServiceModule())) {
         implicit val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
         val uriGraphIndexers = activeShards.shards.map { shard =>
-          val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-          val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-          val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier])
-          val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier])
+          val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
+          val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, bookmarkStore, inject[AirbrakeNotifier])
           (shard -> uriGraphIndexer)
         }
         val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])

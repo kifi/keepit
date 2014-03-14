@@ -14,8 +14,6 @@ import com.keepit.eliza.FakeElizaServiceClientImpl
 import com.google.inject.Injector
 
 import org.apache.lucene.store.RAMDirectory
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 
 import play.api.libs.json.Json
 
@@ -106,7 +104,6 @@ class MessageSearcherTest extends Specification with TestInjector{
 
     val indexer = new MessageIndexer(
       indexDirectory =  new VolatileIndexDirectoryImpl(),
-      indexWriterConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer),
       eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier], new FakeScheduler()),
       airbrake = inject[AirbrakeNotifier]
     )

@@ -6,7 +6,6 @@ import com.keepit.model._
 import com.keepit.model.BookmarkStates._
 import com.keepit.search.index._
 import java.io.StringReader
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import com.google.inject.Inject
@@ -30,9 +29,8 @@ object BookmarkStore {
 
 class BookmarkStore(
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     airbrake: AirbrakeNotifier)
-  extends Indexer[Bookmark, Bookmark, BookmarkStore](indexDirectory, indexWriterConfig) {
+  extends Indexer[Bookmark, Bookmark, BookmarkStore](indexDirectory) {
 
   import BookmarkStoreFields._
 
