@@ -17,6 +17,7 @@ angular.module('kifi', [
   'kifi.search',
   'kifi.tagKeeps',
   'kifi.profile',
+  'kifi.invite',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
