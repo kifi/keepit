@@ -117,7 +117,11 @@ class SearchCommanderImpl @Inject() (
     timing.decoration
 
     val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
-    val mayHaveMoreHits = (mergedResult.hits.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
+    val mayHaveMoreHits = filter match {
+      case Some("m") => (mergedResult.hits.size < mergedResult.myTotal)
+      case Some("f") => (mergedResult.hits.size < mergedResult.friendsTotal)
+      case _ => (mergedResult.hits.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
+    }
     val res = resultDecorator.decorate(mergedResult, mayHaveMoreHits, searchExperimentId, newIdFilter)
 
     timing.end
