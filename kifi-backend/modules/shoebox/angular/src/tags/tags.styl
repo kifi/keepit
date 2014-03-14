@@ -102,16 +102,13 @@ nav-item()
     .kf-nav-link
       background-color: #f9edbe
 
-  &.renaming
-    background-color: white
+  .kf-nav-link
+    &.renaming
+      background-color: white
 
-    .kf-nav-link
-    .kf-tag-count
-      display: none
-
-  &.renaming
-  &.renamed
-    transition: background-color .16s
+    &.renaming
+    &.renamed
+      transition: background-color .16s
 
 .kf-tag-name
   white-space: nowrap
@@ -144,11 +141,11 @@ nav-item()
   .kf-tag.active &
     background-image: url(../img/tag-icon-white.png)
 
-  .kf-tag.renaming &
-    background-image: url(../img/tag-icon-gray.png)
+  .kf-tag .renaming &
+      background-image: url(../img/tag-icon-gray.png)
 
 .kf-tag
-  .dropdown
+  .kf-tag-tools
     display: none
     position: absolute
     top: 0
@@ -158,18 +155,15 @@ nav-item()
     &.open
       display: block
 
-  &:hover .dropdown
+  &:hover .kf-tag-tools
     display: block
 
-  &.renaming .dropdown
+  &.renaming .kf-tag-tools
     display: none
 
   .dropdown-toggle
-    position: absolute
-    top: 0
-    bottom: 0
-    right: 0
-    width: 33px
+    display: inline-block
+    width: 22px
     background-color: #e3e6ee
     text-align: center
     cursor: pointer
@@ -184,39 +178,14 @@ nav-item()
       vertical-align: 1px
 
   &.active
-    .dropdown-toggle
-      background-color: #b8c5d2
+    &:before
+      border-top-color: white
 
-      &:before
-        border-top-color: white
-
-  .dropdown-menu
-    position: absolute
-    top: 100%
-    z-index: 1000
-    display: none
-    float: left
-    min-width: 160px
-    padding: 5px 0
-    margin: 2px 0 0
-    font-size: 14px
-    list-style: none
-    background-color: #fff
-    border: 1px solid #ccc
-    border: 1px solid rgba(0,0,0,.15)
-    border-radius: 4px
-    box-shadow: 0 6px 12px rgba(0,0,0,.175)
-    background-clip: padding-box
-    left: auto
-    right: 0
-
-  .open>.dropdown-menu
-    display: block
+  .kf-drag-target
+    border-color: #b8c5d3
 
 .kf-tag-rename.kf-tag-rename
-  width: 100%
   padding: 0
-  padding-left: 62px
   border: 0
   margin: 0
   font: inherit
@@ -262,3 +231,34 @@ nav-item()
 
   .kf-tag-new.highlight &
     background-color: #dbdee3
+
+.kf-tag-handle
+.kf-tag-dropdown-toggle
+  display: inline-block
+  height: 100%
+  width: 21px
+  background-color: #e9ecf2
+
+  &:hover
+    background-color: #e3e6ee
+
+.kf-tag-dropdown-toggle
+
+  .kf-tag-tool-icon
+    background: url(../img/arrow-gray-down.png) center/10px no-repeat
+
+.kf-tag-handle
+  cursor: move
+
+  .kf-tag-tool-icon
+    background: url(../img/drag-handle-tag.png) center/10px no-repeat
+
+.kf-tag-tool-icon
+  height: 100%
+  width: 100%
+
+.kf-tag-tools
+  position: absolute
+  top: 0
+  bottom: 0
+  right: 0
