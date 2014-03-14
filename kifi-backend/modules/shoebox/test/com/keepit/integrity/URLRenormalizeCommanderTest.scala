@@ -54,11 +54,8 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
           uri = uriRepo.getByNormalizedUrl("http://www.kifi.com/correct1-2/")
           (uri != None) === true
 
-
         }
 
-
-        1 === 1
       }
 
     }
