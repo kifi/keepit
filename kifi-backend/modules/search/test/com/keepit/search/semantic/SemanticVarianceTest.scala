@@ -2,11 +2,9 @@ package com.keepit.search.semantic
 
 import org.specs2.mutable.Specification
 import com.keepit.common.db.Id
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.search.index._
 import java.io.StringReader
 import com.keepit.common.db.SequenceNumber
-import org.apache.lucene.util.Version
 import com.keepit.search.query.TextQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
@@ -17,9 +15,7 @@ import com.keepit.search.Tst
 
 class SemanticVarianceTest extends Specification {
 
-  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-
-  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl, config)
+  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl)
   Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map{ case ((text, fallbackText), id) =>
     indexer.index(Id[Tst](id), text, fallbackText)
   }

@@ -5,17 +5,15 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.sharding.Shard
 import com.keepit.shoebox.ShoeboxServiceClient
-import org.apache.lucene.index.IndexWriterConfig
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class StandaloneURIGraphIndexer(
   indexDirectory: IndexDirectory,
-  indexWriterConfig: IndexWriterConfig,
   bookmarkStore: BookmarkStore,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends URIGraphIndexer(indexDirectory, indexWriterConfig, bookmarkStore, airbrake) {
+) extends URIGraphIndexer(indexDirectory, bookmarkStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()

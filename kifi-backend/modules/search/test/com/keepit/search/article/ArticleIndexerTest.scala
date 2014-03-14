@@ -17,8 +17,6 @@ import org.specs2.mutable._
 import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.keepit.search.SearchConfig
 import com.google.inject.Singleton
@@ -38,8 +36,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait])
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-    var indexer = new StandaloneArticleIndexer(ramDir, config, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    var indexer = new StandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
@@ -119,8 +116,9 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       currentSeqNum += 3
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 3
+      indexer.close()
 
-      indexer = new StandaloneArticleIndexer(ramDir, config, store, null, inject[ShoeboxServiceClient])
+      indexer = new StandaloneArticleIndexer(ramDir, store, null, inject[ShoeboxServiceClient])
       indexer.sequenceNumber.value === currentSeqNum
     })
 

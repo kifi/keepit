@@ -5,17 +5,15 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.sharding.Shard
 import com.keepit.shoebox.ShoeboxServiceClient
-import org.apache.lucene.index.IndexWriterConfig
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class StandaloneArticleIndexer(
   indexDirectory: IndexDirectory,
-  indexWriterConfig: IndexWriterConfig,
   articleStore: ArticleStore,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends ArticleIndexer(indexDirectory, indexWriterConfig, articleStore, airbrake) {
+) extends ArticleIndexer(indexDirectory, articleStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()

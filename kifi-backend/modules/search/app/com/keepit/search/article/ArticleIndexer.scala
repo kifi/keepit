@@ -12,7 +12,6 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
-import org.apache.lucene.index.IndexWriterConfig
 import com.google.inject.Inject
 import scala.util.Success
 import com.keepit.search.article.ArticleRecordSerializer._
@@ -27,10 +26,9 @@ import com.keepit.search.sharding.Shard
 
 class ArticleIndexer(
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
     airbrake: AirbrakeNotifier)
-  extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory, indexWriterConfig) {
+  extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
 
   import ArticleIndexer.ArticleIndexable
 

@@ -5,7 +5,6 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.search.index.{IndexDirectory, Indexable, Indexer, DefaultAnalyzer}
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -35,10 +34,9 @@ object UserIndexer {
 
 class UserIndexer(
   indexDirectory: IndexDirectory,
-  writerConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-  ) extends Indexer[User, User, UserIndexer](indexDirectory, writerConfig) {
+  ) extends Indexer[User, User, UserIndexer](indexDirectory) {
 
   import UserIndexer._
 

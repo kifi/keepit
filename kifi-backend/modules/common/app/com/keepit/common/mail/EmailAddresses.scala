@@ -21,8 +21,6 @@ object EmailAddresses {
   case object YASUHIRO extends SystemEmailAddress("yasuhiro@42go.com")
   case object ANDREW extends SystemEmailAddress("andrew@42go.com")
   case object JARED extends SystemEmailAddress("jared@42go.com")
-  case object JOON extends SystemEmailAddress("joon@42go.com")
-  case object GREG extends SystemEmailAddress("greg@42go.com")
   case object YINGJIE extends SystemEmailAddress("yingjie@42go.com")
   case object LÉO extends SystemEmailAddress("leo@42go.com")
   case object STEPHEN extends SystemEmailAddress("stephen@42go.com")
@@ -36,7 +34,7 @@ object EmailAddresses {
   case object SUPPORT extends SystemEmailAddress("support@kifi.com")
   case object OLD_SUPPORT extends SystemEmailAddress("support@42go.com")//keep for serialization of mail
 
-  val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, JOON, MARTIN)
+  val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, MARTIN)
   val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, EDUARDO, EFFI, NOTIFY, SENDGRID)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
