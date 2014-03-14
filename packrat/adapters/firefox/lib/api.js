@@ -575,7 +575,7 @@ require('./location').onFocus(errors.wrap(dispatch.bind(exports.on.beforeSearch)
 // navigation handling
 
 const stripHashRe = /^[^#]*/;
-const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+const googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)[\?#](?:.*&)?q=([^&#]*)(?:.*&channel=(\w+))?/;
 const plusRe = /\+/g;
 
 require('./location').onChange(errors.wrap(function onLocationChange(tabId, newPage) { // called before onAttach for all pages except images
@@ -586,7 +586,10 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     let match = googleSearchRe.exec(tab.url);
     if (match) {
       let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
-      if (query) dispatch.call(exports.on.search, query);
+      if (query) {
+        let channel = match[2];
+        dispatch.call(exports.on.search, query, channel === 'fflb' ? 'a' : channel === 'sb' ? 's' : 'n');
+      }
     }
     if (httpRe.test(page.url)) {
       dispatch.call(exports.tabs.on.loading, page);

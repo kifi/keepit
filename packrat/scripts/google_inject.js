@@ -134,7 +134,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     tKifiResultsShown = null;
     var t1 = tQuery = Date.now();
     refinements++;
-    api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst}, function results(resp) {
+    api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst, whence: 'i'}, function results(resp) {
       if (q !== query || !areSameFilter(newFilter, filter)) {
         log("[results] ignoring for query:", q, "filter:", newFilter)();
         return;
