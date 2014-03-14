@@ -10,7 +10,6 @@ import com.keepit.common.net.{URI, Host}
 import com.keepit.common.strings.UTF8
 import com.keepit.eliza.ElizaServiceClient
 import org.apache.lucene.store.Directory
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.document.Document
 import play.api.libs.json.Json
 import scala.concurrent.Await
@@ -124,10 +123,9 @@ class MessageContentIndexable(
 
 class MessageIndexer(
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier)
-  extends Indexer[ThreadContent, ThreadContent, MessageIndexer](indexDirectory, indexWriterConfig) {
+  extends Indexer[ThreadContent, ThreadContent, MessageIndexer](indexDirectory) {
 
     val loadBatchSize : Int = 100
     override val commitBatchSize : Int = 50

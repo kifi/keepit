@@ -12,8 +12,6 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ActiveShardsSpecParser
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectoryImpl
 import com.keepit.common.healthcheck.AirbrakeNotifier

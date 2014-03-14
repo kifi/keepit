@@ -4,7 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.{SearchFriend, User}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -22,10 +21,9 @@ object SearchFriendFields {
 
 class SearchFriendIndexer (
   indexDirectory: IndexDirectory,
-  indexWriterConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends Indexer[User, SearchFriend, SearchFriendIndexer](indexDirectory, indexWriterConfig){
+) extends Indexer[User, SearchFriend, SearchFriendIndexer](indexDirectory){
 
   import SearchFriendIndexer._
 

@@ -4,12 +4,10 @@ import org.specs2.mutable._
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.common.db.SequenceNumber
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
 import play.api.test.Helpers._
-import org.apache.lucene.util.Version
 import com.keepit.inject._
 import com.keepit.test._
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -19,7 +17,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 class SearchFriendIndexerTest extends Specification with ApplicationInjector {
 
   def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl) = {
-    new SearchFriendIndexer(dir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new SearchFriendIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   "searchFriend indexer" should {

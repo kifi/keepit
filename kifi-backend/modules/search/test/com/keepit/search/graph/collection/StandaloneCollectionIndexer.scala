@@ -5,18 +5,16 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.sharding.Shard
 import com.keepit.shoebox.ShoeboxServiceClient
-import org.apache.lucene.index.IndexWriterConfig
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.model.Collection
 
 class StandaloneCollectionIndexer(
   indexDirectory: IndexDirectory,
-  indexWriterConfig: IndexWriterConfig,
   collectionNameIndexer: CollectionNameIndexer,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends CollectionIndexer(indexDirectory, indexWriterConfig, collectionNameIndexer, airbrake) {
+) extends CollectionIndexer(indexDirectory, collectionNameIndexer, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()

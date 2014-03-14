@@ -2,7 +2,6 @@ package com.keepit.search.graph.bookmark
 
 import java.io.StringReader
 import org.apache.lucene.document.Field
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
@@ -49,10 +48,9 @@ object URIGraphFields {
 
 class URIGraphIndexer(
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
     airbrake: AirbrakeNotifier)
-  extends Indexer[User, Bookmark, URIGraphIndexer](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
+  extends Indexer[User, Bookmark, URIGraphIndexer](indexDirectory, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable
 
@@ -92,6 +90,11 @@ class URIGraphIndexer(
     // update searchers together to get a consistent view of indexes
     searchers = (this.getSearcher, bookmarkStore.getSearcher)
     cnt
+  }
+
+  override def close() {
+    super.close()
+    bookmarkStore.close()
   }
 
   override def reindex() {

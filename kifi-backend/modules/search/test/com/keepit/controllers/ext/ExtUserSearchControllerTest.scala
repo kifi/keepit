@@ -21,8 +21,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
 
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.IdFilterCompressor
