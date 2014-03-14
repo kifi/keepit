@@ -11,6 +11,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
       before = null,
       end = false,
       previewed = null,
+      selectedIdx,
       limit = 30,
       isDetailOpen = false,
       singleKeepBeingPreviewed = false,
@@ -134,6 +135,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           singleKeepBeingPreviewed = true;
           isDetailOpen = true;
         }
+        selectedIdx = keepIdx(keep);
         previewed = keep;
         api.getChatter(previewed);
 
@@ -154,20 +156,24 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       previewNext: function () {
-        var previewedIdx = keepIdx(previewed);
+        var previewedIdx = selectedIdx;
         if (list.length - 1 > previewedIdx) {
           previewed = list[previewedIdx + 1];
+          selectedIdx++;
         } else {
           previewed = list[0];
+          selectedIdx = 0;
         }
       },
 
       previewPrev: function () {
-        var previewedIdx = keepIdx(previewed);
+        var previewedIdx = selectedIdx;
         if (previewedIdx > 0) {
           previewed = list[previewedIdx - 1];
+          selectedIdx--;
         } else {
           previewed = list[0];
+          selectedIdx = 0;
         }
       },
 
@@ -187,6 +193,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             previewed = null;
             singleKeepBeingPreviewed = false;
           }
+          selectedIdx = keepIdx(keep);
           return true;
         }
         return false;
@@ -207,14 +214,19 @@ angular.module('kifi.keepService', ['kifi.undo'])
             previewed = null;
             singleKeepBeingPreviewed = false;
           }
+          selectedIdx = keepIdx(keep);
           return true;
         }
         return false;
       },
 
       toggleSelect: function (keep) {
-        if (keep === undefined && previewed) {
-          return api.toggleSelect(previewed);
+        if (keep === undefined) {
+          if (previewed) {
+            return api.toggleSelect(previewed);
+          } else if (selectedIdx >= 0) {
+            return api.toggleSelect(list[selectedIdx]);
+          }
         } else if (api.isSelected(keep)) {
           return api.unselect(keep);
         } else if (keep) {
