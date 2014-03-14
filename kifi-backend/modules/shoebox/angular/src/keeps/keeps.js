@@ -53,7 +53,15 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         scope.onClickKeep = function (keep, $event) {
           if ($event.target.tagName !== 'A') {
-            scope.togglePreview(keep);
+            if ($event.ctrlKey || $event.metaKey) {
+              if (scope.isSelected(keep)) {
+                scope.unselect(keep);
+              } else {
+                scope.select(keep);
+              }
+            } else {
+              scope.togglePreview(keep);
+            }
           }
         };
 

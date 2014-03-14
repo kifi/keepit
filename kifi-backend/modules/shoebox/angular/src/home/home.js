@@ -14,10 +14,11 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 ])
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', 'injectedState', '$timeout',
-  function ($scope, tagService, keepService, $q, injectedState, $timeout) {
+  '$scope', 'tagService', 'keepService', '$q', 'injectedState', '$timeout', '$window',
+  function ($scope, tagService, keepService, $q, injectedState, $timeout, $window) {
     keepService.reset();
 
+    $window.document.title = 'Kifi • Your Keeps';
 
     var messages = {
       0: 'Welcome back!',
@@ -46,6 +47,10 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
+
+    $scope.isMultiChecked = function () {
+      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
+    };
 
     $scope.isCheckEnabled = function () {
       return $scope.keeps.length;

@@ -102,8 +102,10 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findNonUsers(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
+POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
+GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
 
 ##########################################
 # Mobile V1

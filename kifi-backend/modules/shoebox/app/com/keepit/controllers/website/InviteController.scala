@@ -3,8 +3,6 @@ package com.keepit.controllers.website
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 
-import java.net.URLEncoder
-
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
@@ -12,15 +10,16 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId, State}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social._
 import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
 import com.keepit.heimdal._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.Play.current
 import play.api._
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
 import play.api.templates.Html
 import com.keepit.common.mail._
@@ -49,8 +48,7 @@ class InviteController @Inject() (db: Database,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   inviteCommander: InviteCommander,
-  fortytwoConfig: FortyTwoConfig,
-  secureSocialClientIds: SecureSocialClientIds
+  fortytwoConfig: FortyTwoConfig
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite = HtmlAction.authenticated { implicit request =>
@@ -58,18 +56,6 @@ class InviteController @Inject() (db: Database,
   }
 
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
-
-  private val url = fortytwoConfig.applicationBaseUrl
-  private val appId = secureSocialClientIds.facebook
-  private def fbInviteUrl(invite: Invitation): String = {
-    db.readOnly(attempts = 2) { implicit ro =>
-      val identity = socialUserInfoRepo.get(invite.recipientSocialUserId.get)
-      val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
-      val confirmUri = URLEncoder.encode(
-        s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
-      s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId}"
-    }
-  }
 
   def inviteConnection = HtmlAction.authenticated { implicit request =>
     val (fullSocialId, subject, message) = request.request.body.asFormUrlEncoded match {
@@ -91,7 +77,7 @@ class InviteController @Inject() (db: Database,
       abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
         econtactTr match {
           case Success(c) =>
-            inviteCommander.sendInvitationForContact(userId, c, user, url, inviteInfo)
+            inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo)
             log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
           case Failure(e) =>
             log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
@@ -99,13 +85,14 @@ class InviteController @Inject() (db: Database,
       }
       CloseWindow()
     } else {
-      val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, url)
+      val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo)
       if (!inviteStatus.sent && inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") {
         inviteStatus.savedInvite match {
-          case Some(saved) => Redirect(fbInviteUrl(saved))
+          case Some(invitation) =>
+            Redirect(inviteCommander.fbInviteUrl(invitation, inviteInfo.fullSocialId.socialId))
           case None => { // shouldn't happen
             log.error(s"[processInvite($userId,$user,$inviteInfo)] Could not send Facebook invite")
-            Status(INTERNAL_SERVER_ERROR)("0")
+            InternalServerError("0")
           }
         }
       } else CloseWindow()
@@ -149,14 +136,12 @@ class InviteController @Inject() (db: Database,
             }
             nameOpt.map {
               case Some(name) =>
-                val baseUrl = fortytwoConfig.applicationBaseUrl
                 val inviter = inviterUserOpt.get.firstName
-                val pageUrl = baseUrl + request.uri
-                val titleText = s"$inviter sent you an invite to kifi"
-                val titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
-
                 Ok(views.html.marketing.landing(
-                    useCustomMetaData = true, pageUrl = pageUrl, titleText = titleText, titleDesc = titleDesc
+                    useCustomMetaData = true,
+                    pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
+                    titleText = s"$inviter sent you an invite to kifi",
+                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
                 )).withCookies(Cookie("inv", invite.externalId.id))
               case None =>
                 log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")

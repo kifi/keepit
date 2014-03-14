@@ -45,7 +45,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
       scope: true,
       controller: 'KeepCtrl',
       templateUrl: 'keep/keep.tpl.html',
-      link: function (scope /*, element, attrs*/ ) {
+      link: function (scope, element /*, attrs*/ ) {
         scope.getTags = function () {
           return scope.keep.tagList;
         };
@@ -133,6 +133,31 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         updateTitleHtml();
         updateDescHtml();
 
+        var $k = element.find('li.kf-keep');
+
+        // Really weird hack to fix a ng-class bug
+        // In certain cases, ng-class is not setting DOM classes correctly.
+        // Reproduction: select several keeps, preview one of the keeps,
+        // unselect it. isSelected(keep) is false, but it'll still appear
+        // as checked.
+        scope.$watchCollection(function () {
+          return {
+            'mine': scope.isMyBookmark(scope.keep),
+            'example': scope.isExample(scope.keep),
+            'private': scope.isPrivate(scope.keep),
+            'detailed': scope.isPreviewed(scope.keep),
+            'selected': !!scope.isSelected(scope.keep)
+          };
+        }, function (cur) {
+          _.forOwn(cur, function (value, key) {
+            if (value && !$k.hasClass(key)) {
+              $k.addClass(key);
+            } else if (!value && $k.hasClass(key)) {
+              $k.removeClass(key);
+            }
+          });
+        });
+
         scope.$watch('keep.title', function () {
           updateTitleHtml();
         });
@@ -166,9 +191,21 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return scope.toggleSelect(scope.keep);
         };
 
+        var dragMask = element.find('.kf-drag-mask');
+        scope.isDragTarget = false;
+
         scope.onTagDrop = function (tag) {
           tagService.addKeepToTag(tag, scope.keep);
+          scope.isDragTarget = false;
         };
+
+        dragMask.on('dragenter', function () {
+          scope.$apply(function () { scope.isDragTarget = true; });
+        });
+
+        dragMask.on('dragleave', function () {
+          scope.$apply(function () { scope.isDragTarget = false; });
+        });
       }
     };
   }

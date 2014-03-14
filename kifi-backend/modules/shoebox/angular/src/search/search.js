@@ -14,8 +14,8 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 ])
 
 .controller('SearchCtrl', [
-  '$scope', 'keepService', '$routeParams', '$location',
-  function ($scope, keepService, $routeParams, $location) {
+  '$scope', 'keepService', '$routeParams', '$location', '$window',
+  function ($scope, keepService, $routeParams, $location, $window) {
     keepService.reset();
 
     if ($scope.search) {
@@ -30,6 +30,8 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
     var query = $routeParams.q || '',
       filter = $routeParams.f || 'm',
       lastResult = null;
+
+    $window.document.title = query === '' ? 'Kifi • Search' : 'Kifi • ' + query;
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
