@@ -5,12 +5,11 @@ import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.util.BytesRef
+import scala.collection.mutable
+import scala.math._
 import scala.util.Random
 import scala.util.Sorting
-import scala.math._
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
-import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
+import java.util.Arrays
 
 class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
 
@@ -30,6 +29,7 @@ object SemanticVector {
   class Sketch(val vec: Array[Float]) extends AnyVal {
     def copyFrom(other: Sketch): Unit = Array.copy(vec, 0, other.vec, 0, vectorSize)
     def clone() = new Sketch(vec.clone())
+    def clear(): Unit = Arrays.fill(vec, 0.0f)
   }
 
   val vectorSize = 128 // bits
@@ -146,6 +146,7 @@ class SemanticVectorBuilder(windowSize: Int) {
 
   private[this] val termQueue = new Array[String](windowSize)
   private[this] val seedQueue = new Array[Sketch](windowSize)
+  private[this] val activeTermPos = mutable.Map[String, Int]()
 
   private[this] var headPos = 0
   private[this] var tailPos = - windowSize
@@ -163,9 +164,10 @@ class SemanticVectorBuilder(windowSize: Int) {
 
   def clear {
     headPos = 0
-    tailPos = - termQueue.length
-    midPos = - (termQueue.length / 2)
-    tailSketch.copyFrom(headSketch)
+    tailPos = - windowSize
+    midPos = - (windowSize / 2)
+    headSketch.clear()
+    tailSketch.clear()
   }
 
   def resetTermSketches {
@@ -198,10 +200,20 @@ class SemanticVectorBuilder(windowSize: Int) {
     if (midPos >= 0) updateTermSketch(termQueue(midPos % windowSize), midSketch)
     if (tailPos >= 0) updateSketch(tailSketch, seedQueue(tailPos % windowSize))
 
-    termQueue(headPos % windowSize) = term
     val seed = getSeedSketch(term)
+
+    activeTermPos.get(term) match {
+      case Some(oldPos) => // a duplicate term, update the position and clear the old seed, do not update headSketch
+        if (oldPos > 0 && oldPos > tailPos) seedQueue(oldPos % windowSize).clear()
+      case None => // not a duplicate term, update headSketch, drop the tail term
+        updateSketch(headSketch, seed)
+        if (tailPos >= 0) activeTermPos -= termQueue(tailPos % windowSize)
+    }
+
+    activeTermPos(term) = headPos
+    termQueue(headPos % windowSize) = term
     seedQueue(headPos % windowSize) = seed
-    updateSketch(headSketch, seed)
+
     headPos += 1
     midPos += 1
     tailPos += 1
