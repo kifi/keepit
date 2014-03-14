@@ -175,6 +175,10 @@ class PrenormalizerTest extends Specification {
         "http://www.amazon.com/dp/1849515522"
       prenormalize("http://www.amazon.fr/Play-Framework-Cookbook-Alexander-Reelsen/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
         "http://www.amazon.fr/dp/1849515522"
+      prenormalize("http://www.amazon.co.jp/Play-Framework-Cookbook-Alexander-Reelsen/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
+        "http://www.amazon.co.jp/dp/1849515522"
+      prenormalize("http://amazon.co.jp/Play-Framework-Cookbook-Alexander-Reelsen/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
+        "http://www.amazon.co.jp/dp/1849515522"
       prenormalize("http://www.amazon.com/dp/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
         "http://www.amazon.com/dp/1849515522"
       prenormalize("http://www.amazon.com/gp/aw/d/B00BHJRYYS/ref=br_mps_pdt-2/178-6590437-2407965?pf_rd_i=507846&pf_rd_m=ATVPDKIKX0DER&pf_rd_p=1665868822&pf_rd_r=00DADGHAS36CTKK5FM96&pf_rd_s=mobile-1&pf_rd_t=101") ===
