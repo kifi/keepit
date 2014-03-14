@@ -13,6 +13,8 @@ object AmazonNormalizer extends StaticNormalizer {
     (uri.host match {
       case Some(Host(_, "amazon")) => true
       case Some(Host(_, "amazon", "www")) => true
+      case Some(Host(_, _, "amazon")) => true
+      case Some(Host(_, _, "amazon", "www")) => true
       case _ => false
     }) && (uri.path match {
       case Some(product(_, _, _)) => true
@@ -40,6 +42,7 @@ object AmazonNormalizer extends StaticNormalizer {
 
   def normalize(host: Option[Host]) = {
     host match {
+      case Some(Host(country, subdomain, "amazon")) => Some(Host(country, subdomain, "amazon", "www"))
       case Some(Host(country, "amazon")) => Some(Host(country, "amazon", "www"))
       case _ => host
     }
