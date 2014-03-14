@@ -12,4 +12,10 @@
       <span class="kf-nav-count" ng-class="{ empty: !counts.friendsNotifCount }">{{counts.friendsNotifCount}}</span>
     </a>
   </li>
+  <li class="kf-nav-item kf-nav-friends" ng-class="{ active: isActive('/invite') }">
+    <a class="kf-nav-link" href="/invite">
+      <span class="kf-nav-name">Invite your friends</span>
+      <span class="kf-nav-count" ng-class="{ empty: !counts.friendsNotifCount }">{{counts.friendsNotifCount}}</span>
+    </a>
+  </li>
 </ul>
