@@ -14,10 +14,11 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 ])
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', 'injectedState', '$timeout',
-  function ($scope, tagService, keepService, $q, injectedState, $timeout) {
+  '$scope', 'tagService', 'keepService', '$q', 'injectedState', '$timeout', '$window',
+  function ($scope, tagService, keepService, $q, injectedState, $timeout, $window) {
     keepService.reset();
 
+    $window.document.title = 'Kifi • Your Keeps';
 
     var messages = {
       0: 'Welcome back!',

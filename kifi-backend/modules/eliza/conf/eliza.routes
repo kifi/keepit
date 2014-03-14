@@ -48,9 +48,6 @@ GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
 
-GET   /internal/eliza/showMeSomeEmail           @com.keepit.eliza.controllers.internal.MessagingController.showMeSomeEmail()
-
-
 ##########################################
 # IMPORTS
 ##########################################
