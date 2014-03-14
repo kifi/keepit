@@ -1515,7 +1515,8 @@ function searchOnServer(request, respond) {
     maxHits: maxHits,
     lastUUID: request.lastUUID,
     context: request.context,
-    kifiVersion: api.version};
+    kifiVersion: api.version,
+    w: request.whence};
 
   var respHandler = function(resp) {
     log('[searchOnServer] response:', resp)();
@@ -1863,21 +1864,21 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(function () {
+api.on.beforeSearch.add(throttle(function (whence) {
   if (enabled('search')) {
-    ajax('search', 'GET', '/search/warmUp');
+    ajax('search', 'GET', '/search/warmUp', {w: whence});
   }
 }, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 var searchFilterCache = {};    // for restoring filter if user navigates back to results
-api.on.search.add(function prefetchResults(query) {
+api.on.search.add(function prefetchResults(query, whence) {
   if (!me || !enabled('search')) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
     entry = searchPrefetchCache[query] = {callbacks: [], response: null};
-    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter}, function (response) {
+    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter, whence: whence}, function (response) {
       entry.response = response;
       while (entry.callbacks.length) entry.callbacks.shift()(response);
       api.timers.clearTimeout(entry.expireTimeout);

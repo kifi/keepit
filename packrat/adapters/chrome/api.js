@@ -105,14 +105,14 @@ var api = (function createApi() {
   }));
 
   var stripHashRe = /^[^#]*/;
-  var googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)\?(?:.*&)?q=([^&#]*)/;
+  var googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)[\?#](?:.*&)?q=([^&#]*)/;
   var plusRe = /\+/g;
 
   chrome.webNavigation.onBeforeNavigate.addListener(errors.wrap(function (details) {
     var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
       var query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
-      if (query) dispatch.call(api.on.search, query);
+      if (query) dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
     }
   }));
 
@@ -234,7 +234,7 @@ var api = (function createApi() {
   }));
 
   chrome.webRequest.onBeforeRequest.addListener(errors.wrap(function () {
-    dispatch.call(api.on.beforeSearch);
+    dispatch.call(api.on.beforeSearch, 'o');
   }), {
     tabId: -1,
     types: ['main_frame', 'other'],
