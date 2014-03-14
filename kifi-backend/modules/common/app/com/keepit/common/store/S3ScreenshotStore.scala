@@ -4,7 +4,7 @@ import java.net.URLEncoder
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Await, Future, Promise}
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
@@ -23,13 +23,16 @@ import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import java.io.{InputStream, ByteArrayInputStream}
+import java.io.{ByteArrayOutputStream, InputStream, ByteArrayInputStream}
 import com.keepit.common.akka.SafeFuture
 import collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
+import com.keepit.common.concurrent.ExecutionContext
+import java.awt.image.BufferedImage
+import scala.collection.mutable.ArrayBuffer
 
 trait S3ScreenshotStore {
   def config: S3ImageConfig
@@ -180,6 +183,22 @@ class S3ScreenshotStoreImpl(
       if (is != null) is.close
     }
   }
+  private def uploadOriginal(uri:NormalizedURI, url:String, imageInfo:ImageInfo, is:InputStream) = { // need refactoring
+    val rawImageTry:Try[BufferedImage] = Try { ImageUtils.forceRGB(ImageIO.read(is)) }
+    val resTr = rawImageTry flatMap { rawImage =>
+      val os = new ByteArrayOutputStream()
+      ImageIO.write(rawImage, "jpg", os)
+      os.flush
+      val bytes = os.toByteArray
+      os.close
+      Try {
+        val key = s"images/${uri.externalId}/0/0.jpg"
+        uploadImage(key, uri, url, bytes.length, ImageSize(rawImage.getWidth, rawImage.getHeight), new ByteArrayInputStream(bytes))
+      } map { putObjRes => rawImage -> putObjRes }
+    }
+    log.info(s"[uploadOriginal(${uri.id},$url,$imageInfo)] res=$resTr")
+    resTr
+  }
   def processImage(uri:NormalizedURI, imageInfo:ImageInfo):Future[Boolean] = {
     val trace = new StackTrace()
     val url = imageInfo.url
@@ -188,7 +207,12 @@ class S3ScreenshotStoreImpl(
       resp.status match {
         case Status.OK =>
           withInputStream[Boolean](resp.getAHCResponse.getResponseBodyAsStream) { is =>
-            resizeAndPersist(trace, url, uri, is)
+            uploadOriginal(uri, url, imageInfo, is) match {
+              case Failure(t) =>
+                false
+              case Success((rawImage, putObjRes)) =>
+                resizeAndPersist(trace, url, uri, rawImage)
+            }
           }
         case _ =>
           log.error(s"[processImage(${uri.id},${imageInfo.url})] Failed to retrieve image. Response: ${resp.statusText}")
@@ -199,32 +223,33 @@ class S3ScreenshotStoreImpl(
     future
   }
 
-  private def resize(originalStream:InputStream):Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = {
-    val rawImageTry = Try { ImageUtils.forceRGB(ImageIO.read(originalStream)) }
+  private def resize(rawImage:BufferedImage):Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = {
     val resizedImages:Seq[Try[(Int, ByteArrayInputStream, ImageSize)]] = imageSizes.map { size =>
-      for {
-        rawImage <- rawImageTry
-        resized <- Try {
-          ImageUtils.resizeImageKeepProportions(rawImage, size)
-        }
-      } yield (resized._1, resized._2, size)
+      Try {
+        val res = ImageUtils.resizeImageKeepProportions(rawImage, size)
+        (res._1, res._2, size)
+      }
     }
     resizedImages
   }
 
-  private def resizeAndPersist(trace:StackTrace, url:String, uri:NormalizedURI, originalStream:InputStream):Boolean = {
-    val resizedImages = resize(originalStream)
+  private def uploadImage(key:String, uri:NormalizedURI, url:String, contentLength:Int, size:ImageSize, imageStream:ByteArrayInputStream) = {
+    val om = new ObjectMetadata()
+    om.setContentType("image/jpeg")
+    om.setContentLength(contentLength)
+    om.setCacheControl("public, max-age=1800")
+    log.info(s"Uploading image of ${url} to S3 key $key")
+    s3Client.putObject(config.bucketName, key, imageStream, om)
+  }
+
+  private def resizeAndPersist(trace:StackTrace, url:String, uri:NormalizedURI, rawImage:BufferedImage):Boolean = {
+    val resizedImages = resize(rawImage)
     val storedObjects = resizedImages map { case resizeAttempt =>
       resizeAttempt match {
         case Success((contentLength, imageStream, size)) =>
           Statsd.increment(s"image.fetch.successes")
-          val om = new ObjectMetadata()
-          om.setContentType("image/jpeg")
-          om.setContentLength(contentLength)
-          om.setCacheControl("public, max-age=1800")
           val key = mkImgKey(uri.externalId, size)
-          val s3obj = s3Client.putObject(config.bucketName, key, imageStream, om)
-          log.info(s"Uploading image of $url to S3 key $key")
+          val s3obj = uploadImage(key, uri, url, contentLength, size, imageStream)
           imageStream.close
           Some(s3obj)
         case Failure(ex) =>
