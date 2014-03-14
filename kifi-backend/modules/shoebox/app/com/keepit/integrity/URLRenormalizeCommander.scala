@@ -101,11 +101,19 @@ class URLRenormalizeCommander @Inject()(
     sendStartEmail(urls)
     val batchUrls = batch[URL](urls, batchSize = 50)     // avoid long DB write lock.
 
-    val originalRef = mutable.Map.empty[Id[NormalizedURI], Set[Id[URL]]]      // all active urls pointing to a uri initially
-    db.readOnly{ implicit s =>
-      urls.map{_.normalizedUriId}.toSet.foreach{ uriId: Id[NormalizedURI] =>
-        val urls = urlRepo.getByNormUri(uriId).filter(_.state == URLStates.ACTIVE)
-        originalRef += uriId -> urls.map{_.id.get}.toSet
+    val originalRef =       // all active urls pointing to a uri initially
+    if (clearSeq && domainRegex.isEmpty){
+      // we already got all urls
+      urls.map{ url => (url.id.get, url.normalizedUriId)}.groupBy(_._2).map{ case (uriId, group) => (uriId, group.map{_._1}.toSet)}
+    } else{
+      // we only retrieved a subset S of urls. For any uri, it's possible some referencing url is not in set S.
+      val ref = mutable.Map.empty[Id[NormalizedURI], Set[Id[URL]]]
+      db.readOnly{ implicit s =>
+        urls.map{_.normalizedUriId}.toSet.foreach{ uriId: Id[NormalizedURI] =>
+          val urls = urlRepo.getByNormUri(uriId).filter(_.state == URLStates.ACTIVE)
+          ref += uriId -> urls.map{_.id.get}.toSet
+        }
+        ref.toMap
       }
     }
     val migratedRef = mutable.Map.empty[Id[NormalizedURI], Set[Id[URL]]]      // urls pointing to new uri due to migration
