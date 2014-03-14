@@ -141,7 +141,8 @@ class URITest extends Specification {
         "http://somerandomtorrentsi.te/torrent/7998570/torrent_that_previously_failed_2560_X_1600_[Set_7]",
         "http://www.cascadecard.com/<%25=this.SiteBasePath%25>",
         "http://www.columnfivemedia.com/{{getAbsoluteURL()}}",
-        "http://www.amazon.com/dp/B00I0LGU8M?ascsubtag=%5Btype|link%5BpostId|1542311578%5Basin|B00I0LGU8M%5BauthorId|5727177402741770316&tag=lifehackeramzn-20"
+        "http://www.amazon.com/dp/B00I0LGU8M?ascsubtag=%5Btype|link%5BpostId|1542311578%5Basin|B00I0LGU8M%5BauthorId|5727177402741770316&tag=lifehackeramzn-20",
+        "http://www.filestube.com/cWA7UKlGrkprbJenUr7ADj/[Wii]Ea-Sports-Nba-jam-WarezLeech-net.html"
       )
 
       urls.foreach { url =>
