@@ -12,7 +12,6 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
@@ -22,7 +21,6 @@ import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.store.RAMDirectory
-import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.TextQuery
 

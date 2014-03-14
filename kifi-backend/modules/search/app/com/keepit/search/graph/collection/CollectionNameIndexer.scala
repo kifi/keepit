@@ -1,6 +1,5 @@
 package com.keepit.search.graph.collection
 
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
@@ -25,9 +24,8 @@ object CollectionNameFields {
 
 class CollectionNameIndexer(
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     airbrake: AirbrakeNotifier)
-  extends Indexer[User, Collection, CollectionNameIndexer](indexDirectory, indexWriterConfig, CollectionNameFields.decoders) {
+  extends Indexer[User, Collection, CollectionNameIndexer](indexDirectory, CollectionNameFields.decoders) {
 
   override val commitBatchSize = 100
   private val fetchSize = commitBatchSize

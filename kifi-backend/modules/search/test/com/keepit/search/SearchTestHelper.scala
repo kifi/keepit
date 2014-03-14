@@ -26,8 +26,6 @@ import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient}
 import com.keepit.test._
 import akka.actor.ActorSystem
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import scala.concurrent.duration._
 import com.keepit.search.tracker.BrowsingHistoryTracker
 import com.keepit.search.tracker.ClickHistoryTracker
@@ -56,33 +54,28 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
   def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
 
     val articleIndexers = activeShards.shards.map{ shard =>
-      val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, articleConfig, store, inject[AirbrakeNotifier])
+      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
     val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[ShoeboxServiceClient])
 
     val uriGraphIndexers = activeShards.shards.map{ shard =>
-      val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-      val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-      val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, bookmarkStoreConfig, inject[AirbrakeNotifier])
-      val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, graphConfig, bookmarkStore, inject[AirbrakeNotifier])
+      val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
+      val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, bookmarkStore, inject[AirbrakeNotifier])
       (shard -> uriGraphIndexer)
     }
     val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])
 
     val collectionIndexers = activeShards.shards.map{ shard =>
-      val colNameConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, colNameConfig, inject[AirbrakeNotifier])
-      val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
-      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectConfig, collectionNameIndexer, inject[AirbrakeNotifier])
+      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
+      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectionNameIndexer, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)
     }
     val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[ShoeboxServiceClient])
 
-    val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphsCommander = new UserGraphsCommander(userGraphIndexer, searchFriendIndexer)
 
     implicit val clock = inject[Clock]
