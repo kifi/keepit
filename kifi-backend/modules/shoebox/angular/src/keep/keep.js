@@ -191,9 +191,21 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return scope.toggleSelect(scope.keep);
         };
 
+        var dragMask = element.find('.kf-drag-mask');
+        scope.isDragTarget = false;
+
         scope.onTagDrop = function (tag) {
           tagService.addKeepToTag(tag, scope.keep);
+          scope.isDragTarget = false;
         };
+
+        dragMask.on('dragenter', function () {
+          scope.$apply(function () { scope.isDragTarget = true; });
+        });
+
+        dragMask.on('dragleave', function () {
+          scope.$apply(function () { scope.isDragTarget = false; });
+        });
       }
     };
   }
