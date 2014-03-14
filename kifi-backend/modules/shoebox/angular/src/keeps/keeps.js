@@ -9,24 +9,30 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
     function keepKeyBindings(e) {
       if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
+        var captured = false;
         switch (e.which) {
           case 38: // up
           case 75: // k
             keepService.previewPrev();
+            captured = true;
             break;
           case 40: // down
           case 74: // j
             keepService.previewNext();
+            captured = true;
             break;
           case 32: // space
             keepService.toggleSelect();
+            captured = true;
             break;
           default:
             $log.log('key', String.fromCharCode(e.which), e.which);
             break;
         }
-        $scope.$apply();
-        e.preventDefault();
+        if (captured) {
+          $scope.$apply();
+          e.preventDefault();
+        }
       }
     }
 
