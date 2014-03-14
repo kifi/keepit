@@ -155,7 +155,6 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       previewNext: function () {
         var previewedIdx = keepIdx(previewed);
-        console.log('down', previewedIdx);
         if (list.length - 1 > previewedIdx) {
           previewed = list[previewedIdx + 1];
         } else {
@@ -165,7 +164,6 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       previewPrev: function () {
         var previewedIdx = keepIdx(previewed);
-        console.log('up', previewedIdx);
         if (previewedIdx > 0) {
           previewed = list[previewedIdx - 1];
         } else {
@@ -215,7 +213,6 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       toggleSelect: function (keep) {
-        console.log("what", keep, keep === undefined, previewed)
         if (keep === undefined && previewed) {
           return api.toggleSelect(previewed);
         } else if (api.isSelected(keep)) {

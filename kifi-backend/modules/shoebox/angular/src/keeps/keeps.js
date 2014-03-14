@@ -3,29 +3,31 @@
 angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
-  '$scope', 'profileService', 'keepService', 'tagService', '$document',
-  function ($scope, profileService, keepService, tagService, $document) {
+  '$scope', 'profileService', 'keepService', 'tagService', '$document', '$log',
+  function ($scope, profileService, keepService, tagService, $document, $log) {
     $scope.me = profileService.me;
 
     function keepKeyBindings(e) {
-      switch (e.which) {
-      case 38: // up
-      case 75: // k
-        keepService.previewPrev();
-        break;
-      case 40: // down
-      case 74: // j
-        keepService.previewNext();
-        break;
-      case 32: // space
-        keepService.toggleSelect();
-        break;
-      default:
-        console.log(e.which)
-        break;
+      if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
+        switch (e.which) {
+          case 38: // up
+          case 75: // k
+            keepService.previewPrev();
+            break;
+          case 40: // down
+          case 74: // j
+            keepService.previewNext();
+            break;
+          case 32: // space
+            keepService.toggleSelect();
+            break;
+          default:
+            $log.log('key', String.fromCharCode(e.which), e.which);
+            break;
+        }
+        $scope.$apply();
+        e.preventDefault();
       }
-      $scope.$apply();
-      e.preventDefault();
     }
 
     $document.on('keydown', keepKeyBindings);
