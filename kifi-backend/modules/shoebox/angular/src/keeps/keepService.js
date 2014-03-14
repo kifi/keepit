@@ -91,6 +91,19 @@ angular.module('kifi.keepService', ['kifi.undo'])
       hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     }
 
+    function keepIdx(keep) {
+      if (keep === null) {
+        return -1;
+      }
+      var givenId = keep.id;
+      for (var i = 0, l = list.length; i < l; i++) {
+        if (list[i].id === givenId) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
 
     var api = {
       list: list,
@@ -140,6 +153,24 @@ angular.module('kifi.keepService', ['kifi.undo'])
         return api.preview(keep);
       },
 
+      previewNext: function () {
+        var previewedIdx = keepIdx(previewed);
+        if (list.length - 1 > previewedIdx) {
+          previewed = list[previewedIdx + 1];
+        } else {
+          previewed = list[0];
+        }
+      },
+
+      previewPrev: function () {
+        var previewedIdx = keepIdx(previewed);
+        if (previewedIdx > 0) {
+          previewed = list[previewedIdx - 1];
+        } else {
+          previewed = list[0];
+        }
+      },
+
       isSelected: function (keep) {
         return keep && keep.id && !!selected[keep.id];
       },
@@ -182,26 +213,17 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       toggleSelect: function (keep) {
-        if (api.isSelected(keep)) {
+        if (keep === undefined && previewed) {
+          return api.toggleSelect(previewed);
+        } else if (api.isSelected(keep)) {
           return api.unselect(keep);
+        } else if (keep) {
+          return api.select(keep);
         }
-        return api.select(keep);
       },
 
       getFirstSelected: function () {
-        var id = _.keys(selected)[0];
-        if (!id) {
-          return null;
-        }
-
-        for (var i = 0, l = list.length, keep; i < l; i++) {
-          keep = list[i];
-          if (keep.id === id) {
-            return keep;
-          }
-        }
-
-        return null;
+        return _.values(selected)[0];
       },
 
       getSelectedLength: function () {
@@ -244,7 +266,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             previewed = null;
             singleKeepBeingPreviewed = false;
           }
-        }, 500);
+        }, 400);
       },
 
       isSelectedAll: function () {
