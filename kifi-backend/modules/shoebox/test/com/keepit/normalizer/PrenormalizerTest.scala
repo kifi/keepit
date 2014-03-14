@@ -120,7 +120,7 @@ class PrenormalizerTest extends Specification {
 
     "handle edge cases" in {
       prenormalize("http://www1.bloomingdales.com/search/results.ognc?sortOption=*&Keyword=juicy%20couture&resultsPerPage=24&Action=sd&attrs=Department%3ADepartment%3ADresses|Color:Color:Black") ===
-        "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department:Department:Dresses|Color:Color:Black&resultsPerPage=24&sortOption=*"
+        "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department:Department:Dresses%7CColor:Color:Black&resultsPerPage=24&sortOption=*"
 
       prenormalize("http:///") === "http://"
 
