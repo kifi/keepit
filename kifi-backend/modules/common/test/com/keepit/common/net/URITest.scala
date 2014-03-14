@@ -1,6 +1,7 @@
 package com.keepit.common.net
 
 import org.specs2.mutable.Specification
+import java.net.{URI => JavaURI}
 
 class URITest extends Specification {
   "URI" should {
@@ -125,6 +126,29 @@ class URITest extends Specification {
       URI.absoluteUrl("http://www.kifi.com/home/foo.html#fragment", "welcome.html").get === "http://www.kifi.com/home/welcome.html"
       URI.absoluteUrl("http://www.kifi.com/home/foo.html", "./welcome.html").get === "http://www.kifi.com/home/welcome.html"
       URI.absoluteUrl("http://www.kifi.com/home/foo.html", "compmodels.aspx?modelid=730310").get === "http://www.kifi.com/home/compmodels.aspx?modelid=730310"
+    }
+
+    "be compatible with Java URI" in {
+      val urls = Seq(
+        "http://cr.com/SchedPdf.aspx?locIds={99D3-41B6-9852}&dir=asc",
+        "http://da.seek.com/d/PERK_[PerkinElmer_Optoelec]_SU405-2.html",
+        "http://scala.org/api/index.html#scala.reflect.api.Universe@Type>:Null<:Types.this.TypeApi",
+        "http://www.walmart.com/browse/tvs/3_1/?facet=tv_screen_size_range%3A60``+%26+Larger",
+        """https://mint.com/inv?accountId=42#location%3A%7B"accountId"%3A"0",+"tab"%3A0%7D""",
+        "http://www.liveleak.com/view?comments=1\\",
+        "http://premium.nba.com/pr/leaguepass/app/2012/console.html?debug=false&type=lp&TinedSid=Gaa419b-25665208-1262918951531-1&nsfg=1355463185|billing.lpbchoice_LAL_LAC_NYK_MIA_OKC^billing.lpbchoice^giBJ5TL8HJT8eLc6&retryCount=3",
+        "http://finance.yahoo.com/q?s=^dji",
+        "http://somerandomtorrentsi.te/torrent/7998570/torrent_that_previously_failed_2560_X_1600_[Set_7]",
+        "http://www.cascadecard.com/<%25=this.SiteBasePath%25>",
+        "http://www.columnfivemedia.com/{{getAbsoluteURL()}}"
+      )
+
+      urls.foreach { url =>
+        val parsedUrl = URI.parse(url).get.toString()
+        JavaURI.create(parsedUrl).toString === parsedUrl
+      }
+
+      "All Good" === "All Good"
     }
   }
 }
