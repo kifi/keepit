@@ -3,9 +3,8 @@
 angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService) {
-    var KEY_ESC = 27;
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices) {
 
     $scope.search = {};
 
@@ -14,8 +13,10 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     };
 
     $scope.onKeydown = function (e) {
-      if (e.keyCode === KEY_ESC) {
+      if (e.keyCode === keyIndices.KEY_ESC) {
         $scope.clear();
+      } else if (e.keyCode === keyIndices.KEY_ENTER) {
+        performSearch();
       }
     };
 
@@ -31,7 +32,7 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       $scope.search.text = '';
     };
 
-    $scope.onChange = _.throttle(function () {
+    function performSearch() {
       var text = $scope.search.text || '';
       text = _.str.trim(text);
 
@@ -46,9 +47,11 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       $timeout(function () {
         $scope.$apply();
       });
-    }, 500);
+    }
 
-    $scope.$on('$routeChangeSuccess', function(event, current, previous) {
+    $scope.onChange = _.debounce(performSearch, 350);
+
+    $scope.$on('$routeChangeSuccess', function (event, current, previous) {
       if (previous && current && previous.controller === 'SearchCtrl' && current.controller !== 'SearchCtrl') {
         $scope.search.text = '';
       }

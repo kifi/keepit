@@ -50,7 +50,8 @@ import com.keepit.search.result.FriendStats
 class MainSearcher(
     userId: Id[User],
     queryString: String,
-    lang: Lang,
+    lang1: Lang,
+    lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
@@ -72,8 +73,6 @@ class MainSearcher(
 
   private[this] var parsedQuery: Option[Query] = None
   def getParsedQuery: Option[Query] = parsedQuery
-
-  def getLang: Lang = lang
 
   private[this] val currentTime = currentDateTime.getMillis()
   private[this] val timeLogs = new SearchTimeLogs()
@@ -152,7 +151,7 @@ class MainSearcher(
     var tParse = currentDateTime.getMillis()
 
     val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang, config)
+    parser = parserFactory(lang1, lang2, config)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 
@@ -347,7 +346,7 @@ class MainSearcher(
       // make sure there is at least one public keep in others
       othersHits.toSortedList.exists{ hit =>
         val h = hit.hit
-        if (getPublicBookmarkCount(h.id) > 0) {
+        if (hasPublicBookmarks(h.id)) {
           true
         } else {
           othersTotal -= 1
@@ -446,6 +445,7 @@ class MainSearcher(
   }
 
   @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
+  @inline private[this] def hasPublicBookmarks(id: Long) = !(uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).isEmpty)
 
   @inline private[this] def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
@@ -461,7 +461,7 @@ class MainSearcher(
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang, config)
+    parser = parserFactory(lang1, lang2, config)
     parser.setPercentMatch(percentMatch)
     parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
 

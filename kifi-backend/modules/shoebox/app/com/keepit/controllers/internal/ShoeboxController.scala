@@ -59,6 +59,7 @@ class ShoeboxController @Inject() (
   emailAddressRepo: EmailAddressRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
+  pageInfoRepo:PageInfoRepo,
   friendRequestRepo: FriendRequestRepo,
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
@@ -231,7 +232,7 @@ class ShoeboxController @Inject() (
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
-    require((!args.isEmpty && args.length == 2), "Both uri and redirect need to be supplied")
+    require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
@@ -345,8 +346,12 @@ class ShoeboxController @Inject() (
     val url = Json.fromJson[String](request.body).get
     val normalizedUriOrPrenormStr = db.readOnly { implicit s => //using cache
       normUriRepo.getByUriOrPrenormalize(url) match {
-        case Right(url) => Json.obj("url" -> url)
-        case Left(nuri) => Json.obj("normalizedURI" -> nuri)
+        case Success(Right(prenormalizedUrl)) => Json.obj("url" -> prenormalizedUrl)
+        case Success(Left(nuri)) => Json.obj("normalizedURI" -> nuri)
+        case Failure(ex) => {
+          log.error("Could not get normalized uri or prenormalized url", ex)
+          Json.obj("url" -> url)
+        }
       }
     }
     Ok(normalizedUriOrPrenormStr)
@@ -383,6 +388,17 @@ class ShoeboxController @Inject() (
     }
     log.info(s"[getScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=$info")
     Ok(Json.toJson(info))
+  }
+
+  def savePageInfo() = SafeAsyncAction(parse.json) { request =>
+    val ts = System.currentTimeMillis
+    val json = request.body
+    val info = json.as[PageInfo]
+    val saved = db.readWrite(attempts = 3) { implicit s =>
+      pageInfoRepo.save(info)
+    }
+    log.info(s"[savePageInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
+    Ok(Json.toJson(saved))
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>

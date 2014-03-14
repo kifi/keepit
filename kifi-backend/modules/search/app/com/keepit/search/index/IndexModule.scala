@@ -91,7 +91,7 @@ trait IndexModule extends ScalaModule with Logging {
     def articleIndexer(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.article.directory", shard, backup)
       log.info(s"storing ArticleIndex${shard.indexNameSuffix} in $dir")
-      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
       new ArticleIndexer(dir, config, articleStore, airbrake)
     }
 
@@ -105,13 +105,13 @@ trait IndexModule extends ScalaModule with Logging {
     def bookmarkStore(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
       log.info(s"storing BookmarkStore${shard.indexNameSuffix} in $dir")
-      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
       new BookmarkStore(dir, config, airbrake)
     }
     def uriGraphIndexer(shard: Shard[NormalizedURI], store: BookmarkStore): URIGraphIndexer = {
       val dir = getIndexDirectory("index.urigraph.directory", shard, backup)
       log.info(s"storing URIGraphIndex${shard.indexNameSuffix} in $dir")
-      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
       new URIGraphIndexer(dir, config, store, airbrake)
     }
 
@@ -125,13 +125,13 @@ trait IndexModule extends ScalaModule with Logging {
     def collectionNameIndexer(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.collectionName.directory", shard, backup)
       log.info(s"storing CollectionNameIndex${shard.indexNameSuffix} in $dir")
-      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
       new CollectionNameIndexer(dir, config, airbrake)
     }
     def collectionIndexer(shard: Shard[NormalizedURI], collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
       val dir = getIndexDirectory("index.collection.directory", shard, backup)
       log.info(s"storing CollectionIndex${shard.indexNameSuffix} in $dir")
-      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+      val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
       new CollectionIndexer(dir, config, collectionNameIndexer, airbrake)
     }
 
@@ -144,7 +144,7 @@ trait IndexModule extends ScalaModule with Logging {
   def userIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): UserIndexer = {
     val dir = getIndexDirectory("index.user.directory", noShard, backup)
     log.info(s"storing user index in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
     new UserIndexer(dir, config, airbrake, shoeboxClient)
   }
 
@@ -153,7 +153,7 @@ trait IndexModule extends ScalaModule with Logging {
   def userGraphIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): UserGraphIndexer = {
     val dir = getIndexDirectory("index.userGraph.directory", noShard, backup)
      log.info(s"storing user graph index in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
     new UserGraphIndexer(dir, config, airbrake, shoeboxClient)
   }
 
@@ -162,7 +162,7 @@ trait IndexModule extends ScalaModule with Logging {
   def searchFriendIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): SearchFriendIndexer = {
     val dir = getIndexDirectory("index.searchFriend.directory", noShard, backup)
     log.info(s"storing searchFriend index in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
     new SearchFriendIndexer(dir, config, airbrake, shoeboxClient)
   }
 
@@ -171,7 +171,7 @@ trait IndexModule extends ScalaModule with Logging {
   def messageIndexer(backup: IndexStore, eliza: ElizaServiceClient, airbrake: AirbrakeNotifier): MessageIndexer = {
     val dir = getIndexDirectory("index.message.directory", noShard, backup)
     log.info(s"storing message index in $dir")
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
     new MessageIndexer(dir, config, eliza, airbrake)
   }
 
@@ -183,8 +183,7 @@ trait IndexModule extends ScalaModule with Logging {
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
     new PhraseIndexerImpl(dir, config, airbrake, shoeboxClient)
   }
 

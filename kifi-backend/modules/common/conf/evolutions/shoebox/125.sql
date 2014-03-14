@@ -26,6 +26,8 @@ CREATE TABLE oauth2_token (
 ) -- DEFAULT CHARSET=utf8mb4
 ;
 
+insert into evolutions (name, description) values('125.sql', 'adding oauth2_token');
+
 # --- !Downs
 
 DROP TABLE oauth2_token;

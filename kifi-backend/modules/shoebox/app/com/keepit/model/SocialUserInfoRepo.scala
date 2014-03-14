@@ -89,7 +89,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
     userCache.getOrElse(SocialUserInfoUserKey(userId)) {
-      (for(f <- rows if f.userId === userId) yield f).list
+      (for(f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
     }
 
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
@@ -97,12 +97,12 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getSocialUserByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUser] =
     socialUserCache.getOrElse(SocialUserKey(userId)) {
-      (for(f <- rows if f.userId === userId) yield f).list.map(_.credentials).flatten.toSeq
+      (for(f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list.map(_.credentials).flatten.toSeq
     }
 
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
       networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
-        (for(f <- rows if f.socialId === id && f.networkType === networkType) yield f).first
+        (for(f <- rows if f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
       }
     } catch {
       case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)

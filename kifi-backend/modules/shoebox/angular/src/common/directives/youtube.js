@@ -22,7 +22,7 @@ angular.module('kifi.youtube', [])
       scope: {
         videoId: '='
       },
-      templateUrl: 'common/directives/youtube.tpl.html',
+      template: '<div class="kf-youtube"></div>',
       link: function (scope, element) {
 
         var lastId = null;

@@ -1,0 +1,151 @@
+.modal-dialog.modal-dialog
+  position: fixed
+  left: 50%
+  top: 50%
+  transform: translate(-50%, -50%)
+  width: auto
+  margin: 0
+
+  .modal.in &
+    transform: translate(-50%, -50%)
+
+  .modal.fade &
+    transform: translate(-50%, -50%)
+
+
+.modal-content.modal-content
+  width: 100%
+  height: 100%
+  border: 1px solid #f2eeed
+  box-shadow: 12px 12px 0 rgba(0, 40, 90, 0.2)
+  background: #faf8f7
+
+
+.kifi-onboarding-iframe
+  position: fixed
+  top: 0
+  left: 0
+  margin: 0 auto
+  width: 100%
+  height: 100%
+  background: transparent
+  z-index: 10000
+
+
+.dialog-content
+  color: #66829b
+  line-height: 1.5
+  padding: 0 0 10px
+
+  h1
+    margin: 0 0 0
+    font-size: 28px
+    font-weight: 300
+    color: #333
+    font-smoothing: antialiased
+    text-align: center
+
+  button
+    width: 150px
+    height: 28px
+    line-height: 28px
+    padding: 11px 15px
+    background-color: #6fa5ef
+    color: #fff
+    border: none
+    border-radius: 6px
+    font-size: 17px
+    font-weight: 300
+    font-smoothing: antialiased
+    cursor: pointer
+    transition: background-color .1s
+
+    &:hover
+      background-color: #7faeef
+
+    &.dialog-warn
+      background-color: #ce6159
+
+      &:focus
+      &:hover
+        background-color: #D3716A
+
+
+    &.dialog-cancel
+      background-color: #b8c5d1
+
+      &:focus
+      &:hover
+        background-color: #C5D2DE
+
+      &:active
+        background-color: #9FACB8
+
+  .action-wrap
+    margin: 0 auto 15px
+    width: 100%
+    text-align: center
+
+  .email-address
+    color: #73787f
+
+.dialog-header
+  font-size: 18px
+  font-weight: 300
+  padding: 19px 6px 8px
+  border-bottom: 2px solid #ecf0f1
+  margin: 0 11px
+  color: #3a495b
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+      
+.dialog-x
+  position: absolute
+  color: #bcc1c7
+  font-weight: normal
+  padding: 15px 20px
+  right: 0
+  top: 0
+  font-size: 16px
+  text-decoration: none
+  cursor: pointer
+
+.dialog-buttons
+  text-align: center
+  margin: 0 auto
+
+
+.dialog-title
+  color: #515051
+  background: url('../img/kifi-logo-color.png') 30px 50% / 32px no-repeat
+  font-size: 0
+  background-color: #eff2f7
+  line-height: 50px
+  margin-bottom: 15px
+  border-radius: 6px 6px 0 0
+
+  .dialog-x
+    font-size: 13px
+    float: right
+    margin: 0 15px
+    color: #888
+    cursor: pointer
+    padding: 0px 8px
+
+    &:hover
+      color: #000
+
+.dialog-body-wrap
+  min-width: 400px
+  margin: 20px 35px
+  color: #333
+  font-size: 14px
+
+  .dialog-body
+    margin: 0 auto
+
+
+.dialog-centered
+  text-align: center
+

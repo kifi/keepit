@@ -28,6 +28,7 @@ import play.modules.statsd.api.Statsd
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.UTF_8
 import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
 import com.keepit.realtime.UrbanAirship
@@ -113,33 +114,25 @@ class MessagingCommander @Inject() (
   }
 
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
-    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
-      val (nUrlStr, unsortedInfos) = if (nUriOrPrenorm.isLeft) {
-        val nUri = nUriOrPrenorm.left.get
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map {
+      case Left(nUri) =>
         val threads = db.readOnly { implicit session =>
           val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
-
-        (nUri.url, buildThreadInfos(userId, threads, Some(url)))
-      } else {
-        (nUriOrPrenorm.right.get, Seq[ElizaThreadInfo]())
-      }
-      val infos = unsortedInfos sortWith { (a,b) =>
-        a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
-      }
-      (nUrlStr, infos)
+        val unsortedInfos = buildThreadInfos(userId, threads, Some(url))
+        val infos = unsortedInfos sortWith { (a,b) =>
+          a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
+        }
+        (nUri.url, infos)
+      case Right(prenormalizedUrl) => (prenormalizedUrl, Seq[ElizaThreadInfo]())
     })
   }
 
   def hasThreads(userId: Id[User], url: String): Future[Boolean] = {
-    shoebox.getNormalizedUriByUrlOrPrenormalize(url).map { nUriOrPrenorm =>
-      nUriOrPrenorm match {
-        case Left(nUri) => {
-          db.readOnly { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
-        }
-        case Right(_) => false
-      }
+    shoebox.getNormalizedURIByURL(url).map {
+      case Some(nUri) => db.readOnly { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
+      case None => false
     }
   }
 
@@ -258,7 +251,7 @@ class MessagingCommander @Inject() (
     new String(outBuf.array, 0, outBuf.position(), charset)
   }
 
-  private def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:String) = {
+  private def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:Option[String]) = {
     val notification = PushNotification(extId, pendingNotificationCount, msg)
     urbanAirship.notifyUser(userId, notification)
     messagingAnalytics.sentPushNotificationForThread(userId, notification)
@@ -266,7 +259,6 @@ class MessagingCommander @Inject() (
 
   private def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]) : Unit = {
     SafeFuture {
-      val locator = "/messages/" + thread.externalId
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
       val unseenAuthors: Int = lastSeenOpt match {
@@ -283,7 +275,7 @@ class MessagingCommander @Inject() (
         message = message,
         thread = thread,
         messageWithBasicUser = messageWithBasicUser,
-        locator = locator,
+        locator = thread.deepLocator.value,
         unread = true,
         originalAuthorIdx = authorActivityInfos.filter(_.started).zipWithIndex.head._2,
         unseenAuthors = unseenAuthors,
@@ -297,14 +289,14 @@ class MessagingCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
-      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator(locator))
+      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, thread.deepLocator)
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
 
       if (!muted) {
         val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
-        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), trimAtBytes(notifText, 128, Charset.forName("UTF-8")))
+        sendPushNotification(userId, thread.externalId, getUnreadUnmutedThreadCount(userId), Some(trimAtBytes(notifText, 128, UTF_8)))
       }
     }
 
@@ -322,9 +314,8 @@ class MessagingCommander @Inject() (
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
-    "9c211915-2413-4030-8efa-d7a9cfc77359", // joon
-    "1714ac86-4ce5-4083-b4c7-bb1e8292c373",  // martin
-    "fd187ca1-2921-4c60-a8c0-955065d454ab" // jared (of the petker variety)
+    "1714ac86-4ce5-4083-b4c7-bb1e8292c373", // martin
+    "fd187ca1-2921-4c60-a8c0-955065d454ab"  // jared (of the petker variety)
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
@@ -332,7 +323,8 @@ class MessagingCommander @Inject() (
     "2d18cd0b-ef30-4759-b6c5-f5f113a30f08", // effi
     "73b1134d-02d4-443f-b99b-e8bc571455e2", // chandler
     "c82b0fa0-6438-4892-8738-7fa2d96f1365", // ketan
-    "ae139ae4-49ad-4026-b215-1ece236f1322"  // jen
+    "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
+    "c1ce2ab6-8211-40f7-8187-1522086f0c2e"  // mark
   )
   val family = engineers ++ product ++ Seq(
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb" // two-meals
@@ -540,7 +532,7 @@ class MessagingCommander @Inject() (
   }
 
   private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread, pageOpt)
@@ -629,7 +621,7 @@ class MessagingCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, false)
-      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, DeepLocator("/messages/" + thread.externalId))
+      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, thread.deepLocator)
 
       notifJson
     })
@@ -778,8 +770,10 @@ class MessagingCommander @Inject() (
     messagingAnalytics.clearedNotification(userId, message, thread, context)
 
     val nUrl: String = thread.nUrl.getOrElse("")
+    val unreadCount = getUnreadUnmutedThreadCount(userId)
     notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, thread.externalId.id, message.createdAt, msgExtId.id))
-    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
+    notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
+    sendPushNotification(userId, thread.externalId, unreadCount, None)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
@@ -792,8 +786,10 @@ class MessagingCommander @Inject() (
     }
     if (changed) {
       val nUrl: String = thread.nUrl.getOrElse("")
+      val unreadCount = getUnreadUnmutedThreadCount(userId)
       notificationRouter.sendToUser(userId, Json.arr("message_unread", nUrl, thread.externalId.id, message.createdAt, msgExtId.id))
-      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(userId)))
+      notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
+      sendPushNotification(userId, thread.externalId, unreadCount, None)
     }
   }
 
@@ -803,13 +799,15 @@ class MessagingCommander @Inject() (
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
-    val lastTime = db.readWrite(attempts=2) { implicit session =>
+    val message = db.readWrite(attempts=2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
-      message.createdAt
+      message
     }
-    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", getUnreadUnmutedThreadCount(user)))
-    lastTime
+    val unreadCount = getUnreadUnmutedThreadCount(user)
+    notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadCount))
+    sendPushNotification(user, message.threadExtId, unreadCount, None)
+    message.createdAt
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {
@@ -924,8 +922,7 @@ class MessagingCommander @Inject() (
   }
 
   def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject], Int, Int)] = {
-    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap { nUriOrPrenorm =>
-      nUriOrPrenorm match {
+    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
       case Left(nUri) =>
         val noticesFuture = db.readOnly { implicit session =>
           userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
@@ -943,22 +940,18 @@ class MessagingCommander @Inject() (
           }
           (nUri.url, notices, numTotal, numUnreadUnmuted)
         })
-      case Right(prenormUri) =>
-        Promise.successful(prenormUri, Seq.empty, 0, 0).future
-      }
+      case Right(prenormalizedUrl) =>
+        Promise.successful(prenormalizedUrl, Seq.empty, 0, 0).future
     })
   }
 
   def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
-    new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap { nUriOrPrenorm =>
-      nUriOrPrenorm match {
-      case Left(nUri) =>
+    new SafeFuture(shoebox.getNormalizedURIByURL(url) flatMap {
+      case Some(nUri) =>
         db.readOnly { implicit session =>
           userThreadRepo.getSendableNotificationsForUriBefore(userId, nUri.id.get, time, howMany)
         }
-      case Right(prenormUri) =>
-        Promise.successful(Seq.empty).future
-      }
+      case _ => Promise.successful(Seq.empty).future
     })
   }
 

@@ -10,7 +10,9 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
       scope: {
         state: '=inputState',
         validateAction: '&inputValidateAction',
-        saveAction: '&inputSaveAction'
+        saveAction: '&inputSaveAction',
+        explicitEnabling: '=',
+        actionLabel: '@'
       },
       transclude: true,
       templateUrl: 'profile/profileInput.tpl.html',
@@ -33,12 +35,15 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           .on('blur', function () {
             // give enough time for save() to fire. todo(martin): find a more reliable solution
             cancelEditPromise = $timeout(scope.cancel, 100);
+          })
+          .on('focus', function () {
+            $timeout(function () { setEditState(); });
           });
 
         function cancelCancelEdit() {
           if (cancelEditPromise) {
-            cancelEditPromise = null;
             $timeout.cancel(cancelEditPromise);
+            cancelEditPromise = null;
           }
         }
 
@@ -52,10 +57,15 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           scope.errorBody = error.body || '';
         }
 
-        scope.edit = function () {
+        function setEditState() {
           cancelCancelEdit();
-          scope.state.currentValue = scope.state.value;
           scope.state.editing = true;
+          scope.state.invalid = false;
+        }
+
+        scope.edit = function () {
+          scope.state.currentValue = scope.state.value;
+          setEditState();
         };
 
         scope.cancel = function () {
@@ -71,7 +81,6 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
             setInvalid(validationResult.error);
             return;
           }
-          scope.state.invalid = false;
           scope.state.prevValue = scope.state.currentValue;
           updateValue(value);
           scope.state.editing = false;

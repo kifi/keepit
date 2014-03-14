@@ -1,10 +1,11 @@
 'use strict';
 
-angular.module('kifi.profileService', ['kifi.routeService'])
+angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService',
-  function ($http, env, $q, util, routeService) {
+  '$http', 'env', '$q', 'util', 'routeService', '$FB',
+  function ($http, env, $q, util, routeService, $FB) {
+
     var me = {
       seqNum: 0
     };
@@ -32,7 +33,7 @@ angular.module('kifi.profileService', ['kifi.routeService'])
     }
 
     function postMe(data) {
-      $http.post(routeService.profileUrl, data).then(function (res) {
+      return $http.post(routeService.profileUrl, data).then(function (res) {
         return updateMe(res.data);
       });
     }
@@ -69,10 +70,13 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       }
     }
 
+    function cloneEmails(me) {
+      return { emails:  _.clone(me.emails, true) };
+    }
+
     function setNewPrimaryEmail(email) {
       getMe().then(function (me) {
-        var props = {};
-        props.emails = _.clone(me.emails, true);
+        var props = cloneEmails(me);
         removeEmailInfo(props.emails, email);
         unsetPrimary(props.emails);
         props.emails.unshift({
@@ -83,11 +87,100 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       });
     }
 
+    function makePrimary(email) {
+      var props = cloneEmails(me);
+      unsetPrimary(props.emails);
+      _.find(props.emails, function (info) {
+        if (info.address === email) {
+          info.isPrimary = true;
+        }
+      });
+      return postMe(props);
+    }
+
     function resendVerificationEmail(email) {
       return $http({
         url: routeService.resendVerificationUrl,
         method: 'POST',
         params: {email: email}
+      });
+    }
+
+    function cancelPendingPrimary() {
+      getMe().then(function (me) {
+        if (me.primaryEmail && me.primaryEmail.isPendingPrimary) {
+          return deleteEmailAccount(me.primaryEmail.address);
+        }
+      });
+    }
+
+    function addEmailAccount(email) {
+      var props = cloneEmails(me);
+      props.emails.push({
+        address: email,
+        isPrimary: false
+      });
+      return postMe(props);
+    }
+
+    function deleteEmailAccount(email) {
+      var props = cloneEmails(me);
+      removeEmailInfo(props.emails, email);
+      return postMe(props);
+    }
+
+    function validateEmailFormat(email) {
+      if (!email) {
+        return failureInputActionResult('This field is required');
+      } else if (!util.validateEmail(email)) {
+        return invalidEmailValidationResult();
+      }
+      return successInputActionResult();
+    }
+
+    function failureInputActionResult(errorHeader, errorBody) {
+      return {
+        isSuccess: false,
+        error: {
+          header: errorHeader,
+          body: errorBody
+        }
+      };
+    }
+
+    function successInputActionResult() {
+      return {isSuccess: true};
+    }
+
+    function getEmailValidationError(status) {
+      switch (status) {
+      case 400: // bad format
+        return invalidEmailValidationResult();
+      case 403: // belongs to another user
+        return failureInputActionResult(
+          'This email address is already taken',
+          'This email address belongs to another user.<br>Please enter another email address.'
+        );
+      }
+    }
+
+    function invalidEmailValidationResult() {
+      return failureInputActionResult('Invalid email address', 'Please enter a valid email address');
+    }
+
+    function sendChangePassword(oldPassword, newPassword) {
+      return $http.post(routeService.userPasswordUrl, {
+        oldPassword: oldPassword,
+        newPassword: newPassword
+      });
+    }
+
+    function getFacebookStatus() {
+      return $FB.getLoginStatus().then(function (res) {
+        me.facebookStatusResponse = res || null;
+        me.facebookStatus = res && res.status || null;
+        me.seqNum++;
+        return res;
       });
     }
 
@@ -98,7 +191,17 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       postMe: postMe,
       getAddressBooks: getAddressBooks,
       setNewPrimaryEmail: setNewPrimaryEmail,
-      resendVerificationEmail: resendVerificationEmail
+      makePrimary: makePrimary,
+      resendVerificationEmail: resendVerificationEmail,
+      cancelPendingPrimary: cancelPendingPrimary,
+      addEmailAccount: addEmailAccount,
+      deleteEmailAccount: deleteEmailAccount,
+      validateEmailFormat: validateEmailFormat,
+      failureInputActionResult: failureInputActionResult,
+      successInputActionResult: successInputActionResult,
+      getEmailValidationError: getEmailValidationError,
+      sendChangePassword: sendChangePassword,
+      getFacebookStatus: getFacebookStatus
     };
   }
 ]);

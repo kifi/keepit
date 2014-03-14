@@ -52,13 +52,13 @@ class MessageContentIndexable(
     }
 
     val content = buildLineField(ThreadIndexFields.contentField, threadContentList){ (fieldName, text, lang) =>
-      val analyzer = DefaultAnalyzer.forIndexing(lang)
+      val analyzer = DefaultAnalyzer.getAnalyzer(lang)
       analyzer.tokenStream(fieldName, new StringReader(text))
     }
     doc.add(content)
 
     val contentStemmed = buildLineField(ThreadIndexFields.contentStemmedField, threadContentList){ (fieldName, text, lang) =>
-      val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
+      val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
       analyzer.tokenStream(fieldName, new StringReader(text))
     }
     doc.add(contentStemmed)
@@ -66,8 +66,8 @@ class MessageContentIndexable(
     //title
     val titleText = data.pageTitleOpt.getOrElse("")
     val titleLang = LangDetector.detect(titleText, preferedLang)
-    val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
-    val titleAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(titleLang)
+    val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
+    val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
     val pageTitle = buildTextField(ThreadIndexFields.titleField, titleText, titleAnalyzer)
     doc.add(pageTitle)
     val pageTitleStemmed = buildTextField(ThreadIndexFields.titleStemmedField, titleText, titleAnalyzerWithStemmer)
@@ -89,7 +89,7 @@ class MessageContentIndexable(
       (i, userName, userNameLang)
     }
     val participantNames = buildLineField(ThreadIndexFields.participantNameField, participantNameList){ (fieldName, text, lang) =>
-      val analyzer = DefaultAnalyzer.forIndexing(lang)
+      val analyzer = DefaultAnalyzer.getAnalyzer(lang)
       analyzer.tokenStream(fieldName, new StringReader(text))
     }
     doc.add(participantNames)

@@ -12,14 +12,17 @@ case class UserAgent(
   operatingSystemName: String,
   typeName: String,
   version: String) {
-
-  lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily) || UserAgent.iPhonePattern.findFirstIn(userAgent).isDefined
+  lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiAppTypeName
+  lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
+  lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily) || isKifiIphoneApp
   lazy val isSupportedDesktop: Boolean = {
     !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
   }
 }
 
 object UserAgent extends Logging {
+
+  val KifiAppTypeName = "kifi app"
 
   val MobileOs = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   val SupportedDesktopBrowsers = Set("Chrome", "Firefox")
@@ -34,7 +37,7 @@ object UserAgent extends Logging {
   def fromString(userAgent: String): UserAgent = {
     userAgent match {
       case iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
-        UserAgent(userAgent, appName, os, device, "kifi app", appVersion)
+        UserAgent(userAgent, appName, os, device, KifiAppTypeName, appVersion)
       case _ =>
         val agent: SFUserAgent = parser.parse(userAgent)
         UserAgent(trim(userAgent),

@@ -11,6 +11,7 @@ trait DeepLinkRepo extends Repo[DeepLink] {
   def getByUri(urlId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink]
   def getByUrl(urlId: Id[URL])(implicit session: RSession): Seq[DeepLink]
   def getByToken(token: DeepLinkToken)(implicit session: RSession): Option[DeepLink]
+  def getByLocatorAndUser(locator: DeepLocator, recipientUserId: Id[User])(implicit session: RSession): DeepLink
 }
 
 @Singleton
@@ -44,4 +45,8 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
 
   def getByToken(token: DeepLinkToken)(implicit session: RSession): Option[DeepLink] =
     (for(b <- rows if b.token === token) yield b).firstOption
+
+  def getByLocatorAndUser(locator: DeepLocator, recipientUserId: Id[User])(implicit session: RSession): DeepLink = {
+    (for(b <- rows if b.deepLocator === locator && b.recipientUserId === recipientUserId) yield b).first
+  }
 }

@@ -15,7 +15,8 @@ angular.module('kifi.keepService', ['kifi.undo'])
       isDetailOpen = false,
       singleKeepBeingPreviewed = false,
       previewUrls = {},
-      doc = $document[0];
+      doc = $document[0],
+      screenshotDebouncePromise = false;
 
     $rootScope.$on('tags.remove', function (tagId) {
       _.forEach(list, function (keep) {
@@ -57,15 +58,30 @@ angular.module('kifi.keepService', ['kifi.undo'])
     function fetchScreenshots(keeps) {
       if (keeps && keeps.length) {
         api.fetchScreenshotUrls(keeps).then(function (urls) {
-          $timeout(function () {
-            api.prefetchImages(urls);
-          });
-
           _.forEach(keeps, function (keep) {
             keep.screenshot = urls[keep.url];
           });
         });
       }
+    }
+
+    function lookupScreenshotUrls(keeps) {
+      if (keeps && keeps.length) {
+        var url = env.xhrBase + '/keeps/screenshot',
+          data = {
+            urls: _.pluck(keeps, 'url')
+          };
+
+        $log.log('keepService.lookupScreenshotUrls()', data);
+
+        return $http.post(url, data).then(function (res) {
+          $timeout(function () {
+            api.prefetchImages(res.data.urls);
+          });
+          return res.data.urls;
+        });
+      }
+      return $q.when(keeps || []);
     }
 
     function processHit(hit) {
@@ -74,6 +90,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
       hit.keepers = hit.users;
       hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     }
+
 
     var api = {
       list: list,
@@ -98,8 +115,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       preview: function (keep) {
         if (keep == null) {
-          singleKeepBeingPreviewed = false;
-          isDetailOpen = false;
+          api.clearState();
         }
         else {
           singleKeepBeingPreviewed = true;
@@ -119,7 +135,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return null;
         }
         else if (api.isPreviewed(keep)) {
-          return api.preview(null);
+          return api.clearState();
         }
         return api.preview(keep);
       },
@@ -222,9 +238,13 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       clearState: function () {
-        previewed = null;
         isDetailOpen = false;
-        singleKeepBeingPreviewed = false;
+        $timeout(function () {
+          if (isDetailOpen === false) {
+            previewed = null;
+            singleKeepBeingPreviewed = false;
+          }
+        }, 500);
       },
 
       isSelectedAll: function () {
@@ -324,20 +344,20 @@ angular.module('kifi.keepService', ['kifi.undo'])
         return $q.when({'threads': 0});
       },
 
-      fetchScreenshotUrls: function (keeps) {
-        if (keeps && keeps.length) {
-          var url = env.xhrBase + '/keeps/screenshot',
-            data = {
-              urls: _.pluck(keeps, 'url')
-            };
+      fetchScreenshotUrls: function (urls) {
+        var previousCancelled = screenshotDebouncePromise && $timeout.cancel(screenshotDebouncePromise);
 
-          $log.log('keepService.fetchScreenshotUrls()', data);
-
-          return $http.post(url, data).then(function (res) {
-            return res.data.urls;
+        if (previousCancelled) {
+          // We cancelled an existing call that was in a timeout. User is likely typing actively.
+          screenshotDebouncePromise = $timeout(angular.noop, 1000);
+          return screenshotDebouncePromise.then(function () {
+            return lookupScreenshotUrls(urls);
           });
         }
-        return $q.when(keeps || []);
+
+        // No previous request was going. Start a timer, but go ahead and run the screenshot lookup.
+        screenshotDebouncePromise = $timeout(angular.noop, 1000);
+        return lookupScreenshotUrls(urls);
       },
 
       prefetchImages: function (urls) {
@@ -478,7 +498,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
             }
           };
 
-        $log.log('keepService.unkeep()', data);
+        $log.log('keepService.find()', data);
 
         return $http.get(url, data).then(function (res) {
           var data = res.data,

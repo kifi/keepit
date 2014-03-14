@@ -61,7 +61,9 @@ module.exports = function (grunt) {
           'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
           'lib/moment/moment.js',
           'lib/angular-moment/angular-moment.js',
-          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js'
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
+          'lib/angular-facebook-api/dist/angular-facebook-api.js',
+          'lib/angular-dragdrop/draganddrop.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
@@ -81,7 +83,9 @@ module.exports = function (grunt) {
           'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
           'lib/moment/min/moment.min.js',
           'lib/angular-moment/angular-moment.min.js',
-          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js'
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
+          'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
+          'lib/angular-dragdrop/draganddrop.js'
         ],
         src: 'src',
         common: 'src/common/build-css',
@@ -102,6 +106,7 @@ module.exports = function (grunt) {
         minJs: 'dist/<%= pkg.name %>.min.js',
         libJs: 'dist/lib.js',
         libMinJs: 'dist/lib.min.js',
+        minTwiceJs: 'dist/lib.twice.min.js',
         tpl: 'dist/<%= pkg.name %>-tpl.js'
         //tplMin: 'dist/<%= pkg.name %>-tpl.min.js'
       },
@@ -111,8 +116,8 @@ module.exports = function (grunt) {
         specs: 'src/**/*.spec.js',
         scenarios: 'src/**/*.scenario.js',
         client: ['<%= path.test.specs %>', '<%= path.test.scenarios %>'],
-        karma: 'test/karma',
-        karmaConfig: 'test/karma/karma.conf.js',
+        karma: 'test',
+        karmaConfig: 'test/karma.conf.js',
         jshintrc: 'test/.jshintrc'
       }
     },
@@ -218,6 +223,10 @@ module.exports = function (grunt) {
       dist: {
         src: ['<%= concat.dist.src %>'],
         dest: '<%= path.dist.minJs %>'
+      },
+      libMin: {
+        src: ['<%= path.dist.libMinJs %>'],
+        dest: '<%= path.dist.minTwiceJs %>'
       }
       /*
       tpl: {
@@ -375,8 +384,9 @@ module.exports = function (grunt) {
     'html2js',
     'copy',
     'jshint',
-    'uglify',
+    'uglify:dist',
     'concat'
+    //'uglify:libMin'
   ]);
 
   // Test task.
@@ -401,8 +411,9 @@ module.exports = function (grunt) {
     'html2js',
     'copy',
     'jshint',
-    'uglify',
+    'uglify:dist',
     'concat',
+    //'uglify:libMin',
     'karma:unit'
   ]);
 };

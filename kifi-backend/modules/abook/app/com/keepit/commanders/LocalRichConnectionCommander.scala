@@ -95,6 +95,7 @@ class LocalRichConnectionCommander @Inject() (
   }
 
   def processUpdateImmediate(message: RichConnectionUpdateMessage): Future[Unit] = synchronized {
+    log.info(s"[WTI] Processing $message")
     try {
       message match {
         case InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
@@ -103,9 +104,8 @@ class LocalRichConnectionCommander @Inject() (
             user2.userId.foreach { userId2 => repo.internRichConnection(userId2, user2.id, Left(user1)) }
           }
         }
-        case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => {
-          db.readWrite { implicit session =>  repo.recordKifiConnection(firstUserId, secondUserId) }
-        }
+        case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => // Ignore
+
         case RecordInvitation(userId: Id[User], invitation: Id[Invitation], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) => {
           db.readWrite { implicit session =>
             val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get(friendEContact.get).email))
@@ -125,9 +125,7 @@ class LocalRichConnectionCommander @Inject() (
             user2.userId.foreach { userId2 => repo.removeRichConnection(userId2, user2.id.get, user1.id.get) }
           }
         }
-        case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => {
-          db.readWrite { implicit session => repo.removeKifiConnection(user1, user2) }
-        }
+        case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => // Ignore
 
         case RecordVerifiedEmail(userId: Id[User], email: String) => {
           db.readWrite { implicit session => eContactRepo.recordVerifiedEmail(email: String, userId) }

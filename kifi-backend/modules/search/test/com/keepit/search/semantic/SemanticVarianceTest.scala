@@ -17,8 +17,7 @@ import com.keepit.search.Tst
 
 class SemanticVarianceTest extends Specification {
 
-  val indexingAnalyzer = DefaultAnalyzer.forIndexing
-  val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
 
   val indexer = new TstIndexer(new VolatileIndexDirectoryImpl, config)
   Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map{ case ((text, fallbackText), id) =>

@@ -6,6 +6,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.imageio.ImageIO
 import org.imgscalr._
 import play.api.libs.json.Json
+import java.awt.Color
 
 case class ImageSize(width: Int, height: Int)
 
@@ -57,5 +58,18 @@ object ImageUtils {
     val os = new ByteArrayOutputStream()
     ImageIO.write(image, "jpeg", os)
     (os.size(), new ByteArrayInputStream(os.toByteArray()))
+  }
+
+  def forceRGB(image: BufferedImage): BufferedImage = {
+    // This forces an image to use RGB and to use white as the transparency color if the source image supports it
+    // However, this can still fail on different color modes, especially from images explicitly saved as CMYK from
+    // Adobe software. The true solution is to use a full featured image processor, like imagemagick.
+    val imageRGB = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
+    val g = imageRGB.createGraphics()
+    g.setColor(Color.WHITE)
+    g.fillRect(0,0,image.getWidth,image.getHeight)
+    g.drawRenderedImage(image, null)
+    g.dispose()
+    imageRGB
   }
 }

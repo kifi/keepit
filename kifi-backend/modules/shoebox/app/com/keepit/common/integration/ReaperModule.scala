@@ -10,7 +10,7 @@ trait ReaperModule extends ScalaModule {
   @Singleton
   @Provides
   def autogenReaperConf: AutogenReaperConf = AutogenReaperConf(
-    current.configuration.getBoolean("cron.reaper.sui.delete").getOrElse(true),
+    current.configuration.getBoolean("cron.reaper.sui.delete").getOrElse(false), // user and sui need to be consistent
     current.configuration.getBoolean("cron.reaper.user.delete").getOrElse(false)
   )
 }

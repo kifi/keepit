@@ -30,7 +30,9 @@ angular.module('kifi', [
   'kifi.layout.main',
   'kifi.layout.nav',
   'kifi.layout.rightCol',
-  'kifi.undo'
+  'kifi.undo',
+  'jun.facebook',
+  'ngDragDrop'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -49,6 +51,27 @@ angular.module('kifi', [
     });
 
     $httpProvider.defaults.withCredentials = true;
+  }
+])
+
+.constant('linkedinConfigSettings', {
+  appKey: 'r11loldy9zlg'
+})
+
+.config([
+  '$FBProvider',
+  function ($FBProvider) {
+    // We cannot inject `env` here since factories are not yet available in config blocks
+    // We can make `env` a constant if we want to remove duplicate codes, but
+    // then we cannot use $location inside `env` initialization
+    /* global window */
+    var host = window.location.host || window.location.hostname,
+      dev = /^dev\.ezkeep\.com|localhost$/.test(host);
+    $FBProvider
+      .appId(dev ? '530357056981814' : '104629159695560')
+      // https://developers.facebook.com/docs/facebook-login/permissions
+      .scope('email')
+      .cookie(true);
   }
 ])
 
@@ -73,8 +96,8 @@ angular.module('kifi', [
 ])
 
 .factory('injectedState', [
-  '$location', 'util',
-  function ($location, util) {
+  '$location',
+  function ($location) {
     var state = {};
 
     if (_.size($location.search()) > 0) {
@@ -83,9 +106,7 @@ angular.module('kifi', [
         state[key] = value;
       });
 
-      if ($location.path() == '/find') {
-        // leave parameters attached.
-      } else {
+      if ($location.path() !== '/find') {
         // For now, remove all URL parameters
         $location.search({});
       }
@@ -101,7 +122,7 @@ angular.module('kifi', [
     return {
       state: state,
       pushState: pushState
-    }
+    };
   }
 ])
 

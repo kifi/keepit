@@ -1,0 +1,34 @@
+package com.keepit.controllers.internal
+
+import com.google.inject.Inject
+import com.keepit.common.time.Clock
+import com.keepit.scraper.ScraperConfig
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.logging.Logging
+import play.api.mvc.Action
+import com.keepit.commanders.emails.EmailNotificationsCommander
+import com.keepit.common.db.Id
+import com.keepit.model.{DeepLocator, User}
+import com.keepit.eliza.model.ThreadItem
+
+class EmailNotificationsController @Inject() (
+   emailNotificationsCommander: EmailNotificationsCommander
+)  (implicit private val clock: Clock,
+    implicit private val scraperConfig: ScraperConfig,
+    private val fortyTwoServices: FortyTwoServices)
+  extends ShoeboxServiceController with Logging {
+
+  implicit val userIdFormat = Id.format[User]
+
+  def sendUnreadMessages = Action(parse.json) { request =>
+    val threadItems = (request.body \ "threadItems").as[Seq[ThreadItem]]
+    val otherParticipants = (request.body \ "otherParticipants").as[Seq[Id[User]]]
+    val recipientUserId = (request.body \ "userId").as[Id[User]]
+    val title = (request.body \ "title").as[String]
+    val deepLocator = DeepLocator((request.body \ "deepLocator").as[String])
+    emailNotificationsCommander.sendUnreadMessages(threadItems, otherParticipants, recipientUserId, title, deepLocator)
+    Ok("")
+  }
+
+}

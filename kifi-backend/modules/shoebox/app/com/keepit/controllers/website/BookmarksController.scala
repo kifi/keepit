@@ -18,17 +18,18 @@ import com.keepit.search.SearchServiceClient
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.store.S3ScreenshotStore
+import com.keepit.common.store.{S3ScreenshotStore}
 import play.api.mvc.{SimpleResult, Action}
 import com.keepit.social.BasicUser
 import scala.util.Try
 import com.keepit.model.KeepToCollection
 import org.joda.time.Seconds
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
+import scala.concurrent.duration.Duration
 
 class BookmarksController @Inject() (
     db: Database,
@@ -36,6 +37,7 @@ class BookmarksController @Inject() (
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
     uriRepo: NormalizedURIRepo,
+    pageInfoRepo: PageInfoRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
@@ -81,6 +83,76 @@ class BookmarksController @Inject() (
         }
       }
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
+  }
+
+  private def cb(pageInfo:PageInfo):Unit = db.readWrite{ implicit rw => pageInfoRepo.save(pageInfo) }
+  // todo: add uriId, sizes, colors, etc.
+  private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
+    val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
+    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(cb)) map { imgUrlOpt =>
+      (screenshotUrlOpt, imgUrlOpt) match {
+        case (None, None) =>
+          Json.obj("url" -> url, "uriId" -> uri.id.get)
+        case (None, Some(imgUrl)) =>
+          Json.obj("url" -> url, "imgUrl" -> imgUrl)
+        case (Some(ssUrl), None) =>
+          Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
+        case (Some(ssUrl), Some(imgUrl)) =>
+          Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
+      }
+    }
+  }
+
+  def getImageUrl() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+    val urlOpt = (request.body \ "url").asOpt[String]
+    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
+    urlOpt match {
+      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
+      case Some(url) => {
+        val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
+          val uriOpt = uriRepo.getByUri(url)
+          val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
+          (uriOpt, pageInfoOpt)
+        }
+        uriOpt match {
+          case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
+          case Some(uri) => {
+            toJsObject(url, uri, pageInfoOpt) map { js => Ok(js) }
+          }
+        }
+      }
+    }
+  }
+
+  def getImageUrls() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
+    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
+    urlsOpt match {
+      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
+      case Some(urls) => {
+        val tuples = db.readOnly { implicit ro =>
+          urls.map { s =>
+            s -> uriRepo.getByUri(s)
+          }
+        }
+        val tuplesF = tuples map { case (url, uriOpt) =>
+          val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
+            val uriOpt = uriRepo.getByUri(url)
+            val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
+            (uriOpt, pageInfoOpt)
+          }
+          uriOpt match {
+            case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
+            case Some(uri) => {
+              toJsObject(url, uri, pageInfoOpt) // todo: batch
+            }
+          }
+        }
+        Future.sequence(tuplesF) map { res =>
+          Ok(Json.toJson(res))
+        }
+      }
+    }
   }
 
   def keepMultiple() = JsonAction.authenticated { request =>

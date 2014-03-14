@@ -27,6 +27,7 @@ import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.actor.FakeScheduler
 import org.joda.time.DateTime
+import com.keepit.eliza.model.ThreadItem
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -520,6 +521,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = ???
 
+  def savePageInfo(pageInfo: PageInfo)(implicit timeout: Int): Future[PageInfo] = ???
+
   def saveNormalizedURI(uri: NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = ???
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
@@ -587,4 +590,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
 
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = Future.successful(Map.empty)
+
+  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator): Future[Unit] = Future.successful(Unit)
 }

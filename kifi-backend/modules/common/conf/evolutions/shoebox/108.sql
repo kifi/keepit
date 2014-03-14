@@ -21,6 +21,8 @@ CREATE TABLE abook_info (
 ) -- DEFAULT CHARSET=utf8mb4
 ;
 
+insert into evolutions (name, description) values('108.sql', 'adding abook_info');
+
 # --- !Downs
 
 DROP TABLE abook;

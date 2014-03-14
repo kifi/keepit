@@ -60,12 +60,7 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
-    List(conn.user1, conn.user2) foreach { userId =>
-      userConnCache.remove(UserConnectionIdKey(userId))
-      connCountCache.remove(UserConnectionCountKey(userId))
-      searchFriendsCache.remove(SearchFriendsKey(userId))
-      unfriendedCache.remove(UnfriendedConnectionsKey(userId))
-    }
+    List(conn.user1, conn.user2) foreach invalidateCache
   }
 
   override def invalidateCache(conn: UserConnection)(implicit session: RSession): Unit = {
@@ -112,19 +107,16 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit = {
-    val changedUserIds = (for {
-      c <- rows if c.user1 === userId || c.user1 === userId
-    } yield (c.user1, c.user2)).list.foldLeft(Set[Id[User]]()) { case (set, (a, b)) => set + a + b }
+    val allConnections = (for { conn <- rows if conn.user1 === userId || conn.user2 === userId } yield conn).list
+    val changedUsers: Set[Id[User]] = for {
+      conn: UserConnection <- allConnections.toSet
+      changedUser <- {
+        save(conn.copy(state = UserConnectionStates.INACTIVE))
+        Seq(conn.user1, conn.user2)
+      }
+    } yield changedUser
 
-    val ids = (for {
-      c <- rows if c.user1 === userId || c.user1 === userId
-    } yield c.id).list
-
-    ids.foreach{ id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.updatedAt, c.seq)).update(UserConnectionStates.INACTIVE, clock.now(), sequence.incrementAndGet())
-    }
-
-    changedUserIds foreach invalidateCache
+    changedUsers foreach invalidateCache
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {

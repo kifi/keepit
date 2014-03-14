@@ -35,6 +35,8 @@ import play.api.libs.json.JsNumber
 import com.keepit.common.usersegment.UserSegmentKey
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import scala.util.{Success, Try}
+import com.keepit.eliza.model.ThreadItem
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -102,6 +104,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int = 10000):Future[PageInfo]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?)(implicit timeout:Int = 10000): Future[Boolean]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
@@ -121,6 +124,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
+  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -367,10 +371,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] =
     call(Shoebox.internal.getNormalizedUriByUrlOrPrenormalize(), JsString(url.take(MaxUrlLength))).map { r =>
-      (r.json \ "url").asOpt[String] match {
-        case Some(url) => Right(url)
-        case None => Left(Json.fromJson[NormalizedURI](r.json \ "normalizedURI").get)
-      }
+      (r.json \ "normalizedURI").asOpt[NormalizedURI].map(Left(_)) getOrElse Right((r.json \ "url").as[String])
     }
 
   def internNormalizedURI(url: String, scrapeWanted: Boolean): Future[NormalizedURI] = {
@@ -629,6 +630,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int):Future[PageInfo] = {
+    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+      r.json.as[PageInfo]
+    }
+  }
+
   @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
@@ -823,5 +830,17 @@ class ShoeboxServiceClientImpl @Inject() (
     val payload = Json.obj("addresses" -> emailAddresses)
     implicit val userIdFormat = Id.format[User]
     call(Shoebox.internal.getVerifiedAddressOwners(), payload).map(_.json.as[Map[String, Id[User]]])
+  }
+
+  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator): Future[Unit] = {
+    implicit val userIdFormat = Id.format[User]
+    val payload = Json.obj(
+      "threadItems" -> threadItems,
+      "otherParticipants" -> otherParticipants.toSeq,
+      "userId" -> userId,
+      "title" -> title,
+      "deepLocator" -> deepLocator.value
+    )
+    call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
   }
 }

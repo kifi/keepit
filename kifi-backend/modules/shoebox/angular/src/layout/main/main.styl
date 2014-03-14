@@ -35,6 +35,10 @@
   line-height: 20px
   color: #5b6670
 
+  .kf-subtitle-text
+    min-width: 80px
+    display: inline-block
+
 .kf-main-head
 .kf-main-keeps
   box-shadow: inset -1px 0 #dbdee3
@@ -75,6 +79,10 @@
       border-color: #b8c5d2
 
   &.checked
+    background-position: 2px 4px
+
+  &.multi-checked
+    background: url(../img/multi-check.png) 99px/12px 8px no-repeat #fff
     background-position: 2px 4px
 
 .kf-query-wrap
@@ -166,7 +174,7 @@
   left: 100%
   transition-delay: 0
 
-.kf-undo
+.kf-small-tooltip
   position: absolute
   left: 0
   right: 0
@@ -174,7 +182,7 @@
   text-align: center
   z-index: 1
 
-.kf-undo-box
+.kf-small-tooltip-box
   display: inline-block
   height: 18px
   padding: 0 12px
@@ -186,7 +194,7 @@
   background-color: #ffc
   white-space: nowrap
 
-.kf-undo-link
+.kf-small-tooltip-link
   font-weight: 500
   margin-left: 4px
 

@@ -17,7 +17,7 @@ import scala.math.log
 class TermScorerTest extends Specification {
 
   val articles = Seq("abc abc abc def", "abc def", "abc abd deg xyz")
-  val analyzer = DefaultAnalyzer.forIndexing
+  val analyzer = DefaultAnalyzer.defaultAnalyzer
   val EPSILON = 1e-5f
 
   def equals(a: Float, b: Float) = abs(a - b) < EPSILON

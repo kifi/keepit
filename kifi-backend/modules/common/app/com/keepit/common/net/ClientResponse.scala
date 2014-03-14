@@ -1,20 +1,25 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
-import play.api.libs.json._
-import play.api.libs.ws._
 
+import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 
-import scala.xml._
+import com.ning.http.util.AsyncHttpProviderUtils.parseCharset
 
-import com.ning.http.util.AsyncHttpProviderUtils
 import java.io.{FileOutputStream, File}
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets.{UTF_8, ISO_8859_1}
+
 import org.apache.commons.io.IOUtils
-import scala.util.Try
+
+import play.api.libs.json._
+import play.api.libs.ws._
 import play.mvc.Http.Status
-import com.keepit.common.controller.CommonHeaders
+
+import scala.util.Try
+import scala.xml._
 
 
 case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
@@ -55,15 +60,15 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
 
   // the following is copied from play.api.libs.ws.WS
   // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
-  // explicitly set, while Plays default encoding is UTF-8.  So, use UTF-8 if charset is not explicitly
+  // explicitly set, while Play's default encoding is UTF-8. So, use UTF-8 if charset is not explicitly
   // set and content type is not text/*, otherwise default to ISO-8859-1
   lazy val charset = {
     val contentType = Option(ahcResponse.getContentType).getOrElse("application/octet-stream")
-    Option(AsyncHttpProviderUtils.parseCharset(contentType)).getOrElse {
+    Option(parseCharset(contentType)).map(Charset.forName).getOrElse {
       if (contentType.startsWith("text/"))
-        AsyncHttpProviderUtils.DEFAULT_CHARSET
+        ISO_8859_1
       else
-        "utf-8"
+        UTF_8
     }
   }
 

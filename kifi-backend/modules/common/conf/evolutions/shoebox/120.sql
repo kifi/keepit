@@ -19,6 +19,8 @@ CREATE TABLE econtact (
 ) -- DEFAULT CHARSET=utf8mb4
 ;
 
+insert into evolutions (name, description) values('120.sql', 'adding econtact');
+
 # --- !Downs
 
 DROP TABLE econtact;

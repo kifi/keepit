@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.tagService'])
+angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
   '$scope', 'profileService', 'keepService', 'tagService',
@@ -53,7 +53,15 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService', 'kifi.t
 
         scope.onClickKeep = function (keep, $event) {
           if ($event.target.tagName !== 'A') {
-            scope.togglePreview(keep);
+            if ($event.ctrlKey || $event.metaKey) {
+              if (scope.isSelected(keep)) {
+                scope.unselect(keep);
+              } else {
+                scope.select(keep);
+              }
+            } else {
+              scope.togglePreview(keep);
+            }
           }
         };
 

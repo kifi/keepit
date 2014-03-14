@@ -14,8 +14,7 @@ import com.keepit.search.TstIndexer
 
 class SemanticVectorQueryTest extends Specification {
 
-  val indexingAnalyzer = DefaultAnalyzer.forIndexing
-  val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
 
   val indexer = new TstIndexer(new VolatileIndexDirectoryImpl, config)
   Array("abc", "abc def", "abc def ghi", "def ghi").zip(Array("", "", "", "jkl")).zipWithIndex.map{ case ((text, fallbackText), id) =>

@@ -175,9 +175,9 @@ class QueuedScrapeProcessor @Inject() (
               case Failure(t) =>
                 log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
               case Success(requests) =>
-                log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.info.id},url=${r.uri.url}]").mkString(",")} ")
+                log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
                 for (sr <- requests) {
-                  asyncScrape(sr.uri, sr.info, sr.proxyOpt)
+                  asyncScrape(sr.uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
                 }
             }
           }(ExecutionContext.fj)
@@ -246,11 +246,11 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, pornDetectorFactory, helper)
-  def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, proxy: Option[HttpProxy]): Unit = {
+  def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
       val callable = new ScrapeCallable(nuri, scrapeInfo, proxy) {
-        def doWork: (NormalizedURI, Option[Article]) = worker.safeProcessURI(uri, info, proxyOpt)
+        def doWork: (NormalizedURI, Option[Article]) = worker.safeProcessURI(uri, info, pageInfoOpt, proxyOpt)
       }
       val fjTask = fjPool.submit(callable)
       if (!fjTask.isDone) {
@@ -264,7 +264,7 @@ class QueuedScrapeProcessor @Inject() (
   def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
     val callable = new TracedCallable[(NormalizedURI, Option[Article])] {
       def doWork: (NormalizedURI, Option[Article]) = {
-        worker.safeProcessURI(uri, info, proxyOpt)
+        worker.safeProcessURI(uri, info, None, proxyOpt)
       }
       def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE_ARTICLE, None, None, None, None)
     }

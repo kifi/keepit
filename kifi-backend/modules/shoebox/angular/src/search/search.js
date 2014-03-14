@@ -14,17 +14,24 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 ])
 
 .controller('SearchCtrl', [
-  '$scope', 'keepService', '$routeParams',
-  function ($scope, keepService, $routeParams) {
+  '$scope', 'keepService', '$routeParams', '$location', '$window',
+  function ($scope, keepService, $routeParams, $location, $window) {
     keepService.reset();
 
     if ($scope.search) {
       $scope.search.text = $routeParams.q;
     }
 
+    if (!$routeParams.q) {
+      // No or blank query
+      $location.path('/');
+    }
+
     var query = $routeParams.q || '',
       filter = $routeParams.f || 'm',
       lastResult = null;
+
+    $window.document.title = query === '' ? 'Kifi • Search' : 'Kifi • ' + query;
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
@@ -90,7 +97,7 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
 
     $scope.getSubtitle = function () {
       if ($scope.loading) {
-        return 'Searching...';
+        return 'Searching…';
       }
 
       var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
@@ -101,7 +108,7 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
       var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
-        return 'Sorry, no results found for &#x201c;' + query + '&#x202c;';
+        return 'Sorry, no results found for “' + query + '”';
       case 1:
         return '1 result found';
       default:

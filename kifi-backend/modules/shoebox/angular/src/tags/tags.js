@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
+angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
 
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
@@ -20,28 +20,12 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
           });
       }
     };
-
-    $scope.rename = function (tag) {
-      if (tag) {
-        $scope.lastHighlight = $scope.highlight;
-        $scope.renameTag = {
-          value: tag.name
-        };
-        $scope.renaming = tag;
-      }
-    };
-
-    $scope.remove = function (tag) {
-      if (tag && tag.id) {
-        return tagService.remove(tag.id);
-      }
-    };
   }
 ])
 
 .directive('kfTags', [
-  '$timeout', '$window', '$location', 'util', 'dom', 'tagService', 'profileService',
-  function ($timeout, $window, $location, util, dom, tagService, profileService) {
+  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'profileService',
+  function ($timeout, $window, $rootScope, $location, util, dom, tagService, profileService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,
@@ -65,45 +49,16 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService'])
           }
         };
 
-        scope.isRenaming = function (tag) {
-          return scope.renaming === tag;
+        scope.unfocus = function () {
+          scope.lastHighlight = scope.highlight;
         };
 
-        scope.onRenameKeydown = function (e) {
-          switch (e.keyCode) {
-          case KEY_ENTER:
-            scope.submitRename();
-            break;
-          case KEY_ESC:
-            scope.cancelRename();
-            break;
-          }
-        };
-
-        function rehighlight() {
+        scope.refocus = function () {
           if (scope.lastHighlight && !scope.highlight) {
             scope.highlight = scope.lastHighlight;
           }
           scope.lastHighlight = null;
-        }
-
-        scope.submitRename = function () {
-          // different scope
-          var newName = scope.renameTag.value,
-            tag = scope.renaming;
-          if (newName && newName !== tag.name) {
-            return tagService.rename(tag.id, newName).then(function (tag) {
-              scope.cancelRename();
-              return tag;
-            });
-          }
-          return scope.cancelRename();
-        };
-
-        scope.cancelRename = function () {
-          scope.renaming = null;
           scope.focusFilter = true;
-          rehighlight();
         };
 
         function getFilterValue() {

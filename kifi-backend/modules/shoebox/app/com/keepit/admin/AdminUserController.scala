@@ -1,13 +1,12 @@
 package com.keepit.controllers.admin
 
-import scala.Some
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{AuthCommander, UserCommander}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
 import com.keepit.common.db._
@@ -23,7 +22,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data._
 import play.api.data.Forms._
@@ -36,6 +35,8 @@ import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import com.keepit.typeahead.abook.EContactTypeahead
+import securesocial.core.Registry
+import com.keepit.common.healthcheck.SystemAdminMailSender
 
 case class UserStatistics(
     user: User,
@@ -93,12 +94,15 @@ class AdminUserController @Inject() (
     imageStore: S3ImageStore,
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
+    userCredRepo: UserCredRepo,
     userCommander: UserCommander,
     econtactTypeahead: EContactTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
+    systemAdminMailSender: SystemAdminMailSender,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
-    heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
+    heimdal: HeimdalServiceClient,
+    authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 
@@ -715,4 +719,114 @@ class AdminUserController @Inject() (
     }
   }
 
+  def fixMissingFortyTwoSocialUsers(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    val problematicUsers = db.readOnly { implicit s =>
+      userRepo.all().filter(user => user.state == UserStates.ACTIVE && !socialUserInfoRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO))
+    }
+
+    if (!readOnly) {
+      problematicUsers.foreach { user =>
+        val currentHasher = Registry.hashers.currentHasher
+        val pInfo = currentHasher.hash(ExternalId[Nothing]().toString)
+        authCommander.saveUserPasswordIdentity(
+          userIdOpt = Some(user.id.get),
+          identityOpt = None,
+          email = db.readWrite { implicit session =>
+            val currentEmail = emailRepo.getByUser(user.id.get)
+            if (currentEmail.verified) currentEmail.address
+            else {
+              val socialEmail = socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get
+              require(currentEmail.address == socialEmail, "No verified email")
+              val updatedEmail = emailRepo.save(currentEmail.withState(EmailAddressStates.VERIFIED))
+              userCommander.updateUserPrimaryEmail(updatedEmail)
+              updatedEmail.address
+            }
+          },
+          passwordInfo = pInfo,
+          firstName = user.firstName,
+          lastName = user.lastName,
+          isComplete = true
+        )
+      }
+    }
+    Ok(Json.toJson(problematicUsers))
+  }}
+
+  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    val toBeCreated = db.readWrite { implicit session =>
+      userConnectionRepo.all().collect { case activeConnection if {
+        val user1State = userRepo.get(activeConnection.user1).state
+        val user2State = userRepo.get(activeConnection.user2).state
+        activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
+      } =>
+        val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+        val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+        if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
+          if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
+          Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
+        } else None
+      }.flatten
+    }
+
+    implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
+    implicit val userIdFormat = Id.format[User]
+    val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
+    val title = "FortyTwo Connections to be created"
+    val msg = toBeCreated.mkString("\n")
+    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.LÉO),
+      subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
+    Ok(json)
+  }}
+
+  def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
+    val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
+    val json = db.readWrite { implicit session =>
+      if (doIt) {
+
+        // Social Graph
+        userConnectionRepo.deactivateAllConnections(userId) // User Connections
+        socialUserInfoRepo.getByUser(userId).foreach { sui =>
+          socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
+          invitationRepo.getByRecipientSocialUserId(sui.id.get).foreach(invitation => invitationRepo.save(invitation.withState(InvitationStates.INACTIVE)))
+          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
+          socialUserInfoRepo.deleteCache(sui)
+        }
+
+        // URI Graph
+        bookmarkRepo.getByUser(userId).foreach { bookmark => bookmarkRepo.save(bookmark.withActive(false)) }
+        collectionRepo.getByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+
+        // Personal Info
+        userSessionRepo.invalidateByUser(userId) // User Session
+        kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
+        userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
+        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(EmailAddressStates.INACTIVE)) } // Email addresses
+        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmailId = None)) // User
+      }
+
+      val user = userRepo.get(userId)
+      val emails = emailRepo.getAllByUser(userId)
+      val credentials = userCredRepo.findByUserIdOpt(userId)
+      val installations = kifiInstallationRepo.all(userId)
+      val tags = collectionRepo.getByUser(userId)
+      val keeps = bookmarkRepo.getByUser(userId)
+      val socialUsers = socialUserInfoRepo.getByUser(userId)
+      val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
+      val userConnections = userConnectionRepo.getConnectedUsers(userId)
+      implicit val userIdFormat = Id.format[User]
+      Json.obj(
+        "user" -> user,
+        "emails" -> emails.map(_.address),
+        "credentials" -> credentials.map(_.credentials),
+        "installations" -> JsObject(installations.map(installation => installation.userAgent.name -> JsString(installation.version.toString))),
+        "tags" -> tags,
+        "keeps" -> keeps,
+        "socialUsers" -> socialUsers,
+        "socialConnections" -> JsObject(socialConnections.toSeq.map { case (network, connections) => network.name -> Json.toJson(connections) }),
+        "userConnections" -> userConnections
+      )
+    }
+    Ok(json)
+  }}
 }

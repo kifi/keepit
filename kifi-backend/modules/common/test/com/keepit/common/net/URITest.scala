@@ -95,5 +95,36 @@ class URITest extends Specification {
       multipleDots.toString === "http://www.42go.com..../team.html"
       multipleDots.host === Some(Host("", "", "", "", "com", "42go", "www"))
     }
+
+    "isRelative" in {
+      URI.isRelative("user/index.php") === true
+      URI.isRelative("/user/index.php") === true
+      URI.isRelative("../user/index.php") === true
+    }
+
+    "absoluteUrl" in {
+      URI.absoluteUrl("http://www.kifi.com", "welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com", "/welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/", "welcome.html").get === "http://www.kifi.com/home/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/index.html", "welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/index.html#hi_there", "welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/index.html", "#welcome").get === "http://www.kifi.com/index.html#welcome"
+      URI.absoluteUrl("http://www.kifi.com:9000", "welcome.html").get === "http://www.kifi.com:9000/welcome.html"
+      URI.absoluteUrl("https://www.kifi.com:9000/home/foo.html", "welcome.html").get === "https://www.kifi.com:9000/home/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "/welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "/welcome.html#bar").get === "http://www.kifi.com/welcome.html#bar"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "./../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/", "./../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/", "../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home", "../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/path2/foo.html", "./../../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/path2/foo.html", ".././../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/path2/foo.html", "../../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html#fragment", "../welcome.html").get === "http://www.kifi.com/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html#fragment", "welcome.html").get === "http://www.kifi.com/home/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "./welcome.html").get === "http://www.kifi.com/home/welcome.html"
+      URI.absoluteUrl("http://www.kifi.com/home/foo.html", "compmodels.aspx?modelid=730310").get === "http://www.kifi.com/home/compmodels.aspx?modelid=730310"
+    }
   }
 }

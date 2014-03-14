@@ -15,8 +15,6 @@ import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.commanders.RemoteUserExperimentCommander
-import play.api.i18n.Messages
-import play.api.libs.json.{JsValue, JsNumber}
 import play.api.mvc._
 import securesocial.core._
 

@@ -16,7 +16,7 @@
   <meta name="viewport" content="width=device-width">
   <title>Kifi</title>
   <link rel="shortcut icon" type="image/png" href="/img/kifi-favi-50.png">
-  <link rel="stylesheet" type="text/css" href="/dist/kifi.css">
+  <link rel="stylesheet" type="text/css" href="/dist/kifi.min.css">
   <link rel="stylesheet" type="text/css" href="/dist/lib.min.css">
 </head>
 <body>
@@ -25,18 +25,7 @@
     <section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'"></section>
     <aside class="kf-col kf-col-right" ng-include="'layout/rightCol/rightCol.tpl.html'"></aside>
   </div>
-  <script src="/dist/lib.js"></script>
-  <script src="/dist/kifi.js"></script>
-  <script>
-    !function (d, s) {
-      if (location.origin === "http://dev.ezkeep.com:8080") {
-        var s = document.createElement(s);
-        s.async = true;
-        s.type = 'text/javascript';
-        s.src = 'http://localhost:8079/livereload.js';
-        d.getElementsByTagName('BODY')[0].appendChild(s);
-      }
-    }(document, 'script');
-  </script>
+  <script src="/dist/lib.min.js"></script>
+  <script src="/dist/kifi.min.js"></script>
 </body>
 </html>

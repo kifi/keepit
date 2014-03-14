@@ -71,14 +71,14 @@ class S3ImageStoreImpl @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
     userValueRepo: UserValueRepo,
-    s3Client: AmazonS3,
+    override val s3Client: AmazonS3,
     suiRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     airbrake: AirbrakeNotifier,
     clock: Clock,
     userPictureRepo: UserPictureRepo,
     val config: S3ImageConfig
-  ) extends S3ImageStore with Logging {
+  ) extends S3ImageStore with S3Helper with Logging {
 
   private val ExpirationTime = Weeks.ONE
 
@@ -185,16 +185,8 @@ class S3ImageStoreImpl @Inject() (
     }
   }
 
-  private def uploadToS3(key: String, is: InputStream, contentLength: Int = 0, label: String = "") = Try {
-    log.info(s"Uploading picture ($label) to S3 key $key")
-    val om = new ObjectMetadata()
-    om.setContentType("image/jpeg")
-    if (contentLength > 0) {
-      om.setContentLength(contentLength)
-    }
-    om.setCacheControl("public, max-age=3600")
-    s3Client.putObject(config.bucketName, key, is, om)
-  }
+  private def uploadToS3(key: String, is: InputStream, contentLength: Int = 0, label: String = "") =
+    streamUpload(config.bucketName, key, is, "public, max-age=3600", contentLength, label)
 
   private def updateUserPictureRecord(userId: Id[User], pictureName: String, source: UserPictureSource, setDefault: Boolean, cropAttributes: Option[ImageCropAttributes]) = {
     val jsonCropAttributes = cropAttributes.map { c =>
@@ -224,23 +216,11 @@ class S3ImageStoreImpl @Inject() (
     }
   }
 
-  private def forceRGB(image: BufferedImage): BufferedImage = {
-    // This forces an image to use RGB and to use white as the transparency color if the source image supports it
-    // However, this can still fail on different color modes, especially from images explicitly saved as CMYK from
-    // Adobe software. The true solution is to use a full featured image processor, like imagemagick.
-    val imageRGB = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
-    val g = imageRGB.createGraphics()
-    g.setColor(Color.WHITE)
-    g.fillRect(0,0,image.getWidth,image.getHeight)
-    g.drawRenderedImage(image, null)
-    g.dispose()
-    imageRGB
-  }
   def readImage(file: File): BufferedImage = {
-    forceRGB(ImageIO.read(file))
+    ImageUtils.forceRGB(ImageIO.read(file))
   }
   def readImage(is: InputStream): BufferedImage = {
-    forceRGB(ImageIO.read(is))
+    ImageUtils.forceRGB(ImageIO.read(is))
   }
 
   def uploadTemporaryPicture(file: File): Try[(String, String)] = Try {

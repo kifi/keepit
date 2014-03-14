@@ -1,6 +1,14 @@
 'use strict';
 
-angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kifi.profileInput', 'kifi.routeService', 'util'])
+angular.module('kifi.profile', [
+  'util',
+  'kifi.profileService',
+  'kifi.profileInput',
+  'kifi.routeService',
+  'kifi.profileEmailAddresses',
+  'kifi.profileChangePassword',
+  'jun.facebook'
+])
 
 .config([
   '$routeProvider',
@@ -13,8 +21,10 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', 'util',
-  function ($scope, $http, profileService, routeService, util) {
+  '$scope', '$http', 'profileService', 'routeService', '$window',
+  function ($scope, $http, profileService, routeService, $window) {
+
+    $window.document.title = 'Kifi • Your Profile';
 
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
@@ -33,19 +43,7 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       $scope.emailInput.value = val || '';
     });
 
-    function failureInputActionResult(errorHeader, errorBody) {
-      return {
-        isSuccess: false,
-        error: {
-          header: errorHeader,
-          body: errorBody
-        }
-      };
-    }
-
-    function successInputActionResult() {
-      return {isSuccess: true};
-    }
+    $scope.addEmailInput = {};
 
     $scope.saveDescription = function (value) {
       profileService.postMe({
@@ -54,30 +52,26 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
     };
 
     $scope.validateEmail = function (value) {
-      if (!value) {
-        return failureInputActionResult('This field is required');
-      } else if (!util.validateEmail(value)) {
-        return invalidEmailValidationResult();
-      }
-      return successInputActionResult();
+      return profileService.validateEmailFormat(value);
     };
 
     $scope.saveEmail = function (email) {
       if ($scope.me && $scope.me.primaryEmail.address === email) {
-        return successInputActionResult();
+        return profileService.successInputActionResult();
       }
 
-      return $http({
-        url: routeService.emailInfoUrl,
-        method: 'GET',
-        params: {
-          email: email
-        }
-      })
-      .then(function (result) {
+      return getEmailInfo(email).then(function (result) {
         return checkCandidateEmailSuccess(email, result.data);
       }, function (result) {
-        return checkCandidateEmailError(result.status);
+        return profileService.getEmailValidationError(result.status);
+      });
+    };
+
+    $scope.addEmail = function (email) {
+      return getEmailInfo(email).then(function (result) {
+        return checkCandidateAddEmailSuccess(email, result.data);
+      }, function (result) {
+        return profileService.getEmailValidationError(result.status);
       });
     };
 
@@ -89,9 +83,12 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       if (!email && $scope.me && $scope.me.primaryEmail) {
         email = $scope.me.primaryEmail.address;
       }
-      $scope.emailForVerification = email;
-      $scope.showResendVerificationEmailDialog.value = true;
+      showVerificationAlert(email);
       profileService.resendVerificationEmail(email);
+    };
+
+    $scope.cancelPendingPrimary = function () {
+      profileService.cancelPendingPrimary();
     };
 
     // Profile email utility functions
@@ -105,8 +102,19 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       profileService.setNewPrimaryEmail(emailToBeSaved);
     };
 
-    function invalidEmailValidationResult() {
-      return failureInputActionResult('Invalid email address', 'Please enter a valid email address');
+    function showVerificationAlert(email) {
+      $scope.emailForVerification = email;
+      $scope.showResendVerificationEmailDialog.value = true;
+    }
+
+    function getEmailInfo(email) {
+      return $http({
+        url: routeService.emailInfoUrl,
+        method: 'GET',
+        params: {
+          email: email
+        }
+      });
     }
 
     function checkCandidateEmailSuccess(email, emailInfo) {
@@ -120,20 +128,73 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       // email is available || (not primary && not pending primary && not verified)
       emailToBeSaved = email;
       $scope.showEmailChangeDialog.value = true;
-      return successInputActionResult();
+      return profileService.successInputActionResult();
     }
 
-    function checkCandidateEmailError(status) {
-      switch (status) {
-        case 400: // bad format
-          return invalidEmailValidationResult();
-        case 403: // belongs to another user
-          return failureInputActionResult(
-            'This email address is already taken',
-            'This email address belongs to another user.<br>Please enter another email address.'
-          );
+    function checkCandidateAddEmailSuccess(email, emailInfo) {
+      if (emailInfo.status === 'available') {
+        profileService.addEmailAccount(email);
+        showVerificationAlert(email); // todo: is the verification triggered automatically?
+      }
+      else {
+        return profileService.failureInputActionResult(
+          'This email address is already added',
+          'Please use another email address.'
+        );
       }
     }
+  }
+])
+
+.directive('kfLinkedinConnectButton', [
+  'profileService', '$window',
+  function (profileService, $window) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        // TODO: implement this. look at how facebook is done
+        //profileService.getLinkedInStatus();
+
+        scope.isLinkedInConnected = function () {
+          return scope.me && scope.me.linkedinStatus === 'connected';
+        };
+
+        scope.connectLinkedIn = function () {
+          $window.location.href = '/link/linkedin';
+        };
+
+        scope.disconnectLinkedIn = function () {
+          // todo: disconnect
+        };
+      }
+    };
+  }
+])
+
+.directive('kfFacebookConnectButton', [
+  'profileService', '$FB', '$window',
+  function (profileService, $FB, $window) {
+    return {
+      restrict: 'A',
+      link: function (scope) {
+        profileService.getFacebookStatus();
+
+        scope.isFacebookConnected = function () {
+          return profileService.me.facebookStatus === 'connected';
+        };
+
+        scope.connectFacebook = function () {
+          $FB.login()['finally'](profileService.getFacebookStatus).then(function () {
+            $window.location.href = '/link/facebook';
+          });
+        };
+
+        scope.disconnectFacebook = function () {
+          // todo: disconnect
+          $FB.disconnect()['finally'](profileService.getFacebookStatus);
+        };
+      }
+    };
   }
 ])
 
@@ -147,8 +208,13 @@ angular.module('kifi.profile', ['kifi.profileService', 'kifi.routeService', 'kif
       templateUrl: 'profile/emailImport.tpl.html',
       link: function (scope) {
 
+        scope.addressBookImportText = 'Import a Gmail account';
+
         profileService.getAddressBooks().then(function (data) {
           scope.addressBooks = data;
+          if (data && data.length > 0) {
+            scope.addressBookImportText = 'Import another Gmail account';
+          }
         });
 
         scope.importGmailContacts = function () {

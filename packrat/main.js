@@ -25,6 +25,7 @@ var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var friends;
 var friendsById;
+var friendSearchCache;
 var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
@@ -47,6 +48,7 @@ function clearDataCache() {
   messageData = {};
   friends = null;
   friendsById = null;
+  friendSearchCache = null;
   ruleSet = {rules: {}};
   urlPatterns = null;
   tags = null;
@@ -284,8 +286,8 @@ function onSocketConnect() {
   getRules(getPrefs.bind(null, getTags.bind(null, getFriends)));
 }
 
-function onSocketDisconnect(why) {
-  log('[onSocketDisconnect]', why)();
+function onSocketDisconnect(why, sec) {
+  log('[onSocketDisconnect]', why, sec || '')();
 }
 
 function getLatestThreads() {
@@ -378,11 +380,12 @@ var socketHandlers = {
     if (friends) {
       for (var i = 0; i < fr.length; i++) {
         var f = standardizeUser(fr[i]);
-        if (friendsById[f.id]) {
+        if (f.id in friendsById) {
           friends = friends.filter(idIsNot(f.id))
         }
-        friends.push(f)
+        friends.push(f);
         friendsById[f.id] = f;
+        friendSearchCache = null;
       }
     }
   },
@@ -391,10 +394,11 @@ var socketHandlers = {
     if (friends) {
       for (var i = 0; i < fr.length; i++) {
         var f = fr[i];
-        if (friendsById[f.id]) {
+        if (f.id in friendsById) {
           friends = friends.filter(idIsNot(f.id));
+          delete friendsById[f.id];
+          friendSearchCache = null;
         }
-        delete friendsById[f.id];
       }
     }
   },
@@ -937,21 +941,21 @@ api.port.on({
   },
   search_friends: function(data, respond) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-    var candidates = data.includeSelf ?
-     friends ? [me].concat(friends) : [me, SUPPORT] :
-     friends || [SUPPORT];
-    var allResults = sf.filter(data.q, candidates, getName);  // cache q -> allResults?
-    var results = allResults.length > 4 ? allResults.slice(0, 4) : allResults;
-    for (var i = 0; i < results.length; i++) {
-      var result = results[i];
-      results[i] = {
-        id: result.id,
-        name: result.name,
-        pictureName: result.pictureName,
-        parts: sf.splitOnMatches(data.q, result.name)
-      };
+    var results;
+    if (friendSearchCache) {
+      results = friendSearchCache.get(data);
+    } else {
+      friendSearchCache = new (global.FriendSearchCache || require('./friend_search_cache').FriendSearchCache)(3600000);
     }
-    respond(results);
+    if (!results) {
+      var candidates = friendSearchCache.get({includeSelf: data.includeSelf, q: data.q.substr(0, data.q.length - 1)}) ||
+        (data.includeSelf ?
+           friends ? [me].concat(friends) : [me, SUPPORT] :
+           friends || [SUPPORT]);
+      results = sf.filter(data.q, candidates, getName);
+      friendSearchCache.put(data, results);
+    }
+    respond((results.length > 4 ? results.slice(0, 4) : results).map(toFriendSearchResult, {sf: sf, q: data.q}));
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
@@ -1511,7 +1515,6 @@ function searchOnServer(request, respond) {
     resp.admBaseUri = admBaseUri();
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
-    resp.othersTotal = resp.othersTotal || 0;
     resp.hits.forEach(processSearchHit);
     if (resp.hits.length < maxHits && (params.context || params.f)) {
       resp.mayHaveMore = false;
@@ -2007,6 +2010,15 @@ function compilePatterns(arr) {
   return arr;
 }
 
+function toFriendSearchResult(f) {
+  return {
+    id: f.id,
+    name: f.name,
+    pictureName: f.pictureName,
+    parts: this.sf.splitOnMatches(this.q, f.name)
+  };
+}
+
 function reTest(s) {
   return function (re) {return re.test(s)};
 }
@@ -2062,6 +2074,7 @@ function getFriends(next) {
       var f = standardizeUser(fr[i]);
       friendsById[f.id] = f;
     }
+    friendSearchCache = null;
     if (next) next();
   });
 }

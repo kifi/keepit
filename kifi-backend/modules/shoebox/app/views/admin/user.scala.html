@@ -72,11 +72,7 @@
       <tr>
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
-          @for(exp <- Seq(ExperimentType.ADMIN,
-              ExperimentType.NO_SEARCH_EXPERIMENTS, ExperimentType.DEMO, ExperimentType.FAKE, ExperimentType.AUTO_GEN,
-              ExperimentType.CAN_INVITE, ExperimentType.CAN_MESSAGE_ALL_USERS, ExperimentType.NOT_SENSITIVE,
-              ExperimentType.GMAIL_INVITE, ExperimentType.CAN_CONNECT,
-              ExperimentType.EXTENSION_LOGGING, ExperimentType.SHOW_HIT_SCORES, ExperimentType.SELF_MESSAGE)) {
+          @for(exp <- ExperimentType._ALL) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -103,7 +99,15 @@
           <input type="submit" value="Merge!">
         </form></td>
       </tr>
-      }
+      <tr>
+        <th>Deactivate User</th>
+        <td><form class="form-inline" method="post"
+        action="@com.keepit.controllers.admin.routes.AdminUserController.deactivate(user.id.get)">
+          <input type="submit" value="Deactivate!">
+          <input type="checkbox" name="doIt" value="true"> I know what I'm doing.
+        </form></td>
+      </tr>
+    }
     </table>
     <p>
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.moreUserInfoView(user.id.get)">More User Info</a>

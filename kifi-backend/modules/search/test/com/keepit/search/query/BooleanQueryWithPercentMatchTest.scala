@@ -29,8 +29,7 @@ import org.apache.lucene.util.Version
 
 class BooleanQueryWithPercentMatchTest extends Specification {
 
-  val indexingAnalyzer = DefaultAnalyzer.forIndexing
-  val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
   val similarity = new DefaultSimilarity()
 
   val ramDir = new RAMDirectory

@@ -122,7 +122,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       if (!isFirst) {
         collapseResults();
         $res.find('.kifi-filter').removeAttr('data-n').attr('href', 'javascript:')
-          .filter('.kifi-filter-all').removeAttr('href data-of data-top');
+          .filter('.kifi-filter-all').removeAttr('href data-top');
       }
       $bar.addClass('kifi-loading');
     }
@@ -166,7 +166,6 @@ if (searchUrlRe.test(document.URL)) !function () {
 
       if (!newFilter || newFilter.who === 'a') {
         var numTop = resp.numTop = resp.show ? resp.hits.length : 0;
-        var allTotal = insertCommas(resp.myTotal + resp.friendsTotal + resp.othersTotal);
         if (!newFilter) {
           $status
             .attr('data-n', numTop)
@@ -177,7 +176,7 @@ if (searchUrlRe.test(document.URL)) !function () {
               (resp.hits.length || 'No'));
           }
         }
-        $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length}).attr('data-of', allTotal);
+        $res.find('.kifi-filter-all').attr(numTop ? {'data-top': numTop} : {'data-n': resp.hits.length});
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));
         $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal));
       }
@@ -671,9 +670,6 @@ if (searchUrlRe.test(document.URL)) !function () {
     if (!response.filter || response.filter.who === 'a') {
       var $filAll = $res.find('.kifi-filter-all');
       $filAll.filter('[data-n]').attr('data-n', response.hits.length);
-      if (!response.mayHaveMore) {
-        $filAll.filter('[data-of]').attr('data-of', response.hits.length);
-      }
     }
     if (!response.mayHaveMore) {
       $res.find('.kifi-res-end').empty();

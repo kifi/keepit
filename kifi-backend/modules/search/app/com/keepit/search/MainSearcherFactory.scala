@@ -66,7 +66,8 @@ class MainSearcherFactory @Inject() (
     shard: Shard[NormalizedURI],
     userId: Id[User],
     queryString: String,
-    lang: Lang,
+    lang1: Lang,
+    lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig
@@ -80,7 +81,8 @@ class MainSearcherFactory @Inject() (
     new MainSearcher(
         userId,
         queryString,
-        lang,
+        lang1,
+        lang2,
         numHitsToReturn,
         filter,
         config,
