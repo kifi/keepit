@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.tagService', ['kifi.keepService'])
+angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope', 'keepService',
-  function ($http, env, $q, $rootScope, keepService) {
+  '$http', 'env', '$q', '$rootScope', 'keepService', 'routeService',
+  function ($http, env, $q, $rootScope, keepService, routeService) {
     var list = [],
       tagsById = {},
       fetchAllPromise = null;
@@ -42,6 +42,25 @@ angular.module('kifi.tagService', ['kifi.keepService'])
         });
         return res;
       });
+    }
+
+    function reorderTag(isTop, srcTag, dstTag) {
+      var index = _.findIndex(list, function (tag) { return tag.id === dstTag.id; });
+      var newSrcTag = _.clone(srcTag);
+      var srcTagId = srcTag.id;
+      newSrcTag.id = -1;
+      if (!isTop) {
+        index += 1;
+      }
+      list.splice(index, 0, newSrcTag);
+      _.remove(list, function (tag) { return tag.id === srcTagId; });
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === -1) {
+          list[i].id = srcTagId;
+        }
+      }
+      $http.post(routeService.tagOrdering, _.pluck(list, 'id'));
+      api.fetchAll();
     }
 
     var api = {
@@ -152,7 +171,9 @@ angular.module('kifi.tagService', ['kifi.keepService'])
 
       addKeepToTag: function (tag, keep) {
         addKeepsToTag(tag, [keep]);
-      }
+      },
+
+      reorderTag: reorderTag
     };
 
     return api;

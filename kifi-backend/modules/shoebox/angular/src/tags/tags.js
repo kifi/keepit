@@ -39,7 +39,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
       templateUrl: 'tags/tags.tpl.html',
       scope: {},
       controller: 'TagsCtrl',
-      link: function (scope, element /*, attrs*/ ) {
+      link: function (scope, element) {
         scope.tags = tagService.list;
 
         scope.clearFilter = function (focus) {
@@ -292,6 +292,14 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         });
 
         tagService.fetchAll();
+
+        scope.watchTagReorder = function () {
+          return !getFilterValue();
+        };
+
+        scope.reorderTag = function (isTop, srcTag, dstTag) {
+          tagService.reorderTag(isTop, srcTag, dstTag);
+        };
       }
     };
   }
