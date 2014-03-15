@@ -41,6 +41,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
       controller: 'TagsCtrl',
       link: function (scope, element) {
         scope.tags = tagService.list;
+        scope.newLocationTagId = null;
 
         scope.clearFilter = function (focus) {
           scope.filter.name = '';
@@ -299,6 +300,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
 
         scope.reorderTag = function (isTop, srcTag, dstTag) {
           tagService.reorderTag(isTop, srcTag, dstTag);
+          scope.newLocationTagId = srcTag.id;
         };
       }
     };

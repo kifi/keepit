@@ -190,9 +190,20 @@ nav-item()
     &:before
       border-top-color: white
 
+
   .kf-drag-mask
   .kf-tag-drag-mask
     border-color: #b8c5d3
+
+.kf-tag-new-location-mask
+  pointer-events: none
+  border-style: solid
+  display: block
+  border-color: rgba(184,197,211,1)
+
+  &.hidden
+    border-color: rgba(184,197,211,0)
+    transition: all 1.5s
 
 .kf-candidate-tag-drag-target
   .kf-tag-drag-mask
