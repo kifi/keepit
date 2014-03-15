@@ -38,8 +38,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', 'tagService',
-  function ($document, tagService) {
+  '$document', '$rootElement', 'tagService', 'util',
+  function ($document, $rootElement, tagService, util) {
     return {
       restrict: 'A',
       scope: true,
@@ -205,6 +205,33 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         dragMask.on('dragleave', function () {
           scope.$apply(function () { scope.isDragTarget = false; });
+        });
+
+        scope.isDragging = false;
+        var clone;
+        var mouseX, mouseY;
+        element.bind('mousemove', function (e) {
+          mouseX = e.pageX - util.offset(element).left;
+          mouseY = e.pageY - util.offset(element).top;
+        });
+        element.bind('dragstart', function (e) {
+          element.addClass('kf-dragged');
+          clone = element.clone().css({
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: element.css('width'),
+            height: element.css('height'),
+            zIndex: -1
+          });
+          element.after(clone);
+          e.dataTransfer.setDragImage(clone[0], mouseX, mouseY);
+          scope.$apply(function () { scope.isDragging = true; });
+        });
+        element.bind('dragend', function () {
+          element.removeClass('kf-dragged');
+          clone.remove();
+          scope.$apply(function () { scope.isDragging = false; });
         });
       }
     };
