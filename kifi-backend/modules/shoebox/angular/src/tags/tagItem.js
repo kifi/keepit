@@ -12,7 +12,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         takeFocus: '&',
         releaseFocus: '&',
         watchTagReorder: '&',
-        reorderTag: '&'
+        reorderTag: '&',
+        hasNewLocation: '&'
       },
       replace: true,
       templateUrl: 'tags/tagItem.tpl.html',
@@ -180,6 +181,16 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         $timeout(function () {
           tagName.css({maxWidth: 0});
           tagName.css({maxWidth: (parseInt(tagLink.css('width'), 10) - parseInt(tagInfo.css('width'), 10)) + 'px'});
+        });
+
+        var newLocationMask = element.find('.kf-tag-new-location-mask');
+        scope.$watch(scope.hasNewLocation, function (value) {
+          if (value) {
+            newLocationMask.removeClass('hidden');
+            $timeout(function () {
+              newLocationMask.addClass('hidden');
+            });
+          }
         });
       }
     };
