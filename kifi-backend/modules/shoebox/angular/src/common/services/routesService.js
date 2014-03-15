@@ -19,7 +19,8 @@ angular.module('kifi.routeService', [])
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
-      formatPicUrl: formatPicUrl
+      formatPicUrl: formatPicUrl,
+      tagOrdering: route('/collections/ordering')
     };
   }
 ]);
