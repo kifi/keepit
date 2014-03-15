@@ -26,13 +26,18 @@ class MobileMessagingController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory
   ) extends MobileController(actionAuthenticator) with ElizaServiceController {
 
-  def getNotifications(howMany: Int) = JsonAction.authenticatedAsync { request =>
-    messagingCommander.getLatestSendableNotifications(request.userId, howMany.toInt).map{ notices =>
+  def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        messagingCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt)
+      case None =>
+        messagingCommander.getLatestSendableNotifications(request.userId, howMany.toInt)
+    }
+    noticesFuture.map {notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
       Ok(Json.arr("notifications", notices, numUnreadUnmuted))
     }
   }
-
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val o = request.body
