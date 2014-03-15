@@ -25,6 +25,7 @@ object IndexerPluginMessages {
   case object UpdateIndex
   case object BackUpIndex
   case object RefreshSearcher
+  case object RefreshWriter
   case object WarmUpIndexDirectory
 }
 
@@ -36,6 +37,7 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
   def commitSequenceNumber: SequenceNumber[S]
   def committedAt: Option[String]
   def refreshSearcher(): Unit
+  def refreshWriter(): Unit
   def warmUpIndexDirectory(): Unit
   def reindex(): Unit
   def close(): Unit
@@ -48,6 +50,7 @@ trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
   def update()
   def reindex()
   def refreshSearcher()
+  def refreshWriter()
   def warmUpIndexDirectory()
   def numDocs(): Int
   def sequenceNumber: SequenceNumber[S]
@@ -105,6 +108,10 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
     actor.ref ! RefreshSearcher
   }
 
+  override def refreshWriter(): Unit = {
+    actor.ref ! RefreshWriter
+  }
+
   override def warmUpIndexDirectory(): Unit = {
     actor.ref ! WarmUpIndexDirectory
   }
@@ -137,6 +144,7 @@ class IndexerActor[S, I <: Indexer[_, S, I]](
       }
     case BackUpIndex => indexer.backup()
     case RefreshSearcher => indexer.refreshSearcher()
+    case RefreshWriter => indexer.refreshWriter()
     case WarmUpIndexDirectory => indexer.warmUpIndexDirectory()
     case m => throw new UnsupportedActorMessage(m)
   }

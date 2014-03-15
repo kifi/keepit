@@ -47,6 +47,11 @@ class ArticleIndexerController @Inject()(
     Ok("phrases will be updated")
   }
 
+  def refreshWriter = Action { implicit request =>
+    indexerPlugin.refreshWriter()
+    Ok("writer refreshed")
+  }
+
   def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>
     val indexer = indexerPlugin.getIndexerFor(id)
     try {
