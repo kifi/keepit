@@ -125,6 +125,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator): Future[Unit]
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -146,7 +147,8 @@ case class ShoeboxCacheProvider @Inject() (
     userBookmarkCountCache: BookmarkCountCache,
     userSegmentCache: UserSegmentCache,
     extensionVersionCache: ExtensionVersionInstallationIdCache,
-    verifiedEmailUserIdCache: VerifiedEmailUserIdCache
+    verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
+    urlPatternRuleAllCache: UrlPatternRuleAllCache
   )
 
 class ShoeboxServiceClientImpl @Inject() (
@@ -842,5 +844,13 @@ class ShoeboxServiceClientImpl @Inject() (
       "deepLocator" -> deepLocator.value
     )
     call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
+  }
+
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {
+    cacheProvider.urlPatternRuleAllCache.getOrElseFuture(UrlPatternRuleAllKey()){
+      call(Shoebox.internal.allURLPatternRules()).map{ r =>
+        Json.fromJson[Seq[UrlPatternRule]](r.json).get
+      }
+    }
   }
 }

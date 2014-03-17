@@ -670,4 +670,9 @@ class ShoeboxController @Inject() (
     implicit val userIdFormat = Id.format[User]
     Ok(Json.toJson(owners.toMap))
   }
+
+  def getAllURLPatternRules() = Action { request =>
+    val patterns = db.readOnly{implicit s => urlPatternRuleRepo.allActive()}
+    Ok(Json.toJson(patterns))
+  }
 }
