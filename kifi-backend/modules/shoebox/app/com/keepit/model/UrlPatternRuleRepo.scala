@@ -35,7 +35,8 @@ class UrlPatternRuleRepoImpl @Inject() (
     def useProxy = column[Id[HttpProxy]]("use_proxy", O.Nullable)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def trustedDomain = column[String]("trusted_domain", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
+    def nonSensitive = column[Option[Boolean]]("non_sensitive")
+    def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?, nonSensitive) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
   }
 
   def table(tag: Tag) = new UrlPatternRuleTable(tag)
