@@ -19,7 +19,8 @@ case class UrlPatternRule(
   isUnscrapable: Boolean = false,
   useProxy: Option[Id[HttpProxy]] = None,
   normalization: Option[Normalization] = None,
-  trustedDomain: Option[String] = None
+  trustedDomain: Option[String] = None,
+  nonSensitive: Boolean = false
 ) extends Model[UrlPatternRule] {
 
   def withId(id: Id[UrlPatternRule]) = this.copy(id = Some(id))
@@ -40,12 +41,13 @@ object UrlPatternRule {
       (__ \ 'isUnscrapable).format[Boolean] and
       (__ \ 'useProxy).formatNullable(Id.format[HttpProxy]) and
       (__ \ 'normalization).formatNullable[Normalization] and
-      (__ \ 'trustedDomain).formatNullable[String]
+      (__ \ 'trustedDomain).formatNullable[String] and
+      (__ \ 'nonSensitive).format[Boolean]
     )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
 }
 
 case class UrlPatternRuleAllKey() extends Key[Seq[UrlPatternRule]] {
-  override val version = 3
+  override val version = 4
   val namespace = "url_pattern_rule_all"
   def toKey(): String = "all"
 }
