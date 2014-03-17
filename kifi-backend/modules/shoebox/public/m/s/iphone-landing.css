@@ -15,7 +15,7 @@ body {
   -webkit-user-select: none;
   -webkit-text-size-adjust: none;
 }
-#k-iscroll {
+main {
   position: absolute;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
   -webkit-transform: translateZ(0);
@@ -24,7 +24,7 @@ body {
 .k-top {
   box-sizing: border-box;
   height: 456px;
-  background: url('crowd.jpg') 0/cover;
+  background: url(../i/crowd.jpg) 0/cover;
   padding-top: 28px;
   position: absolute;
   z-index: 1;
@@ -124,14 +124,14 @@ body {
   letter-spacing: -.5px;
 }
 .k-card-1 {
-  background: #94bf5f url(clock.png) right 13px bottom 14px/101px no-repeat;
+  background: #94bf5f url(../i/clock.png) right 13px bottom 14px/101px no-repeat;
 }
 .k-card-2 {
-  background: #7cc2d1 url(share.png) right 9px bottom 10px/105px no-repeat;
+  background: #7cc2d1 url(../i/share.png) right 9px bottom 10px/105px no-repeat;
 }
 .k-card-3 {
-  background: #f0ca85 url(people.png) right 14px bottom 12px/106px no-repeat;
+  background: #f0ca85 url(../i/people.png) right 14px bottom 12px/106px no-repeat;
 }
 .k-card-4 {
-  background: #f38773 url(devices.png) right 11px bottom 12px/111px no-repeat;
+  background: #f38773 url(../i/devices.png) right 11px bottom 12px/111px no-repeat;
 }
