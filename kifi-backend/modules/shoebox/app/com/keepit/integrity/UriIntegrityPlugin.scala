@@ -198,6 +198,7 @@ class UriIntegrityActor @Inject()(
 
   private def getOverDueList(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
+    log.info(s"batch uri migration: fetching tasks from seqNum ${lowSeq}")
     db.readOnly{ implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE)}
   }
 
