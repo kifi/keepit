@@ -4,6 +4,7 @@ html {
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
   text-align: center;
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: #000;
@@ -17,6 +18,7 @@ body {
 }
 main {
   position: absolute;
+  width: 100%;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
   -webkit-transform: translateZ(0);
   padding-top: 456px;
@@ -24,6 +26,7 @@ main {
 .k-top {
   box-sizing: border-box;
   height: 456px;
+  width: 100%;
   background: url(../i/crowd.jpg) 0/cover;
   padding-top: 28px;
   position: absolute;
@@ -37,7 +40,8 @@ main {
   margin: 0 auto;
 }
 .k-h1 {
-  margin: 8px 0 12px;
+  max-width: 320px;
+  margin: 8px auto 12px;
   color: #fff;
   line-height: 24px;
   font-size: 19px;
@@ -46,7 +50,9 @@ main {
   text-shadow: 1px 1px rgba(0,0,0,.5);
 }
 .k-why {
-  margin: 15px 0 0;
+  box-sizing: border-box;
+  max-width: 320px;
+  margin: 15px auto 0;
   padding-left: 28px;
   text-align: left;
   color: #FFF;
@@ -84,12 +90,16 @@ main {
 .k-iphone.k-out {
   -webkit-transform: translate3d(16px,0,0) rotate(2deg);
 }
-.k-download {
+.k-top-bottom {
   position: absolute;
   z-index: 1;
   bottom: 19px;
-  left: 43px;
+  width: 100%;
+}
+.k-download {
+  display: inline-block;
   width: 234px;
+  margin: 0 auto;
   background-color: #94bf5f;
   border-radius: 6px;
   color: #fff;
