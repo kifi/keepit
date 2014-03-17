@@ -100,7 +100,7 @@ class URLRenormalizeCommander @Inject()(
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
     val urls = getUrlList()
     sendStartEmail(urls)
-    val batchUrls = batch[URL](urls, batchSize = 50)     // avoid long DB write lock.
+    val batchUrls = batch[URL](urls, batchSize = 25)     // avoid long DB write lock.
 
     val originalRef =       // all active urls pointing to a uri initially
     if (clearSeq && domainRegex.isEmpty){
