@@ -5,7 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.common.queue.RichConnectionUpdateMessage
 import com.keepit.common.akka.SafeFuture
 
-import com.kifi.franz.FormattedSQSQueue
+import com.kifi.franz.SQSQueue
 
 import scala.concurrent.Future
 
@@ -17,7 +17,7 @@ import com.google.inject.{Inject, Singleton}
 @Singleton
 class RemoteRichConnectionCommander @Inject() (
     abook: ABookServiceClient,
-    queue: FormattedSQSQueue[RichConnectionUpdateMessage]
+    queue: SQSQueue[RichConnectionUpdateMessage]
   ) extends RichConnectionCommander {
 
   def processUpdate(message: RichConnectionUpdateMessage): Future[Unit] = { //ZZZ safe future

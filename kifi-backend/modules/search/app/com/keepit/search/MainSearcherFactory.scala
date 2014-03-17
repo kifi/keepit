@@ -61,6 +61,7 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
+  private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
 
   def apply(
     shard: Shard[NormalizedURI],
@@ -155,5 +156,24 @@ class MainSearcherFactory @Inject() (
   def semanticVectorSearcher(shard: Shard[NormalizedURI]) = {
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     new SemanticVectorSearcher(articleSearcher)
+  }
+
+  def getLangProfileFuture(shards: Seq[Shard[NormalizedURI]], userId: Id[User], limit: Int): Future[Map[Lang, Float]] = consolidateLangProfReq((userId, limit)){ case (userId, limit) =>
+    Future.traverse(shards){ shard =>
+      SafeFuture{
+        val searcher = getURIGraphSearcher(shard, userId)
+        searcher.getLangProfile()
+      }
+    }.map{ results =>
+      val total = results.map(_.values.sum).sum.toFloat
+      if (total > 0) {
+        val newProf = results.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
+          m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f).toFloat))
+        }
+        newProf.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(limit).toMap // top N with prob > 0.05
+      } else {
+        Map()
+      }
+    }
   }
 }
