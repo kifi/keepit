@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
 
-//@deprecated("In favor of FormattedSQSQueue, see SimpleQueueModule.scala", "Feb 19 2014")
+//@deprecated("In favor of SQSQueue[T], see SimpleQueueModule.scala", "Feb 19 2014")
 class AmazonSQS(val client:AmazonSQSClient) extends SimpleQueueService with Logging {
   def create(name: String) = {
     client.createQueue(new CreateQueueRequest(name)).getQueueUrl
@@ -39,7 +39,7 @@ object AmazonSQSQueue {
 }
 
 import AmazonSQSQueue._
-//@deprecated("In favor of FormattedSQSQueue, see SimpleQueueModule.scala", "Feb 19 2014")
+//@deprecated("In favor of SQSQueue[T], see SimpleQueueModule.scala", "Feb 19 2014")
 class AmazonSQSQueue(override val queueUrl:String, override val name:String, client:AmazonSQSClient) extends SimpleQueue with Logging {
 
   def delete(msgHandle: String): Unit = {
