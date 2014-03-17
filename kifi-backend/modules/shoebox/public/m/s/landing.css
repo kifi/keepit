@@ -1,0 +1,118 @@
+body {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+.k-top {
+  box-sizing: border-box;
+  height: 456px;
+  background: url('crowd.jpg') 0/cover;
+  padding-top: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.k-logo {
+  height: 35px;
+  width: 61px;
+  margin: 0 auto;
+}
+.k-h1 {
+  margin: 8px 0 12px;
+  color: #fff;
+  line-height: 24px;
+  font-size: 19px;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 1px 1px rgba(0,0,0,.5);
+}
+.k-why {
+  margin: 15px 0 184px;
+  padding-left: 28px;
+  text-align: left;
+  color: #FFF;
+  line-height: 20px;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 1px 1px rgba(0,0,0,.5);
+}
+.k-why>li {
+  list-style-type: none;
+  text-indent: -4px;
+}
+.k-why>li::before {
+  content: '\2022';
+  font-size: 21px;
+  margin-right: 6px;
+  vertical-align: bottom;
+}
+.k-heart {
+  width: 20px;
+  height: 19px;
+  position: relative;
+  top: 4px;
+  left: 2px;
+}
+.k-iphone {
+  position: absolute;
+  width: 219px;
+  height: 255px;
+  top: 216px;
+  right: 0;
+  -webkit-transition: -webkit-transform 2s ease-in-out;
+  -webkit-transform: none;
+}
+.k-iphone.k-out {
+  -webkit-transform: translate3d(16px,0,0) rotate(2deg);
+}
+.k-download {
+  margin: 0 auto;
+  display: block;
+  width: 233px;
+  background-color: #94bf5f;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 21px;
+  line-height: 53px;
+  -webkit-font-smoothing: antialiased;
+  text-shadow: 1px 1px rgba(0,0,40,.25);
+  text-decoration: none !important;
+  box-shadow: 1px 1px rgba(0,0,0,.25);
+  position: relative;
+  z-index: 1;
+}
+.k-download:active {
+  background-color: #82a854;
+}
+.k-card {
+  box-sizing: border-box;
+  height: 255px;
+  padding: 35px 0 0 26px;
+  text-align: left;
+  color: #000;
+  line-height: 20px;
+  font-size: 17px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+.k-card>h2 {
+  margin: 0 0 15px;
+  color: #fff;
+  line-height: 34px;
+  font-size: 28px;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -.5px;
+}
+.k-card-1 {
+  background: #94bf5f url(clock.png) right 13px bottom 14px/101px no-repeat;
+}
+.k-card-2 {
+  background: #7cc2d1 url(share.png) right 9px bottom 10px/105px no-repeat;
+}
+.k-card-3 {
+  background: #f0ca85 url(people.png) right 14px bottom 12px/106px no-repeat;
+}
+.k-card-4 {
+  background: #f38773 url(devices.png) right 11px bottom 12px/111px no-repeat;
+}

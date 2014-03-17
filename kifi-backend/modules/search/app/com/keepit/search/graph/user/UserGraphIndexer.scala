@@ -4,7 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.{UserConnection, User}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -24,10 +23,9 @@ object UserGraphFields {
 
 class UserGraphIndexer(
   indexDirectory: IndexDirectory,
-  indexWriterConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
-) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory, indexWriterConfig){
+) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory){
 
   import UserGraphIndexer._
 

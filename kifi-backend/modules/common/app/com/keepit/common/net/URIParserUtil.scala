@@ -8,13 +8,13 @@ object URIParserUtil {
   private[this] val space = " "
   private[this] val genDelims  = ":/?#[]@"
   private[this] val subDelims  = "!$&'()*+,;="
-  private[this] val others = """`"^{}<>\|% """
+  private[this] val others = """`"^{}<>\|%"""
   private[this] val allSymbols = controls + space+ genDelims + subDelims + others
 
-  val pathReservedChars: Set[Char]       = Set('%') ++ controls ++ space ++ genDelims - '@' - ':'
-  val paramNameReservedChars: Set[Char]  = Set('%') ++ controls          ++ genDelims - '@' - ':' - '/' - '?' + '=' + '+' + '&'
-  val paramValueReservedChars: Set[Char] = Set('%') ++ controls          ++ genDelims - '@' - ':' - '/' - '?' + '+' + '&'
-  val fragmentReservedChars: Set[Char]   = Set('%') ++ controls ++ space ++ genDelims - '@' - ':' - '/' - '?' - '#'
+  val pathReservedChars: Set[Char]       = Set.empty ++ controls ++ space ++ genDelims ++ others - '@' - ':'
+  val paramNameReservedChars: Set[Char]  = Set.empty ++ controls          ++ genDelims ++ others - '@' - ':' - '/' - '?'
+  val paramValueReservedChars: Set[Char] = Set.empty ++ controls          ++ genDelims ++ others - '@' - ':' - '/' - '?'
+  val fragmentReservedChars: Set[Char]   = Set.empty ++ controls ++ space ++ genDelims ++ others - '@' - ':' - '/' - '?' - '#'
   val encodingMap: Map[Char, String] = allSymbols.map(c => (c -> encodeChar(c))).toMap
 
   private[this] val _percentEncodeRe = """(\%\p{XDigit}\p{XDigit})+""".r

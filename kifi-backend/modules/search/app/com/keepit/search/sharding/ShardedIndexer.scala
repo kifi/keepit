@@ -66,6 +66,10 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
     indexShards.valuesIterator.foreach(_.refreshSearcher())
   }
 
+  def refreshWriter(): Unit = {
+    indexShards.valuesIterator.foreach(_.refreshWriter())
+  }
+
   def warmUpIndexDirectory(): Unit = {
     indexShards.valuesIterator.foreach(_.warmUpIndexDirectory())
   }

@@ -1,7 +1,6 @@
 package com.keepit.search.phrasedetector
 
 import com.keepit.search.index.{ArchivedDirectory, Indexable, Indexer, IndexDirectory}
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.model.{Collection, Phrase}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -12,15 +11,14 @@ import com.keepit.search.IndexInfo
 import com.keepit.search.Lang
 import scala.concurrent.duration._
 
-abstract class PhraseIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase, Phrase, PhraseIndexer](indexDirectory, indexWriterConfig) {
+abstract class PhraseIndexer(indexDirectory: IndexDirectory) extends Indexer[Phrase, Phrase, PhraseIndexer](indexDirectory) {
   def update(): Int
 }
 
 class PhraseIndexerImpl(
   indexDirectory: IndexDirectory,
-  indexWriterConfig: IndexWriterConfig,
   airbrake: AirbrakeNotifier,
-  shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
+  shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory) with Logging  {
 
   override val commitBatchSize = 1000
 

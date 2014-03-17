@@ -1,7 +1,6 @@
 package com.keepit.search.graph.collection
 
 import org.apache.lucene.document.BinaryDocValuesField
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import com.keepit.common.db._
@@ -37,10 +36,9 @@ object CollectionFields {
 
 class CollectionIndexer(
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     collectionNameIndexer: CollectionNameIndexer,
     airbrake: AirbrakeNotifier)
-  extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
+  extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, CollectionFields.decoders) {
 
   import CollectionFields._
   import CollectionIndexer.CollectionIndexable
@@ -56,6 +54,11 @@ class CollectionIndexer(
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
+  }
+
+  override def close(): Unit = {
+    collectionNameIndexer.close()
+    super.close()
   }
 
   override def backup(): Unit = {

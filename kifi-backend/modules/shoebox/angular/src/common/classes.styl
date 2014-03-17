@@ -22,6 +22,8 @@
       background: #cccccc
 
 .kf-drag-mask
+.kf-tag-drag-mask
+.kf-tag-new-location-mask
   display: none
   position: absolute
   top: 0
@@ -30,12 +32,19 @@
   height: 100%
   z-index: 1
   box-sizing: border-box
-
-.kf-drag-target
-  border-style: dashed
-  border-width: 3px
+  border-width: 2px
   border-color: #c3dba8
+  border-style: none
 
 .kf-candidate-drag-target
+.kf-dragged
   .kf-drag-mask
     display: block
+
+.kf-drag-target
+  .kf-drag-mask
+    border-style: dashed
+
+.kf-dragged
+  .kf-drag-mask
+    border-style: solid

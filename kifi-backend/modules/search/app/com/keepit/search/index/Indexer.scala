@@ -9,6 +9,7 @@ import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
+import org.apache.lucene.util.Version
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -58,20 +59,22 @@ trait IndexingEventHandler[T, S] {
 
 abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     indexDirectory: IndexDirectory,
-    indexWriterConfig: IndexWriterConfig,
     fieldDecoders: Map[String, FieldDecoder])
   extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
 
-  def this(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
+  def this(indexDirectory: IndexDirectory) = this(indexDirectory, Map.empty[String, FieldDecoder])
 
   val commitBatchSize = 1000
 
-  lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
+  protected def indexWriterConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
+
+  private[this] var indexWriter: IndexWriter = null
+
   private[this] val indexWriterLock = new AnyRef
 
-  val indexWarmer: Option[IndexWarmer] = None
-
-  protected var searcher: Searcher = {
+  def reopenWriter(): Unit = indexWriterLock.synchronized {
+    if (indexWriter != null) indexWriter.close
+    indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
     if (!DirectoryReader.indexExists(indexDirectory)) {
       val seedDoc = new Document()
       val idTerm = new Term(Indexer.idFieldName, (-1L).toString)
@@ -79,8 +82,14 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
       indexWriter.updateDocument(idTerm, seedDoc)
       indexWriter.commit()
     }
-    val reader = DirectoryReader.open(indexDirectory)
-    Searcher(reader)
+  }
+
+  reopenWriter() // open indexWriter
+
+  val indexWarmer: Option[IndexWarmer] = None
+
+  protected var searcher: Searcher = indexWriterLock.synchronized{
+    Searcher(DirectoryReader.open(indexDirectory))
   }
 
   def warmUpIndexDirectory(): Unit = {
@@ -315,6 +324,10 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher() {
+    searcher = Searcher.reopen(searcher, indexWarmer)
+  }
+
+  def refreshWriter() {
     searcher = Searcher.reopen(searcher, indexWarmer)
   }
 

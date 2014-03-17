@@ -2,7 +2,7 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">Tags / {{tag.name}}</h1>
     <div class="kf-subtitle">
-      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
+      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll(), 'multi-checked': isMultiChecked() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>

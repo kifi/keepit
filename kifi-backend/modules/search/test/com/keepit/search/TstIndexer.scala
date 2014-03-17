@@ -5,14 +5,13 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
-import org.apache.lucene.index.IndexWriterConfig
 import com.keepit.search.semantic.SemanticVectorBuilder
 import org.apache.lucene.analysis.Analyzer
 import java.io.StringReader
 
 class Tst(val id: Id[Tst], val text: String, val personalText: String)
 
-class TstIndexer(indexDirectory: IndexDirectory, indexWriterConfig: IndexWriterConfig) extends Indexer[Tst, Tst, TstIndexer](indexDirectory, indexWriterConfig) {
+class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIndexer](indexDirectory) {
   def buildIndexable(id: Id[Tst]): Indexable[Tst, Tst] = throw new UnsupportedOperationException()
   def buildIndexable(data: Tst): Indexable[Tst, Tst] = new TstIndexable(data.id, data.text, data.personalText, indexWriterConfig.getAnalyzer)
 

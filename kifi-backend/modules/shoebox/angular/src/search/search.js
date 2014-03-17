@@ -77,6 +77,10 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
 
+    $scope.isMultiChecked = function () {
+      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
+    };
+
     $scope.isCheckEnabled = function () {
       return $scope.keeps.length;
     };

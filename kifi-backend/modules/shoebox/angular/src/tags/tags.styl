@@ -58,6 +58,7 @@ nav-item()
   left: 0
   right: -1px
   overflow: hidden
+  width: 100%
 
   .antiscroll-inner
     position: relative
@@ -103,6 +104,8 @@ nav-item()
       background-color: #f9edbe
 
   .kf-nav-link
+    background-color: #eff2f7
+
     &.renaming
       background-color: white
 
@@ -110,10 +113,16 @@ nav-item()
     &.renamed
       transition: background-color .16s
 
+.kf-tag-info
+  display: inline-block
+
 .kf-tag-name
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
+  display: inline-block
+  vertical-align: middle
+  line-height: 100%
 
 .kf-tag-count
   font-size: 12px
@@ -181,8 +190,24 @@ nav-item()
     &:before
       border-top-color: white
 
-  .kf-drag-target
+
+  .kf-drag-mask
+  .kf-tag-drag-mask
     border-color: #b8c5d3
+
+.kf-tag-new-location-mask
+  pointer-events: none
+  border-style: solid
+  display: block
+  border-color: rgba(184,197,211,1)
+
+  &.hidden
+    border-color: rgba(184,197,211,0)
+    transition: all 1.5s
+
+.kf-candidate-tag-drag-target
+  .kf-tag-drag-mask
+    display: block
 
 .kf-tag-rename.kf-tag-rename
   padding: 0

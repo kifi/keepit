@@ -1,10 +1,15 @@
-<li class="kf-nav-item kf-tag">
-  <div class="kf-nav-link" ng-class="{ renaming: isRenaming }" ng-click="navigateToTag($event)" ui-draggable="true" drag="tag" drag-channel="tagDragChannel" ui-on-drop="onKeepDrop($data,tag)" drop-channel="keepDragChannel" drag-enter-class="kf-candidate-drag-target">
-    <span class="kf-tag-icon"></span>
-    <span ng-show="!isRenaming">
-      <span class="kf-tag-name">{{tag.name}}</span>
-      <span class="kf-tag-count">{{tag.keeps}}</span>
-      <div class="kf-tag-tools" ng-class="{ open: isDropdownOpen }" ng-click="$event.stopPropagation()">
+<li class="kf-nav-item kf-tag" ng-mouseenter="adjustWidthHighlight()" ng-mouseleave="adjustWidthNoHighlight()">
+  <div class="kf-nav-link" ng-class="{ renaming: isRenaming, 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }" ng-click="navigateToTag($event)"
+    ui-draggable="true" drag="tag" drag-channel="tagDragChannel" ui-on-drop="onKeepDrop($data)" drop-channel="keepDragChannel" drag-enter-class="kf-candidate-drag-target">
+    <div class="kf-tag-drag-container" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-tag-drag-target">
+      <div class="kf-tag-info">
+        <span class="kf-tag-icon"></span>
+      <span ng-show="!isRenaming">
+        <span class="kf-tag-name">{{tag.name}}</span>
+        <span class="kf-tag-count">{{tag.keeps}}</span>
+      </span>
+      </div>
+      <div class="kf-tag-tools" ng-show="!isRenaming" ng-class="{ open: isDropdownOpen }" ng-click="$event.stopPropagation()">
         <div class="kf-tag-dropdown-toggle" ng-show="!isDragging" ng-click="toggleDropdown()"><div class="kf-tag-tool-icon"></div></div>
         <div class="kf-tag-handle"><div class="kf-tag-tool-icon"></div></div>
         <ul class="kf-dropdown-menu" ng-show="isDropdownOpen">
@@ -16,8 +21,10 @@
           </li>
         </ul>
       </div>
-    </span>
-    <input class="kf-tag-rename" type="text" placeholder="Type new tag name" ng-model="renameTag.value" ng-keydown="onRenameKeydown($event)" ng-show="isRenaming">
-    <div class="kf-drag-mask" ng-class="{ 'kf-drag-target': isDragTarget }"></div>
+      <input class="kf-tag-rename" type="text" placeholder="Type new tag name" ng-model="renameTag.value" ng-keydown="onRenameKeydown($event)" ng-show="isRenaming">
+      <div class="kf-drag-mask" ng-class="{ 'kf-drag-target': isDragTarget }"></div>
+      <div class="kf-tag-drag-mask"></div>
+      <div class="kf-tag-new-location-mask hidden"></div>
+    </div>
   </div>
 </li>

@@ -14,8 +14,6 @@ import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.Play.current
@@ -129,18 +127,18 @@ trait GraphTestHelper extends ApplicationInjector {
   }
 
   def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(bookmarkStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier])
-    new StandaloneURIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val bookmarkStore = new BookmarkStore(bookmarkStoreDir, inject[AirbrakeNotifier])
+    new StandaloneURIGraphIndexer(uriGraphDir, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CollectionIndexer = {
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier])
-    new StandaloneCollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
+    new StandaloneCollectionIndexer(collectionDir, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkUserGraphsCommander() = {
-    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val commander = new UserGraphsCommander(userGraphIndexer, searchFriendIndexer)
     (userGraphIndexer, searchFriendIndexer, commander)
   }
