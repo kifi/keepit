@@ -21,11 +21,9 @@ main {
   width: 100%;
   -webkit-tap-highlight-color: rgba(0,0,0,0);
   -webkit-transform: translateZ(0);
-  padding-top: 456px;
 }
 .k-top {
   box-sizing: border-box;
-  height: 456px;
   width: 100%;
   background: url(../i/crowd.jpg) 0/cover;
   padding-top: 28px;
@@ -33,6 +31,10 @@ main {
   z-index: 1;
   top: 0;
   overflow: hidden;
+}
+body>.k-top {
+  position: fixed;
+  height: 100%;
 }
 .k-logo {
   height: 35px;
@@ -87,7 +89,7 @@ main {
   -webkit-transition: -webkit-transform 2s ease-in-out;
   -webkit-transform: none;
 }
-.k-iphone.k-out {
+.k-iphone.k-initial {
   -webkit-transform: translate3d(16px,0,0) rotate(2deg);
 }
 .k-top-bottom {
