@@ -24,7 +24,7 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
         val renormRepo = inject[RenormalizedURLRepo]
         val centralConfig = inject[CentralConfig]
         val mailSender = inject[SystemAdminMailSender]
-        val commander = new URLRenormalizeCommander(db, mailSender, uriRepo, urlRepo, changedUriRepo, renormRepo, centralConfig )
+        val commander = new URLRenormalizeCommander(db, null, mailSender, uriRepo, urlRepo, changedUriRepo, renormRepo, centralConfig )
 
         val (uri0, uri1, url0, url1, url2, url3) = db.readWrite{ implicit s =>
           val uri0 = uriRepo.save(NormalizedURI.withHash("http://kifi.com/wrong", Some("kifi")).withState(NormalizedURIStates.SCRAPED))   // trigger 1 migration
