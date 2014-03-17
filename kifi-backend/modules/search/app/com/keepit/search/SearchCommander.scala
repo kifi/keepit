@@ -177,6 +177,9 @@ class SearchCommanderImpl @Inject() (
     }
 
     // TODO: use user profile info as a bias
+
+    val langProfFuture = mainSearcherFactory.getLangProfileFuture(shards.shards, userId, 3)
+
     var acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
       val langCode = code.substring(0,2)
       if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
@@ -191,7 +194,8 @@ class SearchCommanderImpl @Inject() (
       acceptLangs = Set(Lang("en"))
     }
 
-    val langProf = getLangProfile(userId, 3)
+    val langProf = monitoredAwait.result(langProfFuture, 10 seconds, "slow getting lang profile")
+
     val firstLangSet = acceptLangs ++ langProf.keySet
 
     val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(firstLangSet, 0.9d))
@@ -202,25 +206,6 @@ class SearchCommanderImpl @Inject() (
       None
     }
     (firstLang, secondLang)
-  }
-
-  private def getLangProfile(userId: Id[User], limit: Int): Map[Lang, Float] = { // todo: cache
-    val future = Future.traverse(shards.shards){ shard =>
-      SafeFuture{
-        val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
-        searcher.getLangProfile()
-      }
-    }
-    val results = monitoredAwait.result(future, 10 seconds, "slow getting lang profile")
-    val total = results.map(_.values.sum).sum.toFloat
-    if (total > 0) {
-      val newProf = results.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
-        m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f).toFloat))
-      }
-      newProf.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(limit).toMap // top N with prob > 0.05
-    } else {
-      Map()
-    }
   }
 
   private def getSearchFilter(
