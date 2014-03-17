@@ -103,7 +103,6 @@ private class RawKeepImporterActor @Inject() (
           bookmarksCommanderProvider.get.addToCollection(tag, successes)(context)
         }
         //the bookmarks list may be very large!
-        searchClient.updateBrowsingHistory(userId, successes.map(_.uriId): _*)
         searchClient.updateURIGraph()
 
         db.readWriteBatch(successesRawKeep) { case (session, rk) =>
