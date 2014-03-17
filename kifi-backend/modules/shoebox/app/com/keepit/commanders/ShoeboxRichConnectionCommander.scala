@@ -5,7 +5,7 @@ import com.keepit.common.queue._
 import com.keepit.model._
 import com.keepit.common.db.slick.{RepoModification, Database}
 
-import com.kifi.franz.FormattedSQSQueue
+import com.kifi.franz.SQSQueue
 
 import com.google.inject.{Inject, Singleton, Provider}
 import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration}
@@ -21,7 +21,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 @Singleton
 class ShoeboxRichConnectionCommander @Inject() (
     abook: ABookServiceClient,
-    queue: FormattedSQSQueue[RichConnectionUpdateMessage],
+    queue: SQSQueue[RichConnectionUpdateMessage],
     socialConnectionRepo: Provider[SocialConnectionRepo],
     userConnectionRepo: Provider[UserConnectionRepo],
     invitationRepo: Provider[InvitationRepo],
