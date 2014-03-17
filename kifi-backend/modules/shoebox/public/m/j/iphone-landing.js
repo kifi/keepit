@@ -62,26 +62,53 @@ this.maxPosY/this.scroller.maxScrollY);this.updatePosition()},updatePosition:fun
 b){0>a?a=0:a>this.maxPosX&&(a=this.maxPosX);0>b?b=0:b>this.maxPosY&&(b=this.maxPosY);a=this.options.listenX?f.round(a/this.sizeRatioX):this.scroller.x;b=this.options.listenY?f.round(b/this.sizeRatioY):this.scroller.y;this.scroller.scrollTo(a,b)},fade:function(a,b){if(!b||this.visible){clearTimeout(this.fadeTimeout);this.fadeTimeout=null;var c=a?250:500,e=a?0:300;this.wrapperStyle[d.style.transitionDuration]=c+"ms";this.fadeTimeout=setTimeout(function(a){this.wrapperStyle.opacity=a;this.visible=+a}.bind(this,
 a?"1":"0"),e)}}};p.utils=d;"undefined"!=typeof module&&module.exports?module.exports=p:g.IScroll=p})(window,document,Math);
 
-setTimeout(function initScrolling() {
+(function () {
+  var scroller, yFixedTop, topIsFixed = false;
   var $top = document.querySelector('.k-top');
-  var $topPar = $top.parentNode;
-  var fixed = false;
-  var iScr = new IScroll(document.body, {probeType: 3, disableMouse: true, disablePointer: true});
-  iScr.on('scroll', fixTop);
-  iScr.on('scrollEnd', fixTop);
-  function fixTop(e) {
-    var y = this.y << 0;
-    if ((y < -367) !== fixed) {
-      fixed = !fixed;
+  var $main = document.querySelector('main');
+  updateTopHeight();
+  prependTopTo($main);
+
+  setTimeout(initIScroll, 100);
+  document.body.addEventListener('orientationchange', function () {
+    updateTopHeight();
+    if (scroller) {
+      scroller.refresh();
+      updateTopPosition(true);
+    }
+  });
+
+  function updateTopHeight() {
+    var h = document.body.offsetHeight;
+    $main.style.paddingTop = $top.style.height = h + 'px';
+    yFixedTop = 89 - h;
+  }
+
+  function updateTopPosition(force) {
+    var y = scroller.y << 0;
+    if ((y < yFixedTop) !== topIsFixed) {
+      topIsFixed = !topIsFixed;
       $top.parentNode.removeChild($top);
-      $top.style.position = fixed ? 'fixed' : '';
-      $top.style.top = fixed ? '-367px' : '';
-      var p = fixed ? $topPar.parentNode : $topPar;
-      p.insertBefore($top, p.firstChild);
-      setTimeout(iScr.refresh.bind(iScr), 0);
+      $top.style.top = topIsFixed ? yFixedTop + 'px' : '';
+      prependTopTo(topIsFixed ? $main.parentNode : $main);
+    } else if (topIsFixed && force === true) {
+      $top.style.top = yFixedTop + 'px';
     }
   }
-  document.addEventListener('touchmove', function (e) { e.preventDefault() }, false);
-}, 100);
 
-document.querySelector('.k-iphone').classList.remove('k-out');
+  function prependTopTo($el) {
+    $el.insertBefore($top, $el.firstChild);
+  }
+
+  function initIScroll() {
+    scroller = new IScroll(document.body, {probeType: 3, disableMouse: true, disablePointer: true});
+    scroller.on('scroll', updateTopPosition);
+    scroller.on('scrollEnd', updateTopPosition);
+  }
+}());
+
+document.addEventListener('touchmove', function (e) { e.preventDefault() }, false);
+
+setTimeout(function () {
+  document.querySelector('.k-iphone').classList.remove('k-initial');
+}, 0);
