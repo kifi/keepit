@@ -20,7 +20,7 @@ case class UrlPatternRule(
   useProxy: Option[Id[HttpProxy]] = None,
   normalization: Option[Normalization] = None,
   trustedDomain: Option[String] = None,
-  nonSensitive: Option[Boolean] = None
+  nonSensitive: Boolean = false
 ) extends Model[UrlPatternRule] {
 
   def withId(id: Id[UrlPatternRule]) = this.copy(id = Some(id))
@@ -42,7 +42,7 @@ object UrlPatternRule {
       (__ \ 'useProxy).formatNullable(Id.format[HttpProxy]) and
       (__ \ 'normalization).formatNullable[Normalization] and
       (__ \ 'trustedDomain).formatNullable[String] and
-      (__ \ 'nonSensitive).format[Option[Boolean]]
+      (__ \ 'nonSensitive).format[Boolean]
     )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
 }
 
