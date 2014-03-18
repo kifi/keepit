@@ -3,8 +3,8 @@
 angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState) {
 
     $scope.search = {};
 
@@ -65,6 +65,27 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     angular.element($window).resize(updateHeight);
 
     $timeout(updateHeight);
+
+    var messages = {
+      0: 'Welcome back!',
+      2: 'Bookmark import in progress. Reload the page to update.'
+    };
+
+    function handleInjectedState(state) {
+      if (state) {
+        if (state.m && state.m === '1') {
+          $scope.showEmailModal = true;
+          $scope.modal = 'email';
+        } else if (state.m) { // show small tooltip
+          var msg = messages[state.m];
+          $scope.tooltipMessage = msg;
+          $timeout(function () {
+            delete $scope.tooltipMessage;
+          }, 5000);
+        }
+      }
+    }
+    handleInjectedState(injectedState.state);
 
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
