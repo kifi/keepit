@@ -388,22 +388,39 @@ body.kifi-snapshot-root {
   line-height: 20px;
   text-transform: uppercase;
 }
-.kifi-ti-dropdown-invited::after {
+.kifi-ti-dropdown-item.kifi-invited::after {
   content: 'Invited';
   background: left 5px/11px 8px no-repeat;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAICAYAAAAvOAWIAAAAdUlEQVQY02NgIAAmHQySAuJrQFxFSKEcEN8G4v9AvB8myIxFoQIQ34MqPAjEPCDBaVBBBSSFSkD8EKpwDxBzwSS2QwVBkspArA7ET6BiIDlOZOs4kTSAFD2DsjcDMRs2j7BBJf9D8VqsCtE0LAfiJUDMgk0NAPgmab8gBSMYAAAAAElFTkSuQmCC);
   padding-left: 15px;
 }
-.kifi-ti-dropdown-invited.kifi-ti-dropdown-item-selected::after {
+.kifi-ti-dropdown-item-selected.kifi-invited::after {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAICAQAAACFMc0DAAAAY0lEQVQIHQXBQQoBAQBA0SeaIiew0MTCjZ1AWVlZzGZKzqGUkmt87y0AANqZXQAA7XtVD7QEaOxdPdvq3LsROvSp5jZoqj4dO/WtptagdVP17VfdGwA0dK/q1gAAGrp2aQXAHw0zSLJT6Y6XAAAAAElFTkSuQmCC);
 }
 @media (min-resolution: 1.3dppx) {
-  .kifi-ti-dropdown-invited::after {
+  .kifi-ti-dropdown-item.kifi-invited::after {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAYAAAAS7Y8mAAAA50lEQVQ4y2NgoBKYdDAoDYg/AnEpAxUNzQHif0D8H4orqWFoEZqhIHybUkPL0QwE4XdAbEKJodVYDH0NxIbIihiBWJIEQ5uwGPoSiHWRFbEB8QpoONUSYWgHFkOfAbEmusJVaIpacBgI8lUPFkOfALEaNg33sSjuwGLoJCzqHgCxEi6vqUNtRdfUCzUQhKdjkb8HxPKEwk0Jaju65slAPAeL+E0gliU2puWB+C4WQ9DxNVJSEMxwWahrcBl6GYjFyU34klBXoRt6DohFKM2qYlDXwQw9A8RC1CqxRID4ABDvBGJ+UvUDAHUvWe4FPe0wAAAAAElFTkSuQmCC);
   }
-  .kifi-ti-dropdown-invited.kifi-ti-dropdown-item-selected::after {
+  .kifi-ti-dropdown-item-selected.kifi-invited::after {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAQAAAC45EetAAAAxklEQVQoFY3BP0rDcBzG4fe3uAoSLBlCoENLhw4Fz+TUSZAixUU6ZGiXdnDxAOIN3DyAdAkEglgzFKEIghfIp6ThW7V/0j6PdAQu+eFax6BLTuFGh3BFTulN1ehhvrlQFfqYLzoq4PC1A3eYBW0VOOGRnFttIMJ80lKJJ0oDreEYYuY0ZPjARFrBMcZk1PWLJnPMCIfjHjMj1H/UyTATHjApgbYR8s6mBF+7EZDyV0xN++GTYKZ4qsY5MYVXznQYHi88c6o9ljMk+9nu+/6xAAAAAElFTkSuQmCC);
   }
+}
+.kifi-ti-dropdown-item.kifi-inviting::after {
+  content: 'Inviting';
+  background-image: inherit;
+  background-position: -9999px,left;
+  background-size: 0,10px;
+  background-repeat: no-repeat;
+  padding-left: 16px;
+}
+.kifi-ti-dropdown-item.kifi-invite-fail::after {
+  content: 'Error Inviting';
+  background-image: none;
+  padding-left: 0;
+  color: #c00;
+}
+.kifi-ti-dropdown-item-selected.kifi-invite-fail::after {
+  color: #fff;
 }
 .kifi-ti-dropdown-invite-name {
   line-height: 14px;

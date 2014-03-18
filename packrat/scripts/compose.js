@@ -142,14 +142,14 @@ var initCompose = (function() {
           return html.join('');
         } else if (res.id) {
           return [
-              '<li class="kifi-ti-dropdown-invite-social', res.invited ? ' kifi-ti-dropdown-invited' : '', '"',
+              '<li class="kifi-ti-dropdown-invite-social', res.invited ? ' kifi-invited' : '', '"',
               ' style="background-image:url(', Mustache.escape(res.pic || 'https://www.kifi.com/assets/img/ghost-linkedin.100.png'), ')">',
               '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
               '<div class="kifi-ti-dropdown-invite-sub">', res.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
               '</li>'].join('');
         } else if (res.email) {
           return [
-              '<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-ti-dropdown-invited' : '', '">',
+              '<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-invited' : '', '">',
               '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
               '<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(res.email), '</div>',
               '</li>'].join('');
@@ -157,10 +157,10 @@ var initCompose = (function() {
           return '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>';
         }
       },
-      onSelect: function (res) {
+      onSelect: function (res, el) {
         if (!res.pictureName) {
           if (res.id || res.email) {
-            handleInvite(res);
+            handleInvite(res, el);
           } else if (res === 'tip') {
             api.port.emit('invite_friends', 'composePane');
           }
@@ -401,9 +401,20 @@ var initCompose = (function() {
     }
   }
 
-  function handleInvite(res) {
-    api.port.emit('invite_friend', {who: res, whence: 'composePane'}, function (data) {
-      // TODO: update UI to show invited?
+  function handleInvite(res, el) {
+    var $el = $(el);
+    var bgImg = $el.css('background-image');
+    $el.addClass('kifi-inviting').css('background-image', bgImg + ',url(' + api.url('images/spinner_32.gif') + ')');
+    api.port.emit('invite_friend', {id: res.id, email: res.email, whence: 'composePane'}, function (data) {
+      $el.removeClass('kifi-inviting').css('background-image', bgImg);
+      if (data.url) {
+        window.open(data.url, 'kifi-invite-' + (res.id || res.email), 'height=550,width=990');
+      } else if (data.sent) {
+        $el.addClass('kifi-invited');
+      } else if (data.sent === false) {
+        $el.addClass('kifi-invite-fail');
+        setTimeout($.fn.removeClass.bind($el, 'kifi-invite-fail'), 2000);
+      }
     });
   }
 }());

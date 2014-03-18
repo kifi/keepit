@@ -396,7 +396,7 @@
 
     function handleItemChosen(el) {
       var item = $.data(el, 'tokeninput');
-      if (!settings.onSelect || settings.onSelect.call($hiddenInput, item) !== false) {
+      if (!settings.onSelect || settings.onSelect.call($hiddenInput, item, el) !== false) {
         addToken(item);
         $hiddenInput.change();
       }

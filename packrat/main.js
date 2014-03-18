@@ -702,6 +702,12 @@ api.port.on({
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
     mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
   },
+  invite_friend: function (data, respond) {
+    ajax('POST', '/ext/invite', {id: data.id, email: data.email}, respond, function () {
+      respond({sent: false});
+    });
+    mixpanel.track('user_clicked_pane', {type: where, action: 'choseSocialContact', network: data.id ? data.id.split('/')[0] : 'email'});
+  },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
     if (data.to) {
