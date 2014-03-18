@@ -33,10 +33,8 @@ extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] wi
     def description     = column[String]("description")
     def safe            = column[Boolean]("safe")
     def faviconUrl      = column[String]("favicon_url")
-    def imageAvail      = column[Boolean]("image_avail")
-    def screenshotAvail = column[Boolean]("screenshot_avail")
     def imageInfoId     = column[Id[ImageInfo]]("image_info_id")
-    def * = (id.?,createdAt,updatedAt,state,seq,uriId,description.?,safe.?,faviconUrl.?,imageAvail.?,screenshotAvail.?,imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
+    def * = (id.?,createdAt,updatedAt,state,seq,uriId,description.?,safe.?,faviconUrl.?,imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
   }
 
   def table(tag:Tag) = new PageInfoTable(tag)
