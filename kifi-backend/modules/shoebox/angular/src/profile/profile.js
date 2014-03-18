@@ -25,6 +25,7 @@ angular.module('kifi.profile', [
   function ($scope, $http, profileService, routeService, $window) {
 
     $window.document.title = 'Kifi • Your Profile';
+    profileService.getNetworks();
 
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
@@ -147,25 +148,25 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfLinkedinConnectButton', [
-  'profileService', '$window',
-  function (profileService, $window) {
+  'profileService', '$FB', '$window',
+  function (profileService, $FB, $window) {
     return {
       restrict: 'A',
       link: function (scope) {
-        // TODO: implement this. look at how facebook is done
-        //profileService.getLinkedInStatus();
+        scope.isLinkedInConnected = (profileService.me && profileService.me.linkedInConnected) || false;
 
-        scope.isLinkedInConnected = function () {
-          return scope.me && scope.me.linkedinStatus === 'connected';
-        };
+        scope.$watch(function () {
+          return profileService.me.linkedInConnected;
+        }, function (status) {
+          scope.isLinkedInConnected = status;
+          var li = _.find(profileService.networks, function (n) {
+            return n.network === 'linkedin'
+          });
+          scope.liProfileUrl = li && li.profileUrl;
+        });
 
-        scope.connectLinkedIn = function () {
-          $window.location.href = '/link/linkedin';
-        };
-
-        scope.disconnectLinkedIn = function () {
-          // todo: disconnect
-        };
+        scope.connectLinkedIn = profileService.social.connectLinkedIn;
+        scope.disconnectLinkedIn = profileService.social.disconnectLinkedIn;
       }
     };
   }
@@ -177,22 +178,20 @@ angular.module('kifi.profile', [
     return {
       restrict: 'A',
       link: function (scope) {
-        profileService.getFacebookStatus();
+        scope.isFacebookConnected = (profileService.me && profileService.me.facebookConnected) || false;
 
-        scope.isFacebookConnected = function () {
-          return profileService.me.facebookStatus === 'connected';
-        };
-
-        scope.connectFacebook = function () {
-          $FB.login()['finally'](profileService.getFacebookStatus).then(function () {
-            $window.location.href = '/link/facebook';
+        scope.$watch(function () {
+          return profileService.me.facebookConnected;
+        }, function (status) {
+          scope.isFacebookConnected = status;
+          var fb = _.find(profileService.networks, function (n) {
+            return n.network === 'facebook'
           });
-        };
+          scope.fbProfileUrl = fb && fb.profileUrl;
+        });
 
-        scope.disconnectFacebook = function () {
-          // todo: disconnect
-          $FB.disconnect()['finally'](profileService.getFacebookStatus);
-        };
+        scope.connectFacebook = profileService.social.connectFacebook;
+        scope.disconnectFacebook = profileService.social.disconnectFacebook;
       }
     };
   }

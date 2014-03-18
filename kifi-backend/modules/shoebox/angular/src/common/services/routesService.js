@@ -14,6 +14,13 @@ angular.module('kifi.routeService', [])
     }
 
     return {
+      disconnectNetwork: function (network) {
+        return env.origin + '/disconnect/' + network;
+      },
+      linkNetwork: function (network) {
+        return env.origin + '/link/' + network;
+      },
+      networks: route('/user/networks'),
       profileUrl: route('/user/me'),
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
