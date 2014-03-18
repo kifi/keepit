@@ -6,13 +6,13 @@ import scala.concurrent.{Await, Future, Promise}
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{SystemAdminMailSender, StackTrace, AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.model._
-import play.api.libs.ws.WS
+import play.api.libs.ws.{Response, WS}
 import scala.util.Try
 import play.modules.statsd.api.Statsd
 import javax.imageio.ImageIO
@@ -30,10 +30,13 @@ import scala.concurrent.duration._
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{RetryFuture, ExecutionContext}
 import java.awt.image.BufferedImage
 import scala.collection.mutable.ArrayBuffer
 import org.apache.commons.lang3.RandomStringUtils
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.service.RequestConsolidator
+import scala.concurrent.duration._
 
 trait S3ScreenshotStore {
   def config: S3ImageConfig
@@ -107,6 +110,7 @@ class S3ScreenshotStoreImpl(
     shoeboxServiceClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     clock: Clock,
+    systemAdminMailSender: SystemAdminMailSender,
     val config: S3ImageConfig
   ) extends S3ScreenshotStore with S3Helper with Logging {
 
@@ -143,18 +147,36 @@ class S3ScreenshotStoreImpl(
     }
   }
 
+  private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyExtractResponse]](2 minutes)
+
   private def getPageInfo(url:String):Future[Option[EmbedlyExtractResponse]] = {
-    WS.url(url).withRequestTimeout(120000).get().map { resp =>
-      log.info(s"[getPageInfo($url)] resp.status=${resp.statusText} body=${resp.body} json=${Json.prettyPrint(resp.json)}")
-      resp.status match {
-        case Status.OK =>
-          val pageInfo = Json.fromJson[EmbedlyExtractResponse](resp.json).asOpt
-          log.info(s"[getPageInfo($url)] pageInfo=$pageInfo")
-          pageInfo
-        case _ =>
-          airbrake.notify(s"[getExtractResponse($url)] ERROR from provider: status=${resp.status} body=${resp.body}")
-          // retry or put on queue
-          None
+    fetchPageInfoConsolidator(url) { urlString =>
+      val future = WS.url(url).withRequestTimeout(120000).get()
+      future map { resp =>
+        log.info(s"[getPageInfo($url)] resp.status=${resp.statusText} body=${resp.body} json=${Json.prettyPrint(resp.json)}")
+        resp.status match {
+          case Status.OK =>
+            val pageInfo = Json.fromJson[EmbedlyExtractResponse](resp.json).asOpt
+            log.info(s"[getPageInfo($url)] pageInfo=$pageInfo")
+            pageInfo
+          case _ =>
+            val msg = s"[getExtractResponse($url)] ERROR from provider: status=${resp.status} body=${resp.body}"
+            log.error(msg)
+            systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
+              subject = s"S3ScreenshotStore.getPageInfo($url)",
+              htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
+              category = NotificationCategory.System.ADMIN))
+            // todo(ray): retry and/or put on queue
+            None
+        }
+      } recover { case t:Throwable =>
+        val msg = s"[getExtractResponse($url)] Caught exception $t; cause=${t.getCause}"
+        log.error(msg)
+        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
+          subject = s"S3ScreenshotStore.getPageInfo($url)",
+          htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
+          category = NotificationCategory.System.ADMIN))
+        None
       }
     }
   }
