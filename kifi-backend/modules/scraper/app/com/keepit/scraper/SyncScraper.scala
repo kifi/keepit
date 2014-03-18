@@ -109,7 +109,7 @@ class SyncScraper @Inject() (
 
             // initial throttling by tying to screenshot; need to move out
             if (pageInfoOpt.forall(p => Days.daysBetween(currentDateTime.withTimeAtStartOfDay, p.updatedAt.withTimeAtStartOfDay).getDays >= 5)) {
-              s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { res =>
+              s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, true) map { res => // todo: updateImage
                 log.info(s"[processURI(${uri.id},${uri.url})] imageUrl=$res")
                 res
               }

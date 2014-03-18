@@ -12,8 +12,6 @@ CREATE TABLE page_info (
   description varchar(1024),
   safe boolean,
   favicon_url varchar(1024),
-  image_avail boolean,
-  screenshot_avail boolean,
   image_info_id bigint(20),
 
   PRIMARY KEY (id),

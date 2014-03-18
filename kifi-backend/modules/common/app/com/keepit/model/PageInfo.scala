@@ -32,8 +32,6 @@ case class PageInfo(
   description:Option[String]      = None,
   safe:Option[Boolean]            = None,
   faviconUrl:Option[String]       = None,
-  imageAvail:Option[Boolean]      = None,  // todo: removeme
-  screenshotAvail:Option[Boolean] = None,  // todo: removeme
   imageInfoId:Option[Id[ImageInfo]] = None
 ) extends ModelWithState[PageInfo] with ModelWithSeqNumber[PageInfo] with PageGenericInfo with PageSafetyInfo {
   def withId(pageInfoId: Id[PageInfo]) = copy(id = Some(pageInfoId))
@@ -52,8 +50,6 @@ object PageInfo {
     (__ \ 'description).formatNullable[String] and
     (__ \ 'safe).formatNullable[Boolean] and
     (__ \ 'favicon_url).formatNullable[String] and
-    (__ \ 'imageAvail).formatNullable[Boolean] and
-    (__ \ 'screenshotAvail).formatNullable[Boolean] and
     (__ \ 'imageInfoId).formatNullable(Id.format[ImageInfo])
   )(PageInfo.apply _, unlift(PageInfo.unapply))
 }
