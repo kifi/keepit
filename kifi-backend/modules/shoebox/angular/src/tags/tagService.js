@@ -45,6 +45,7 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
     }
 
     function reorderTag(isTop, srcTag, dstTag) {
+      // isTop indicates whether dstTag should be placed before or after srcTag
       var index = _.findIndex(list, function (tag) { return tag.id === dstTag.id; });
       var newSrcTag = _.clone(srcTag);
       var srcTagId = srcTag.id;
