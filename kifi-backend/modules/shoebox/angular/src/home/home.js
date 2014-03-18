@@ -14,33 +14,11 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 ])
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', 'injectedState', '$timeout', '$window',
-  function ($scope, tagService, keepService, $q, injectedState, $timeout, $window) {
+  '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window',
+  function ($scope, tagService, keepService, $q, $timeout, $window) {
     keepService.reset();
 
     $window.document.title = 'Kifi • Your Keeps';
-
-    var messages = {
-      0: 'Welcome back!',
-      1: 'Thank you for verifying your email address.',
-      2: 'Bookmark import in progress. Reload the page to update.'
-    };
-
-    function handleInjectedState(state) {
-      if (state) {
-        if (state.m && state.m === '1') {
-          $scope.showEmailModal = true;
-          $scope.modal = 'email';
-        } else if (state.m) { // show small tooltip
-          var msg = messages[state.m];
-          $scope.tooltipMessage = msg;
-          $timeout(function () {
-            delete $scope.tooltipMessage;
-          }, 5000);
-        }
-      }
-    }
-    handleInjectedState(injectedState.state);
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
