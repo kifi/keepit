@@ -21,7 +21,7 @@ angular.module('kifi.modal', [])
         };
 
         this.hideModal = function (hideAction) {
-          if (hideAction) {
+          if (typeof hideAction === 'function') {
             hideAction();
           } else if (defaultHideAction) {
             defaultHideAction();
