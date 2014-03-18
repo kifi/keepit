@@ -106,6 +106,7 @@ POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteControl
 
 GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
 GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
+GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleIPhoneTempForDev(token: String)
 
 ##########################################
 # Mobile V1
