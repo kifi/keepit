@@ -176,11 +176,6 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def userTopicCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserTopicCache(stats, accessLog, (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
   def socialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SocialUserConnectionsCache(stats, accessLog, (outerRepo, 6 hours))
 
