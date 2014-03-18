@@ -144,6 +144,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         scope.onTagDrop = function (tag) {
           stopTagDrag();
           if (isTop !== null && scope.watchTagReorder()) {
+            // The "dragend" handler must be called before removing the element from the DOM.
+            element.find('.kf-nav-link').triggerHandler('dragend');
             scope.reorderTag({isTop: isTop, srcTag: tag, dstTag: scope.tag});
           }
         };
