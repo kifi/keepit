@@ -20,7 +20,7 @@ class ExtDeepLinkController @Inject() (
   deepLinkRepo: DeepLinkRepo,
   normalizedURIRepo: NormalizedURIRepo)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
-  
+
   def createDeepLink() = Action(parse.tolerantJson) { request =>
     val req = request.body.asInstanceOf[JsObject]
     val initiator = Id[User]((req \ "initiator").as[Long])
@@ -115,4 +115,19 @@ class ExtDeepLinkController @Inject() (
       }
     }
   }
+
+  // TODO: integrate this view into the logic/flow above (replace iphoneDeeplink)
+  def handleIPhoneTempForDev(tokenString: String) = HtmlAction(authenticatedAction = { request =>
+    if (request.experiments.contains(ExperimentType.ADMIN)) {
+      Ok(views.html.mobile.iPhoneLink())
+    } else {
+      NotFound("")
+    }
+  }, unauthenticatedAction = { request =>
+    if (request.domain == "dev.ezkeep.com") {
+      Ok(views.html.mobile.iPhoneLink())
+    } else {
+      NotFound("")
+    }
+  })
 }
