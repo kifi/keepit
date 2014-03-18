@@ -11,6 +11,12 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
         var captured = false;
         switch (e.which) {
+          case 27:
+            if (keepService.isPreviewed()) {
+              keepService.clearState();
+              captured = true;
+            }
+            break;
           case 38: // up
           case 75: // k
             keepService.previewPrev();
@@ -39,6 +45,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     $document.on('keydown', keepKeyBindings);
 
     $scope.$on('$destroy', function () {
+      keepService.clearState();
       $document.off('keydown', keepKeyBindings);
     });
 

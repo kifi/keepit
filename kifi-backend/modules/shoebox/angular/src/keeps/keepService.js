@@ -93,7 +93,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
     }
 
     function keepIdx(keep) {
-      if (keep === null) {
+      if (!keep) {
         return -1;
       }
       var givenId = keep.id;

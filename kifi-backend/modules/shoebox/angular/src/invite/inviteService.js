@@ -13,7 +13,7 @@ angular.module('kifi.inviteService', [])
         requests = [],
         whoToInviteList = [],
         inviteList = [], // used for typeahead dropdown for invite search
-        platform;
+        platformFilter;
 
     var api = {
       connectWithKifiUser: function (userId) {

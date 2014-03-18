@@ -18,7 +18,7 @@ angular.module('kifi.detail',
         scope.isDetailOpen = keepService.isDetailOpen;
         scope.getPreviewed = keepService.getPreviewed;
         scope.getSelected = keepService.getSelected;
-        scope.closeDetail = keepService.togglePreview.bind(null, null);
+        scope.closeDetail = keepService.clearState;
         scope.me = profileService.me;
 
         scope.$watch(scope.getPreviewed, function (keep) {

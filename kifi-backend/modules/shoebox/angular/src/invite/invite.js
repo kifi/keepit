@@ -23,5 +23,20 @@ angular.module('kifi.invite', [
 
     $window.document.title = 'Kifi • Invite your friends';
 
+    // bogus data just to get everyone started
+    var friend = {
+      image: 'https://graph.facebook.com/71105121/picture?width=75&height=75',
+      label: 'Andrew Conner',
+      status: 'joined',
+      value: 'facebook/71105121'
+    };
+    $scope.friends = [friend];
+
+    $scope.invite = function (friend) {
+      // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?
+      // is 'friend' overloaded naming wise? is socialFriend better?
+      $window.alert('Inviting ' + friend);
+    };
+
   }
 ]);
