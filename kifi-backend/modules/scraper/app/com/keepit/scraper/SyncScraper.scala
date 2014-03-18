@@ -220,7 +220,6 @@ class SyncScraper @Inject() (
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
             isNonSensitive(normalizedUri.url).map { nonSensitive =>
-              println("\n===========\n sensitivity check!")
               if (!nonSensitive) {
                 if (contentLang == Lang("en") && content.size > 100) {
                   val detector = new SlidingWindowPornDetector(pornDetectorFactory())
