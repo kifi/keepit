@@ -174,6 +174,17 @@ class UriIntegrityActor @Inject()(
     val toMerge = getOverDueList(batchSize)
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
 
+    if (toMerge.size == 0){
+      log.info("no active changed_uris were founded. Check if we have applied changed_uris generated during urlRenormalization")
+      val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
+      val applied = db.readOnly{ implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED)}
+      if (applied.size == batchSize){   // make sure a full batch of applied ones
+        applied.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
+        log.info(s"${applied.size} applied changed_uris are found!")
+      }
+      return applied.size
+    }
+
     toMerge.map{ change =>
       try{
         db.readWrite{ implicit s => handleURIMigration(change) }
