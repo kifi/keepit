@@ -106,19 +106,9 @@ class HomeController @Inject() (
   }
 
   // TODO: serve this to all iPhone requests at /mobile and remove this route + action
-  def iPhoneLandingTempForDev = HtmlAction(authenticatedAction = { request =>
-    if (request.experiments.contains(ExperimentType.ADMIN)) {
-      Ok(views.html.marketing.iPhoneLanding())
-    } else {
-      NotFound("")
-    }
-  }, unauthenticatedAction = { request =>
-    if (request.request.domain == "dev.ezkeep.com") {
-      Ok(views.html.marketing.iPhoneLanding())
-    } else {
-      NotFound("")
-    }
-  })
+  def iPhoneLandingTempForDev = Action { request =>
+    Ok(views.html.marketing.iPhoneLanding())
+  }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
   private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {

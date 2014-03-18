@@ -111,4 +111,4 @@ document.addEventListener('touchmove', function (e) { e.preventDefault() }, fals
 
 setTimeout(function () {
   document.querySelector('.k-iphone').classList.remove('k-initial');
-}, 0);
+}, 100);
