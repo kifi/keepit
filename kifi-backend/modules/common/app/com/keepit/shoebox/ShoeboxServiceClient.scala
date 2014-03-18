@@ -105,6 +105,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int = 10000):Future[PageInfo]
+  def getImageInfo(id:Id[ImageInfo])(implicit timeout:Int = 10000):Future[ImageInfo]
+  def saveImageInfo(imgInfo:ImageInfo)(implicit timeout:Int = 10000):Future[ImageInfo]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?)(implicit timeout:Int = 10000): Future[Boolean]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
@@ -635,6 +637,18 @@ class ShoeboxServiceClientImpl @Inject() (
   def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int):Future[PageInfo] = {
     call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
       r.json.as[PageInfo]
+    }
+  }
+
+  def getImageInfo(id: Id[ImageInfo])(implicit timeout: Int): Future[ImageInfo] = {
+    call(Shoebox.internal.getImageInfo(id)).map { r =>
+      r.json.as[ImageInfo]
+    }
+  }
+
+  def saveImageInfo(imgInfo:ImageInfo)(implicit timeout:Int):Future[ImageInfo] = {
+    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+      r.json.as[ImageInfo]
     }
   }
 
