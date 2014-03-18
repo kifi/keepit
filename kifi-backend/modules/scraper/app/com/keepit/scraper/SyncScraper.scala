@@ -20,6 +20,8 @@ import com.keepit.learning.porndetector.SlidingWindowPornDetector
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.Lang
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Future
 
 
 // straight port from original (local) code
@@ -32,7 +34,8 @@ class SyncScraper @Inject() (
   articleStore: ArticleStore,
   s3ScreenshotStore: S3ScreenshotStore,
   pornDetectorFactory: PornDetectorFactory,
-  helper: SyncShoeboxDbCallbacks
+  helper: SyncShoeboxDbCallbacks,
+  shoeboxClient: ShoeboxServiceClient
 ) extends Logging {
 
   implicit val myConfig = config
@@ -216,14 +219,18 @@ class SyncScraper @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            SafeFuture {
-              if (contentLang == Lang("en") && content.size > 100) {
-                val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-                detector.isPorn(content.take(100000)) match {
-                  case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
-                  case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
-                  case _ =>
+            isNonSensitive(normalizedUri.url).map { nonSensitive =>
+              if (!nonSensitive) {
+                if (contentLang == Lang("en") && content.size > 100) {
+                  val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+                  detector.isPorn(content.take(100000)) match {
+                    case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+                    case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+                    case _ =>
+                  }
                 }
+              } else {
+                log.info(s"uri ${normalizedUri} is exempted from sensitive check!")
               }
             }
 
@@ -336,5 +343,12 @@ class SyncScraper @Inject() (
       absoluteTargetUrl <- URI.absoluteUrl(baseUrl, actualTargetUrl)
       parsedTargetUri <- URI.safelyParse(absoluteTargetUrl)
     } yield parsedTargetUri.toString()
+  }
+
+  private def isNonSensitive(url: String): Future[Boolean] = {
+    shoeboxClient.getAllURLPatterns().map{ patterns =>
+      val pat = patterns.find(rule => url.matches(rule.pattern))
+      pat.map{_.nonSensitive}.getOrElse(false)
+    }
   }
 }

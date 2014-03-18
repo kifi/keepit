@@ -26,6 +26,7 @@ import scala.concurrent.forkjoin.{ForkJoinTask, ForkJoinPool}
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class TracedRunnable[T](name:String, cb: => T) extends Runnable { // WIP
 
@@ -131,7 +132,8 @@ class QueuedScrapeProcessor @Inject() (
   asyncHelper: ShoeboxDbCallbacks,
   schedulingProperties: SchedulingProperties,
   pornDetectorFactory: PornDetectorFactory,
-  helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
+  helper: SyncShoeboxDbCallbacks,
+  shoeboxClient: ShoeboxServiceClient) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 120000 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
@@ -245,7 +247,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, pornDetectorFactory, helper)
+  private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, s3ScreenshotStore, pornDetectorFactory, helper, shoeboxClient)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
