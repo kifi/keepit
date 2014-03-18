@@ -9,7 +9,8 @@
   var WORD_DELIMITER = /[\s,.]+/;
   var WORD_DELIMITER_CAPTURING = /([\s,.]+)/;
   var LOCALE_COMPARE_OPTIONS = {usage: 'search', sensitivity: 'base'};
-  var COLLATOR = typeof Intl === 'undefined' ? null : new Intl.Collator(navigator.language, LOCALE_COMPARE_OPTIONS);
+  var COLLATOR = typeof Intl === 'undefined' ? null :
+    new Intl.Collator(typeof navigator === 'undefined' ? 'en-US' : navigator.language, LOCALE_COMPARE_OPTIONS);
 
   /**
    * Tests whether the first string starts with the second string in locale comparison.
