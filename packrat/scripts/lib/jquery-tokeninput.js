@@ -88,41 +88,41 @@
 
   // Additional public (exposed) methods
   var methods = {
-    init: function(findItems, settings) {
+    init: function (findItems, settings) {
       return this.each(function () {
-        $.data(this, 'tokenInputObject', new $.TokenList(this, findItems, $.extend({}, DEFAULT_SETTINGS, settings)));
+        $.data(this, 'tokenInput', new $.TokenList(this, findItems, $.extend({}, DEFAULT_SETTINGS, settings)));
       });
     },
-    clear: function() {
-      this.data('tokenInputObject').clear();
+    clear: function () {
+      this.data('tokenInput').clear();
       return this;
     },
-    add: function(item) {
-      this.data('tokenInputObject').add(item);
+    add: function (item) {
+      this.data('tokenInput').add(item);
       return this;
     },
-    remove: function(item) {
-      this.data('tokenInputObject').remove(item);
+    remove: function (item) {
+      this.data('tokenInput').remove(item);
       return this;
     },
-    get: function() {
-      return this.data('tokenInputObject').getTokens();
+    get: function () {
+      return this.data('tokenInput').getTokens();
     },
-    endSearch: function(actions) {
-      return this.data('tokenInputObject').endSearch(actions);
+    endSearch: function (actions) {
+      return this.data('tokenInput').endSearch(actions);
     },
-    toggleDisabled: function(disable) {
-      this.data('tokenInputObject').toggleDisabled(disable);
+    toggleDisabled: function (disable) {
+      this.data('tokenInput').toggleDisabled(disable);
       return this;
     },
     flushCache: function () {
-      this.data('tokenInputObject').flushCache();
+      this.data('tokenInput').flushCache();
       return this;
     },
     destroy: function () {
-      if (this.data('tokenInputObject')) {
-        this.data('tokenInputObject').destroy();
-        this.removeData('tokenInputObject');
+      if (this.data('tokenInput')) {
+        this.data('tokenInput').destroy();
+        this.removeData('tokenInput');
       }
       return this;
     }
