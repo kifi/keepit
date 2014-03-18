@@ -18,10 +18,13 @@ class ScraperCallbackHelper @Inject()(
   urlPatternRuleRepo:UrlPatternRuleRepo,
   normUriRepo:NormalizedURIRepo,
   pageInfoRepo:PageInfoRepo,
+  imageInfoRepo:ImageInfoRepo,
   scrapeInfoRepo:ScrapeInfoRepo
   ) extends Logging {
 
-  private val lock = new ReentrantLock()
+  private val assignLock    = new ReentrantLock()
+  private val pageInfoLock  = new ReentrantLock()
+  private val imageInfoLock = new ReentrantLock()
 
   def withLock[T](lock:ReentrantLock)(f: => T) = {
     try {
@@ -33,7 +36,7 @@ class ScraperCallbackHelper @Inject()(
   }
 
   def assignTasks(zkId:Id[ScraperWorker], max:Int):Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", {r:Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}"}) {
-    withLock(lock) {
+    withLock(assignLock) {
       val builder = Seq.newBuilder[ScrapeRequest]
       val res = db.readWrite(attempts = 2) { implicit rw =>
         val limit = if (max < 10) max * 2 else max
@@ -59,6 +62,22 @@ class ScraperCallbackHelper @Inject()(
         log.warn(s"[assignTask($zkId,$max)] 0 tasks assigned") // can be more aggressive
       }
       res.take(max)
+    }
+  }
+
+  def saveImageInfo(info:ImageInfo):ImageInfo = {
+    withLock(imageInfoLock) {
+      db.readWrite(attempts = 3) { implicit s =>
+        imageInfoRepo.save(info)
+      }
+    }
+  }
+
+  def savePageInfo(info:PageInfo) = {
+    withLock(pageInfoLock) {
+      db.readWrite(attempts = 3) { implicit s =>
+        pageInfoRepo.save(info)
+      }
     }
   }
 
