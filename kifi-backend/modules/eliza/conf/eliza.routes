@@ -18,7 +18,7 @@ POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.M
 # Mobile V1
 ##########################################
 
-GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
+GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
 POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 POST    /m/1/eliza/messages/:parentId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
 GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
@@ -27,10 +27,6 @@ GET     /m/1/eliza/thread/:threadId       @com.keepit.eliza.controllers.mobile.M
 GET     /m/1/eliza/getThread              @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThread(threadId: String)
 GET     /m/1/eliza/getThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThreadsByUrl(url: String)
 GET     /m/1/eliza/hasThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.hasThreadsByUrl(url: String)
-
-
-## the following route is an old convention, keep around until eduardo say its ok to kill
-GET     /eliza/m/1/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int)
 
 ##########################################
 # INTERNAL ROUTES/Eliza
