@@ -180,32 +180,46 @@ class SearchCommanderImpl @Inject() (
 
     val langProfFuture = mainSearcherFactory.getLangProfileFuture(shards.shards, userId, 3)
 
-    var acceptLangs = acceptLangCodes.toSet.flatMap{ code: String =>
-      val langCode = code.substring(0,2)
-      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
-      else {
-        val lang = Lang(langCode)
-        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+    val acceptLangs = {
+      val langs = acceptLangCodes.toSet.flatMap{ code: String =>
+        val langCode = code.substring(0,2)
+        if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+        else {
+          val lang = Lang(langCode)
+          if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+        }
+      }
+      if (langs.isEmpty) {
+        log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+        Set(Lang("en"))
+      } else {
+        langs
       }
     }
 
-    if (acceptLangs.isEmpty) {
-      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-      acceptLangs = Set(Lang("en"))
-    }
-
     val langProf = monitoredAwait.result(langProfFuture, 10 seconds, "slow getting lang profile")
+    val profLangs = langProf.keySet
 
-    val firstLangSet = acceptLangs ++ langProf.keySet
+    var strongCandidates = acceptLangs ++ profLangs
 
-    val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(firstLangSet, 0.9d))
-    val secondLangSet = (firstLangSet - firstLang)
-    val secondLang = if (secondLangSet.nonEmpty) {
-      Some(LangDetector.detectShortText(query, getLangsPriorProbabilities(secondLangSet, 1.0d)))
+    val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 0.9d))
+    strongCandidates -= firstLang
+    val secondLang = if (strongCandidates.nonEmpty) {
+      Some(LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 1.0d)))
     } else {
       None
     }
-    (firstLang, secondLang)
+
+    // we may switch first/second langs
+    if (acceptLangs.contains(firstLang)) {
+      (firstLang, secondLang)
+    } else if (acceptLangs.contains(secondLang.get)) {
+      (secondLang.get, Some(firstLang))
+    } else if (profLangs.contains(firstLang)) {
+      (firstLang, secondLang)
+    } else {
+      (secondLang.get, Some(firstLang))
+    }
   }
 
   private def getSearchFilter(
