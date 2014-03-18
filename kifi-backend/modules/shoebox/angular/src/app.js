@@ -88,6 +88,7 @@ angular.module('kifi', [
       local: local,
       dev: dev,
       production: !dev,
+      origin: origin,
       xhrBase: origin + '/site',
       xhrBaseEliza: origin.replace('www', 'eliza') + '/eliza/site',
       xhrBaseSearch: origin.replace('www', 'search') + '/search',

@@ -557,18 +557,25 @@ a.profile-nw
   background-position: -128px 0
 
 .profile-nw.nw-facebook
-  background-color: #637ab8
+  background-color: #dbdee3
 
 .profile-nw.nw-facebook:hover
 .profile-nw.nw-facebook:focus
   background-color: #7087C5
 
+.connected .nw-facebook
+  background-color: #637ab8
+
 .profile-nw.nw-facebook:active
   background-color: #4A619F
 
 .profile-nw.nw-linkedin
-  background-color: #4f83c3
   background-position: -60px 0
+  background-color: #dbdee3
+
+.connected .nw-linkedin
+  background-color: #4f83c3
+
 
 .profile-nw.nw-linkedin:hover
 .profile-nw.nw-linkedin:focus
@@ -597,13 +604,11 @@ a.profile-nw
 .profile-nw.nw-email:active
   background-color: #C84F50
 
-.not-connected a.profile-nw
-  background-color: #dbdee3
-
-.not-connected .profile-nw-connected
-  visibility: hidden
+.connected .profile-nw-connected
+  visibility: visible
 
 .profile-nw-connected
+  visibility: hidden
   position: relative
   display: block
   color: #818691
