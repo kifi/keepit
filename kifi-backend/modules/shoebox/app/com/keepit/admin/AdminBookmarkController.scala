@@ -33,6 +33,7 @@ class AdminBookmarksController @Inject() (
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
   pageInfoRepo: PageInfoRepo,
+  imageInfoRepo: ImageInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   s3ScreenshotStore: S3ScreenshotStore,
   clock: Clock)
@@ -41,13 +42,12 @@ class AdminBookmarksController @Inject() (
   implicit val dbMasterSlave = Database.Slave
 
   private def editBookmark(bookmark: Bookmark)(implicit request: AuthenticatedRequest[AnyContent]) = {
-    @inline def cb(pageInfo:PageInfo):Unit = db.readWrite { implicit rw => pageInfoRepo.save(pageInfo) }
     db.readOnly { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
       val pageInfoOpt = pageInfoRepo.getByUri(bookmark.uriId)
-      s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(cb)) map { imgUrl =>
+      s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrl =>
         val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imgUrl.getOrElse(""), screenshotUrl))
       }

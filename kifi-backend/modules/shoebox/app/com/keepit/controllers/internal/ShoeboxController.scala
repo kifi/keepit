@@ -59,6 +59,7 @@ class ShoeboxController @Inject() (
   emailAddressRepo: EmailAddressRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
+  imageInfoRepo:ImageInfoRepo,
   pageInfoRepo:PageInfoRepo,
   friendRequestRepo: FriendRequestRepo,
   userValueRepo: UserValueRepo,
@@ -388,6 +389,24 @@ class ShoeboxController @Inject() (
     }
     log.info(s"[getScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=$info")
     Ok(Json.toJson(info))
+  }
+
+  def getImageInfo(id:Id[ImageInfo]) = SafeAsyncAction { request =>
+    val imageInfo = db.readOnly { implicit ro =>
+      imageInfoRepo.get(id)
+    }
+    log.info(s"[getImageInfo($id)] result=$imageInfo")
+    Ok(Json.toJson(imageInfo))
+  }
+
+  def saveImageInfo() = SafeAsyncAction(parse.json) { request =>
+    val json = request.body
+    val info = json.as[ImageInfo]
+    val saved = db.readWrite(attempts = 3) { implicit s =>
+      imageInfoRepo.save(info)
+    }
+    log.info(s"[saveImageInfo] result=$saved")
+    Ok(Json.toJson(saved))
   }
 
   def savePageInfo() = SafeAsyncAction(parse.json) { request =>

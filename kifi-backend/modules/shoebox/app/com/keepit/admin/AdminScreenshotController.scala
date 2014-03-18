@@ -24,6 +24,7 @@ class AdminScreenshotController @Inject() (
   db: Database,
   bookmarkRepo: BookmarkRepo,
   pageInfoRepo: PageInfoRepo,
+  imageInfoRepo: ImageInfoRepo,
   uriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
@@ -58,7 +59,15 @@ class AdminScreenshotController @Inject() (
     Ok(html.admin.images())
   }
 
-  def imageInfos(uriId:Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
+  def imageInfos() = AdminHtmlAction.authenticated { request =>
+    val imageInfos = db.readOnly { implicit ro =>
+      imageInfoRepo.page(page = 0, size = 50).sortBy(_.id.get.id)
+    }
+    // add pagination
+    Ok(html.admin.imageInfos(imageInfos))
+  }
+
+  def imagesForUri(uriId:Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
     Try {
       db.readOnly { implicit ro =>
         uriRepo.get(uriId)
@@ -66,18 +75,13 @@ class AdminScreenshotController @Inject() (
     } match {
       case Success(uri) =>
         s3ScreenshotStore.getImageInfos(uri) map { infos =>
-          Ok(html.admin.imageInfos(uri, s3ScreenshotStore.getScreenshotUrl(uri), infos))
+          Ok(html.admin.imagesForUri(uri, s3ScreenshotStore.getScreenshotUrl(uri), infos))
         }
       case Failure(t) =>
         Future.successful(BadRequest(s"uriId($uriId) not found"))
     }
   }
 
-  private def updatePageInfo(pageInfo:PageInfo):Unit = {
-    db.readWrite { implicit rw =>
-      pageInfoRepo.save(pageInfo)
-    }
-  }
   val compareForm = Form("uriIds" -> text)
   def imagesCompare() = AdminHtmlAction.authenticatedAsync { implicit request =>
     try {
@@ -89,7 +93,7 @@ class AdminScreenshotController @Inject() (
           (uri, pageInfoOpt)
         }
         val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri)
-        s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(updatePageInfo)) map { imgUrl =>
+        s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrl =>
           (uri, screenshotUrl, imgUrl)
         }
       }
