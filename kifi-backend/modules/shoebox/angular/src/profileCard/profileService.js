@@ -3,13 +3,14 @@
 angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', '$FB',
-  function ($http, env, $q, util, routeService, $FB) {
+  '$http', 'env', '$q', 'util', 'routeService', '$FB', '$window',
+  function ($http, env, $q, util, routeService, $FB, $window) {
 
     var me = {
       seqNum: 0
     };
-    var addressBooks = [];
+    var addressBooks = [],
+        networks = [];
 
     function updateMe(data) {
       angular.forEach(data, function (val, key) {
@@ -28,7 +29,6 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
     }
 
     function getMe() {
-      // todo: add mechanism to combine concurrent outgoing requests. useful here.
       return me.seqNum > 0 ? $q.when(me) : fetchMe();
     }
 
@@ -175,13 +175,41 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       });
     }
 
-    function getFacebookStatus() {
-      return $FB.getLoginStatus().then(function (res) {
-        me.facebookStatusResponse = res || null;
-        me.facebookStatus = res && res.status || null;
+    function getNetworks() {
+      $http.get(routeService.networks).then(function (res) {
+        util.replaceArrayInPlace(networks, res.data);
+        me.facebookConnected = !!_.find(networks, function (n) {
+          return n.network === 'facebook';
+        });
+        me.linkedInConnected = !!_.find(networks, function (n) {
+          return n.network === 'linkedin';
+        });
         me.seqNum++;
-        return res;
+        return res.data;
       });
+    }
+
+    var social = {
+      connectFacebook: function () {
+        $window.location.href = routeService.linkNetwork('facebook');
+      },
+      connectLinkedIn: function () {
+        $window.location.href = routeService.linkNetwork('linkedin');
+      },
+      disconnectFacebook: function () {
+        return $http.post(routeService.disconnectNetwork('facebook')).then(function (res) {
+          me.facebookConnected = false;
+          me.seqNum++;
+          return res;
+        });
+      },
+      disconnectLinkedIn: function () {
+        return $http.post(routeService.disconnectNetwork('linkedin')).then(function (res) {
+          me.linkedInConnected = false;
+          me.seqNum++;
+          return res;
+        });
+      }
     }
 
     return {
@@ -201,7 +229,9 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
       sendChangePassword: sendChangePassword,
-      getFacebookStatus: getFacebookStatus
+      social: social,
+      getNetworks: getNetworks,
+      networks: networks
     };
   }
 ]);

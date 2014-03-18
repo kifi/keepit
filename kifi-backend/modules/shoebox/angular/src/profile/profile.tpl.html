@@ -62,16 +62,19 @@
         <h3>Connect your social networks to Kifi</h3>
         <h5>Find which of your friends are using Kifi</h5>
         <ul class="profile-networks">
-          <li kf-facebook-connect-button data-network="facebook" ng-class="{ 'not-connected': !isFacebookConnected() }">
-            <a class="profile-nw nw-facebook" href="javascript:" ng-click="connectFacebook()">Facebook</a>
+          <li kf-facebook-connect-button data-network="facebook" ng-class="{ 'connected': isFacebookConnected }">
+            <a class="profile-nw nw-facebook" href="https://www.kifi.com/link/facebook" ng-click="connectFacebook()" ng-show="!isFacebookConnected">Facebook</a>
+            <a class="profile-nw nw-facebook" ng-href="{{fbProfileUrl}}" target="_blank" ng-show="isFacebookConnected">Facebook</a>
             <span class="profile-nw-connected">
               <span class="profile-placeholder">&nbsp;</span>
               <span class="profile-connected">Connected</span>
               <a class="profile-disconnect" href="javascript:" ng-click="disconnectFacebook()">Disconnect?</a>
             </span>
           </li>
-          <li kf-linkedin-connect-button data-network="linkedin" ng-class="{ 'not-connected': !isLinkedInConnected() }">
-            <a class="profile-nw nw-linkedin" href="javascript:" ng-click="connectLinkedIn()">LinkedIn</a>
+
+          <li kf-linkedin-connect-button data-network="linkedin" ng-class="{ 'connected': isLinkedInConnected }">
+            <a class="profile-nw nw-linkedin" href="https://www.kifi.com/link/linkedin" ng-click="connectFacebook()" ng-show="!isLinkedInConnected">LinkedIn</a>
+            <a class="profile-nw nw-linkedin" ng-href="{{liProfileUrl}}" target="_blank" ng-show="isLinkedInConnected">LinkedIn</a>
             <span class="profile-nw-connected">
               <span class="profile-placeholder">&nbsp;</span>
               <span class="profile-connected">Connected</span>
