@@ -117,17 +117,7 @@ class ExtDeepLinkController @Inject() (
   }
 
   // TODO: integrate this view into the logic/flow above (replace iphoneDeeplink)
-  def handleIPhoneTempForDev(tokenString: String) = HtmlAction(authenticatedAction = { request =>
-    if (request.experiments.contains(ExperimentType.ADMIN)) {
-      Ok(views.html.mobile.iPhoneLink())
-    } else {
-      NotFound("")
-    }
-  }, unauthenticatedAction = { request =>
-    if (request.domain == "dev.ezkeep.com") {
-      Ok(views.html.mobile.iPhoneLink())
-    } else {
-      NotFound("")
-    }
-  })
+  def handleIPhoneTempForDev(tokenString: String) = Action { request =>
+    Ok(views.html.mobile.iPhoneLink())
+  }
 }
