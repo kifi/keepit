@@ -6,7 +6,6 @@ import com.google.inject.{Provider, Provides, Singleton}
 import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.search._
 import com.amazonaws.auth.BasicAWSCredentials
-import com.keepit.learning.topicmodel._
 import com.keepit.common.logging.AccessLog
 
 trait StoreModule extends ScalaModule {
@@ -48,34 +47,6 @@ trait ProdStoreModule extends StoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
     new S3KifInstallationStoreImpl(bucketName, amazonS3Client, accessLog)
   }
-
-  @Singleton
-  @Provides
-  def wordTopicStore(amazonS3Client: AmazonS3, accessLog: AccessLog): WordTopicStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
-    new S3WordTopicStoreImpl(bucketName, amazonS3Client, accessLog)
-  }
-
-  @Singleton
-  @Provides
-  def wordTopicBlobStore(amazonS3Client: AmazonS3, accessLog: AccessLog): WordTopicBlobStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
-    new S3WordTopicBlobStoreImpl(bucketName, amazonS3Client, accessLog)
-  }
-
-  @Singleton
-  @Provides
-  def wordStore(amazonS3Client: AmazonS3, accessLog: AccessLog): WordStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
-    new S3WordStoreImpl(bucketName, amazonS3Client, accessLog)
-  }
-
-  @Singleton
-  @Provides
-  def topicWordsStore(amazonS3Client: AmazonS3, accessLog: AccessLog): TopicWordsStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
-    new S3TopicWordsStoreImpl(bucketName, amazonS3Client, accessLog)
-  }
 }
 
 abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
@@ -116,32 +87,4 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
     whenConfigured("amazon.s3.install.bucket")(
       prodStoreModule.kifiInstallationStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryKifInstallationStoreImpl())
-
-  @Singleton
-  @Provides
-  def wordTopicStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): WordTopicStore =
-    whenConfigured("amazon.s3.wordTopic.bucket")(
-      prodStoreModule.wordTopicStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryWordTopicStoreImpl())
-
-  @Singleton
-  @Provides
-  def wordTopicBlobStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): WordTopicBlobStore =
-    whenConfigured("amazon.s3.wordTopic.bucket")(
-      prodStoreModule.wordTopicBlobStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryWordTopicBlobStoreImpl())
-
-  @Singleton
-  @Provides
-  def wordStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): WordStore =
-    whenConfigured("amazon.s3.wordTopic.bucket")(
-      prodStoreModule.wordStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryWordStoreImpl())
-
-  @Singleton
-  @Provides
-  def topicWordsStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): TopicWordsStore =
-    whenConfigured("amazon.s3.wordTopic.bucket")(
-      prodStoreModule.topicWordsStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryTopicWordsStoreImpl())
 }

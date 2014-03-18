@@ -47,7 +47,7 @@ class ResultDecorator(
     val hits = result.hits
     val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users.toSeq)
-    val expertsFuture = if (showExperts) { suggestExperts(hits, shoeboxClient) } else { Promise.successful(List.empty[Id[User]]).future }
+    val expertsFuture = Promise.successful(List.empty[Id[User]]).future  // TODO: revisit
 
     val highlightedHits = highlight(hits)
 
@@ -85,15 +85,6 @@ class ResultDecorator(
     hits.map{ h =>
       val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
       h.set("basicUsers", JsArray(basicUsers))
-    }
-  }
-
-  private def suggestExperts(hits: Seq[DetailedSearchHit], shoeboxClient: ShoeboxServiceClient): Future[Seq[Id[User]]] = {
-    val urisAndUsers = hits.map{ hit => (hit.uriId, hit.users) }
-    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
-      Promise.successful(List.empty[Id[User]]).future
-    } else{
-      shoeboxClient.suggestExperts(urisAndUsers)
     }
   }
 }
