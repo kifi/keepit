@@ -433,6 +433,13 @@ body.kifi-snapshot-root {
 .kifi-ti-dropdown-tip:not(:first-child) {
   border-top: 1px solid #ccc;
 }
+.kifi-ti-dropdown-tip.kifi-ti-dropdown-item-selected {
+  background-color: #fff2c5;
+  color: #000;
+}
+.kifi-ti-dropdown-searching .kifi-ti-dropdown-tip {
+  display: none;
+}
 .kifi-ti-dropdown-tip::before {
   position: static;
   display: inline-block;
@@ -442,10 +449,6 @@ body.kifi-snapshot-root {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAxklEQVQ4y2NgwAOeXJlVCMTFDOQAoEZOIH4GxM9BbHIMyATi/1CcSapmFiC+i2QAiM1CigFRSJphOAqXYg0gDgXiGiBeAsSngPgrFgO+QuWWQNWC9GiADDiLRTGx+AzIADEgvkaG5qtALArzhiQQ3yBB802QHvSwkAbi20RoBqmRwRWgvkQY4Icv+vKJMCAfnwEziTBgJj4DDqMp3gfFyGKH8RnwFimKPJDEPaBiILm3uDRzA/FDIE4CYiYs8kxQOZAabpg4AHfM2MuHHzKuAAAAAElFTkSuQmCC);
   background-size: 16px;
   margin-right: 6px;
-}
-.kifi-ti-dropdown-tip.kifi-ti-dropdown-item-selected {
-  background-color: #fff2c5;
-  color: #000;
 }
 .kifi-ti-tip-invite {
   text-decoration: underline;

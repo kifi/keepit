@@ -10,9 +10,10 @@ var initCompose = (function() {
   api.port.on({
     nonusers: function (o) {
       $composes.each(function () {
-        var $f = $(this);
-        if (o.q === $f.find('.kifi-ti-token-for-input>input').val().trim()) {
-          $f.find('.kifi-compose-to').tokenInput('endSearch', constructActions(o.nonusers));
+        var search = $.data(this, 'search');
+        if (search && search.q === o.q) {
+          $.removeData(this, 'search');
+          search.withResults(o.nonusers.concat(['tip']), false, o.error);
         }
       });
     }
@@ -113,23 +114,15 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    $t.tokenInput(function search(query, cachedResults, withResults) {
-      var nWanted = 4, nHave = cachedResults ? cachedResults.length : 0;
-      if (nWanted > nHave) {
-        api.port.emit('search_friends', {
-          q: query,
-          n: nWanted,
-          nHave: nHave,
-          includeSelf: !$t.tokenInput('get').length
-        }, function (results) {
-          withResults(results);
-          if (results.length >= nWanted) {
-            $t.tokenInput('endSearch', constructActions([]));
-          }
-        });
-      } else {
-        setTimeout($.fn.tokenInput.bind($t, 'endSearch', constructActions([])));
-      }
+    $t.tokenInput(function search(numTokens, query, withResults) {
+      api.port.emit('search_friends', {q: query, n: 4, includeSelf: numTokens === 0}, function (o) {
+        if (o.results.length || !o.searching) {  // wait for more if none yet
+          withResults(o.results.concat(o.searching ? [] : ['tip']), o.searching);
+        }
+        if (o.searching) {
+          $f.data('search', {q: query, withResults: withResults});
+        }
+      });
     }, {
       placeholder: 'To',
       resultsLimit: 4,
@@ -137,15 +130,42 @@ var initCompose = (function() {
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
       classForRoots: 'kifi-root',
-      formatResult: function (f) {
-        var html = [
-          '<li style="background-image:url(//', cdnBase, '/users/', f.id, '/pics/100/', f.pictureName, ')">',
-          Mustache.escape(f.parts[0])];
-        for (var i = 1; i < f.parts.length; i++) {
-          html.push(i % 2 ? '<b>' : '</b>', Mustache.escape(f.parts[i]));
+      formatResult: function (res) {
+        if (res.pictureName) {
+          var html = [
+            '<li class="kifi-ti-dropdown-item-autoselect" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
+            Mustache.escape(res.parts[0])];
+          for (var i = 1; i < res.parts.length; i++) {
+            html.push(i % 2 ? '<b>' : '</b>', Mustache.escape(res.parts[i]));
+          }
+          html.push('</li>');
+          return html.join('');
+        } else if (res.id) {
+          return [
+              '<li class="kifi-ti-dropdown-invite-social', res.invited ? ' kifi-ti-dropdown-invited' : '', '"',
+              ' style="background-image:url(', Mustache.escape(res.pic || 'https://www.kifi.com/assets/img/ghost-linkedin.100.png'), ')">',
+              '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
+              '<div class="kifi-ti-dropdown-invite-sub">', res.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
+              '</li>'].join('');
+        } else if (res.email) {
+          return [
+              '<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-ti-dropdown-invited' : '', '">',
+              '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
+              '<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(res.email), '</div>',
+              '</li>'].join('');
+        } else if (res === 'tip') {
+          return '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>';
         }
-        html.push('</li>');
-        return html.join('');
+      },
+      onSelect: function (res) {
+        if (!res.pictureName) {
+          if (res.id || res.email) {
+            handleInvite(res);
+          } else if (res === 'tip') {
+            api.port.emit('invite_friends', 'composePane');
+          }
+          return false;
+        }
       },
       onAdd: function () {
         if (defaultText && !$d.text()) {
@@ -381,40 +401,8 @@ var initCompose = (function() {
     }
   }
 
-  function constructActions(nonusers) {
-    var actions = nonusers.map(function (nu) {
-      if (nu.email) {
-        return {
-          html: [
-            '<li class="kifi-ti-dropdown-invite-email', nu.invited ? ' kifi-ti-dropdown-invited' : '', '">',
-            '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(nu.name), '</div>',
-            '<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(nu.email), '</div>',
-            '</li>'].join(''),
-          handle: handleInvite,
-          nonuser: nu
-        };
-      } else {
-        return {
-          html: [
-            '<li class="kifi-ti-dropdown-invite-social', nu.invited ? ' kifi-ti-dropdown-invited' : '', '"',
-            ' style="background-image:url(', Mustache.escape(nu.pic || 'https://www.kifi.com/assets/img/ghost-linkedin.100.png'), ')">',
-            '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(nu.name), '</div>',
-            '<div class="kifi-ti-dropdown-invite-sub">', nu.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
-            '</li>'].join(''),
-          handle: handleInvite,
-          nonuser: nu
-        };
-      }
-    });
-    actions.push({
-      html: '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>',
-      handle: api.port.emit.bind(api.port, 'invite_friends', 'composePane')
-    });
-    return actions;
-  }
-
-  function handleInvite() {
-    api.port.emit('invite_friend', {who: this.nonuser, whence: 'composePane'}, function (data) {
+  function handleInvite(res) {
+    api.port.emit('invite_friend', {who: res, whence: 'composePane'}, function (data) {
       // TODO: update UI to show invited?
     });
   }

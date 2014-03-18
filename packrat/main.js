@@ -940,31 +940,34 @@ api.port.on({
     respond(webBaseUri());
   },
   search_friends: function(data, respond, tab) {
-    var nHave = data.nHave || 0;
-    if (!nHave) {
-      var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-      var results;
-      if (friendSearchCache) {
-        results = friendSearchCache.get(data);
-      } else {
-        friendSearchCache = new (global.FriendSearchCache || require('./friend_search_cache').FriendSearchCache)(3600000);
-      }
-      if (!results) {
-        var candidates = friendSearchCache.get({includeSelf: data.includeSelf, q: data.q.substr(0, data.q.length - 1)}) ||
-          (data.includeSelf ?
-             friends ? [me].concat(friends) : [me, SUPPORT] :
-             friends || [SUPPORT]);
-        results = sf.filter(data.q, candidates, getName);
-        friendSearchCache.put(data, results);
-      }
-      nHave = results.length;
-      respond((nHave > data.n ? results.slice(0, data.n) : results).map(toFriendSearchResult, {sf: sf, q: data.q}));
+    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    var results;
+    if (friendSearchCache) {
+      results = friendSearchCache.get(data);
+    } else {
+      friendSearchCache = new (global.FriendSearchCache || require('./friend_search_cache').FriendSearchCache)(3600000);
     }
-    if (nHave < data.n) {
-      ajax('GET', '/ext/nonusers', {q: data.q, n: data.n - nHave}, function (nonusers) {
+    if (!results) {
+      var candidates = friendSearchCache.get({includeSelf: data.includeSelf, q: data.q.substr(0, data.q.length - 1)}) ||
+        (data.includeSelf ?
+           friends ? [me].concat(friends) : [me, SUPPORT] :
+           friends || [SUPPORT]);
+      results = sf.filter(data.q, candidates, getName);
+      friendSearchCache.put(data, results);
+    }
+    if (results.length > data.n) {
+      results = results.slice(0, data.n);
+    }
+    var nMoreDesired = data.n - results.length;
+    respond({
+      results: results.map(toFriendSearchResult, {sf: sf, q: data.q}),
+      searching: nMoreDesired > 0
+    });
+    if (nMoreDesired) {
+      ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
         api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: nonusers});
       }, function () {
-        api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: []});
+        api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: [], error: true});
       });
     }
   },

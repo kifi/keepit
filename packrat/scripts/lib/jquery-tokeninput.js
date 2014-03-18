@@ -1,9 +1,5 @@
 // Tokenizing Autocomplete Text Entry 1.6.1, heavily modified
-// https://github.com/loopj/jquery-tokeninput (original)
-//
-// Copyright (c) 2009 James Smith (http://loopj.com)
-// Licensed jointly under the GPL and MIT licenses,
-// choose which one suits your project best!
+/*! adapted from github.com/loopj/jquery-tokeninput (c) 2009 James Smith, MIT license */
 
 (function ($) {
 
@@ -15,7 +11,6 @@
     disabled: false,
 
     // Results (in dropdown)
-    resultsLimit: null,
     formatResult: function (item) {
       return '<li>' + htmlEscape(item.name) + '</li>';
     },
@@ -30,6 +25,7 @@
     },
 
     // Callbacks
+    onSelect: null,
     onAdd: null,
     onDelete: null
   };
@@ -45,6 +41,7 @@
     dropdown: 'dropdown',
     dropdownSearching: 'dropdown-searching',
     dropdownItem: 'dropdown-item',
+    dropdownItemAutoSelect: 'dropdown-item-autoselect',
     dropdownItemSelected: 'dropdown-item-selected',
   };
 
@@ -107,9 +104,6 @@
     },
     get: function () {
       return this.data('tokenInput').getTokens();
-    },
-    endSearch: function (actions) {
-      return this.data('tokenInput').endSearch(actions);
     },
     toggleDisabled: function (disable) {
       this.data('tokenInput').toggleDisabled(disable);
@@ -227,7 +221,7 @@
           case KEY.NUMPAD_ENTER:
           case KEY.COMMA:
             if (selectedDropdownItem) {
-              handleItemChosen($.data(selectedDropdownItem, 'tokeninput'));
+              handleItemChosen(selectedDropdownItem);
               return false;
             } else {
               this.value = '';
@@ -351,22 +345,6 @@
       return tokens.slice();
     };
 
-    this.endSearch = function (actions) {
-      if ($dropdown.hasClass(classes.dropdownSearching)) {
-        $dropdown.removeClass(classes.dropdownSearching);
-        if (actions && actions.length) {
-          var $ul = $dropdown.find('ul');
-          for (var i = 0; i < actions.length; i++) {
-            var action = actions[i];
-            $(action.html)
-              .addClass(classes.dropdownItem)
-              .data('tokeninput', action)
-              .appendTo($ul);
-          }
-        }
-      }
-    };
-
     this.toggleDisabled = function (disable) {
       toggleDisabled(disable);
     };
@@ -416,10 +394,9 @@
       }
     }
 
-    function handleItemChosen(item) {
-      if (item.handle) {
-        item.handle();
-      } else {
+    function handleItemChosen(el) {
+      var item = $.data(el, 'tokeninput');
+      if (!settings.onSelect || settings.onSelect.call($hiddenInput, item) !== false) {
         addToken(item);
         $hiddenInput.change();
       }
@@ -575,58 +552,56 @@
     }
 
     function hideDropdown() {
-      // $dropdown.hide().empty().removeClass(classes.dropdownSearching);
-      // selectedDropdownItem = null;
+      $dropdown.hide().empty().removeClass(classes.dropdownSearching).removeData('q');
+      selectedDropdownItem = null;
     }
 
     function showDropdown() {
-      var offset = $tokenList.offset();
-      $dropdown.css({
-        display: '',
-        position: 'fixed',
-        top: offset.top + $tokenList.outerHeight(),
-        left: offset.left,              // TODO: use right instead of left
-        width: $tokenList.css('width')
-      });
+      if ($dropdown.css('display') === 'none') {
+        var r = $tokenList[0].getBoundingClientRect();
+        $dropdown.css({  // TODO: allow callers to specify parent and position/size dropdown
+          display: '',
+          position: 'fixed',
+          top: r.bottom,
+          right: window.innerWidth - r.right,
+          width: r.width
+        });
+      }
     }
 
-    // Populate the results dropdown with some results
-    function populateDropdown(results) {
-      $dropdown.empty().addClass(classes.dropdownSearching);
+    function populateDropdown(query, results, partial) {
+      $dropdown.empty().toggleClass(classes.dropdownSearching, !!partial).data('q', query);
       selectedDropdownItem = null;
 
-      if (results.length > settings.resultsLimit) {
-        results.length = settings.resultsLimit;
-      }
-
-      var items = results.map(function (result) {
-        return $(settings.formatResult(result))
-          .addClass(classes.dropdownItem)
-          .data('tokeninput', result)[0];
-      });
+      var items = results.map(formatDropdownItem);
       $('<ul/>')
-        .append(items)
         .on('mouseover', 'li', function () {
           selectDropdownItem(this);
         })
         .on('mousedown', 'li', function (e) {
           if (e.which === 1) {
-            handleItemChosen($.data(this, 'tokeninput'));
+            handleItemChosen(this);
             return false;
           }
         })
+        .append(items)
         .appendTo($dropdown);
-      if (items.length) {
+      if (items.length && items[0].classList.contains(classes.dropdownItemAutoSelect)) {
         selectDropdownItem(items[0]);
       }
       showDropdown();
     }
 
+    function formatDropdownItem(result) {
+      return $(settings.formatResult(result))
+        .addClass(classes.dropdownItem)
+        .data('tokeninput', result)[0];
+    }
+
     // Highlight an item in the results dropdown
     function selectDropdownItem(item) {
-      var className = classes.dropdownItemSelected;
-      $(selectedDropdownItem).removeClass(className);
-      $(selectedDropdownItem = item).addClass(className);
+      $(selectedDropdownItem).removeClass(classes.dropdownItemSelected);
+      $(selectedDropdownItem = item).addClass(classes.dropdownItemSelected);
     }
 
     // Do a search and show the "searching" dropdown
@@ -637,20 +612,40 @@
 
       var query = $tokenInput.val().trim();
       if (query.length) {
-        var results = cache.get(query);
-        findItems(query, results, receiveResults.bind(null, query));
-        if (results) {
-          populateDropdown(results);
+        var o = cache.get(query);
+        if (o && o.complete) {
+          populateDropdown(query, o.results, false);
+        } else {
+          $dropdown.addClass(classes.dropdownSearching);
+          findItems(tokens.length, query, receiveResults.bind(null, query));
         }
       } else {
         hideDropdown();
       }
     }
 
-    function receiveResults(query, results) {
-      cache.add(query, results);
-      if ($tokenInput.val().trim() === query) {
-        populateDropdown(results);
+    function receiveResults(query, results, partial, errored) {
+      if (!errored) {
+        var o = cache.get(query);
+        if (!o) {
+          cache.add(query, {results: results, complete: !partial});
+        } else if (!o.complete) {
+          Array.prototype.push.apply(o.results, results);
+          o.complete = !partial;
+        }
+      }
+
+      if ($tokenInput.val().trim() === query && $dropdown.hasClass(classes.dropdownSearching)) {
+        if ($dropdown.data('q') !== query) {
+          populateDropdown(query, results, partial);
+        } else {
+          if (!partial) {
+            $dropdown.removeClass(classes.dropdownSearching);
+          }
+          if (results.length) {
+            $dropdown.find('ul').append(results.map(formatDropdownItem));
+          }
+        }
       }
     }
 
@@ -664,11 +659,11 @@
     this.data = {};
   };
   Cache.prototype = {
-    add: function (query, results) {
-      this.data[query] = results;
+    add: function (k, v) {
+      this.data[k] = v;
     },
-    get: function (query) {
-      return this.data[query];
+    get: function (k) {
+      return this.data[k];
     },
     flush: function () {
       this.data = {};
