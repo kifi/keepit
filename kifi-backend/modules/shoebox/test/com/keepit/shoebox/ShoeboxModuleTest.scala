@@ -24,7 +24,6 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
-import com.keepit.learning.topicmodel.{TopicUpdater, FakeWordTopicModule, DevTopicModelModule}
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.scraper.{TestScraperConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -55,8 +54,6 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestSliderHistoryTrackerModule(),
         TestSearchServiceClientModule(),
         FakeDomainTagImporterModule(),
-        FakeWordTopicModule(),
-        DevTopicModelModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScrapeSchedulerModule(), // This one should not be required once the Scraper is off Shoebox
@@ -75,7 +72,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         for (c <- classes) inject(classType[Controller](c), injector)
         val bindings = injector.getAllBindings
         val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[QuartzActor],
-          classOf[MailToKeepServerSettings], classOf[MemcachedClient], classOf[TopicUpdater])
+          classOf[MailToKeepServerSettings], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
           val fail = exclude exists { badKalazz =>

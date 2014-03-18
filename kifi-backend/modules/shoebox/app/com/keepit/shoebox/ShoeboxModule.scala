@@ -32,7 +32,6 @@ abstract class ShoeboxModule(
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule,
-//  val topicModelModule: TopicModelModule, //disable for now
   val domainTagImporterModule: DomainTagImporterModule,
   val cacheModule: ShoeboxCacheModule,
   val scrapeSchedulerModule: ScrapeSchedulerModule,

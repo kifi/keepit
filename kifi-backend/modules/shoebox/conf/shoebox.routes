@@ -545,7 +545,6 @@ GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.i
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
-POST    /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.internal.ExpertRecommenderController.suggestExperts()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
