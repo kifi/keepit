@@ -8,8 +8,8 @@
 
 	var year = 2014,
 		month = 3,
-		day = 19,
-		hour = 14;
+		day = 24,
+		hour = 12;
 
 	var relTime = new Date(Date.UTC(year, month - 1, day, hour + 8, 0, 0, 0));
 	if (relTime > new Date()) {
