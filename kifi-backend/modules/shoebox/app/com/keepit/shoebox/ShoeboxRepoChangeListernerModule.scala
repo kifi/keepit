@@ -11,6 +11,7 @@ import com.keepit.model.{
 }
 
 import com.keepit.commanders.{
+  ShoeboxRichConnectionCommander,
   SocialConnectionModification,
   SocialConnectionModificationActor,
   UserConnectionModification,
@@ -27,8 +28,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.actor.ActorInstance
-
-import akka.actor.ActorSystem
+import com.keepit.common.queue.RecordInvitation
 
 case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   def configure(): Unit = {}
@@ -47,8 +47,14 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def invitationChangeListener(invitationModificationActor: ActorInstance[InvitationModificationActor]): Option[RepoModification.Listener[Invitation]] = Some({
-    repoModification => invitationModificationActor.ref ! InvitationModification(repoModification)
+  def invitationChangeListener(invitationModificationActor: ActorInstance[InvitationModificationActor], shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander): Option[RepoModification.Listener[Invitation]] = Some({
+    repoModification => {
+      val invitation = repoModification.model
+      invitation.senderUserId.foreach { userId =>
+        shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(userId, invitation.id.get, invitation.recipientSocialUserId, invitation.recipientEContactId))
+      }
+      invitationModificationActor.ref ! InvitationModification(repoModification)
+    }
   })
 
   @Provides
