@@ -28,6 +28,6 @@ CREATE TABLE image_info (
 CREATE SEQUENCE image_info_sequence;
 CREATE INDEX image_info_seq_index on image_info(seq);
 
-insert into evolutions (name, description) values('148.sql', 'adding image_info');
+insert into evolutions (name, description) values('149.sql', 'adding image_info');
 
 # --- !Downs
