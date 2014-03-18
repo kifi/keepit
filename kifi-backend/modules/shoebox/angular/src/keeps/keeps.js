@@ -12,8 +12,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         var captured = false;
         switch (e.which) {
           case 27:
-            keepService.clearState();
-            captured = true;
+            if (keepService.isPreviewed()) {
+              keepService.clearState();
+              captured = true;
+            }
             break;
           case 38: // up
           case 75: // k
