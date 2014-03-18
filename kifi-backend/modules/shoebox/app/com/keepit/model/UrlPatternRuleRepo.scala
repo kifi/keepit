@@ -15,6 +15,7 @@ trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
   def getProxy(url: String)(implicit session: RSession): Option[HttpProxy]
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String]
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization]
+  def isNonSensitive(url: String)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -35,7 +36,8 @@ class UrlPatternRuleRepoImpl @Inject() (
     def useProxy = column[Id[HttpProxy]]("use_proxy", O.Nullable)
     def normalization = column[Normalization]("normalization", O.Nullable)
     def trustedDomain = column[String]("trusted_domain", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
+    def nonSensitive = column[Boolean]("non_sensitive")
+    def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?, nonSensitive) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
   }
 
   def table(tag: Tag) = new UrlPatternRuleTable(tag)
@@ -68,4 +70,5 @@ class UrlPatternRuleRepoImpl @Inject() (
   def getProxy(url: String)(implicit session: RSession): Option[HttpProxy] = for { rule <- findFirst(url); proxyId <- rule.useProxy; proxy <- httpProxyRepo.allActive().find(_.id == Some(proxyId)) } yield proxy // todo(Léo): break up this repo amd move proxy rules to sraper db
   def getTrustedDomain(url: String)(implicit session: RSession): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String)(implicit session: RSession): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
+  def isNonSensitive(url: String)(implicit session: RSession): Boolean = findFirst(url).map{_.nonSensitive}.getOrElse(false)
 }

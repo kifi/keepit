@@ -11,7 +11,7 @@ import com.keepit.common.logging.Logging
 
 import com.google.inject.{Inject, Singleton}
 
-import com.kifi.franz.FormattedSQSQueue
+import com.kifi.franz.SQSQueue
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -30,7 +30,7 @@ import scala.util.Success
 
 @Singleton
 class LocalRichConnectionCommander @Inject() (
-    queue: FormattedSQSQueue[RichConnectionUpdateMessage],
+    queue: SQSQueue[RichConnectionUpdateMessage],
     serviceDiscovery: ServiceDiscovery,
     airbrake: AirbrakeNotifier,
     db: Database,

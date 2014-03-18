@@ -15,6 +15,7 @@ import com.keepit.common.logging.Logging
 
 class URLRenormalizeCommander @Inject()(
   db: Database,
+  airbrake: AirbrakeNotifier,
   systemAdminMailSender: SystemAdminMailSender,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
@@ -99,7 +100,7 @@ class URLRenormalizeCommander @Inject()(
     var changes = Vector.empty[(URL, Option[NormalizedURI])]
     val urls = getUrlList()
     sendStartEmail(urls)
-    val batchUrls = batch[URL](urls, batchSize = 50)     // avoid long DB write lock.
+    val batchUrls = batch[URL](urls, batchSize = 25)     // avoid long DB write lock.
 
     val originalRef =       // all active urls pointing to a uri initially
     if (clearSeq && domainRegex.isEmpty){
@@ -121,18 +122,22 @@ class URLRenormalizeCommander @Inject()(
 
     batchUrls.map { urls =>
       log.info(s"begin a new batch of renormalization. lastId from zookeeper: ${centralConfig(RenormalizationCheckKey)}")
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 2) { implicit s =>
         urls.foreach { url =>
-          needRenormalization(url) match {
-            case (true, newUriOpt) => {
-              changes = changes :+ (url, newUriOpt)
-              newUriOpt.foreach{ uri =>
-                potentialUriMigrations += url.normalizedUriId -> (potentialUriMigrations.getOrElse(url.normalizedUriId, Set()) + uri.id.get)
-                migratedRef += uri.id.get -> (migratedRef.getOrElse(uri.id.get, Set()) + url.id.get)
+          try {
+            needRenormalization(url) match {
+              case (true, newUriOpt) => {
+                changes = changes :+ (url, newUriOpt)
+                newUriOpt.foreach { uri =>
+                  potentialUriMigrations += url.normalizedUriId -> (potentialUriMigrations.getOrElse(url.normalizedUriId, Set()) + uri.id.get)
+                  migratedRef += uri.id.get -> (migratedRef.getOrElse(uri.id.get, Set()) + url.id.get)
+                }
+                if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, oldUriId = url.normalizedUriId, newUriId = uri.id.get)) }
               }
-              if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, oldUriId = url.normalizedUriId, newUriId = uri.id.get))}
+              case _ =>
             }
-            case _ =>
+          } catch {
+            case ex: Throwable => airbrake.notify(s"skipped renormalizing ${url}", ex)
           }
         }
       }

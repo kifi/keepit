@@ -1,16 +1,20 @@
 package com.keepit.controllers.website
 
+import com.google.inject.Inject
+
+import com.keepit.commanders.{InviteCommander, UserCommander}
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
+import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
-import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{InviteCommander, UserCommander}
-import com.keepit.common.db.ExternalId
-import com.keepit.common.KestrelCombinator
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -19,19 +23,12 @@ import play.api._
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
+import play.api.mvc.DiscardingCookie
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import com.keepit.commanders.{UserCommander, InviteCommander}
-import com.keepit.common.db.ExternalId
 
 import securesocial.core.{SecureSocial, Authenticator}
 
-import com.google.inject.Inject
-import com.keepit.common.net.UserAgent
-import com.keepit.heimdal._
 import scala.Some
-import play.api.mvc.DiscardingCookie
-import com.keepit.common.controller.AuthenticatedRequest
 
 class HomeController @Inject() (
   db: Database,
@@ -64,7 +61,6 @@ class HomeController @Inject() (
     Ok(fortyTwoServices.currentVersion.toString)
   }
 
-  // Start post-launch stuff!
   def about = HtmlAction(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
@@ -109,6 +105,21 @@ class HomeController @Inject() (
     }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
+  // TODO: serve this to all iPhone requests at /mobile and remove this route + action
+  def iPhoneLandingTempForDev = HtmlAction(authenticatedAction = { request =>
+    if (request.experiments.contains(ExperimentType.ADMIN)) {
+      Ok(views.html.marketing.iPhoneLanding())
+    } else {
+      NotFound("")
+    }
+  }, unauthenticatedAction = { request =>
+    if (request.request.domain == "dev.ezkeep.com") {
+      Ok(views.html.marketing.iPhoneLanding())
+    } else {
+      NotFound("")
+    }
+  })
+
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
   private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     val agentOpt = request.headers.get("User-Agent").map { agent =>
@@ -119,7 +130,6 @@ class HomeController @Inject() (
     val agentClass = if (isIphone) "iphone" else ""
     Ok(views.html.marketing.mobileLanding(false, agentClass))
   }
-  // End post-launch stuff!
 
   def home = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
 

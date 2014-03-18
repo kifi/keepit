@@ -13,6 +13,7 @@
         <th>Pattern
         <th>Test It
         <th>Do They Match?
+        <th>Non Sensitive
         <th>Do Not Scrape
         <th>Scrape via Proxy
         <th>Normalize Url Scheme
@@ -24,6 +25,9 @@
       <td class="control-group"><input type="text" class="url-pattern" name="pattern_@pattern.id.get" value="@pattern.pattern">
       <td class="control-group"><input type="text" class="url-example" name="example_@pattern.id.get" value="@pattern.example.getOrElse("")">
       <td class="url-match">
+
+      <td> <input type="checkbox" class="checkbox" name="non_sensitive_@pattern.id.get" @if(pattern.nonSensitive) {checked}> </td>
+
       <td><input type="checkbox" class="checkbox" name="unscrapable_@pattern.id.get" @if(pattern.isUnscrapable) {checked}>
       <td><select name="proxy_@pattern.id.get">
         <option name="None" value="None" @if(pattern.useProxy.isEmpty) {selected}>Don't
@@ -38,6 +42,7 @@
       <td class="control-group"><input type="text" class="url-pattern" name="new_pattern">
       <td class="control-group"><input type="text" class="url-example" name="new_example">
       <td class="url-match">
+      <td><input type="checkbox" class="checkbox" name="new_nonsensitive">
       <td><input type="checkbox" class="checkbox" name="new_unscrapable">
       <td><select name="new_proxy">
         <option name="None" value="None" selected>Don't
