@@ -92,7 +92,7 @@ main {
   height: 31px;
   vertical-align: 2px;
   margin-left: 1px;
-  -webkit-transition: -webkit-transform .5s ease-in-out;
+  -webkit-transition: -webkit-transform 1.2s ease-in-out;
   -webkit-transform: none;
   -webkit-transform-origin: left bottom;
 }
