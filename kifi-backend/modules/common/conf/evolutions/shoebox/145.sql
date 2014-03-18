@@ -14,6 +14,7 @@ CREATE TABLE page_info (
   favicon_url varchar(1024),
   image_avail boolean,
   screenshot_avail boolean,
+  image_info_id bigint(20),
 
   PRIMARY KEY (id),
   UNIQUE INDEX page_info_uri_id (uri_id)

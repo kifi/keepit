@@ -1,0 +1,26 @@
+@(pageInfos:Seq[PageInfo])
+
+@admin("PageInfos") {
+
+  <table class="table table-striped">
+    <th><tr><td>Id</td><td>state</td><td>URI ID</td><td>description</td><td>safe</td><td>favicon</td><td>ImageInfo ID</td></tr></th>
+    @for(page <- pageInfos){
+      <tr>
+          <td><a href="@com.keepit.controllers.admin.routes.AdminPageInfoController.pageInfo(page.id.get)">@page.id.get</a></td>
+          <td>@page.state</td>
+          <td>@page.uriId</td>
+          <td>@page.description</td>
+          <td>
+            @if(page.safe){
+              @page.safe
+            }else{
+              <b>@page.safe</b>
+            }
+          </td>
+          <td><img src="@page.faviconUrl" alt="no favicon"/></td>
+          <td>@page.imageInfoId</td>
+      </tr>
+    }
+  </table>
+
+}

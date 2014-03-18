@@ -35,7 +35,8 @@ extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] wi
     def faviconUrl      = column[String]("favicon_url")
     def imageAvail      = column[Boolean]("image_avail")
     def screenshotAvail = column[Boolean]("screenshot_avail")
-    def * = (id.?,createdAt,updatedAt,state,seq,uriId,description.?,safe.?,faviconUrl.?,imageAvail.?,screenshotAvail.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
+    def imageInfoId     = column[Id[ImageInfo]]("image_info_id")
+    def * = (id.?,createdAt,updatedAt,state,seq,uriId,description.?,safe.?,faviconUrl.?,imageAvail.?,screenshotAvail.?,imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
   }
 
   def table(tag:Tag) = new PageInfoTable(tag)
@@ -46,6 +47,7 @@ extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] wi
 
   override def save(model: PageInfo)(implicit session: RWSession): PageInfo = {
     val toSave = model.copy(seq = sequence.incrementAndGet())
+    log.info(s"[PageInfoRepo.save] $toSave")
     super.save(toSave)
   }
 

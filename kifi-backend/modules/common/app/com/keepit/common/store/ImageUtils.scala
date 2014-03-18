@@ -33,8 +33,8 @@ object ImageUtils {
     val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
     val os = new ByteArrayOutputStream()
     ImageIO.write(resized.getOrElse(rawImage), "jpeg", os)
-
-    (os.size(), new ByteArrayInputStream(os.toByteArray()))
+    val bytes = os.toByteArray()
+    (bytes.length, new ByteArrayInputStream(bytes))
   }
   def resizeImageMakeSquare(rawImage: BufferedImage, size: ImageSize) = {
     val cropped = if (rawImage.getHeight != rawImage.getWidth) {

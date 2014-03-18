@@ -38,6 +38,7 @@ class BookmarksController @Inject() (
     collectionRepo: CollectionRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
+    imageInfoRepo: ImageInfoRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
@@ -85,11 +86,10 @@ class BookmarksController @Inject() (
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
   }
 
-  private def cb(pageInfo:PageInfo):Unit = db.readWrite{ implicit rw => pageInfoRepo.save(pageInfo) }
   // todo: add uriId, sizes, colors, etc.
   private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
     val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
-    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, Some(cb)) map { imgUrlOpt =>
+    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrlOpt =>
       (screenshotUrlOpt, imgUrlOpt) match {
         case (None, None) =>
           Json.obj("url" -> url, "uriId" -> uri.id.get)
