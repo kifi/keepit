@@ -112,9 +112,11 @@ trait QueryExpansion extends QueryParser {
       super.getFieldQuery("t", queryText, quoted, alt).foreach{ q =>
         if (!equivalent(textQuery.terms, extractTerms(q))) {
           val query = if (quoted) q else mayConvertQuery(q, alt.lang)
+          val boost = if (textQuery.isEmpty) 0.1f else 1.0f
           textQuery.addRegularQuery(query)
           textQuery.addRegularQuery(copyFieldQuery(query, "c"))
           textQuery.addPersonalQuery(copyFieldQuery(query, "title"))
+          textQuery.setBoost(textQuery.getBoost * boost)
         }
       }
     }
@@ -132,11 +134,13 @@ trait QueryExpansion extends QueryParser {
     if(!quoted) {
       altStemmingAnalyzer.foreach{ alt =>
         getFieldQuery("ts", queryText, false, alt).foreach{ q =>
-        if (!equivalent(textQuery.stems, extractTerms(q))) {
+          if (!equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
+            val boost = if (textQuery.isEmpty) 0.1f else 1.0f
             textQuery.addRegularQuery(query)
             textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
             textQuery.addPersonalQuery(copyFieldQuery(query, "title_stemmed"))
+            textQuery.setBoost(textQuery.getBoost * boost)
           }
         }
       }
