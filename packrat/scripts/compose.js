@@ -161,7 +161,7 @@ var initCompose = (function() {
       onSelect: function (res, el) {
         if (!res.pictureName) {
           if (res.id || res.email) {
-            handleInvite(res, el);
+            handleInvite(res, el, $t);
           } else if (res === 'tip') {
             api.port.emit('invite_friends', 'composePane');
           }
@@ -402,7 +402,7 @@ var initCompose = (function() {
     }
   }
 
-  function handleInvite(res, el) {
+  function handleInvite(res, el, $t) {
     var $el = $(el);
     var bgImg = $el.css('background-image');
     $el.addClass('kifi-inviting').css('background-image', bgImg + ',url(' + api.url('images/spinner_32.gif') + ')');
@@ -417,5 +417,6 @@ var initCompose = (function() {
         setTimeout($.fn.removeClass.bind($el, 'kifi-invite-fail'), 2000);
       }
     });
+    $t.tokenInput('flushCache');
   }
 }());
