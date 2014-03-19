@@ -35,11 +35,13 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
         keeps: keeps
       };
       $http.post(url, payload).then(function (res) {
-        updateKeepCount(tag.id, keeps.length);
-        // broadcast change to interested parties
-        keeps.forEach(function (keep) {
-          $rootScope.$emit('tags.addToKeep', {tag: tag, keep: keep});
-        });
+        if (res.data && res.data.addedToCollection) {
+          updateKeepCount(tag.id, res.data.addedToCollection);
+          // broadcast change to interested parties
+          keeps.forEach(function (keep) {
+            $rootScope.$emit('tags.addToKeep', {tag: tag, keep: keep});
+          });
+        }
         return res;
       });
     }
