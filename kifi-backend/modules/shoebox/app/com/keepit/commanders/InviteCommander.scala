@@ -32,6 +32,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Try
+import com.keepit.common.queue.CancelInvitation
 
 case class FullSocialId(network:String, id:String) {
   def socialId: SocialId = SocialId(id)
@@ -73,7 +74,8 @@ class InviteCommander @Inject() (
   heimdal: HeimdalServiceClient,
   clock: Clock,
   s3ImageStore: S3ImageStore,
-  emailOptOutCommander: EmailOptOutCommander) extends Logging {
+  emailOptOutCommander: EmailOptOutCommander,
+  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
 
@@ -84,22 +86,24 @@ class InviteCommander @Inject() (
   }
 
   private def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    db.readOnly { implicit s =>
+    db.readWrite { implicit session =>
       val userSocialAccounts = socialUserInfoRepo.getByUser(userId)
+      val fortyTwoSocialAccount = userSocialAccounts.find(_.networkType == SocialNetworks.FORTYTWO).get
       val cookieInvite = invId.flatMap { inviteExtId =>
-        Try(invitationRepo.get(inviteExtId)).map { invite =>
-          val invitedSocial = userSocialAccounts.find(_.id == invite.recipientSocialUserId)
-          val detectedInvite = if (invitedSocial.isEmpty && userSocialAccounts.nonEmpty) {
-            // User signed up using a different social account than what we know about.
-            invite.copy(recipientSocialUserId = userSocialAccounts.head.id)
-          } else {
-            invite
+        Try(invitationRepo.get(inviteExtId)).toOption.map { invite =>
+          userSocialAccounts.find(_.id == invite.recipientSocialUserId) match {
+            case Some(invitedSocialAccount) => invitedSocialAccount -> invite
+            case None =>
+              // User signed up using a different social account than the one he was invited with.
+              for {
+                senderId <- invite.senderUserId
+                recipientSocialUserId <- invite.recipientSocialUserId
+              } yield session.onTransactionSuccess {
+                shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(recipientSocialUserId), None))
+              }
+              fortyTwoSocialAccount -> invitationRepo.save(invite.copy(recipientSocialUserId = fortyTwoSocialAccount.id))
           }
-          invite.recipientSocialUserId match {
-            case Some(rsui) => socialUserInfoRepo.get(rsui) -> detectedInvite
-            case None => socialUserInfoRepo.get(userSocialAccounts.head.id.get) -> detectedInvite
-          }
-        }.toOption
+        }
       }
 
       val otherInvites = for {
@@ -107,17 +111,15 @@ class InviteCommander @Inject() (
         invite <- invitationRepo.getByRecipientSocialUserId(su.id.get)
       } yield (su, invite)
 
-      val existingInvites = otherInvites.toSet ++ cookieInvite.map(Set(_)).getOrElse(Set.empty)
+      val existingInvites = otherInvites.toSet ++ cookieInvite.toSet
 
       if (existingInvites.isEmpty) {
-        userSocialAccounts.find(_.networkType == SocialNetworks.FORTYTWO).map { su =>
-          Set(su -> Invitation(
-            createdAt = clock.now,
-            senderUserId = None,
-            recipientSocialUserId = su.id,
-            state = InvitationStates.ACTIVE
-          ))
-        }.getOrElse(Set())
+        Set(fortyTwoSocialAccount -> invitationRepo.save(Invitation(
+          createdAt = clock.now,
+          senderUserId = None,
+          recipientSocialUserId = fortyTwoSocialAccount.id,
+          state = InvitationStates.ACTIVE
+        )))
       } else {
         existingInvites
       }
@@ -136,15 +138,10 @@ class InviteCommander @Inject() (
         }
       }
       for ((su, invite) <- anyPendingInvites) {
-        // Swallow exceptions currently because we have a constraint that we user can only be invited once
-        // However, this can get violated if the user signs up with a different social network than we were expecting
-        // and we change the recipientSocialUserId. When the constraint is removed, this Try{} can be too.
-        Try {
-          connectInvitedUsers(userId, invite)
-          if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-            val acceptedInvite = invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-            reportReceivedInvitation(userId, su.networkType, acceptedInvite, invId == Some(invite.externalId))
-          }
+        connectInvitedUsers(userId, invite)
+        if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
+          val acceptedInvite = invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+          reportReceivedInvitation(userId, su.networkType, acceptedInvite, invId == Some(invite.externalId))
         }
       }
     }

@@ -25,7 +25,7 @@ case class RichSocialConnection(
   friendUserId: Option[Id[User]],
   commonKifiFriendsCount: Int,
   kifiFriendsCount: Int,
-  invitation: Option[Id[Invitation]],
+  invitationSent: Int,
   invitationCount: Int,
   blocked: Boolean
 ) extends ModelWithState[RichSocialConnection] {
