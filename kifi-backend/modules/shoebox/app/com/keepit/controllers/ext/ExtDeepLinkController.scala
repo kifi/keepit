@@ -54,19 +54,21 @@ class ExtDeepLinkController @Inject() (
   def handle(tokenString: String) = HtmlAction(
     authenticatedAction = { request =>
       val token = DeepLinkToken(tokenString)
-      getDeepLinkAndUrl(token) map { case (deepLink, url) =>
+      getDeepLinkAndUrl(token) map { case (deepLink, uri) =>
         val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
         log.info(s"handling user ${request.userId} with iphone: $isIphone & app: $isKifiIphoneApp")
-        if (isKifiIphoneApp || (isIphone && request.experiments.contains(ExperimentType.MOBILE_REDITECT))) {
+        if (isKifiIphoneApp) {
+          Redirect(uri.url)
+        } else if (isIphone) {
           doHandleMobile(request, tokenString)
         } else {
           deepLink.recipientUserId match {
             case Some(request.userId) =>
-              log.info(s"sending user ${request.userId} to $url")
-              Ok(views.html.deeplink(url, deepLink.deepLocator.value))
+              log.info(s"sending user ${request.userId} to $uri")
+              Ok(views.html.deeplink(uri.url, deepLink.deepLocator.value))
             case _ =>
-              log.info(s"sending unknown user to $url with authenticated session")//is that possible ???
-              Redirect(url)
+              log.info(s"sending unknown user to $uri with authenticated session")//is that possible ???
+              Redirect(uri.url)
           }
         }
       } getOrElse NotFound
@@ -74,14 +76,16 @@ class ExtDeepLinkController @Inject() (
     unauthenticatedAction = { request =>
       val token = DeepLinkToken(tokenString)
       getDeepLinkAndUrl(token) map {
-        case (deepLink, url) =>
+        case (deepLink, uri) =>
           val (isIphone, isKifiIphoneApp) = mobileCheck(request)
           log.info(s"handling unknown user with iphone: $isIphone & app: $isKifiIphoneApp")
-          if (isKifiIphoneApp || isIphone) {
+          if (isKifiIphoneApp) {
+            Redirect(uri.url)
+          } else if (isIphone) {
             doHandleMobile(request, tokenString)
           } else {
-            log.info(s"sending unknown user directly to the url $url")
-            Redirect(url)
+            log.info(s"sending unknown user directly to the url $uri")
+            Redirect(uri.url)
           }
       } getOrElse NotFound
     })
@@ -94,24 +98,24 @@ class ExtDeepLinkController @Inject() (
     val (isIphone, isKifiIphoneApp) = mobileCheck(request)
     val token = DeepLinkToken(tokenString)
     val result: Option[SimpleResult] = getDeepLinkAndUrl(token) map {
-      case (deepLink, url) =>
+      case (deepLink, uri) =>
         if (isKifiIphoneApp) {
-          Redirect(url)
+          Redirect(uri.url)
         } else if (isIphone) {
-          log.info(s"sending user to $url via iphone app page")
-          Ok(views.html.iphoneDeeplink(url, deepLink.deepLocator.value))
+          log.info(s"sending user to $uri via iphone app page")
+          Ok(views.html.iphoneDeeplink(uri.url, deepLink.deepLocator.value))
         } else throw new IllegalStateException("not mobile!")
     }
     result getOrElse NotFound
   }
 
-  private def getDeepLinkAndUrl(token: DeepLinkToken): Option[(DeepLink, String)] = {
+  private def getDeepLinkAndUrl(token: DeepLinkToken): Option[(DeepLink, NormalizedURI)] = {
     db.readOnly { implicit s =>
       for {
         deepLink <- deepLinkRepo.getByToken(token)
         uriId <- deepLink.uriId
       } yield {
-        (deepLink, normalizedURIRepo.get(uriId).url)
+        (deepLink, normalizedURIRepo.get(uriId))
       }
     }
   }
