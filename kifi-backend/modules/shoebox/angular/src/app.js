@@ -18,6 +18,7 @@ angular.module('kifi', [
   'kifi.tagKeeps',
   'kifi.profile',
   'kifi.invite',
+  'kifi.invite.connectionCard',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
