@@ -202,7 +202,7 @@ class SearchCommanderImpl @Inject() (
 
     var strongCandidates = acceptLangs ++ profLangs
 
-    val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 0.9d))
+    val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 0.6d))
     strongCandidates -= firstLang
     val secondLang = if (strongCandidates.nonEmpty) {
       Some(LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 1.0d)))

@@ -47,7 +47,8 @@ class LangDetectorTest extends Specification {
     }
 
     "detect short Japanese" in {
-      LangDetector.detectShortText("サッカー") === Lang("ja")
+      LangDetector.detectShortText("サッカー", Map(Lang("en") -> 0.66d)) === Lang("ja")
+      LangDetector.detectShortText("料理", Map(Lang("en") -> 0.20d, Lang("fr") -> 0.20d, Lang("ja") -> 0.20d)) === Lang("ja")
     }
 
     "detect short Hebrew" in {
