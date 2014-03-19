@@ -106,13 +106,12 @@ class SyncScraper @Inject() (
           }
           if(shouldUpdateScreenshot(scrapedURI)) {
             s3ScreenshotStore.updatePicture(scrapedURI)
+          }
 
-            // initial throttling by tying to screenshot; need to move out
-            if (pageInfoOpt.forall(p => Days.daysBetween(currentDateTime, p.updatedAt).getDays >= 5)) {
-              s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, true) map { res => // todo: updateImage
-                log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
-                res
-              }
+          if (pageInfoOpt.forall(p => Days.daysBetween(currentDateTime, p.updatedAt).getDays >= 5)) {
+            s3ScreenshotStore.asyncGetImageUrl(scrapedURI, pageInfoOpt, true) map { res => // todo: updateImage
+              log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
+              res
             }
           }
 
