@@ -342,7 +342,7 @@ class MainSearcher(
         }
       }
       queue.foreach{ h => hits.insert(h) }
-    } else {
+    } else if (myTotal + friendsTotal == hits.size) {
       // make sure there is at least one public keep in others
       othersHits.toSortedList.exists{ hit =>
         val h = hit.hit

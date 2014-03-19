@@ -1,4 +1,4 @@
-// Underscore.js 1.5.2 (a subset)
+// Underscore.js 1.6.0 (a subset)
 var _ = {};
 
 // underscorejs.org/#throttle
@@ -11,6 +11,7 @@ _.throttle = function(func, wait, options) {
     previous = options.leading === false ? 0 : Date.now();
     timeout = null;
     result = func.apply(context, args);
+    context = args = null;
   };
   return function() {
     var now = Date.now();
@@ -23,6 +24,7 @@ _.throttle = function(func, wait, options) {
       timeout = null;
       previous = now;
       result = func.apply(context, args);
+      context = args = null;
     } else if (!timeout && options.trailing !== false) {
       timeout = setTimeout(later, remaining);
     }
@@ -33,24 +35,30 @@ _.throttle = function(func, wait, options) {
 // underscorejs.org/#debounce
 _.debounce = function(func, wait, immediate) {
   var timeout, args, context, timestamp, result;
+  var later = function() {
+    var last = Date.now() - timestamp;
+    if (last < wait) {
+      timeout = setTimeout(later, wait - last);
+    } else {
+      timeout = null;
+      if (!immediate) {
+        result = func.apply(context, args);
+        context = args = null;
+      }
+    }
+  };
   return function() {
     context = this;
     args = arguments;
     timestamp = Date.now();
-    var later = function() {
-      var last = Date.now() - timestamp;
-      if (last < wait) {
-        timeout = setTimeout(later, wait - last);
-      } else {
-        timeout = null;
-        if (!immediate) result = func.apply(context, args);
-      }
-    };
     var callNow = immediate && !timeout;
     if (!timeout) {
       timeout = setTimeout(later, wait);
     }
-    if (callNow) result = func.apply(context, args);
+    if (callNow) {
+      result = func.apply(context, args);
+      context = args = null;
+    }
     return result;
   };
 };
