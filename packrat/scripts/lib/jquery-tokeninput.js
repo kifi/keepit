@@ -616,6 +616,9 @@
         if (o && o.complete) {
           populateDropdown(query, o.results, false);
         } else {
+          if (o) {
+            o.results.length = 0;
+          }
           $dropdown.addClass(classes.dropdownSearching);
           findItems(tokens.length, query, receiveResults.bind(null, query));
         }
