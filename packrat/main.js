@@ -698,15 +698,15 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
-  invite_friends: function (where) {
+  invite_friends: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
-    mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
+    mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
   },
   invite_friend: function (data, respond) {
-    ajax('POST', '/ext/invite', {id: data.id, email: data.email}, respond, function () {
+    ajax('POST', '/ext/invite', data, respond, function () {
       respond({sent: false});
     });
-    mixpanel.track('user_clicked_pane', {type: where, action: 'choseSocialContact', network: data.id ? data.id.split('/')[0] : 'email'});
+    mixpanel.track('user_clicked_pane', {type: data.source, action: 'choseSocialContact', network: data.id ? data.id.split('/')[0] : 'email'});
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();

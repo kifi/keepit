@@ -406,7 +406,7 @@ var initCompose = (function() {
     var $el = $(el);
     var bgImg = $el.css('background-image');
     $el.addClass('kifi-inviting').css('background-image', bgImg + ',url(' + api.url('images/spinner_32.gif') + ')');
-    api.port.emit('invite_friend', {id: res.id, email: res.email, whence: 'composePane'}, function (data) {
+    api.port.emit('invite_friend', {id: res.id, email: res.email, source: 'composePane'}, function (data) {
       $el.removeClass('kifi-inviting').css('background-image', bgImg);
       if (data.url) {
         window.open(data.url, 'kifi-invite-' + (res.id || res.email), 'height=550,width=990');
