@@ -2,10 +2,10 @@
   <div class="invite-wrapper" antiscroll="{ autoHide: false }">
     <div class="invite">
       <h2>Invite your friends</h2>
-        <p>Getting invites to work may benefit from directives that trigger invites without WTI being finished below. So:</p>
-        <div ng-repeat="friend in friends">
-          <div ng-click="invite(friend)">Invite {{friend.label}}!</div>
-        </div>
+      <p>Getting invites to work may benefit from directives that trigger invites without WTI being finished below. So:</p>
+      <div ng-repeat="friend in friends">
+        <div ng-click="invite(friend)">Invite {{friend.label}}!</div>
+      </div>
       <div class="kf-connection-card-container">
         <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend"></div>
       </div>
