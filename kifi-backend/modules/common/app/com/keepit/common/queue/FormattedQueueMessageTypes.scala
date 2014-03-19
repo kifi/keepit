@@ -82,7 +82,7 @@ object RecordResentInvitation extends Companion[RecordResentInvitation] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   private implicit val eContactIdFormat = Id.format[EContact]
-  implicit val format = Json.format[RecordInvitation]
+  implicit val format = Json.format[RecordResentInvitation]
   implicit val typeCode = TypeCode("record_resent_invitation")
 }
 
