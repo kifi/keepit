@@ -238,7 +238,7 @@ class S3ScreenshotStoreImpl(
       getPageInfo(embedlyUrl(uri.url)) flatMap { pageInfoOpt =>
         pageInfoOpt match {
           case Some(pageInfo) =>
-            if (pageInfo.safe.exists(safe => safe)) {
+            if (pageInfo.safe.exists(safe => !safe)) {
               mailNotify(s"[fetchAndUpdatePageInfo(${uri.id})] page is not safe; will not fetch image. $pageInfo; $uri", None)
               shoeboxServiceClient.savePageInfo(pageInfo.toPageInfo(uri.id.get)) map { savedPage =>
                 (Option(savedPage), None)
