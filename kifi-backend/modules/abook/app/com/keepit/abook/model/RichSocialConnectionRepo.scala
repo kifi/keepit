@@ -16,6 +16,7 @@ import com.keepit.common.KestrelCombinator
 trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection
   def recordInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
+  def recordResentInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
   def cancelInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
   def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit
   def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
@@ -45,10 +46,10 @@ class RichSocialConnectionRepoImpl @Inject() (
     def friendName = column[String]("friend_name", O.Nullable)
     def commonKifiFriendsCount = column[Int]("common_kifi_friends_count", O.NotNull)
     def kifiFriendsCount = column[Int]("kifi_friends_count", O.NotNull)
-    def invitationSent = column[Int]("invitation_sent", O.NotNull)
+    def invitationsSent = column[Int]("invitations_sent", O.NotNull)
     def invitedBy = column[Int]("invited_by", O.NotNull)
     def blocked = column[Boolean]("blocked", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, userId, userSocialId.?, connectionType, friendSocialId.?, friendEmailAddress.?, friendName.?, friendUserId.?, commonKifiFriendsCount, kifiFriendsCount, invitationSent, invitedBy, blocked) <> ((RichSocialConnection.apply _).tupled, RichSocialConnection.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, userId, userSocialId.?, connectionType, friendSocialId.?, friendEmailAddress.?, friendName.?, friendUserId.?, commonKifiFriendsCount, kifiFriendsCount, invitationsSent, invitedBy, blocked) <> ((RichSocialConnection.apply _).tupled, RichSocialConnection.unapply _)
   }
 
   def table(tag: Tag) = new RichSocialConnectionTable(tag)
@@ -86,7 +87,7 @@ class RichSocialConnectionRepoImpl @Inject() (
         save(inactiveConnection.copy(
           commonKifiFriendsCount = commonKifiFriendsCount,
           kifiFriendsCount = kifiFriendsCount + 1,
-          invitationSent = 0,
+          invitationsSent = 0,
           invitedBy = invitedBy,
           state = RichSocialConnectionStates.ACTIVE
         ))
@@ -108,7 +109,7 @@ class RichSocialConnectionRepoImpl @Inject() (
           friendUserId = friendUserId,
           commonKifiFriendsCount = commonKifiFriendsCount,
           kifiFriendsCount = kifiFriendsCount + 1,
-          invitationSent = 0,
+          invitationsSent = 0,
           invitedBy = invitedBy,
           blocked = false
         ))
@@ -227,13 +228,13 @@ class RichSocialConnectionRepoImpl @Inject() (
   def recordInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => {
-        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationSent === 0} yield row.invitationSent).update(1)
+        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent === 0} yield row.invitationsSent).update(1)
         if (updated == 1) {
           sqlu"UPDATE rich_social_connection SET invited_by = invited_by + 1 WHERE friend_social_id = $friendSocialId".execute()
         }
       }
       case Right(friendEmailAddress) => {
-        val updated = (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress && row.invitationSent === 0 } yield row.invitationSent).update(1)
+        val updated = (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress && row.invitationsSent === 0 } yield row.invitationsSent).update(1)
         if (updated == 1) {
           sqlu"UPDATE rich_social_connection SET invited_by = invited_by + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
         }
@@ -241,16 +242,25 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
+  def recordResentInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
+    friendId match {
+      case Left(friendSocialId) =>
+        (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent > 0} yield row.invitationsSent).mutate(r => r.row = r.row + 1)
+      case Right(friendEmailAddress) =>
+        (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress && row.invitationsSent > 0 } yield row.invitationsSent).mutate(r => r.row = r.row + 1)
+    }
+  }
+
   def cancelInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => {
-        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationSent > 0} yield row.invitationSent).update(0)
+        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent > 0} yield row.invitationsSent).update(0)
         if (updated == 1) {
           sqlu"UPDATE rich_social_connection SET invited_by = invited_by - 1 WHERE friend_social_id = $friendSocialId".execute()
         }
       }
       case Right(friendEmailAddress) => {
-        val updated = (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress && row.invitationSent > 0 } yield row.invitationSent).update(0)
+        val updated = (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress && row.invitationsSent > 0 } yield row.invitationsSent).update(0)
         if (updated == 1) {
           sqlu"UPDATE rich_social_connection SET invited_by = invited_by - 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
         }

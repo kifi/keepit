@@ -32,7 +32,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Try
-import com.keepit.common.queue.CancelInvitation
+import com.keepit.common.queue.{RecordResentInvitation, CancelInvitation}
 
 case class FullSocialId(network:String, id:String) {
   def socialId: SocialId = SocialId(id)
@@ -200,6 +200,7 @@ class InviteCommander @Inject() (
       inviteOpt match {
         case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE => {
           sendEmailInvitation(c, alreadyInvited, user, inviteInfo)
+          shoeboxRichConnectionCommander.processUpdateImmediate(RecordResentInvitation(userId, None, c.id))
         }
         case inactiveOpt => {
           val totalAllowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
@@ -290,7 +291,13 @@ class InviteCommander @Inject() (
       implicit rw =>
         val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserInfo.id.get) match {
-          case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE => cb(socialUserInfo, currInvite)
+          case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE => {
+            val status = cb(socialUserInfo, currInvite)
+            if (status.sent) {
+              shoeboxRichConnectionCommander.processUpdateImmediate(RecordResentInvitation(userId, socialUserInfo.id, None))
+            }
+            status
+          }
           case inactiveOpt =>
             val totalAllowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites) // todo(He-Who-Must-Not-Be-Named): removeme
             val currentInvitations = invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE)

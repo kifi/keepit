@@ -77,6 +77,16 @@ object RecordInvitation extends Companion[RecordInvitation] {
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
+case class RecordResentInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) extends RichConnectionUpdateMessage
+object RecordResentInvitation extends Companion[RecordResentInvitation] {
+  private implicit val userIdFormat = Id.format[User]
+  private implicit val socialIdFormat = Id.format[SocialUserInfo]
+  private implicit val eContactIdFormat = Id.format[EContact]
+  implicit val format = Json.format[RecordInvitation]
+  implicit val typeCode = TypeCode("record_resent_invitation")
+}
+
+//Propages changes to InvitationRepo (needs sequence number).
 case class CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) extends RichConnectionUpdateMessage
 object CancelInvitation extends Companion[CancelInvitation] {
   private implicit val userIdFormat = Id.format[User]
