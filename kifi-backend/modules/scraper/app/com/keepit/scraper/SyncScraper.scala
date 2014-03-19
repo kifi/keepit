@@ -271,9 +271,9 @@ class SyncScraper @Inject() (
 
   private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
 
-  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
+  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl().filterNot(_.contains("{{"))
 
-  private[this] def getAlternateUrls(x: Extractor): Set[String] = x.getAlternateUrls()
+  private[this] def getAlternateUrls(x: Extractor): Set[String] = x.getAlternateUrls().filterNot(_.contains("{{"))
 
   private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
 
