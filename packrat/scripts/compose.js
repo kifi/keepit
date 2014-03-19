@@ -148,11 +148,12 @@ var initCompose = (function() {
               '<div class="kifi-ti-dropdown-invite-sub">', res.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
               '</li>'].join('');
         } else if (res.email) {
-          return [
-              '<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-invited' : '', '">',
-              '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
-              '<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(res.email), '</div>',
-              '</li>'].join('');
+          var html = ['<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-invited' : '', '">'];
+          if (res.name) {
+            html.push('<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>');
+          }
+          html.push('<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(res.email), '</div></li>');
+          return html.join('');
         } else if (res === 'tip') {
           return '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>';
         }
