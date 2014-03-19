@@ -32,6 +32,8 @@ angular.module('kifi.invite', [
     };
     $scope.friends = [friend];
 
+    $scope.whoToInvite = [1,2,3,4,5,6,7,8,9,10,11,12,13,14]; //data is not currently used, just need some number of elements
+
     $scope.invite = function (friend) {
       // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?
       // is 'friend' overloaded naming wise? is socialFriend better?
