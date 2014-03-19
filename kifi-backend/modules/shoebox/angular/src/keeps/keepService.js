@@ -168,10 +168,10 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       previewNext: _.throttle(function () {
-        var previewedIdx = selectedIdx;
+        selectedIdx = selectedIdx || 0;
         var toPreview;
-        if (list.length - 1 > previewedIdx) {
-          toPreview = list[previewedIdx + 1];
+        if (list.length - 1 > selectedIdx) {
+          toPreview = list[selectedIdx + 1];
           selectedIdx++;
         } else {
           toPreview = list[0];
@@ -181,10 +181,10 @@ angular.module('kifi.keepService', ['kifi.undo'])
       }, 150),
 
       previewPrev: _.throttle(function () {
-        var previewedIdx = selectedIdx;
+        selectedIdx = selectedIdx || 0;
         var toPreview;
-        if (previewedIdx > 0) {
-          toPreview = list[previewedIdx - 1];
+        if (selectedIdx > 0) {
+          toPreview = list[selectedIdx - 1];
           selectedIdx--;
         } else {
           toPreview = list[0];
