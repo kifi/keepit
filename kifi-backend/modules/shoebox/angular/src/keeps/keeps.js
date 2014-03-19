@@ -47,27 +47,31 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.togglePreview = keepService.togglePreview;
         scope.isPreviewed = keepService.isPreviewed;
 
+        var antiscroll = element.find('.antiscroll-inner');
+        var wrapper = element.find('.keeps-wrapper');
+
         function bringCardIntoViewUp() {
           var elem = element.find('.detailed');
           var offset = elem.offset();
-          if (offset.top < 250) {
-            var next = elem.parent().prev().prev() || elem.parent().prev() || elem.parent();
-            if (next[0]) {
-              next[0].scrollIntoView(true);
-            }
+          if (!offset || !offset.top) {
+            return;
+          }
+
+          if (offset.top - 300 < 0) {
+            antiscroll.scrollTop(antiscroll.scrollTop() + (offset.top - 300));
           }
         }
 
         function bringCardIntoViewDown() {
           var elem = element.find('.detailed');
           var offset = elem.offset();
-          var wrapperHeight = element.find('.keeps-wrapper').height();
+          if (!offset || !offset.top) {
+            return;
+          }
+          var wrapperHeight = wrapper.height();
 
-          if (offset.top > wrapperHeight - 100) {
-            var next = elem.parent().next().next() || elem.parent().next() || elem.parent();
-            if (next[0]) {
-              next[0].scrollIntoView(false);
-            }
+          if (offset.top + 100 > wrapperHeight) {
+            antiscroll.scrollTop(antiscroll.scrollTop() + (offset.top + 100 - wrapperHeight));
           }
         }
 
@@ -76,7 +80,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             var captured = false;
             /* jshint maxcomplexity: false */
             switch (e.which) {
-              case 13:
+              case 13: // enter
                 var p = keepService.getHighlighted();
                 keepService.togglePreview(p);
                 captured = true;

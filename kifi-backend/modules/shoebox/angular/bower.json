@@ -19,7 +19,7 @@
   ],
   "dependencies": {
     "normalize-css": "2.x.x",
-    "jquery": "1.x.x",
+    "jquery": ">=1.9.0",
     "angular": "1.2.x",
     "angular-cookies": "1.2.x",
     "angular-resource": "1.2.x",

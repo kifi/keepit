@@ -17,6 +17,6 @@ module.exports = function (config) {
     autoWatch: true,
     browsers: ['PhantomJS'],
     captureTimeout: 60000,
-    singleRun: false
+    singleRun: true
   });
 };
