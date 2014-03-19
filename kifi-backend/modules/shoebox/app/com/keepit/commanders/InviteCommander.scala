@@ -32,7 +32,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Try
-import com.keepit.common.queue.{RecordResentInvitation, CancelInvitation}
+import com.keepit.common.queue.{RecordInvitation, RecordResentInvitation, CancelInvitation}
 
 case class FullSocialId(network:String, id:String) {
   def socialId: SocialId = SocialId(id)
@@ -219,6 +219,7 @@ class InviteCommander @Inject() (
             sendEmailInvitation(c, invite, user, inviteInfo)
             invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
             reportSentInvitation(invite, SocialNetworks.EMAIL)
+            shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(userId, None, c.id))
           }
         }
       }
@@ -293,9 +294,7 @@ class InviteCommander @Inject() (
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserInfo.id.get) match {
           case Some(currInvite) if currInvite.state != InvitationStates.INACTIVE => {
             val status = cb(socialUserInfo, currInvite)
-            if (status.sent) {
-              shoeboxRichConnectionCommander.processUpdateImmediate(RecordResentInvitation(userId, socialUserInfo.id, None))
-            }
+            if (status.sent) { shoeboxRichConnectionCommander.processUpdateImmediate(RecordResentInvitation(userId, socialUserInfo.id, None)) }
             status
           }
           case inactiveOpt =>
@@ -309,7 +308,9 @@ class InviteCommander @Inject() (
                 recipientSocialUserId = socialUserInfo.id,
                 state = InvitationStates.INACTIVE
               )
-              cb(socialUserInfo, invite)
+              val status = cb(socialUserInfo, invite)
+              if (status.sent) { shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(userId, socialUserInfo.id, None)) }
+              status
             } else {
               InviteStatus(false, None, "over_invite_limit")
             }
