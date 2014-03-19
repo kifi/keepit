@@ -173,7 +173,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         };
 
         scope.getName = function (user) {
-          return [user.firstName, user.firstName].filter(function(n) {
+          return [user.firstName, user.firstName].filter(function (n) {
             return !!n;
           }).join(' ');
         };
