@@ -118,7 +118,7 @@ class MobileBookmarksController @Inject() (
 
   private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
     val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
-    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, true) map { imgUrlOpt => // todo: disable update
+    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, false) map { imgUrlOpt =>
       (screenshotUrlOpt, imgUrlOpt) match {
         case (None, None) =>
           Json.obj("url" -> url, "uriId" -> uri.id.get)
