@@ -1,5 +1,5 @@
 <li class="kf-nav-item kf-tag" ng-mouseenter="enableHover()" ng-mouseleave="disableHover()">
-  <div class="kf-nav-link" ng-class="{ renaming: isRenaming, 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }" ng-click="navigateToTag($event)"
+  <div class="kf-nav-link" ng-class="{ renaming: isRenaming, 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget, hover: isHovering }" ng-click="navigateToTag($event)"
     ui-draggable="true" drag="tag" drag-channel="tagDragChannel" ui-on-drop="onKeepDrop($data)" drop-channel="keepDragChannel" drag-enter-class="kf-candidate-drag-target">
     <div class="kf-tag-drag-container" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-tag-drag-target">
       <div class="kf-tag-info">
