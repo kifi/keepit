@@ -4,12 +4,24 @@
 <html data-kifi-deep-link='{"url":"@url","locator":"@locator"}'>
 
 <script>
-setTimeout(function () {
-  window.location = "@url";
-  //window.location = "https://itunes.apple.com/kifi";
-}, 100);
+var osSupportApp = (navigator.userAgent.match(/(iPod|iPhone)/g) ? true : false );
 
-window.location = "kifi://open@locator";
+if (osSupportApp) {
+  //If the app is not installed the script will wait for 2sec and redirect to web.
+  var loadedAt = +new Date;
+  setTimeout(
+    function(){
+      if (+new Date - loadedAt < 2000) {
+        window.location = "@url";
+      }
+    }
+    ,25);
+    //Try launching the app using URL schemes
+  window.open("kifi://open@locator", "_self");
+} else {
+  //Launch the website
+  window.location = "@url";
+}
 </script>
 It appears that you don't have the Kifi app installed, sending you to the App store.
 We will try to send you to @url at @locator
