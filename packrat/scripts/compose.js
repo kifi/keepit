@@ -406,7 +406,7 @@ var initCompose = (function() {
     var $el = $(el);
     var bgImg = $el.css('background-image');
     $el.addClass('kifi-inviting').css('background-image', bgImg + ',url(' + api.url('images/spinner_32.gif') + ')');
-    api.port.emit('invite_friend', {id: res.id, email: res.email, source: 'composePane'}, function (data) {
+    api.port.emit('invite_friend', {id: res.id, email: res.email, source: 'composePane'}, notBeforeMs(1000, function (data) {
       $el.removeClass('kifi-inviting').css('background-image', bgImg);
       if (data.url) {
         window.open(data.url, 'kifi-invite-' + (res.id || res.email), 'height=550,width=990');
@@ -416,7 +416,19 @@ var initCompose = (function() {
         $el.addClass('kifi-invite-fail');
         setTimeout($.fn.removeClass.bind($el, 'kifi-invite-fail'), 2000);
       }
-    });
+    }));
     $t.tokenInput('flushCache');
+  }
+
+  function notBeforeMs(ms, f) {
+    var t0 = Date.now();
+    return function () {
+      var elapsed = Date.now() - t0;
+      if (elapsed >= ms) {
+        f.apply(this, arguments);
+      } else {
+        setTimeout(f.apply.bind(f, this, arguments), ms - elapsed);
+      }
+    };
   }
 }());
