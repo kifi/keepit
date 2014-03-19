@@ -46,9 +46,9 @@ class RichSocialConnectionRepoImpl @Inject() (
     def commonKifiFriendsCount = column[Int]("common_kifi_friends_count", O.NotNull)
     def kifiFriendsCount = column[Int]("kifi_friends_count", O.NotNull)
     def invitationSent = column[Int]("invitation_sent", O.NotNull)
-    def invitationCount =  column[Int]("invitation_count", O.NotNull)
+    def invitedBy = column[Int]("invited_by", O.NotNull)
     def blocked = column[Boolean]("blocked", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, userId, userSocialId.?, connectionType, friendSocialId.?, friendEmailAddress.?, friendName.?, friendUserId.?, commonKifiFriendsCount, kifiFriendsCount, invitationSent, invitationCount, blocked) <> ((RichSocialConnection.apply _).tupled, RichSocialConnection.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, userId, userSocialId.?, connectionType, friendSocialId.?, friendEmailAddress.?, friendName.?, friendUserId.?, commonKifiFriendsCount, kifiFriendsCount, invitationSent, invitedBy, blocked) <> ((RichSocialConnection.apply _).tupled, RichSocialConnection.unapply _)
   }
 
   def table(tag: Tag) = new RichSocialConnectionTable(tag)
@@ -82,11 +82,12 @@ class RichSocialConnectionRepoImpl @Inject() (
         if (connectionType == FortyTwo) { recordDirectedKifiConnection(userId, friendUserId.get) }
         val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
         val commonKifiFriendsCount = incrementCommonKifiFriendsCounts(userId, friendId)
-        val invitationCount = getInvitationCount(friendId)
+        val invitedBy = countInviters(friendId)
         save(inactiveConnection.copy(
           commonKifiFriendsCount = commonKifiFriendsCount,
           kifiFriendsCount = kifiFriendsCount + 1,
-          invitationCount = invitationCount,
+          invitationSent = 0,
+          invitedBy = invitedBy,
           state = RichSocialConnectionStates.ACTIVE
         ))
       }
@@ -95,7 +96,7 @@ class RichSocialConnectionRepoImpl @Inject() (
         if (connectionType == FortyTwo) { recordDirectedKifiConnection(userId, friendUserId.get) }
         val kifiFriendsCount = incrementKifiFriendsCounts(friendId)
         val commonKifiFriendsCount = incrementCommonKifiFriendsCounts(userId, friendId)
-        val invitationCount = getInvitationCount(friendId)
+        val invitedBy = countInviters(friendId)
 
         save(RichSocialConnection(
           userId = userId,
@@ -108,7 +109,7 @@ class RichSocialConnectionRepoImpl @Inject() (
           commonKifiFriendsCount = commonKifiFriendsCount,
           kifiFriendsCount = kifiFriendsCount + 1,
           invitationSent = 0,
-          invitationCount = invitationCount,
+          invitedBy = invitedBy,
           blocked = false
         ))
       }
@@ -129,9 +130,9 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
-  private def getInvitationCount(friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = friendId match {
-    case Left(friendSocialId) => (for { row <- rows if row.friendSocialId === friendSocialId } yield row.invitationCount).firstOption() getOrElse 0
-    case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitationCount).firstOption() getOrElse 0
+  private def countInviters(friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = friendId match {
+    case Left(friendSocialId) => (for { row <- rows if row.friendSocialId === friendSocialId } yield row.invitedBy).firstOption() getOrElse 0
+    case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitedBy).firstOption() getOrElse 0
   }
 
   private def incrementKifiFriendsCounts(friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
@@ -228,13 +229,13 @@ class RichSocialConnectionRepoImpl @Inject() (
       case Left(friendSocialId) => {
         val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationSent === 0} yield row.invitationSent).update(1)
         if (updated == 1) {
-          sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE friend_social_id = $friendSocialId".execute()
+          sqlu"UPDATE rich_social_connection SET invited_by = invited_by + 1 WHERE friend_social_id = $friendSocialId".execute()
         }
       }
       case Right(friendEmailAddress) => {
         val updated = (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress && row.invitationSent === 0 } yield row.invitationSent).update(1)
         if (updated == 1) {
-          sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
+          sqlu"UPDATE rich_social_connection SET invited_by = invited_by + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
         }
       }
     }
@@ -245,13 +246,13 @@ class RichSocialConnectionRepoImpl @Inject() (
       case Left(friendSocialId) => {
         val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationSent > 0} yield row.invitationSent).update(0)
         if (updated == 1) {
-          sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count - 1 WHERE friend_social_id = $friendSocialId".execute()
+          sqlu"UPDATE rich_social_connection SET invited_by = invited_by - 1 WHERE friend_social_id = $friendSocialId".execute()
         }
       }
       case Right(friendEmailAddress) => {
         val updated = (for { row <- rows if row.userId === userId && row.friendEmailAddress === friendEmailAddress && row.invitationSent > 0 } yield row.invitationSent).update(0)
         if (updated == 1) {
-          sqlu"UPDATE rich_social_connection SET invitation_count = invitation_count - 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
+          sqlu"UPDATE rich_social_connection SET invited_by = invited_by - 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
         }
       }
     }

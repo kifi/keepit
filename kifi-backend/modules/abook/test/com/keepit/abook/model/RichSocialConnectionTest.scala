@@ -58,7 +58,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       léoToMarvin.kifiFriendsCount === 1
       léoToMarvin.commonKifiFriendsCount === 0
       léoToMarvin.invitationSent === 0
-      léoToMarvin.invitationCount === 0
+      léoToMarvin.invitedBy === 0
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, Some(facebookLéo), Left(facebookMarvin)) === léoToMarvin
@@ -127,7 +127,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       léoToGrassfed42.kifiFriendsCount === 1
       léoToGrassfed42.commonKifiFriendsCount === 0
       léoToGrassfed42.invitationSent === 0
-      léoToGrassfed42.invitationCount === 0
+      léoToGrassfed42.invitedBy === 0
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, None, Right(contact42)) === léoToGrassfed42
@@ -141,11 +141,11 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       db.readOnly { implicit session =>
         val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
         stephenToMarvin.invitationSent === 0
-        stephenToMarvin.invitationCount === 1
+        stephenToMarvin.invitedBy === 1
 
         val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
         léoToMarvin.invitationSent === 1
-        léoToMarvin.invitationCount === 1
+        léoToMarvin.invitedBy === 1
       }
 
       db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiStephen, Left(facebookMarvin.id.get)) }
@@ -153,11 +153,11 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       db.readOnly { implicit session =>
         val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
         stephenToMarvin.invitationSent === 1
-        stephenToMarvin.invitationCount === 2
+        stephenToMarvin.invitedBy === 2
 
         val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
         léoToMarvin.invitationSent === 1
-        léoToMarvin.invitationCount === 2
+        léoToMarvin.invitedBy === 2
       }
 
       db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, Right(contact42.email)) }
@@ -165,11 +165,11 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       db.readOnly { implicit session =>
         val léoToGrassfed42 = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(contact42.email)).get
         léoToGrassfed42.invitationSent === 1
-        léoToGrassfed42.invitationCount === 1
+        léoToGrassfed42.invitedBy === 1
 
         val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
         léoToMarvin.invitationSent === 1
-        léoToMarvin.invitationCount === 2
+        léoToMarvin.invitedBy === 2
       }
     }
 
