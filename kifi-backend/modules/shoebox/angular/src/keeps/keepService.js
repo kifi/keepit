@@ -105,6 +105,14 @@ angular.module('kifi.keepService', ['kifi.undo'])
       return -1;
     }
 
+    function expiredConversationCount(keep) {
+      if (!keep.conversationUpdatedAt) {
+        return true;
+      }
+      var diff = new Date().getTime() - keep.conversationUpdatedAt.getTime();
+      return diff / 1000 > 10; // conversation count is older than 5 seconds
+    }
+
 
     var api = {
       list: list,
@@ -370,7 +378,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       getChatter: function (keep) {
-        if (keep && keep.url) {
+        if (keep && keep.url && expiredConversationCount(keep)) {
           var url = env.xhrBaseEliza + '/chatter';
 
           var data = {
@@ -382,6 +390,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return $http.post(url, data).then(function (res) {
             var data = res.data;
             keep.conversationCount = data.threads;
+            keep.conversationUpdatedAt = new Date();
             return data;
           });
         }
