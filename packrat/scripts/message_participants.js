@@ -1,6 +1,6 @@
 // @require scripts/lib/jquery.js
-// @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/jquery-tokeninput.js
 // @require scripts/render.js
 // @require scripts/util.js
 // @require scripts/kifi_util.js
@@ -148,9 +148,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 							q: query,
 							n: nWanted,
 							nHave: nHave
-		        }, function (results) {
-		          withResults(results, results.length < nWanted);
-		        });
+							}, function (results) {
+								withResults(results, results.length < nWanted);
+							});
 						return true;
 					}
 				}, {

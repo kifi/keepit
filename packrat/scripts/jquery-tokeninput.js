@@ -1,6 +1,6 @@
-// Tokenizing Autocomplete Text Entry 1.6.1, heavily modified
-/*! adapted from github.com/loopj/jquery-tokeninput (c) 2009 James Smith, MIT license */
+// @require scripts/lib/underscore.js
 
+/*! adapted from github.com/loopj/jquery-tokeninput (c) 2009 James Smith, MIT license */
 (function ($) {
 
   var DEFAULT_SETTINGS = {
@@ -555,18 +555,30 @@
     function hideDropdown() {
       $dropdown.hide().empty().removeClass(classes.dropdownSearching).removeData('q');
       selectedDropdownItem = null;
+      $(window).off('resize.tokenInput');
     }
 
     function showDropdown() {
       if ($dropdown.css('display') === 'none') {
-        var r = $tokenList[0].getBoundingClientRect();
-        $dropdown.css({  // TODO: allow callers to specify parent and position/size dropdown
+        var r = $tokenList[0].getBoundingClientRect();  // TODO: parameterize attaching/positioning
+        var winHeight = window.innerHeight;
+        var winWidth = window.innerWidth;
+        $dropdown.css({
           display: '',
+          visibility: 'hidden',
           position: 'fixed',
           top: r.bottom,
-          right: window.innerWidth - r.right,
+          right: winWidth - r.right,
           width: r.width
         });
+        var r2 = $dropdown[0].getBoundingClientRect();
+        $dropdown.css({
+          visibility: '',
+          right: winWidth - 2 * r.right + r2.right
+        });
+        $(window).on('resize.tokenInput', _.throttle(function () {
+          $dropdown.css('top', $tokenList[0].getBoundingClientRect().bottom);
+        }, 50));
       }
     }
 
