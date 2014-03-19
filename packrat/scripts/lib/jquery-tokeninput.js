@@ -105,6 +105,10 @@
     get: function () {
       return this.data('tokenInput').getTokens();
     },
+    deselectDropdownItem: function () {
+      this.data('tokenInput').deselectDropdownItem();
+      return this;
+    },
     toggleDisabled: function (disable) {
       this.data('tokenInput').toggleDisabled(disable);
       return this;
@@ -166,7 +170,7 @@
         this.value = '';
         $tokenList.removeClass(classes.listFocused);
       })
-      .bind('keyup keydown blur update', resizeInput)
+      .on('input', handleQueryChange)
       .keydown(function (event) {
         var $prevToken;
         var $nextToken;
@@ -211,10 +215,8 @@
                 }
               }
               return false;
-            } else {
-              setTimeout(handleQueryChange, 0);  // wait for input value to change
-              break;
             }
+            break;
 
           case KEY.TAB:
           case KEY.ENTER:
@@ -223,24 +225,19 @@
             if (selectedDropdownItem) {
               handleItemChosen(selectedDropdownItem);
               return false;
-            } else {
-              this.value = '';
-              if (event.keyCode === KEY.TAB) {
-                break;
-              } else {
-                return false;
-              }
             }
+            if (this.value) {
+              this.value = '';
+              handleQueryChange();
+            }
+            if (event.keyCode !== KEY.TAB) {
+              return false;
+            }
+            break;
 
           case KEY.ESC:
             hideDropdown();
             return false;
-
-          default:
-            if (String.fromCharCode(event.which)) {
-              setTimeout(handleQueryChange, 0);  // wait for input value to change
-            }
-            break;
         }
       });
 
@@ -341,8 +338,12 @@
       });
     };
 
-    this.getTokens = function() {
+    this.getTokens = function () {
       return tokens.slice();
+    };
+
+    this.deselectDropdownItem = function () {
+      selectDropdownItem(null);
     };
 
     this.toggleDisabled = function (disable) {
@@ -598,7 +599,7 @@
         .data('tokeninput', result)[0];
     }
 
-    // Highlight an item in the results dropdown
+    // Highlight an item in the results dropdown (or pass null to deselect)
     function selectDropdownItem(item) {
       $(selectedDropdownItem).removeClass(classes.dropdownItemSelected);
       $(selectedDropdownItem = item).addClass(classes.dropdownItemSelected);
@@ -609,6 +610,8 @@
       if (selectedToken) {
         deselectToken($(selectedToken), POSITION.AFTER);
       }
+
+      resizeInput();
 
       var query = $tokenInput.val().trim();
       if (query.length) {
