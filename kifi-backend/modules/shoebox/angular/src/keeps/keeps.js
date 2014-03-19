@@ -3,57 +3,9 @@
 angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
-  '$scope', 'profileService', 'keepService', 'tagService', '$document', '$log',
-  function ($scope, profileService, keepService, tagService, $document, $log) {
+  '$scope', 'profileService', 'keepService', 'tagService',
+  function ($scope, profileService, keepService, tagService) {
     $scope.me = profileService.me;
-
-    function keepKeyBindings(e) {
-      if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
-        var captured = false;
-        /* jshint ignore:start */
-        switch (e.which) {
-          case 13:
-            var p = keepService.getHighlighted();
-            keepService.togglePreview(p);
-            captured = true;
-            break;
-          case 27: // esc
-            if (keepService.isDetailOpen()) {
-              keepService.clearState();
-              captured = true;
-            }
-            break;
-          case 38: // up
-          case 75: // k
-            keepService.previewPrev();
-            captured = true;
-            break;
-          case 40: // down
-          case 74: // j
-            keepService.previewNext();
-            captured = true;
-            break;
-          case 32: // space
-            keepService.toggleSelect();
-            captured = true;
-            break;
-        }
-        /* jshint ignore:end */
-        if (captured) {
-          $scope.$apply();
-          e.preventDefault();
-        } else {
-          $log.log('key', String.fromCharCode(e.which), e.which);
-        }
-      }
-    }
-
-    $document.on('keydown', keepKeyBindings);
-
-    $scope.$on('$destroy', function () {
-      keepService.clearState();
-      $document.off('keydown', keepKeyBindings);
-    });
 
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.list.length;
@@ -69,8 +21,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService',
-  function (keepService) {
+  'keepService', '$document', '$log',
+  function (keepService, $document, $log) {
 
     return {
       restrict: 'A',
@@ -84,7 +36,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
-      link: function (scope /*, element, attrs*/ ) {
+      link: function (scope, element /*, attrs*/ ) {
         keepService.reset();
 
         scope.select = keepService.select;
@@ -94,6 +46,79 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.preview = keepService.preview;
         scope.togglePreview = keepService.togglePreview;
         scope.isPreviewed = keepService.isPreviewed;
+
+        function bringCardIntoViewUp() {
+          var elem = element.find('.detailed');
+          var offset = elem.offset();
+          if (offset.top < 250) {
+            var next = elem.parent().prev().prev() || elem.parent().prev() || elem.parent();
+            if (next[0]) {
+              next[0].scrollIntoView(true);
+            }
+          }
+        }
+
+        function bringCardIntoViewDown() {
+          var elem = element.find('.detailed');
+          var offset = elem.offset();
+          var wrapperHeight = element.find('.keeps-wrapper').height();
+
+          if (offset.top > wrapperHeight - 100) {
+            var next = elem.parent().next().next() || elem.parent().next() || elem.parent();
+            if (next[0]) {
+              next[0].scrollIntoView(false);
+            }
+          }
+        }
+
+        function keepKeyBindings(e) {
+          if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
+            var captured = false;
+            /* jshint maxcomplexity: false */
+            switch (e.which) {
+              case 13:
+                var p = keepService.getHighlighted();
+                keepService.togglePreview(p);
+                captured = true;
+                break;
+              case 27: // esc
+                if (keepService.isDetailOpen()) {
+                  keepService.clearState();
+                  captured = true;
+                }
+                break;
+              case 38: // up
+              case 75: // k
+                keepService.previewPrev();
+                bringCardIntoViewUp();
+                captured = true;
+                break;
+              case 40: // down
+              case 74: // j
+                keepService.previewNext();
+                bringCardIntoViewDown();
+                captured = true;
+                break;
+              case 32: // space
+                keepService.toggleSelect();
+                captured = true;
+                break;
+            }
+            if (captured) {
+              scope.$apply();
+              e.preventDefault();
+            } else {
+              $log.log('key', String.fromCharCode(e.which), e.which);
+            }
+          }
+        }
+
+        $document.on('keydown', keepKeyBindings);
+
+        scope.$on('$destroy', function () {
+          keepService.clearState();
+          $document.off('keydown', keepKeyBindings);
+        });
 
         scope.isShowMore = function () {
           return !scope.keepsLoading && scope.keepsHasMore;
