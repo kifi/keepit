@@ -1,6 +1,6 @@
-<div class="kf-main-keeps"
+<div class="kf-main-keeps keeps-wrapper"
 	antiscroll="{ autoHide: false }">
-  <div smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
+  <div smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()" class="keeps-list">
     <ol class="kf-my-keeps">
       <div kf-keep ng-repeat="keep in keeps" ng-click="onClickKeep(keep, $event)"></div>
     </ol>
