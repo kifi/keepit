@@ -11,8 +11,13 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
         var captured = false;
         switch (e.which) {
-          case 27:
-            if (keepService.isPreviewed()) {
+          case 13:
+            var p = keepService.getHighlighted();
+            keepService.togglePreview(p);
+            captured = true;
+            break;
+          case 27: // esc
+            if (keepService.isDetailOpen()) {
               keepService.clearState();
               captured = true;
             }
