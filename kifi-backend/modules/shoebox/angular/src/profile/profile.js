@@ -148,8 +148,8 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfLinkedinConnectButton', [
-  'profileService', '$FB', '$window',
-  function (profileService, $FB, $window) {
+  'profileService',
+  function (profileService) {
     return {
       restrict: 'A',
       link: function (scope) {
@@ -160,7 +160,7 @@ angular.module('kifi.profile', [
         }, function (status) {
           scope.isLinkedInConnected = status;
           var li = _.find(profileService.networks, function (n) {
-            return n.network === 'linkedin'
+            return n.network === 'linkedin';
           });
           scope.liProfileUrl = li && li.profileUrl;
         });
@@ -173,8 +173,8 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfFacebookConnectButton', [
-  'profileService', '$FB', '$window',
-  function (profileService, $FB, $window) {
+  'profileService',
+  function (profileService) {
     return {
       restrict: 'A',
       link: function (scope) {
@@ -185,7 +185,7 @@ angular.module('kifi.profile', [
         }, function (status) {
           scope.isFacebookConnected = status;
           var fb = _.find(profileService.networks, function (n) {
-            return n.network === 'facebook'
+            return n.network === 'facebook';
           });
           scope.fbProfileUrl = fb && fb.profileUrl;
         });

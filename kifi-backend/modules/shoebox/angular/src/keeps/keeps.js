@@ -10,6 +10,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     function keepKeyBindings(e) {
       if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
         var captured = false;
+        /* jshint ignore:start */
         switch (e.which) {
           case 13:
             var p = keepService.getHighlighted();
@@ -36,13 +37,13 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             keepService.toggleSelect();
             captured = true;
             break;
-          default:
-            $log.log('key', String.fromCharCode(e.which), e.which);
-            break;
         }
+        /* jshint ignore:end */
         if (captured) {
           $scope.$apply();
           e.preventDefault();
+        } else {
+          $log.log('key', String.fromCharCode(e.which), e.which);
         }
       }
     }

@@ -15,10 +15,12 @@ angular.module('util', [])
       trimInput: function (input) {
         return input ? input.trim().replace(/\s+/g, ' ') : '';
       },
+      /* jshint ignore:start */
       validateEmail: function (input) {
         var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
         return emailAddrRe.test(input);
       },
+      /* jshint ignore:end */
       replaceArrayInPlace: function (oldArray, newArray) {
         // empties oldArray, loads newArray values into it, keeping the same reference.
         oldArray = oldArray || [];

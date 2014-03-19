@@ -210,7 +210,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
           return res;
         });
       }
-    }
+    };
 
     return {
       me: me, // when mutated, you MUST increment me.seqNum
