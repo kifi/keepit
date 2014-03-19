@@ -139,6 +139,8 @@ object ApplicationBuild extends Build {
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.tika" % "tika-parsers" % "1.3"
   )
+  
+  lazy val cortexDependencies = Seq()
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
@@ -245,6 +247,10 @@ object ApplicationBuild extends Build {
   lazy val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-scraper.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
+  
+  lazy val cortex = play.Project("cortex", appVersion, cortexDependencies, path=file("modules/cortex")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-cortex.conf"): _*
+  ).dependsOn(common % "test->test;compile->compile")
 
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
     .settings(
@@ -255,8 +261,16 @@ object ApplicationBuild extends Build {
       },
       commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
     )
-    .dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "test->test;compile->compile", heimdal % "test->test;compile->compile", abook % "test->test;compile->compile", scraper % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb)
+    .dependsOn(
+      common % "test->test;compile->compile", 
+      search % "test->test;compile->compile", 
+      shoebox % "test->test;compile->compile", 
+      eliza % "test->test;compile->compile", 
+      heimdal % "test->test;compile->compile", 
+      abook % "test->test;compile->compile", 
+      scraper % "test->test;compile->compile",
+      cortex % "test->test;compile->compile")
+    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)

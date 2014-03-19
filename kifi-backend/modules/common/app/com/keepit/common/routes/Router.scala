@@ -258,6 +258,12 @@ object Scraper extends Service {
   }
 }
 
+object Cortex extends Service {
+  object internal {
+
+  }
+}
+
 object Common {
   object internal {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")
