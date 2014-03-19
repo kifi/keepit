@@ -72,12 +72,12 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def processInvite(userId:Id[User], user:User, inviteInfo:InviteInfo): SimpleResult = {
+  def processInvite(userId: Id[User], user: User, inviteInfo: InviteInfo): SimpleResult = {
     if (inviteInfo.fullSocialId.network == "email") {
       abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
         econtactTr match {
           case Success(c) =>
-            inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo)
+            inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo, "site")
             log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
           case Failure(e) =>
             log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
@@ -85,7 +85,7 @@ class InviteController @Inject() (db: Database,
       }
       CloseWindow()
     } else {
-      val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo)
+      val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, "site")
       if (!inviteStatus.sent && inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") {
         inviteStatus.savedInvite match {
           case Some(invitation) =>
@@ -160,7 +160,7 @@ class InviteController @Inject() (db: Database,
         case Some(invite) =>
           if (errorCode.isEmpty) {
             invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
-            inviteCommander.reportSentInvitation(invite, SocialNetworks.FACEBOOK)
+            inviteCommander.reportSentInvitation(invite, SocialNetworks.FACEBOOK, None)
           }
           CloseWindow()
         case None =>
