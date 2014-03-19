@@ -77,13 +77,14 @@ nav-item()
   line-height: 36px
   white-space: nowrap
 
-  &:hover
-    .kf-nav-link
+  .kf-nav-link
+    // for some reason kf-nav-link may remain stuck in :hover state when using Chrome
+    // - may be due to DOM manipulation such as adding/removing elements.
+    // so we override :hover so that it does nothing and manually enable/disable a "hover" class on mouseenter/mouseleave events
+    &:hover
+      background-color: #eff2f7
+    &.hover
       background-color: #e9ecf2
-
-  &.active
-    .kf-nav-link
-      background-color: #e3e6ee
 
   &.highlight
   &.drop-hover
@@ -103,8 +104,11 @@ nav-item()
     .kf-nav-link
       background-color: #f9edbe
 
+  &.active
+    .kf-nav-link
+      background-color: #e3e6ee
+
   .kf-nav-link
-    background-color: #eff2f7
 
     &.renaming
       background-color: white
@@ -158,16 +162,16 @@ nav-item()
     display: none
     position: absolute
     top: 0
+    bottom: 0
     right: 0
-    height: 100%
 
     &.open
       display: block
 
-  &:hover .kf-tag-tools
+  .hover .kf-tag-tools
     display: block
 
-  &.renaming .kf-tag-tools
+  .renaming .kf-tag-tools
     display: none
 
   .dropdown-toggle
@@ -281,9 +285,3 @@ nav-item()
 .kf-tag-tool-icon
   height: 100%
   width: 100%
-
-.kf-tag-tools
-  position: absolute
-  top: 0
-  bottom: 0
-  right: 0

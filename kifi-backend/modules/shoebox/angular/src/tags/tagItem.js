@@ -22,6 +22,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         scope.isDropdownOpen = false;
         scope.renameTag = {};
         var input = element.find('input');
+        var navLink = element.find('.kf-nav-link');
 
         scope.onKeepDrop = function (keep) {
           tagService.addKeepToTag(scope.tag, keep);
@@ -145,7 +146,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           stopTagDrag();
           if (isTop !== null && scope.watchTagReorder()) {
             // The "dragend" handler must be called before removing the element from the DOM.
-            element.find('.kf-nav-link').triggerHandler('dragend');
+            navLink.triggerHandler('dragend');
             scope.reorderTag({isTop: isTop, srcTag: tag, dstTag: scope.tag});
           }
         };
@@ -194,6 +195,14 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
             });
           }
         });
+
+        scope.enableHover = function () {
+          navLink.addClass("hover");
+        };
+
+        scope.disableHover = function () {
+          navLink.removeClass("hover");
+        };
       }
     };
   }
