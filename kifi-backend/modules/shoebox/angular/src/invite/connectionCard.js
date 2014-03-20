@@ -15,7 +15,6 @@ angular.module('kifi.invite.connectionCard', [])
       var friend = scope.friend();
       scope.mainImage = friend.image;
       scope.mainLabel = friend.name;
-      scope.bylineIcon = '/img/networks2.png';
       scope.hidden = false;
 
       scope.facebook = friend.network === 'facebook';
