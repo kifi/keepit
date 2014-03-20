@@ -2,7 +2,7 @@ package com.keepit.abook.model
 
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
 import com.keepit.common.db.Id
-import com.keepit.model.{EContact, User, SocialUserInfo, Invitation}
+import com.keepit.model.{EContact, User, SocialUserInfo}
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.social.{SocialNetworks, SocialNetworkType}
@@ -15,8 +15,7 @@ import com.keepit.common.KestrelCombinator
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])
 trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection
-  def recordInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
-  def recordResentInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
+  def recordInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String], invitationNumber: Int = 1)(implicit session: RWSession): Unit
   def cancelInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
   def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit
   def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
@@ -226,29 +225,20 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
-  def recordInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
+  def recordInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], invitationNumber: Int)(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => {
-        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent === 0} yield row.invitationsSent).update(1)
-        if (updated == 1) {
+        val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent === invitationNumber - 1 } yield row.invitationsSent).update(invitationNumber)
+        if (updated == 1 && invitationNumber == 1) {
           sqlu"UPDATE rich_social_connection SET invited_by = invited_by + 1 WHERE friend_social_id = $friendSocialId".execute()
         }
       }
       case Right(friendEmailAddress) => {
-        val updated = (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress && row.invitationsSent === 0 } yield row.invitationsSent).update(1)
-        if (updated == 1) {
+        val updated = (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress && row.invitationsSent === invitationNumber - 1 } yield row.invitationsSent).update(invitationNumber)
+        if (updated == 1 && invitationNumber == 1) {
           sqlu"UPDATE rich_social_connection SET invited_by = invited_by + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress".execute()
         }
       }
-    }
-  }
-
-  def recordResentInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
-    friendId match {
-      case Left(friendSocialId) =>
-        (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent > 0} yield row.invitationsSent).mutate(r => r.row = r.row + 1)
-      case Right(friendEmailAddress) =>
-        (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress && row.invitationsSent > 0 } yield row.invitationsSent).mutate(r => r.row = r.row + 1)
     }
   }
 

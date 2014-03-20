@@ -106,10 +106,10 @@ class LocalRichConnectionCommander @Inject() (
         }
         case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => // Ignore
 
-        case RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) => {
+        case RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]], invitationNumber: Int) => {
           db.readWrite { implicit session =>
             val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get(friendEContact.get).email))
-            repo.recordInvitation(userId, friend) }
+            repo.recordInvitation(userId, friend, invitationNumber) }
         }
 
         case CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) => {
