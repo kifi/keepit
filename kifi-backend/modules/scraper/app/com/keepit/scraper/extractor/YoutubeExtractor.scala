@@ -28,7 +28,8 @@ class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxServi
 class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends JsoupBasedExtractor(url, maxContentChars) {
 
   def parse(doc: Document): String = {
-    val headline = doc.getElementById("watch-headline-title").text
+    val headlineElement = doc.getElementById("watch-headline-title")
+    val headline = if (headlineElement != null) headlineElement.text else ""
     val description = doc.select("#watch-description-text, #watch-description-extras div.content, #watch-description-extra-info").text
     val channel = doc.select("#watch7-user-header .yt-user-name").text()
     val closedCaptions = getClosedCaptions(doc).getOrElse("")
