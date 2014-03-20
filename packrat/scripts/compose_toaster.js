@@ -3,12 +3,10 @@
 // @require scripts/lib/q.min.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/html/keeper/compose_toaster.js
-// @require scripts/lib/jquery-tokeninput.js
 // @require scripts/formatting.js
 // @require scripts/look.js
 // @require scripts/render.js
 // @require scripts/compose.js
-// @require scripts/snapshot.js
 
 var toaster = (function () {
   'use strict';

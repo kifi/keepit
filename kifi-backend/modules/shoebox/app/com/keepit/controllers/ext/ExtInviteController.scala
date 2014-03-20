@@ -26,8 +26,9 @@ class ExtInviteController @Inject() (
 
   def invite() = JsonAction.authenticatedParseJsonAsync { request =>
     val userId = request.userId
+    val source = (request.body \ "source").as[String]
     (request.body \ "id").asOpt[String] map FullSocialId.apply map { fullSocialId =>
-      val status = inviteCommander.processSocialInvite(userId, InviteInfo(fullSocialId, None, None))
+      val status = inviteCommander.processSocialInvite(userId, InviteInfo(fullSocialId, None, None), source)
       if (!status.sent && fullSocialId.network.equalsIgnoreCase("facebook") && status.code == "client_handle") {
         status.savedInvite match {
           case Some(invitation) =>
@@ -44,7 +45,7 @@ class ExtInviteController @Inject() (
       abookServiceClient.getOrCreateEContact(userId, emailAddr) map { econtactTr =>
         econtactTr match {
           case Success(c) =>  // TODO: refactor InviteCommander not to require a FullSocialId for invitations by email (the null below)
-            inviteCommander.sendInvitationForContact(userId, c, request.user, InviteInfo(null, None, None))
+            inviteCommander.sendInvitationForContact(userId, c, request.user, InviteInfo(null, None, None), source)
             log.info(s"[invite($userId,$emailAddr)] invite sent successfully")
             Ok(Json.obj("sent" -> true))
           case Failure(e) =>  // TODO: did abookServiceClient already Airbrake?
