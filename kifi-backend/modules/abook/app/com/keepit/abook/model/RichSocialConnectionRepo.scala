@@ -24,6 +24,7 @@ trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
   def getByUserAndKifiFriend(userId: Id[User], kifiFriendId: Id[User])(implicit session: RSession): Seq[RichSocialConnection]
   def dedupedWTIForUser(user: Id[User], howMany: Int)(implicit session: RSession): Seq[Id[SocialUserInfo]]
   def removeRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo])(implicit session: RWSession): Unit
+  def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int
 }
 
 
@@ -267,6 +268,13 @@ class RichSocialConnectionRepoImpl @Inject() (
       }
     }
   }
+
+  def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = {
+    friendId match {
+      case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId} yield row.invitationsSent)
+      case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitationsSent)
+    }
+  }.firstOption getOrElse 0
 
   def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit = {
     friendId match {

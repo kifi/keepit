@@ -60,6 +60,7 @@ trait ABookServiceClient extends ServiceClient {
   def refreshAllFilters():Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int]
 }
 
 
@@ -250,6 +251,10 @@ class ABookServiceClientImpl @Inject() (
       r.json.as[Seq[Id[SocialUserInfo]]]
     }
   }
+
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = {
+    call(ABook.internal.countInvitationsSent(userId, friend)).map(_.json.as[Int])
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -307,4 +312,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
 
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
+
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = ???
+
 }
