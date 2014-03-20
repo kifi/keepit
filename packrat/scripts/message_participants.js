@@ -1,16 +1,17 @@
-// @require scripts/lib/jquery.js
-// @require scripts/lib/antiscroll.min.js
-// @require scripts/jquery-tokeninput.js
-// @require scripts/render.js
-// @require scripts/util.js
-// @require scripts/kifi_util.js
-// @require scripts/prevent_ancestor_scroll.js
+// @require styles/keeper/message_participants.css
+// @require styles/keeper/compose.css
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant.js
 // @require scripts/html/keeper/message_participant_icon.js
 // @require scripts/html/keeper/message_avatar.js
-// @require styles/keeper/message_participants.css
-// @require styles/keeper/compose.css
+// @require scripts/lib/jquery.js
+// @require scripts/lib/jquery-tokeninput.js
+// @require scripts/lib/antiscroll.min.js
+// @require scripts/friend_search.js
+// @require scripts/render.js
+// @require scripts/util.js
+// @require scripts/kifi_util.js
+// @require scripts/prevent_ancestor_scroll.js
 
 /**
  * --------------------------
@@ -141,37 +142,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		initAndAsyncFocusInput: function () {
 			var $input = this.$input;
 			if (!$input) {
-				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput(function search(query, cachedResults, withResults) {
-					var nWanted = 4, nHave = cachedResults ? cachedResults.length : 0;
-					if (nWanted > nHave) {
-						api.port.emit('search_friends', {
-							q: query,
-							n: nWanted,
-							nHave: nHave
-							}, function (results) {
-								withResults(results, results.length < nWanted);
-							});
-						return true;
-					}
-				}, {
+				$input = this.$input = this.get$('.kifi-message-participant-dialog-input');
+				initFriendSearch($input, 'threadPane', api.noop, {
 					placeholder: 'Type a name...',
-					resultsLimit: 4,
-					preventDuplicates: true,
-					tokenValue: 'id',
-					classPrefix: 'kifi-ti-',
-					classForRoots: 'kifi-root',
-					// tip: {
-					// 	html: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
-					// 	action: api.port.emit.bind(api.port, 'invite_friends', 'threadPane')
-					// },
-					formatResult: function (f) {
-						// var html = Mustache.escape(f.parts[0]);
-						// for (var i = 1; i < f.parts.length; i++) {
-						// 	html += i % 2 ? '<b>' : '</b>';
-						// 	html += Mustache.escape(f.parts[i]);
-						// }
-						// return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
-					},
 					onAdd: function () {
 						this.getAddDialog().addClass('kifi-non-empty');
 					}.bind(this),
@@ -181,7 +154,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						}
 					}.bind(this)
 				});
-				$('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
 			}
 
 			setTimeout(function () {

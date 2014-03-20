@@ -965,15 +965,16 @@ api.port.on({
       results = results.slice(0, data.n);
     }
     var nMoreDesired = data.n - results.length;
+    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
     respond({
-      results: results.map(toFriendSearchResult, {sf: sf, q: data.q}),
-      searching: nMoreDesired > 0
+      searchId: searchId,
+      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
     });
     if (nMoreDesired) {
       ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
-        api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: nonusers});
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers});
       }, function () {
-        api.tabs.emit(tab, 'nonusers', {q: data.q, nonusers: [], error: true});
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
       });
     }
   },

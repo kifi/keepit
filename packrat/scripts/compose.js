@@ -1,23 +1,14 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/underscore.js
+// @require scripts/friend_search.js
 // @request scripts/look.js
+// @require scripts/snapshot.js
 // @require scripts/prevent_ancestor_scroll.js
 
 var initCompose = (function() {
   'use strict';
-
-  api.port.on({
-    nonusers: function (o) {
-      $composes.each(function () {
-        var search = $.data(this, 'search');
-        if (search && search.q === o.q) {
-          $.removeData(this, 'search');
-          search.withResults(o.nonusers.concat(['tip']), false, o.error);
-        }
-      });
-    }
-  });
 
   var $composes = $();
   var prefix = CO_KEY + '-';
@@ -114,60 +105,10 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    $t.tokenInput(function search(numTokens, query, withResults) {
-      api.port.emit('search_friends', {q: query, n: 4, includeSelf: numTokens === 0}, function (o) {
-        if (o.results.length || !o.searching) {  // wait for more if none yet
-          withResults(o.results.concat(o.searching ? [] : ['tip']), o.searching);
-        }
-        if (o.searching) {
-          $f.data('search', {q: query, withResults: withResults});
-        }
-      });
+    initFriendSearch($t, 'composePane', function includeSelf(numTokens) {
+      return numTokens === 0;
     }, {
       placeholder: 'To',
-      resultsLimit: 4,
-      preventDuplicates: true,
-      tokenValue: 'id',
-      classPrefix: 'kifi-ti-',
-      classForRoots: 'kifi-root',
-      formatResult: function (res) {
-        if (res.pictureName) {
-          var html = [
-            '<li class="kifi-ti-dropdown-item-autoselect" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
-            Mustache.escape(res.parts[0])];
-          for (var i = 1; i < res.parts.length; i++) {
-            html.push(i % 2 ? '<b>' : '</b>', Mustache.escape(res.parts[i]));
-          }
-          html.push('</li>');
-          return html.join('');
-        } else if (res.id) {
-          return [
-              '<li class="kifi-ti-dropdown-invite-social', res.invited ? ' kifi-invited' : '', '"',
-              ' style="background-image:url(', Mustache.escape(res.pic || 'https://www.kifi.com/assets/img/ghost-linkedin.100.png'), ')">',
-              '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
-              '<div class="kifi-ti-dropdown-invite-sub">', res.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
-              '</li>'].join('');
-        } else if (res.email) {
-          var html = ['<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-invited' : '', '">'];
-          if (res.name) {
-            html.push('<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>');
-          }
-          html.push('<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(res.email), '</div></li>');
-          return html.join('');
-        } else if (res === 'tip') {
-          return '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>';
-        }
-      },
-      onSelect: function (res, el) {
-        if (!res.pictureName) {
-          if (res.id || res.email) {
-            handleInvite(res, el, $t);
-          } else if (res === 'tip') {
-            api.port.emit('invite_friends', 'composePane');
-          }
-          return false;
-        }
-      },
       onAdd: function () {
         if (defaultText && !$d.text()) {
           $f.removeClass('kifi-empty');
@@ -190,7 +131,6 @@ var initCompose = (function() {
         throttledSaveDraft();
       }
     });
-    $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   }
 
   $f.keydown(function (e) {
@@ -400,50 +340,5 @@ var initCompose = (function() {
       $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
       $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
     }
-  }
-
-  function handleInvite(res, el, $t) {
-    var $el = $(el);
-    var bgImg = $el.css('background-image');
-    $el.addClass('kifi-inviting').css('background-image', bgImg + ',url(' + api.url('images/spinner_32.gif') + ')');
-    api.port.emit('invite_friend', {id: res.id, email: res.email, source: 'composePane'}, notBeforeMs(1000, function (data) {
-      $el.removeClass('kifi-inviting').css('background-image', bgImg);
-      if (data.url) {
-        window.open(data.url, 'kifi-invite-' + (res.id || res.email), 'height=550,width=990');
-      } else if (data.sent) {
-        $el.addClass('kifi-invited');
-        var $activeEl = $(document.activeElement);
-        if ($activeEl.is('.kifi-ti-token-for-input>input')) {
-          clearInputAfter($activeEl, 1500);
-        }
-      } else if (data.sent === false) {
-        $el.addClass('kifi-invite-fail');
-        setTimeout($.fn.removeClass.bind($el, 'kifi-invite-fail'), 2000);
-      }
-    }));
-    $t.tokenInput('flushCache').tokenInput('deselectDropdownItem');
-  }
-
-  function clearInputAfter($in, ms) {
-    var t = setTimeout(function () {
-      $in.val('').triggerHandler('input');
-    }, 1500);
-    function cleanUp() {
-      clearTimeout(t);
-      $in.off('input blur', cleanUp);
-    }
-    $in.on('input blur', cleanUp);
-  }
-
-  function notBeforeMs(ms, f) {
-    var t0 = Date.now();
-    return function () {
-      var elapsed = Date.now() - t0;
-      if (elapsed >= ms) {
-        f.apply(this, arguments);
-      } else {
-        setTimeout(f.apply.bind(f, this, arguments), ms - elapsed);
-      }
-    };
   }
 }());
