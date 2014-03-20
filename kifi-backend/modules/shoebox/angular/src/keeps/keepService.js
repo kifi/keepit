@@ -110,7 +110,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
         return true;
       }
       var diff = new Date().getTime() - keep.conversationUpdatedAt.getTime();
-      return diff / 1000 > 10; // conversation count is older than 5 seconds
+      return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
 
 
