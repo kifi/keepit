@@ -49,7 +49,10 @@ case class SocialFinalizeInfo(
   picWidth: Option[Int],
   cropX: Option[Int],
   cropY: Option[Int],
-  cropSize: Option[Int])
+  cropSize: Option[Int]) {
+
+  override def toString = s"[SocialFinalizeInfo] $email,$firstName,$lastName,"
+}
 
 object SocialFinalizeInfo {
   implicit val format = (
@@ -168,7 +171,7 @@ class AuthCommander @Inject()(
       require(AuthHelper.validatePwd(sfi.password), "invalid password")
       val currentHasher = Registry.hashers.currentHasher
       val pInfo = timing(s"[finalizeSocialAccount] hash") {
-        currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
+        currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
       }
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
