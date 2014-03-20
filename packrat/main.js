@@ -304,6 +304,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   }, {});
 
   threadsById = {};
+  threadReadAt = {};
   arr.forEach(function (n) {
     standardizeNotification(n);
     threadsById[n.thread] = n;
