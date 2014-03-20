@@ -698,9 +698,15 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
-  invite_friends: function (where) {
+  invite_friends: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
-    mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
+    mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
+  },
+  invite_friend: function (data, respond) {
+    ajax('POST', '/ext/invite', data, respond, function () {
+      respond({sent: false});
+    });
+    mixpanel.track('user_clicked_pane', {type: data.source, action: 'choseSocialContact', network: data.id ? data.id.split('/')[0] : 'email'});
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
@@ -939,7 +945,7 @@ api.port.on({
   web_base_uri: function(_, respond) {
     respond(webBaseUri());
   },
-  search_friends: function(data, respond) {
+  search_friends: function(data, respond, tab) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
     var results;
     if (friendSearchCache) {
@@ -955,14 +961,29 @@ api.port.on({
       results = sf.filter(data.q, candidates, getName);
       friendSearchCache.put(data, results);
     }
-    respond((results.length > 4 ? results.slice(0, 4) : results).map(toFriendSearchResult, {sf: sf, q: data.q}));
+    if (results.length > data.n) {
+      results = results.slice(0, data.n);
+    }
+    var nMoreDesired = data.n - results.length;
+    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
+    respond({
+      searchId: searchId,
+      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
+    });
+    if (nMoreDesired) {
+      ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers.map(toNonUserSearchResult, {sf: sf, q: data.q})});
+      }, function () {
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
+      });
+    }
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page’s normalized URI may have changed
+      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // pageâ€™s normalized URI may have changed
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {
@@ -2018,6 +2039,23 @@ function toFriendSearchResult(f) {
     pictureName: f.pictureName,
     parts: this.sf.splitOnMatches(this.q, f.name)
   };
+}
+
+function toNonUserSearchResult(f) {
+  if (f.name) {
+    f.nameParts = this.sf.splitOnMatches(this.q, f.name);
+  }
+  if (f.email) {
+    var i = f.email.indexOf('@');
+    f.emailParts = this.sf.splitOnMatches(this.q, f.email.substr(0, i));
+    var n = f.emailParts.length;
+    if (n % 2) {
+      f.emailParts[n - 1] += f.email.substr(i);
+    } else {
+      f.emailParts.push(f.email.substr(i));
+    }
+  }
+  return f;
 }
 
 function reTest(s) {

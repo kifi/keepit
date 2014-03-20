@@ -173,7 +173,7 @@ class InviteCommander @Inject() (
     }
   }
 
-  def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, inviteInfo:InviteInfo)(implicit rw:RWSession) {
+  private def sendEmailInvitation(c:EContact, invite:Invitation, invitingUser:User, inviteInfo:InviteInfo)(implicit rw:RWSession) {
     val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
 
     val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
@@ -196,7 +196,7 @@ class InviteCommander @Inject() (
     log.info(s"[inviteConnection-email] sent invitation to $c")
   }
 
-  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, inviteInfo:InviteInfo):Unit = {
+  def sendInvitationForContact(userId: Id[User], c: EContact, user: User, inviteInfo: InviteInfo, source: String): Unit = {
     db.readWrite { implicit s =>
       val inviteOpt = invitationRepo.getBySenderIdAndRecipientEContactId(userId, c.id.get)
       log.info(s"[inviteConnection-email] inviteOpt=$inviteOpt")
@@ -220,16 +220,16 @@ class InviteCommander @Inject() (
             }
             sendEmailInvitation(c, invite, user, inviteInfo)
             invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-            reportSentInvitation(invite, SocialNetworks.EMAIL)
+            reportSentInvitation(invite, SocialNetworks.EMAIL, Some(source))
           }
         }
       }
     }
   }
 
-  case class InviteStatus(sent:Boolean, savedInvite:Option[Invitation], code:String)
+  case class InviteStatus(sent: Boolean, savedInvite: Option[Invitation], code: String)
 
-  def sendInvitationForLinkedIn(userId:Id[User], invite:Invitation, socialUserInfo:SocialUserInfo, inviteInfo:InviteInfo):InviteStatus = {
+  private def sendInvitationForLinkedIn(userId: Id[User], invite: Invitation, socialUserInfo: SocialUserInfo, inviteInfo: InviteInfo, source: String): InviteStatus = {
     val savedOpt:Option[Invitation] = db.readWrite(attempts = 2) { implicit s =>
       val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
       val path = routes.InviteController.acceptInvite(invite.externalId).url
@@ -265,7 +265,7 @@ class InviteCommander @Inject() (
     }
     savedOpt match {
       case Some(saved) =>
-        reportSentInvitation(invite, SocialNetworks.LINKEDIN)
+        reportSentInvitation(invite, SocialNetworks.LINKEDIN, Some(source))
         InviteStatus(true, savedOpt, "invite_sent")
       case None =>
         log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite)")
@@ -273,14 +273,14 @@ class InviteCommander @Inject() (
     }
   }
 
-  def processSocialInvite(userId: Id[User], inviteInfo:InviteInfo):InviteStatus = {
-    def sendInvitationCB(socialUserInfo:SocialUserInfo, invite:Invitation):InviteStatus = {
+  def processSocialInvite(userId: Id[User], inviteInfo: InviteInfo, source: String): InviteStatus = {
+    def sendInvitationCB(socialUserInfo: SocialUserInfo, invite: Invitation): InviteStatus = {
       socialUserInfo.networkType match {
         case SocialNetworks.FACEBOOK =>
           val saved = db.readWrite(attempts = 2) { implicit s => invitationRepo.save(invite) }
           InviteStatus(false, Some(saved), "client_handle")
         case SocialNetworks.LINKEDIN =>
-          sendInvitationForLinkedIn(userId, invite, socialUserInfo, inviteInfo)
+          sendInvitationForLinkedIn(userId, invite, socialUserInfo, inviteInfo, source)
         case _ =>
           InviteStatus(false, None, "unsupported_social_network")
       }
@@ -288,7 +288,7 @@ class InviteCommander @Inject() (
     filterSocialInvite(inviteInfo, userId, sendInvitationCB)
   }
 
-  def filterSocialInvite(inviteInfo:InviteInfo, userId:Id[User], cb:(SocialUserInfo, Invitation) => InviteStatus):InviteStatus = {
+  private def filterSocialInvite(inviteInfo:InviteInfo, userId:Id[User], cb:(SocialUserInfo, Invitation) => InviteStatus):InviteStatus = {
     db.readWrite(attempts = 2) {
       implicit rw =>
         val socialUserInfo = socialUserInfoRepo.get(SocialId(inviteInfo.fullSocialId.id), SocialNetworkType(inviteInfo.fullSocialId.network))
@@ -313,12 +313,13 @@ class InviteCommander @Inject() (
     }
   }
 
-  def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType): Unit = invite.senderUserId.foreach { senderId =>
+  def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType, source: Option[String]): Unit = invite.senderUserId.foreach { senderId =>
     SafeFuture {
       val contextBuilder = eventContextBuilder()
       contextBuilder += ("action", "sent")
       contextBuilder += ("socialNetwork", socialNetwork.toString)
       contextBuilder += ("inviteId", invite.externalId.id)
+      source.foreach { source => contextBuilder += ("source", source) }
       invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
       invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
       heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED))
