@@ -30,11 +30,13 @@ extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] wi
   type RepoImpl = PageInfoTable
   class PageInfoTable(tag: Tag) extends RepoTable[PageInfo](db, tag, "page_info") with SeqNumberColumn[PageInfo] {
     def uriId           = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def title           = column[String]("title")
     def description     = column[String]("description")
     def safe            = column[Boolean]("safe")
+    def lang            = column[String]("lang")
     def faviconUrl      = column[String]("favicon_url")
     def imageInfoId     = column[Id[ImageInfo]]("image_info_id")
-    def * = (id.?,createdAt,updatedAt,state,seq,uriId,description.?,safe.?,faviconUrl.?,imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
+    def * = (id.?,createdAt,updatedAt,state,seq,uriId,title.?,description.?,safe.?,lang.?,faviconUrl.?,imageInfoId.?) <> ((PageInfo.apply _).tupled, PageInfo.unapply _)
   }
 
   def table(tag:Tag) = new PageInfoTable(tag)

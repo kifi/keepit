@@ -36,7 +36,7 @@ class MobileInviteController @Inject()(
         abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
           econtactTr match {
             case Success(c) =>
-              inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo)
+              inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo, "mobile")
               log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
               Ok(Json.obj("code" -> "invitation_sent"))
             case Failure(e) =>
@@ -45,7 +45,7 @@ class MobileInviteController @Inject()(
           }
         }
       } else {
-        val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo)
+        val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, "mobile")
         log.info(s"[inviteConnection(${request.userId})] inviteStatus=$inviteStatus")
         if (inviteStatus.sent) resolve(Ok(Json.obj("code" -> "invitation_sent")))
         else if (inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") { // special handling
