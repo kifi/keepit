@@ -21,6 +21,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         scope.isRenaming = false;
         scope.isDropdownOpen = false;
         scope.renameTag = {};
+        scope.isHovering = false;
         var input = element.find('input');
 
         scope.onKeepDrop = function (keep) {
@@ -194,6 +195,14 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
             });
           }
         });
+
+        scope.enableHover = function () {
+          scope.isHovering = true;
+        };
+
+        scope.disableHover = function () {
+          scope.isHovering = false;
+        };
       }
     };
   }

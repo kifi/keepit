@@ -60,6 +60,28 @@ class SyncScraper @Inject() (
     }
   }
 
+  def shouldUpdateImage(uri:NormalizedURI, s3ScreenshotStore:S3ScreenshotStore, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
+    if (NormalizedURIStates.DO_NOT_SCRAPE.contains(scrapedURI.state)) {
+      log.warn(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] DO_NOT_SCRAPE; skipped.")
+      false
+    } else {
+      pageInfoOpt match {
+        case None =>
+          // may need marker if embedly fails
+          log.info(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] pageInfo=None; update.")
+          true
+        case Some(pageInfo) =>
+          if (Days.daysBetween(currentDateTime, pageInfo.updatedAt).getDays >= 5) {
+            log.info(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] it's been 5 days; pageInfo=$pageInfo; update.")
+            true
+          } else {
+            log.info(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] it's not been 5 days; pageInfo=$pageInfo; skipped.")
+            false
+          }
+      }
+    }
+  }
+
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
     log.info(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
@@ -106,13 +128,12 @@ class SyncScraper @Inject() (
           }
           if(shouldUpdateScreenshot(scrapedURI)) {
             s3ScreenshotStore.updatePicture(scrapedURI)
+          }
 
-            // initial throttling by tying to screenshot; need to move out
-            if (pageInfoOpt.forall(p => Days.daysBetween(currentDateTime.withTimeAtStartOfDay, p.updatedAt.withTimeAtStartOfDay).getDays >= 5)) {
-              s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { res =>
-                log.info(s"[processURI(${uri.id},${uri.url})] imageUrl=$res")
-                res
-              }
+          if (shouldUpdateImage(uri, s3ScreenshotStore, scrapedURI, pageInfoOpt)) {
+            s3ScreenshotStore.asyncGetImageUrl(scrapedURI, pageInfoOpt, true) map { res => // todo: updateImage
+              log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
+              res
             }
           }
 

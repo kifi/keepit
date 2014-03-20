@@ -44,7 +44,7 @@ case class BookmarkCountForCollectionKey(collectionId: Id[Collection]) extends K
   def toKey(): String = collectionId.toString
 }
 
-class BookmarkCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class BookmarkCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration)*)
   extends PrimitiveCacheImpl[BookmarkCountForCollectionKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object KeepToCollectionStates extends States[KeepToCollection]

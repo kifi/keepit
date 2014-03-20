@@ -622,7 +622,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int):Future[PageInfo] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), routingStrategy = leaderPriority).map { r =>
       r.json.as[PageInfo]
     }
   }
@@ -634,7 +634,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def saveImageInfo(imgInfo:ImageInfo)(implicit timeout:Int):Future[ImageInfo] = {
-    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), routingStrategy = leaderPriority).map { r =>
       r.json.as[ImageInfo]
     }
   }

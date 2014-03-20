@@ -1,0 +1,9 @@
+<div class="kf-connection-card" ng-class="{'kf-connection-invited': invited}" ng-hide="hidden"> <!-- Should really be ng-if but that causes some error for some reason -->
+  <img class="kf-connection-card-image" ng-src="{{mainImage}}"></img>
+  <span class="kf-connection-card-who">
+    <span class="kf-main-label">{{mainLabel}}</span><br>
+    <img class="kf-byline-icon" ng-src="{{bylineIcon}}"></img><span class="kf-byline">{{byline}}</span>
+  </span>
+  <span class="kf-connection-card-action" ng-class="{'kf-connection-invited': invited}" ng-click="action()">{{actionText}}</span>
+  <span class="kf-connection-card-close" ng-click="closeAction()">x</span>
+</div>

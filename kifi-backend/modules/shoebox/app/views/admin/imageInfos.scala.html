@@ -3,12 +3,12 @@
 @admin("Image Infos") {
 
 <table class="table table-striped">
-    <th><tr><td>Id</td><td>state</td><td>image</td><td>name</td><td>width</td><td>height</td><td>size</td></tr></th>
+    <th><tr><td>Id</td><td>state</td><td>image URL</td><td>name</td><td>width</td><td>height</td><td>size</td></tr></th>
     @for(image <- imageInfos){
     <tr>
         <td>@image.id</td>
         <td>@image.state</td>
-        <td><img src="@image.url" width="100" height="100" alt="no image available"/></td>
+        <td><a href="@image.url">@image.url</a></td>
         <td>@image.name</td>
         <td>@image.width</td>
         <td>@image.height</td>

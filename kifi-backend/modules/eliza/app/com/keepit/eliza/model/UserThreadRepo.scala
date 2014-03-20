@@ -465,9 +465,9 @@ class UserThreadRepoImpl @Inject() (
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession) : Unit = {
     relevantMessageOpt.map{ relevantMessage =>
-      (for (row <- rows if row.id===id && row.lastMsgFromOther===relevantMessage) yield row.notificationEmailed).update(true)
+      (for (row <- rows if row.id === id && row.lastMsgFromOther === relevantMessage) yield row.notificationEmailed).update(true)
     } getOrElse {
-      (for (row <- rows if row.id===id) yield (row.notificationEmailed, row.updatedAt)).update((true, clock.now()))
+      (for (row <- rows if row.id === id) yield (row.notificationEmailed, row.updatedAt)).update((true, clock.now()))
     }
   }
 
