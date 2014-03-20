@@ -45,7 +45,7 @@ class ScraperController @Inject() (
     val url = (parameters \ "url").as[String]
     URI.parse(url).get.host match {
       case None =>
-        throw new IllegalArgumentException(s"url $url has not host!")
+        throw new IllegalArgumentException(s"url $url has no host!")
       case Some(_) =>
         val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
         val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
