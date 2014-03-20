@@ -1013,7 +1013,7 @@ api.port.on({
         if (url == baseUri + "/#_=_" || url == baseUri + "/") {
           ajax("GET", "/ext/authed", function (loggedIn) {
             if (loggedIn !== false) {
-              startSession(function() {
+              authenticate(function() {
                 log("[open_login_popup] closing popup")();
                 popup.close();
               });
@@ -1023,7 +1023,7 @@ api.port.on({
       }
     });
   },
-  logged_in: startSession.bind(null, api.noop),
+  logged_in: authenticate.bind(null, api.noop),
   remove_notification: function (threadId) {
     removeNotificationPopups(threadId);
   },
@@ -1574,7 +1574,7 @@ function kifify(tab) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
       ajax("GET", "/ext/authed", function(loggedIn) {
         if (loggedIn !== false) {
-          startSession(function() {
+          authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
               kifify(tab);
             }
@@ -2189,20 +2189,16 @@ function throttle(func, wait, opts) {  // underscore.js
 var me, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
-  if (api.mode.isDev()) {
-    openLogin(callback, retryMs);
-  } else {
-    startSession(callback, retryMs);
+  var origInstId = stored('installation_id');
+  if (!origInstId) {
+    store('prompt_to_import_bookmarks', true);
   }
-}
-
-function startSession(callback, retryMs) {
   ajax('POST', '/kifi/start', {
-    installation: stored('installation_id'),
+    installation: origInstId,
     version: api.version
   },
   function done(data) {
-    log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
+    log('[authenticate:done] reason: %s session: %o', api.loadReason, data)();
     unstore('logout');
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
@@ -2224,41 +2220,22 @@ function startSession(callback, retryMs) {
     callback();
   },
   function fail(xhr) {
-    log("[startSession:fail] xhr.status:", xhr.status)();
+    log('[authenticate:fail] xhr.status:', xhr.status)();
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
-        api.timers.setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
+        api.timers.setTimeout(authenticate.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
-    } else if (stored('installation_id')) {
-      openLogin(callback, retryMs);
-    } else {
+    } else if (!origInstId) {
       api.tabs.selectOrOpen(webBaseUri() + '/');
       api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
         if (tab.url.replace(/\/(?:#.*)?$/, '') === webBaseUri()) {
           api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
-          startSession(callback, retryMs);
+          authenticate(callback, retryMs);
         }
       });
     }
   });
-}
-
-function openLogin(callback, retryMs) {
-  log("[openLogin]")();
-  var baseUri = webBaseUri();
-  api.popup.open({
-    name: "kifi-authenticate",
-    url: baseUri + '/login',
-    width: 1020,
-    height: 530}, {
-    navigate: function(url) {
-      if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-        log("[openLogin] closing popup")();
-        this.close();
-        startSession(callback, retryMs);
-      }
-    }});
 }
 
 function clearSession() {
@@ -2323,8 +2300,5 @@ api.errors.wrap(authenticate.bind(null, function() {
     } else {
       api.tabs.open(webBaseUri() + '/');
     }
-  }
-  if (api.loadReason === 'install' || api.mode.isDev()) {
-    store('prompt_to_import_bookmarks', true);
   }
 }, 3000))();
