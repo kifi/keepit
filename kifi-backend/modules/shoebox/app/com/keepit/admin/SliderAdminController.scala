@@ -185,7 +185,6 @@ class SliderAdminController @Inject() (
 
     val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.IMPORTED_DOMAIN_TAGS).map { rawEvents =>
       rawEvents.value.map { json =>
-        println(json)
         val createdAt = DateTimeJsonFormat.reads(json \ "time" \ "$date").get
         val context = (json \ "context").as[HeimdalContext]
         val eventName = context.getSeq[String]("eventName").get.head
