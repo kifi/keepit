@@ -8,7 +8,7 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.time._
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
@@ -27,7 +27,6 @@ import java.net.URLEncoder
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
@@ -38,7 +37,7 @@ import com.keepit.abook.ABookServiceClient
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String])
 
 object FullSocialId {
-  def fromString(fullSocialId: String): FullSocialId = {
+  def fromString(fullSocialId: String): Option[FullSocialId] = Try {
     val Array(networkName, idString) = fullSocialId.split("/")
     val network = SocialNetworkType(networkName)
     val identifier = network match {
@@ -46,7 +45,7 @@ object FullSocialId {
       case _ => Left(SocialId(idString))
     }
     new FullSocialId(network, identifier)
-  }
+  }.toOption
 
   def toString(fullSocialId: FullSocialId): String =s"${fullSocialId.network.name}/${fullSocialId.identifier.left.map(_.id).merge}"
 }
@@ -206,19 +205,18 @@ class InviteCommander @Inject() (
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
     val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(GenericEmailAddress(c.email)))}"
 
-    val electronicMail = ElectronicMail(
-      senderUserId = None,
-      from = EmailAddresses.INVITATION,
-      fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
-      to = Seq(GenericEmailAddress(c.email)),
-      subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
-      htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
-      textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
-      category = NotificationCategory.User.INVITATION,
-      extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address))
-    )
-
     db.readWrite { implicit session =>
+      val electronicMail = ElectronicMail(
+        senderUserId = None,
+        from = EmailAddresses.INVITATION,
+        fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
+        to = Seq(GenericEmailAddress(c.email)),
+        subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
+        htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
+        textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
+        category = NotificationCategory.User.INVITATION,
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address))
+      )
       postOffice.sendMail(electronicMail)
       val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
       log.info(s"[inviteConnection-email] sent invitation to $c")
@@ -312,18 +310,19 @@ class InviteCommander @Inject() (
 
   private val resendInvitationLimit = 5
   private def isAllowed(inviteInfo: InviteInfo): Boolean = {
-    lazy val totalAllowedInvites = userValueRepo.getValue(inviteInfo.userId, UserValues.availableInvites) // todo(He-Who-Must-Not-Be-Named): removeme
-    lazy val uniqueInvites = invitationRepo.getByUser(inviteInfo.userId).filter(_.state != InvitationStates.INACTIVE).length
+    lazy val (totalAllowedInvites, uniqueInvites) = db.readOnly { implicit session => (
+      userValueRepo.getValue(inviteInfo.userId, UserValues.availableInvites), // todo(He-Who-Must-Not-Be-Named): removeme
+      invitationRepo.getByUser(inviteInfo.userId).filter(_.state != InvitationStates.INACTIVE).length
+    )}
     (1 < inviteInfo.invitationNumber && inviteInfo.invitationNumber <= resendInvitationLimit) || (uniqueInvites < totalAllowedInvites)
   }
 
   private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String]): Future[InviteInfo] = {
     val (friendFuture, invitationsSentFuture) = fullSocialId.identifier match {
-      case Left(socialId) => db.readOnly() { implicit session =>
-        val friendSocialUserInfo = socialUserInfoRepo.get(socialId, fullSocialId.network)
+      case Left(socialId) =>
+        val friendSocialUserInfo =  db.readOnly() { implicit session =>socialUserInfoRepo.get(socialId, fullSocialId.network) }
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
-      }
       case Right(emailAddress) => {
         val friendEContactFuture = abook.getOrCreateEContact(userId, emailAddress).map(eContactTry => Right(eContactTry.get))
         val invitationsSentFuture = countInvitationsSent(userId, Right(emailAddress))
@@ -337,10 +336,12 @@ class InviteCommander @Inject() (
     } yield InviteInfo(userId, friend, invitationsSent + 1, subject, message)
   }
 
-  private def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], knownInvitation: Option[Invitation] = None)(implicit session: RSession): Future[Int] = {
+  private def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], knownInvitation: Option[Invitation] = None): Future[Int] = {
     // Optimization to avoid calling ABook in the most common cases (ie first time social invites)
     val mayHaveBeenInvitedAlready = friendId match {
-      case Left(socialUserId) => (knownInvitation orElse invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserId)).exists(_.state != InvitationStates.INACTIVE)
+      case Left(socialUserId) => (knownInvitation orElse db.readOnly { implicit session =>
+        invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserId)
+      }).exists(_.state != InvitationStates.INACTIVE)
       case Right(emailAddress) => knownInvitation.isEmpty || knownInvitation.get.state != InvitationStates.INACTIVE
     }
     if (mayHaveBeenInvitedAlready) abook.countInvitationsSent(userId, friendId) else Future.successful(0)
