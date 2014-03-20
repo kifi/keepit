@@ -177,14 +177,16 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 }
 
 function onGetFail(uri, done, failures, req) {
-  if (failures < 10) {
-    var ms = failures * 2000;
-    log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
-    api.timers.setTimeout(
-      api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
-      ms);
-  } else {
-    log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+  if (req.status !== 403) {
+    if (failures < 10) {
+      var ms = failures * 2000;
+      log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
+      api.timers.setTimeout(
+        api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
+        ms);
+    } else {
+      log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+    }
   }
 }
 
