@@ -2,7 +2,7 @@
   <img class="kf-connection-card-image" ng-src="{{mainImage}}"></img>
   <span class="kf-connection-card-who">
     <span class="kf-main-label">{{mainLabel}}</span><br>
-    <span class="kf-byline-icon" ng-class="{'kf-facebook-icon-micro': facebook, 'kf-linkedin-icon-micro': linkedin, 'kf-email-icon-micro': email}"></span><span class="kf-byline">{{byline}}</span>
+    <span class="kf-byline-icon kf-icon-micro" ng-class="{'kf-facebook-icon-micro': facebook, 'kf-linkedin-icon-micro': linkedin, 'kf-email-icon-micro': email}"></span><span class="kf-byline">{{byline}}</span>
   </span>
   <span class="kf-connection-card-action" ng-class="{'kf-connection-invited': invited}" ng-click="action()">{{actionText}}</span>
   <span class="kf-connection-card-close" ng-click="closeAction()">x</span>

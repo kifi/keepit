@@ -45,9 +45,8 @@ angular.module('kifi.invite', [
     $scope.isWTIScrollDisabled = function () {
       return !wtiService.hasMore();
     };
-    $scope.wtiScrollNext = function () {
-      showMoreWTI();
-    };
+    $scope.wtiScrollNext = showMoreWTI;
+
     $scope.wtiHasMore = function () {
       return true;
     };
