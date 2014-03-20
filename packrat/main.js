@@ -1878,7 +1878,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 });
 
 api.on.beforeSearch.add(throttle(function (whence) {
-  if (enabled('search')) {
+  if (me && enabled('search')) {
     ajax('search', 'GET', '/search/warmUp', {w: whence});
   }
 }, 50000));
