@@ -12,6 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.performance.timing
+import com.keepit.common.net.URI
 
 class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
@@ -35,17 +36,22 @@ class ScraperController @Inject() (
       val signatureOption = articleOption.map(_.signature)
       val json = Json.toJson(signatureOption.map(_.toBase64()))
       val url = (request.body \ "url").as[String]
-      log.info(s"[getSignature($url)] result: ${json}")
+      log.info(s"[getSignature($url)] result: $json")
       Ok(json)
     }(ExecutionContext.fj)
   }
 
   private def processBasicArticleRequest(parameters: JsValue): Future[Option[BasicArticle]] = {
     val url = (parameters \ "url").as[String]
-    val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
-    val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
-    timing(s"fetchBasicArticle($url,$proxyOpt,$extractorProviderTypeOpt)") {
-      scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
+    URI.parse(url).get.host match {
+      case None =>
+        throw new IllegalArgumentException(s"url $url has not host!")
+      case Some(_) =>
+        val proxyOpt = (parameters \ "proxy").asOpt[HttpProxy]
+        val extractorProviderTypeOpt = (parameters \ "extractorProviderType").asOpt[String] flatMap { s => ExtractorProviderTypes.ALL.find(_.name == s) }
+        timing(s"fetchBasicArticle($url,$proxyOpt,$extractorProviderTypeOpt)") {
+          scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
+        }
     }
   }
 
@@ -65,7 +71,7 @@ class ScraperController @Inject() (
 
   def asyncScrapeWithRequest() = Action.async(parse.json) { request =>
     val scrapeRequest = request.body.as[ScrapeRequest]
-    log.info(s"[asyncScrapeWithRequest] req=${scrapeRequest}")
+    log.info(s"[asyncScrapeWithRequest] req=$scrapeRequest")
     val tupF = scrapeProcessor.scrapeArticle(scrapeRequest.uri, scrapeRequest.scrapeInfo, scrapeRequest.proxyOpt)
     tupF.map { t =>
       val res = ScrapeTuple(t._1, t._2)
@@ -73,23 +79,4 @@ class ScraperController @Inject() (
       Ok(Json.toJson(res))
     }(ExecutionContext.fj)
   }
-
-  // todo: removeme
-  def scheduleScrape() = Action(parse.json) { request =>
-    val jsValues = request.body.as[JsArray].value
-    require(jsValues != null && jsValues.length >= 2, "Expect args to be nUri & scrapeInfo")
-    val normalizedUri = jsValues(0).as[NormalizedURI]
-    val info = jsValues(1).as[ScrapeInfo]
-    log.info(s"[scheduleScrape] scheduling scraping job for (url=${normalizedUri.url}, info=$info)")
-    scrapeProcessor.asyncScrape(normalizedUri, info, None, None)
-    Ok(JsBoolean(true))
-  }
-
-  def scheduleScrapeWithRequest() = Action(parse.json) { request =>
-    val scrapeRequest = request.body.as[ScrapeRequest]
-    log.info(s"[scheduleScrapeWithRequest] scheduling scraping job for request=${scrapeRequest}")
-    scrapeProcessor.asyncScrape(scrapeRequest.uri, scrapeRequest.scrapeInfo, scrapeRequest.pageInfoOpt, scrapeRequest.proxyOpt)
-    Ok(JsBoolean(true))
-  }
-
 }
