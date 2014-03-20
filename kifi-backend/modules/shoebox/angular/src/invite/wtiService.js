@@ -22,15 +22,13 @@ angular.module('kifi.invite.wtiService', [])
             } else {
               page = page + 1;
             }
+            return list;
           });
         }
         return lastRequest;
       },
       hasMore: function () {
         return more && page < 5;
-      },
-      getList: function () {
-        return list;
       },
       reset: function () {
         list = [];

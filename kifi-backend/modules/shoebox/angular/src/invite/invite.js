@@ -34,8 +34,8 @@ angular.module('kifi.invite', [
 
 
     function showMoreWTI() {
-      wtiService.getMore().then(function () {
-        $scope.whoToInvite = wtiService.getList();
+      wtiService.getMore().then(function (list) {
+        $scope.whoToInvite = list;
       });
     }
 
