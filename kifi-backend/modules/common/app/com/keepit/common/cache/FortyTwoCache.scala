@@ -127,7 +127,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         }
         case _ => // ignore
       }
-      var ttlInSeconds = maxTTL match {
+      val ttlInSeconds = maxTTL match {
         case _ : Duration.Infinite => 0
         case _ =>
           if (minTTL == maxTTL) {
