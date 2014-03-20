@@ -972,7 +972,7 @@ api.port.on({
     });
     if (nMoreDesired) {
       ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
-        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers});
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers.map(toNonUserSearchResult, {sf: sf, q: data.q})});
       }, function () {
         api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
       });
@@ -2039,6 +2039,23 @@ function toFriendSearchResult(f) {
     pictureName: f.pictureName,
     parts: this.sf.splitOnMatches(this.q, f.name)
   };
+}
+
+function toNonUserSearchResult(f) {
+  if (f.name) {
+    f.nameParts = this.sf.splitOnMatches(this.q, f.name);
+  }
+  if (f.email) {
+    var i = f.email.indexOf('@');
+    f.emailParts = this.sf.splitOnMatches(this.q, f.email.substr(0, i));
+    var n = f.emailParts.length;
+    if (n % 2) {
+      f.emailParts[n - 1] += f.email.substr(i);
+    } else {
+      f.emailParts.push(f.email.substr(i));
+    }
+  }
+  return f;
 }
 
 function reTest(s) {

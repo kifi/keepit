@@ -42,29 +42,43 @@ var initFriendSearch = (function () {
   function formatResult(res) {
     if (res.pictureName) {
       var html = [
-        '<li class="kifi-ti-dropdown-item-autoselect" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
-        Mustache.escape(res.parts[0])];
-      for (var i = 1; i < res.parts.length; i++) {
-        html.push(i % 2 ? '<b>' : '</b>', Mustache.escape(res.parts[i]));
-      }
+        '<li class="kifi-ti-dropdown-item-autoselect" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">'];
+      appendParts(html, res.parts);
       html.push('</li>');
       return html.join('');
     } else if (res.id) {
-      return [
+      var html = [
           '<li class="kifi-ti-dropdown-invite-social', res.invited ? ' kifi-invited' : '', '"',
           ' style="background-image:url(', Mustache.escape(res.pic || 'https://www.kifi.com/assets/img/ghost-linkedin.100.png'), ')">',
-          '<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>',
+          '<div class="kifi-ti-dropdown-invite-name">'];
+      appendParts(html, res.nameParts);
+      html.push('</div>',
           '<div class="kifi-ti-dropdown-invite-sub">', res.id[0] === 'f' ? 'Facebook' : 'LinkedIn', '</div>',
-          '</li>'].join('');
+          '</li>');
+      return html.join('');
     } else if (res.email) {
       var html = ['<li class="kifi-ti-dropdown-invite-email', res.invited ? ' kifi-invited' : '', '">'];
-      if (res.name) {
-        html.push('<div class="kifi-ti-dropdown-invite-name">', Mustache.escape(res.name), '</div>');
+      if (res.nameParts) {
+        html.push('<div class="kifi-ti-dropdown-invite-name">');
+        appendParts(html, res.nameParts);
+        html.push('</div>');
       }
-      html.push('<div class="kifi-ti-dropdown-invite-sub">', Mustache.escape(res.email), '</div></li>');
+      html.push('<div class="kifi-ti-dropdown-invite-sub">');
+      appendParts(html, res.emailParts);
+      html.push('</div></li>');
       return html.join('');
     } else if (res === 'tip') {
       return '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>';
+    }
+  }
+
+  function appendParts(html, parts) {
+    for (var i = 0; i < parts.length; i++) {
+      if (i % 2) {
+        html.push('<b>', Mustache.escape(parts[i]), '</b>');
+      } else {
+        html.push(Mustache.escape(parts[i]));
+      }
     }
   }
 
