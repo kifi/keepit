@@ -6,8 +6,9 @@
       <div ng-repeat="friend in friends">
         <div ng-click="invite(friend)">Invite {{friend.label}}!</div>
       </div>
-      <div class="kf-connection-card-container">
+      <div class="kf-connection-card-container" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
         <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend"></div>
+        <span ng-click="wtiScrollNext()" ng-show="wtiHasMore()" class="kf-show-more">Show more</span>
       </div>
 
     </div>

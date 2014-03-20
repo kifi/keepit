@@ -27,7 +27,8 @@ angular.module('kifi.routeService', [])
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
-      tagOrdering: route('/collections/ordering')
+      tagOrdering: route('/collections/ordering'),
+      whoToInvite: route('/friends/wti')
     };
   }
 ]);

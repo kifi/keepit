@@ -1,3 +1,25 @@
+kf-icon-micro()
+  background-image: url('/img/networks2.png')
+  background-size: auto 100%
+  background-repeat: no-repeat
+  border-radius: 1px
+
+.kf-facebook-icon-micro
+  kf-icon-micro()
+  background-color: #576EB1
+
+
+.kf-linkedin-icon-micro
+  kf-icon-micro()
+  background-color: #427BBE
+  background-position: -16px top
+
+.kf-email-icon-micro
+  kf-icon-micro()
+  background-color: lightgrey
+  background-position: -63px top
+
+
 .kf-connection-card-container
   .kf-connection-card
     @media screen and (min-width: 1200px)
@@ -5,6 +27,17 @@
 
     @media screen and (max-width: 1200px)
       width: calc(100% - 10px)
+
+  .kf-show-more
+    float: right
+    text-decoration: underline
+    cursor: pointer
+    color: #4B6F9F
+    font-weight: 300
+    font-size: 13px
+    letter-spacing: .5px
+    margin-right: 5px
+
 
 .kf-connection-card
   background-color: #EFF2F7
@@ -17,6 +50,7 @@
   opacity: 1
   height: 64px
   border-radius: 3px
+
 
   &:hover
     background-color: #DEEBFC
@@ -32,7 +66,7 @@
 
   .kf-connection-card-image
     float: left
-    margin-right: 5px
+    margin-right: 10px
     height: 64px
     width: 64px
     border-radius: 3px
@@ -44,10 +78,11 @@
 
     .kf-byline-icon
       vertical-align: middle
-      margin-right: 2px
-      margin-bottom: 2px
-      height: 10px
-      width: 10px
+      margin-right: 5px
+      height: 16px
+      width: 16px
+      display: inline-block
+
 
     .kf-byline
       font-size: 90%
