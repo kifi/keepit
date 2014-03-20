@@ -422,13 +422,18 @@ body.kifi-snapshot-root {
 .kifi-ti-dropdown-item-selected.kifi-invite-fail::after {
   color: #fff;
 }
+.kifi-ti-dropdown-invite-name,
+.kifi-ti-dropdown-invite-sub {
+  white-space: nowrap;
+  width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .kifi-ti-dropdown-invite-name {
   line-height: 14px;
-  white-space: nowrap;
 }
 .kifi-ti-dropdown-invite-sub {
   font-size: 11px;
-  white-space: nowrap;
 }
 .kifi-ti-dropdown-invite-sub:not(:first-child) {
   line-height: 13px;
