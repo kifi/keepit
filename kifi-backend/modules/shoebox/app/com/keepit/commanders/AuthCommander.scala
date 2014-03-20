@@ -49,10 +49,7 @@ case class SocialFinalizeInfo(
   picWidth: Option[Int],
   cropX: Option[Int],
   cropY: Option[Int],
-  cropSize: Option[Int]) {
-
-  override def toString = s"[SocialFinalizeInfo] $email,$firstName,$lastName,"
-}
+  cropSize: Option[Int])
 
 object SocialFinalizeInfo {
   implicit val format = (
