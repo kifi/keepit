@@ -42,7 +42,7 @@ var initFriendSearch = (function () {
   function formatResult(res) {
     if (res.pictureName) {
       var html = [
-        '<li class="kifi-ti-dropdown-item-autoselect" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">'];
+        '<li class="kifi-ti-dropdown-item-token" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">'];
       appendParts(html, res.parts);
       html.push('</li>');
       return html.join('');
