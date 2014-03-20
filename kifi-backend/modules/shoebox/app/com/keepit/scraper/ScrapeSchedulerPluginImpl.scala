@@ -13,9 +13,8 @@ import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
-import play.modules.statsd.api.Statsd
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.common.mail.{ElectronicMailCategory, EmailAddresses, ElectronicMail, LocalPostOffice}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.db.slick.Database.Slave

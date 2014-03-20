@@ -20,7 +20,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
 
   private def signature(url: String): Future[Option[Signature]] = URI.parse(url).get.host match {
     case Some(_) => scraperPlugin.getSignature(url, None)
-    case None => throw new IllegalArgumentException(s"url $url has not host!")
+    case None => throw new IllegalArgumentException(s"url $url has no host!")
   }
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {

@@ -122,8 +122,6 @@ trait ScraperServiceClient extends ServiceClient {
   def asyncScrape(uri:NormalizedURI):Future[(NormalizedURI, Option[Article])] // pass in simple url? not sure if Tuple2
   def asyncScrapeWithInfo(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
   def asyncScrapeWithRequest(request:ScrapeRequest):Future[(NormalizedURI, Option[Article])]
-  def scheduleScrape(uri:NormalizedURI, info:ScrapeInfo):Future[Boolean] // ack
-  def scheduleScrapeWithRequest(request:ScrapeRequest):Future[Boolean] // ack
   def getBasicArticle(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
   def getSignature(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
@@ -159,18 +157,6 @@ class ScraperServiceClientImpl @Inject() (
     call(Scraper.internal.asyncScrapeArticleWithRequest, Json.toJson(request)).map { r =>
       val t = r.json.as[ScrapeTuple]
       (t.uri, t.articleOpt)
-    }
-  }
-
-  def scheduleScrape(uri: NormalizedURI, info: ScrapeInfo): Future[Boolean] = {
-    call(Scraper.internal.scheduleScrape, JsArray(Seq(Json.toJson(uri), Json.toJson(info)))).map { r =>
-      r.json.as[JsBoolean].value
-    }
-  }
-
-  def scheduleScrapeWithRequest(request: ScrapeRequest): Future[Boolean] = {
-    call(Scraper.internal.scheduleScrapeWithRequest, Json.toJson(request)).map { r =>
-      r.json.as[JsBoolean].value
     }
   }
 
