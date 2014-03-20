@@ -15,7 +15,9 @@ class WebsocketsShutdownListener(websocketRouter: WebSocketRouter, accessLog: Ac
   val ShutdownWindowInMilli = 18000
 
   def shutdown(): Unit = {
-    val count = websocketRouter.connectedSockets
+    // There may be no connections at all (and we don't want a divide by 0) and some may slip in.
+    // Lets make sure that the timer runs anyway every at least ShutdownWindowInMilli/10 ms to ensure nice cleanup.
+    val count = websocketRouter.connectedSockets.max(10)
     val rate = ShutdownWindowInMilli / count
     println(s"closing $count sockets at rate of one every ${rate}ms")//on shutdown the logger may be terminated, double logging
     log.info(s"closing $count sockets at rate of one every ${rate}ms")
