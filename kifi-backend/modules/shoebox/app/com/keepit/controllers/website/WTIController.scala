@@ -19,8 +19,9 @@ class WTIController @Inject() (
   actionAuthenticator: ActionAuthenticator
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
+  private val rand = new Random(System.currentTimeMillis())
+
   private def gimmeSomething[T](seq: Seq[T]): T = {
-    val rand = new Random(System.currentTimeMillis());
     seq(rand.nextInt(seq.length));
   }
 
@@ -28,7 +29,6 @@ class WTIController @Inject() (
     if (howMuch <= 0) {
       Nil
     } else {
-      val rand = new Random(System.currentTimeMillis())
       WTIDataPacket(
         name = gimmeSomething(Seq("Stephen", "Andrew", "Léo", "Eishay", "Danny", "Jared")) + " " +  gimmeSomething(Seq("Kemmerling", "Conner", "Grimaldi", "Smith", "Blumenfeld", "Jacobs")) + " " + rand.nextInt(500),
         invited = gimmeSomething(Seq(false, false, false, true)),
