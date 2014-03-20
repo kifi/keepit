@@ -8,14 +8,15 @@ import play.api.libs.json._
 
 
 class TransactionLocalCache[K <: Key[T], T] private(
-  val ttl: Duration,
+  override val minTTL: Duration,
+  override val maxTTL: Duration,
   override val outerCache: Option[ObjectCache[K, T]],
   underlying: ObjectCache[K, T],
   serializer: Serializer[T]
 ) extends ObjectCache[K, T] {
 
   // outerCache is wrapped in ReadOnlyCacheWrapper to block updates silently
-  def this(underlying: ObjectCache[K, T], serializer: Serializer[T]) = this(Duration.Inf, Some(new ReadOnlyCacheWrapper(underlying)), underlying, serializer)
+  def this(underlying: ObjectCache[K, T], serializer: Serializer[T]) = this(Duration.Inf, Duration.Inf, Some(new ReadOnlyCacheWrapper(underlying)), underlying, serializer)
 
   sealed trait LocalObjectState
   case class LFound(value: Any) extends LocalObjectState
@@ -71,7 +72,8 @@ class TransactionLocalCache[K <: Key[T], T] private(
 }
 
 class ReadOnlyCacheWrapper[K <: Key[T], T](underlying: ObjectCache[K, T]) extends ObjectCache[K, T] {
-  val ttl: Duration = Duration.Inf
+  val minTTL: Duration = Duration.Inf
+  val maxTTL: Duration = Duration.Inf
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T] = underlying.getFromInnerCache(key)
 
