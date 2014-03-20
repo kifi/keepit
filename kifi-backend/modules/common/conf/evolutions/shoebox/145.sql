@@ -9,9 +9,11 @@ CREATE TABLE page_info (
   state varchar(20) NOT NULL,
   seq bigint(20) NOT NULL,
   uri_id bigint(20) NOT NULL,
-  description varchar(1024),
+  title varchar(2048),
+  description varchar(3072),
   safe boolean,
-  favicon_url varchar(1024),
+  lang varchar(256),
+  favicon_url varchar(3072),
   image_info_id bigint(20),
 
   PRIMARY KEY (id),

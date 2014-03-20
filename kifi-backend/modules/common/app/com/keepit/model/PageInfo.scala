@@ -29,8 +29,10 @@ case class PageInfo(
   state:     State[PageInfo] = PageInfoStates.ACTIVE,
   seq:       SequenceNumber[PageInfo] = SequenceNumber.ZERO,
   uriId:Id[NormalizedURI],
+  title:Option[String]            = None,
   description:Option[String]      = None,
   safe:Option[Boolean]            = None,
+  lang:Option[String]             = None,
   faviconUrl:Option[String]       = None,
   imageInfoId:Option[Id[ImageInfo]] = None
 ) extends ModelWithState[PageInfo] with ModelWithSeqNumber[PageInfo] with PageGenericInfo with PageSafetyInfo {
@@ -47,8 +49,10 @@ object PageInfo {
     (__ \ 'state).format(State.format[PageInfo]) and
     (__ \ 'seq).format(SequenceNumber.format[PageInfo]) and
     (__ \ 'uri_id).format(Id.format[NormalizedURI]) and
+    (__ \ 'title).formatNullable[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'safe).formatNullable[Boolean] and
+    (__ \ 'lang).formatNullable[String] and
     (__ \ 'favicon_url).formatNullable[String] and
     (__ \ 'imageInfoId).formatNullable(Id.format[ImageInfo])
   )(PageInfo.apply _, unlift(PageInfo.unapply))

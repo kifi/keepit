@@ -37,6 +37,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
+import java.util.concurrent.atomic.AtomicInteger
 
 trait S3ScreenshotStore {
   def config: S3ImageConfig
@@ -79,20 +80,23 @@ case class EmbedlyExtractResponse(
   description:Option[String],
   content:Option[String],
   safe:Option[Boolean],
+  lang:Option[String],
   faviconUrl:Option[String],
   images:Seq[EmbedlyImage]) extends PageGenericInfo with PageSafetyInfo with PageMediaInfo {
   implicit def toPageInfo(nuriId:Id[NormalizedURI]):PageInfo =
     PageInfo(
       id = None,
       uriId = nuriId,
+      title = this.title,
       description = this.description,
       safe = this.safe,
-      faviconUrl = this.faviconUrl
+      lang = this.lang,
+      faviconUrl = (this.faviconUrl.collect{ case f:String if f.startsWith("http") => f }) // embedly bug
     )
 }
 
 object EmbedlyExtractResponse {
-  val EMPTY = EmbedlyExtractResponse("", None, None, None, None, None, None, Seq.empty[EmbedlyImage])
+  val EMPTY = EmbedlyExtractResponse("", None, None, None, None, None, None, None, Seq.empty[EmbedlyImage])
 
   implicit val format = (
     (__ \ 'original_url).format[String] and
@@ -101,6 +105,7 @@ object EmbedlyExtractResponse {
     (__ \ 'description).formatNullable[String] and
     (__ \ 'content).formatNullable[String] and
     (__ \ 'safe).formatNullable[Boolean] and
+    (__ \ 'language).formatNullable[String] and
     (__ \ 'favicon_url).formatNullable[String] and
     (__ \ 'images).format[Seq[EmbedlyImage]]
   )(EmbedlyExtractResponse.apply _, unlift(EmbedlyExtractResponse.unapply))
@@ -162,29 +167,43 @@ class S3ScreenshotStoreImpl(
   }
   private def mailNotify(msg:String, t:Option[Throwable]):Unit = mailNotify(msg, msg, t)
 
-  private def getPageInfo(url:String):Future[Option[EmbedlyExtractResponse]] = {
+  private def fetch(url:String, timeout:Int):Future[Response] = {
+    val count = new AtomicInteger()
+    val resolver:PartialFunction[Throwable, Boolean] = { case t:Throwable =>
+      count.getAndIncrement
+      // random delay or backoff
+      mailNotify(s"fetch($url): attempt#(${count.get}) failed with $t", Some(t)) // intermittent embedly/site failures
+      true
+    }
+    RetryFuture(attempts = 2, resolver){
+      WS.url(url).withRequestTimeout(timeout).get()
+    }
+  }
+
+  private def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] = {
+    val url = embedlyUrl(uri.url)
     fetchPageInfoConsolidator(url) { urlString =>
-      val future = WS.url(url).withRequestTimeout(120000).get()
-      future map { resp =>
-        log.info(s"[getPageInfo($url)] resp.status=${resp.statusText} body=${resp.body} json=${Json.prettyPrint(resp.json)}")
+      fetch(url, 120000) map { resp =>
+        log.info(s"[getExtractResponse(${uri.id},${uri.url})] resp.status=${resp.statusText} body=${resp.body}")
         resp.status match {
           case Status.OK =>
-            val pageInfo = Json.fromJson[EmbedlyExtractResponse](resp.json).asOpt
-            log.info(s"[getPageInfo($url)] pageInfo=$pageInfo")
-            pageInfo
-          case _ => // todo(ray): retry and/or queue
-            mailNotify(s"[getExtractResponse($url)] ERROR from provider: status=${resp.status} body=${resp.body}", None)
+            val js = Json.parse(resp.body) // resp.json has some issues
+            val pageInfoOpt = Json.fromJson[EmbedlyExtractResponse](js).asOpt
+            log.info(s"[getExtractResponse(${uri.id},${uri.url})] json=${js} pageInfoOpt=$pageInfoOpt")
+            pageInfoOpt
+          case _ => // todo(ray): need better handling of error codes
+            mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] ERROR while invoking ($url): status=${resp.status} body=${resp.body} originalUrl=$url", None)
             None
         }
       } recover { case t:Throwable =>
-        mailNotify(s"[getExtractResponse($url)] Caught exception $t; cause=${t.getCause}", Some(t))
+        mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] Caught exception while invoking ($url): Exception=$t; cause=${t.getCause}", Some(t))
         None
       }
     }
   }
 
   def getImageInfos(uri: NormalizedURI):Future[Seq[ImageInfo]] = {
-    getPageInfo(embedlyUrl(uri.url)) map { resp =>
+    getExtractResponse(uri) map { resp =>
       val imgInfos = resp map (_.images.map(_.toImageInfo(uri.id.get))) getOrElse Seq.empty[ImageInfo]
       log.info(s"[getImageInfos(${uri.url})] ${imgInfos.mkString(",")}")
       imgInfos
@@ -193,8 +212,10 @@ class S3ScreenshotStoreImpl(
 
   def asyncGetImageUrl(uri:NormalizedURI, pageInfoOpt:Option[PageInfo], update:Boolean = false):Future[Option[String]] = {
     log.info(s"[asyncGetImageUrl] uri=$uri pageInfo=$pageInfoOpt")
-    if (config.isLocal || !embedlyEnabled) Future.successful(None)
-    else {
+    if (config.isLocal || !embedlyEnabled) {
+      log.info(s"[asyncGetImageUrl(${uri.id},${uri.url})] config.isLocal=${config.isLocal} embedlyEnabled=${embedlyEnabled}; skipped")
+      Future.successful(None)
+    } else {
       pageInfoOpt match {
         case None =>
           if (!update) Future.successful(None) else {
@@ -204,7 +225,7 @@ class S3ScreenshotStoreImpl(
               }
             } recover {
               case t:Throwable =>
-                log.error(s"[asyncGetImageUrl(${uri.id},${uri.url},$update)] fetch failure: Exception $t; cause=${t.getCause}")
+                log.error(s"[asyncGetImageUrl(${uri.id},${uri.url},$update)] fetch failure: Exception=$t; cause=${t.getCause}")
                 None
             }
           }
@@ -215,7 +236,7 @@ class S3ScreenshotStoreImpl(
                 mkImgUrl(uri.externalId, imgInfo.name)
               } recover {
                 case t:Throwable =>
-                  mailNotify("[asyncGetImageUrl(${uri.id},${uri.url},$update)] failed to getImageInfo: Exception $t; cause=${t.getCause}", Some(t))
+                  mailNotify(s"[asyncGetImageUrl(${uri.id},${uri.url},$update)] failed to getImageInfo: Exception $t; cause=${t.getCause}", Some(t))
                   None
               }
             case _ => Future.successful(None) // no image
@@ -235,8 +256,8 @@ class S3ScreenshotStoreImpl(
   private def fetchAndUpdatePageInfo(uri:NormalizedURI):Future[(Option[PageInfo],Option[ImageInfo])] = {
     log.info(s"[fetchAndUpdatePageInfo(${uri.id})] url=${uri.url}")
     pageInfoConsolidator(uri) { uri =>
-      getPageInfo(embedlyUrl(uri.url)) flatMap { pageInfoOpt =>
-        pageInfoOpt match {
+      getExtractResponse(uri) flatMap { embedlyRespOpt =>
+        embedlyRespOpt match {
           case Some(pageInfo) =>
             if (pageInfo.safe.exists(safe => !safe)) {
               mailNotify(s"[fetchAndUpdatePageInfo(${uri.id})] page is not safe; will not fetch image. $pageInfo; $uri", None)
@@ -248,7 +269,7 @@ class S3ScreenshotStoreImpl(
                 case Some(embedlyImage) =>
                   fetchAndUpdateImageInfo(uri, embedlyImage.toImageInfo(uri.id.get)) recoverWith {
                     case t:Throwable =>
-                      log.error(s"Failed to process image ($embedlyImage), Exception:$t; cause=${t.getCause}")
+                      log.error(s"Failed to process (primary) image ($embedlyImage) -- search for alternatives; Exception:$t; cause=${t.getCause}")
                       findAltImage(pageInfo.images.drop(1).take(3), uri)
                   }
                 case None => // no image
