@@ -32,10 +32,10 @@ class SendgridMailProvider @Inject() (
   extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
-    override def getPasswordAuthentication(): PasswordAuthentication = {
+    override def getPasswordAuthentication: PasswordAuthentication = {
       val username = "fortytwo"//load from conf
       val password = "keepemailsrunning"
-      return new PasswordAuthentication(username, password)
+      new PasswordAuthentication(username, password)
     }
   }
 
@@ -49,24 +49,23 @@ class SendgridMailProvider @Inject() (
     val auth = new SMTPAuthenticator()
     val mailSession = Session.getInstance(props, auth)
     mailSession.setDebug(log.isDebugEnabled)
-    mailSession.setDebug(true)
     mailSession
   }
 
-  def nullifyTransport(transport: Transport) = if (transportOpt.map(t => t == transport).getOrElse(false)) {
+  def nullifyTransport(transport: Transport) = if (transportOpt.exists(t => t == transport)) {
     log.info("setting transportOpt to None since it contains a bad state transport")
-    if (transport.isConnected()) transport.close()
+    if (transport.isConnected) transport.close()
     transportOpt = None
   }
 
   def createTransport(): Transport = {
-    val transport = mailSession.getTransport()
+    val transport = mailSession.getTransport
     def externalIdFromTransportEvent(e: TransportEvent) =
-      ExternalId[ElectronicMail](e.getMessage().getHeader(MailProvider.KIFI_MAIL_ID)(0))
+      ExternalId[ElectronicMail](e.getMessage.getHeader(MailProvider.KIFI_MAIL_ID)(0))
 
     transport.addTransportListener(new TransportListener() {
       def messageDelivered(e: TransportEvent): Unit = {
-        log.info("messageDelivered: %s".format(e))
+        log.info(s"messageDelivered: $e")
       }
       def messageNotDelivered(e: TransportEvent): Unit = {
         mailError(externalIdFromTransportEvent(e), "transport.messageNotDelivered", transport)
@@ -79,7 +78,7 @@ class SendgridMailProvider @Inject() (
     transport.addConnectionListener(new ConnectionListener() {
       def opened(e: ConnectionEvent)  { log.info(e.toString) }
       def closed(e: ConnectionEvent) {
-        log.info("got event %s".format(e))
+        log.info(s"got event $e")
         nullifyTransport(transport)
       }
       def disconnected(e: ConnectionEvent) {
@@ -93,9 +92,9 @@ class SendgridMailProvider @Inject() (
 
   private var transportOpt: Option[Transport] = None
 
-  def getLiveTransport(): Transport = transportOpt match {
+  def internLiveTransport(): Transport = transportOpt match {
     case Some(transport) =>
-      if (transport.isConnected()) {
+      if (transport.isConnected) {
         transport
       } else {
         nullifyTransport(transport)
@@ -112,7 +111,7 @@ class SendgridMailProvider @Inject() (
    */
   def sendMail(mail: ElectronicMail) {
     if (mail.isReadyToSend) {
-      val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).map(_.isReadyToSend).getOrElse(false)
+      val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
       if(checkAgain) {
         val message = try {
           createMessage(mail)
@@ -123,7 +122,7 @@ class SendgridMailProvider @Inject() (
             }
             throw t
         }
-        val transport = getLiveTransport()
+        val transport = internLiveTransport()
         try {
           transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
           val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
@@ -168,7 +167,7 @@ class SendgridMailProvider @Inject() (
     multipart.addBodyPart(part2)
 
     val uniqueArgs = "unique_args" -> JsObject(List("mail_id" -> JsString(mail.externalId.id)))
-    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category), uniqueArgs)).toString)
+    message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category), uniqueArgs)).toString())
 
     message.setContent(multipart)
 

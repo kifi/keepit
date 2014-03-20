@@ -133,8 +133,6 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
         raw === deduped
 
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, BookmarkSource.email, true)
-        println("airbrake errors:")
-        println(fakeAirbrake.errors mkString "\n")
         fakeAirbrake.errorCount() === 0
         bookmarks.size === 3
         db.readWrite { implicit session =>

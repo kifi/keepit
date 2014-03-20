@@ -117,7 +117,6 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         outbox(0).to(0).address === "username@42go.com"
         outbox(0).subject === "Let's get started with Kifi"
 
-        println(outbox(0).htmlBody)
         outbox(0).htmlBody.toString.containsSlice("www.kifi.com/unsubscribe/") === true
 
       }
