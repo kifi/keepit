@@ -3,13 +3,10 @@ package com.keepit.common.cache
 import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.concurrent._
 import scala.concurrent.duration._
-
 import java.util.concurrent.atomic.AtomicInteger
-
 import net.codingwell.scalaguice.ScalaModule
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Access.CACHE
@@ -18,12 +15,12 @@ import com.keepit.common.time._
 import com.keepit.serializer.Serializer
 import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access._
-
 import play.api.Logger
 import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.modules.statsd.api.Statsd
+import java.util.Random
 
 case class CacheSizeLimitExceededException(msg:String) extends Exception(msg)
 
@@ -33,6 +30,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
 
   val repo: FortyTwoCachePlugin
   val serializer: Serializer[T]
+
+  private[this] val rnd = new Random
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T] = {
     val timer = accessLog.timer(CACHE)
@@ -128,9 +127,16 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         }
         case _ => // ignore
       }
-      var ttlInSeconds = ttl match {
+      var ttlInSeconds = maxTTL match {
         case _ : Duration.Infinite => 0
-        case _ => ttl.toSeconds.toInt
+        case _ =>
+          if (minTTL == maxTTL) {
+            minTTL.toSeconds.toInt
+          } else {
+            val minTTLSeconds = minTTL.toSeconds.toInt
+            val maxTTLSeconds = maxTTL.toSeconds.toInt
+            minTTLSeconds + (rnd.nextDouble * (maxTTLSeconds - minTTLSeconds).toDouble).toInt
+          }
       }
       repo.set(keyS, properlyBoxed, ttlInSeconds)
       val namespace = key.namespace
@@ -164,12 +170,12 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
 
 object FortyTwoCacheFactory {
   def apply[K <: Key[T], T](
-      innerToOuterPluginSettings: Seq[(FortyTwoCachePlugin, Duration, Serializer[T])],
+      innerToOuterPluginSettings: Seq[(FortyTwoCachePlugin, Duration, Duration, Serializer[T])],
       stats: CacheStatistics,
       accessLog: AccessLog): Option[FortyTwoCacheImpl[K, T]] =
     innerToOuterPluginSettings.foldRight[Option[FortyTwoCacheImpl[K, T]]](None) {
-      case ((innerPlugin, shorterTTL, nextSerializer), outer) =>
-        Some(new FortyTwoCacheImpl[K, T](stats, accessLog, innerPlugin, shorterTTL, nextSerializer, outer))
+      case ((innerPlugin, minTTL, maxTTL, nextSerializer), outer) =>
+        Some(new FortyTwoCacheImpl[K, T](stats, accessLog, innerPlugin, minTTL, maxTTL, nextSerializer, outer))
     }
 }
 
@@ -177,7 +183,8 @@ class FortyTwoCacheImpl[K <: Key[T], T](
   val stats: CacheStatistics,
   val accessLog: AccessLog,
   val repo: FortyTwoCachePlugin,
-  val ttl: Duration,
+  val minTTL: Duration,
+  val maxTTL: Duration,
   val serializer: Serializer[T],
   override val outerCache: Option[ObjectCache[K, T]]
 ) extends FortyTwoCache[K, T] {
@@ -185,18 +192,31 @@ class FortyTwoCacheImpl[K <: Key[T], T](
   // Constructor using a distinct serializer for each cache plugin
   def this(
       stats: CacheStatistics, accessLog: AccessLog,
-      innerMostPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T]),
-      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T])*) =
+      innerMostPluginSettings: (FortyTwoCachePlugin, Duration, Duration, Serializer[T]),
+      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration, Serializer[T])*) =
     this(stats, accessLog,
-      innerMostPluginSettings._1, innerMostPluginSettings._2, innerMostPluginSettings._3,
+      innerMostPluginSettings._1, innerMostPluginSettings._2, innerMostPluginSettings._3, innerMostPluginSettings._4,
       FortyTwoCacheFactory[K, T](innerToOuterPluginSettings, stats, accessLog))
 
   // Constructor using the same serializer for each cache plugin
   def this(
       stats: CacheStatistics, accessLog: AccessLog,
       innermostPluginSettings: (FortyTwoCachePlugin, Duration),
-      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(serializer: Serializer[T]) =
-    this(stats, accessLog,
-      (innermostPluginSettings._1, innermostPluginSettings._2, serializer), innerToOuterPluginSettings.map {case (plugin, ttl) => (plugin, ttl, serializer)}:_*)
+      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(serializer: Serializer[T]) = {
+    this(stats,
+         accessLog,
+         (innermostPluginSettings._1, innermostPluginSettings._2, innermostPluginSettings._2, serializer),
+         innerToOuterPluginSettings.map{ case (plugin, ttl) => (plugin, ttl, ttl, serializer)}:_*)
+  }
+
+  def this(
+      stats: CacheStatistics, accessLog: AccessLog,
+      innermostPluginSettings: (FortyTwoCachePlugin, Duration, Duration),
+      innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration)*)(serializer: Serializer[T]) = {
+    this(stats,
+         accessLog,
+         innermostPluginSettings match { case (plugin, minTTL, maxTTL) => (plugin, minTTL, if (minTTL > maxTTL) minTTL else maxTTL, serializer) },
+         innerToOuterPluginSettings.map{ case (plugin, minTTL, maxTTL) => (plugin, minTTL, if (minTTL > maxTTL) minTTL else maxTTL, serializer) }:_*)
+  }
 }
 
