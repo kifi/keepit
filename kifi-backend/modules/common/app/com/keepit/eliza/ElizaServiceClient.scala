@@ -18,7 +18,7 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
+import com.keepit.eliza.model.{MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
 
 import akka.actor.Scheduler
 
@@ -30,7 +30,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Long]
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]]
 
   def unsendNotification(id: Long): Unit
 
@@ -75,7 +75,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Long] = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj(
       "userIds"   -> userIds.toSeq,
@@ -88,7 +88,7 @@ class ElizaServiceClientImpl @Inject() (
       "category"  -> category
     )
     call(Eliza.internal.sendGlobalNotification, payload).map { response =>
-      response.body.toLong
+      Id[MessageHandle](response.body.toLong)
     }
   }
 
@@ -135,8 +135,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     p.future
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Long] = {
-    val p = Promise.successful(42.toLong)
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]] = {
+    val p = Promise.successful(Id[MessageHandle](42.toLong))
     p.future
   }
 
