@@ -24,7 +24,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
-   collectionsForBookmarkCache: CollectionsForBookmarkCache,
+   collectionsForBookmarkCache: CollectionsForKeepCache,
    keepRepoProvider: Provider[KeepRepoImpl],
    val db: DataBaseComponent,
    val clock: Clock)
@@ -35,13 +35,13 @@ class KeepToCollectionRepoImpl @Inject() (
   private lazy val keepRepo = keepRepoProvider.get
 
   override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
-    collectionsForBookmarkCache.set(CollectionsForBookmarkKey(ktc.bookmarkId),
+    collectionsForBookmarkCache.set(CollectionsForKeepKey(ktc.bookmarkId),
       (for (c <- rows if c.bookmarkId === ktc.bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list)
   }
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
-    collectionsForBookmarkCache.remove(CollectionsForBookmarkKey(ktc.bookmarkId))
+    collectionsForBookmarkCache.remove(CollectionsForKeepKey(ktc.bookmarkId))
   }
 
   type RepoImpl = KeepToCollectionTable
@@ -56,7 +56,7 @@ class KeepToCollectionRepoImpl @Inject() (
   initTable()
 
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]] =
-    collectionsForBookmarkCache.getOrElse(CollectionsForBookmarkKey(bookmarkId)) {
+    collectionsForBookmarkCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
       (for (c <- rows if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list
     }

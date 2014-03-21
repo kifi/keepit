@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import scala.util.Random
 import org.joda.time.DateTime
 
-case class InternedUriAndBookmark(bookmark: Bookmark, uri: NormalizedURI, isNewKeep: Boolean)
+case class InternedUriAndKeep(bookmark: Bookmark, uri: NormalizedURI, isNewKeep: Boolean)
 
 @Singleton
 class BookmarkInterner @Inject() (
@@ -99,7 +99,7 @@ class BookmarkInterner @Inject() (
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Bookmark], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
     val newKeeps = persistedBookmarksWithUris collect {
-      case InternedUriAndBookmark(bm, uri, isNewBookmark) if isNewBookmark => bm
+      case InternedUriAndKeep(bm, uri, isNewBookmark) if isNewBookmark => bm
     }
 
     keptAnalytics.keptPages(userId, newKeeps, context)
@@ -121,7 +121,7 @@ class BookmarkInterner @Inject() (
   }
 
   val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndBookmark] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndKeep] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
@@ -134,8 +134,8 @@ class BookmarkInterner @Inject() (
         scraper.scheduleScrape(uri, date)
       }
 
-      val (isNewKeep, bookmark) = internBookmark(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
-      Some(InternedUriAndBookmark(bookmark, uri, isNewKeep))
+      val (isNewKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
+      Some(InternedUriAndKeep(bookmark, uri, isNewKeep))
     } else {
       None
     }
@@ -149,7 +149,7 @@ class BookmarkInterner @Inject() (
       None
   }
 
-  private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
+  private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
     keepRepo.getByUriAndUserAllStates(uri.id.get, userId) match {
       case Some(bookmark) =>
