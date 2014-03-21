@@ -154,11 +154,8 @@ class HeimdalContextBuilder {
   def addUrlInfo(url: String): Unit = {
     this += ("url", url)
     URI.parse(url).foreach { uri =>
-      uri.host.collect { case host @ Host(domain) if domain.nonEmpty =>
+      uri.host.collect { case host  =>
         this += ("host", host.name)
-        this += ("domain", domain.take(2).reverse.mkString("."))
-        this += ("domainExtension", domain(0))
-        this += ("domainName", domain(1))
       }
       uri.scheme.foreach { scheme => this += ("scheme", scheme) }
     }
@@ -176,7 +173,7 @@ class HeimdalContextBuilder {
   }
 
   def addNotificationCategory(category: NotificationCategory): Unit = {
-    val camelledCategory = category.category.toLowerCase().split("_") match { case Array(h, q @ _*)  => h + q.map(_.capitalize).mkString }
+    val camelledCategory = category.category.toLowerCase.split("_") match { case Array(h, q @ _*)  => h + q.map(_.capitalize).mkString }
     this += ("category", camelledCategory)
     NotificationCategory.User.parentCategory.get(category).foreach { parentCategory => this += ("parentCategory", parentCategory) }
   }
