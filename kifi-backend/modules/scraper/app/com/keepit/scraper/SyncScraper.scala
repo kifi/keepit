@@ -94,7 +94,7 @@ class SyncScraper @Inject() (
         // check if document is not changed or does not need to be reindexed
         if (latestUri.title == Option(article.title) && // title change should always invoke indexing
           latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
-          latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
+          latestUri.state != NormalizedURIStates.SCRAPE_FAILED && latestUri.state != NormalizedURIStates.ACTIVE &&
           signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed

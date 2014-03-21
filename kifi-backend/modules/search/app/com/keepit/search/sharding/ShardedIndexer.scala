@@ -78,6 +78,10 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
     indexShards.valuesIterator.foreach(_.backup())
   }
 
+  override def lastBackup: Long = {
+    indexShards.valuesIterator.map(_.lastBackup).max
+  }
+
   def close(): Unit = {
     closing = true
     indexShards.valuesIterator.foreach(_.close())

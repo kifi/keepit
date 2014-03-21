@@ -72,7 +72,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   private[this] val indexWriterLock = new AnyRef
 
-  def reopenWriter(): Unit = indexWriterLock.synchronized {
+  private[this] def reopenWriter(): Unit = indexWriterLock.synchronized{
     if (indexWriter != null) indexWriter.close
     indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
     if (!DirectoryReader.indexExists(indexDirectory)) {
@@ -278,6 +278,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     log.info(s"index committed: commitData=${commitData}")
   }
 
+  private var _lastBackup: Long = System.currentTimeMillis
+  override def lastBackup: Long = _lastBackup
+
   def backup(): Unit = {
     log.info("Index will be backed up on next commit")
     indexDirectory.scheduleBackup()
@@ -285,9 +288,10 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   override def onCommit(successful: Seq[Indexable[T, S]]): Unit =
     try {
-      val start = currentDateTime.getMillis
+      val start = System.currentTimeMillis
       if (indexDirectory.doBackup()) {
-        val end = currentDateTime.getMillis
+        val end = System.currentTimeMillis
+        _lastBackup = end
         Statsd.gauge(Seq("index", indexDirectory.getDirectory().getName, "size").mkString("."), FileUtils.sizeOfDirectory(indexDirectory.getDirectory()))
         log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
       }
@@ -321,17 +325,15 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     commitData.get(Indexer.CommitData.committedAt)
   }
 
-  def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
+  def numDocs: Int = (indexWriter.numDocs() - 1) // minus the seed doc
 
-  def refreshSearcher() {
+  def refreshSearcher(): Unit = {
     searcher = Searcher.reopen(searcher, indexWarmer)
   }
 
-  def refreshWriter() {
-    searcher = Searcher.reopen(searcher, indexWarmer)
-  }
+  def refreshWriter(): Unit = reopenWriter()
 
-  def getFieldDecoder(fieldName: String) = {
+  def getFieldDecoder(fieldName: String): FieldDecoder = {
     fieldDecoders.get(fieldName) match {
       case Some(decoder) => decoder
       case _ => fieldName match {

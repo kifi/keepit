@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.keepService', ['kifi.undo'])
+angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch) {
 
     var list = [],
       selected = {},
@@ -112,6 +112,25 @@ angular.module('kifi.keepService', ['kifi.undo'])
       var diff = new Date().getTime() - keep.conversationUpdatedAt.getTime();
       return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
+
+
+
+    var keepList = new Clutch(function (url, config) {
+      $log.log('keepService.getList()', config && config.params);
+
+      return $http.get(url, config).then(function (res) {
+        var data = res.data,
+          keeps = data.keeps || [];
+
+        _.forEach(keeps, function (keep) {
+          keep.isMyBookmark = true;
+        });
+
+        fetchScreenshots(keeps);
+
+        return { keeps: keeps, before: data.before };
+      });
+    });
 
 
     var api = {
@@ -336,28 +355,20 @@ angular.module('kifi.keepService', ['kifi.undo'])
           params: params
         };
 
-        $log.log('keepService.getList()', params);
+        return keepList.get(url, config).then(function (result) {
+          var keeps = result.keeps;
+          var _before = result.before;
 
-        return $http.get(url, config).then(function (res) {
-          var data = res.data,
-            keeps = data.keeps || [];
           if (!keeps.length) {
             end = true;
           }
 
-          if (!data.before) {
+          if (!_before) {
             list.length = 0;
           }
 
           list.push.apply(list, keeps);
           before = list.length ? list[list.length - 1].id : null;
-
-          _.forEach(keeps, function (keep) {
-            keep.isMyBookmark = true;
-          });
-
-          fetchScreenshots(keeps);
-
           return keeps;
         });
       },
