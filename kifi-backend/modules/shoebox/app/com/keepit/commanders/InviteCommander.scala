@@ -116,6 +116,7 @@ class InviteCommander @Inject() (
   }
 
   private def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
+    // todo(Léo): this method was never updated to handle email invitations. Needs to be fixed.
     db.readWrite { implicit session =>
       val userSocialAccounts = socialUserInfoRepo.getByUser(userId)
       val fortyTwoSocialAccount = userSocialAccounts.find(_.networkType == SocialNetworks.FORTYTWO).get
