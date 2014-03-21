@@ -23,7 +23,7 @@ case class Bookmark(
   isPrivate: Boolean = false,
   userId: Id[User],
   state: State[Bookmark] = BookmarkStates.ACTIVE,
-  source: BookmarkSource,
+  source: KeepSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
   seq: SequenceNumber[Bookmark] = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Bookmark] with ModelWithState[Bookmark] with ModelWithSeqNumber[Bookmark]{
@@ -66,40 +66,40 @@ object Bookmark {
     (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'state).format(State.format[Bookmark]) and
-    (__ \ 'source).format[String].inmap(BookmarkSource.apply, unlift(BookmarkSource.unapply)) and
+    (__ \ 'source).format[String].inmap(KeepSource.apply, unlift(KeepSource.unapply)) and
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
     (__ \ 'seq).format(SequenceNumber.format[Bookmark])
   )(Bookmark.apply, unlift(Bookmark.unapply))
 }
 
-case class BookmarkUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
+case class KeepUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
 
-object BookmarkUriAndTime {
+object KeepUriAndTime {
   import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 
   implicit def bookmarkUriAndTimeFormat = (
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'createdAt).format(DateTimeJsonLongFormat)
-  )(BookmarkUriAndTime.apply, unlift(BookmarkUriAndTime.unapply))
+  )(KeepUriAndTime.apply, unlift(KeepUriAndTime.unapply))
 }
 
-case class BookmarkCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
+case class KeepCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
   override val version = 3
   val namespace = "bookmark_count"
   def toKey(): String = userId map (_.toString) getOrElse "all"
 }
 
-class BookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[BookmarkCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
+case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
   override val version = 4
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
 
-class BookmarkUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[KeepUriUserKey, Bookmark](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class LatestBookmarkUriKey(uriId: Id[NormalizedURI]) extends Key[Bookmark] {
   override val version = 1
@@ -107,36 +107,36 @@ case class LatestBookmarkUriKey(uriId: Id[NormalizedURI]) extends Key[Bookmark] 
   def toKey(): String = uriId.toString
 }
 
-class LatestBookmarkUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestBookmarkUriKey, Bookmark](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object BookmarkStates extends States[Bookmark]
 
-case class BookmarkSource(value: String) {
+case class KeepSource(value: String) {
   override def toString = value
 }
 
-object BookmarkSource {
-  val keeper = BookmarkSource("keeper")
-  val bookmarkImport = BookmarkSource("bookmarkImport")
-  val site = BookmarkSource("site")
-  val mobile = BookmarkSource("mobile")
-  val email = BookmarkSource("email")
-  val default = BookmarkSource("default")
-  val unknown = BookmarkSource("unknown")
+object KeepSource {
+  val keeper = KeepSource("keeper")
+  val bookmarkImport = KeepSource("bookmarkImport")
+  val site = KeepSource("site")
+  val mobile = KeepSource("mobile")
+  val email = KeepSource("email")
+  val default = KeepSource("default")
+  val unknown = KeepSource("unknown")
 
   val valid = Set(keeper, bookmarkImport, site, mobile, email, default)
 
-  def get(value: String): BookmarkSource = BookmarkSource(value) match {
-    case BookmarkSource("HOVER_KEEP") => keeper
-    case BookmarkSource("INIT_LOAD") => bookmarkImport
+  def get(value: String): KeepSource = KeepSource(value) match {
+    case KeepSource("HOVER_KEEP") => keeper
+    case KeepSource("INIT_LOAD") => bookmarkImport
     case source => source
   }
 }
 
 object BookmarkFactory {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Bookmark =
+  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Bookmark =
     Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
 
 }

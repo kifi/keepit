@@ -13,7 +13,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.model._
-import com.keepit.model.BookmarkSource._
+import com.keepit.model.KeepSource._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -152,7 +152,7 @@ class AdminBookmarksController @Inject() (
       (infos filter (_.name.startsWith("BookmarkStore"))).map{_.numDocs}.sum
     }
     val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
-      keepRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
+      keepRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), KeepSource.bookmarkImport)
     }}}
     val bookmarkTodayOthersCountFuture = future { timing("load bookmarks other counts from today") { db.readOnly { implicit s =>
       keepRepo.getCountByTime(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now())

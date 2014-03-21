@@ -49,7 +49,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keeper = BookmarkSource.keeper
+        val keeper = KeepSource.keeper
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
         val db = inject[Database]
 
@@ -115,7 +115,7 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keeper = BookmarkSource.keeper
+        val keeper = KeepSource.keeper
         val db = inject[Database]
 
         val (user, bookmark1, bookmark2, collections) = db.readWrite {implicit s =>

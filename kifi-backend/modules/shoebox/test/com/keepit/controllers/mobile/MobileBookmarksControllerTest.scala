@@ -62,7 +62,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
   def externalIdForCollection(userId: Id[User], name: String): String = forCollection(userId, name).externalId.id
 
-  def sourceForTitle(title: String): BookmarkSource = forTitle(title).source
+  def sourceForTitle(title: String): KeepSource = forTitle(title).source
 
   def stateForTitle(title: String): String = forTitle(title).state.value
 
@@ -93,7 +93,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
-      val keeper = BookmarkSource.keeper
+      val keeper = KeepSource.keeper
       val keepToCollectionRepo = inject[KeepToCollectionRepo]
       val db = inject[Database]
 
@@ -160,7 +160,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
-      val keeper = BookmarkSource.keeper
+      val keeper = KeepSource.keeper
       val db = inject[Database]
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite {implicit s =>
@@ -291,8 +291,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
-      val keeper = BookmarkSource.keeper
-      val initLoad = BookmarkSource.bookmarkImport
+      val keeper = KeepSource.keeper
+      val initLoad = KeepSource.bookmarkImport
       val db = inject[Database]
 
       val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -373,8 +373,8 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
-      val keeper = BookmarkSource.keeper
-      val initLoad = BookmarkSource.bookmarkImport
+      val keeper = KeepSource.keeper
+      val initLoad = KeepSource.bookmarkImport
       val db = inject[Database]
 
       val (user, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -525,9 +525,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        sourceForTitle("title 11") === BookmarkSource.mobile
-        sourceForTitle("title 21") === BookmarkSource.mobile
-        sourceForTitle("title 31") === BookmarkSource.mobile
+        sourceForTitle("title 11") === KeepSource.mobile
+        sourceForTitle("title 21") === KeepSource.mobile
+        sourceForTitle("title 31") === KeepSource.mobile
 
         stateForTitle("title 11") === "active"
         stateForTitle("title 21") === "active"
@@ -569,9 +569,9 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
         status(keepRes) must equalTo(OK);
         contentType(keepRes) must beSome("application/json");
 
-        sourceForTitle("title 11") === BookmarkSource.mobile
-        sourceForTitle("title 21") === BookmarkSource.mobile
-        sourceForTitle("title 31") === BookmarkSource.mobile
+        sourceForTitle("title 11") === KeepSource.mobile
+        sourceForTitle("title 21") === KeepSource.mobile
+        sourceForTitle("title 31") === KeepSource.mobile
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.unkeepMultiple().toString
         path === "/m/1/keeps/remove"

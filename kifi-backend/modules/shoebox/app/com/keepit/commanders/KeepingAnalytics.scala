@@ -30,7 +30,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   def createdTag(newTag: Collection, context: HeimdalContext): Unit = {
     val createdAt = currentDateTime
-    val isDefaultTag = context.get[String]("source").map(_ == BookmarkSource.default.value) getOrElse false
+    val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
     if (!isDefaultTag) SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -61,7 +61,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
   def keptPages(userId: Id[User], keeps: Seq[Bookmark], existingContext: HeimdalContext): Unit = SafeFuture {
     val keptAt = currentDateTime
 
-    keeps.collect { case bookmark if bookmark.source != BookmarkSource.default =>
+    keeps.collect { case bookmark if bookmark.source != KeepSource.default =>
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "keptPage")
@@ -71,7 +71,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       contextBuilder += ("uriId", bookmark.uriId.toString)
       val context = contextBuilder.build
       heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
-      if (bookmark.source != BookmarkSource.bookmarkImport) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
+      if (bookmark.source != KeepSource.bookmarkImport) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
 
       // Anonymized event with page information
       anonymise(contextBuilder)
@@ -148,7 +148,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
   }
 
   def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
-    val isDefaultTag = context.get[String]("source").map(_ == BookmarkSource.default.value) getOrElse false
+    val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
     if (!isDefaultTag) changedTag(tag, keep, "taggedPage", context, taggedAt)
   }
 

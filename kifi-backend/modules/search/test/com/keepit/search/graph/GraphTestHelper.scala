@@ -21,7 +21,7 @@ import play.api.test.Helpers._
 
 trait GraphTestHelper extends ApplicationInjector {
 
-  val source = BookmarkSource("test")
+  val source = KeepSource("test")
   val bigDataSize = 8000
 
   def initData = {

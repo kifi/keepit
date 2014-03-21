@@ -31,7 +31,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           userRepo.save(User(firstName = "foo", lastName = "bar"))
         }
 
-        val hover = BookmarkSource.keeper
+        val hover = KeepSource.keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
@@ -130,7 +130,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           (userRepo.save(User(firstName = "foo", lastName = "bar")), userRepo.save(User(firstName = "foo", lastName = "bar")))
         }
 
-        val hover = BookmarkSource.keeper
+        val hover = KeepSource.keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
@@ -329,7 +329,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           userRepo.save(User(firstName = "foo", lastName = "bar"))
         }
 
-        val hover = BookmarkSource.keeper
+        val hover = KeepSource.keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))

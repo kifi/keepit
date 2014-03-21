@@ -59,7 +59,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
   def externalIdForCollection(userId: Id[User], name: String): String = forCollection(userId, name).externalId.id
 
-  def sourceForTitle(title: String): BookmarkSource = forTitle(title).source
+  def sourceForTitle(title: String): KeepSource = forTitle(title).source
 
   def stateForTitle(title: String): String = forTitle(title).state.value
 
@@ -89,8 +89,8 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keeper = BookmarkSource.keeper
-        val initLoad = BookmarkSource.bookmarkImport
+        val keeper = KeepSource.keeper
+        val initLoad = KeepSource.bookmarkImport
         val db = inject[Database]
 
         val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -175,8 +175,8 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keeper = BookmarkSource.keeper
-        val initLoad = BookmarkSource.bookmarkImport
+        val keeper = KeepSource.keeper
+        val initLoad = KeepSource.bookmarkImport
         val db = inject[Database]
 
         val (user, bookmark1, bookmark2, bookmark3) = db.readWrite {implicit s =>
@@ -295,9 +295,9 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        sourceForTitle("title 11") === BookmarkSource.site
-        sourceForTitle("title 21") === BookmarkSource.site
-        sourceForTitle("title 31") === BookmarkSource.site
+        sourceForTitle("title 11") === KeepSource.site
+        sourceForTitle("title 21") === KeepSource.site
+        sourceForTitle("title 31") === KeepSource.site
 
         stateForTitle("title 11") === "active"
         stateForTitle("title 21") === "active"
@@ -387,9 +387,9 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         status(keepRes) must equalTo(OK);
         contentType(keepRes) must beSome("application/json");
 
-        sourceForTitle("title 11") === BookmarkSource.site
-        sourceForTitle("title 21") === BookmarkSource.site
-        sourceForTitle("title 31") === BookmarkSource.site
+        sourceForTitle("title 11") === KeepSource.site
+        sourceForTitle("title 21") === KeepSource.site
+        sourceForTitle("title 31") === KeepSource.site
 
         val path = com.keepit.controllers.website.routes.BookmarksController.unkeepMultiple().toString
         path === "/site/keeps/remove"

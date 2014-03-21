@@ -40,7 +40,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
-            val hover = BookmarkSource.keeper
+            val hover = KeepSource.keeper
             val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = nuri0.id.get, source = hover))
             val bm2 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id, uriId = nuri2.id.get, source = hover))
             val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
@@ -150,7 +150,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
-            val hover = BookmarkSource.keeper
+            val hover = KeepSource.keeper
             val bm0 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = uri0.id.get, source = hover))
             val bm0better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = uri0better.id.get, source = hover))
 

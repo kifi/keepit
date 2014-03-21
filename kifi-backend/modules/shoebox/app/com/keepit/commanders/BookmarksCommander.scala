@@ -109,7 +109,7 @@ class BookmarksCommander @Inject() (
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: BookmarkSource)(implicit context: HeimdalContext):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val (keeps, _) = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
@@ -197,7 +197,7 @@ class BookmarksCommander @Inject() (
     } tap { _ => searchClient.updateURIGraph() }
   }
 
-  def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: BookmarkSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
+  def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
     val (bookmarks, _) = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag, bookmarks)
   }
@@ -255,13 +255,13 @@ class BookmarksCommander @Inject() (
     }
   }
 
-  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: BookmarkSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
+  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
     val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
       rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
       userId,
       mutatePrivacy = true,
       installationId = None,
-      source = BookmarkSource.default
+      source = KeepSource.default
     )
 
     val keepsByUrl = bookmarks.map(keep => keep.url -> keep).toMap

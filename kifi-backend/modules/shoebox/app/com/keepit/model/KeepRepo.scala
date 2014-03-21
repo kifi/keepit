@@ -23,7 +23,7 @@ trait KeepRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] wi
   def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
-  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int
+  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber[Bookmark], fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
@@ -33,7 +33,7 @@ trait KeepRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] wi
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Bookmark]
   def getByTitle(title: String)(implicit session: RSession): Seq[Bookmark]
   def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean
-  def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[BookmarkSource]]
+  def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
   def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark]
 }
 
@@ -41,9 +41,9 @@ trait KeepRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] wi
 class KeepRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val countCache: BookmarkCountCache,
-  bookmarkUriUserCache: BookmarkUriUserCache,
-  latestBookmarkUriCache: LatestBookmarkUriCache
+  val countCache: KeepCountCache,
+  bookmarkUriUserCache: KeepUriUserCache,
+  latestBookmarkUriCache: LatestKeepUriCache
 ) extends DbRepo[Bookmark] with KeepRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {
 
   import db.Driver.simple._
@@ -59,7 +59,7 @@ class KeepRepoImpl @Inject() (
     def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable)//indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull)//indexd
-    def source = column[BookmarkSource]("source", O.NotNull)
+    def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, urlId.?, url, bookmarkPath.?, isPrivate,
       userId, state, source, kifiInstallation.?, seq) <> ((Bookmark.apply _).tupled, Bookmark.unapply _)
@@ -68,11 +68,11 @@ class KeepRepoImpl @Inject() (
   def table(tag: Tag) = new BookmarkTable(tag)
   initTable()
 
-  implicit val getBookmarkSourceResult = getResultFromMapper[BookmarkSource]
-  implicit val setBookmarkSourceParameter = setParameterFromMapper[BookmarkSource]
+  implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
+  implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
   private implicit val getBookmarkResult : GetResult[com.keepit.model.Bookmark] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
-    Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[BookmarkSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Bookmark]])
+    Bookmark(id = r.<<[Option[Id[Bookmark]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Bookmark]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Option[Id[URL]]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Bookmark]], source = r.<<[KeepSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Bookmark]])
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
@@ -90,8 +90,8 @@ class KeepRepoImpl @Inject() (
   }
 
   override def deleteCache(bookmark: Bookmark)(implicit session: RSession): Unit = {
-    bookmarkUriUserCache.remove(BookmarkUriUserKey(bookmark.uriId, bookmark.userId))
-    countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+    bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
+    countCache.remove(KeepCountKey(Some(bookmark.userId)))
     latestBookmarkUriCache.remove(LatestBookmarkUriKey(bookmark.uriId))
   }
 
@@ -99,14 +99,14 @@ class KeepRepoImpl @Inject() (
     if (bookmark.state == BookmarkStates.INACTIVE) {
       deleteCache(bookmark)
     } else {
-      bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-      countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
+      bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
+      countCache.remove(KeepCountKey(Some(bookmark.userId)))
       latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
     }
   }
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark] =
-    bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
+    bookmarkUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
       val bookmarks = (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
@@ -188,7 +188,7 @@ class KeepRepoImpl @Inject() (
   def getCountByUser(userId: Id[User], includePrivate: Boolean)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
     if (includePrivate) {
-      countCache.getOrElse(BookmarkCountKey(Some(userId))) {
+      countCache.getOrElse(KeepCountKey(Some(userId))) {
         val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${BookmarkStates.ACTIVE}'"
         sql.as[Int].first
       }
@@ -212,7 +212,7 @@ class KeepRepoImpl @Inject() (
     sql.as[Int].first
   }
 
-  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int = {
+  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
 
     val sql = sql"select count(*) as c from bookmark b where b.state = '#${BookmarkStates.ACTIVE}' and b.source=${source} and updated_at between ${from} and ${to};"
@@ -257,9 +257,9 @@ class KeepRepoImpl @Inject() (
     (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
   }
 
-  def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[BookmarkSource]] =
+  def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]] =
     StaticQuery.queryNA[(Long, String)]("""select distinct user_id, source from bookmark where state != '#${BookmarkStates.INACTIVE}'""").list.map {
-      case (id, source) => (Id[User](id), BookmarkSource.get(source))
+      case (id, source) => (Id[User](id), KeepSource.get(source))
     }.groupBy(_._1).mapValues(_.map(_._2))
 
   def oldestBookmark(userId: Id[User], excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Bookmark] = {

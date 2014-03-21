@@ -108,7 +108,7 @@ class MailToKeepActor @Inject() (
                   implicit val context = HeimdalContext.empty
                   val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
                     Seq(RawBookmarkRepresentation(url = uri.toString, isPrivate = (keepType == KeepType.Private))),
-                    user.id.get, BookmarkSource.email, mutatePrivacy = true)
+                    user.id.get, KeepSource.email, mutatePrivacy = true)
                   val bookmark = bookmarks.head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
                   sendReply(
