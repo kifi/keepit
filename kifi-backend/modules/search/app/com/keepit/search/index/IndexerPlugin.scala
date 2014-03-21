@@ -160,7 +160,7 @@ class IndexerActor[S, I <: Indexer[_, S, I]](
         onError = { e => airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e) }
       )
     case BackUpIndex => {
-      val minBackupInterval = 300000 // 5 minutes
+      val minBackupInterval = 600000 // 10 minutes
       if (System.currentTimeMillis - indexer.lastBackup > minBackupInterval) indexer.backup()
     }
     case RefreshSearcher => indexer.refreshSearcher()
