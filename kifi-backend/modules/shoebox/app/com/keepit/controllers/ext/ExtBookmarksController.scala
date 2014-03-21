@@ -23,19 +23,19 @@ import scala.Some
 import play.api.libs.json.JsNumber
 
 private case class SendableBookmark(
-  id: ExternalId[Bookmark],
+  id: ExternalId[Keep],
   title: Option[String],
   url: String,
   isPrivate: Boolean,
-  state: State[Bookmark]
+  state: State[Keep]
 )
 
 private object SendableBookmark {
-  private implicit val externalIdFormat = ExternalId.format[Bookmark]
-  private implicit val stateFormat = State.format[Bookmark]
+  private implicit val externalIdFormat = ExternalId.format[Keep]
+  private implicit val stateFormat = State.format[Keep]
   implicit val writesSendableBookmark = Json.writes[SendableBookmark]
 
-  def fromBookmark(b: Bookmark): SendableBookmark =
+  def fromBookmark(b: Keep): SendableBookmark =
     SendableBookmark(b.externalId, b.title, b.url, b.isPrivate, b.state)
 }
 

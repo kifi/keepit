@@ -131,7 +131,7 @@ class FixedResultSearchCommander extends SearchCommander {
               ExternalId[Collection]("c17da7ce-64bb-4c91-8832-1f1a6a88b7be"),
               ExternalId[Collection]("19ccb3db-4e18-4ade-91bd-1a98ef33aa63")
             )),
-            Some(ExternalId[Bookmark]("604754fb-182d-4c39-a314-2d1994b24159")),  // bookmarkId
+            Some(ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159")),  // bookmarkId
             Some(Seq((9, 13))),  // title matches
             None // url matches
           ),

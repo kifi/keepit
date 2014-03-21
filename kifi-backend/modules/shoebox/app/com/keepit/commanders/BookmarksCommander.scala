@@ -20,9 +20,9 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.KestrelCombinator
 
-case class KeepInfo(id: Option[ExternalId[Bookmark]] = None, title: Option[String], url: String, isPrivate: Boolean)
+case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
-case class FullKeepInfo(bookmark: Bookmark, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
+case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
 
 class FullKeepInfoWriter extends Writes[FullKeepInfo] {
   def writes(info: FullKeepInfo) = Json.obj(
@@ -39,13 +39,13 @@ class FullKeepInfoWriter extends Writes[FullKeepInfo] {
 
 object KeepInfo {
   implicit val format = (
-    (__ \ 'id).formatNullable(ExternalId.format[Bookmark]) and
+    (__ \ 'id).formatNullable(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_))
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
 
-  def fromBookmark(bookmark: Bookmark): KeepInfo = {
+  def fromBookmark(bookmark: Keep): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
   }
 }
@@ -76,7 +76,7 @@ class BookmarksCommander @Inject() (
     rawBookmarkFactory: RawBookmarkFactory
  ) extends Logging {
 
-  def allKeeps(before: Option[ExternalId[Bookmark]], after: Option[ExternalId[Bookmark]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
+  def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
     val (keeps, collectionOpt) = db.readOnly { implicit s =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
@@ -148,7 +148,7 @@ class BookmarksCommander @Inject() (
     deactivatedKeepInfos
   }
 
-  def updateKeep(keep: Bookmark, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Bookmark] = {
+  def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {
     val shouldBeUpdated = (isPrivate.isDefined && keep.isPrivate != isPrivate.get) || (title.isDefined && keep.title != title)
     if (shouldBeUpdated) Some {
       val updatedPrivacy = isPrivate getOrElse keep.isPrivate
@@ -160,7 +160,7 @@ class BookmarksCommander @Inject() (
     } else None
   }
 
-  def addToCollection(collection: Collection, keeps: Seq[Bookmark])(implicit context: HeimdalContext): Set[KeepToCollection] = {
+  def addToCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
@@ -181,7 +181,7 @@ class BookmarksCommander @Inject() (
     } tap { _ => searchClient.updateURIGraph() }
   }
 
-  def removeFromCollection(collection: Collection, keeps: Seq[Bookmark])(implicit context: HeimdalContext): Set[KeepToCollection] = {
+  def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val removed = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
@@ -255,7 +255,7 @@ class BookmarksCommander @Inject() (
     }
   }
 
-  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Bookmark]] = {
+  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Keep]] = {
     val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
       rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
       userId,
@@ -280,7 +280,7 @@ class BookmarksCommander @Inject() (
     keepsByTag
   }
 
-  def setFirstKeeps(userId: Id[User], keeps: Seq[Bookmark]): Unit = {
+  def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {
     db.readWrite { implicit session =>
       val origin = keepRepo.oldestBookmark(userId).map(_.createdAt) getOrElse currentDateTime
       keeps.zipWithIndex.foreach { case (keep, i) =>

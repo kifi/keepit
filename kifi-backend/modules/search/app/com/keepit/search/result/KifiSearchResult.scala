@@ -205,7 +205,7 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
   def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
-  def bookmarkId: Option[ExternalId[Bookmark]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Bookmark])
+  def bookmarkId: Option[ExternalId[Keep]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Keep])
 
   def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {
     var matchesJson = Json.obj()
@@ -242,7 +242,7 @@ object BasicSearchHit extends Logging {
     title: Option[String],
     url: String,
     collections: Option[Seq[ExternalId[Collection]]] = None,
-    bookmarkId: Option[ExternalId[Bookmark]] = None,
+    bookmarkId: Option[ExternalId[Keep]] = None,
     titleMatches: Option[Seq[(Int, Int)]] = None,
     urlMatches: Option[Seq[(Int, Int)]] = None
   ): BasicSearchHit = {

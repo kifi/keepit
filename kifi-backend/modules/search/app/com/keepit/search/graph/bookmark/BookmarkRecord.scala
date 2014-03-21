@@ -1,14 +1,14 @@
 package com.keepit.search.graph.bookmark
 
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.model.Bookmark
+import com.keepit.model.Keep
 import com.keepit.model.NormalizedURI
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-case class BookmarkRecord(title: String, url: String, createdAt: Long, isPrivate: Boolean, uriId: Id[NormalizedURI], externalId: Option[ExternalId[Bookmark]])
+case class BookmarkRecord(title: String, url: String, createdAt: Long, isPrivate: Boolean, uriId: Id[NormalizedURI], externalId: Option[ExternalId[Keep]])
 
 object BookmarkRecordSerializer {
   implicit def toByteArray(r: BookmarkRecord): Array[Byte] = {
@@ -45,7 +45,7 @@ object BookmarkRecordSerializer {
       in.readLong(),      // createdAt
       in.readByte() == 1, // isPrivate
       Id[NormalizedURI](in readLong()),
-      if (version >= 3) Some(ExternalId[Bookmark](in.readString())) else None)
+      if (version >= 3) Some(ExternalId[Keep](in.readString())) else None)
   }
 }
 

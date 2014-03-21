@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import scala.util.Random
 import org.joda.time.DateTime
 
-case class InternedUriAndKeep(bookmark: Bookmark, uri: NormalizedURI, isNewKeep: Boolean)
+case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean)
 
 @Singleton
 class BookmarkInterner @Inject() (
@@ -96,7 +96,7 @@ class BookmarkInterner @Inject() (
   }
 
 
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Bookmark], Seq[RawBookmarkRepresentation]) = {
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
     val newKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark) if isNewBookmark => bm

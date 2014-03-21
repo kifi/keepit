@@ -41,7 +41,7 @@ class AdminBookmarksController @Inject() (
 
   implicit val dbMasterSlave = Database.Slave
 
-  private def editBookmark(bookmark: Bookmark)(implicit request: AuthenticatedRequest[AnyContent]) = {
+  private def editBookmark(bookmark: Keep)(implicit request: AuthenticatedRequest[AnyContent]) = {
     db.readOnly { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
@@ -54,7 +54,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def edit(id: Id[Bookmark]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def edit(id: Id[Keep]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val bookmark = db.readOnly { implicit session =>
       keepRepo.get(id)
     }
@@ -72,7 +72,7 @@ class AdminBookmarksController @Inject() (
   }
 
   def rescrape = AdminJsonAction.authenticatedParseJson { request =>
-    val id = Id[Bookmark]((request.body \ "id").as[Int])
+    val id = Id[Keep]((request.body \ "id").as[Int])
     db.readWrite { implicit session =>
       val bookmark = keepRepo.get(id)
       val uri = uriRepo.get(bookmark.uriId)
@@ -85,7 +85,7 @@ class AdminBookmarksController @Inject() (
   def updateBookmarks() = AdminHtmlAction.authenticated { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
-    def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
+    def setIsPrivate(id: Id[Keep], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
       val bookmark = keepRepo.get(id)
       log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
       keepRepo.save(bookmark.withPrivate(isPrivate))
@@ -93,7 +93,7 @@ class AdminBookmarksController @Inject() (
       bookmark.userId
     }
 
-    def setIsActive(id: Id[Bookmark], isActive: Boolean)(implicit session: RWSession): Id[User] = {
+    def setIsActive(id: Id[Keep], isActive: Boolean)(implicit session: RWSession): Id[User] = {
       val bookmark = keepRepo.get(id)
       log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
       keepRepo.save(bookmark.withActive(isActive))
@@ -104,8 +104,8 @@ class AdminBookmarksController @Inject() (
     db.readWrite { implicit s =>
       request.body.asFormUrlEncoded.get foreach { case (key, values) =>
         key.split("_") match {
-          case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
-          case Array("active", id) => setIsActive(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("private", id) => setIsPrivate(Id[Keep](id.toInt), toBoolean(values.last))
+          case Array("active", id) => setIsActive(Id[Keep](id.toInt), toBoolean(values.last))
         }
       }
     }
@@ -114,7 +114,7 @@ class AdminBookmarksController @Inject() (
   }
 
   //this is an admin only task!!!
-  def delete(id: Id[Bookmark]) = AdminHtmlAction.authenticated { request =>
+  def delete(id: Id[Keep]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit s =>
       keepRepo.delete(id)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))

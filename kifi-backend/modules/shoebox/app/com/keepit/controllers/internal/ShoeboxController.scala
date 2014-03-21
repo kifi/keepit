@@ -458,7 +458,7 @@ class ShoeboxController @Inject() (
   }
 
   def saveBookmark() = Action(parse.json) { request =>
-    val bookmark = request.body.as[Bookmark]
+    val bookmark = request.body.as[Keep]
     val saved = db.readWrite(attempts = 3) { implicit session =>
       keepRepo.save(bookmark)
     }

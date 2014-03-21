@@ -45,16 +45,16 @@ class UriIntegrityActor @Inject()(
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
+  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Keep]] = {
     keepRepo.getByUrlId(urlId).groupBy(_.userId)
   }
 
-  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
+  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Keep]] = {
     keepRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
   }
 
   /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
+  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Keep]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
 
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head

@@ -60,7 +60,7 @@ class PageCommander @Inject() (
 
       val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }
 
-      val bookmark: Option[Bookmark] = nUri.flatMap { uri =>
+      val bookmark: Option[Keep] = nUri.flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, userId)
       }
       val tags: Seq[Collection] = bookmark.map { bm =>
