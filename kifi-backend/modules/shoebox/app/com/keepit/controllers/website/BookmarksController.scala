@@ -158,7 +158,7 @@ class BookmarksController @Inject() (
   def keepMultiple() = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
-        val source = BookmarkSource.site
+        val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
         val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
         log.info(s"kept ${keeps.size} new keeps")
@@ -207,7 +207,7 @@ class BookmarksController @Inject() (
     toBeUpdated match {
       case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
       case Some((isPrivate, title)) => db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         bookmarksCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
       } match {
         case None => NotFound(Json.obj("error" -> "Keep not found"))
@@ -218,7 +218,7 @@ class BookmarksController @Inject() (
 
   def unkeep(id: ExternalId[Bookmark]) = JsonAction.authenticated { request =>
     db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
       Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
     } getOrElse {
@@ -252,7 +252,7 @@ class BookmarksController @Inject() (
   }
 
   def saveCollection(id: String) = JsonAction.authenticated { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     collectionCommander.saveCollection(id, request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
@@ -261,7 +261,7 @@ class BookmarksController @Inject() (
 
   def deleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.deleteCollection(coll)
       Ok(Json.obj("deleted" -> coll.name))
     } getOrElse {
@@ -274,7 +274,7 @@ class BookmarksController @Inject() (
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
         val keeps = db.readOnly { implicit s => keepExtIds.flatMap(keepRepo.getOpt(_)) }
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val removed = bookmarksCommander.removeFromCollection(collection, keeps)
         Ok(Json.obj("removed" -> removed.size))
       } getOrElse {
@@ -292,7 +292,7 @@ class BookmarksController @Inject() (
     } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
         val keeps = db.readOnly { implicit session => keepExtIds.map(keepRepo.get) }
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val added = bookmarksCommander.addToCollection(collection, keeps)
         Ok(Json.obj("added" -> added.size))
       } getOrElse {

@@ -61,7 +61,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
-  def getUriIdsInCollection(id: Id[Collection]): Future[Seq[BookmarkUriAndTime]]
+  def getUriIdsInCollection(id: Id[Collection]): Future[Seq[KeepUriAndTime]]
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
@@ -132,7 +132,7 @@ trait ShoeboxServiceClient extends ServiceClient {
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
-    bookmarkUriUserCache: BookmarkUriUserCache,
+    bookmarkUriUserCache: KeepUriUserCache,
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
@@ -145,7 +145,7 @@ case class ShoeboxCacheProvider @Inject() (
     searchFriendsCache: SearchFriendsCache,
     userValueCache: UserValueCache,
     userConnCountCache: UserConnectionCountCache,
-    userBookmarkCountCache: BookmarkCountCache,
+    userBookmarkCountCache: KeepCountCache,
     userSegmentCache: UserSegmentCache,
     extensionVersionCache: ExtensionVersionInstallationIdCache,
     verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
@@ -219,7 +219,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
-    cacheProvider.bookmarkUriUserCache.getOrElseFutureOpt(BookmarkUriUserKey(uriId, userId)) {
+    cacheProvider.bookmarkUriUserCache.getOrElseFutureOpt(KeepUriUserKey(uriId, userId)) {
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
           Json.fromJson[Option[Bookmark]](r.json).get
       }
@@ -404,9 +404,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[BookmarkUriAndTime]] = {
+  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
     call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = longTimeout) map { r =>
-      Json.fromJson[Seq[BookmarkUriAndTime]](r.json).get
+      Json.fromJson[Seq[KeepUriAndTime]](r.json).get
     }
   }
 
@@ -776,7 +776,7 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserSegment(userId: Id[User]): Future[UserSegment] = {
     cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)){
       val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
-      val bmsCount = cacheProvider.userBookmarkCountCache.get(BookmarkCountKey(Some(userId)))
+      val bmsCount = cacheProvider.userBookmarkCountCache.get(KeepCountKey(Some(userId)))
 
       (friendsCount, bmsCount) match {
         case (Some(f), Some(bm)) => {

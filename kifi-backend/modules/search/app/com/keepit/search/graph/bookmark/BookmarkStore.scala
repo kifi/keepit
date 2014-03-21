@@ -24,7 +24,7 @@ object BookmarkStoreFields {
 
 object BookmarkStore {
   def shouldDelete(bookmark: Bookmark, shard: Shard[NormalizedURI]): Boolean = ((bookmark.state == INACTIVE) || (!shard.contains(bookmark.uriId)))
-  val bookmarkSource = BookmarkSource("BookmarkStore")
+  val bookmarkSource = KeepSource("BookmarkStore")
 }
 
 class BookmarkStore(

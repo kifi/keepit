@@ -28,7 +28,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-        val keeper = BookmarkSource.keeper
+        val keeper = KeepSource.keeper
 
         val (user, collections, bookmark1, bookmark2) = db.readWrite {implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))

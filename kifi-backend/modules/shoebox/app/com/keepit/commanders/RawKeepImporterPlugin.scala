@@ -94,7 +94,7 @@ private class RawKeepImporterActor @Inject() (
       }
 
       if (successes.nonEmpty) {
-        if (source == BookmarkSource.bookmarkImport && installationId.isDefined) {
+        if (source == KeepSource.bookmarkImport && installationId.isDefined) {
           // User selected to import Léo
           val tagName = db.readOnly { implicit session =>
             "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")

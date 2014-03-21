@@ -23,7 +23,7 @@ case class DbCacheModule(cachePluginModules: CachePluginModule*) extends CacheMo
   @Singleton
   @Provides
   def bookmarkUriUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BookmarkUriUserCache(stats, accessLog, (outerRepo, 7 days))
+    new KeepUriUserCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides

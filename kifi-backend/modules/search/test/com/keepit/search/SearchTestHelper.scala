@@ -162,12 +162,12 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarkByUriAndUser: this should not fail")
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection]): Seq[BookmarkUriAndTime] = {
+  def getUriIdsInCollection(collectionId: Id[Collection]): Seq[KeepUriAndTime] = {
     val future = inject[ShoeboxServiceClient].getUriIdsInCollection(collectionId)
     inject[MonitoredAwait].result(future, 3 seconds, "getUriIdsInCollection: this should not fail")
   }
 
-  val source = BookmarkSource("test")
+  val source = KeepSource("test")
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig.overrideWith(
     "myBookmarkBoost" -> "1",
