@@ -36,7 +36,7 @@ class ExtInviteController @Inject() (
             Ok(json)
           case failedInviteStatus => {
             log.error(s"[invite] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
-            airbrake.notify(new FailedInvitationException(request.userId, fullSocialId, failedInviteStatus))
+            airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
             InternalServerError("0")
           }
         }

@@ -65,7 +65,7 @@ class InviteController @Inject() (db: Database,
           Redirect(facebookUrl)
         case failedInviteStatus => {
           log.error(s"[inviteConnection] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
-          airbrake.notify(new FailedInvitationException(request.userId, fullSocialId, failedInviteStatus))
+          airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
           InternalServerError("0")
         }
       }
@@ -73,9 +73,17 @@ class InviteController @Inject() (db: Database,
     resultOption getOrElse Future.successful(CloseWindow())
   }
 
-  def confirmInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]) = Action {
-    if (inviteCommander.confirmFacebookInvite(id: ExternalId[Invitation], source, errorMsg: Option[String], errorCode: Option[Int]).sent) { CloseWindow() }
-    else { Redirect(routes.HomeController.home) }
+  def confirmInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]) = Action { request =>
+    val inviteStatus = inviteCommander.confirmFacebookInvite(id: ExternalId[Invitation], source, errorMsg: Option[String], errorCode: Option[Int])
+    if (inviteStatus.sent) {
+      log.info(s"[confirmInvite] Facebook invite sent: $inviteStatus")
+      CloseWindow()
+    }
+    else {
+      log.error(s"[confirmInvite] Unexpected error while processing Facebook invitation ${id} from ${source}: ${inviteStatus} $errorMsg }")
+      airbrake.notify(new FailedInvitationException(inviteStatus, Some(id), None, None))
+      Redirect(routes.HomeController.home)
+    }
   }
 
   def refreshAllSocialInfo() = HtmlAction.authenticatedAsync { implicit request =>

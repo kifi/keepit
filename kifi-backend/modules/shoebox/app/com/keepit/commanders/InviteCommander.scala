@@ -53,8 +53,8 @@ object FullSocialId {
 case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, EContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
 
 case class InviteStatus(sent: Boolean, savedInvite: Option[Invitation], code: String)
-case class FailedInvitationException(userId: Id[User], friendFullSocialId: FullSocialId, inviteStatus: InviteStatus)
-  extends Exception(s"Invitation from user $userId to $friendFullSocialId was not processed correctly: ${inviteStatus}")
+case class FailedInvitationException(inviteStatus: InviteStatus, inviteId: Option[ExternalId[Invitation]], userId: Option[Id[User]], friendFullSocialId: Option[FullSocialId])
+  extends Exception(s"Invitation $inviteId from user $userId to $friendFullSocialId was not processed correctly: ${inviteStatus}")
 
 object InviteStatus {
   def sent(savedInvite: Invitation) = {
