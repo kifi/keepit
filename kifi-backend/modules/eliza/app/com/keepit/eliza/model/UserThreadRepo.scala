@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
+import com.keepit.common.db.slick.{Repo, RepoWithDelete, DbRepo, DbRepoWithDelete, DataBaseComponent}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -21,7 +21,7 @@ import scala.concurrent.{Future, Promise}
 
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
-trait UserThreadRepo extends Repo[UserThread] {
+trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean=false)(implicit session: RWSession) : UserThread
 
@@ -103,6 +103,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
 
+  def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread]
+
 }
 
 /**
@@ -115,7 +117,7 @@ class UserThreadRepoImpl @Inject() (
     userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
     shoebox: ShoeboxServiceClient //todo: Its wrong to have a shoebox client here, this should go in the contoller layer
   )
-  extends DbRepo[UserThread] with UserThreadRepo with MessagingTypeMappers with Logging {
+  extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
@@ -518,6 +520,10 @@ class UserThreadRepoImpl @Inject() (
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
    (for (row <- rows if row.user===userId && row.uriId===uriId) yield row.id).firstOption.isDefined
+  }
+
+  def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
+    (for (row <- rows if row.thread===threadId) yield row).list
   }
 
 }
