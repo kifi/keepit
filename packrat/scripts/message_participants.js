@@ -1,16 +1,17 @@
-// @require scripts/lib/jquery.js
-// @require scripts/lib/jquery-tokeninput.js
-// @require scripts/lib/antiscroll.min.js
-// @require scripts/render.js
-// @require scripts/util.js
-// @require scripts/kifi_util.js
-// @require scripts/prevent_ancestor_scroll.js
+// @require styles/keeper/message_participants.css
+// @require styles/keeper/compose.css
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant.js
 // @require scripts/html/keeper/message_participant_icon.js
 // @require scripts/html/keeper/message_avatar.js
-// @require styles/keeper/message_participants.css
-// @require styles/keeper/compose.css
+// @require scripts/lib/jquery.js
+// @require scripts/lib/jquery-tokeninput.js
+// @require scripts/lib/antiscroll.min.js
+// @require scripts/friend_search.js
+// @require scripts/render.js
+// @require scripts/util.js
+// @require scripts/kifi_util.js
+// @require scripts/prevent_ancestor_scroll.js
 
 /**
  * --------------------------
@@ -131,7 +132,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * after tokenInput construction.
 		 */
 		get$TokenInput: function () {
-			return this.get$('.kifi-ti-token-input input');
+			return this.get$('.kifi-ti-token-for-input>input');
 		},
 
 		/**
@@ -141,43 +142,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		initAndAsyncFocusInput: function () {
 			var $input = this.$input;
 			if (!$input) {
-				$input = this.$input = this.get$('.kifi-message-participant-dialog-input').tokenInput(function search(query, withResults) {
-					api.port.emit('search_friends', {q: query}, withResults);
-				}, {
+				$input = this.$input = this.get$('.kifi-message-participant-dialog-input');
+				initFriendSearch($input, 'threadPane', api.noop, {
 					placeholder: 'Type a name...',
-					hintText: '',
-					searchingText: '',
-					resultsLimit: 4,
-					tipHtml: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
-					preventDuplicates: true,
-					allowTabOut: true,
-					tokenValue: 'id',
-					theme: 'Kifi',
-					classes: {
-						tokenList: 'kifi-ti-list',
-						token: 'kifi-ti-token',
-						tokenReadOnly: 'kifi-ti-token-readonly',
-						tokenDelete: 'kifi-ti-token-delete',
-						selectedToken: 'kifi-ti-token-selected',
-						highlightedToken: 'kifi-ti-token-highlighted',
-						dropdown: 'kifi-root kifi-ti-dropdown',
-						dropdownItem: 'kifi-ti-dropdown-item',
-						dropdownItem2: 'kifi-ti-dropdown-item',
-						dropdownTip: 'kifi-ti-dropdown-tip',
-						selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
-						inputToken: 'kifi-ti-token-input',
-						focused: 'kifi-ti-focused',
-						disabled: 'kifi-ti-disabled'
-					},
-					zindex: 999999999992,
-					resultsFormatter: function (f) {
-						var html = Mustache.escape(f.parts[0]);
-						for (var i = 1; i < f.parts.length; i++) {
-							html += i % 2 ? '<b>' : '</b>';
-							html += Mustache.escape(f.parts[i]);
-						}
-						return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
-					},
 					onAdd: function () {
 						this.getAddDialog().addClass('kifi-non-empty');
 					}.bind(this),
@@ -185,10 +152,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 						if (!$input.tokenInput('get').length) {
 							this.getAddDialog().removeClass('kifi-non-empty');
 						}
-					}.bind(this),
-					onTip: function () {
-						api.port.emit('invite_friends', 'threadPane');
-					}
+					}.bind(this)
 				});
 			}
 

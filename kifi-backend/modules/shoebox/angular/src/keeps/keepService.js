@@ -105,6 +105,14 @@ angular.module('kifi.keepService', ['kifi.undo'])
       return -1;
     }
 
+    function expiredConversationCount(keep) {
+      if (!keep.conversationUpdatedAt) {
+        return true;
+      }
+      var diff = new Date().getTime() - keep.conversationUpdatedAt.getTime();
+      return diff / 1000 > 15; // conversation count is older than 15 seconds
+    }
+
 
     var api = {
       list: list,
@@ -125,6 +133,10 @@ angular.module('kifi.keepService', ['kifi.undo'])
 
       isPreviewed: function (keep) {
         return !!previewed && previewed === keep;
+      },
+
+      getHighlighted: function () {
+        return list[selectedIdx];
       },
 
       preview: function (keep) {
@@ -155,27 +167,33 @@ angular.module('kifi.keepService', ['kifi.undo'])
         return api.preview(keep);
       },
 
-      previewNext: function () {
-        var previewedIdx = selectedIdx;
-        if (list.length - 1 > previewedIdx) {
-          previewed = list[previewedIdx + 1];
+      previewNext: _.throttle(function () {
+        selectedIdx = selectedIdx || 0;
+        var toPreview;
+        if (list.length - 1 > selectedIdx) {
+          toPreview = list[selectedIdx + 1];
           selectedIdx++;
         } else {
-          previewed = list[0];
+          toPreview = list[0];
           selectedIdx = 0;
         }
-      },
+        api.togglePreview(toPreview);
+      }, 150),
 
-      previewPrev: function () {
-        var previewedIdx = selectedIdx;
-        if (previewedIdx > 0) {
-          previewed = list[previewedIdx - 1];
+      previewPrev: _.throttle(function () {
+        selectedIdx = selectedIdx || 0;
+        var toPreview;
+        if (selectedIdx > 0) {
+          toPreview = list[selectedIdx - 1];
           selectedIdx--;
         } else {
-          previewed = list[0];
+          toPreview = list[0];
           selectedIdx = 0;
         }
-      },
+        if (!api.isPreviewed(toPreview)) {
+          api.togglePreview(toPreview);
+        }
+      }, 150),
 
       isSelected: function (keep) {
         return keep && keep.id && !!selected[keep.id];
@@ -206,15 +224,17 @@ angular.module('kifi.keepService', ['kifi.undo'])
           var countSelected = _.size(selected);
           if (countSelected === 0 && isDetailOpen === true) {
             api.preview(keep);
+            selectedIdx = keepIdx(keep);
           }
           else if (countSelected === 1 && isDetailOpen === true) {
-            api.preview(api.getFirstSelected());
+            var first = api.getFirstSelected();
+            selectedIdx = keepIdx(first);
+            api.preview(first);
           }
           else {
             previewed = null;
             singleKeepBeingPreviewed = false;
           }
-          selectedIdx = keepIdx(keep);
           return true;
         }
         return false;
@@ -360,7 +380,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
       },
 
       getChatter: function (keep) {
-        if (keep && keep.url) {
+        if (keep && keep.url && expiredConversationCount(keep)) {
           var url = env.xhrBaseEliza + '/chatter';
 
           var data = {
@@ -372,6 +392,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return $http.post(url, data).then(function (res) {
             var data = res.data;
             keep.conversationCount = data.threads;
+            keep.conversationUpdatedAt = new Date();
             return data;
           });
         }

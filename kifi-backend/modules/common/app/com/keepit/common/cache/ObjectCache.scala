@@ -6,8 +6,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
-  val ttl: Duration
-  outerCache map {outer => require(ttl <= outer.ttl)}
+  val minTTL: Duration
+  val maxTTL: Duration
+
+  outerCache map {outer => require(maxTTL <= outer.minTTL)}
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit

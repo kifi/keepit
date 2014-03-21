@@ -4,13 +4,11 @@
 
 POST    /internal/scraper/getBasicArticle               @com.keepit.scraper.ScraperController.getBasicArticle
 POST    /internal/scraper/getSignature                  @com.keepit.scraper.ScraperController.getSignature
-POST    /internal/scraper/scheduleScrape                @com.keepit.scraper.ScraperController.scheduleScrape
-POST    /internal/scraper/scheduleScrapeWithRequest     @com.keepit.scraper.ScraperController.scheduleScrapeWithRequest
 POST    /internal/scraper/asyncScrapeWithInfo           @com.keepit.scraper.ScraperController.asyncScrapeWithInfo
 POST    /internal/scraper/asyncScrapeWithRequest        @com.keepit.scraper.ScraperController.asyncScrapeWithRequest
 GET     /internal/scraper/getPornDetectorModel          @com.keepit.controllers.scraper.PornDetectorController.getModel
-POST     /internal/scraper/pornDetector/detectPorn      @com.keepit.controllers.scraper.PornDetectorController.detect
-POST     /internal/scraper/pornDetector/whitelist       @com.keepit.controllers.scraper.PornDetectorController.whitelist
+POST    /internal/scraper/pornDetector/detectPorn      @com.keepit.controllers.scraper.PornDetectorController.detect
+POST    /internal/scraper/pornDetector/whitelist       @com.keepit.controllers.scraper.PornDetectorController.whitelist
 
 
 ->  / common.Routes

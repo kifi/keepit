@@ -76,7 +76,7 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           val request = FakeRequest("GET", path)
           val result = route(request).get
           status(result) must equalTo(OK)
-          contentAsString(result).contains("itunes.apple.com") === false
+          contentAsString(result).contains("""window.location = "http://www.google.com";""") === false
         }
 
         inject[FakeActionAuthenticator].setUser(niven, Set(ExperimentType.MOBILE_REDITECT))
@@ -89,7 +89,7 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           val result = route(request).get
           status(result) must equalTo(OK)
           val content = contentAsString(result)
-          content.contains("itunes.apple.com") === true
+          contentAsString(result).contains("""window.location = "http://www.google.com";""") === true
         }
       }
     }

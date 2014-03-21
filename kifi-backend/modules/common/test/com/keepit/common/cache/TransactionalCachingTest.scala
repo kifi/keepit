@@ -10,7 +10,8 @@ class TransactionalCachingTest extends Specification {
 
   class TestCache[K <: Key[T], T] extends ObjectCache[K, T] {
     private[this] val store = TrieMap.empty[K, Option[T]]
-    val ttl = Duration.Inf
+    val minTTL = Duration.Inf
+    val maxTTL = Duration.Inf
 
     protected[cache] def getFromInnerCache(key: K): ObjectState[T] = {
       store.get(key) match {

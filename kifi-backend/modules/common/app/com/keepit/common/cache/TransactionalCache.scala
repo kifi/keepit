@@ -46,6 +46,12 @@ abstract class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal] private(cache: Objec
     innermostPluginSettings: (FortyTwoCachePlugin, Duration),
     innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*) =
       this(new FortyTwoCacheImpl[K, P](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P]), Serializer[P])
+
+  def this(
+            stats: CacheStatistics, accessLog: AccessLog,
+            innermostPluginSettings: (FortyTwoCachePlugin, Duration, Duration),
+            innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration)*) =
+    this(new FortyTwoCacheImpl[K, P](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P]), Serializer[P])
 }
 
 abstract class StringCacheImpl[K <: Key[String]] private(cache: ObjectCache[K, String], serializer: Serializer[String]) extends TransactionalCache(cache, serializer) {

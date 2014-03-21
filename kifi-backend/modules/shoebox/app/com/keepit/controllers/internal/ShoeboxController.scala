@@ -402,21 +402,16 @@ class ShoeboxController @Inject() (
   def saveImageInfo() = SafeAsyncAction(parse.json) { request =>
     val json = request.body
     val info = json.as[ImageInfo]
-    val saved = db.readWrite(attempts = 3) { implicit s =>
-      imageInfoRepo.save(info)
-    }
+    val saved = scraperHelper.saveImageInfo(info)
     log.info(s"[saveImageInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def savePageInfo() = SafeAsyncAction(parse.json) { request =>
-    val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[PageInfo]
-    val saved = db.readWrite(attempts = 3) { implicit s =>
-      pageInfoRepo.save(info)
-    }
-    log.info(s"[savePageInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
+    val saved = scraperHelper.savePageInfo(info)
+    log.info(s"[savePageInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
 

@@ -82,7 +82,7 @@
 
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
-  <logger name="securesocial.core" level="DEBUG"/>
+  <!--logger name="securesocial.core" level="DEBUG"/-->
 
   <root level="INFO">
     <appender-ref ref="async_app_log" />

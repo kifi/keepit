@@ -3,7 +3,7 @@ package com.keepit.common.store
 import com.keepit.inject.AppScoped
 import com.google.inject.{Provider, Provides, Singleton}
 import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time.Clock
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -35,8 +35,8 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   @Singleton
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
+      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, systemAdminMailSender, config)
   }
 
   @Singleton
@@ -75,8 +75,8 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
   @Singleton
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, config)
+      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, systemAdminMailSender, config)
   }
 
   @Singleton

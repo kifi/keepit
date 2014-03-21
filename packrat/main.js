@@ -177,14 +177,16 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 }
 
 function onGetFail(uri, done, failures, req) {
-  if (failures < 10) {
-    var ms = failures * 2000;
-    log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
-    api.timers.setTimeout(
-      api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
-      ms);
-  } else {
-    log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+  if (req.status !== 403) {
+    if (failures < 10) {
+      var ms = failures * 2000;
+      log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
+      api.timers.setTimeout(
+        api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
+        ms);
+    } else {
+      log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+    }
   }
 }
 
@@ -304,6 +306,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   }, {});
 
   threadsById = {};
+  threadReadAt = {};
   arr.forEach(function (n) {
     standardizeNotification(n);
     threadsById[n.thread] = n;
@@ -698,9 +701,15 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
-  invite_friends: function (where) {
+  invite_friends: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
-    mixpanel.track('user_clicked_pane', {type: where, action: 'clickInviteFriends'});
+    mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
+  },
+  invite_friend: function (data, respond) {
+    ajax('POST', '/ext/invite', data, respond, function () {
+      respond({sent: false});
+    });
+    mixpanel.track('user_clicked_pane', {type: data.source, action: 'choseSocialContact', network: data.id ? data.id.split('/')[0] : 'email'});
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
@@ -939,7 +948,7 @@ api.port.on({
   web_base_uri: function(_, respond) {
     respond(webBaseUri());
   },
-  search_friends: function(data, respond) {
+  search_friends: function(data, respond, tab) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
     var results;
     if (friendSearchCache) {
@@ -955,14 +964,29 @@ api.port.on({
       results = sf.filter(data.q, candidates, getName);
       friendSearchCache.put(data, results);
     }
-    respond((results.length > 4 ? results.slice(0, 4) : results).map(toFriendSearchResult, {sf: sf, q: data.q}));
+    if (results.length > data.n) {
+      results = results.slice(0, data.n);
+    }
+    var nMoreDesired = data.n - results.length;
+    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
+    respond({
+      searchId: searchId,
+      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
+    });
+    if (nMoreDesired) {
+      ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers.map(toNonUserSearchResult, {sf: sf, q: data.q})});
+      }, function () {
+        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
+      });
+    }
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page’s normalized URI may have changed
+      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // pageâ€™s normalized URI may have changed
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {
@@ -991,7 +1015,7 @@ api.port.on({
         if (url == baseUri + "/#_=_" || url == baseUri + "/") {
           ajax("GET", "/ext/authed", function (loggedIn) {
             if (loggedIn !== false) {
-              startSession(function() {
+              authenticate(function() {
                 log("[open_login_popup] closing popup")();
                 popup.close();
               });
@@ -1001,7 +1025,7 @@ api.port.on({
       }
     });
   },
-  logged_in: startSession.bind(null, api.noop),
+  logged_in: authenticate.bind(null, api.noop),
   remove_notification: function (threadId) {
     removeNotificationPopups(threadId);
   },
@@ -1552,7 +1576,7 @@ function kifify(tab) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
       ajax("GET", "/ext/authed", function(loggedIn) {
         if (loggedIn !== false) {
-          startSession(function() {
+          authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
               kifify(tab);
             }
@@ -1854,7 +1878,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 });
 
 api.on.beforeSearch.add(throttle(function (whence) {
-  if (enabled('search')) {
+  if (me && enabled('search')) {
     ajax('search', 'GET', '/search/warmUp', {w: whence});
   }
 }, 50000));
@@ -2020,6 +2044,23 @@ function toFriendSearchResult(f) {
   };
 }
 
+function toNonUserSearchResult(f) {
+  if (f.name) {
+    f.nameParts = this.sf.splitOnMatches(this.q, f.name);
+  }
+  if (f.email) {
+    var i = f.email.indexOf('@');
+    f.emailParts = this.sf.splitOnMatches(this.q, f.email.substr(0, i));
+    var n = f.emailParts.length;
+    if (n % 2) {
+      f.emailParts[n - 1] += f.email.substr(i);
+    } else {
+      f.emailParts.push(f.email.substr(i));
+    }
+  }
+  return f;
+}
+
 function reTest(s) {
   return function (re) {return re.test(s)};
 }
@@ -2150,20 +2191,16 @@ function throttle(func, wait, opts) {  // underscore.js
 var me, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
-  if (api.mode.isDev()) {
-    openLogin(callback, retryMs);
-  } else {
-    startSession(callback, retryMs);
+  var origInstId = stored('installation_id');
+  if (!origInstId) {
+    store('prompt_to_import_bookmarks', true);
   }
-}
-
-function startSession(callback, retryMs) {
   ajax('POST', '/kifi/start', {
-    installation: stored('installation_id'),
+    installation: origInstId,
     version: api.version
   },
   function done(data) {
-    log("[authenticate:done] reason: %s session: %o", api.loadReason, data)();
+    log('[authenticate:done] reason: %s session: %o', api.loadReason, data)();
     unstore('logout');
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
@@ -2185,41 +2222,22 @@ function startSession(callback, retryMs) {
     callback();
   },
   function fail(xhr) {
-    log("[startSession:fail] xhr.status:", xhr.status)();
+    log('[authenticate:fail] xhr.status:', xhr.status)();
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
-        api.timers.setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
+        api.timers.setTimeout(authenticate.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
-    } else if (stored('installation_id')) {
-      openLogin(callback, retryMs);
-    } else {
+    } else if (!origInstId) {
       api.tabs.selectOrOpen(webBaseUri() + '/');
       api.tabs.on.loading.add(onLoadingTemp = function(tab) {
         // if kifi.com home page, retry first authentication
         if (tab.url.replace(/\/(?:#.*)?$/, '') === webBaseUri()) {
           api.tabs.on.loading.remove(onLoadingTemp), onLoadingTemp = null;
-          startSession(callback, retryMs);
+          authenticate(callback, retryMs);
         }
       });
     }
   });
-}
-
-function openLogin(callback, retryMs) {
-  log("[openLogin]")();
-  var baseUri = webBaseUri();
-  api.popup.open({
-    name: "kifi-authenticate",
-    url: baseUri + '/login',
-    width: 1020,
-    height: 530}, {
-    navigate: function(url) {
-      if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-        log("[openLogin] closing popup")();
-        this.close();
-        startSession(callback, retryMs);
-      }
-    }});
 }
 
 function clearSession() {
@@ -2284,8 +2302,5 @@ api.errors.wrap(authenticate.bind(null, function() {
     } else {
       api.tabs.open(webBaseUri() + '/');
     }
-  }
-  if (api.loadReason === 'install' || api.mode.isDev()) {
-    store('prompt_to_import_bookmarks', true);
   }
 }, 3000))();

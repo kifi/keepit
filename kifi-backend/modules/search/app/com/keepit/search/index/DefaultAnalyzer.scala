@@ -64,8 +64,8 @@ object DefaultAnalyzer {
   implicit def langCodeToLang(langCode: String): Lang = Lang(langCode)
 
   val defaultLang = Lang("en")
-  private[this] val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, defaultLang)
-  private[this] val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja")
+  private[this] val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, defaultLang).withFilter[EmptyTokenFilter]
+  private[this] val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja").withFilter[EmptyTokenFilter]
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 

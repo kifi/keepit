@@ -18,6 +18,8 @@ angular.module('kifi', [
   'kifi.tagKeeps',
   'kifi.profile',
   'kifi.invite',
+  'kifi.invite.connectionCard',
+  'kifi.invite.wtiService',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',

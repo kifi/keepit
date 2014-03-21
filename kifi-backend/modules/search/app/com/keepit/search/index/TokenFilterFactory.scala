@@ -235,6 +235,17 @@ class ApostropheFilter(tokenStream: TokenStream) extends TokenFilter(tokenStream
   }
 }
 
+class EmptyTokenFilter(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
+  val termAttr = addAttribute(classOf[CharTermAttribute])
+
+  override def incrementToken(): Boolean = {
+    var len = 0
+    while (len == 0) {
+      if (tokenStream.incrementToken) len = termAttr.length else return false
+    }
+    true
+  }
+}
 
 class TypeAttributeAccessor extends TypeAttributeImpl {
   var tokenType: String = TypeAttribute.DEFAULT_TYPE

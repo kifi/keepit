@@ -168,7 +168,7 @@ class AuthCommander @Inject()(
       require(AuthHelper.validatePwd(sfi.password), "invalid password")
       val currentHasher = Registry.hashers.currentHasher
       val pInfo = timing(s"[finalizeSocialAccount] hash") {
-        currentHasher.hash(sfi.password.toString) // SecureSocial takes String only
+        currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
       }
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),

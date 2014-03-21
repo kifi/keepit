@@ -1,10 +1,14 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/underscore.js
+// @require scripts/friend_search.js
 // @request scripts/look.js
+// @require scripts/snapshot.js
 // @require scripts/prevent_ancestor_scroll.js
 
 var initCompose = (function() {
+  'use strict';
 
   var $composes = $();
   var prefix = CO_KEY + '-';
@@ -14,9 +18,9 @@ var initCompose = (function() {
     updateKeyTip($composes);
   });
 
-  return function ($c, opts) {
-  'use strict';
-  var $f = $c.find('.kifi-compose');
+  return function ($container, opts) {
+
+  var $f = $container.find('.kifi-compose');
   var $t = $f.find('.kifi-compose-to');
   var $d = $f.find('.kifi-compose-draft');
   var defaultText = $d.data('default');  // real text, not placeholder
@@ -101,43 +105,10 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    $t.tokenInput(function search(query, withResults) {
-      api.port.emit('search_friends', {q: query, includeSelf: !$t.tokenInput('get').length}, withResults);
+    initFriendSearch($t, 'composePane', function includeSelf(numTokens) {
+      return numTokens === 0;
     }, {
       placeholder: 'To',
-      hintText: '',
-      searchingText: '',
-      resultsLimit: 4,
-      tipHtml: '<span class="kifi-ti-tip-invite">Invite friends</span> to message them on Kifi',
-      preventDuplicates: true,
-      allowTabOut: true,
-      tokenValue: 'id',
-      theme: 'Kifi',
-      classes: {
-        tokenList: 'kifi-ti-list',
-        token: 'kifi-ti-token',
-        tokenReadOnly: 'kifi-ti-token-readonly',
-        tokenDelete: 'kifi-ti-token-delete',
-        selectedToken: 'kifi-ti-token-selected',
-        highlightedToken: 'kifi-ti-token-highlighted',
-        dropdown: 'kifi-root kifi-ti-dropdown',
-        dropdownItem: 'kifi-ti-dropdown-item',
-        dropdownItem2: 'kifi-ti-dropdown-item',
-        dropdownTip: 'kifi-ti-dropdown-tip',
-        selectedDropdownItem: 'kifi-ti-dropdown-item-selected',
-        inputToken: 'kifi-ti-token-input',
-        focused: 'kifi-ti-focused',
-        disabled: 'kifi-ti-disabled'
-      },
-      zindex: 999999999992,
-      resultsFormatter: function (f) {
-        var html = Mustache.escape(f.parts[0]);
-        for (var i = 1; i < f.parts.length; i++) {
-          html += i % 2 ? '<b>' : '</b>';
-          html += Mustache.escape(f.parts[i]);
-        }
-        return '<li style="background-image:url(//' + cdnBase + '/users/' + f.id + '/pics/100/' + f.pictureName + ')">' + html + '</li>';
-      },
       onAdd: function () {
         if (defaultText && !$d.text()) {
           $f.removeClass('kifi-empty');
@@ -158,9 +129,6 @@ var initCompose = (function() {
           $t.tokenInput('flushCache');
         }
         throttledSaveDraft();
-      },
-      onTip: function () {
-        api.port.emit('invite_friends', 'composePane');
       }
     });
   }
@@ -198,7 +166,7 @@ var initCompose = (function() {
     if ($t.length) {
       var recipients = $t.tokenInput('get');
       if (!recipients.length) {
-        $f.find('#token-input-kifi-compose-to').focus();
+        $f.find('.kifi-ti-token-for-input>input').focus();
         return;
       }
     }
@@ -331,6 +299,10 @@ var initCompose = (function() {
     return sel.rangeCount ? sel.getRangeAt(0) : null;
   }
 
+  function getId(o) {
+    return o.id;
+  }
+
   // compose API
   return {
     form: function () {
@@ -346,7 +318,7 @@ var initCompose = (function() {
     focus: function () {
       log('[compose.focus]')();
       if ($t.length && !$t.tokenInput('get').length) {
-        $f.find('#token-input-kifi-compose-to').focus();
+        $f.find('.kifi-ti-token-for-input>input').focus();
       } else {
         $d.focus();
       }

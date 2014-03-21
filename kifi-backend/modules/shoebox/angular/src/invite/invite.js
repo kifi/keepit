@@ -18,9 +18,8 @@ angular.module('kifi.invite', [
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window',
-  function ($scope, $http, profileService, routeService, $window) {
-
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService',
+  function ($scope, $http, profileService, routeService, $window, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
     // bogus data just to get everyone started
@@ -31,6 +30,19 @@ angular.module('kifi.invite', [
       value: 'facebook/71105121'
     };
     $scope.friends = [friend];
+
+    wtiService.loadInitial();
+    $scope.whoToInvite = wtiService.list;
+
+    $scope.wtiScrollDistance = '100%';
+    $scope.isWTIScrollDisabled = function () {
+      return !wtiService.hasMore();
+    };
+    $scope.wtiScrollNext = wtiService.getMore;
+
+    $scope.wtiHasMore = function () {
+      return true;
+    };
 
     $scope.invite = function (friend) {
       // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?
