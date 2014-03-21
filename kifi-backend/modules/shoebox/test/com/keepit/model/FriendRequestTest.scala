@@ -6,6 +6,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
+import com.keepit.eliza.{ElizaServiceClient, FakeElizaServiceClientImpl}
 
 class FriendRequestTest extends Specification with ShoeboxTestInjector {
 
@@ -52,14 +53,24 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
     "with messageHandle" in {
       val users = (1 to 3).map(Id[User](_)).toSeq
       withDb() { implicit injector =>
+        val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
+        eliza.unsentNotificationIds.size === 0
         val (fr1, fr2) = db.readWrite { implicit s => (
           friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(1), messageHandle = Some(Id[MessageHandle](1)))),
           friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = Some(Id[MessageHandle](22))))
         )}
+        eliza.unsentNotificationIds.size === 0
         db.readOnly { implicit s =>
           friendRequestRepo.get(fr1.id.get).messageHandle.get.id === 1
           friendRequestRepo.get(fr2.id.get).messageHandle.get.id === 22
         }
+        db.readWrite { implicit s =>
+          friendRequestRepo.save(fr1.copy(state = FriendRequestStates.ACCEPTED))
+          friendRequestRepo.save(fr2.copy(state = FriendRequestStates.IGNORED))
+        }
+        eliza.unsentNotificationIds.size === 2
+        eliza.unsentNotificationIds(0) === Id[MessageHandle](22)
+        eliza.unsentNotificationIds(1) === Id[MessageHandle](1)
       }
     }
   }
