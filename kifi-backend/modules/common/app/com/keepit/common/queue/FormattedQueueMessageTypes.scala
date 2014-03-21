@@ -67,16 +67,24 @@ object RemoveKifiConnection extends Companion[RemoveKifiConnection] {
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
-case class RecordInvitation(userId: Id[User], invitation: Id[Invitation], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) extends RichConnectionUpdateMessage
+case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]], sent: Int = 1) extends RichConnectionUpdateMessage
 object RecordInvitation extends Companion[RecordInvitation] {
   private implicit val userIdFormat = Id.format[User]
-  private implicit val invitationIdFormat = Id.format[Invitation]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   private implicit val eContactIdFormat = Id.format[EContact]
   implicit val format = Json.format[RecordInvitation]
   implicit val typeCode = TypeCode("record_inivitation")
 }
 
+//Propages changes to InvitationRepo (needs sequence number).
+case class CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) extends RichConnectionUpdateMessage
+object CancelInvitation extends Companion[CancelInvitation] {
+  private implicit val userIdFormat = Id.format[User]
+  private implicit val socialIdFormat = Id.format[SocialUserInfo]
+  private implicit val eContactIdFormat = Id.format[EContact]
+  implicit val format = Json.format[CancelInvitation]
+  implicit val typeCode = TypeCode("cancel_invitation")
+}
 
 //Propages changes to SocialUserInfoRepo (needs sequence number). Will usually be a direct call.
 case class RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) extends RichConnectionUpdateMessage

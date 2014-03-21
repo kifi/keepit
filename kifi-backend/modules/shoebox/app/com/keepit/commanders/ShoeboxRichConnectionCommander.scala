@@ -113,9 +113,12 @@ class ShoeboxRichConnectionCommander @Inject() (
     }
 
     if (invitations.nonEmpty) {
-      invitations.collect { case invitation if invitation.state != InvitationStates.INACTIVE =>
-        invitation.senderUserId.foreach { userId =>
-          processUpdate(RecordInvitation(userId, invitation.id.get, invitation.recipientSocialUserId, invitation.recipientEContactId))
+      invitations.foreach {
+        case invitation if invitation.state != InvitationStates.INACTIVE => invitation.senderUserId.foreach { userId =>
+          processUpdate(RecordInvitation(userId, invitation.recipientSocialUserId, invitation.recipientEContactId))
+        }
+        case inactiveInvitation => inactiveInvitation.senderUserId.foreach { userId =>
+          processUpdate(CancelInvitation(userId, inactiveInvitation.recipientSocialUserId, inactiveInvitation.recipientEContactId))
         }
       }
 

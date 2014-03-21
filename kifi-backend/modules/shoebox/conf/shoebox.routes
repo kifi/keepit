@@ -190,7 +190,7 @@ GET     /unsupported                @com.keepit.controllers.website.HomeControll
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
