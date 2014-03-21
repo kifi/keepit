@@ -40,7 +40,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private def nextUserId() = { Id[User](userIdCounter.incrementAndGet()) }
 
   private val bookmarkIdCounter = new AtomicInteger(0)
-  private def nextBookmarkId() = { Id[Bookmark](bookmarkIdCounter.incrementAndGet()) }
+  private def nextBookmarkId() = { Id[Keep](bookmarkIdCounter.incrementAndGet()) }
 
   private val uriIdCounter = new AtomicInteger(0)
   private def nextUriId() = { Id[NormalizedURI](uriIdCounter.incrementAndGet()) }
@@ -78,7 +78,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private def nextUriSeqNum() = { SequenceNumber[NormalizedURI](uriSeqCounter.incrementAndGet()) }
 
   private val bookmarkSeqCounter = new AtomicInteger(0)
-  private def nextBookmarkSeqNum() = { SequenceNumber[Bookmark](bookmarkSeqCounter.incrementAndGet()) }
+  private def nextBookmarkSeqNum() = { SequenceNumber[Keep](bookmarkSeqCounter.incrementAndGet()) }
 
   private val collectionSeqCounter = new AtomicInteger(0)
   private def nextCollectionSeqNum() = { SequenceNumber[Collection](collectionSeqCounter.incrementAndGet()) }
@@ -98,12 +98,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allSearchFriends = MutableMap[Id[SearchFriend], SearchFriend]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
   val allProbabilisticExperimentGenerators = MutableMap[Name[ProbabilisticExperimentGenerator], ProbabilisticExperimentGenerator]()
-  val allUserBookmarks = MutableMap[Id[User], Set[Id[Bookmark]]]()
-  val allBookmarks = MutableMap[Id[Bookmark], Bookmark]()
+  val allUserBookmarks = MutableMap[Id[User], Set[Id[Keep]]]()
+  val allBookmarks = MutableMap[Id[Keep], Keep]()
   val allNormalizedURIs = MutableMap[Id[NormalizedURI], NormalizedURI]()
   val uriToUrl = MutableMap[Id[NormalizedURI], URL]()
   val allCollections = MutableMap[Id[Collection], Collection]()
-  val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Bookmark]]]()
+  val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Keep]]]()
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
   val allEmails = MutableMap[Id[EmailAddress], EmailAddress]()
   val allUserEmails = MutableMap[Id[User], Seq[EmailAddress]]()
@@ -192,7 +192,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
   }
 
-  def saveBookmarks(bookmarks: Bookmark*): Seq[Bookmark] = {
+  def saveBookmarks(bookmarks: Keep*): Seq[Keep] = {
     bookmarks.map {b =>
       val id = b.id.getOrElse(nextBookmarkId())
       val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
@@ -211,12 +211,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
   }
 
-  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
+  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*) {
     allCollectionBookmarks(collectionId) = allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get)
     allCollections(collectionId) = allCollections(collectionId).copy(seq = nextCollectionSeqNum())
   }
 
-  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
+  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
     val bookmarks = edges.map { case (uri, user, optionalTitle) => {
       val url = uriToUrl(uri.id.get)
       BookmarkFactory(uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate)
@@ -224,21 +224,21 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     saveBookmarks(bookmarks:_*)
   }
 
-  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
     val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }
 
-  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
     val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Bookmark]] = ???
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Keep]] = ???
 
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Option[Bookmark]] = ???
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Option[Keep]] = ???
 
-  def saveBookmark(bookmark: Bookmark)(implicit timeout:Int): Future[Bookmark] = ???
+  def saveBookmark(bookmark: Keep)(implicit timeout:Int): Future[Keep] = ???
 
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
@@ -309,12 +309,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(uri)
   }
 
-  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
+  def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
     val bookmarks = allUserBookmarks.getOrElse(userId, Set.empty).map(allBookmarks(_)).toSeq
     Future.successful(bookmarks)
   }
 
-  def getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fetchSize: Int): Future[Seq[Bookmark]] = {
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]] = {
     val bookmarks = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(bookmarks)
   }
@@ -394,14 +394,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(collections)
   }
 
-  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
+  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Keep]] = {
     val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
     Future.successful(bookmarks)
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[BookmarkUriAndTime]] = {
+  def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
     val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
-    Future.successful(bookmarks map {b => BookmarkUriAndTime(b.uriId, b.createdAt) })
+    Future.successful(bookmarks map {b => KeepUriAndTime(b.uriId, b.createdAt) })
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
@@ -440,7 +440,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(users)
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Keep]] = {
     val bookmark = allUserBookmarks(userId).map(allBookmarks(_)).find(_.uriId == uriId)
     Future.successful(bookmark)
   }

@@ -30,12 +30,12 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
-          )), user.id.get, BookmarkSource.email, true)
+          )), user.id.get, KeepSource.email, true)
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
-          bookmarkRepo.get(bookmarks.head.id.get).copy(updatedAt = bookmarks.head.updatedAt) === bookmarks.head
-          bookmarkRepo.all.size === 1
+          keepRepo.get(bookmarks.head.id.get).copy(updatedAt = bookmarks.head.updatedAt) === bookmarks.head
+          keepRepo.all.size === 1
         }
       }
     }
@@ -46,7 +46,7 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val bookmarkInterner = inject[BookmarkInterner]
-        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, BookmarkSource.bookmarkImport, Json.obj(
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
         )))
@@ -74,12 +74,12 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
         val deduped = bookmarkInterner.deDuplicate(raw)
         deduped === raw
         deduped.size === 2
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, BookmarkSource.email, true)
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, KeepSource.email, true)
 
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
-          bookmarkRepo.all.size === 2
+          keepRepo.all.size === 2
         }
       }
     }
@@ -132,12 +132,12 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
         val deduped = bookmarkInterner.deDuplicate(raw)
         raw === deduped
 
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, BookmarkSource.email, true)
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, KeepSource.email, true)
         fakeAirbrake.errorCount() === 0
         bookmarks.size === 3
         db.readWrite { implicit session =>
-          bookmarkRepo.all.size === 3
-          bookmarkRepo.all.map(_.url).toSet === Set[String](
+          keepRepo.all.size === 3
+          keepRepo.all.map(_.url).toSet === Set[String](
             "http://42go.com",
             ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString).take(URLFactory.MAX_URL_SIZE),
             "http://kifi.com")
@@ -153,18 +153,18 @@ class BookmarkInternerTest extends Specification with ShoeboxTestInjector {
         val (initialBookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user.id.get, BookmarkSource.keeper, true)
+        ))), user.id.get, KeepSource.keeper, true)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
-          bookmarkRepo.save(bookmarkRepo.getByUser(user.id.get).head.withActive(false))
+          keepRepo.save(keepRepo.getByUser(user.id.get).head.withActive(false))
         }
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user.id.get, BookmarkSource.keeper, true)
+        ))), user.id.get, KeepSource.keeper, true)
         db.readOnly { implicit s =>
           bookmarks.size === 1
-          bookmarkRepo.all.size === 1
+          keepRepo.all.size === 1
         }
       }
     }

@@ -29,11 +29,11 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      val hover = BookmarkSource.keeper
+      val hover = KeepSource.keeper
 
-      val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url,
+      val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
         urlId = url1.id, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-      val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url,
+      val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
         urlId = url2.id, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
 
       val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1))
@@ -46,7 +46,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
   }
 
   "collections" should {
-    "allow the bookmarkRepo to query by a specific collection" in {
+    "allow the keepRepo to query by a specific collection" in {
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
@@ -57,10 +57,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
         db.readOnly { implicit s =>
           collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
-          bookmarkRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
-          bookmarkRepo.getByUser(user1.id.get, None, None, 5) must haveLength(2)
-          bookmarkRepo.getByUserAndCollection(user1.id.get, coll2.id.get, None, None, 5) must haveLength(1)
-          bookmarkRepo.getByUserAndCollection(user1.id.get, coll3.id.get, None, None, 5) must beEmpty
+          keepRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
+          keepRepo.getByUser(user1.id.get, None, None, 5) must haveLength(2)
+          keepRepo.getByUserAndCollection(user1.id.get, coll2.id.get, None, None, 5) must haveLength(1)
+          keepRepo.getByUserAndCollection(user1.id.get, coll3.id.get, None, None, 5) must beEmpty
         }
       }
     }
@@ -78,12 +78,12 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
         db.readOnly { implicit s =>
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
         }
         db.readWrite { implicit s =>
-          bookmarkRepo.save(bookmark1.withActive(false))
+          keepRepo.save(bookmark1.withActive(false))
         }
         db.readOnly { implicit s =>
           keepToCollectionRepo.count(coll1.id.get) === 1
@@ -128,10 +128,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark2.id.get)
-          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
+          keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
         }
       }
@@ -187,7 +187,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
         db.readWrite { implicit s =>
-          bookmarkRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
+          keepRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
         }
         db.readOnly { implicit s =>
           collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)

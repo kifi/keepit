@@ -136,38 +136,38 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections:_*)
   }
 
-  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
+  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*) {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks:_*)
   }
 
-  def saveBookmarks(bookmarks: Bookmark*): Seq[Bookmark] = {
+  def saveBookmarks(bookmarks: Keep*): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarks(bookmarks:_*)
   }
 
-  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Bookmark] = {
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByURI(edgesByURI, uniqueTitle, isPrivate, source)
   }
 
-  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Bookmark] = {
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByUser(edgesByUser, uniqueTitle, isPrivate, source)
   }
 
-  def getBookmarks(userId: Id[User]): Seq[Bookmark] = {
+  def getBookmarks(userId: Id[User]): Seq[Keep] = {
     val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarks(userId)
      inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Option[Bookmark] = {
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Option[Keep] = {
     val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarkByUriAndUser(uriId, userId)
     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarkByUriAndUser: this should not fail")
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection]): Seq[BookmarkUriAndTime] = {
+  def getUriIdsInCollection(collectionId: Id[Collection]): Seq[KeepUriAndTime] = {
     val future = inject[ShoeboxServiceClient].getUriIdsInCollection(collectionId)
     inject[MonitoredAwait].result(future, 3 seconds, "getUriIdsInCollection: this should not fail")
   }
 
-  val source = BookmarkSource("test")
+  val source = KeepSource("test")
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig.overrideWith(
     "myBookmarkBoost" -> "1",

@@ -30,7 +30,7 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def title = column[String]("title", O.Nullable)
     def isPrivate = column[Boolean]("is_private", O.NotNull)
     def importId = column[String]("import_id", O.Nullable)
-    def source = column[BookmarkSource]("source", O.NotNull)
+    def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallationId = column[ExternalId[KifiInstallation]]("installation_id", O.Nullable)
     def originalJson = column[JsValue]("original_json", O.Nullable)
 

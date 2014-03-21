@@ -13,7 +13,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.model._
-import com.keepit.model.BookmarkSource._
+import com.keepit.model.KeepSource._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -28,7 +28,7 @@ class AdminBookmarksController @Inject() (
   db: Database,
   scraper: ScrapeSchedulerPlugin,
   searchServiceClient: SearchServiceClient,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
@@ -41,7 +41,7 @@ class AdminBookmarksController @Inject() (
 
   implicit val dbMasterSlave = Database.Slave
 
-  private def editBookmark(bookmark: Bookmark)(implicit request: AuthenticatedRequest[AnyContent]) = {
+  private def editBookmark(bookmark: Keep)(implicit request: AuthenticatedRequest[AnyContent]) = {
     db.readOnly { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
@@ -54,16 +54,16 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def edit(id: Id[Bookmark]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def edit(id: Id[Keep]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val bookmark = db.readOnly { implicit session =>
-      bookmarkRepo.get(id)
+      keepRepo.get(id)
     }
     editBookmark(bookmark)
   }
 
   def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val bookmarkOpt = db.readOnly { implicit session =>
-      bookmarkRepo.getByUri(id).headOption
+      keepRepo.getByUri(id).headOption
     }
     bookmarkOpt match {
       case Some(bookmark) => editBookmark(bookmark)
@@ -72,9 +72,9 @@ class AdminBookmarksController @Inject() (
   }
 
   def rescrape = AdminJsonAction.authenticatedParseJson { request =>
-    val id = Id[Bookmark]((request.body \ "id").as[Int])
+    val id = Id[Keep]((request.body \ "id").as[Int])
     db.readWrite { implicit session =>
-      val bookmark = bookmarkRepo.get(id)
+      val bookmark = keepRepo.get(id)
       val uri = uriRepo.get(bookmark.uriId)
       scraper.scheduleScrape(uri)
       Ok(JsObject(Seq("status" -> JsString("ok"))))
@@ -85,18 +85,18 @@ class AdminBookmarksController @Inject() (
   def updateBookmarks() = AdminHtmlAction.authenticated { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
-    def setIsPrivate(id: Id[Bookmark], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
-      val bookmark = bookmarkRepo.get(id)
+    def setIsPrivate(id: Id[Keep], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
+      val bookmark = keepRepo.get(id)
       log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      bookmarkRepo.save(bookmark.withPrivate(isPrivate))
+      keepRepo.save(bookmark.withPrivate(isPrivate))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }
 
-    def setIsActive(id: Id[Bookmark], isActive: Boolean)(implicit session: RWSession): Id[User] = {
-      val bookmark = bookmarkRepo.get(id)
+    def setIsActive(id: Id[Keep], isActive: Boolean)(implicit session: RWSession): Id[User] = {
+      val bookmark = keepRepo.get(id)
       log.info("updating bookmark %s with active = %s".format(bookmark, isActive))
-      bookmarkRepo.save(bookmark.withActive(isActive))
+      keepRepo.save(bookmark.withActive(isActive))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }
@@ -104,8 +104,8 @@ class AdminBookmarksController @Inject() (
     db.readWrite { implicit s =>
       request.body.asFormUrlEncoded.get foreach { case (key, values) =>
         key.split("_") match {
-          case Array("private", id) => setIsPrivate(Id[Bookmark](id.toInt), toBoolean(values.last))
-          case Array("active", id) => setIsActive(Id[Bookmark](id.toInt), toBoolean(values.last))
+          case Array("private", id) => setIsPrivate(Id[Keep](id.toInt), toBoolean(values.last))
+          case Array("active", id) => setIsActive(Id[Keep](id.toInt), toBoolean(values.last))
         }
       }
     }
@@ -114,9 +114,9 @@ class AdminBookmarksController @Inject() (
   }
 
   //this is an admin only task!!!
-  def delete(id: Id[Bookmark]) = AdminHtmlAction.authenticated { request =>
+  def delete(id: Id[Keep]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit s =>
-      bookmarkRepo.delete(id)
+      keepRepo.delete(id)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
@@ -127,7 +127,7 @@ class AdminBookmarksController @Inject() (
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
     def bookmarksInfos() = {
-      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE, false, Set(BookmarkStates.INACTIVE)) } } } flatMap { bookmarks =>
+      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(BookmarkStates.INACTIVE)) } } } flatMap { bookmarks =>
         val usersFuture = future { timing("load user") { db.readOnly { implicit s =>
           bookmarks map (_.userId) map { id =>
             userMap.getOrElseUpdate(id, userRepo.get(id))
@@ -152,10 +152,10 @@ class AdminBookmarksController @Inject() (
       (infos filter (_.name.startsWith("BookmarkStore"))).map{_.numDocs}.sum
     }
     val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
-      bookmarkRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), BookmarkSource.bookmarkImport)
+      keepRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), KeepSource.bookmarkImport)
     }}}
     val bookmarkTodayOthersCountFuture = future { timing("load bookmarks other counts from today") { db.readOnly { implicit s =>
-      bookmarkRepo.getCountByTime(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now())
+      keepRepo.getCountByTime(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now())
     }}}
 
 

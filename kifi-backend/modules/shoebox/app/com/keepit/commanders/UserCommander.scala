@@ -81,7 +81,7 @@ class UserCommander @Inject() (
   userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
@@ -222,7 +222,7 @@ class UserCommander @Inject() (
 
   def getUserSegment(userId: Id[User]): UserSegment = {
     val (numBms, numFriends) = db.readOnly{ implicit s => //using cache
-      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
+      (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
     val segment = UserSegmentFactory(numBms, numFriends)
@@ -342,8 +342,8 @@ class UserCommander @Inject() (
 
   def createDefaultKeeps(userId: Id[User]): Unit = {
     val contextBuilder = new HeimdalContextBuilder()
-    contextBuilder += ("source", BookmarkSource.default.value) // manually set the source so that it appears in tag analytics
-    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, BookmarkSource.default)(contextBuilder.build)
+    contextBuilder += ("source", KeepSource.default.value) // manually set the source so that it appears in tag analytics
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, KeepSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
     val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
     db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }

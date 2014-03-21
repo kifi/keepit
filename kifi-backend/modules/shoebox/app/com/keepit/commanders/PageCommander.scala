@@ -31,7 +31,7 @@ class PageCommander @Inject() (
     normalizationService: NormalizationService,
     domainRepo: DomainRepo,
     userToDomainRepo: UserToDomainRepo,
-    bookmarkRepo: BookmarkRepo,
+    keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     domainClassifier: DomainClassifier,
@@ -60,8 +60,8 @@ class PageCommander @Inject() (
 
       val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }
 
-      val bookmark: Option[Bookmark] = nUri.flatMap { uri =>
-        bookmarkRepo.getByUriAndUser(uri.id.get, userId)
+      val bookmark: Option[Keep] = nUri.flatMap { uri =>
+        keepRepo.getByUriAndUser(uri.id.get, userId)
       }
       val tags: Seq[Collection] = bookmark.map { bm =>
         keepToCollectionRepo.getCollectionsForBookmark(bm.id.get).map { collId =>

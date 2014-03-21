@@ -10,7 +10,7 @@ import com.keepit.serializer.TraversableFormat
 
 case class KeepToCollection(
   id: Option[Id[KeepToCollection]] = None,
-  bookmarkId: Id[Bookmark],
+  bookmarkId: Id[Keep],
   collectionId: Id[Collection],
   state: State[KeepToCollection] = KeepToCollectionStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
@@ -22,29 +22,29 @@ case class KeepToCollection(
   def inactivate(): KeepToCollection = this.copy(state = KeepToCollectionStates.INACTIVE)
 }
 
-case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[Id[Collection]]] {
+case class CollectionsForKeepKey(bookmarkId: Id[Keep]) extends Key[Seq[Id[Collection]]] {
   override val version = 2
   val namespace = "collections_for_bookmark"
   def toKey(): String = bookmarkId.toString
 }
 
-class CollectionsForBookmarkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
+class CollectionsForKeepCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CollectionsForKeepKey, Seq[Id[Collection]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
 
 // NOTE: the following code is left here as comment for record that we used the name space, bookmarks_for_collection. bump up the version number if you want to use it again.
-//case class BookmarksForCollectionKey(collectionId: Id[Collection]) extends Key[Seq[Id[Bookmark]]] {
+//case class BookmarksForCollectionKey(collectionId: Id[Collection]) extends Key[Seq[Id[Keep]]] {
 //  override val version = 1
 //  val namespace = "bookmarks_for_collection"
 //  def toKey(): String = collectionId.toString
 //}
 
-case class BookmarkCountForCollectionKey(collectionId: Id[Collection]) extends Key[Int] {
+case class KeepCountForCollectionKey(collectionId: Id[Collection]) extends Key[Int] {
   override val version = 1
   val namespace = "bookmark_count_for_collection"
   def toKey(): String = collectionId.toString
 }
 
-class BookmarkCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration)*)
-  extends PrimitiveCacheImpl[BookmarkCountForCollectionKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+class KeepCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Duration)*)
+  extends PrimitiveCacheImpl[KeepCountForCollectionKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object KeepToCollectionStates extends States[KeepToCollection]

@@ -4,4 +4,9 @@
     <a class="profile-image-change" href="javascript:" ng-click="selectFile()">Change photo</a>
     <input class="profile-image-file" type="file" name="photo" onchange="angular.element(this).scope().fileChosen(this.files)">
   </label>
+  <div kf-modal show="showImageEditDialog.value">
+    <div kf-basic-modal-content with-cancel action-text="Submit" action="uploadImage()" cancel="cancelChooseImage()">
+      <p>Edit your image below<!-- image cropping tool coming --></p>
+    </div>
+  </div>
 </div>

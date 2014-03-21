@@ -21,8 +21,8 @@ import com.keepit.search.graph.URIList
 import com.keepit.model.User
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
-import com.keepit.model.Bookmark
-import com.keepit.model.BookmarkSource
+import com.keepit.model.Keep
+import com.keepit.model.KeepSource
 import com.keepit.search.graph.bookmark._
 
 
@@ -48,21 +48,21 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
     val t0 = new DateTime(2014, 2, 17, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     val bms = client.saveBookmarks(
-      Bookmark(createdAt = t0, uriId = uris(0).id.get, url = uris(0).url, userId = users(1).id.get, source = BookmarkSource.keeper, isPrivate = false),
+      Keep(createdAt = t0, uriId = uris(0).id.get, url = uris(0).url, userId = users(1).id.get, source = KeepSource.keeper, isPrivate = false),
 
-      Bookmark(createdAt = t0.plusMinutes(1), uriId = uris(1).id.get, url = uris(1).url, userId = users(1).id.get, source = BookmarkSource.keeper, isPrivate = false),
-      Bookmark(createdAt = t0.plusMinutes(2), uriId = uris(1).id.get, url = uris(1).url, userId = users(2).id.get, source = BookmarkSource.keeper, isPrivate = false),
-      Bookmark(createdAt = t0.plusMinutes(3), uriId = uris(1).id.get, url = uris(1).url, userId = users(3).id.get, source = BookmarkSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(1), uriId = uris(1).id.get, url = uris(1).url, userId = users(1).id.get, source = KeepSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(2), uriId = uris(1).id.get, url = uris(1).url, userId = users(2).id.get, source = KeepSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(3), uriId = uris(1).id.get, url = uris(1).url, userId = users(3).id.get, source = KeepSource.keeper, isPrivate = false),
 
-      Bookmark(createdAt = t0.plusMinutes(4), uriId = uris(2).id.get, url = uris(2).url, userId = users(0).id.get, source = BookmarkSource.keeper, isPrivate = false),
-      Bookmark(createdAt = t0.plusMinutes(5), uriId = uris(2).id.get, url = uris(2).url, userId = users(2).id.get, source = BookmarkSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(4), uriId = uris(2).id.get, url = uris(2).url, userId = users(0).id.get, source = KeepSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(5), uriId = uris(2).id.get, url = uris(2).url, userId = users(2).id.get, source = KeepSource.keeper, isPrivate = false),
 
-      Bookmark(createdAt = t0.plusMinutes(6), uriId = uris(3).id.get, url = uris(3).url, userId = users(1).id.get, source = BookmarkSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(6), uriId = uris(3).id.get, url = uris(3).url, userId = users(1).id.get, source = KeepSource.keeper, isPrivate = false),
 
-      Bookmark(createdAt = t0.plusMinutes(7), uriId = uris(4).id.get, url = uris(4).url, userId = users(2).id.get, source = BookmarkSource.keeper, isPrivate = false),
-      Bookmark(createdAt = t0.plusMinutes(8), uriId = uris(4).id.get, url = uris(4).url, userId = users(3).id.get, source = BookmarkSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(7), uriId = uris(4).id.get, url = uris(4).url, userId = users(2).id.get, source = KeepSource.keeper, isPrivate = false),
+      Keep(createdAt = t0.plusMinutes(8), uriId = uris(4).id.get, url = uris(4).url, userId = users(3).id.get, source = KeepSource.keeper, isPrivate = false),
 
-      Bookmark(createdAt = t0.plusMinutes(9), uriId = uris(5).id.get, url = uris(5).url, userId = users(2).id.get, source = BookmarkSource.keeper, isPrivate = true)
+      Keep(createdAt = t0.plusMinutes(9), uriId = uris(5).id.get, url = uris(5).url, userId = users(2).id.get, source = KeepSource.keeper, isPrivate = true)
     )
 
     val connections = client.saveConnections(Map(users(0).id.get -> Set(users(1).id.get, users(2).id.get)))

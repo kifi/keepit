@@ -30,7 +30,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   def createdTag(newTag: Collection, context: HeimdalContext): Unit = {
     val createdAt = currentDateTime
-    val isDefaultTag = context.get[String]("source").map(_ == BookmarkSource.default.value) getOrElse false
+    val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
     if (!isDefaultTag) SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= context.data
@@ -58,10 +58,10 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
-  def keptPages(userId: Id[User], keeps: Seq[Bookmark], existingContext: HeimdalContext): Unit = SafeFuture {
+  def keptPages(userId: Id[User], keeps: Seq[Keep], existingContext: HeimdalContext): Unit = SafeFuture {
     val keptAt = currentDateTime
 
-    keeps.collect { case bookmark if bookmark.source != BookmarkSource.default =>
+    keeps.collect { case bookmark if bookmark.source != KeepSource.default =>
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "keptPage")
@@ -71,7 +71,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       contextBuilder += ("uriId", bookmark.uriId.toString)
       val context = contextBuilder.build
       heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
-      if (bookmark.source != BookmarkSource.bookmarkImport) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
+      if (bookmark.source != KeepSource.bookmarkImport) heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
 
       // Anonymized event with page information
       anonymise(contextBuilder)
@@ -95,7 +95,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
-  def unkeptPages(userId: Id[User], keeps: Seq[Bookmark], context: HeimdalContext): Unit = {
+  def unkeptPages(userId: Id[User], keeps: Seq[Keep], context: HeimdalContext): Unit = {
     val unkeptAt = currentDateTime
 
     SafeFuture {
@@ -116,7 +116,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
-  def updatedKeep(oldKeep: Bookmark, updatedKeep: Bookmark, context: HeimdalContext): Unit = SafeFuture {
+  def updatedKeep(oldKeep: Keep, updatedKeep: Keep, context: HeimdalContext): Unit = SafeFuture {
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= context.data
     contextBuilder += ("action", "updatedKeep")
@@ -147,15 +147,15 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
 
   }
 
-  def taggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
-    val isDefaultTag = context.get[String]("source").map(_ == BookmarkSource.default.value) getOrElse false
+  def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
+    val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
     if (!isDefaultTag) changedTag(tag, keep, "taggedPage", context, taggedAt)
   }
 
-  def untaggedPage(tag: Collection, keep: Bookmark, context: HeimdalContext, untaggedAt: DateTime = currentDateTime): Unit =
+  def untaggedPage(tag: Collection, keep: Keep, context: HeimdalContext, untaggedAt: DateTime = currentDateTime): Unit =
     changedTag(tag, keep, "untaggedPage", context, untaggedAt)
 
-  private def changedTag(tag: Collection, keep: Bookmark, action: String, context: HeimdalContext, changedAt: DateTime): Unit = SafeFuture {
+  private def changedTag(tag: Collection, keep: Keep, action: String, context: HeimdalContext, changedAt: DateTime): Unit = SafeFuture {
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= context.data
     contextBuilder += ("action", action)

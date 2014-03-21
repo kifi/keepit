@@ -22,7 +22,7 @@ class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   s3ScreenshotStore: S3ScreenshotStore,
   db: Database,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   pageInfoRepo: PageInfoRepo,
   imageInfoRepo: ImageInfoRepo,
   uriRepo: NormalizedURIRepo)
@@ -41,7 +41,7 @@ class AdminScreenshotController @Inject() (
 
   def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction.authenticated { implicit request =>
     val uris = db.readOnly { implicit session =>
-      bookmarkRepo.getByUser(userId).map(_.uriId)
+      keepRepo.getByUser(userId).map(_.uriId)
     }
     uris.drop(drop).take(take).grouped(100).foreach { uriGroup =>
       db.readOnly { implicit session =>

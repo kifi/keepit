@@ -4,7 +4,7 @@ import org.specs2.mutable.SpecificationLike
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 import com.keepit.heimdal.HeimdalContext
 import akka.actor.ActorSystem
-import com.keepit.model.{RawKeepFactory, BookmarkSource, User}
+import com.keepit.model.{RawKeepFactory, KeepSource, User}
 import play.api.libs.json.Json
 import akka.testkit.{TestActorRef, TestKit}
 import play.api.test.Helpers._
@@ -31,13 +31,13 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
         }
         val bookmarkInterner = inject[BookmarkInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
-        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, BookmarkSource.bookmarkImport, json))
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json))
 
         // Importer is run synchronously in TestKit.
 
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
-          val bookmarks = bookmarkRepo.all
+          val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
           oneUrl.size === 1
           val bm = oneUrl.head

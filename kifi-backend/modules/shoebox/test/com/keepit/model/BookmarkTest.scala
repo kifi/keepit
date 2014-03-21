@@ -11,8 +11,8 @@ import com.google.inject.Injector
 
 class BookmarkTest extends Specification with ShoeboxTestInjector {
 
-  val hover = BookmarkSource.keeper
-  val initLoad = BookmarkSource.bookmarkImport
+  val hover = KeepSource.keeper
+  val initLoad = KeepSource.bookmarkImport
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -30,13 +30,13 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-      bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
-      bookmarkRepo.save(Bookmark(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id,
         uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), isPrivate = true))
-      bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1)))
 
       (user1, user2, uri1, uri2, uri3, url1, url2)
@@ -48,14 +48,14 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, uri3, _, _) = setup()
         db.readOnly { implicit s =>
-          val marks = bookmarkRepo.getByUser(user1.id.get, None, None, 3)
+          val marks = keepRepo.getByUser(user1.id.get, None, None, 3)
           marks.map(_.uriId) === Seq(uri3.id.get, uri2.id.get, uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, 5).map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), 5).map(_.uriId) === Seq(uri3.id.get)
-          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
+          keepRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, 5).map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
+          keepRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, 5) must beEmpty
+          keepRepo.getByUser(user1.id.get, Some(marks(2).externalId), None, 5) must beEmpty
+          keepRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), 5).map(_.uriId) === Seq(uri3.id.get)
+          keepRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
+          keepRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
         }
       }
     }
@@ -63,9 +63,9 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, _, _, _) = setup()
         val cxAll = db.readOnly {implicit s =>
-          bookmarkRepo.all
+          keepRepo.all
         }
-        val all = inject[Database].readOnly(implicit session => bookmarkRepo.all)
+        val all = inject[Database].readOnly(implicit session => keepRepo.all)
         all.map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"), None)
       }
     }
@@ -73,8 +73,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, _, _, _) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"))
-          bookmarkRepo.getByUser(user2.id.get).map(_.title) === Seq(None)
+          keepRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"))
+          keepRepo.getByUser(user2.id.get).map(_.title) === Seq(None)
         }
       }
     }
@@ -82,8 +82,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, _, _, _) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
-          bookmarkRepo.getByUri(uri2.id.get).map(_.title) === Seq(Some("A1"))
+          keepRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
+          keepRepo.getByUri(uri2.id.get).map(_.title) === Seq(Some("A1"))
         }
       }
     }
@@ -91,7 +91,7 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.count(s) === 4
+          keepRepo.count(s) === 4
         }
       }
     }
@@ -101,8 +101,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         val clock = inject[FakeClock]
         db.readOnly {implicit s =>
           val now = clock.now
-          bookmarkRepo.getCountByTime(now.minusHours(3), now.plusMinutes(1)) === 4
-          bookmarkRepo.getCountByTime(now.minusHours(6), now.minusHours(3)) === 0
+          keepRepo.getCountByTime(now.minusHours(3), now.plusMinutes(1)) === 4
+          keepRepo.getCountByTime(now.minusHours(6), now.minusHours(3)) === 0
         }
       }
     }
@@ -111,8 +111,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         setup()
         val clock = inject[FakeClock]
         db.readOnly {implicit s =>
-          bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, initLoad) === 1
-          bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, hover) === 3
+          keepRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, initLoad) === 1
+          keepRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, hover) === 3
         }
       }
     }
@@ -120,10 +120,10 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, _, _, _, _, _) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getCountByUser(user1.id.get) === 3
-          bookmarkRepo.getCountByUser(user2.id.get) === 1
-          bookmarkRepo.getPrivatePublicCountByUser(user1.id.get) === (1, 2)
-          bookmarkRepo.getPrivatePublicCountByUser(user2.id.get) === (0, 1)
+          keepRepo.getCountByUser(user1.id.get) === 3
+          keepRepo.getCountByUser(user2.id.get) === 1
+          keepRepo.getPrivatePublicCountByUser(user1.id.get) === (1, 2)
+          keepRepo.getPrivatePublicCountByUser(user2.id.get) === (0, 1)
         }
       }
     }
@@ -131,8 +131,8 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, _, _, _, _, _) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.getNumMutual(user1.id.get, user2.id.get) === 1
-          bookmarkRepo.getNumMutual(user2.id.get, user1.id.get) === 1
+          keepRepo.getNumMutual(user1.id.get, user2.id.get) === 1
+          keepRepo.getNumMutual(user2.id.get, user1.id.get) === 1
         }
       }
     }
@@ -141,21 +141,21 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, _, url1, _) = setup()
         db.readWrite{ implicit s =>
-          bookmarkRepo.count === 4
-          val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-          bookmarkRepo.delete(bm.get.id.get)
+          keepRepo.count === 4
+          val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
+          keepRepo.delete(bm.get.id.get)
         }
         db.readWrite{ implicit s =>
-          bookmarkRepo.all.size === 3
-          bookmarkRepo.count === 3
+          keepRepo.all.size === 3
+          keepRepo.count === 3
         }
         db.readWrite{ implicit s =>
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
           uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
         }
         db.readWrite{ implicit s =>
-          bookmarkRepo.count === 4
+          keepRepo.count === 4
         }
       }
     }
@@ -164,13 +164,13 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
        withDb() { implicit injector =>
          val (user1, user2, uri1, uri2, url1, _, _) = setup()
          db.readWrite{ implicit s =>
-           val bm = bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-           bookmarkRepo.save(bm.get.withActive(false))
+           val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
+           keepRepo.save(bm.get.withActive(false))
          }
 
          db.readOnly{ implicit s =>
-           bookmarkRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
-           bookmarkRepo.getByUriAndUserAllStates(uri1.id.get, user1.id.get).size === 1
+           keepRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
+           keepRepo.getByUriAndUserAllStates(uri1.id.get, user1.id.get).size === 1
         }
       }
     }
@@ -186,25 +186,25 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
           (uri, uriId, url, firstUserId, secondUserId)
         }
         db.readOnly{ implicit s =>
-          bookmarkRepo.latestBookmark(uriId) === None
+          keepRepo.latestBookmark(uriId) === None
         }
         val firstUserBookmark = db.readWrite{ implicit s =>
-          bookmarkRepo.save(Bookmark(userId = firstUserId, uriId = uriId, url = url, source = hover))
+          keepRepo.save(Keep(userId = firstUserId, uriId = uriId, url = url, source = hover))
         }
         db.readOnly{ implicit s =>
-          bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === firstUserBookmark.id
+          keepRepo.latestBookmark(uriId).flatMap(_.id) === firstUserBookmark.id
         }
         val secondUserBookmark = db.readWrite{ implicit s =>
-          bookmarkRepo.save(Bookmark(userId = secondUserId, uriId = uriId, url = url, source = hover))
+          keepRepo.save(Keep(userId = secondUserId, uriId = uriId, url = url, source = hover))
         }
         db.readOnly{ implicit s =>
-          bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === secondUserBookmark.id
+          keepRepo.latestBookmark(uriId).flatMap(_.id) === secondUserBookmark.id
         }
         val latestBookmark = db.readWrite{ implicit s =>
-          bookmarkRepo.save(firstUserBookmark)
+          keepRepo.save(firstUserBookmark)
         }
         db.readOnly{ implicit s =>
-          bookmarkRepo.latestBookmark(uriId).flatMap(_.id) === latestBookmark.id
+          keepRepo.latestBookmark(uriId).flatMap(_.id) === latestBookmark.id
         }
       }
     }

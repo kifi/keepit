@@ -24,14 +24,14 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "foo", lastName = "bar"))
         }
 
-        val hover = BookmarkSource.keeper
+        val hover = KeepSource.keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
@@ -62,10 +62,10 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         val bms = db.readWrite { implicit session =>
-          val bm0 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover))
-          val bm1 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
-          val bm2 = bmRepo.save(Bookmark(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover))
-          val bm3 = bmRepo.save(Bookmark(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id, uriId = uris(3).id.get, source = hover))
+          val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover))
+          val bm1 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
+          val bm2 = bmRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover))
+          val bm3 = bmRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id, uriId = uris(3).id.get, source = hover))
 
           Seq(bm0, bm1, bm2, bm3)
         }
@@ -123,14 +123,14 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val (user, other) = db.readWrite { implicit session =>
           (userRepo.save(User(firstName = "foo", lastName = "bar")), userRepo.save(User(firstName = "foo", lastName = "bar")))
         }
 
-        val hover = BookmarkSource.keeper
+        val hover = KeepSource.keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
@@ -152,8 +152,8 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         var bms = db.readWrite { implicit session =>
-          val bm0 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover))
-          val bm1 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
+          val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover))
+          val bm1 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
 
           Seq(bm0, bm1)
         }
@@ -192,7 +192,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         bms ++= db.readWrite { implicit session =>
           uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
           uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
-          Seq(bmRepo.save(Bookmark(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover)))
+          Seq(bmRepo.save(Keep(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover)))
         }
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
@@ -211,7 +211,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
 
         // test: INACTIVE to SCRAPE_WANTED
         bms ++= db.readWrite { implicit session =>
-          Seq(bmRepo.save(Bookmark(title = Some("AltaVista"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id,  uriId = uris(3).id.get, source = hover)))
+          Seq(bmRepo.save(Keep(title = Some("AltaVista"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id,  uriId = uris(3).id.get, source = hover)))
         }
         db.readOnly{ implicit s =>
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
@@ -255,8 +255,8 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
           uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
           Seq(
-            bmRepo.save(Bookmark(title = Some("google"), userId = other.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover)),
-            bmRepo.save(Bookmark(title = Some("bing"), userId = other.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
+            bmRepo.save(Keep(title = Some("google"), userId = other.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover)),
+            bmRepo.save(Keep(title = Some("bing"), userId = other.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
           )
         }
         cleaner.clean(readOnly = false)
@@ -322,14 +322,14 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "foo", lastName = "bar"))
         }
 
-        val hover = BookmarkSource.keeper
+        val hover = KeepSource.keeper
 
         val uris = db.readWrite { implicit session =>
           val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
@@ -357,10 +357,10 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         val bms = db.readWrite { implicit session =>
-          val bm0 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover))
-          val bm1 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
-          val bm2 = bmRepo.save(Bookmark(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover))
-          val bm3 = bmRepo.save(Bookmark(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id, uriId = uris(3).id.get, source = hover))
+          val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url, urlId = urls(0).id,  uriId = uris(0).id.get, source = hover))
+          val bm1 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url, urlId = urls(1).id, uriId = uris(1).id.get, source = hover))
+          val bm2 = bmRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id,  uriId = uris(2).id.get, source = hover))
+          val bm3 = bmRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id, uriId = uris(3).id.get, source = hover))
 
           Seq(bm0, bm1, bm2, bm3)
         }

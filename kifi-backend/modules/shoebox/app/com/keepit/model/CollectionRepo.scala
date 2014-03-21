@@ -30,7 +30,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 @Singleton
 class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
-  val bookmarkCountForCollectionCache: BookmarkCountForCollectionCache,
+  val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val heimdal: HeimdalServiceClient,
@@ -58,12 +58,12 @@ class CollectionRepoImpl @Inject() (
   override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.set(UserCollectionsKey(collection.userId),
       (for (c <- rows if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
-    bookmarkCountForCollectionCache.remove(BookmarkCountForCollectionKey(collection.id.get))
+    bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collection.id.get))
   }
 
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
-    bookmarkCountForCollectionCache.remove(BookmarkCountForCollectionKey(model.id.get))
+    bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(model.id.get))
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
@@ -84,11 +84,11 @@ class CollectionRepoImpl @Inject() (
       && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
 
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int = {
-    bookmarkCountForCollectionCache.getOrElse(BookmarkCountForCollectionKey(collId)) { keepToCollectionRepo.count(collId) }
+    bookmarkCountForCollectionCache.getOrElse(KeepCountForCollectionKey(collId)) { keepToCollectionRepo.count(collId) }
   }
 
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int] = {
-    val keys = collIds.map(BookmarkCountForCollectionKey)
+    val keys = collIds.map(KeepCountForCollectionKey)
     bookmarkCountForCollectionCache.bulkGetOrElse(keys){ missing =>
       missing.map{ key => key -> keepToCollectionRepo.count(key.collectionId) }.toMap
     }.map{ case (key, count) => key.collectionId -> count }
@@ -115,7 +115,7 @@ class CollectionRepoImpl @Inject() (
       (for (c <- rows if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
 
       // invalidate count cache
-      bookmarkCountForCollectionCache.remove(BookmarkCountForCollectionKey(collectionId))
+      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collectionId))
     }
   }
 
