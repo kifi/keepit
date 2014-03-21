@@ -125,13 +125,17 @@ class InviteCommander @Inject() (
             case Some(invitedSocialAccount) => invitedSocialAccount -> invite
             case None =>
               // User signed up using a different social account than the one he was invited with.
-              for {
-                senderId <- invite.senderUserId
-                recipientSocialUserId <- invite.recipientSocialUserId
-              } yield session.onTransactionSuccess {
-                shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(recipientSocialUserId), None))
+              invite.senderUserId.foreach { senderId =>
+               session.onTransactionSuccess {
+                  invite.recipientSocialUserId.foreach { recipientSocialUserId =>
+                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(recipientSocialUserId), None))
+                  }
+                  invite.recipientEContactId.foreach { recipientEContactId =>
+                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(recipientEContactId)))
+                  }
+               }
               }
-              fortyTwoSocialAccount -> invitationRepo.save(invite.copy(recipientSocialUserId = fortyTwoSocialAccount.id))
+              fortyTwoSocialAccount -> invitationRepo.save(invite.copy(recipientSocialUserId = fortyTwoSocialAccount.id, recipientEContactId = None))
           }
         }
       }
