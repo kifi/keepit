@@ -50,7 +50,7 @@ object FullSocialId {
   def toString(fullSocialId: FullSocialId): String =s"${fullSocialId.network.name}/${fullSocialId.identifier.left.map(_.id).merge}"
 }
 
-case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, EContact], invitationNumber: Int, subject: Option[String], message: Option[String])
+case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, EContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
 
 case class InviteStatus(sent: Boolean, savedInvite: Option[Invitation], code: String)
 
@@ -91,6 +91,8 @@ class InviteCommander @Inject() (
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander,
   shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander) extends Logging {
+
+  private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
     val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (_, in) =>
@@ -177,14 +179,14 @@ class InviteCommander @Inject() (
     }
   }
 
-  def invite(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String]): Future[InviteStatus] = {
-    getInviteInfo(userId, fullSocialId, subject, message).map {
+  def invite(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteStatus] = {
+    getInviteInfo(userId, fullSocialId, subject, message, source).map {
       case inviteInfo if isAllowed(inviteInfo) => processInvite(inviteInfo)
       case _ => InviteStatus.forbidden
     }
   }
 
-  def processInvite(inviteInfo: InviteInfo): InviteStatus = {
+  private def processInvite(inviteInfo: InviteInfo): InviteStatus = {
     val inviteStatus = inviteInfo.friend match {
       case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.FACEBOOK => handleFacebookInvite(inviteInfo)
       case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.LINKEDIN => sendInvitationForLinkedIn(inviteInfo)
@@ -195,7 +197,7 @@ class InviteCommander @Inject() (
     inviteStatus
   }
 
-  def sendEmailInvitation(inviteInfo:InviteInfo): InviteStatus = {
+  private def sendEmailInvitation(inviteInfo:InviteInfo): InviteStatus = {
     val invite = getInvitation(inviteInfo)
     val invitingUser = db.readOnly { implicit session => userRepo.get(inviteInfo.userId) }
     val c = inviteInfo.friend.right.get
@@ -224,7 +226,7 @@ class InviteCommander @Inject() (
     }
   }
 
-  def sendInvitationForLinkedIn(inviteInfo:InviteInfo): InviteStatus = {
+  private def sendInvitationForLinkedIn(inviteInfo:InviteInfo): InviteStatus = {
     val invite = getInvitation(inviteInfo)
     val userId = inviteInfo.userId
     val savedOpt:Option[Invitation] = db.readWrite(attempts = 2) { implicit s =>
@@ -269,21 +271,21 @@ class InviteCommander @Inject() (
     }
   }
 
-  private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
-  def fbInviteUrl(invitation: Invitation, socialId: SocialId): String = {
-    val link = URLEncoder.encode(s"$baseUrl${routes.InviteController.acceptInvite(invitation.externalId)}", "UTF-8")
-    val confirmUri = URLEncoder.encode(s"$baseUrl${routes.InviteController.confirmInvite(invitation.externalId, None, None)}", "UTF-8")
-    s"https://www.facebook.com/dialog/send?app_id=${secureSocialClientIds.facebook}&link=$link&redirect_uri=$confirmUri&to=$socialId"
-  }
-
-  def handleFacebookInvite(inviteInfo: InviteInfo): InviteStatus = {
+  private def handleFacebookInvite(inviteInfo: InviteInfo): InviteStatus = {
     val invitation = getInvitation(inviteInfo)
     val saved = db.readWrite(attempts = 2) { implicit s => invitationRepo.save(invitation) }
     InviteStatus.clientHandle(saved)
   }
 
-  def confirmFacebookInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
+  def acceptUrl(invitationId: ExternalId[Invitation]) = URLEncoder.encode(s"$baseUrl${routes.InviteController.acceptInvite(invitationId)}", "UTF-8")
+  def fbConfirmUrl(invitationId: ExternalId[Invitation], source: String) = URLEncoder.encode(s"$baseUrl${routes.InviteController.confirmInvite(invitationId, source, None, None)}", "UTF-8")
+  def fbInviteUrl(invitationId: ExternalId[Invitation], socialId: SocialId, source: String): String = {
+    val link = acceptUrl(invitationId)
+    val redirectUri = fbConfirmUrl(invitationId, source)
+    s"https://www.facebook.com/dialog/send?app_id=${secureSocialClientIds.facebook}&link=$link&redirect_uri=$redirectUri&to=$socialId"
+  }
 
+  def confirmFacebookInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
     val (inviteStatus, existingInvitation) = db.readWrite { implicit session =>
       val existingInvitation = invitationRepo.getOpt(id)
       val inviteStatus = existingInvitation match {
@@ -300,7 +302,7 @@ class InviteCommander @Inject() (
       val friendId = activeInvite.recipientSocialUserId.get
       countInvitationsSent(userId, Left(friendId), existingInvitation).map { invitationsSent =>
         val friendSocialUserInfo = db.readOnly { implicit session => socialUserInfoRepo.get(friendId) }
-        val inviteInfo = InviteInfo(userId, Left(friendSocialUserInfo), invitationsSent + 1, None, None)
+        val inviteInfo = InviteInfo(userId, Left(friendSocialUserInfo), invitationsSent + 1, None, None, source)
         reportSentInvitation(activeInvite, inviteInfo)
       }
     }
@@ -317,7 +319,7 @@ class InviteCommander @Inject() (
     (1 < inviteInfo.invitationNumber && inviteInfo.invitationNumber <= resendInvitationLimit) || (uniqueInvites < totalAllowedInvites)
   }
 
-  private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String]): Future[InviteInfo] = {
+  private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteInfo] = {
     val (friendFuture, invitationsSentFuture) = fullSocialId.identifier match {
       case Left(socialId) =>
         val friendSocialUserInfo =  db.readOnly() { implicit session =>socialUserInfoRepo.get(socialId, fullSocialId.network) }
@@ -333,7 +335,7 @@ class InviteCommander @Inject() (
     for {
       friend <- friendFuture
       invitationsSent <- invitationsSentFuture
-    } yield InviteInfo(userId, friend, invitationsSent + 1, subject, message)
+    } yield InviteInfo(userId, friend, invitationsSent + 1, subject, message, source)
   }
 
   private def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], knownInvitation: Option[Invitation] = None): Future[Int] = {
@@ -377,6 +379,7 @@ class InviteCommander @Inject() (
     contextBuilder += ("socialNetwork", socialNetwork.toString)
     contextBuilder += ("inviteId", invite.externalId.id)
     contextBuilder += ("invitationNumber", inviteInfo.invitationNumber)
+    inviteInfo.source.foreach { source => contextBuilder += ("source", source) }
     invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
     invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
     heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED))

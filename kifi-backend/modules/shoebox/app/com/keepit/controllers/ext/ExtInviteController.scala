@@ -21,11 +21,14 @@ class ExtInviteController @Inject() (
 
     fullSocialIdOption match {
       case None => Future.successful(BadRequest("0"))
-      case Some(fullSocialId) => inviteCommander.invite(request.userId, fullSocialId, None, None).map {
-        case inviteStatus if inviteStatus.sent => Ok(Json.obj("sent" -> true))
-        case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
-          Ok(Json.obj("url" -> inviteCommander.fbInviteUrl(facebookInvite, fullSocialId.identifier.left.get)))
-        case _ => InternalServerError("0")
+      case Some(fullSocialId) => {
+        val source = (request.body \ "source").as[String]
+        inviteCommander.invite(request.userId, fullSocialId, None, None, source).map {
+          case inviteStatus if inviteStatus.sent => Ok(Json.obj("sent" -> true))
+          case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
+            Ok(Json.obj("url" -> inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source)))
+          case _ => InternalServerError("0")
+        }
       }
     }
   }

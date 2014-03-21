@@ -5,7 +5,6 @@ import com.keepit.common.controller.{ShoeboxServiceController, MobileController,
 import com.keepit.commanders.{InviteStatus, FullSocialId, InviteCommander}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import com.keepit.model.Invitation
 import com.keepit.social.SocialNetworks
 import scala.concurrent.Future
 
@@ -20,10 +19,11 @@ class MobileInviteController @Inject()(
       case Some(fullSocialId) => {
         val subject = (request.body \ "subject").asOpt[String]
         val message = (request.body \ "message").asOpt[String]
-        inviteCommander.invite(request.userId, fullSocialId, subject, message).map {
+        val source = "mobile"
+        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
           case inviteStatus if inviteStatus.sent => Ok(Json.obj("code" -> "invitation_sent"))
           case InviteStatus(false, Some(facebookInvite), code @ "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
-            Ok(Json.obj("code" -> code, "invite" -> Json.toJson[Invitation](facebookInvite)))
+            Ok(Json.obj("code" -> code, "link" -> inviteCommander.acceptUrl(facebookInvite.externalId), "redirectUri" -> inviteCommander.fbConfirmUrl(facebookInvite.externalId, source)))
           case _ => Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error"))
         }
       }

@@ -51,18 +51,19 @@ class InviteController @Inject() (db: Database,
     } yield {
       val subject = form.get("subject").map(_.head)
       val message = form.get("message").map(_.head)
-      inviteCommander.invite(request.userId, fullSocialId, subject, message).map {
+      val source = "site"
+      inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
         case inviteStatus if inviteStatus.sent => CloseWindow()
         case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
-          Redirect(inviteCommander.fbInviteUrl(facebookInvite, fullSocialId.identifier.left.get))
+          Redirect(inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source))
         case _ => InternalServerError("0")
       }
     }
     resultOption getOrElse Future.successful(CloseWindow())
   }
 
-  def confirmInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]) = Action {
-    if (inviteCommander.confirmFacebookInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]).sent) { CloseWindow() }
+  def confirmInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]) = Action {
+    if (inviteCommander.confirmFacebookInvite(id: ExternalId[Invitation], source, errorMsg: Option[String], errorCode: Option[Int]).sent) { CloseWindow() }
     else { Redirect(routes.HomeController.home) }
   }
 
