@@ -53,6 +53,8 @@ object FullSocialId {
 case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, EContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
 
 case class InviteStatus(sent: Boolean, savedInvite: Option[Invitation], code: String)
+case class FailedInvitationException(userId: Id[User], friendFullSocialId: FullSocialId, inviteStatus: InviteStatus)
+  extends Exception(s"Invitation from user $userId to $friendFullSocialId was not processed correctly: ${inviteStatus}")
 
 object InviteStatus {
   def sent(savedInvite: Invitation) = {
@@ -60,7 +62,7 @@ object InviteStatus {
     InviteStatus(true, Some(savedInvite), "invite_sent")
   }
   def clientHandle(savedInvite: Invitation) = InviteStatus(false, Some(savedInvite), "client_handle")
-  def facebookError(code: Int) = InviteStatus(false, None, s"facebook_error_$code")
+  def facebookError(code: Int, savedInvite: Option[Invitation]) = InviteStatus(false, savedInvite, s"facebook_error_$code")
   val unknownError = InviteStatus(false, None, "unknown_error")
   val forbidden = InviteStatus(false, None, "over_invite_limit")
   val notFound = InviteStatus(false, None, "invite_not_found")
@@ -192,6 +194,7 @@ class InviteCommander @Inject() (
   }
 
   private def processInvite(inviteInfo: InviteInfo): InviteStatus = {
+    log.info(s"[processInvite] Processing: $inviteInfo")
     val inviteStatus = inviteInfo.friend match {
       case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.FACEBOOK => handleFacebookInvite(inviteInfo)
       case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.LINKEDIN => sendInvitationForLinkedIn(inviteInfo)
@@ -199,6 +202,7 @@ class InviteCommander @Inject() (
       case _ => InviteStatus.unsupportedNetwork
     }
     if (inviteStatus.sent) { reportSentInvitation(inviteStatus.savedInvite.get, inviteInfo) }
+    log.info(s"[processInvite] Processed: $inviteStatus")
     inviteStatus
   }
 
@@ -209,8 +213,11 @@ class InviteCommander @Inject() (
     val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
 
     val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
+    val subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation")
+    log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] sending with subject=$subject message=$message")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
     val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(GenericEmailAddress(c.email)))}"
+
 
     db.readWrite { implicit session =>
       val electronicMail = ElectronicMail(
@@ -218,7 +225,7 @@ class InviteCommander @Inject() (
         from = EmailAddresses.INVITATION,
         fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
         to = Seq(GenericEmailAddress(c.email)),
-        subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation"),
+        subject = subject,
         htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
         textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
         category = NotificationCategory.User.INVITATION,
@@ -226,7 +233,7 @@ class InviteCommander @Inject() (
       )
       postOffice.sendMail(electronicMail)
       val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
-      log.info(s"[inviteConnection-email] sent invitation to $c")
+      log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] invitation sent")
       InviteStatus.sent(savedInvite)
     }
   }
@@ -279,6 +286,7 @@ class InviteCommander @Inject() (
   private def handleFacebookInvite(inviteInfo: InviteInfo): InviteStatus = {
     val invitation = getInvitation(inviteInfo)
     val saved = db.readWrite(attempts = 2) { implicit s => invitationRepo.save(invitation) }
+    log.info(s"[handleFacebookInvite(${inviteInfo.userId}, ${invitation.recipientSocialUserId.get}})] Persisted ${invitation}")
     InviteStatus.clientHandle(saved)
   }
 
@@ -294,9 +302,9 @@ class InviteCommander @Inject() (
     val (inviteStatus, existingInvitation) = db.readWrite { implicit session =>
       val existingInvitation = invitationRepo.getOpt(id)
       val inviteStatus = existingInvitation match {
-        case Some(invite) if invite.state != InvitationStates.INACTIVE => errorCode.map(InviteStatus.facebookError) getOrElse InviteStatus.sent(invite)
+        case Some(invite) if invite.state != InvitationStates.INACTIVE => errorCode.map(InviteStatus.facebookError(_, existingInvitation)) getOrElse InviteStatus.sent(invite)
         case Some(inactiveInvite) if errorCode.isEmpty => InviteStatus.sent(invitationRepo.save(inactiveInvite.copy(state = InvitationStates.ACTIVE)))
-        case _ => errorCode.map(InviteStatus.facebookError) getOrElse InviteStatus.notFound
+        case _ => errorCode.map(InviteStatus.facebookError(_, existingInvitation)) getOrElse InviteStatus.notFound
       }
       (inviteStatus, existingInvitation)
     }
@@ -305,23 +313,29 @@ class InviteCommander @Inject() (
       val activeInvite = inviteStatus.savedInvite.get
       val userId = activeInvite.senderUserId.get
       val friendId = activeInvite.recipientSocialUserId.get
+      log.info(s"[confirmFacebookInvite(${id})] Confirmed ${inviteStatus}")
       countInvitationsSent(userId, Left(friendId), existingInvitation).map { invitationsSent =>
         val friendSocialUserInfo = db.readOnly { implicit session => socialUserInfoRepo.get(friendId) }
         val inviteInfo = InviteInfo(userId, Left(friendSocialUserInfo), invitationsSent + 1, None, None, source)
         reportSentInvitation(activeInvite, inviteInfo)
       }
-    }
-
+    } else { log.error(s"[confirmFacebookInvite(${id}})] Failed to confirmed ${inviteStatus}") }
     inviteStatus
   }
 
   private val resendInvitationLimit = 5
+  private class IllegalInvitationException(message: String) extends Exception(message)
   private def isAllowed(inviteInfo: InviteInfo): Boolean = {
     lazy val (totalAllowedInvites, uniqueInvites) = db.readOnly { implicit session => (
       userValueRepo.getValue(inviteInfo.userId, UserValues.availableInvites), // todo(He-Who-Must-Not-Be-Named): removeme
       invitationRepo.getByUser(inviteInfo.userId).filter(_.state != InvitationStates.INACTIVE).length
     )}
-    (1 < inviteInfo.invitationNumber && inviteInfo.invitationNumber <= resendInvitationLimit) || (uniqueInvites < totalAllowedInvites)
+    val allowed = (1 < inviteInfo.invitationNumber && inviteInfo.invitationNumber <= resendInvitationLimit) || (uniqueInvites < totalAllowedInvites)
+    if (!allowed) {
+      log.error(s"[InviteCommander.isAllowed] Illegal invitation: $inviteInfo")
+      airbrake.notify(new IllegalInvitationException(s"An invitation was rejected: $inviteInfo"))
+    }
+    allowed
   }
 
   private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteInfo] = {

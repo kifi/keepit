@@ -18,8 +18,9 @@ import play.api.templates.Html
 import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.model.Invitation
-import com.keepit.commanders.{InviteStatus, FullSocialId, InviteCommander}
+import com.keepit.commanders.{FailedInvitationException, InviteStatus, FullSocialId, InviteCommander}
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -34,7 +35,8 @@ class InviteController @Inject() (db: Database,
   actionAuthenticator: ActionAuthenticator,
   abookServiceClient: ABookServiceClient,
   inviteCommander: InviteCommander,
-  fortytwoConfig: FortyTwoConfig
+  fortytwoConfig: FortyTwoConfig,
+  airbrake: AirbrakeNotifier
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite = HtmlAction.authenticated { implicit request =>
@@ -55,8 +57,14 @@ class InviteController @Inject() (db: Database,
       inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
         case inviteStatus if inviteStatus.sent => CloseWindow()
         case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
-          Redirect(inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source))
-        case _ => InternalServerError("0")
+          val facebookUrl = inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source)
+          log.info(s"[InviteController] Redirecting user ${request.userId} to Facebook: $facebookUrl")
+          Redirect(facebookUrl)
+        case failedInviteStatus => {
+          log.error(s"[InviteController] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+          airbrake.notify(new FailedInvitationException(request.userId, fullSocialId, failedInviteStatus))
+          InternalServerError("0")
+        }
       }
     }
     resultOption getOrElse Future.successful(CloseWindow())
