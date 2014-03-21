@@ -32,7 +32,9 @@ angular.module('kifi.invite.wtiService', [])
       },
       loadInitial: function () {
         if (list.length === 0) {
-          this.getMore();
+          this.getMore().then(function () {
+            this.getMore();
+          });
         }
       },
       list: list
