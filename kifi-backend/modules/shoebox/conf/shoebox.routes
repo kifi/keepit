@@ -243,7 +243,6 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
-GET     /site/user/allConnections       @com.keepit.controllers.website.TypeaheadController.getAllConnections(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= true)
 GET     /site/user/socialConnections    @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
