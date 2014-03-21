@@ -23,13 +23,16 @@ class MobileInviteController @Inject()(
         val message = (request.body \ "message").asOpt[String]
         val source = "mobile"
         inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
-          case inviteStatus if inviteStatus.sent => Ok(Json.obj("code" -> "invitation_sent"))
+          case inviteStatus if inviteStatus.sent => {
+            log.info(s"[inviteConnection] Invite sent: $inviteStatus")
+            Ok(Json.obj("code" -> "invitation_sent"))
+          }
           case InviteStatus(false, Some(facebookInvite), code @ "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
             val json = Json.obj("code" -> code, "link" -> inviteCommander.acceptUrl(facebookInvite.externalId), "redirectUri" -> inviteCommander.fbConfirmUrl(facebookInvite.externalId, source))
-            log.info(s"[MobileInviteController] Redirecting user ${request.userId} to Facebook: $json")
+            log.info(s"[inviteConnection] Redirecting user ${request.userId} to Facebook: $json")
             Ok(json)
           case failedInviteStatus => {
-            log.error(s"[MobileInviteController] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+            log.error(s"[inviteConnection] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
             airbrake.notify(new FailedInvitationException(request.userId, fullSocialId, failedInviteStatus))
             Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error"))
           }

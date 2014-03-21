@@ -26,13 +26,16 @@ class ExtInviteController @Inject() (
       case Some(fullSocialId) => {
         val source = (request.body \ "source").as[String]
         inviteCommander.invite(request.userId, fullSocialId, None, None, source).map {
-          case inviteStatus if inviteStatus.sent => Ok(Json.obj("sent" -> true))
+          case inviteStatus if inviteStatus.sent => {
+            log.info(s"[invite] Invite sent: $inviteStatus")
+            Ok(Json.obj("sent" -> true))
+          }
           case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
             val json = Json.obj("url" -> inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source))
-            log.info(s"[ExtInviteController] Redirecting user ${request.userId} to Facebook: $json")
+            log.info(s"[invite] Redirecting user ${request.userId} to Facebook: $json")
             Ok(json)
           case failedInviteStatus => {
-            log.error(s"[ExtInviteController] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+            log.error(s"[invite] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
             airbrake.notify(new FailedInvitationException(request.userId, fullSocialId, failedInviteStatus))
             InternalServerError("0")
           }
