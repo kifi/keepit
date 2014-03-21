@@ -42,7 +42,7 @@ class MobileBookmarksController @Inject() (
   implicit val writesKeepInfo = new FullKeepInfoWriter()
 
   def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int) = JsonAction.authenticatedAsync { request =>
-    bookmarksCommander.allKeeps(before map ExternalId[Bookmark], after map ExternalId[Bookmark], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
+    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], count, request.userId) map { res =>
       Ok(Json.obj(
         "collection" -> res._1,
         "before" -> before,

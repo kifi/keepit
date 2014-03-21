@@ -8,18 +8,18 @@ import com.keepit.common.time._
 
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
-  def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]]
-  def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]]
+  def getCollectionsForBookmark(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
+  def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
-  def getByBookmark(keepId: Id[Bookmark],
+  def getByBookmark(keepId: Id[Keep],
                     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                    (implicit session: RSession): Seq[KeepToCollection]
   def getByCollection(collId: Id[Collection],
                       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                      (implicit session: RSession): Seq[KeepToCollection]
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int
-  def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit
-  def getOpt(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
+  def remove(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit
+  def getOpt(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
 }
 
 @Singleton
@@ -46,7 +46,7 @@ class KeepToCollectionRepoImpl @Inject() (
 
   type RepoImpl = KeepToCollectionTable
   class KeepToCollectionTable(tag: Tag) extends RepoTable[KeepToCollection](db, tag, "keep_to_collection") {
-    def bookmarkId = column[Id[Bookmark]]("bookmark_id", O.NotNull)
+    def bookmarkId = column[Id[Keep]]("bookmark_id", O.NotNull)
     def collectionId = column[Id[Collection]]("collection_id", O.NotNull)
     def * = (id.?, bookmarkId, collectionId, state, createdAt, updatedAt) <> ((KeepToCollection.apply _).tupled,
       KeepToCollection.unapply _)
@@ -55,17 +55,17 @@ class KeepToCollectionRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToCollectionTable(tag)
   initTable()
 
-  def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]] =
+  def getCollectionsForBookmark(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]] =
     collectionsForBookmarkCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
       (for (c <- rows if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list
     }
 
-  def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]] =
+  def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]] =
       (for (c <- rows if c.collectionId === collectionId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.bookmarkId).list
 
-  def getByBookmark(keepId: Id[Bookmark],
+  def getByBookmark(keepId: Id[Keep],
                     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                    (implicit session: RSession): Seq[KeepToCollection] =
     (for (c <- rows if c.bookmarkId === keepId && c.state =!= excludeState.getOrElse(null)) yield c).list
@@ -84,11 +84,11 @@ class KeepToCollectionRepoImpl @Inject() (
     } yield c).length).firstOption.getOrElse(0)
   }
 
-  def getOpt(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection] = {
+  def getOpt(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection] = {
     (for(r <- rows if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r).firstOption
   }
 
-  def remove(bookmarkId: Id[Bookmark], collectionId: Id[Collection])(implicit session: RWSession): Unit = {
+  def remove(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit = {
     val q = for(r <- rows if r.bookmarkId === bookmarkId && r.collectionId === collectionId) yield r
     q.list.map { ktc => //there should be only [0, 1], iterating on possibly more for safty
       save(ktc.inactivate())

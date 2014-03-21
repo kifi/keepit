@@ -50,7 +50,7 @@ class URIGraphIndexer(
     indexDirectory: IndexDirectory,
     val bookmarkStore: BookmarkStore,
     airbrake: AirbrakeNotifier)
-  extends Indexer[User, Bookmark, URIGraphIndexer](indexDirectory, URIGraphFields.decoders) {
+  extends Indexer[User, Keep, URIGraphIndexer](indexDirectory, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable
 
@@ -72,7 +72,7 @@ class URIGraphIndexer(
 
   def getSearchers: (Searcher, Searcher) = searchers
 
-  override def onFailure(indexable: Indexable[User, Bookmark], e: Throwable) {
+  override def onFailure(indexable: Indexable[User, Keep], e: Throwable) {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -80,11 +80,11 @@ class URIGraphIndexer(
 
   def update(): Int = throw new UnsupportedOperationException()
 
-  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
+  def update(name: String, bookmarks: Seq[Keep], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     val cnt = doUpdate("URIGraphIndex" + name) {
       bookmarkStore.update(name, bookmarks, shard)
 
-      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber[Bookmark]]) { (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
+      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber[Keep]]) { (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
       usersChanged.iterator.map(buildIndexable)
     }
     // update searchers together to get a consistent view of indexes
@@ -107,7 +107,7 @@ class URIGraphIndexer(
     bookmarkStore.backup()
   }
 
-  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber[Bookmark])): URIGraphIndexable = {
+  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber[Keep])): URIGraphIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
     val bookmarks = bookmarkStore.getBookmarks(userId)
     new URIGraphIndexable(id = userId,
@@ -125,10 +125,10 @@ object URIGraphIndexer {
 
   class URIGraphIndexable(
     override val id: Id[User],
-    override val sequenceNumber: SequenceNumber[Bookmark],
+    override val sequenceNumber: SequenceNumber[Keep],
     override val isDeleted: Boolean,
-    val bookmarks: Seq[Bookmark]
-  ) extends Indexable[User, Bookmark] with LineFieldBuilder with Logging{
+    val bookmarks: Seq[Keep]
+  ) extends Indexable[User, Keep] with LineFieldBuilder with Logging{
 
     override def buildDocument = {
       val doc = super.buildDocument
@@ -199,7 +199,7 @@ object URIGraphIndexer {
       buildIteratorField(URIGraphFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
     }
 
-    private def buildBookmarkTitleList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
+    private def buildBookmarkTitleList(publicBookmarks: Seq[Keep], privateBookmarks: Seq[Keep], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
       var lineNo = 0
       var titles = new ArrayBuffer[(Int, String, Lang)]
       publicBookmarks.foreach{ b =>
@@ -219,7 +219,7 @@ object URIGraphIndexer {
       titles
     }
 
-    private def buildBookmarkURLList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): ArrayBuffer[(Int, Try[URI], Lang)] = {
+    private def buildBookmarkURLList(publicBookmarks: Seq[Keep], privateBookmarks: Seq[Keep]): ArrayBuffer[(Int, Try[URI], Lang)] = {
       val urlMap = bookmarks.foldLeft(Map.empty[Long, String]){ (m, b) => m + (b.uriId.id -> b.url) }
 
       var lineNo = 0
@@ -237,7 +237,7 @@ object URIGraphIndexer {
       sites
     }
 
-    private def buildBookmarkIdField(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): Seq[Field] = {
+    private def buildBookmarkIdField(publicBookmarks: Seq[Keep], privateBookmarks: Seq[Keep]): Seq[Field] = {
       val arr = (publicBookmarks.map(_.id.get.id) ++ privateBookmarks.map(_.id.get.id)).toArray
       val packedBookmarkIds = Util.packLongArray(arr)
       buildExtraLongBinaryDocValuesField(URIGraphFields.bookmarkIdField, packedBookmarkIds)

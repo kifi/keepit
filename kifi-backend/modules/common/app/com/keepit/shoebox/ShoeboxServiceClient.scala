@@ -60,7 +60,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]]
-  def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
+  def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Keep]]
   def getUriIdsInCollection(id: Id[Collection]): Future[Seq[KeepUriAndTime]]
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
@@ -70,9 +70,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
-  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
-  def getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fertchSize: Int): Future[Seq[Bookmark]]
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
+  def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fertchSize: Int): Future[Seq[Keep]]
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Keep]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
@@ -98,9 +98,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Bookmark]]
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Bookmark]]
-  def saveBookmark(bookmark:Bookmark)(implicit timeout:Int = 10000): Future[Bookmark]
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Keep]]
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Keep]]
+  def saveBookmark(bookmark:Keep)(implicit timeout:Int = 10000): Future[Keep]
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
   def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int = 10000):Future[PageInfo]
@@ -206,41 +206,41 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
+  def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
     call(Shoebox.internal.getBookmarks(userId)).map{ r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
+      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
     }
   }
 
-  def getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fetchSize: Int): Future[Seq[Bookmark]] = {
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]] = {
     call(Shoebox.internal.getBookmarksChanged(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
+      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
     }
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Keep]] = {
     cacheProvider.bookmarkUriUserCache.getOrElseFutureOpt(KeepUriUserKey(uriId, userId)) {
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
-          Json.fromJson[Option[Bookmark]](r.json).get
+          Json.fromJson[Option[Keep]](r.json).get
       }
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Seq[Bookmark]] = {
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Seq[Keep]] = {
     call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
+      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
     }
   }
 
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Option[Bookmark]] = {
+  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Option[Keep]] = {
     call(Shoebox.internal.getLatestBookmark(uriId), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
-      Json.fromJson[Option[Bookmark]](r.json).get
+      Json.fromJson[Option[Keep]](r.json).get
     }
   }
 
-  def saveBookmark(bookmark: Bookmark)(implicit timeout: Int): Future[Bookmark] = {
+  def saveBookmark(bookmark: Keep)(implicit timeout: Int): Future[Keep] = {
     call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
-      Json.fromJson[Bookmark](r.json).get
+      Json.fromJson[Keep](r.json).get
     }
   }
 
@@ -398,9 +398,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
+  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Keep]] = {
     call(Shoebox.internal.getBookmarksInCollection(collectionId), callTimeouts = longTimeout) map { r =>
-      Json.fromJson[Seq[Bookmark]](r.json).get
+      Json.fromJson[Seq[Keep]](r.json).get
     }
   }
 

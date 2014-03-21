@@ -23,18 +23,18 @@ object BookmarkStoreFields {
 }
 
 object BookmarkStore {
-  def shouldDelete(bookmark: Bookmark, shard: Shard[NormalizedURI]): Boolean = ((bookmark.state == INACTIVE) || (!shard.contains(bookmark.uriId)))
+  def shouldDelete(bookmark: Keep, shard: Shard[NormalizedURI]): Boolean = ((bookmark.state == INACTIVE) || (!shard.contains(bookmark.uriId)))
   val bookmarkSource = KeepSource("BookmarkStore")
 }
 
 class BookmarkStore(
     indexDirectory: IndexDirectory,
     airbrake: AirbrakeNotifier)
-  extends Indexer[Bookmark, Bookmark, BookmarkStore](indexDirectory) {
+  extends Indexer[Keep, Keep, BookmarkStore](indexDirectory) {
 
   import BookmarkStoreFields._
 
-  override def onFailure(indexable: Indexable[Bookmark, Bookmark], e: Throwable): Unit = {
+  override def onFailure(indexable: Indexable[Keep, Keep], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
@@ -42,15 +42,15 @@ class BookmarkStore(
 
   def update(): Int = throw new UnsupportedOperationException("BookmarkStore should not be updated by update()")
 
-  def update(name: String, bookmarks: Seq[Bookmark], shard: Shard[NormalizedURI]) {
+  def update(name: String, bookmarks: Seq[Keep], shard: Shard[NormalizedURI]) {
     doUpdate("BookmarkStore" + name){
       bookmarks.iterator.map(buildIndexable(_, shard))
     }
   }
 
-  def getBookmarks(userId: Id[User]): Seq[Bookmark] = {
+  def getBookmarks(userId: Id[User]): Seq[Keep] = {
     val term = new Term(userField, userId.id.toString)
-    val buf = new ArrayBuffer[Bookmark]
+    val buf = new ArrayBuffer[Keep]
     getSearcher.foreachReader{ reader =>
       val mapper = reader.getIdMapper
       val td = reader.termDocsEnum(term)
@@ -62,8 +62,8 @@ class BookmarkStore(
           docValues.get(td.docID, ref)
           val rec = BookmarkRecordSerializer.fromByteArray(ref.bytes, ref.offset, ref.length)
           val bookmarkId = mapper.getId(docid)
-          buf += Bookmark(
-            id = Some(Id[Bookmark](bookmarkId)),
+          buf += Keep(
+            id = Some(Id[Keep](bookmarkId)),
             title = Some(rec.title),
             url = rec.url,
             createdAt = new DateTime(rec.createdAt),
@@ -92,7 +92,7 @@ class BookmarkStore(
     }
   }
 
-  def buildIndexable(bookmark: Bookmark, shard: Shard[NormalizedURI]): BookmarkIndexable = {
+  def buildIndexable(bookmark: Keep, shard: Shard[NormalizedURI]): BookmarkIndexable = {
     new BookmarkIndexable(
       id = bookmark.id.get,
       sequenceNumber = bookmark.seq,
@@ -101,11 +101,11 @@ class BookmarkStore(
   }
 
   class BookmarkIndexable(
-    override val id: Id[Bookmark],
-    override val sequenceNumber: SequenceNumber[Bookmark],
+    override val id: Id[Keep],
+    override val sequenceNumber: SequenceNumber[Keep],
     override val isDeleted: Boolean,
-    val bookmark: Bookmark
-  ) extends Indexable[Bookmark, Bookmark] {
+    val bookmark: Keep
+  ) extends Indexable[Keep, Keep] {
 
     implicit def toReader(text: String) = new StringReader(text)
 

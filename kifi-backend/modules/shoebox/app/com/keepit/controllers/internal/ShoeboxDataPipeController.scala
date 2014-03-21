@@ -66,7 +66,7 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(phrases))
   }
 
-  def getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fetchSize: Int) = Action { request =>
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
     val bookmarks = db.readOnly(2, Slave) { implicit session =>
       keepRepo.getBookmarksChanged(seqNum, fetchSize)
     }
