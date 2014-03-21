@@ -13,7 +13,7 @@ class AdminPageInfoController @Inject()
 (actionAuthenticator: ActionAuthenticator,
  s3ScreenshotStore: S3ScreenshotStore,
  db: Database,
- bookmarkRepo: BookmarkRepo,
+ keepRepo: KeepRepo,
  pageInfoRepo: PageInfoRepo,
  imageInfoRepo: ImageInfoRepo,
  uriRepo: NormalizedURIRepo)

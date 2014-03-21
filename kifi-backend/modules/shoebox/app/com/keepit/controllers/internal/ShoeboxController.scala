@@ -39,7 +39,7 @@ class ShoeboxController @Inject() (
   db: Database,
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   normUriRepo: NormalizedURIRepo,
   normalizationServiceProvider:Provider[NormalizationService],
   urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -185,8 +185,8 @@ class ShoeboxController @Inject() (
         val savedUri  = normUriRepo.save(uri)
         val savedInfo = scrapeInfoRepo.save(info)
         if (updateBookmark) {
-          bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
-            bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+          keepRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
+            keepRepo.save(bookmark.copy(title = savedUri.title))
           }
         }
         log.info(s"[scraped($savedUri,$savedInfo)] time-lapsed=${System.currentTimeMillis - ts}")
@@ -428,14 +428,14 @@ class ShoeboxController @Inject() (
 
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly(2, Slave) { implicit session => //no cache used
-      bookmarkRepo.getByUser(userId)
+      keepRepo.getByUser(userId)
     }
     Ok(Json.toJson(bookmarks))
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
     val bookmark = db.readOnly { implicit session => //using cache
-      bookmarkRepo.getByUriAndUser(uriId, userId)
+      keepRepo.getByUriAndUser(uriId, userId)
     }.map(Json.toJson(_)).getOrElse(JsNull)
     Ok(bookmark)
   }
@@ -443,7 +443,7 @@ class ShoeboxController @Inject() (
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = Action { request =>
     val ts = System.currentTimeMillis
     val bookmarks = db.readOnly(2, Slave) { implicit session =>
-      bookmarkRepo.getByUriWithoutTitle(uriId)
+      keepRepo.getByUriWithoutTitle(uriId)
     }
     log.info(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
     Ok(Json.toJson(bookmarks))
@@ -451,7 +451,7 @@ class ShoeboxController @Inject() (
 
   def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
     val bookmarkOpt = db.readOnly(2) { implicit session => //using cache
-      bookmarkRepo.latestBookmark(uriId)
+      keepRepo.latestBookmark(uriId)
     }
     log.info(s"[getLatestBookmark($uriId)] $bookmarkOpt")
     Ok(Json.toJson(bookmarkOpt))
@@ -460,7 +460,7 @@ class ShoeboxController @Inject() (
   def saveBookmark() = Action(parse.json) { request =>
     val bookmark = request.body.as[Bookmark]
     val saved = db.readWrite(attempts = 3) { implicit session =>
-      bookmarkRepo.save(bookmark)
+      keepRepo.save(bookmark)
     }
     log.info(s"[saveBookmark] saved=$saved")
     Ok(Json.toJson(saved))
@@ -575,7 +575,7 @@ class ShoeboxController @Inject() (
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
     Ok(Json.toJson(db.readOnly { implicit s => //using cache
-      keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
+      keepToCollectionRepo.getBookmarksInCollection(collectionId) map keepRepo.get
     }))
   }
 

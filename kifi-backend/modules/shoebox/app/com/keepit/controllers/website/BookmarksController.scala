@@ -34,7 +34,7 @@ import scala.concurrent.duration.Duration
 class BookmarksController @Inject() (
     db: Database,
     userRepo: UserRepo,
-    bookmarkRepo: BookmarkRepo,
+    keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
@@ -190,7 +190,7 @@ class BookmarksController @Inject() (
   }
 
   def getKeepInfo(id: ExternalId[Bookmark]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } filter { _.isActive } map { b =>
+    db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
       Ok(Json.toJson(KeepInfo.fromBookmark(b)))
     } getOrElse {
       NotFound(Json.obj("error" -> "Keep not found"))
@@ -206,7 +206,7 @@ class BookmarksController @Inject() (
 
     toBeUpdated match {
       case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
-      case Some((isPrivate, title)) => db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { bookmark =>
+      case Some((isPrivate, title)) => db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
         bookmarksCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
       } match {
@@ -217,7 +217,7 @@ class BookmarksController @Inject() (
   }
 
   def unkeep(id: ExternalId[Bookmark]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { bookmark =>
+    db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
       val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
       Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
@@ -238,7 +238,7 @@ class BookmarksController @Inject() (
   }
 
   def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
-    val numKeepsFuture = SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+    val numKeepsFuture = SafeFuture { db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
     for {
       numKeeps <- numKeepsFuture
@@ -273,7 +273,7 @@ class BookmarksController @Inject() (
     implicit val externalIdFormat = ExternalId.format[Bookmark]
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
-        val keeps = db.readOnly { implicit s => keepExtIds.flatMap(bookmarkRepo.getOpt(_)) }
+        val keeps = db.readOnly { implicit s => keepExtIds.flatMap(keepRepo.getOpt(_)) }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
         val removed = bookmarksCommander.removeFromCollection(collection, keeps)
         Ok(Json.obj("removed" -> removed.size))
@@ -291,7 +291,7 @@ class BookmarksController @Inject() (
       collectionRepo.getByUserAndExternalId(request.userId, id)
     } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
-        val keeps = db.readOnly { implicit session => keepExtIds.map(bookmarkRepo.get) }
+        val keeps = db.readOnly { implicit session => keepExtIds.map(keepRepo.get) }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.site).build
         val added = bookmarksCommander.addToCollection(collection, keeps)
         Ok(Json.obj("added" -> added.size))
@@ -305,13 +305,13 @@ class BookmarksController @Inject() (
 
   def numKeeps() = JsonAction.authenticated { request =>
     Ok(Json.obj(
-      "numKeeps" -> db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) }
+      "numKeeps" -> db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) }
     ))
   }
 
   def mutualKeeps(id: ExternalId[User]) = JsonAction.authenticated { request =>
     Ok(Json.obj(
-      "mutualKeeps" -> db.readOnly { implicit s => bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
+      "mutualKeeps" -> db.readOnly { implicit s => keepRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
     ))
   }
 

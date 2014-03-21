@@ -22,7 +22,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
@@ -113,7 +113,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val uriRepo = inject[NormalizedURIRepo]
         val collectionRepo = inject[CollectionRepo]
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 

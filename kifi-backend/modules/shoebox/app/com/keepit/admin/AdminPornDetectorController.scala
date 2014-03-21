@@ -15,14 +15,14 @@ import com.keepit.model.NormalizedURIRepoImpl
 import com.keepit.scraper.ScraperServiceClient
 import views.html
 import com.keepit.model.Restriction
-import com.keepit.model.BookmarkRepo
+import com.keepit.model.KeepRepo
 import scala.collection.mutable.ArrayBuffer
 
 class AdminPornDetectorController @Inject()(
   scraper: ScraperServiceClient,
   db: Database,
   uriRepo: NormalizedURIRepo,
-  bmRepo: BookmarkRepo,
+  bmRepo: KeepRepo,
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
 

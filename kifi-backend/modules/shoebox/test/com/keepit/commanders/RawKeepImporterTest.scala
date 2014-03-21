@@ -37,7 +37,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
 
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
-          val bookmarks = bookmarkRepo.all
+          val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
           oneUrl.size === 1
           val bm = oneUrl.head

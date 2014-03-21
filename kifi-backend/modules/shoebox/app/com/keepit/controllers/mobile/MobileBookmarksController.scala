@@ -31,7 +31,7 @@ class MobileBookmarksController @Inject() (
   s3ScreenshotStore: S3ScreenshotStore,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   actionAuthenticator: ActionAuthenticator,
   bookmarksCommander: BookmarksCommander,
   collectionCommander: CollectionCommander,
@@ -54,7 +54,7 @@ class MobileBookmarksController @Inject() (
 
   def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
     for {
-      numKeeps <- SafeFuture { db.readOnly { implicit s => bookmarkRepo.getCountByUser(request.userId) } }
+      numKeeps <- SafeFuture { db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) } }
       collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
     } yield {
       Ok(Json.obj(

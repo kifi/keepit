@@ -32,7 +32,7 @@ class UriIntegrityActor @Inject()(
   clock: Clock,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   bookmarkInterner: BookmarkInterner,
   deepLinkRepo: DeepLinkRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
@@ -46,11 +46,11 @@ class UriIntegrityActor @Inject()(
 ) extends FortyTwoActor(airbrake) with Logging {
 
   private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
-    bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+    keepRepo.getByUrlId(urlId).groupBy(_.userId)
   }
 
   private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
-    bookmarkRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
+    keepRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
   }
 
   /** tricky point: make sure (user, uri) pair is unique.  */
@@ -58,18 +58,18 @@ class UriIntegrityActor @Inject()(
 
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
-      bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
+      keepRepo.getByUriAndUserAllStates(newUriId, userId) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
-          bookmarkRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
-          bookmarkRepo.save(oldBm.withNormUriId(newUriId))
+          keepRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+          keepRepo.save(oldBm.withNormUriId(newUriId))
           Some(oldBm, None)
         }
         case Some(bm) =>
           if (oldBm.state == BookmarkStates.ACTIVE) {
-            if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
-            bookmarkRepo.save(oldBm.withActive(false))
-            bookmarkRepo.deleteCache(oldBm)
+            if (bm.state == BookmarkStates.INACTIVE) keepRepo.save(bm.withActive(true))
+            keepRepo.save(oldBm.withActive(false))
+            keepRepo.deleteCache(oldBm)
             Some(oldBm, Some(bm))
           } else {
             None
