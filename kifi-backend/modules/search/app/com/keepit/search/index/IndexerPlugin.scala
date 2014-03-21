@@ -1,7 +1,6 @@
 package com.keepit.search.index
 
 import akka.actor._
-import akka.pattern.ask
 import akka.util.Timeout
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.akka.UnsupportedActorMessage
@@ -11,15 +10,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
-import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
-import play.api.Play.current
-import play.api.Plugin
-import scala.concurrent.Await
+import com.keepit.search.IndexInfo
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.keepit.search.IndexInfo
-import java.util.concurrent.atomic.AtomicBoolean
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import java.util.concurrent.atomic.AtomicInteger
 
 object IndexerPluginMessages {
   case object UpdateIndex
@@ -42,8 +38,34 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
   def reindex(): Unit
   def close(): Unit
   def indexInfos(name: String): Seq[IndexInfo]
+  def lastBackup: Long
 
-  val pendingUpdateReq = new AtomicBoolean(false)
+  private[this] val updateTaskManager = new IndexUpdateTaskManager[S, I]()
+  def updateAsync(onError: Throwable=>Unit): Unit = updateTaskManager.requestUpdate(this, onError)
+}
+
+class IndexUpdateTaskManager[S, I <: Indexer[_, S, I]] {
+  private[this] val state = new AtomicInteger(0) // 0: idle, 1: updating, 2-or-greater: pending
+
+  def requestUpdate(indexer: IndexManager[S, I], onError: Throwable=>Unit) = {
+    if (state.getAndAdd(2) == 0) {
+      // the state was 0, we need to start the update task
+      Future {
+        try {
+          while (state.decrementAndGet() > 0) {
+            // the state was 2-or-greater, there are pending requests, start the update task
+            // all pending requests are consumed by this
+            state.set(1)
+            indexer.update()
+          }
+        } catch {
+          case e: Throwable =>
+            state.set(0) // go to the idle state so that the next request will start the update task
+            onError(e)
+        }
+      }
+    }
+  }
 }
 
 trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
@@ -93,9 +115,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   }
 
   def update(): Unit = {
-    if (indexer.pendingUpdateReq.compareAndSet(false, true)) {
-      actor.ref ! UpdateIndex
-    }
+    actor.ref ! UpdateIndex
   }
 
   override def reindex(): Unit = {
@@ -135,14 +155,14 @@ class IndexerActor[S, I <: Indexer[_, S, I]](
   import IndexerPluginMessages._
 
   def receive() = {
-    case UpdateIndex => try {
-        indexer.pendingUpdateReq.set(false)
-        indexer.update()
-      } catch {
-        case e: Exception =>
-          airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e)
-      }
-    case BackUpIndex => indexer.backup()
+    case UpdateIndex =>
+      indexer.updateAsync(
+        onError = { e => airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e) }
+      )
+    case BackUpIndex => {
+      val minBackupInterval = 300000 // 5 minutes
+      if (System.currentTimeMillis - indexer.lastBackup > minBackupInterval) indexer.backup()
+    }
     case RefreshSearcher => indexer.refreshSearcher()
     case RefreshWriter => indexer.refreshWriter()
     case WarmUpIndexDirectory => indexer.warmUpIndexDirectory()
