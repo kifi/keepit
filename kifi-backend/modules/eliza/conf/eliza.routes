@@ -40,6 +40,7 @@ GET   /internal/eliza/getUserThreadStats        @com.keepit.eliza.controllers.in
 GET   /internal/eliza/sequenceNumber/renormalization @com.keepit.eliza.controllers.internal.ElizaController.getRenormalizationSequenceNumber()
 
 POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.controllers.internal.MessagingController.sendGlobalNotification
+GET   /internal/eliza/unsendNotification        @com.keepit.eliza.controllers.internal.MessagingController.unsendNotification(id: Long)
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
