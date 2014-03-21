@@ -20,7 +20,6 @@ angular.module('kifi.invite', [
 .controller('InviteCtrl', [
   '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService',
   function ($scope, $http, profileService, routeService, $window, wtiService) {
-    wtiService.reset();
     $window.document.title = 'Kifi • Invite your friends';
 
     // bogus data just to get everyone started
@@ -32,20 +31,14 @@ angular.module('kifi.invite', [
     };
     $scope.friends = [friend];
 
-
-    function showMoreWTI() {
-      wtiService.getMore().then(function (list) {
-        $scope.whoToInvite = list;
-      });
-    }
-
-    showMoreWTI();
+    wtiService.loadInitial();
+    $scope.whoToInvite = wtiService.list;
 
     $scope.wtiScrollDistance = '100%';
     $scope.isWTIScrollDisabled = function () {
       return !wtiService.hasMore();
     };
-    $scope.wtiScrollNext = showMoreWTI;
+    $scope.wtiScrollNext = wtiService.getMore;
 
     $scope.wtiHasMore = function () {
       return true;

@@ -16,7 +16,7 @@ angular.module('kifi.invite.wtiService', [])
           requestInProgress = true;
           lastRequest = $http.get(routeService.whoToInvite + '?page=' + page).then(function (res) {
             requestInProgress = false;
-            list = list.concat(res.data);
+            list.push.apply(list, res.data);
             if (res.data.length === 0) {
               more = false;
             } else {
@@ -30,13 +30,12 @@ angular.module('kifi.invite.wtiService', [])
       hasMore: function () {
         return more && page < 5;
       },
-      reset: function () {
-        list = [];
-        more = true;
-        page = 0;
-        requestInProgress = false;
-        lastRequest = null;
-      }
+      loadInitial: function () {
+        if (list.length === 0) {
+          this.getMore();
+        }
+      },
+      list: list
     };
   }
 ]);
