@@ -57,8 +57,8 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
           friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = Some(Id[MessageHandle](22))))
         )}
         db.readOnly { implicit s =>
-          friendRequestRepo.get(fr1.id.get).messageHandle.get === 1
-          friendRequestRepo.get(fr1.id.get).messageHandle.get === 22
+          friendRequestRepo.get(fr1.id.get).messageHandle.get.id === 1
+          friendRequestRepo.get(fr2.id.get).messageHandle.get.id === 22
         }
       }
     }
