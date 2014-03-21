@@ -39,7 +39,7 @@ case class AirbrakeError(
     } else {
       exception match {
         case e: ReportedException => this.copy(exception = e.getCause).cleanError
-        case t: Throwable if (t.toString.contains("Execution exception in null:null")) => this.copy(exception = t.getCause).cleanError
+        case t: Throwable if t.toString.contains("Execution exception in null:null") => this.copy(exception = t.getCause).cleanError
         case _ => this
       }
     }
@@ -47,7 +47,7 @@ case class AirbrakeError(
 
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
-    s"${rootException.toString()}\nat \t${rootException.getStackTrace mkString "\nat \t"}"
+    s"${rootException.toString}\nat \t${rootException.getStackTrace mkString "\nat \t"}"
   }
 
   private val maxCauseDepth = 5

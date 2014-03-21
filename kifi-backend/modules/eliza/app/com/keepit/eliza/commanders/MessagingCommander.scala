@@ -160,54 +160,56 @@ class MessagingCommander @Inject() (
 
       (message, thread)
     }
+    SafeFuture {
+      val notificationAttempts = userIds.map { userId =>
+        Try {
+          val (notifJson, userThread) = db.readWrite{ implicit session =>
+            val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
+            val notifJson = Json.obj(
+              "id"       -> message.externalId.id,
+              "time"     -> message.createdAt,
+              "thread"   -> message.threadExtId.id,
+              "unread"   -> true,
+              "category" -> categoryString,
+              "title"    -> title,
+              "bodyHtml" -> body,
+              "linkText" -> linkText,
+              "url"      -> linkUrl,
+              "isSticky" -> sticky,
+              "image"    -> imageUrl
+            )
 
-    val notificationAttempts = userIds.map { userId =>
-      Try {
-        val (notifJson, userThread) = db.readWrite{ implicit session =>
-          val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
-          val notifJson = Json.obj(
-            "id"       -> message.externalId.id,
-            "time"     -> message.createdAt,
-            "thread"   -> message.threadExtId.id,
-            "unread"   -> true,
-            "category" -> categoryString,
-            "title"    -> title,
-            "bodyHtml" -> body,
-            "linkText" -> linkText,
-            "url"      -> linkUrl,
-            "isSticky" -> sticky,
-            "image"    -> imageUrl
+            val userThread = userThreadRepo.save(UserThread(
+              id = None,
+              user = userId,
+              thread = thread.id.get,
+              uriId = None,
+              lastSeen = None,
+              unread = true,
+              lastMsgFromOther = Some(message.id.get),
+              lastNotification = notifJson,
+              notificationUpdatedAt = message.createdAt,
+              replyable = false
+            ))
+
+            (notifJson, userThread)
+          }
+
+          notificationRouter.sendToUser(
+            userId,
+            Json.arr("notification", notifJson)
           )
-
-          val userThread = userThreadRepo.save(UserThread(
-            id = None,
-            user = userId,
-            thread = thread.id.get,
-            uriId = None,
-            lastSeen = None,
-            unread = true,
-            lastMsgFromOther = Some(message.id.get),
-            lastNotification = notifJson,
-            notificationUpdatedAt = message.createdAt,
-            replyable = false
-          ))
-
-          (notifJson, userThread)
+          userId
         }
-
-        notificationRouter.sendToUser(
-          userId,
-          Json.arr("notification", notifJson)
-        )
-        userId
       }
+
+      val notified = notificationAttempts collect { case Success(userId) => userId }
+      messagingAnalytics.sentGlobalNotification(notified, message, thread, category)
+
+      val errors = notificationAttempts collect { case Failure(ex) => ex }
+      if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
     }
-
-    val notified = notificationAttempts collect { case Success(userId) => userId }
-    messagingAnalytics.sentGlobalNotification(notified, message, thread, category)
-
-    val errors = notificationAttempts collect { case Failure(ex) => ex }
-    if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
+    message.id.get
   }
 
   private def buildMessageNotificationJson(

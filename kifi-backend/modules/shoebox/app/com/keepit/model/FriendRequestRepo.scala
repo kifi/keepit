@@ -1,15 +1,19 @@
 package com.keepit.model
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import scala.concurrent.duration.Duration
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{Key, PrimitiveCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{States, Id, State}
+import com.keepit.common.db.{Id, State}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.eliza.model.MessageHandle
+import com.keepit.eliza.ElizaServiceClient
 
 @ImplementedBy(classOf[FriendRequestRepoImpl])
 trait FriendRequestRepo extends Repo[FriendRequest] {
@@ -34,16 +38,20 @@ class FriendRequestCountCache(stats: CacheStatistics, accessLog: AccessLog, inne
 class FriendRequestRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    friendRequestCountCache: FriendRequestCountCache
+    friendRequestCountCache: FriendRequestCountCache,
+    elizaClient: ElizaServiceClient
   ) extends DbRepo[FriendRequest] with FriendRequestRepo with Logging {
 
   import db.Driver.simple._
+
+//  implicit val messageHandleIdMapper = idMapper[MessageHandle]
 
   type RepoImpl = FriendRequestTable
   class FriendRequestTable(tag: Tag) extends RepoTable[FriendRequest](db, tag, "friend_request") {
     def senderId = column[Id[User]]("sender_id", O.NotNull)
     def recipientId = column[Id[User]]("recipient_id", O.NotNull)
-    def * = (id.?, senderId, recipientId, createdAt, updatedAt, state) <> ((FriendRequest.apply _).tupled, FriendRequest.unapply _)
+    def messagecHandle = column[Option[Id[MessageHandle]]]("message_handle", O.Nullable)
+    def * = (id.?, senderId, recipientId, createdAt, updatedAt, state, messagecHandle) <> ((FriendRequest.apply _).tupled, FriendRequest.unapply _)
   }
 
   def table(tag: Tag) = new FriendRequestTable(tag)
@@ -55,6 +63,15 @@ class FriendRequestRepoImpl @Inject() (
 
   override def deleteCache(model: FriendRequest)(implicit session: RSession): Unit = {
     friendRequestCountCache.remove(FriendRequestCountKey(model.recipientId))
+  }
+
+  override def save(model: FriendRequest)(implicit s: RWSession): FriendRequest = {
+    s.onTransactionSuccess {
+      if (model.state == FriendRequestStates.IGNORED || model.state == FriendRequestStates.ACCEPTED) {
+        model.messageHandle.foreach { id => elizaClient.unsendNotification(id) }
+      }
+    }
+    super.save(model)
   }
 
   def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int = {
