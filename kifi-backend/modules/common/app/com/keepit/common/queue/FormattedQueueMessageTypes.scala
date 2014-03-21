@@ -24,6 +24,7 @@ object RichConnectionUpdateMessage {
       case e: RecordKifiConnection => Companion.writes(e)
       case e: RemoveKifiConnection => Companion.writes(e)
       case e: RecordInvitation => Companion.writes(e)
+      case e: CancelInvitation => Companion.writes(e)
       case e: RecordFriendUserId => Companion.writes(e)
       case e: Block => Companion.writes(e)
       case e: RecordVerifiedEmail => Companion.writes(e)
