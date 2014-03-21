@@ -53,12 +53,12 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def collectionsForBookmarkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new CollectionsForBookmarkCache(stats, accessLog, (outerRepo, 1 day))
+    new CollectionsForKeepCache(stats, accessLog, (outerRepo, 1 day))
 
   @Singleton
   @Provides
   def bookmarkCountCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BookmarkCountForCollectionCache(stats, accessLog, (outerRepo, 3 days, 7 days))
+    new KeepCountForCollectionCache(stats, accessLog, (outerRepo, 3 days, 7 days))
 
   @Singleton
   @Provides

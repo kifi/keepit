@@ -34,12 +34,12 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Singleton
   @Provides
   def collectionsForBookmarkCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new CollectionsForBookmarkCache(stats, accessLog, (outerRepo, 1 day))
+    new CollectionsForKeepCache(stats, accessLog, (outerRepo, 1 day))
 
   @Singleton
   @Provides
   def bookmarkCountForCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BookmarkCountForCollectionCache(stats, accessLog, (outerRepo, 3 days, 7 days))
+    new KeepCountForCollectionCache(stats, accessLog, (outerRepo, 3 days, 7 days))
 
   @Singleton
   @Provides
