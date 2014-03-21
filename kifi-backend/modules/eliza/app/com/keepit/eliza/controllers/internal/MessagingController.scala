@@ -90,8 +90,12 @@ class MessagingController @Inject() (
 
   }
 
+  //The whole code path starting here isn't the best.
+  //What we really need is some sort of notion that a notification has a call to action
+  //and a marker when that was completed.
   def unsendNotification(messageId: Long) = Action { request =>
-    Ok("This doesn't do anything yet")
+    messagingCommander.deleteUserThreadsForMessageId(Id[Message](messageId))
+    Ok("It's a goner.")
   }
 
   def verifyAllNotifications() = Action { request => //Use with caution, very expensive!

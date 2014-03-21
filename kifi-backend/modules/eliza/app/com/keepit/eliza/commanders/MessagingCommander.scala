@@ -14,6 +14,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.heimdal._
 import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
@@ -62,7 +63,8 @@ class MessagingCommander @Inject() (
   messagingAnalytics: MessagingAnalytics,
   notificationRouter: WebSocketRouter,
   urbanAirship: UrbanAirship,
-  shoebox: ShoeboxServiceClient) extends Logging {
+  shoebox: ShoeboxServiceClient,
+  airbrake: AirbrakeNotifier) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -210,6 +212,24 @@ class MessagingCommander @Inject() (
       if (errors.size>0) throw scala.collection.parallel.CompositeThrowable(errors)
     }
     message.id.get
+  }
+
+  def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
+    val (threadExtId, userThreads) : (ExternalId[MessageThread],Seq[UserThread])= db.readOnly { implicit session =>
+      val message = messageRepo.get(id)
+      val threadId = message.thread
+      (message.threadExtId, userThreadRepo.getByThread(threadId))
+    }
+    if (userThreads.length != 1) {
+      airbrake.notify(s"Trying to delete notification for thread ${threadExtId} with not exactly one participant. Not permitted.")
+    } else {
+      userThreads.foreach{ userThread =>
+        db.readWrite { implicit session =>
+          userThreadRepo.delete(userThread)
+        }
+        notificationRouter.sendToUser(userThread.user, Json.arr("remove_thread", threadExtId.id))
+      }
+    }
   }
 
   private def buildMessageNotificationJson(
