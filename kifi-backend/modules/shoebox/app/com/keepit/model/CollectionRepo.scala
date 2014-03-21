@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{SequenceNumber, State, ExternalId, Id}
@@ -11,7 +13,6 @@ import com.keepit.eliza.ElizaServiceClient
 import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
-import com.keepit.heimdal.HeimdalServiceClient
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
@@ -33,7 +34,6 @@ class CollectionRepoImpl @Inject() (
   val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
-  val heimdal: HeimdalServiceClient,
   val db: DataBaseComponent,
   val clock: Clock)
   extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
@@ -96,13 +96,15 @@ class CollectionRepoImpl @Inject() (
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
-    Try {
-      if (model.state == CollectionStates.INACTIVE) {
-        elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", SendableTag.from(model)))
-      } else if (model.id == None) {
-        elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", SendableTag.from(model)))
-      } else {
-        elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", SendableTag.from(model)))
+    session.onTransactionSuccess {
+      Try {
+        if (model.state == CollectionStates.INACTIVE) {
+          elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", SendableTag.from(model)))
+        } else if (model.id == None) {
+          elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", SendableTag.from(model)))
+        } else {
+          elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", SendableTag.from(model)))
+        }
       }
     }
     super.save(newModel)
