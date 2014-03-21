@@ -65,7 +65,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
 
   def forTitle(title: String): Bookmark = {
     inject[Database].readWrite { implicit session =>
-      val bookmarks = inject[BookmarkRepo].getByTitle(title)
+      val bookmarks = inject[KeepRepo].getByTitle(title)
       bookmarks.size === 1
       bookmarks.head
     }
@@ -88,7 +88,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         val userRepo = inject[UserRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
-        val bookmarkRepo = inject[BookmarkRepo]
+        val keepRepo = inject[KeepRepo]
         val keeper = BookmarkSource.keeper
         val initLoad = BookmarkSource.bookmarkImport
         val db = inject[Database]
@@ -104,18 +104,18 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          val bookmark1 = keepRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
-          val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+          val bookmark2 = keepRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
-          val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+          val bookmark3 = keepRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
 
           (user1, user2, bookmark1, bookmark2, bookmark3)
         }
 
         val keeps = db.readWrite {implicit s =>
-          bookmarkRepo.getByUser(user1.id.get, None, None, 100)
+          keepRepo.getByUser(user1.id.get, None, None, 100)
         }
         keeps.size === 2
 
@@ -174,7 +174,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         val userRepo = inject[UserRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
-        val bookmarkRepo = inject[BookmarkRepo]
+        val keepRepo = inject[KeepRepo]
         val keeper = BookmarkSource.keeper
         val initLoad = BookmarkSource.bookmarkImport
         val db = inject[Database]
@@ -190,18 +190,18 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          val bookmark1 = keepRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
-          val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+          val bookmark2 = keepRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
-          val bookmark3 = bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+          val bookmark3 = keepRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
 
           (user1, bookmark1, bookmark2, bookmark3)
         }
 
         val keeps = db.readWrite {implicit s =>
-          bookmarkRepo.getByUser(user.id.get, None, None, 100)
+          keepRepo.getByUser(user.id.get, None, None, 100)
         }
         keeps.size === 2
 

@@ -25,14 +25,14 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
    collectionsForBookmarkCache: CollectionsForBookmarkCache,
-   bookmarkRepoProvider: Provider[BookmarkRepoImpl],
+   keepRepoProvider: Provider[KeepRepoImpl],
    val db: DataBaseComponent,
    val clock: Clock)
   extends DbRepo[KeepToCollection] with KeepToCollectionRepo {
 
   import db.Driver.simple._
 
-  private lazy val bookmarkRepo = bookmarkRepoProvider.get
+  private lazy val keepRepo = keepRepoProvider.get
 
   override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForBookmarkCache.set(CollectionsForBookmarkKey(ktc.bookmarkId),
@@ -76,10 +76,10 @@ class KeepToCollectionRepoImpl @Inject() (
     (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
 
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    import bookmarkRepo.db.Driver.simple._
+    import keepRepo.db.Driver.simple._
     Query((for {
       c <- this.rows
-      b <- bookmarkRepo.rows if b.id === c.bookmarkId && c.collectionId === collId &&
+      b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collId &&
          b.state === BookmarkStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
     } yield c).length).firstOption.getOrElse(0)
   }
@@ -96,10 +96,10 @@ class KeepToCollectionRepoImpl @Inject() (
   }
 
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[BookmarkUriAndTime] = {
-    import bookmarkRepo.db.Driver.simple._
+    import keepRepo.db.Driver.simple._
     val res = (for {
       c <- this.rows
-      b <- bookmarkRepo.rows if b.id === c.bookmarkId && c.collectionId === collectionId &&
+      b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collectionId &&
                                  b.state === BookmarkStates.ACTIVE &&
                                  c.state === KeepToCollectionStates.ACTIVE
     } yield (b.uriId, b.createdAt)) list;

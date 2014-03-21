@@ -29,7 +29,7 @@ private class RawKeepImporterActor @Inject() (
   db: Database,
   rawKeepRepo: RawKeepRepo,
   bookmarkInternerProvider: Provider[BookmarkInterner],
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier,

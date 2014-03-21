@@ -18,7 +18,7 @@ class OrphanCleaner @Inject() (
   nuriRepo: NormalizedURIRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   scraper: ScrapeSchedulerPlugin,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   bookmarkInterner: BookmarkInterner,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier
@@ -55,7 +55,7 @@ class OrphanCleaner @Inject() (
   private def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
     val currentUri = nuriRepo.get(uriId)
     val activeScrapeInfoOption = scrapeInfoRepo.getByUriId(uriId).filterNot(_.state == ScrapeInfoStates.INACTIVE)
-    val isActuallyKept = hasKnownKeep || bookmarkRepo.exists(uriId)
+    val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
 
     if (isActuallyKept) {
       // Make sure the uri is not inactive and has a scrape info
@@ -156,7 +156,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing Bookmarks")
     while (!done) {
-      val bookmarks = db.readOnly{ implicit s => bookmarkRepo.getBookmarksChanged(seq, 100) }
+      val bookmarks = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 100) }
       done = bookmarks.isEmpty
 
       db.readWrite{ implicit s =>

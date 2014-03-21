@@ -43,7 +43,7 @@ class ExtBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   bookmarkInterner: BookmarkInterner,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   collectionRepo: CollectionRepo,
@@ -116,7 +116,7 @@ class ExtBookmarksController @Inject() (
     val url = (request.body \ "url").as[String]
     db.readOnly { implicit s =>
       uriRepo.getByUri(url).flatMap { uri =>
-        bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
+        keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     } map { bookmark =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, BookmarkSource.keeper).build
@@ -137,7 +137,7 @@ class ExtBookmarksController @Inject() (
 
     val bookmarkOpt = db.readOnly { implicit s =>
       uriRepo.getByUri(url).flatMap { uri =>
-        bookmarkRepo.getByUriAndUser(uri.id.get, request.userId)
+        keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     }
     val maybeOk = for {
@@ -187,7 +187,7 @@ class ExtBookmarksController @Inject() (
 
   def getNumMutualKeeps(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val n: Int = db.readOnly { implicit s =>
-      bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
+      keepRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
     }
     Ok(Json.obj("n" -> n))
   }

@@ -81,7 +81,7 @@ class UserCommander @Inject() (
   userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
@@ -222,7 +222,7 @@ class UserCommander @Inject() (
 
   def getUserSegment(userId: Id[User]): UserSegment = {
     val (numBms, numFriends) = db.readOnly{ implicit s => //using cache
-      (bookmarkRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
+      (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
     val segment = UserSegmentFactory(numBms, numFriends)

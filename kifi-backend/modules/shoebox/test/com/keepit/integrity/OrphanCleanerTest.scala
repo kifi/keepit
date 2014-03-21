@@ -24,7 +24,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val user = db.readWrite { implicit session =>
@@ -123,7 +123,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val (user, other) = db.readWrite { implicit session =>
@@ -322,7 +322,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
 
         val user = db.readWrite { implicit session =>

@@ -10,8 +10,8 @@ import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
 import com.keepit.common.logging.Logging
 
 
-@ImplementedBy(classOf[BookmarkRepoImpl])
-trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] with SeqNumberFunction[Bookmark] {
+@ImplementedBy(classOf[KeepRepoImpl])
+trait KeepRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] with SeqNumberFunction[Bookmark] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Bookmark]])(implicit session: RSession): Seq[Bookmark]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
   def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
@@ -38,13 +38,13 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
 }
 
 @Singleton
-class BookmarkRepoImpl @Inject() (
+class KeepRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val countCache: BookmarkCountCache,
   bookmarkUriUserCache: BookmarkUriUserCache,
   latestBookmarkUriCache: LatestBookmarkUriCache
-) extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {
+) extends DbRepo[Bookmark] with KeepRepo with ExternalIdColumnDbFunction[Bookmark] with SeqNumberDbFunction[Bookmark] with Logging {
 
   import db.Driver.simple._
 

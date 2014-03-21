@@ -70,7 +70,7 @@ class BookmarksCommander @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
     uriRepo: NormalizedURIRepo,
-    bookmarkRepo: BookmarkRepo,
+    keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory
@@ -81,9 +81,9 @@ class BookmarksCommander @Inject() (
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
-          bookmarkRepo.getByUserAndCollection(userId, collection.id.get, before, after, count)
+          keepRepo.getByUserAndCollection(userId, collection.id.get, before, after, count)
         case None =>
-          bookmarkRepo.getByUser(userId, before, after, count)
+          keepRepo.getByUser(userId, before, after, count)
       }
       (keeps, collectionOpt)
     }
@@ -132,8 +132,8 @@ class BookmarksCommander @Inject() (
       val bms = keepInfos.map { ki =>
         val url = ki.url
         uriRepo.getByUri(ki.url).flatMap { uri =>
-          bookmarkRepo.getByUriAndUser(uri.id.get, userId).map { b =>
-            bookmarkRepo.save(b withActive false)
+          keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
+            keepRepo.save(b withActive false)
           }
         }
       }.flatten
@@ -153,7 +153,7 @@ class BookmarksCommander @Inject() (
     if (shouldBeUpdated) Some {
       val updatedPrivacy = isPrivate getOrElse keep.isPrivate
       val updatedTitle = title orElse keep.title
-      val updatedKeep = db.readWrite { implicit s => bookmarkRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle)) }
+      val updatedKeep = db.readWrite { implicit s => keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle)) }
       searchClient.updateURIGraph()
       keptAnalytics.updatedKeep(keep, updatedKeep, context)
       updatedKeep
@@ -218,7 +218,7 @@ class BookmarksCommander @Inject() (
     db.readWrite { implicit s =>
       for {
         uri <- uriRepo.getByUri(url)
-        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, userId)
+        bookmark <- keepRepo.getByUriAndUser(uri.id.get, userId)
         collection <- collectionRepo.getOpt(id)
       } {
         keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
@@ -233,7 +233,7 @@ class BookmarksCommander @Inject() (
     db.readWrite { implicit s =>
       for {
         uri <- uriRepo.getByUri(url).toSeq
-        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        bookmark <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
         ktc <- keepToCollectionRepo.getByBookmark(bookmark.id.get)
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
@@ -247,7 +247,7 @@ class BookmarksCommander @Inject() (
     db.readOnly { implicit s =>
       for {
         uri <- uriRepo.getByUri(url).toSeq
-        bookmark <- bookmarkRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        bookmark <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
         collectionId <- keepToCollectionRepo.getCollectionsForBookmark(bookmark.id.get)
       } yield {
         collectionRepo.get(collectionId)
@@ -282,9 +282,9 @@ class BookmarksCommander @Inject() (
 
   def setFirstKeeps(userId: Id[User], keeps: Seq[Bookmark]): Unit = {
     db.readWrite { implicit session =>
-      val origin = bookmarkRepo.oldestBookmark(userId).map(_.createdAt) getOrElse currentDateTime
+      val origin = keepRepo.oldestBookmark(userId).map(_.createdAt) getOrElse currentDateTime
       keeps.zipWithIndex.foreach { case (keep, i) =>
-        bookmarkRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
+        keepRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
       }
     }
   }

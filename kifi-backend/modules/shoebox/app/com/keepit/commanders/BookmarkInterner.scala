@@ -27,7 +27,7 @@ class BookmarkInterner @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
   scraper: ScrapeSchedulerPlugin,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
@@ -151,16 +151,16 @@ class BookmarkInterner @Inject() (
 
   private def internBookmark(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    bookmarkRepo.getByUriAndUserAllStates(uri.id.get, userId) match {
+    keepRepo.getByUriAndUserAllStates(uri.id.get, userId) match {
       case Some(bookmark) =>
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
         val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
-        val persistedKeep = if(keepWithTitle != bookmark) bookmarkRepo.save(keepWithTitle) else bookmark
+        val persistedKeep = if(keepWithTitle != bookmark) keepRepo.save(keepWithTitle) else bookmark
         (false, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, bookmarkRepo.save(BookmarkFactory(uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+        (true, keepRepo.save(BookmarkFactory(uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
     }
   }
 
