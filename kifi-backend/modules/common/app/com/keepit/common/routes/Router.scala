@@ -6,6 +6,7 @@ import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import com.keepit.search.message.ThreadContent
+import com.keepit.eliza.model.MessageHandle
 
 trait Service
 
@@ -190,7 +191,7 @@ object Eliza extends Service {
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")
     def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
     def sendGlobalNotification() = ServiceRoute(POST, "/internal/eliza/sendGlobalNotification")
-    def unsendNotification(id: Long) = ServiceRoute(GET, "/internal/eliza/unsendNotification", Param("id", id))
+    def unsendNotification(messageHandle: Id[MessageHandle]) = ServiceRoute(GET, "/internal/eliza/unsendNotification", Param("id", messageHandle))
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
     def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
     def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long) = ServiceRoute(GET, "/internal/eliza/getThreadContentForIndexing", Param("sequenceNumber", sequenceNumber), Param("maxBatchSize", maxBatchSize))

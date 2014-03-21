@@ -484,6 +484,8 @@ class UserCommander @Inject() (
 
     }
 
+
+
     elizaServiceClient.sendGlobalNotification(
       userIds = Set(friend.id.get),
       title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",

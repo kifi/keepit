@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
-import com.keepit.common.zookeeper.{ServiceInstance, ServiceCluster}
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
@@ -32,7 +32,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]]
 
-  def unsendNotification(id: Long): Unit
+  def unsendNotification(messageHandle: Id[MessageHandle]): Unit
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -92,8 +92,8 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def unsendNotification(id: Long): Unit = {
-    call(Eliza.internal.unsendNotification(id))
+  def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
+    call(Eliza.internal.unsendNotification(messageHandle))
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
@@ -140,7 +140,11 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     p.future
   }
 
-  def unsendNotification(id: Long): Unit = {}
+  var unsentNotificationIds = List[Id[MessageHandle]]()
+
+  def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
+    unsentNotificationIds = messageHandle :: unsentNotificationIds
+  }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())
