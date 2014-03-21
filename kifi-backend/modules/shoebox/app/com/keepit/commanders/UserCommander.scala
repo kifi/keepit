@@ -530,7 +530,7 @@ class UserCommander @Inject() (
 
             (true, "acceptedRequest")
           } getOrElse {
-            friendRequestRepo.save(FriendRequest(senderId = userId, recipientId = user.id.get))
+            val request = friendRequestRepo.save(FriendRequest(senderId = userId, recipientId = user.id.get, messageHandle = None))
 
             SafeFuture{
               //sending 'friend request' email && Notification
@@ -551,7 +551,6 @@ class UserCommander @Inject() (
                 )(session)
 
                 (requestingUser, requestingUserImage)
-
               }
 
               elizaServiceClient.sendGlobalNotification(
@@ -564,6 +563,8 @@ class UserCommander @Inject() (
                 sticky = false,
                 category = NotificationCategory.User.FRIEND_REQUEST
               )
+              //todo(eishay): stash the id into the request object and persist it in the db
+              //friendRequestRepo.save(request.copy(messageHandle = None))
             }
 
             (true, "sentRequest")
