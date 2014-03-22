@@ -21,4 +21,12 @@ class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookSer
     val friendId = friendSocialId.map(id => Left(Id[SocialUserInfo](id))) getOrElse Right(friendEmailAddress.get)
     Ok(JsNumber(wtiCommander.countInvitationsSent(userId, friendId)))
   }
+
+  def blockRichConnection() = Action(parse.json) { request =>
+    val o = request.body
+    val userId = (o \ "userId").as(Id.format[User])
+    val friendId = (o \ "friendSocialId").asOpt(Id.format[SocialUserInfo]).map(Left(_)) getOrElse Right((o \ "friendEmailAddress").as[String])
+    wtiCommander.blockRichConnection(userId, friendId)
+    Ok
+  }
 }

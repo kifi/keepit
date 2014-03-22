@@ -241,6 +241,7 @@ object ABook extends Service {
     def refreshPrefixFiltersByIds() = ServiceRoute(POST, s"/internal/abook/refreshPrefixFiltersByIds")
     def refreshAllPrefixFilters() = ServiceRoute(GET, s"/internal/abook/refreshAllPrefixFilters")
     def richConnectionUpdate() = ServiceRoute(POST, s"/internal/abook/richConnectionUpdate")
+    def blockRichConnection() = ServiceRoute(POST, s"/internal/abook/blockRichConnection")
     def ripestFruit(userId:Id[User], howMany:Int) = ServiceRoute(GET, s"/internal/abook/ripestFruit?userId=${userId.id}&howMany=$howMany")
     def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]) = ServiceRoute(GET, s"/internal/abook/${userId}/countInvitationsSent", friend match {
       case Left(friendSocialId) => Param("friendSocialId", friendSocialId)

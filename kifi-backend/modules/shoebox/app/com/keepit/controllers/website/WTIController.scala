@@ -7,6 +7,7 @@ import play.api.libs.json.Json
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 
 import scala.util.Random
+import com.keepit.commanders.{ShoeboxRichConnectionCommander, FullSocialId}
 
 
 //packet for easy testing. Likely not going to stay.
@@ -16,7 +17,8 @@ object WTIDataPacket {
 }
 
 class WTIController @Inject() (
-  actionAuthenticator: ActionAuthenticator
+  actionAuthenticator: ActionAuthenticator,
+  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   private val rand = new Random(System.currentTimeMillis())
@@ -42,6 +44,16 @@ class WTIController @Inject() (
 
   def wti(page: Int) = JsonAction.authenticated { request =>
     Ok(Json.toJson(makeMeSomeData(20)))
+  }
+
+  def block() = JsonAction.authenticated(parse.json) { request =>
+    (request.body \ "fullSocialId").asOpt[String].flatMap(FullSocialId.fromString) match {
+      case None => BadRequest("0")
+      case Some(fullSocialId) => {
+        shoeboxRichConnectionCommander.block(request.userId, fullSocialId)
+        Ok
+      }
+    }
   }
 }
 
