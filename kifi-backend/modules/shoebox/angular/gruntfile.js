@@ -38,11 +38,13 @@ module.exports = function (grunt) {
         lib: 'lib',
         libCss: [
           'lib/normalize-css/normalize.css',
-          'managed-lib/bootstrap/bootstrap.css'
+          'managed-lib/bootstrap/bootstrap.css',
+          'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css'
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
-          'managed-lib/bootstrap/bootstrap.css'
+          'managed-lib/bootstrap/bootstrap.css',
+          'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'
         ],
         libJs: [
           'lib/lodash/dist/lodash.js',
@@ -63,7 +65,9 @@ module.exports = function (grunt) {
           'lib/angular-moment/angular-moment.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.js',
-          'lib/angular-dragdrop/draganddrop.js'
+          'lib/angular-dragdrop/draganddrop.js',
+          'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js',
+          'managed-lib/ui-slider/slider.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
@@ -85,7 +89,9 @@ module.exports = function (grunt) {
           'lib/angular-moment/angular-moment.min.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
-          'lib/angular-dragdrop/draganddrop.js'
+          'lib/angular-dragdrop/draganddrop.js',
+          'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
+          'managed-lib/ui-slider/slider.js'
         ],
         src: 'src',
         common: 'src/common/build-css',
@@ -101,6 +107,7 @@ module.exports = function (grunt) {
         dir: 'dist',
         css: 'dist/<%= pkg.name %>.css',
         minCss: 'dist/<%= pkg.name %>.min.css',
+        libCss: 'dist/lib.css',
         libMinCss: 'dist/lib.min.css',
         js: 'dist/<%= pkg.name %>.js',
         minJs: 'dist/<%= pkg.name %>.min.js',
@@ -150,7 +157,7 @@ module.exports = function (grunt) {
         dest: '<%= path.dist.minCss %>'
       },
       lib: {
-        src: ['<%= path.client.libCss %>'],
+        src: ['<%= path.dist.libCss %>'],
         dest: '<%= path.dist.libMinCss %>'
       }
     },
@@ -237,6 +244,10 @@ module.exports = function (grunt) {
     },
     concat: {
       // https://github.com/gruntjs/grunt-contrib-concat#options
+      libCss: {
+        src: ['<%= path.client.libCss %>'],
+        dest: '<%= path.dist.libCss %>'
+      },
       libJs: {
         src: ['<%= path.client.libJs %>'],
         dest: '<%= path.dist.libJs %>'
@@ -380,12 +391,12 @@ module.exports = function (grunt) {
     'clean:dist',
     'clean:test',
     'stylus:dev',
-    'cssmin',
     'html2js',
     'copy',
     'jshint',
     'uglify:dist',
-    'concat'
+    'concat',
+    'cssmin'
     //'uglify:libMin'
   ]);
 
@@ -407,12 +418,12 @@ module.exports = function (grunt) {
     'clean:dist',
     'clean:test',
     'stylus:dev',
-    'cssmin',
     'html2js',
     'copy',
     'jshint',
     'uglify:dist',
     'concat',
+    'cssmin',
     //'uglify:libMin',
     'karma:unit'
   ]);

@@ -5,8 +5,11 @@
     <input class="profile-image-file" type="file" name="photo" onchange="angular.element(this).scope().fileChosen(this.files)">
   </label>
   <div kf-modal show="showImageEditDialog.value">
-    <div kf-basic-modal-content with-cancel action-text="Submit" action="uploadImage()" cancel="cancelChooseImage()">
-      <p>Edit your image below<!-- image cropping tool coming --></p>
+    <div kf-basic-modal-content with-cancel title="Position and size of your photo" action-text="Submit" action="uploadImage()" cancel="cancelChooseImage()">
+      <div class="kf-profile-image-dialog-image">
+        <div class="kf-profile-image-dialog-mask"></div>
+      </div>
+      <div class="kf-profile-image-dialog-slider" ui-slider="zoomSlider" ng-model="zoomSlider.value"></div>
     </div>
   </div>
 </div>
