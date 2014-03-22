@@ -59,7 +59,9 @@ trait ABookServiceClient extends ServiceClient {
   def refreshPrefixFiltersByIds(userIds:Seq[Id[User]]):Future[Unit]
   def refreshAllFilters():Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit]
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int]
 }
 
 
@@ -244,11 +246,23 @@ class ABookServiceClientImpl @Inject() (
     callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map{r => ()}
   }
 
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit] = {
+    implicit val userIdFormat = Id.format[User]
+    implicit val socialIdFormat = Id.format[SocialUserInfo]
+    val json = Json.obj("userId" -> userId, "friendSocialId" -> friend.left.toOption, "friendEmailAddress" -> friend.right.toOption)
+    call(ABook.internal.blockRichConnection, json).map(_ => ())
+  }
+
+
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = {
     implicit val idFormatter = Id.format[SocialUserInfo]
     call(ABook.internal.ripestFruit(userId, howMany)).map{ r =>
       r.json.as[Seq[Id[SocialUserInfo]]]
     }
+  }
+
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = {
+    call(ABook.internal.countInvitationsSent(userId, friend)).map(_.json.as[Int])
   }
 }
 
@@ -306,5 +320,10 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
 
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit] = ???
+
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
+
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = ???
+
 }

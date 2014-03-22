@@ -3,7 +3,7 @@ package com.keepit.integrity
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.commanders.BookmarkInterner
+import com.keepit.commanders.KeepInterner
 import com.keepit.common.zookeeper.{SequenceNumberCentralConfigKey, LongCentralConfigKey, CentralConfig}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -19,7 +19,7 @@ class OrphanCleaner @Inject() (
   scrapeInfoRepo: ScrapeInfoRepo,
   scraper: ScrapeSchedulerPlugin,
   keepRepo: KeepRepo,
-  bookmarkInterner: BookmarkInterner,
+  bookmarkInterner: KeepInterner,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier
   ) extends Logging {

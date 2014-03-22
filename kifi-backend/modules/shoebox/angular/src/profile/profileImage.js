@@ -3,8 +3,8 @@
 angular.module('kifi.profileImage', [])
 
 .directive('kfProfileImage', [
-  '$compile', '$templateCache', '$window', '$q', '$http', 'env',
-  function ($compile, $templateCache, $window, $q, $http, env) {
+  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'profileService',
+  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -14,13 +14,99 @@ angular.module('kifi.profileImage', [])
       templateUrl: 'profile/profileImage.tpl.html',
       link: function (scope, element) {
         scope.showImageEditDialog = {value: false};
-        var fileInput = element.find('.profile-image-file');
 
-        var URL = $window.URL || $window.webkitURL,
-          PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
+        var maskOffset = 40, maskSize;
+        var positioning = {};
+        var dragging = {};
+        var isImageLoaded = false;
+        var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
           PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
-
         var photoXhr2;
+
+        function refreshZoom() {
+          if (!isImageLoaded) {
+            return;
+          }
+          var scale = Math.pow(scope.zoomSlider.value / scope.zoomSlider.max, 2);
+          positioning.currentWidth = positioning.minimumWidth + scale * (positioning.maximumWidth - positioning.minimumWidth);
+          positioning.currentHeight = positioning.minimumHeight + scale * (positioning.maximumHeight - positioning.minimumHeight);
+          imageElement.css({backgroundSize: positioning.currentWidth + 'px ' + positioning.currentHeight + 'px'});
+          updateOffset();
+          updateImagePosition();
+        }
+
+        scope.zoomSlider = {
+          orientation: 'horizontal',
+          min: 0,
+          max: 100,
+          range: 'min',
+          change: refreshZoom,
+          slide: refreshZoom
+        };
+
+        function cappedLength(length, low, high) {
+          if (length > low) {
+            return low;
+          }
+          if (length < high) {
+            return high;
+          }
+          return length;
+        }
+
+        function updateImagePosition() {
+          imageElement.css({backgroundPosition: positioning.currentLeft + 'px ' + positioning.currentTop + 'px'});
+        }
+
+        function setPosition(left, top) {
+          positioning.currentLeft = cappedLength(left, maskOffset, imageElement.width() - maskOffset - positioning.currentWidth);
+          positioning.currentTop = cappedLength(top, maskOffset, imageElement.height() - maskOffset - positioning.currentHeight);
+        }
+
+        function updateOffset() {
+          var left = imageElement.width() / 2 - positioning.currentWidth * positioning.centerXRatio;
+          var top = imageElement.height() / 2 - positioning.currentHeight * positioning.centerYRatio;
+          setPosition(left, top);
+        }
+
+        function updateRatio() {
+          positioning.centerXRatio = (imageElement.width() / 2 - positioning.currentLeft) / positioning.currentWidth;
+          positioning.centerYRatio = (imageElement.height() / 2 - positioning.currentTop) / positioning.currentHeight;
+        }
+
+        var fileInput = element.find('.profile-image-file');
+        var imageElement, imageMask;
+        $timeout(function () {
+          imageElement = element.find('.kf-profile-image-dialog-image');
+          imageMask = element.find('.kf-profile-image-dialog-mask');
+          setupImageDragging();
+        });
+
+        function startImageDragging(e) {
+          dragging.initialMouseX = e.pageX;
+          dragging.initialMouseY = e.pageY;
+          dragging.initialLeft = positioning.currentLeft;
+          dragging.initialTop = positioning.currentTop;
+          $document.on('mousemove', updateImageDragging);
+          $document.on('mouseup', stopImageDragging);
+        }
+
+        function updateImageDragging(e) {
+          var left = dragging.initialLeft + e.pageX - dragging.initialMouseX;
+          var top = dragging.initialTop + e.pageY - dragging.initialMouseY;
+          setPosition(left, top);
+          updateImagePosition();
+        }
+
+        function stopImageDragging() {
+          $document.off('mousemove', updateImageDragging);
+          $document.off('mousemove', stopImageDragging);
+          updateRatio();
+        }
+
+        function setupImageDragging() {
+          imageMask.on('mousedown', startImageDragging);
+        }
 
         function uploadPhotoXhr2(files) {
           var file = Array.prototype.filter.call(files, isImage)[0];
@@ -78,10 +164,56 @@ angular.module('kifi.profileImage', [])
         scope.fileChosen = function (files) {
           // this function is called via onchange attribute in input field - we need to let angular know about it
           scope.$apply(function () {
+            isImageLoaded = false;
             scope.files = files;
-            scope.showImageEditDialog.value = true;
+            if (scope.files.length === 0) {
+              return;
+            }
+            // Using a local file reader so that the user can edit the image without uploading it to the server first
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              showImageEditingTool(e.target.result);
+            };
+            reader.readAsDataURL(scope.files[0]);
           });
         };
+
+        function showImageEditingTool(imageUrl) {
+          scope.$apply(function () {
+            imageElement.css({
+              background: 'url(' + imageUrl + ') no-repeat'
+            });
+            maskSize = imageElement.width() - 2 * maskOffset;
+            var image = new Image();
+            image.onload = function () {
+              var img = this;
+              scope.$apply(function () {
+                positioning.imageWidth = img.width || 1;
+                positioning.imageHeight = img.height || 1;
+                var imageRatio = positioning.imageWidth / positioning.imageHeight;
+                var maxZoomFactor = 1.5;
+                if (imageRatio < 1) {
+                  positioning.minimumWidth = maskSize;
+                  positioning.minimumHeight = positioning.minimumWidth / imageRatio;
+                  positioning.maximumWidth = maxZoomFactor * Math.max(positioning.imageWidth, maskSize);
+                  positioning.maximumHeight = positioning.maximumWidth / imageRatio;
+                } else {
+                  positioning.minimumHeight = maskSize;
+                  positioning.minimumWidth = positioning.minimumHeight * imageRatio;
+                  positioning.maximumHeight = maxZoomFactor * Math.max(positioning.imageHeight, maskSize);
+                  positioning.maximumWidth = positioning.maximumHeight * imageRatio;
+                }
+                scope.zoomSlider.value = 50;
+                positioning.centerXRatio = 0.5;
+                positioning.centerYRatio = 0.5;
+                scope.showImageEditDialog.value = true;
+                isImageLoaded = true;
+                refreshZoom();
+              });
+            };
+            image.src = imageUrl;
+          });
+        }
 
         scope.cancelChooseImage = function () {
           fileInput.val(null);
@@ -90,25 +222,21 @@ angular.module('kifi.profileImage', [])
         scope.uploadImage = function () {
           var upload = uploadPhotoXhr2(scope.files);
           if (upload) {
-            var localPhotoUrl = URL.createObjectURL(upload.file);
-            var img = new $window.Image();
-            img.onload = function () {
-              var image = this;
-              upload.promise.then(function (result) {
-                $http.post(PHOTO_CROP_UPLOAD_URL, {
-                  picToken: result && result.token,
-                  picWidth: image.width,
-                  picHeight: image.height,
-                  cropX: image.x,
-                  cropY: image.y,
-                  cropSize: Math.min(image.width, image.height)
-                })
-                  .then(function () {
-                    scope.picUrl = result.url;
-                  });
+            upload.promise.then(function (result) {
+              var scaling = positioning.imageWidth / positioning.currentWidth;
+              var data = {
+                picToken: result && result.token,
+                picWidth: positioning.imageWidth,
+                picHeight: positioning.imageHeight,
+                cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
+                cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
+                cropSize: Math.floor(Math.min(scaling * maskSize, scaling * maskSize))
+              };
+              $http.post(PHOTO_CROP_UPLOAD_URL, data)
+              .then(function () {
+                profileService.fetchMe();
               });
-            };
-            img.src = localPhotoUrl;
+            });
           }
         };
       }

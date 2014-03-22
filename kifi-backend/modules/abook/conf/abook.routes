@@ -31,8 +31,9 @@ POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.aboo
 GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.ABookController.refreshAllPrefixFilters
 
 POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.ABookController.richConnectionUpdate()
+POST     /internal/abook/blockRichConnection                    @com.keepit.abook.ABookWTIController.blockRichConnection()
 GET      /internal/abook/ripestFruit                            @com.keepit.abook.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
-
+GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[String] ?= None)
 
 ->  / common.Routes
 
