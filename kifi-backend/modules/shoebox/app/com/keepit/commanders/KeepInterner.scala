@@ -23,7 +23,7 @@ import org.joda.time.DateTime
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean)
 
 @Singleton
-class BookmarkInterner @Inject() (
+class KeepInterner @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
   scraper: ScrapeSchedulerPlugin,

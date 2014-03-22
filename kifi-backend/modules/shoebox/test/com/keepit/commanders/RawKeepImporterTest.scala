@@ -29,7 +29,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
-        val bookmarkInterner = inject[BookmarkInterner]
+        val bookmarkInterner = inject[KeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json))
 

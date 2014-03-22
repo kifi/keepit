@@ -17,7 +17,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.commanders.BookmarkInterner
+import com.keepit.commanders.KeepInterner
 import com.keepit.scraper.ScrapeSchedulerPlugin
 
 trait UriChangeMessage
@@ -33,7 +33,7 @@ class UriIntegrityActor @Inject()(
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   keepRepo: KeepRepo,
-  bookmarkInterner: BookmarkInterner,
+  bookmarkInterner: KeepInterner,
   deepLinkRepo: DeepLinkRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   scraper: ScrapeSchedulerPlugin,
