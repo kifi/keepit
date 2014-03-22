@@ -13,6 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model.User
 
 import scala.util.Random
+import com.keepit.commanders.{ShoeboxRichConnectionCommander, FullSocialId}
 import scala.concurrent.Future
 
 
@@ -24,6 +25,7 @@ object WTIDataPacket {
 
 class WTIController @Inject() (
   actionAuthenticator: ActionAuthenticator,
+  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
   abook: ABookServiceClient,
   socialUserInfoRepo: SocialUserInfoRepo,
   db: Database
@@ -68,6 +70,16 @@ class WTIController @Inject() (
 
   def wti(page: Int) = JsonAction.authenticatedAsync { request =>
     makeMeSomeRealData(request.userId, 20).map(wtiPackets => Ok(Json.toJson(wtiPackets)))
+  }
+
+  def block() = JsonAction.authenticated(parse.json) { request =>
+    (request.body \ "fullSocialId").asOpt[String].flatMap(FullSocialId.fromString) match {
+      case None => BadRequest("0")
+      case Some(fullSocialId) => {
+        shoeboxRichConnectionCommander.block(request.userId, fullSocialId)
+        Ok
+      }
+    }
   }
 }
 

@@ -12,4 +12,5 @@ class WTICommander @Inject() (richSocialConnectionRepo: RichSocialConnectionRepo
 
   def ripestFruit(userId: Id[User], howMany: Int): Seq[Id[SocialUserInfo]] = db.readOnly { implicit session => richSocialConnectionRepo.dedupedWTIForUser(userId, howMany) }
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]) = db.readOnly { implicit session => richSocialConnectionRepo.countInvitationsSent(userId, friend) }
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Unit = db.readWrite { implicit session => richSocialConnectionRepo.block(userId, friend) }
 }

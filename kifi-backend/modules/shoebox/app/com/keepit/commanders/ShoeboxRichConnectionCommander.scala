@@ -12,7 +12,7 @@ import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration}
 import scala.concurrent.duration._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.reflect.ClassTag
-import com.keepit.common.db.{SequenceNumber, Model}
+import com.keepit.common.db.{Id, SequenceNumber, Model}
 import akka.actor.Scheduler
 import com.keepit.common.time.Clock
 import com.keepit.model.SocialConnection
@@ -147,6 +147,15 @@ class ShoeboxRichConnectionCommander @Inject() (
     }
 
     emails.length
+  }
+
+  def block(userId: Id[User], fullSocialId: FullSocialId): Unit = {
+    val friendId = fullSocialId.identifier.left.map { socialId =>
+      db.readOnly { implicit session =>
+        socialUserInfoRepo.get.get(socialId, fullSocialId.network).id.get
+      }
+    }
+    abook.blockRichConnection(userId, friendId)
   }
 }
 
