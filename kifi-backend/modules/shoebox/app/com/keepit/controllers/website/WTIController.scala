@@ -3,10 +3,17 @@ package com.keepit.controllers.website
 import com.google.inject.Inject
 
 import play.api.libs.json.Json
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.abook.ABookServiceClient
+import com.keepit.model.SocialUserInfoRepo
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.model.User
 
 import scala.util.Random
+import scala.concurrent.Future
 
 
 //packet for easy testing. Likely not going to stay.
@@ -16,7 +23,10 @@ object WTIDataPacket {
 }
 
 class WTIController @Inject() (
-  actionAuthenticator: ActionAuthenticator
+  actionAuthenticator: ActionAuthenticator,
+  abook: ABookServiceClient,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  db: Database
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   private val rand = new Random(System.currentTimeMillis())
@@ -40,8 +50,24 @@ class WTIController @Inject() (
     }
   }
 
-  def wti(page: Int) = JsonAction.authenticated { request =>
-    Ok(Json.toJson(makeMeSomeData(20)))
+  private def makeMeSomeRealData(user: Id[User], howMuch: Int): Future[Seq[WTIDataPacket]]= {
+    abook.ripestFruit(user, 20).map{ socialIds =>
+      val socialUsers = db.readOnly { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
+      socialUsers.map { socialUser =>
+        WTIDataPacket(
+          name = socialUser.fullName,
+          invited = gimmeSomething(Seq(false, false, false, true)),
+          invitedHowLongAgo = Some(rand.nextInt(500)),
+          network = socialUser.networkType.name,
+          image = socialUser.getPictureUrl(64,64).getOrElse(""),
+          inNetworkId = socialUser.socialId.id
+        )
+      }
+    }
+  }
+
+  def wti(page: Int) = JsonAction.authenticatedAsync { request =>
+    makeMeSomeRealData(request.userId, 20).map(wtiPackets => Ok(Json.toJson(wtiPackets)))
   }
 }
 
