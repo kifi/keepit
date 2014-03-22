@@ -28,7 +28,7 @@ private case object ProcessKeeps
 private class RawKeepImporterActor @Inject() (
   db: Database,
   rawKeepRepo: RawKeepRepo,
-  bookmarkInternerProvider: Provider[BookmarkInterner],
+  bookmarkInternerProvider: Provider[KeepInterner],
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userValueRepo: UserValueRepo,
