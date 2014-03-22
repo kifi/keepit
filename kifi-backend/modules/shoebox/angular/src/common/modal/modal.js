@@ -21,6 +21,10 @@ angular.module('kifi.modal', [])
         };
 
         this.hideModal = function (hideAction) {
+          if ($scope.noUserHide && $scope.show) {
+            // hide is disabled for user and was not triggered by change of state
+            return;
+          }
           if (typeof hideAction === 'function') {
             hideAction();
           } else if (defaultHideAction) {
@@ -55,6 +59,7 @@ angular.module('kifi.modal', [])
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
         scope.backdropStyle = {};
+        scope.noUserHide = (attrs.noUserHide !== void 0) || false;
 
         if (attrs.kfWidth) {
           scope.dialogStyle.width = attrs.kfWidth;
