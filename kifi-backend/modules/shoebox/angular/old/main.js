@@ -3710,9 +3710,11 @@ $(function () {
 			collectionId: collId,
 			keeps: $keeps.map(function () {
 				var a = this.querySelector('.keep-title>a');
+				var isPrivate = this.querySelector('.keep-private.on') != null;
 				return {
 					title: a.title,
-					url: a.href
+					url: a.href,
+					isPrivate: isPrivate
 				};
 			}).get()
 		})
