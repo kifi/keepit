@@ -3762,8 +3762,8 @@ $(function () {
 				var a = this.querySelector('.keep-title>a');
 				var isPrivate = this.querySelector('.keep-private.on') != null;
 				return {
-					title: a.title,
-					url: a.href,
+          title: a.title,
+          url: a.href,
           isPrivate: isPrivate
 				};
 			}).get()
