@@ -70,6 +70,8 @@ class ElizaEmailNotifierActor @Inject() (
       ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
     } reverse
 
+    log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed ${userThread.notificationEmailed}")
+
     if (threadItems.nonEmpty) {
       val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
       shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator)
