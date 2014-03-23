@@ -28,13 +28,12 @@ class ForkJoinExecContextMonitor @Inject() (
     log.info(s"[checkFJContext] #queuedSubmission=${fj.getQueuedSubmissionCount} #queuedTasks=${fj.getQueuedTaskCount} fj=${fj}")
     if (fj.getQueuedSubmissionCount > Runtime.getRuntime.availableProcessors * 5) { // todo: tweak; airbrake if this proves useful
       systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG,
-        to = Seq(EmailAddresses.ENG),
+        to = Seq(EmailAddresses.RAY),
         category = NotificationCategory.System.HEALTHCHECK, // may need a new category
         subject = s"fjPool-queuedSubmission=${fj.getQueuedSubmissionCount}",
-        htmlBody = s"ForkJoinPool-backed context queued submission count exceeded threshold ${fj}"))
+        htmlBody = s"ForkJoinPool-backed context queued submission count exceeded threshold $fj"))
     }
   }
-
 }
 
 trait ForkJoinExecContextPlugin extends Plugin
