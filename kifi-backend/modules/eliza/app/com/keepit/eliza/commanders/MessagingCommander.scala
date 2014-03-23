@@ -215,7 +215,7 @@ class MessagingCommander @Inject() (
       (message.threadExtId, userThreadRepo.getByThread(threadId))
     }
     if (userThreads.length != 1) {
-      airbrake.notify(s"Trying to delete notification for thread ${threadExtId} with not exactly one participant. Not permitted.")
+      airbrake.notify(s"Trying to delete notification for thread $threadExtId with not exactly one participant. Not permitted.")
     } else {
       userThreads.foreach{ userThread =>
         db.readWrite { implicit session =>
