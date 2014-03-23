@@ -121,7 +121,7 @@ case class MessageThread(
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
+  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
 
   def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
