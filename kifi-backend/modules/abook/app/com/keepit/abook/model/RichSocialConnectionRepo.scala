@@ -24,6 +24,7 @@ trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
   def dedupedWTIForUser(user: Id[User], howMany: Int)(implicit session: RSession): Seq[Id[SocialUserInfo]]
   def removeRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo])(implicit session: RWSession): Unit
   def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int
+  def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int)(implicit session: RSession): Seq[RichSocialConnection]
 }
 
 
@@ -132,8 +133,8 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def countInviters(friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = friendId match {
-    case Left(friendSocialId) => (for { row <- rows if row.friendSocialId === friendSocialId } yield row.invitedBy).firstOption() getOrElse 0
-    case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitedBy).firstOption() getOrElse 0
+    case Left(friendSocialId) => (for { row <- rows if row.state === RichSocialConnectionStates.ACTIVE && row.friendSocialId === friendSocialId } yield row.invitedBy).firstOption() getOrElse 0
+    case Right(friendEmailAddress) => (for { row <- rows if row.state === RichSocialConnectionStates.ACTIVE && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitedBy).firstOption() getOrElse 0
   }
 
   private def incrementKifiFriendsCounts(friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
@@ -156,12 +157,12 @@ class RichSocialConnectionRepoImpl @Inject() (
         case Left(friendSocialId) => sqlu"""
           UPDATE rich_social_connection
           SET common_kifi_friends_count = common_kifi_friends_count + 1
-          WHERE friend_social_id = $friendSocialId AND user_id IN (#${kifiFriendsIdSet.mkString(",")})
+          WHERE friend_social_id = $friendSocialId AND state='active' AND user_id IN (#${kifiFriendsIdSet.mkString(",")})
         """
         case Right(friendEmailAddress) => sqlu"""
           UPDATE rich_social_connection
           SET common_kifi_friends_count = common_kifi_friends_count + 1
-          WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress AND user_id IN (#${kifiFriendsIdSet.mkString(",")})
+          WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress AND state = 'active' AND user_id IN (#${kifiFriendsIdSet.mkString(",")})
         """
       }
       commonKifiFriendsCount.first()
@@ -187,7 +188,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count + 1
-        WHERE user_id = $userId AND friend_social_id IN (#${socialFriendIdSet.mkString(",")})
+        WHERE user_id = $userId AND friend_social_id AND state='active' IN (#${socialFriendIdSet.mkString(",")})
       """.execute()
     }
 
@@ -197,7 +198,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       val q = sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count + 1
-        WHERE user_id = $userId AND connection_type = '#${Email}' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
+        WHERE user_id = $userId AND connection_type = '#${Email}' AND friend_email_address AND state='active' IN (#${emailFriendSet.mkString(",")})
       """
       q.execute()
     }
@@ -209,7 +210,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count - 1
-        WHERE user_id = $userId AND friend_social_id IN (#${socialFriendIdSet.mkString(",")})
+        WHERE user_id = $userId AND friend_social_id AND state='active' IN (#${socialFriendIdSet.mkString(",")})
       """.execute()
     }
 
@@ -219,7 +220,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       val q = sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count - 1
-        WHERE user_id = $userId AND connection_type = '#${Email}' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
+        WHERE user_id = $userId AND connection_type = '#${Email}' AND friend_email_address AND state='active' IN (#${emailFriendSet.mkString(",")})
       """
       q.execute()
     }
@@ -278,6 +279,11 @@ class RichSocialConnectionRepoImpl @Inject() (
       case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row.blocked).update(true)
       case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row.blocked).update(true)
     }
+  }
+
+  def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int)(implicit session: RSession): Seq[RichSocialConnection] = {
+    val q = for { row <- rows if row.state === RichSocialConnectionStates.ACTIVE && row.userId === userId && row.friendUserId.isNull && row.blocked === false} yield row
+    q.sortBy(r => (r.commonKifiFriendsCount desc, r.kifiFriendsCount desc)).drop(page * pageSize).take(pageSize).list
   }
 
   def dedupedWTIForUser(user: Id[User], howMany: Int)(implicit session: RSession): Seq[Id[SocialUserInfo]] = {
