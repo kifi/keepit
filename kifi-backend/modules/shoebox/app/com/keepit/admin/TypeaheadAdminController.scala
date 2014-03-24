@@ -100,8 +100,8 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def search(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    typeaheadCommander.searchWithInviteStatus(userId, query, None, false) map { res => // hack
+  def search(userId:Id[User], query:String, limit:Int) = AdminHtmlAction.authenticatedAsync { request =>
+    typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), false) map { res => // hack
     // Ok(res.map(c => s"label=${c.label} score=${c.score} status=${c.status} value=${c.value}<br/>").mkString(""))
     Ok(
         "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td></tr>" +

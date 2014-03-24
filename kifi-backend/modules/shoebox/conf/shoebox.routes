@@ -442,7 +442,7 @@ POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminC
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], search:String ?= "")
 GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], search:String ?= "")
-GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], search:String ?= "")
+GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], search:String ?= "", limit:Int ?= 5)
 GET     /admin/typeahead/refreshPrefixFilter        @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFilter(userId:Id[User])
 POST    /admin/typeahead/refreshPrefixFiltersByIds  @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFiltersByIds()
 GET     /admin/typeahead/refreshAllPrefixFilters    @com.keepit.controllers.admin.TypeaheadAdminController.refreshAllPrefixFilters()
