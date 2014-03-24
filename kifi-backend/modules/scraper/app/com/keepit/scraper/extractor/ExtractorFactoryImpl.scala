@@ -8,12 +8,14 @@ import com.google.inject.{Singleton, Inject}
 @Singleton
 class ExtractorFactoryImpl @Inject() (
     youtubeExtractorProvider: YoutubeExtractorProvider,
+    simpleJsoupBasedExtractorProvider: SimpleJsoupBasedExtractorProvider,
     linkProcessingExtractorProvider: LinkProcessingExtractorProvider) extends ExtractorFactory with Logging {
 
   val all = Seq(
     youtubeExtractorProvider,
     GithubExtractorProvider,
     LinkedInExtractorProvider,
+    simpleJsoupBasedExtractorProvider,
     linkProcessingExtractorProvider
   )
 

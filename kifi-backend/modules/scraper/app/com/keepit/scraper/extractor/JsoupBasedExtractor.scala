@@ -28,8 +28,15 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
     content.take(maxContentChars)
   }
 
-  def getMetadata(name: String): Option[String] = toOption(doc.select("meta[name=" + name + "]").attr("content"))
-                                          .orElse(toOption(doc.select("meta[property=" + name + "]").attr("content")))
+  def getMetadata(name: String): Option[String] = {
+    if (name.toLowerCase == "title") {
+      toOption(doc.select("head title").text)
+    } else {
+      None
+    }
+    .orElse(toOption(doc.select("meta[name=" + name + "]").attr("content")))
+    .orElse(toOption(doc.select("meta[property=" + name + "]").attr("content")))
+  }
 
   def getLinks(name: String): Set[String] = {
     val urls = doc.select("link[ref=" + name + "]").iterator() map {e => e.attr("href")}
