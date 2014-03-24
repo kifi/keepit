@@ -166,17 +166,12 @@ class LocalRichConnectionCommander @Inject() (
       var notDone = true
       while (notDone) {
         var batch : Seq[EContact] = db.readOnly { implicit session => eContactRepo.get.getIdRangeBatch(Id[EContact](maxSeen), Id[EContact](superDuperMaximumId), 10000) }
-        if (batch.length == 0){
-          notDone = false
-        } else {
-          var localMaxSeen = 0L
-          batch.foreach { eContact =>
-            localMaxSeen = math.max(eContact.id.get.id, localMaxSeen)
-            processEContact(eContact)
-          }
-          maxSeen = math.max(localMaxSeen, maxSeen+1)
+        var localMaxSeen = 0L
+        batch.foreach { eContact =>
+          localMaxSeen = math.max(eContact.id.get.id, localMaxSeen)
+          processEContact(eContact)
         }
-
+        maxSeen = math.max(localMaxSeen, maxSeen+10000)
       }
     }
   }
