@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{Inject, Singleton, Provider}
 
 import com.kifi.franz.SQSQueue
 
@@ -26,6 +26,7 @@ import scala.util.Left
 import scala.util.Failure
 import scala.util.Right
 import scala.util.Success
+import scala.math
 
 
 @Singleton
@@ -35,8 +36,8 @@ class LocalRichConnectionCommander @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     repo: RichSocialConnectionRepo,
-    eContactRepo: EContactRepo,
-    scheduler: Scheduler
+    scheduler: Scheduler,
+    eContactRepo: Provider[EContactRepo]
   ) extends RichConnectionCommander with Logging {
 
 
@@ -45,6 +46,7 @@ class LocalRichConnectionCommander @Inject() (
     if (serviceDiscovery.isLeader()) {
       log.info("RConn: I'm the leader, let's go")
       processQueueItems()
+      oneTimeAbookDataSync() //ZZZ to be removed after run
     } else {
       log.info("RConn: I'm not the leader, nothing to do yet")
       scheduler.scheduleOnce(1 minute){
@@ -108,13 +110,13 @@ class LocalRichConnectionCommander @Inject() (
 
         case RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]], invitationNumber: Int) => {
           db.readWrite { implicit session =>
-            val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get(friendEContact.get).email))
+            val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get.get(friendEContact.get).email))
             repo.recordInvitation(userId, friend, invitationNumber) }
         }
 
         case CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEContact: Option[Id[EContact]]) => {
           db.readWrite { implicit session =>
-            val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get(friendEContact.get).email))
+            val friend = friendSocialId.map(Left(_)).getOrElse(Right(eContactRepo.get.get(friendEContact.get).email))
             repo.cancelInvitation(userId, friend) }
         }
 
@@ -135,12 +137,47 @@ class LocalRichConnectionCommander @Inject() (
         case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => // Ignore
 
         case RecordVerifiedEmail(userId: Id[User], email: String) => {
-          db.readWrite { implicit session => eContactRepo.recordVerifiedEmail(email: String, userId) }
+          db.readWrite { implicit session => eContactRepo.get.recordVerifiedEmail(email: String, userId) }
         }
       }
       Future.successful(())
     } catch {
       case t: Throwable => Future.failed(t)
+    }
+  }
+
+  def processEContact(eContact: EContact): Unit = {
+    db.readWrite { implicit session =>
+      repo.internRichConnection(eContact.userId, None, Right(eContact))
+      eContact.contactUserId.foreach{ contactUserId =>
+        repo.recordFriendUserId(Right(eContact.email), contactUserId)
+      }
+    }
+  }
+
+
+  //ZZZ this will be removed once run once successfully
+  var syncIsRunning = false
+  def oneTimeAbookDataSync(): Unit =  if (!syncIsRunning) synchronized {
+    if (!syncIsRunning) {
+      syncIsRunning = true;
+      val superDuperMaximumId = 1000000
+      var maxSeen = 0L
+      var notDone = true
+      while (notDone) {
+        var batch : Seq[EContact] = db.readOnly { implicit session => eContactRepo.get.getIdRangeBatch(Id[EContact](maxSeen), Id[EContact](superDuperMaximumId), 10000) }
+        if (batch.length == 0){
+          notDone = false
+        } else {
+          var localMaxSeen = 0L
+          batch.foreach { eContact =>
+            localMaxSeen = math.max(eContact.id.get.id, localMaxSeen)
+            processEContact(eContact)
+          }
+          maxSeen = math.max(localMaxSeen, maxSeen+1)
+        }
+
+      }
     }
   }
 }

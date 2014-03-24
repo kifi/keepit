@@ -32,7 +32,8 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
     TestSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
     FakeAirbrakeModule(),
-    ABookCacheModule(HashMapMemoryCacheModule())
+    ABookCacheModule(HashMapMemoryCacheModule()),
+    FakeAbookRepoChangeListenerModule()
   )
 
   "ABook Commander" should {
