@@ -17,9 +17,9 @@ angular.module('kifi.friends', [
 ])
 
 .controller('FriendsCtrl', [
-  '$scope', 'profileService', '$window',
+  '$scope', '$window',
   function ($scope, $window) {
-    //$window.document.title = 'Kifi • Your Friends on Kifi';
+    $window.document.title = 'Kifi • Your Friends on Kifi';
 
     // plenty to do!
   }
