@@ -13,12 +13,14 @@ import com.keepit.abook.ABookServiceClient
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
-import play.api.libs.json.JsArray
+import play.api.libs.json.{Json, JsArray}
+import com.keepit.commanders.TypeaheadCommander
 
 class TypeaheadAdminController @Inject() (
   db:Database,
   actionAuthenticator:ActionAuthenticator,
   abookServiceClient:ABookServiceClient,
+  typeaheadCommander:TypeaheadCommander,
   econtactTypeahead:EContactTypeahead,
   socialUserTypeahead:SocialUserTypeahead) extends AdminController(actionAuthenticator) {
 
@@ -82,7 +84,7 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def search(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+  def searchOld(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     val socialF = SafeFuture {
       socialUserTypeahead.search(userId, query)(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) getOrElse Seq.empty[SocialUserBasicInfo]
     }
@@ -95,6 +97,17 @@ class TypeaheadAdminController @Inject() (
     } yield {
       Ok(socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
          contactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+    }
+  }
+
+  def search(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+    typeaheadCommander.searchWithInviteStatus(userId, query, None, false) map { res => // hack
+    // Ok(res.map(c => s"label=${c.label} score=${c.score} status=${c.status} value=${c.value}<br/>").mkString(""))
+    Ok(
+        "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td></tr>" +
+        res.map(c => s"<tr><td>${c.label}</td><td>${c.networkType}</td><td>${c.score}</td><td>${c.status}</td><td>${c.value}</td></tr>").mkString("") +
+        "</table>"
+      )
     }
   }
 
