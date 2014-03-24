@@ -8,6 +8,7 @@ import com.keepit.model._
 import com.keepit.commanders.UserCommander
 
 import views.html
+import com.keepit.abook.ABookServiceClient
 
 class AdminInvitationController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -15,7 +16,8 @@ class AdminInvitationController @Inject() (
   invitationRepo: InvitationRepo,
   socialUserRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
-  userCommander: UserCommander)
+  userCommander: UserCommander,
+  abook: ABookServiceClient)
     extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
@@ -100,5 +102,19 @@ class AdminInvitationController @Inject() (
 
   private def notifyAcceptedUser(user: User): Unit = {
     userCommander.sendWelcomeEmail(user)
+  }
+
+  def addEmailAddresses() = AdminHtmlAction.authenticated() { implicit request =>
+    val relevantInvitations = db.readOnly { implicit request => invitationRepo.all().filter(invitation => invitation.recipientEContactId.isDefined && invitation.recipientEmailAddress.isEmpty) }
+    abook.getEContactsByIds(relevantInvitations.map(_.recipientEContactId.get)).map { eContacts =>
+      val emailByEContact = eContacts.map { eContact => eContact.id.get -> eContact.email }.toMap
+      db.readWrite { implicit session =>
+        relevantInvitations.foreach { invitation =>
+          val latestInvitation = invitationRepo.get(invitation.id.get)
+          invitationRepo.save(latestInvitation.copy(recipientEmailAddress = emailByEContact.get(latestInvitation.recipientEContactId.get)))
+        }
+      }
+    }
+    Ok(relevantInvitations)
   }
 }
