@@ -34,6 +34,8 @@ import scala.util.Try
 import com.keepit.common.queue.{RecordInvitation, CancelInvitation}
 import com.keepit.abook.ABookServiceClient
 
+import akka.actor.Scheduler
+
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String])
 
 object FullSocialId {
@@ -92,7 +94,8 @@ class InviteCommander @Inject() (
   clock: Clock,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander,
-  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander) extends Logging {
+  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
+  scheduler: Scheduler) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
 
@@ -179,10 +182,25 @@ class InviteCommander @Inject() (
         }
       }
 
-      eliza.sendToUser(userId, Json.arr("new_friends", Set(basicUserRepo.load(senderUserId))))
-      eliza.sendToUser(senderUserId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+      notifyClientsOfConnection(userId, senderUserId);
 
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
+    }
+  }
+
+  private def notifyClientsOfConnection(user1: Id[User], user2: Id[User]) = {
+    delay{
+      db.readOnly { implicit session =>
+        eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
+        eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
+      }
+    }
+  }
+
+  private def delay(f: => Unit) = {
+    import scala.concurrent.duration._
+    scheduler.scheduleOnce(5 minutes) {
+      f
     }
   }
 
