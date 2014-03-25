@@ -62,7 +62,7 @@ class ElizaEmailNotifierActor @Inject() (
     val now = clock.now
     airbrake.verify(userThread.replyable, s"$userThread not replyable")
     airbrake.verify(userThread.unread, s"$userThread not unread")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt 30min ago")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt more then 30min ago")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"$userThread notificationUpdatedAt in the future")
     airbrake.verify(!userThread.notificationEmailed, s"$userThread notification emailed")
 

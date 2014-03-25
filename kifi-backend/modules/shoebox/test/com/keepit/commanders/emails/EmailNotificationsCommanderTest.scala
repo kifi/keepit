@@ -39,7 +39,7 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
         val recipientUserId: Id[User] = george.id.get
         val deepLocator: DeepLocator = link.deepLocator
 
-        commander.sendUnreadMessages(threadItems, otherParticipantIds, recipientUserId, title, deepLocator)
+        commander.sendUnreadMessages(threadItems, otherParticipantIds, recipientUserId, title, deepLocator, None)
 
         val outbox = inject[FakeOutbox]
         println(outbox.head.htmlBody)
