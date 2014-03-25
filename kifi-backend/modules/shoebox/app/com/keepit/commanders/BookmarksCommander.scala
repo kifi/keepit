@@ -65,7 +65,7 @@ object KeepInfosWithCollection {
 
 class BookmarksCommander @Inject() (
     db: Database,
-    bookmarkInterner: BookmarkInterner,
+    bookmarkInterner: KeepInterner,
     searchClient: SearchServiceClient,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,

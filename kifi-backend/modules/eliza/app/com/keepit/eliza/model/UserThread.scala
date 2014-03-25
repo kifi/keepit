@@ -36,5 +36,5 @@ case class UserThread(
   extends Model[UserThread] {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime)
+  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
 }

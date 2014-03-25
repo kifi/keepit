@@ -11,7 +11,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier, HealthcheckPlugin}
 import com.keepit.common.time._
-import com.keepit.commanders.BookmarkInterner
+import com.keepit.commanders.KeepInterner
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -42,7 +42,7 @@ private object SendableBookmark {
 class ExtBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  bookmarkInterner: BookmarkInterner,
+  bookmarkInterner: KeepInterner,
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,

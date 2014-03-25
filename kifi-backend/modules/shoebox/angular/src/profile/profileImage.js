@@ -14,6 +14,8 @@ angular.module('kifi.profileImage', [])
       templateUrl: 'profile/profileImage.tpl.html',
       link: function (scope, element) {
         scope.showImageEditDialog = {value: false};
+        scope.showImageUploadingModal = {value: false};
+        scope.showImageUploadFailedDialog = {value: false};
 
         var maskOffset = 40, maskSize;
         var positioning = {};
@@ -215,11 +217,18 @@ angular.module('kifi.profileImage', [])
           });
         }
 
-        scope.cancelChooseImage = function () {
+        scope.resetChooseImage = function () {
           fileInput.val(null);
         };
 
+        function imageUploadError() {
+          scope.showImageUploadingModal.value = false;
+          scope.showImageUploadFailedDialog.value = true;
+          scope.resetChooseImage();
+        }
+
         scope.uploadImage = function () {
+          scope.showImageUploadingModal.value = true;
           var upload = uploadPhotoXhr2(scope.files);
           if (upload) {
             upload.promise.then(function (result) {
@@ -235,8 +244,12 @@ angular.module('kifi.profileImage', [])
               $http.post(PHOTO_CROP_UPLOAD_URL, data)
               .then(function () {
                 profileService.fetchMe();
-              });
-            });
+                scope.showImageUploadingModal.value = false;
+                scope.resetChooseImage();
+              }, imageUploadError);
+            }, imageUploadError);
+          } else {
+            imageUploadError();
           }
         };
       }

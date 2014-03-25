@@ -34,6 +34,8 @@ import scala.util.Try
 import com.keepit.common.queue.{RecordInvitation, CancelInvitation}
 import com.keepit.abook.ABookServiceClient
 
+import akka.actor.Scheduler
+
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String])
 
 object FullSocialId {
@@ -92,7 +94,8 @@ class InviteCommander @Inject() (
   clock: Clock,
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander,
-  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander) extends Logging {
+  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
+  scheduler: Scheduler) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
 
@@ -179,10 +182,25 @@ class InviteCommander @Inject() (
         }
       }
 
-      eliza.sendToUser(userId, Json.arr("new_friends", Set(basicUserRepo.load(senderUserId))))
-      eliza.sendToUser(senderUserId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+      notifyClientsOfConnection(userId, senderUserId);
 
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
+    }
+  }
+
+  private def notifyClientsOfConnection(user1: Id[User], user2: Id[User]) = {
+    delay{
+      db.readOnly { implicit session =>
+        eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
+        eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
+      }
+    }
+  }
+
+  private def delay(f: => Unit) = {
+    import scala.concurrent.duration._
+    scheduler.scheduleOnce(5 minutes) {
+      f
     }
   }
 
@@ -213,7 +231,7 @@ class InviteCommander @Inject() (
     val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
 
     val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
-    val subject = inviteInfo.subject.getOrElse("Please accept your Kifi Invitation")
+    val subject = inviteInfo.subject.getOrElse("Join me on kifi")
     log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] sending with subject=$subject message=$message")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
     val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(GenericEmailAddress(c.email)))}"

@@ -9,16 +9,11 @@ angular.module('kifi.inviteService', [])
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
-    var friends = [],
-        requests = [],
-        whoToInviteList = [],
+    var whoToInviteList = [],
         inviteList = [], // used for typeahead dropdown for invite search
         platformFilter;
 
     var api = {
-      connectWithKifiUser: function (userId) {
-        return null; // todo!
-      },
 
       invite: function (platform, identifier) {
         return null; // todo!
@@ -34,15 +29,8 @@ angular.module('kifi.inviteService', [])
           // handle no platform, which means search everywhere
         }
         return null; // todo!
-      },
-
-      getKifiFriends: function () {
-        return $q.when(friends);
-      },
-
-      getRequests: function () {
-        return $q.when(requests); // todo!
       }
+
     };
 
     return api;

@@ -20,6 +20,8 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType}
 import scala.collection.mutable
 import com.keepit.commanders.TypeaheadCommander
 
+case class TypeaheadSearchRequest(query:String, limit:Int, pictureUrl:Boolean, inviteStatus:Boolean)
+
 class TypeaheadController @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
@@ -27,9 +29,8 @@ class TypeaheadController @Inject() (
   actionAuthenticator: ActionAuthenticator
  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
-  // incompatible with UserCommander.getAllConnections
-  def getAllConnections(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean) = JsonAction.authenticatedAsync {  request =>
-    commander.queryAll(request.userId, search, network, limit, pictureUrl) map { res =>
+  def searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean) = JsonAction.authenticatedAsync { request =>
+    commander.searchWithInviteStatus(request.userId, query.getOrElse(""), limit, pictureUrl, filterJoinedUsers) map { res =>
       Ok(Json.toJson(res))
     }
   }
