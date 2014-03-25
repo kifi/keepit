@@ -19,7 +19,7 @@ class SendgridController  @Inject() (
   sendgridCommander: SendgridCommander)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
-  def parseEvent() = Action(parse.json) { request =>
+  def parseEvent() = Action(parse.tolerantJson) { request =>
     val events: Seq[SendgridEvent] = try {
       val json = request.body
       Json.fromJson[Seq[SendgridEvent]](json) match {

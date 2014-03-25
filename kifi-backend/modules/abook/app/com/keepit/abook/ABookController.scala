@@ -125,7 +125,7 @@ class ABookController @Inject() (
     }
   }
 
-  def getEContactsByIds() = Action(parse.json) { request =>
+  def getEContactsByIds() = Action(parse.tolerantJson) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
     val contacts = db.readOnly { implicit ro =>
@@ -368,7 +368,7 @@ class ABookController @Inject() (
     }
   }
 
-  def richConnectionUpdate() = Action(parse.json) { request =>
+  def richConnectionUpdate() = Action(parse.tolerantJson) { request =>
     val updateMessage = request.body.as[RichConnectionUpdateMessage]
     richConnectionCommander.processUpdateImmediate(updateMessage)
     Ok("")

@@ -37,7 +37,7 @@ class MobileAuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  def accessTokenSignup(providerName:String) = Action(parse.json) { implicit request =>
+  def accessTokenSignup(providerName:String) = Action(parse.tolerantJson) { implicit request =>
     val resOpt = for {
       provider   <- Registry.providers.get(providerName)
       oauth2Info <- request.body.asOpt[OAuth2Info]
@@ -90,7 +90,7 @@ class MobileAuthController @Inject() (
     resOpt getOrElse BadRequest(Json.obj("error" -> "invalid arguments"))
   }
 
-  def accessTokenLogin(providerName: String) = Action(parse.json) { implicit request =>
+  def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
     log.info(s"[accessTokenLogin($providerName)] ${request.body}")
     val resOpt:Option[Result] =
       for {

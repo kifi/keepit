@@ -68,7 +68,7 @@ class SearchController @Inject()(
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 
-  def searchWithConfig() = Action(parse.json){ request =>
+  def searchWithConfig() = Action(parse.tolerantJson){ request =>
     val js = request.body
     val userId = Id[User]((js \ "userId").as[Long])
     val query = (js \ "query").as[String]
@@ -83,7 +83,7 @@ class SearchController @Inject()(
     }))
   }
 
-  def searchUsers() = Action(parse.json){ request =>
+  def searchUsers() = Action(parse.tolerantJson){ request =>
     val UserSearchRequest(userId, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)

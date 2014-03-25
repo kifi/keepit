@@ -23,7 +23,7 @@ class EmailNotificationsController @Inject() (
 
   implicit val userIdFormat = Id.format[User]
 
-  def sendUnreadMessages = Action(parse.json) { request =>
+  def sendUnreadMessages = Action(parse.tolerantJson) { request =>
     val threadItems = (request.body \ "threadItems").as[Seq[ThreadItem]]
     val otherParticipants = (request.body \ "otherParticipants").as[Seq[Id[User]]]
     val recipientUserId = (request.body \ "userId").as[Id[User]]

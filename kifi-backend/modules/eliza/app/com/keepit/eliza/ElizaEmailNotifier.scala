@@ -9,10 +9,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.common.strings._
-import com.keepit.model.{NotificationCategory, UserStates, User}
+import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.{ElectronicMail,EmailAddresses}
 import com.keepit.inject.AppScoped
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -20,7 +19,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Inject, ImplementedBy}
 
 import scala.concurrent.duration._
-import scala.concurrent.Await
 import scala.util.matching.Regex.Match
 
 import akka.util.Timeout
@@ -62,9 +60,9 @@ class ElizaEmailNotifierActor @Inject() (
     val now = clock.now
     airbrake.verify(userThread.replyable, s"$userThread not replyable")
     airbrake.verify(userThread.unread, s"$userThread not unread")
+    airbrake.verify(!userThread.notificationEmailed, s"$userThread notification emailed")
     airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt more then 30min ago")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"$userThread notificationUpdatedAt in the future")
-    airbrake.verify(!userThread.notificationEmailed, s"$userThread notification emailed")
 
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
 

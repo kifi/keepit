@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 class SearchEventController @Inject() (searchEventCommander: SearchEventCommander) extends SearchServiceController {
 
-  def updateBrowsingHistory(userId: Id[User]) = Action(parse.json) { request =>
+  def updateBrowsingHistory(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     SafeFuture{
       val browsedUris = request.body.as[JsArray].value.map(_.asOpt(Id.format[NormalizedURI])).flatten
       searchEventCommander.browsedUris(userId, browsedUris)
