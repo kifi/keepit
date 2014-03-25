@@ -28,7 +28,7 @@ angular.module('kifi.invite.wtiService', [])
         return lastRequest;
       },
       hasMore: function () {
-        return more && page < 5;
+        return more;
       },
       loadInitial: function () {
         if (list.length === 0) {
