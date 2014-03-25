@@ -22,6 +22,7 @@ import play.api.libs.json.JsObject
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
+import com.keepit.abook.model.RichSocialConnection
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -135,6 +136,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   def getResultOptionFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[Option[T]] = GetResult[Option[T]](mapper.nextOption)
 
   implicit val getDateTimeResult = getResultFromMapper[DateTime]
+  implicit val getSocialNetworkTypeResult = getResultFromMapper[SocialNetworkType]
   implicit def getSequenceNumberResult[T] = getResultFromMapper[SequenceNumber[T]]
   implicit def getIdResult[M <: Model[M]] = getResultFromMapper[Id[M]]
   implicit def getOptIdResult[M <: Model[M]] = getResultOptionFromMapper[Id[M]]

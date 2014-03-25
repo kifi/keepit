@@ -1,7 +1,7 @@
 package com.keepit.abook.model
 
 import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
-import com.keepit.common.db.Id
+import com.keepit.common.db.{State, Id}
 import com.keepit.model.{EContact, User, SocialUserInfo}
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
@@ -10,6 +10,8 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType}
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import scala.slick.jdbc.StaticQuery.interpolation
 import com.keepit.common.KestrelCombinator
+import scala.slick.jdbc.GetResult
+import org.joda.time.DateTime
 
 
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])
@@ -59,6 +61,27 @@ class RichSocialConnectionRepoImpl @Inject() (
 
   def deleteCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
   def invalidateCache(model: RichSocialConnection)(implicit session: RSession): Unit = {}
+
+  private implicit val getRichSocialConnectionResult: GetResult[RichSocialConnection] = GetResult { r =>
+    RichSocialConnection(
+      r.<<[Option[Id[RichSocialConnection]]],
+      r.<<[DateTime],
+      r.<<[DateTime],
+      r.<<[State[RichSocialConnection]],
+      r.<<[Id[User]],
+      r.<<[Option[Id[SocialUserInfo]]],
+      r.<<[SocialNetworkType],
+      r.<<[Option[Id[SocialUserInfo]]],
+      r.<<[Option[String]],
+      r.<<[Option[String]],
+      r.<<[Option[Id[User]]],
+      r.<<[Int],
+      r.<<[Int],
+      r.<<[Int],
+      r.<<[Int],
+      r.<<[Boolean]
+    )
+  }
 
   private val Email: SocialNetworkType = SocialNetworks.EMAIL
   private val FortyTwo: SocialNetworkType = SocialNetworks.FORTYTWO
@@ -301,14 +324,19 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int)(implicit session: RSession): Seq[RichSocialConnection] = {
-    val q = for { row <- rows if
-      row.state === RichSocialConnectionStates.ACTIVE &&
-      row.connectionType =!= FortyTwo &&
-      row.userId === userId &&
-      row.friendUserId.isNull &&
-      row.blocked === false
-    } yield row
-    q.sortBy(r => (r.commonKifiFriendsCount desc, r.kifiFriendsCount desc)).drop(page * pageSize).take(pageSize).list
+    val q = sql"""
+      SELECT * FROM rich_social_connection
+      WHERE
+        state = 'active' AND
+        connection_type != '#$FortyTwo' AND
+        user_id = $userId AND
+        friend_user_id is NULL AND
+        blocked = false AND
+        friend_name NOT IN (SELECT DISTINCT friend_name FROM rich_social_connection WHERE user_id = $userId AND friend_user_id is NOT NULL)
+      ORDER BY common_kifi_friends_count DESC, kifi_friends_count DESC
+      LIMIT ${page * pageSize}, $pageSize
+    """
+    q.as[RichSocialConnection].list()
   }
 
   def dedupedWTIForUser(user: Id[User], howMany: Int)(implicit session: RSession): Seq[Id[SocialUserInfo]] = {
