@@ -39,6 +39,13 @@ class LoggingFilter() extends EssentialFilter {
 
         def logTime(result: SimpleResult): SimpleResult = {
           midFlightRequests.goingOut(rh)
+
+          //report headers and query string only if there was an error
+          val (reqHeaders, queryString) = if (result.header.status/100 >= 4) {
+            (rh.headers.toSimpleMap.mkString(","), rh.rawQueryString)
+          } else (null, null) //null is bad, in this case its ok
+
+
           val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
           val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
           val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
@@ -48,6 +55,8 @@ class LoggingFilter() extends EssentialFilter {
             remoteLeader = remoteIsLeader,
             remoteServiceId = remoteServiceId,
             remoteServiceType = remoteServiceType,
+            remoteHeaders = reqHeaders,
+            query = queryString,
             method = rh.method,
             currentRequestCount = countStart,
             url = rh.uri,

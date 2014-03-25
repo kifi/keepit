@@ -50,7 +50,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           remoteUp: String = null,
           remoteLeader: String = null,
           remoteServiceId: String = null,
-          remoteIsLeader: String = null,
+          remoteHeaders: String = null,
           query: String = null,
           trackingId: String = null,
           method: String = null,
@@ -74,6 +74,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       remoteLeader = Option(remoteLeader),
       remoteServiceType = Option(remoteServiceType),
       remoteServiceId = Option(remoteServiceId),
+      remoteHeaders = Option(remoteHeaders),
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
@@ -99,6 +100,7 @@ case class AccessLogEvent(
   remoteUp: Option[String],
   remoteLeader: Option[String],
   remoteServiceId: Option[String],
+  remoteHeaders: Option[String],
   query: Option[String],
   trackingId: Option[String],
   method: Option[String],
@@ -147,6 +149,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.remoteServiceId.map("remoteServiceId:" + _) ::
       e.remoteUp.map("remoteUp:" + _) ::
       e.remoteLeader.map("remoteLeader:" + _) ::
+      e.remoteHeaders.map("remoteHeaders:" + _) ::
       e.query.map("query:" + _) ::
       e.url.map("url:" + _) ::
       e.body.map("body:" + _) ::
