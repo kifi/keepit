@@ -96,7 +96,6 @@ class MainSearcher(
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
-  private[this] val homePageBoost = config.asFloat("homePageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
@@ -183,7 +182,7 @@ class MainSearcher(
       val tLucene = currentDateTime.getMillis()
       hotDocs.set(browsingFilter, clickBoosts)
       personalizedSearcher.doSearch(weight){ (scorer, reader) =>
-        val visibility = new ArticleVisibility(reader)
+        val visibility = ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {

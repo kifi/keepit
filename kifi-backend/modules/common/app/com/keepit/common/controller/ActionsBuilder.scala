@@ -7,7 +7,9 @@ import play.api.mvc._
 import play.api.libs.json.{JsValue, JsNumber}
 import play.api.i18n.Messages
 import securesocial.core.SecuredRequest
+
 import play.api.mvc.SimpleResult
+import com.keepit.common.logging.Logging
 
 trait ActionsBuilder { self: Controller =>
   val actionAuthenticator: ActionAuthenticator
@@ -16,11 +18,12 @@ trait ActionsBuilder { self: Controller =>
 
 }
 
-class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controller {
+class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controller with Logging {
   private implicit val ec = ExecutionContext.immediate
 
   def unhandledUnAuthenticated[T](tag: String, apiClient: Boolean) = {
     val p = { implicit request: Request[T] =>
+      log.warn(s"tag:$tag api:$apiClient - UnAuthenticated request on access attempt to ${request.method}:${request.path} with cookies:${request.cookies.mkString(",")}")
       if (apiClient) {
         Future.successful(Forbidden(JsNumber(0)))
       } else {
@@ -33,7 +36,9 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
   }
 
   private def ActionHandlerAsync[T](parser: BodyParser[T], apiClient: Boolean, allowPending: Boolean, authFilter: AuthenticatedRequest[T] => Boolean)
-                                   (onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult], onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onSocial", apiClient), onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
+                                   (onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+                                    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onSocial", apiClient),
+                                    onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
 
     val filteredAuthenticatedRequest: AuthenticatedRequest[T] => Future[SimpleResult] = { request =>
       if (authFilter(request)) {
@@ -43,7 +48,8 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       }
     }
 
-    actionAuthenticator.authenticatedAction(apiClient, allowPending, parser, filteredAuthenticatedRequest, onSocialAuthenticated = onSocialAuthenticated, onUnauthenticated = onUnauthenticated)
+    actionAuthenticator.authenticatedAction(apiClient, allowPending, parser, filteredAuthenticatedRequest,
+      onSocialAuthenticated = onSocialAuthenticated, onUnauthenticated = onUnauthenticated)
   }
 
   trait ActionDefaults {

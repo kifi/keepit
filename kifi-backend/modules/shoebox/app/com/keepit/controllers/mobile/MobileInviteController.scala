@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileInviteController @Inject()(
-  actionAuthenticator:ActionAuthenticator,
+  actionAuthenticator: ActionAuthenticator,
   inviteCommander:InviteCommander,
   airbrake: AirbrakeNotifier
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
