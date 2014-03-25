@@ -85,7 +85,7 @@ class ElizaEmailNotifierActor @Inject() (
 
     if (threadItems.nonEmpty) {
       val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
-      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator)
+      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator, userThread.notificationUpdatedAt)
     }
     db.readWrite{ implicit session =>
       userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
