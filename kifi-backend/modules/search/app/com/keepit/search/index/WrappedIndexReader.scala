@@ -10,29 +10,28 @@ import org.apache.lucene.index.NumericDocValues
 import org.apache.lucene.index.BinaryDocValues
 import org.apache.lucene.index.SortedDocValues
 import org.apache.lucene.index.SortedSetDocValues
-import org.apache.lucene.index.Term
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import org.apache.lucene.index.SlowCompositeReaderWrapper
 
 object WrappedIndexReader {
 
-  def apply(inner: DirectoryReader, warmer: Option[IndexWarmer] = None): WrappedIndexReader = {
-    doOpen(inner, Map.empty[String, IdMapper], warmer)
+  def apply(inner: DirectoryReader): WrappedIndexReader = {
+    doOpen(inner, Map.empty[String, IdMapper])
   }
 
-  def reopen(oldReader: WrappedIndexReader, warmer: Option[IndexWarmer] = None): WrappedIndexReader = {
+  def reopen(oldReader: WrappedIndexReader): WrappedIndexReader = {
     val oldInner = oldReader.inner
     val newInner = DirectoryReader.openIfChanged(oldInner)
     if (newInner != null) {
       var oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
-      doOpen(newInner, oldIdMappers, warmer)
+      doOpen(newInner, oldIdMappers)
     } else {
       oldReader
     }
   }
 
-  private def doOpen(inner: DirectoryReader, oldIdMappers: Map[String, IdMapper], warmer: Option[IndexWarmer]) = {
+  private def doOpen(inner: DirectoryReader, oldIdMappers: Map[String, IdMapper]) = {
     val subReaders = inner.getContext.leaves.foldLeft(new ArrayBuffer[WrappedSubReader]){ (buf, cx) =>
       cx.reader match {
         case segmentReader: SegmentReader =>
@@ -40,9 +39,7 @@ object WrappedIndexReader {
           val oldIdMapper = oldIdMappers.get(segmentName)
           val newSubReader = oldIdMapper match {
             case Some(oldIdMapper) => new WrappedSubReader(segmentName, segmentReader, oldIdMapper)
-            case None =>
-              warmer.foreach{ warmer => warmer.warm(segmentReader) }
-              new WrappedSubReader(segmentName, segmentReader, ArrayIdMapper(segmentReader))
+            case None              => new WrappedSubReader(segmentName, segmentReader, ArrayIdMapper(segmentReader))
           }
           buf += newSubReader
         case subReader =>

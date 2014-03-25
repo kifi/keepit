@@ -1,7 +1,7 @@
 package com.keepit.search.article
 
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
@@ -12,12 +12,10 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
-import com.google.inject.Inject
 import scala.util.Success
 import com.keepit.search.article.ArticleRecordSerializer._
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
-import com.keepit.search.index.IndexWarmer
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.IndexInfo
@@ -31,8 +29,6 @@ class ArticleIndexer(
   extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
 
   import ArticleIndexer.ArticleIndexable
-
-  override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
   override val commitBatchSize = 1000
 

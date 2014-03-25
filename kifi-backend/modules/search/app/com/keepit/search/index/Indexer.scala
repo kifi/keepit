@@ -86,8 +86,6 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   reopenWriter() // open indexWriter
 
-  val indexWarmer: Option[IndexWarmer] = None
-
   protected var searcher: Searcher = indexWriterLock.synchronized{
     Searcher(DirectoryReader.open(indexDirectory))
   }
@@ -328,7 +326,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   def numDocs: Int = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher(): Unit = {
-    searcher = Searcher.reopen(searcher, indexWarmer)
+    searcher = Searcher.reopen(searcher)
   }
 
   def refreshWriter(): Unit = reopenWriter()
