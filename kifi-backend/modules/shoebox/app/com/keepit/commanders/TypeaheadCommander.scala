@@ -8,7 +8,7 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import com.keepit.common.db.Id
-import com.keepit.social.{SocialNetworkType, SocialNetworks}
+import com.keepit.social.{BasicUser, SocialNetworkType, SocialNetworks}
 import scala.concurrent.Future
 import play.api.libs.json._
 import com.keepit.typeahead.TypeaheadHit
@@ -207,32 +207,48 @@ class TypeaheadCommander @Inject()(
         resOpt map { res => res.collect { case hit if includeHit(hit) => hit } }
       }
       val searchF = searchClient.userTypeahead(userId, q, limit.getOrElse(5), filter = "nf")
-      val topF = for {
-        socialHitsOpt <- socialF
-        abookHitsOpt  <- abookF
-      } yield {
-        val sortedOpt = {
-          if (socialHitsOpt.isEmpty && abookHitsOpt.isEmpty) None
-          else {
-            val socialHits = socialHitsOpt.getOrElse(Seq.empty)
-            val abookHits  = abookHitsOpt.getOrElse(Seq.empty)
-            log.info(s"[searchWIS($userId,$query,$limit)] socialHits(len=${socialHits.length}):${socialHits.mkString(",")} abookHits(len=${abookHits.length}):${abookHits.mkString(",")}")
-            val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
-            val abookHitsTup  = abookHits.map(h => (SocialNetworks.EMAIL, h))
-            if (addNFUsers) {
-              searchF map { searchRes =>
-                log.info(s"[searchWIS($userId,$query,$limit)] searchNFRes=${searchRes.mkString(",")}") // todo
+      val topF = socialF flatMap { socialHitsOpt =>
+        if (limit.exists(n => (socialHitsOpt.exists(res => (res.length > n && res.last.score == 0))))) {
+          socialF map { socialHitsOpt =>
+            socialHitsOpt map { hits =>
+              val res = hits.map(h => (h.info.networkType, h)).sorted(hitOrd)
+              log.info(s"[searchWIS($userId,$query,$limit)] short-circuit res(len=${res.length}):${res.mkString(",")}")
+              res
+            }
+          }
+        } else {
+          abookF flatMap { abookHitsOpt => // process NF first once settled
+            val sortedOptF = {
+              if (socialHitsOpt.isEmpty && abookHitsOpt.isEmpty && (!addNFUsers)) Future.successful(None) // need tuning
+              else {
+                val socialHits = socialHitsOpt.getOrElse(Seq.empty)
+                val abookHits  = abookHitsOpt.getOrElse(Seq.empty)
+                log.info(s"[searchWIS($userId,$query,$limit)] socialHits(len=${socialHits.length}):${socialHits.mkString(",")} abookHits(len=${abookHits.length}):${abookHits.mkString(",")}")
+                val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
+                val abookHitsTup  = abookHits.map(h => (SocialNetworks.EMAIL, h))
+                val allHitsF = if (addNFUsers) {
+                  searchF map { searchHits =>
+                    log.info(s"[searchWIS($userId,$query,$limit)] searchNFRes=${searchHits.mkString(",")}")
+                    val nfUsersHitTup = searchHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
+                    (socialHitsTup ++ nfUsersHitTup ++ abookHitsTup)
+                  }
+                } else {
+                  Future.successful(socialHitsTup ++ abookHitsTup)
+                }
+                allHitsF map { combined =>
+                  log.info(s"[searchWIS($userId,$query,$limit)] combined(len=${combined.length}):${combined.mkString(",")}")
+                  val sorted = combined.sorted(hitOrd)
+                  log.info(s"[searchWIS($userId,$query,$limit)] sorted(len=${sorted.length}):${sorted.mkString(",")}")
+                  Some(sorted)
+                }
               }
             }
-            val combined:Seq[(SocialNetworkType, TypeaheadHit[_])] = (socialHitsTup ++ abookHitsTup)
-            log.info(s"[searchWIS($userId,$query,$limit)] combined(len=${combined.length}):${combined.mkString(",")}")
-            val sorted = combined.sorted(hitOrd)
-            log.info(s"[searchWIS($userId,$query,$limit)] sorted=${sorted.mkString(",")}")
-            Some(sorted)
+            sortedOptF
           }
         }
-        sortedOpt
       }
+
+
       topF flatMap { topOpt =>
         topOpt match {
           case None => Future.successful(Seq.empty[ConnectionWithInviteStatus])
@@ -270,9 +286,16 @@ class TypeaheadCommander @Inject()(
                       }
                     } getOrElse ""
                     ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status)
-                  case SocialNetworks.FORTYTWO | SocialNetworks.FORTYTWO_NF =>
+                  case SocialNetworks.FORTYTWO =>
                     val sci = hit.info.asInstanceOf[SocialUserBasicInfo]
                     ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), "joined")
+                  case SocialNetworks.FORTYTWO_NF =>
+                    val bu = hit.info.asInstanceOf[BasicUser]
+                    val name = s"${bu.firstName} ${bu.lastName}".trim
+                    val picUrl = if (pictureUrl) {
+                      Some(bu.pictureName) // get full url
+                    } else None
+                    ConnectionWithInviteStatus(name, hit.score, SocialNetworks.FORTYTWO_NF.name, picUrl, s"fortytwo/${bu.externalId}", "joined")
                 }
               }
               val filtered = if (filterJoinedUsers) resWithStatus.filter(cis => !(cis.status == "joined" && cis.networkType != SocialNetworks.FORTYTWO.name)) else resWithStatus
