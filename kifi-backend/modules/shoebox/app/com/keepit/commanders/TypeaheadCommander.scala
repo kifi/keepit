@@ -150,7 +150,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  val snMap:Map[SocialNetworkType, Int] = Map(SocialNetworks.FACEBOOK -> 0, SocialNetworks.LINKEDIN -> 1, SocialNetworks.FORTYTWO -> 2, SocialNetworks.EMAIL -> 3)
+  val snMap:Map[SocialNetworkType, Int] = Map(SocialNetworks.FACEBOOK -> 0, SocialNetworks.LINKEDIN -> 1, SocialNetworks.FORTYTWO -> 2, SocialNetworks.FORTYTWO_NF -> 3, SocialNetworks.EMAIL -> 4)
 
   val snOrd = new Ordering[SocialNetworkType] {
     def compare(x: SocialNetworkType, y: SocialNetworkType) = if (x == y) 0 else snMap(x) compare snMap(y)
@@ -185,7 +185,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
+  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean, addNFUsers:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
     val socialInvitesF = db.readOnlyAsync { implicit ro =>
       invitationRepo.getSocialInvitesBySenderId(userId) // not cached
     }
@@ -206,27 +206,32 @@ class TypeaheadCommander @Inject()(
       val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map(_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
         resOpt map { res => res.collect { case hit if includeHit(hit) => hit } }
       }
-//      val searchF = searchClient.searchUsers(Some(userId), q, limit.getOrElse(5), "non-f") // some issues in dev mode
+      val searchF = searchClient.userTypeahead(userId, q, limit.getOrElse(5), filter = "nf")
       val topF = for {
         socialHitsOpt <- socialF
         abookHitsOpt  <- abookF
       } yield {
-        val resOpt = {
+        val sortedOpt = {
           if (socialHitsOpt.isEmpty && abookHitsOpt.isEmpty) None
           else {
             val socialHits = socialHitsOpt.getOrElse(Seq.empty)
             val abookHits  = abookHitsOpt.getOrElse(Seq.empty)
-            log.info(s"[searchWithInviteStatus($userId,$query,$limit)] socialHits(len=${socialHits.length}):${socialHits.mkString(",")} abookHits(len=${abookHits.length}):${abookHits.mkString(",")}")
+            log.info(s"[searchWIS($userId,$query,$limit)] socialHits(len=${socialHits.length}):${socialHits.mkString(",")} abookHits(len=${abookHits.length}):${abookHits.mkString(",")}")
             val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
             val abookHitsTup  = abookHits.map(h => (SocialNetworks.EMAIL, h))
+            if (addNFUsers) {
+              searchF map { searchRes =>
+                log.info(s"[searchWIS($userId,$query,$limit)] searchNFRes=${searchRes.mkString(",")}") // todo
+              }
+            }
             val combined:Seq[(SocialNetworkType, TypeaheadHit[_])] = (socialHitsTup ++ abookHitsTup)
-            log.info(s"[searchWithInviteStatus($userId,$query,$limit)] combined(len=${combined.length}):${combined.mkString(",")}")
+            log.info(s"[searchWIS($userId,$query,$limit)] combined(len=${combined.length}):${combined.mkString(",")}")
             val sorted = combined.sorted(hitOrd)
-            log.info(s"[searchWithInviteStatus($userId,$query,$limit)] sorted=${sorted.mkString(",")}")
+            log.info(s"[searchWIS($userId,$query,$limit)] sorted=${sorted.mkString(",")}")
             Some(sorted)
           }
         }
-        resOpt
+        sortedOpt
       }
       topF flatMap { topOpt =>
         topOpt match {
@@ -265,7 +270,7 @@ class TypeaheadCommander @Inject()(
                       }
                     } getOrElse ""
                     ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status)
-                  case SocialNetworks.FORTYTWO =>
+                  case SocialNetworks.FORTYTWO | SocialNetworks.FORTYTWO_NF =>
                     val sci = hit.info.asInstanceOf[SocialUserBasicInfo]
                     ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), "joined")
                 }
@@ -274,7 +279,7 @@ class TypeaheadCommander @Inject()(
               val res = limit.map{ n =>
                 filtered.take(n)
               }.getOrElse(filtered)
-              log.info(s"[searchWithInviteStatus($userId,$query,$limit)] res=${res.mkString(",")}")
+              log.info(s"[searchWIS($userId,$query,$limit)] res=${res.mkString(",")}")
               res
             }
           }

@@ -9,6 +9,8 @@ import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import com.keepit.search.user.UserSearchResult
+import com.keepit.typeahead.TypeaheadHit
+import com.keepit.social.BasicUser
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, null) {
 
@@ -43,6 +45,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = ???
 
   override def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
+
+  override def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = ???
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
 
