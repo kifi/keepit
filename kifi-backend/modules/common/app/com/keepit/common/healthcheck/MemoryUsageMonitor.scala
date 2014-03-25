@@ -14,7 +14,7 @@ import scala.collection.JavaConversions._
 object MemoryUsageMonitor {
 
   val poolsToBeMonitored = Set("CMS Old Gen")
-  val percentThreshold = 0.9d
+  val percentThreshold = 0.9d // probably it is a good idea to tune -XX:CMSInitiatingOccupancyFraction to the same value
 
   case class MemoryPool(bean: MemoryPoolMXBean, threshold: Long, maxHeapSize: Long)
 
