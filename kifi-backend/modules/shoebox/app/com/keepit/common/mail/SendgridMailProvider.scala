@@ -22,13 +22,15 @@ import com.keepit.heimdal._
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
+import com.keepit.common.time._
 
 @Singleton
 class SendgridMailProvider @Inject() (
     db: Database,
     mailRepo: ElectronicMailRepo,
     airbrake: AirbrakeNotifier,
-    heimdal: HeimdalServiceClient)
+    heimdal: HeimdalServiceClient,
+    clock: Clock)
   extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
@@ -113,6 +115,10 @@ class SendgridMailProvider @Inject() (
     if (mail.isReadyToSend) {
       val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
       if(checkAgain) {
+        val now = clock.now
+        airbrake.verify(mail.createdAt.isAfter(now.minusMinutes(10)),
+          s"sending mail ${mail.id.get} / ${mail.externalId} which was created more then 10 minutes ago at " +
+          s"${mail.createdAt}, now is $now")
         val message = try {
           createMessage(mail)
         } catch {
@@ -126,14 +132,14 @@ class SendgridMailProvider @Inject() (
         try {
           transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
           val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
-          log.info("mail ${mail.externalId} sent with new Message-ID: $messageId")
+          log.info(s"mail ${mail.id.get} / ${mail.externalId} sent with new Message-ID: $messageId")
           db.readWrite { implicit s =>
             mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
           }
         } catch {
           case e: Throwable =>
             log.error(e.toString)
-            mailError(mail, e.toString(), transport)
+            mailError(mail, e.toString, transport)
         }
       }
     }
