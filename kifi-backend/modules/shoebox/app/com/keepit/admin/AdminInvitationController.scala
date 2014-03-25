@@ -6,9 +6,11 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.commanders.UserCommander
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import views.html
 import com.keepit.abook.ABookServiceClient
+import play.api.libs.json.Json
 
 class AdminInvitationController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -115,6 +117,6 @@ class AdminInvitationController @Inject() (
         }
       }
     }
-    Ok(relevantInvitations)
+    Ok(Json.toJson(relevantInvitations))
   }
 }

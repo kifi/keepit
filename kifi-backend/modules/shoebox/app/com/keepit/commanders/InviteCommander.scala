@@ -133,8 +133,8 @@ class InviteCommander @Inject() (
                   invite.recipientSocialUserId.foreach { recipientSocialUserId =>
                     shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(recipientSocialUserId), None))
                   }
-                  invite.recipientEContactId.foreach { recipientEContactId =>
-                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(recipientEContactId)))
+                  invite.recipientEmailAddress.foreach { recipientEmailAddress =>
+                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(recipientEmailAddress)))
                   }
                }
               }
@@ -390,8 +390,8 @@ class InviteCommander @Inject() (
     val senderId = inviteInfo.userId
     val socialNetwork = inviteInfo.friend.left.map(_.networkType).left getOrElse SocialNetworks.EMAIL
     val friendSocialId = invite.recipientSocialUserId
-    val friendEContactId = if (socialNetwork != SocialNetworks.EMAIL) None else invite.recipientEContactId
-    shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(senderId, friendSocialId, friendEContactId, inviteInfo.invitationNumber))
+    val friendEmailAddress = if (socialNetwork != SocialNetworks.EMAIL) None else invite.recipientEmailAddress
+    shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(senderId, friendSocialId, friendEmailAddress, inviteInfo.invitationNumber))
 
     // Report to Mixpanel
     val contextBuilder = eventContextBuilder()
