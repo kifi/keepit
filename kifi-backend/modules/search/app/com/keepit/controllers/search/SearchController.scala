@@ -112,7 +112,6 @@ class SearchController @Inject()(
     val userId = userIdOpt.get
     log.info(s"user search: userId = ${userId}")
     val excludedExperiments = Seq("fake")   // TODO(yingjie): Address admins differently
-    val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
     val searchFilter = createFilter(Some(userId), Some(filter), None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
