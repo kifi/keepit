@@ -59,6 +59,13 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
   private def sendEmailViaShoebox(userThread: UserThread): Unit = {
+    val now = clock.now
+    airbrake.verify(userThread.replyable, s"$userThread not replyable")
+    airbrake.verify(userThread.unread, s"$userThread not unread")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt 30min ago")
+    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"$userThread notificationUpdatedAt in the future")
+    airbrake.verify(!userThread.notificationEmailed, s"$userThread notification emailed")
+
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
 
     //everyone exception user who we about to email
@@ -74,11 +81,11 @@ class ElizaEmailNotifierActor @Inject() (
 
     log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
       s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
-      s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed ${userThread.notificationEmailed}")
+      s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
 
     if (threadItems.nonEmpty) {
       val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
-      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator)
+      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator, userThread.id.get, userThread.notificationUpdatedAt)
     }
     db.readWrite{ implicit session =>
       userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
