@@ -68,7 +68,7 @@ object RemoveKifiConnection extends Companion[RemoveKifiConnection] {
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
-case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String], sent: Int = 1) extends RichConnectionUpdateMessage
+case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String], invitationNumber: Int = 1) extends RichConnectionUpdateMessage
 object RecordInvitation extends Companion[RecordInvitation] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
