@@ -142,6 +142,8 @@ object ApplicationBuild extends Build {
 
   lazy val cortexDependencies = Seq()
 
+  lazy val graphDependencies = Seq()
+
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
     "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
@@ -252,6 +254,10 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-cortex.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
 
+  lazy val graph = play.Project("graph", appVersion, graphDependencies, path=file("modules/graph")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
+  ).dependsOn(common % "test->test;compile->compile")
+
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
     .settings(
       aggregate in update := false,
@@ -269,12 +275,13 @@ object ApplicationBuild extends Build {
       heimdal % "test->test;compile->compile",
       abook % "test->test;compile->compile",
       scraper % "test->test;compile->compile",
-      cortex % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex)
+      cortex % "test->test;compile->compile",
+      graph % "test->test;compile->compile")
+    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, graph)
 
   override def rootProject = Some(kifiBackend)
 }
