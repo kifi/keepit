@@ -88,6 +88,7 @@ class ShoeboxActionAuthenticator @Inject() (
             onSocialAuthenticated(SecuredRequest(identity, request))
         }
       case None =>
+        log.warn(s"unknown user access is unauthenticated while access ${request.path}")
         onUnauthenticated(request)
     }
     request.headers.get("Origin").filter { uri =>
@@ -115,8 +116,7 @@ class ShoeboxActionAuthenticator @Inject() (
     if (user.state == UserStates.BLOCKED ||
       user.state == UserStates.INACTIVE ||
       (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {
-      val message = "user %s access is forbidden".format(userId)
-      log.warn(message)
+      log.warn(s"user $userId access is forbidden/blocked while access ${request.path}")
       Future.successful(Redirect("/logout"))
     } else {
       try {
