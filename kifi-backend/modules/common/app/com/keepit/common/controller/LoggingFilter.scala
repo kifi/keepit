@@ -41,7 +41,7 @@ class LoggingFilter() extends EssentialFilter {
           midFlightRequests.goingOut(rh)
 
           //report headers and query string only if there was an error
-          val (reqHeaders, queryString) = if (result.header.status/100 >= 4) {
+          val (reqHeaders, queryString) = if (result.header.status / 100 >= 4) {
             (rh.headers.toSimpleMap.mkString(","), rh.rawQueryString)
           } else (null, null) //null is bad, in this case its ok
 

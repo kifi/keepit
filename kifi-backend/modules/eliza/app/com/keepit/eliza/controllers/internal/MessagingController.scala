@@ -74,7 +74,7 @@ class MessagingController @Inject() (
     }
   }
 
-  def sendGlobalNotification() = Action(parse.json) { request =>
+  def sendGlobalNotification() = Action(parse.tolerantJson) { request =>
     val data : JsObject = request.body.asInstanceOf[JsObject]
 
     val userIds  : Set[Id[User]]  =  (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet

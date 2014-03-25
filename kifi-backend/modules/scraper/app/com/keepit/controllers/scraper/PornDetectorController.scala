@@ -20,7 +20,7 @@ class PornDetectorController @Inject()(
     Ok(Json.toJson(factory.model.likelihood))
   }
 
-  def detect() = Action(parse.json) { request =>
+  def detect() = Action(parse.tolerantJson) { request =>
     val query = (request.body \ "query").as[String]
     val detector = factory()
     val windows = PornDetectorUtil.tokenize(query).sliding(10, 10)
@@ -28,7 +28,7 @@ class PornDetectorController @Inject()(
     Ok(Json.toJson(badTexts.toMap))
   }
 
-  def whitelist() = Action(parse.json){ request =>
+  def whitelist() = Action(parse.tolerantJson){ request =>
     val whitelist = (request.body \ "whitelist").as[String]
     val tokens = PornDetectorUtil.tokenize(whitelist)
     val model = store.get(FILE_NAME).get

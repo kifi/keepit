@@ -16,7 +16,7 @@ class ShoeboxPageController @Inject()(
    private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 
-  def isSensitiveURI() = Action(parse.json){ request =>
+  def isSensitiveURI() = Action(parse.tolerantJson){ request =>
     val uri = (request.body \"uri").as[String]
     Ok(Json.toJson(pageCommander.isSensitiveURI(uri)))
   }

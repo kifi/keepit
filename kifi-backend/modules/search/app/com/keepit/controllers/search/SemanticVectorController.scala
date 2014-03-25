@@ -37,7 +37,7 @@ class SemanticVectorController @Inject()(shards: ActiveShards, shardedArticleInd
     Ok(Json.toJson(score))
   }
 
-  def visualizeSemanticVector() = Action(parse.json){ request =>
+  def visualizeSemanticVector() = Action(parse.tolerantJson){ request =>
     val queries = Json.fromJson[Seq[String]](request.body).get
     val s = new SemanticContextAnalyzer(searcher, analyzer, stemAnalyzer)
     val rv = queries.map{ q => s.getSemanticVector(q).toBinary }

@@ -102,7 +102,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(sui))
   }
 
-  def sendMail = Action(parse.json) { request =>
+  def sendMail = Action(parse.tolerantJson) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>
         db.readWrite(attempts = 3) { implicit session =>
@@ -116,7 +116,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def sendMailToUser = Action(parse.json) { request =>
+  def sendMailToUser = Action(parse.tolerantJson) { request =>
     val userId = Id[User]((request.body \ "user").as[Long])
     val email = (request.body \ "email").as[ElectronicMail]
 
@@ -134,7 +134,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
-  def saveNormalizedURI() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
+  def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
     val saved = db.readWrite(attempts = 3) { implicit s =>
@@ -144,7 +144,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
-  def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.json) { request =>
+  def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
      val saveResult = Try(db.readWrite(attempts = 3) { implicit s =>
        // Handle serialization in session to be transactional.
        val originalNormalizedUri = normUriRepo.get(uriId)
@@ -170,7 +170,7 @@ class ShoeboxController @Inject() (
 
   }
 
-  def scraped() = SafeAsyncAction(parse.json) { request =>
+  def scraped() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
     val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
@@ -196,7 +196,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def scrapeFailed() = SafeAsyncAction(parse.json) { request =>
+  def scrapeFailed() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
     val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
@@ -229,7 +229,7 @@ class ShoeboxController @Inject() (
   }
 
   // todo: revisit
-  def recordPermanentRedirect() = Action.async(parse.json) { request =>
+  def recordPermanentRedirect() = Action.async(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     log.info(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
@@ -267,7 +267,7 @@ class ShoeboxController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def recordScrapedNormalization() = Action(parse.json) { request =>
+  def recordScrapedNormalization() = Action(parse.tolerantJson) { request =>
 
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
@@ -295,7 +295,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(httpProxyOpt))
   }
 
-  def getProxyP = SafeAsyncAction(parse.json) { request =>
+  def getProxyP = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val url = request.body.as[String]
     val httpProxyOpt = db.readOnly(2, Slave) { implicit session =>
@@ -313,7 +313,7 @@ class ShoeboxController @Inject() (
     Ok(JsBoolean(res))
   }
 
-  def isUnscrapableP() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
+  def isUnscrapableP() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val args = request.body.as[JsArray].value
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
@@ -332,7 +332,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
-  def getNormalizedURIByURL() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
+  def getNormalizedURIByURL() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val url : String = Json.fromJson[String](request.body).get
     val uriOpt = db.readOnly { implicit s =>
       normUriRepo.getByUri(url) //using cache
@@ -343,7 +343,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getNormalizedUriByUrlOrPrenormalize() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
+  def getNormalizedUriByUrlOrPrenormalize() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val url = Json.fromJson[String](request.body).get
     val normalizedUriOrPrenormStr = db.readOnly { implicit s => //using cache
       normUriRepo.getByUriOrPrenormalize(url) match {
@@ -358,7 +358,7 @@ class ShoeboxController @Inject() (
     Ok(normalizedUriOrPrenormStr)
   }
 
-  def internNormalizedURI() = SafeAsyncAction(parse.json(maxLength = MaxContentLength)) { request =>
+  def internNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uri = db.readWrite(attempts = 2) { implicit s =>  //using cache
@@ -374,7 +374,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def getScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+  def getScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
     val uri = json.as[NormalizedURI]
@@ -399,7 +399,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(imageInfo))
   }
 
-  def saveImageInfo() = SafeAsyncAction(parse.json) { request =>
+  def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val info = json.as[ImageInfo]
     val saved = scraperHelper.saveImageInfo(info)
@@ -407,7 +407,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
-  def savePageInfo() = SafeAsyncAction(parse.json) { request =>
+  def savePageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val info = json.as[PageInfo]
     val saved = scraperHelper.savePageInfo(info)
@@ -415,7 +415,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
-  def saveScrapeInfo() = SafeAsyncAction(parse.json) { request =>
+  def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[ScrapeInfo]
@@ -457,7 +457,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(bookmarkOpt))
   }
 
-  def saveBookmark() = Action(parse.json) { request =>
+  def saveBookmark() = Action(parse.tolerantJson) { request =>
     val bookmark = request.body.as[Keep]
     val saved = db.readWrite(attempts = 3) { implicit session =>
       keepRepo.save(bookmark)
@@ -480,7 +480,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getBasicUsers() = Action(parse.json) { request =>
+  def getBasicUsers() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val users = db.readOnly { implicit s => //using cache
       userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
@@ -488,7 +488,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getBasicUsersNoCache() = Action(parse.json) { request =>
+  def getBasicUsersNoCache() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val users = db.readOnly { implicit s => //using cache
       userIds.map{ userId =>
@@ -499,7 +499,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getEmailAddressesForUsers() = Action(parse.json) { request =>
+  def getEmailAddressesForUsers() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val emails = db.readOnly(2, Slave){ implicit s =>
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
@@ -541,7 +541,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(exp))
   }
 
-  def saveExperiment = Action(parse.json) { request =>
+  def saveExperiment = Action(parse.tolerantJson) { request =>
     val exp = Json.fromJson[SearchConfigExperiment](request.body).get
     val saved = db.readWrite(attempts = 3) { implicit s => searchConfigExperimentRepo.save(exp) }
     Ok(Json.toJson(saved))
@@ -554,7 +554,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(experiments))
   }
 
-  def getExperimentsByUserIds() = Action(parse.json) { request =>
+  def getExperimentsByUserIds() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[JsArray].value.map{x => Id[User](x.as[Long])}
     val exps = db.readOnly { implicit s => //using cache
       userIds.map{ uid =>
@@ -605,7 +605,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def clickAttribution() = SafeAsyncAction(parse.json) { request =>
+  def clickAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val clicker = Id.format[User].reads(json \ "clicker").get
     val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
@@ -624,7 +624,7 @@ class ShoeboxController @Inject() (
     Ok(JsArray(requests.map{ x => Json.toJson(x) }))
   }
 
-  def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.json) { request =>
+  def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.tolerantJson) { request =>
     val value = request.body.as[String]
     db.readWrite(attempts = 3) { implicit session => userValueRepo.setValue(userId, key, value) }
     Ok
@@ -659,7 +659,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def updateURIRestriction() = SafeAsyncAction(parse.json){ request =>
+  def updateURIRestriction() = SafeAsyncAction(parse.tolerantJson){ request =>
     val uriId = Json.fromJson[Id[NormalizedURI]](request.body \ "uriId").get
     val r = request.body \ "restriction" match {
       case JsNull => None
@@ -671,7 +671,7 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  def getVerifiedAddressOwners() = SafeAsyncAction(parse.json) { request =>
+  def getVerifiedAddressOwners() = SafeAsyncAction(parse.tolerantJson) { request =>
     val addresses = (request.body \ "addresses").as[Seq[String]]
     val owners = db.readOnly { implicit session =>
       for {
