@@ -47,7 +47,7 @@ class LocalRichConnectionCommander @Inject() (
     if (serviceDiscovery.isLeader()) {
       log.info("RConn: I'm the leader, let's go")
       processQueueItems()
-      oneTimeAbookDataSync() //ZZZ to be removed after run
+      //oneTimeAbookDataSync() //uncomment this line to enable historical EContact -> WTI data sync
     } else {
       log.info("RConn: I'm not the leader, nothing to do yet")
       scheduler.scheduleOnce(1 minute){
@@ -156,8 +156,7 @@ class LocalRichConnectionCommander @Inject() (
     }
   }
 
-
-  //ZZZ this will be removed once run once successfully
+  //Dead code for now. Will be removed as soon as WTI is fully stable
   var syncIsRunning = false
   def oneTimeAbookDataSync(): Unit = {
     log.info("Maybe starting ecsync")
