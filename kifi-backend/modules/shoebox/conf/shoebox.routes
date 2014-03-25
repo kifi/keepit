@@ -458,7 +458,6 @@ POST    /admin/spell/correct        @com.keepit.controllers.admin.AdminSpellCorr
 GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
 POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
 POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitationController.rejectUser(id: Id[SocialUserInfo])
-GET     /admin/invites/addEmails    @com.keepit.controllers.admin.AdminInvitationController.addEmailAddresses()
 
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
