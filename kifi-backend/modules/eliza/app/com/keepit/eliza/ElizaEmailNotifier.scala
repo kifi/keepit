@@ -47,8 +47,10 @@ class ElizaEmailNotifierActor @Inject() (
 
   def receive = {
     case SendEmails =>
+      val now = clock.now
+      val startTime = now.minusMinutes(15)
       val unseenUserThreads = db.readOnly { implicit session =>
-        userThreadRepo.getUserThreadsForEmailing(clock.now.minusMinutes(15))
+        userThreadRepo.getUserThreadsForEmailing(startTime)
       }
       unseenUserThreads.foreach { userThread =>
         sendEmailViaShoebox(userThread)
@@ -70,7 +72,9 @@ class ElizaEmailNotifierActor @Inject() (
       ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
     } reverse
 
-    log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed ${userThread.notificationEmailed}")
+    log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
+      s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
+      s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed ${userThread.notificationEmailed}")
 
     if (threadItems.nonEmpty) {
       val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
