@@ -50,6 +50,8 @@ class ElizaEmailNotifierActor @Inject() (
       val unseenUserThreads = db.readOnly { implicit session =>
         userThreadRepo.getUserThreadsForEmailing(startTime)
       }
+      val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
+      log.info(s"[now:$now] [cut:$startTime] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
       unseenUserThreads.foreach { userThread =>
         sendEmailViaShoebox(userThread)
       }
@@ -57,12 +59,13 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
   private def sendEmailViaShoebox(userThread: UserThread): Unit = {
+    log.info(s"processing user thread $userThread")
     val now = clock.now
     airbrake.verify(userThread.replyable, s"$userThread not replyable")
     airbrake.verify(userThread.unread, s"$userThread not unread")
-    airbrake.verify(!userThread.notificationEmailed, s"$userThread notification emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt more then 30min ago")
-    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"$userThread notificationUpdatedAt in the future")
+    airbrake.verify(!userThread.notificationEmailed, s"$userThread notification already emailed")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt ${userThread.notificationUpdatedAt} more then 30min ago")
+    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"$userThread notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
 
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
 
@@ -88,6 +91,7 @@ class ElizaEmailNotifierActor @Inject() (
     db.readWrite{ implicit session =>
       userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
     }
+    log.info(s"processed user thread $userThread")
   }
 }
 
