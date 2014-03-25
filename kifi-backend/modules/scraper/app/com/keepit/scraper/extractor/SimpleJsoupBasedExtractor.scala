@@ -24,9 +24,12 @@ class SimpleJsoupBasedExtractorProvider @Inject() (airbrake: AirbrakeNotifier) e
 
   private case class Rule(hostPattern: Option[Regex], pathPattern: Option[Regex], selectors: Seq[(String, Boolean)])
 
-  private val rules: List[Rule] = List{
-    Rule(Some("""(^|\.)cookpad\.com$""".r), Some("""^/recipe/""".r), Seq(("#recipe", true)))
-  }
+  private val rules: List[Rule] = List(
+    // Cookpad
+    Rule(Some("""(^|\.)cookpad\.com$""".r), Some("""^/recipe/list/""".r), Seq((".main-cont", true))),
+    Rule(Some("""(^|\.)cookpad\.com$""".r), Some("""^/recipe/[^/]+/tsukurepos""".r), Seq(("#main", true))),
+    Rule(Some("""(^|\.)cookpad\.com$""".r), Some("""^/recipe/[^/]+($|/$)""".r), Seq(("#recipe", true)))
+  )
 
   private[this] def findRule(uri: URI): Option[Rule] = {
     uri match {
