@@ -127,23 +127,34 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       override def getValueForNormalization(): Float = normalizationValue
 
       override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-        val required = new ArrayBuffer[Scorer]
-        val prohibited = new ArrayBuffer[Scorer]
-        val optional = new ArrayBuffer[BooleanScoreDoc]
 
-        requiredWeights.foreach{ w =>
-          val subScorer = w.scorer(context, true, false, acceptDocs)
-          // if a required clasuse does not have a scorer, no hit
-          if (subScorer == null) return null
-          required += subScorer
+        val required = if (requiredWeights.isEmpty) Seq.empty[Scorer] else {
+          val buf = new ArrayBuffer[Scorer]
+          requiredWeights.foreach { w =>
+            val subScorer = w.scorer(context, true, false, acceptDocs)
+            // if a required clasuse does not have a scorer, no hit
+            if (subScorer == null) return null
+            buf += subScorer
+          }
+          buf
         }
-        prohibitedWeights.foreach{ w =>
-          val subScorer = w.scorer(context, true, false, acceptDocs)
-          if (subScorer != null) prohibited += subScorer
+
+        val prohibited = if (prohibitedWeights.isEmpty) Seq.empty[Scorer] else {
+          val buf = new ArrayBuffer[Scorer]
+          prohibitedWeights.foreach { w =>
+            val subScorer = w.scorer(context, true, false, acceptDocs)
+            if (subScorer != null) buf += subScorer
+          }
+          buf
         }
-        optionalWeights.foreach{ case (w, value) =>
-          val subScorer = w.scorer(context, true, false, acceptDocs)
-          if (subScorer != null) optional += new BooleanScoreDoc(subScorer, value)
+
+        val optional = if (optionalWeights.isEmpty) Seq.empty[BooleanScoreDoc] else {
+          val buf = new ArrayBuffer[BooleanScoreDoc]
+          optionalWeights.foreach { case (w, value) =>
+            val subScorer = w.scorer(context, true, false, acceptDocs)
+            if (subScorer != null) buf += new BooleanScoreDoc(subScorer, value)
+          }
+          buf
         }
 
         if (required.isEmpty && optional.isEmpty) {
@@ -153,7 +164,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           val hotDocSet = hotDocs.map{ f => f.getDocIdSet(context, acceptDocs).bits() }.getOrElse(new MatchNoBits(context.reader.maxDoc))
 
           BooleanScorer(this, disableCoord, similarity, threshold, thresholdForHotDocs, coordFactorForRequired, coordFactorForOptional,
-                        required.toArray, totalValueOnRequired, optional.toArray, totalValueOnOptional, prohibited.toArray, hotDocSet)
+                        required, totalValueOnRequired, optional, totalValueOnOptional, prohibited, hotDocSet)
         }
       }
 
@@ -254,35 +265,34 @@ object BooleanScorer {
   def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, threshold: Float, thresholdForHotDocs: Float,
             coordFactorForRequired: Float,
             coordFactorForOptional: Array[Float],
-            required: Array[Scorer], requiredValue: Float,
-            optional: Array[BooleanScoreDoc], optionalValue: Float,
-            prohibited: Array[Scorer],
+            required: Seq[Scorer], requiredValue: Float,
+            optional: Seq[BooleanScoreDoc], optionalValue: Float,
+            prohibited: Seq[Scorer],
             hotDocSet: Bits) = {
     def conjunction() = {
-      new BooleanAndScorer(weight, coordFactorForRequired, required, requiredValue)
+      new BooleanAndScorer(weight, coordFactorForRequired, required.toArray, requiredValue)
     }
     def disjunction() = {
       new BooleanOrScorerImpl(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
     }
     def prohibit(source: Scorer) = {
-      new BooleanNotScorer(weight, source, prohibited)
+      new BooleanNotScorer(weight, source, prohibited.toArray)
     }
 
     val mainScorer =
-      if (required.length > 0 && optional.length > 0) {
+      if (required.nonEmpty && optional.nonEmpty) {
         new BooleanScorer(weight, conjunction(), disjunction(), threshold)
-      } else if (required.length > 0) {
+      } else if (required.nonEmpty) {
         conjunction()
-      } else if (optional.length > 0) {
+      } else if (optional.nonEmpty) {
         disjunction()
       } else QueryUtil.emptyScorer(weight)
 
-    if (prohibited.length > 0) prohibit(mainScorer) else mainScorer
+    if (prohibited.nonEmpty) prohibit(mainScorer) else mainScorer
   }
 }
 
 class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float) extends Scorer(weight) {
-
 
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -369,7 +379,7 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
 
 trait BooleanOrScorer extends Scorer
 
-class BooleanOrScorerImpl(weight: Weight, scorers: Array[BooleanScoreDoc], coordFactors: Array[Float],
+class BooleanOrScorerImpl(weight: Weight, scorers: Seq[BooleanScoreDoc], coordFactors: Array[Float],
                       threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
 extends Scorer(weight) with BooleanOrScorer with Logging {
 
