@@ -136,8 +136,8 @@ class InviteCommander @Inject() (
                   invite.recipientSocialUserId.foreach { recipientSocialUserId =>
                     shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(recipientSocialUserId), None))
                   }
-                  invite.recipientEContactId.foreach { recipientEContactId =>
-                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(recipientEContactId)))
+                  invite.recipientEmailAddress.foreach { recipientEmailAddress =>
+                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(recipientEmailAddress)))
                   }
                }
               }
@@ -250,7 +250,7 @@ class InviteCommander @Inject() (
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address))
       )
       postOffice.sendMail(electronicMail)
-      val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+      val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
       log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] invitation sent")
       InviteStatus.sent(savedInvite)
     }
@@ -288,7 +288,7 @@ class InviteCommander @Inject() (
         airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
         None
       } else {
-        val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+        val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
         log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] savedInvite=${saved}")
         Some(saved)
       }
@@ -321,7 +321,7 @@ class InviteCommander @Inject() (
       val existingInvitation = invitationRepo.getOpt(id)
       val inviteStatus = existingInvitation match {
         case Some(invite) if invite.state != InvitationStates.INACTIVE => errorCode.map(InviteStatus.facebookError(_, existingInvitation)) getOrElse InviteStatus.sent(invite)
-        case Some(inactiveInvite) if errorCode.isEmpty => InviteStatus.sent(invitationRepo.save(inactiveInvite.copy(state = InvitationStates.ACTIVE)))
+        case Some(inactiveInvite) if errorCode.isEmpty => InviteStatus.sent(invitationRepo.save(inactiveInvite.copy(state = InvitationStates.ACTIVE).withLastSentTime(clock.now())))
         case _ => errorCode.map(InviteStatus.facebookError(_, existingInvitation)) getOrElse InviteStatus.notFound
       }
       (inviteStatus, existingInvitation)
@@ -398,6 +398,7 @@ class InviteCommander @Inject() (
       senderUserId = Some(inviteInfo.userId),
       recipientSocialUserId = inviteInfo.friend.left.toOption.map(_.id.get),
       recipientEContactId = inviteInfo.friend.right.toOption.map(_.id.get),
+      recipientEmailAddress = inviteInfo.friend.right.toOption.map(_.email),
       state = InvitationStates.INACTIVE
     )
   }
@@ -407,8 +408,8 @@ class InviteCommander @Inject() (
     val senderId = inviteInfo.userId
     val socialNetwork = inviteInfo.friend.left.map(_.networkType).left getOrElse SocialNetworks.EMAIL
     val friendSocialId = invite.recipientSocialUserId
-    val friendEContactId = if (socialNetwork != SocialNetworks.EMAIL) None else invite.recipientEContactId
-    shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(senderId, friendSocialId, friendEContactId, inviteInfo.invitationNumber))
+    val friendEmailAddress = if (socialNetwork != SocialNetworks.EMAIL) None else invite.recipientEmailAddress
+    shoeboxRichConnectionCommander.processUpdateImmediate(RecordInvitation(senderId, friendSocialId, friendEmailAddress, inviteInfo.invitationNumber))
 
     // Report to Mixpanel
     val contextBuilder = eventContextBuilder()
@@ -419,7 +420,7 @@ class InviteCommander @Inject() (
     inviteInfo.source.foreach { source => contextBuilder += ("source", source) }
     invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
     invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
-    heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED))
+    heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
   }
 
   private def reportReceivedInvitation(receiverId: Id[User], socialUserNetwork: SocialNetworkType, invite: Invitation, actuallyAccepted: Boolean): Unit =
@@ -452,7 +453,7 @@ class InviteCommander @Inject() (
         // Backfill the history of the new user with all the invitations he/she received
         contextBuilder += ("action", "wasInvited")
         contextBuilder += ("senderId", senderId.id)
-        heimdal.trackEvent(UserEvent(receiverId, contextBuilder.build, UserEventTypes.JOINED, invite.createdAt))
+        heimdal.trackEvent(UserEvent(receiverId, contextBuilder.build, UserEventTypes.JOINED, invite.lastSentAt getOrElse invite.createdAt))
       }
     }
 }

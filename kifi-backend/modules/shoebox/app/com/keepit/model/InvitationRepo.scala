@@ -47,9 +47,11 @@ class InvitationRepoImpl @Inject() (
   case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] with SeqNumberColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
-    def recipientEContactId   = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
+    def recipientEContactId  = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
+    def recipientEmailAddress  = column[String]("recipient_email_address", O.Nullable)
+    def lastSentAt = column[DateTime]("last_sent_at", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
+    def * = (id.?, createdAt, updatedAt, lastSentAt.?, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, recipientEmailAddress.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
   }
 
   def table(tag: Tag) = new InvitationTable(tag)
