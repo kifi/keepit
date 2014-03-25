@@ -10,7 +10,7 @@ import com.keepit.typeahead.TypeaheadHit
 import views.html
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.abook.ABookServiceClient
-import scala.concurrent.Future
+import scala.concurrent.{Promise, Future}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import play.api.libs.json.{Json, JsArray}
@@ -65,6 +65,17 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
+  def refreshAll(filterType:String) = AdminHtmlAction.authenticatedAsync { request =>
+    val resF = filterType.trim match {
+      case "contact" => econtactTypeahead.refreshAll()
+      case "social"  => socialUserTypeahead.refreshAll()
+      case _ => Promise[Unit].future
+    }
+    resF map { res =>
+      Ok(s"All PrefixFilters updated for $filterType")
+    }
+  }
+
   def socialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
     val res = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
@@ -100,8 +111,8 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def search(userId:Id[User], query:String, limit:Int, pictureUrl:Boolean, filterJoinedUsers:Boolean) = AdminHtmlAction.authenticatedAsync { request =>
-    typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, filterJoinedUsers) map { res => // hack
+  def search(userId:Id[User], query:String, limit:Int, pictureUrl:Boolean, filterJoinedUsers:Boolean, addNFUsers:Boolean) = AdminHtmlAction.authenticatedAsync { request =>
+    typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, filterJoinedUsers, addNFUsers) map { res => // hack
     // Ok(res.map(c => s"label=${c.label} score=${c.score} status=${c.status} value=${c.value}<br/>").mkString(""))
     Ok(
         "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td></tr>" +
