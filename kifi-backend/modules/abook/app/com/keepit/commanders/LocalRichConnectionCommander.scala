@@ -8,6 +8,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.akka.SafeFuture
 
 import com.google.inject.{Inject, Singleton, Provider}
 
@@ -158,20 +159,27 @@ class LocalRichConnectionCommander @Inject() (
 
   //ZZZ this will be removed once run once successfully
   var syncIsRunning = false
-  def oneTimeAbookDataSync(): Unit =  if (!syncIsRunning) synchronized {
-    if (!syncIsRunning) {
-      syncIsRunning = true;
-      val superDuperMaximumId = 1000000
-      var maxSeen = 0L
-      var notDone = true
-      while (notDone) {
-        var batch : Seq[EContact] = db.readOnly { implicit session => eContactRepo.get.getIdRangeBatch(Id[EContact](maxSeen), Id[EContact](superDuperMaximumId), 10000) }
-        var localMaxSeen = 0L
-        batch.foreach { eContact =>
-          localMaxSeen = math.max(eContact.id.get.id, localMaxSeen)
-          processEContact(eContact)
+  def oneTimeAbookDataSync(): Unit = {
+    log.info("Maybe starting ecsync")
+    if (!syncIsRunning) synchronized {
+      SafeFuture("abook sync"){
+        log.info("Starting ecsync")
+        if (!syncIsRunning) {
+          syncIsRunning = true;
+          val superDuperMaximumId = 1000000
+          var maxSeen = 0L
+          var notDone = true
+          while (notDone) {
+            var batch : Seq[EContact] = db.readOnly { implicit session => eContactRepo.get.getIdRangeBatch(Id[EContact](maxSeen), Id[EContact](superDuperMaximumId), 10000) }
+            var localMaxSeen = 0L
+            log.info(s"processing ecsync batch with ${batch.length} contacts")
+            batch.foreach { eContact =>
+              localMaxSeen = math.max(eContact.id.get.id, localMaxSeen)
+              processEContact(eContact)
+            }
+            maxSeen = math.max(localMaxSeen, maxSeen+10000)
+          }
         }
-        maxSeen = math.max(localMaxSeen, maxSeen+10000)
       }
     }
   }
