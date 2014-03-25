@@ -15,8 +15,8 @@ class AdminInvitationController @Inject() (
   invitationRepo: InvitationRepo,
   socialUserRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
-  userCommander: UserCommander)
-    extends AdminController(actionAuthenticator) {
+  userCommander: UserCommander
+) extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
 

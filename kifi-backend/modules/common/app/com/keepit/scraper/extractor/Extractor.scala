@@ -23,7 +23,8 @@ object ExtractorProviderTypes {
   case object LINKEDIN        extends ExtractorProviderType("linkedin")
   case object LINKEDIN_ID     extends ExtractorProviderType("linkedin_id")
   case object LINK_PROCESSING extends ExtractorProviderType("link_processing")
-  val ALL:Seq[ExtractorProviderType] = Seq(YOUTUBE, GITHUB, LINKEDIN, LINKEDIN_ID, LINK_PROCESSING)
+  case object SIMPLE_JSOUP    extends ExtractorProviderType("simple_jsoup")
+  val ALL:Seq[ExtractorProviderType] = Seq(YOUTUBE, GITHUB, LINKEDIN, LINKEDIN_ID, LINK_PROCESSING, SIMPLE_JSOUP)
 }
 
 abstract class ExtractorProvider extends PartialFunction[URI, Extractor]

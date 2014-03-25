@@ -10,14 +10,14 @@ import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileInviteController @Inject()(
-  actionAuthenticator:ActionAuthenticator,
+  actionAuthenticator: ActionAuthenticator,
   inviteCommander:InviteCommander,
   airbrake: AirbrakeNotifier
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
   def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
-    (request.body \ "fullSocialId").asOpt[String].flatMap(FullSocialId.fromString) match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "invalid_arguments")))
+    (request.body \ "fullSocialId").asOpt[FullSocialId] match {
+      case None => Future.successful(BadRequest("0"))
       case Some(fullSocialId) => {
         val subject = (request.body \ "subject").asOpt[String]
         val message = (request.body \ "message").asOpt[String]

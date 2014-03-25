@@ -135,12 +135,17 @@ trait Typeahead[E, I] extends Logging {
   def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
 
   def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = {
+    log.info(s"[refreshByIds] begin re-indexing for #${userIds.length} users ...")
     implicit val fj = ExecutionContext.fj
     val futures = new ArrayBuffer[Future[Unit]]
     for (userId <- userIds) {
-      futures += refresh(userId).map{ _ => }
+      futures += refresh(userId).map{ filter =>
+        log.info(s"[refreshByIds] done with re-indexing for ${userId}; filter=${filter}")
+      }
     }
-    Future.sequence(futures.toSeq).map{ _ => }
+    Future.sequence(futures.toSeq).map{ _ =>
+      log.info(s"[refreshByIds] done with re-indexing for #${userIds.length} users.")
+    }
   }
 
   def refreshAll(): Future[Unit]

@@ -128,6 +128,12 @@ class PagerDutySender @Inject() (httpClient: HttpClient) {
 trait AirbrakeNotifier {
   def reportDeployment(): Unit
 
+  def verify(condition: => Boolean, message : => String): Boolean = {
+    val pass: Boolean = condition
+    if (!pass) notify(message)
+    pass
+  }
+
   def notify(error: AirbrakeError): AirbrakeError
 
   def notify(errorException: Throwable): AirbrakeError

@@ -17,7 +17,7 @@ class ExtInviteController @Inject() (
 ) extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite() = JsonAction.authenticatedParseJsonAsync { request =>
-    val fullSocialIdOption = (request.body \ "id").asOpt[String].flatMap(FullSocialId.fromString) orElse {
+    val fullSocialIdOption = (request.body \ "id").asOpt[FullSocialId] orElse {
       (request.body \ "email").asOpt[String].map(email => FullSocialId(SocialNetworks.EMAIL, Right(email)))
     }
 

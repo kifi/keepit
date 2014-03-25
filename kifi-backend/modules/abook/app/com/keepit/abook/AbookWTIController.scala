@@ -9,6 +9,7 @@ import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc.Action
 
 import com.google.inject.Inject
+import com.keepit.abook.model.RichSocialConnection
 
 class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookServiceController {
 
@@ -28,5 +29,10 @@ class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookSer
     val friendId = (o \ "friendSocialId").asOpt(Id.format[SocialUserInfo]).map(Left(_)) getOrElse Right((o \ "friendEmailAddress").as[String])
     wtiCommander.blockRichConnection(userId, friendId)
     Ok
+  }
+
+  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = Action { request =>
+    val ripestFruits = wtiCommander.getRipestFruitsByCommonKifiFriendsCount(userId, page, pageSize)
+    Ok(Json.toJson(ripestFruits))
   }
 }

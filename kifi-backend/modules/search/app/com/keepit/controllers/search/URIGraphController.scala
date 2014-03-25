@@ -44,12 +44,13 @@ class URIGraphController @Inject()(
 
   def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
     future {
-      val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
+      val ids = request.body.as[Seq[Long]]
       val info = ids.map{ id =>
-        activeShards.find(id) match {
+        val uriId = Id[NormalizedURI](id)
+        activeShards.find(uriId) match {
           case Some(shard) =>
             val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
-            searcher.getSharingUserInfo(id)
+            searcher.getSharingUserInfo(uriId)
           case None =>
             throw new Exception("shard not found")
         }

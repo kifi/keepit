@@ -32,6 +32,9 @@ trait EContactRepo extends Repo[EContact] {
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
   def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int
+
+  //ZZZ to be removed when sync run is complete, i.e. a few ours after going live
+  def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
 }
 
 @Singleton
@@ -39,7 +42,8 @@ class EContactRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val econtactTypeaheadCache: EContactTypeaheadCache,
-  val econtactCache: EContactCache
+  val econtactCache: EContactCache,
+  override protected val changeListener: Option[RepoModification.Listener[EContact]]
 ) extends DbRepo[EContact] with EContactRepo with Logging {
 
   import DBSession._
@@ -179,4 +183,10 @@ class EContactRepoImpl @Inject() (
   def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int = {
     (for { row <- rows if row.email === email && row.contactUserId.isNull } yield row.contactUserId).update(contactUserId)
   }
+
+  //ZZZ to be removed after run, i.e. a few ours after going live
+  def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact] = {
+    (for (row <- rows if row.id > minId && row.id <= maxId) yield row).sortBy(r => r.id).take(maxBatchSize).list
+  }
+
 }

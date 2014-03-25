@@ -3,41 +3,34 @@ package com.keepit.search
 
 import com.keepit.search.semantic._
 import com.keepit.search.semantic.SemanticVector.Sketch
-import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
-import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.DocsAndPositionsEnum
-import org.apache.lucene.index.FilterAtomicReader.FilterDocsAndPositionsEnum
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
-import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.index._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
-import scala.math._
 import org.apache.lucene.search.Filter
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Weight
 
 
 object Searcher {
-  def apply(indexReader: DirectoryReader, indexWarmer: Option[IndexWarmer] = None) = new Searcher(WrappedIndexReader(indexReader), indexWarmer)
-  def reopen(oldSearcher: Searcher, indexWarmer: Option[IndexWarmer] = None) = {
-    new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader, indexWarmer), indexWarmer)
+  def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
+  def reopen(oldSearcher: Searcher) = {
+    new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
   }
 }
 
-class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[IndexWarmer] = None) extends IndexSearcher(indexReader) {
+class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
 
   private[this] var sketchMap = Map.empty[Term, Sketch]
   protected[this] var numPayloadsMap: Map[Term, Int] = Map()

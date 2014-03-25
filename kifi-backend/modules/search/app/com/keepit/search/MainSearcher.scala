@@ -1,7 +1,6 @@
 package com.keepit.search
 
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -9,38 +8,28 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.graph.bookmark.BookmarkRecord
-import com.keepit.search.graph.EdgeSetAccessor
-import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
-import com.keepit.search.graph.bookmark.UserToUriEdgeSet
 import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.query.HotDocSetFilter
-import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.TextQuery
 import com.keepit.search.query.parser.{MainQueryParser, MainQueryParserFactory}
 import com.keepit.search.semantic.SemanticVector
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
-import org.apache.lucene.util.PriorityQueue
-import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 import scala.math._
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
-import scala.concurrent.future
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
 import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
-import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
@@ -96,7 +85,6 @@ class MainSearcher(
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
-  private[this] val homePageBoost = config.asFloat("homePageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
@@ -183,7 +171,7 @@ class MainSearcher(
       val tLucene = currentDateTime.getMillis()
       hotDocs.set(browsingFilter, clickBoosts)
       personalizedSearcher.doSearch(weight){ (scorer, reader) =>
-        val visibility = new ArticleVisibility(reader)
+        val visibility = ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -488,12 +476,6 @@ class MainSearcher(
   def timing(): Unit = {
     SafeFuture {
       timeLogs.send()
-
-      articleSearcher.indexWarmer.foreach{ warmer =>
-        parsedQuery.foreach{ query =>
-            warmer.addTerms(QueryUtil.getTerms(query))
-        }
-      }
 
       val timeLimit = 1000L
       // search is a little slow after service restart. allow some grace period

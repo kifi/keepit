@@ -61,7 +61,7 @@ class KeepInterner @Inject() (
       keepsAbuseMonitor.inspect(userId, total)
       keptAnalytics.keepImport(userId, clock.now, context, total)
 
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
         // If it happens, the user will experience the % complete jumping around a bit until it's finished.
         userValueRepo.setValue(userId, "bookmark_import_last_start", clock.now)
