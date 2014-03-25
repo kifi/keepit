@@ -10,7 +10,7 @@ angular.module('kifi.invite.wtiService', [])
     var page = 0;
     var requestInProgress =  false;
     var lastRequest;
-    return {
+    var api = {
       getMore: function () {
         if (!requestInProgress) {
           requestInProgress = true;
@@ -32,12 +32,14 @@ angular.module('kifi.invite.wtiService', [])
       },
       loadInitial: function () {
         if (list.length === 0) {
-          this.getMore().then(function () {
-            this.getMore();
+          api.getMore().then(function () {
+            api.getMore();
           });
         }
       },
       list: list
     };
+
+    return api;
   }
 ]);
