@@ -1,0 +1,19 @@
+
+<div class="social-invite-search">
+  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)" ng-blur="blur()">
+  <ul class="social-invite-dropdown" ng-show="search.showDropdown">
+    <li class="social-invite-element" ng-repeat="result in results" ng-class="{'social-selected': result.value === selected }">
+      <div ng-if="result.image"><img ng-src="{{result.image}}" class="social-invite-image"></div>
+      <div class="social-invite-summary">
+        <div class="social-invite-name">{{result.label}}</div>
+        <div class="social-invite-network">
+          <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.network}}
+        </div>
+      </div>
+      <div class="social-invite-action">
+        <div class="social-invite-button">Add</div>
+      </div>
+      <div class="clearfix"></div>
+    </li>
+  </ul>
+</div>

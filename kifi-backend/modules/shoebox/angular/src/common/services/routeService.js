@@ -28,7 +28,11 @@ angular.module('kifi.routeService', [])
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
       tagOrdering: route('/collections/ordering'),
-      whoToInvite: route('/friends/wti')
+      whoToInvite: route('/friends/wti'),
+      socialSearch: function (name, limit) {
+        limit = limit || 6;
+        return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
+      }
     };
   }
 ]);
