@@ -165,7 +165,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   private def incrementCommonKifiFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
-    val kifiFriendsIdSet: Set[Id[User]] = getKifiFriends(userId).flatMap(_.friendUserId).
+    val kifiFriendsIdSet: Set[Id[User]] = getKifiFriends(userId).flatMap(_.friendUserId)
     if (kifiFriendsIdSet.isEmpty) {
       0
     } else {
