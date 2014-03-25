@@ -8,7 +8,7 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.time._
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
@@ -19,7 +19,7 @@ import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{EContact, EmailAddressRepo, Invitation, InvitationRepo, InvitationStates, NotificationCategory}
 import com.keepit.model.{SocialConnection, SocialConnectionRepo, SocialConnectionStates, SocialUserInfo, SocialUserInfoRepo}
-import com.keepit.model.{User, UserConnectionRepo, UserRepo, UserStates, UserValues, UserValueRepo}
+import com.keepit.model.{User, UserConnectionRepo, UserRepo, UserStates}
 import com.keepit.social.{SecureSocialClientIds, SocialId, SocialNetworkType, SocialNetworks}
 
 import java.net.URLEncoder
@@ -102,7 +102,6 @@ class InviteCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   eliza: ElizaServiceClient,
   basicUserRepo: BasicUserRepo,
-  userValueRepo: UserValueRepo,
   linkedIn: LinkedInSocialGraph,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
@@ -357,15 +356,13 @@ class InviteCommander @Inject() (
     inviteStatus
   }
 
-  private val resendInvitationLimit = 5
   private class IllegalInvitationException(message: String) extends Exception(message)
-  private def isInvitationAllowed(userId: Id[User], invitationNumber: Int)(implicit session: RSession): Boolean = {
-    lazy val totalAllowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites) // todo(He-Who-Must-Not-Be-Named): removeme
-    lazy val uniqueInvites =invitationRepo.getByUser(userId).filter(_.state != InvitationStates.INACTIVE).length
-    (1 < invitationNumber && invitationNumber <= resendInvitationLimit) || (uniqueInvites < totalAllowedInvites)
+  private def isInvitationAllowed(invitationNumber: Int): Boolean = {
+    val resendInvitationLimit = 5
+    invitationNumber <= resendInvitationLimit
   }
   private def isAllowed(inviteInfo: InviteInfo): Boolean = {
-    val allowed = db.readOnly { implicit session => isInvitationAllowed(inviteInfo.userId, inviteInfo.invitationNumber) }
+    val allowed = isInvitationAllowed(inviteInfo.invitationNumber)
     if (!allowed) {
       log.error(s"[InviteCommander.isAllowed] Illegal invitation: $inviteInfo")
       airbrake.notify(new IllegalInvitationException(s"An invitation was rejected: $inviteInfo"))
@@ -486,7 +483,7 @@ class InviteCommander @Inject() (
             val emailAddress = richConnection.friendEmailAddress.get
             val name = richConnection.friendName getOrElse emailAddress // Dangerous?
             val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
-            val canBeInvited = isInvitationAllowed(userId, richConnection.invitationsSent + 1)
+            val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
             Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))
           case _ =>
             val socialUserId = richConnection.friendSocialId.get
@@ -494,7 +491,7 @@ class InviteCommander @Inject() (
             val name = richConnection.friendName getOrElse socialUserInfo.fullName
             val fullSocialId = FullSocialId(richConnection.connectionType, Left(socialUserInfo.socialId))
             val pictureUrl = socialUserInfo.getPictureUrl()
-            val canBeInvited = isInvitationAllowed(userId, richConnection.invitationsSent + 1)
+            val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
             Invitee(name, fullSocialId, pictureUrl, canBeInvited, lastInvitedAtBySocialUserId.get(socialUserId))
         }}
       }
