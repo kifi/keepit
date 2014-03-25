@@ -21,6 +21,7 @@ import com.keepit.model.Invitation
 import com.keepit.commanders.{FailedInvitationException, InviteStatus, FullSocialId, InviteCommander}
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.util.{Success, Failure, Try}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -46,31 +47,29 @@ class InviteController @Inject() (db: Database,
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
 
   def inviteConnection = HtmlAction.authenticatedAsync { implicit request =>
-    val resultOption = for {
-      form <- request.body.asFormUrlEncoded
-      fullSocialIdString <- form.get("fullSocialId").map(_.head)
-      fullSocialId <- FullSocialId.fromString(fullSocialIdString)
-    } yield {
-      val subject = form.get("subject").map(_.head)
-      val message = form.get("message").map(_.head)
-      val source = "site"
-      inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
-        case inviteStatus if inviteStatus.sent => {
-          log.info(s"[inviteConnection] Invite sent: $inviteStatus")
-          CloseWindow()
+    val form = request.body.asFormUrlEncoded.get
+    Try(FullSocialId(form.get("fullSocialId").get.head)) match {
+      case Failure(_) => Future.successful(BadRequest("0"))
+      case Success(fullSocialId) =>
+        val subject = form.get("subject").map(_.head)
+        val message = form.get("message").map(_.head)
+        val source = "site"
+        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
+          case inviteStatus if inviteStatus.sent => {
+            log.info(s"[inviteConnection] Invite sent: $inviteStatus")
+            CloseWindow()
+          }
+          case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
+            val facebookUrl = inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source)
+            log.info(s"[inviteConnection] Redirecting user ${request.userId} to Facebook: $facebookUrl")
+            Redirect(facebookUrl)
+          case failedInviteStatus => {
+            log.error(s"[inviteConnection] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+            airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
+            InternalServerError("0")
+          }
         }
-        case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
-          val facebookUrl = inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source)
-          log.info(s"[inviteConnection] Redirecting user ${request.userId} to Facebook: $facebookUrl")
-          Redirect(facebookUrl)
-        case failedInviteStatus => {
-          log.error(s"[inviteConnection] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
-          airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
-          InternalServerError("0")
-        }
-      }
     }
-    resultOption getOrElse Future.successful(CloseWindow())
   }
 
   def confirmInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]) = Action { request =>

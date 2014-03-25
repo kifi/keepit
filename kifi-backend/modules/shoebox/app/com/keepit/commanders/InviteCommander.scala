@@ -19,7 +19,7 @@ import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{EContact, EmailAddressRepo, Invitation, InvitationRepo, InvitationStates, NotificationCategory}
 import com.keepit.model.{SocialConnection, SocialConnectionRepo, SocialConnectionStates, SocialUserInfo, SocialUserInfoRepo}
-import com.keepit.model.{User, UserConnectionRepo, UserRepo, UserStates, UserValues, UserValueRepo}
+import com.keepit.model.{User, UserConnectionRepo, UserRepo, UserStates}
 import com.keepit.social.{SecureSocialClientIds, SocialId, SocialNetworkType, SocialNetworks}
 
 import java.net.URLEncoder
@@ -27,6 +27,7 @@ import java.net.URLEncoder
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.Duration
@@ -35,11 +36,14 @@ import com.keepit.common.queue.{RecordInvitation, CancelInvitation}
 import com.keepit.abook.ABookServiceClient
 
 import akka.actor.Scheduler
+import org.joda.time.DateTime
 
-case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String])
+case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String]) {
+  override def toString(): String = s"${network.name}/${identifier.left.map(_.id).merge}"
+}
 
 object FullSocialId {
-  def fromString(fullSocialId: String): Option[FullSocialId] = Try {
+  def apply(fullSocialId: String): FullSocialId = {
     val Array(networkName, idString) = fullSocialId.split("/")
     val network = SocialNetworkType(networkName)
     val identifier = network match {
@@ -47,16 +51,25 @@ object FullSocialId {
       case _ => Left(SocialId(idString))
     }
     new FullSocialId(network, identifier)
-  }.toOption
+  }
+  implicit val format: Format[FullSocialId] = Format(Reads.of[String].map(FullSocialId.apply), Writes(fullSocialId => JsString(fullSocialId.toString())))
+}
 
-  def toString(fullSocialId: FullSocialId): String =s"${fullSocialId.network.name}/${fullSocialId.identifier.left.map(_.id).merge}"
+case class Invitee(name: String, fullSocialId: FullSocialId, pictureUrl: Option[String], canBeInvited: Boolean, lastInvitedAt: Option[DateTime])
+
+object Invitee {
+  implicit val format = (
+      (__ \ 'name).format[String] and
+      (__ \ 'fullSocialId).format[FullSocialId] and
+      (__ \ 'pictureUrl).formatNullable[String] and
+      (__ \ 'canBeInvited).format[Boolean] and
+      (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
+    )(Invitee.apply, unlift(Invitee.unapply))
 }
 
 case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, EContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
 
 case class InviteStatus(sent: Boolean, savedInvite: Option[Invitation], code: String)
-case class FailedInvitationException(inviteStatus: InviteStatus, inviteId: Option[ExternalId[Invitation]], userId: Option[Id[User]], friendFullSocialId: Option[FullSocialId])
-  extends Exception(s"Invitation $inviteId from user $userId to $friendFullSocialId was not processed correctly: ${inviteStatus}")
 
 object InviteStatus {
   def sent(savedInvite: Invitation) = {
@@ -70,6 +83,9 @@ object InviteStatus {
   val notFound = InviteStatus(false, None, "invite_not_found")
   val unsupportedNetwork = InviteStatus(false, None, "unsupported_social_network")
 }
+
+case class FailedInvitationException(inviteStatus: InviteStatus, inviteId: Option[ExternalId[Invitation]], userId: Option[Id[User]], friendFullSocialId: Option[FullSocialId])
+  extends Exception(s"Invitation $inviteId from user $userId to $friendFullSocialId was not processed correctly: ${inviteStatus}")
 
 class InviteCommander @Inject() (
   db: Database,
@@ -86,7 +102,6 @@ class InviteCommander @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   eliza: ElizaServiceClient,
   basicUserRepo: BasicUserRepo,
-  userValueRepo: UserValueRepo,
   linkedIn: LinkedInSocialGraph,
   eventContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
@@ -341,14 +356,13 @@ class InviteCommander @Inject() (
     inviteStatus
   }
 
-  private val resendInvitationLimit = 5
   private class IllegalInvitationException(message: String) extends Exception(message)
+  private def isInvitationAllowed(invitationNumber: Int): Boolean = {
+    val resendInvitationLimit = 5
+    invitationNumber <= resendInvitationLimit
+  }
   private def isAllowed(inviteInfo: InviteInfo): Boolean = {
-    lazy val (totalAllowedInvites, uniqueInvites) = db.readOnly { implicit session => (
-      userValueRepo.getValue(inviteInfo.userId, UserValues.availableInvites), // todo(He-Who-Must-Not-Be-Named): removeme
-      invitationRepo.getByUser(inviteInfo.userId).filter(_.state != InvitationStates.INACTIVE).length
-    )}
-    val allowed = (1 < inviteInfo.invitationNumber && inviteInfo.invitationNumber <= resendInvitationLimit) || (uniqueInvites < totalAllowedInvites)
+    val allowed = isInvitationAllowed(inviteInfo.invitationNumber)
     if (!allowed) {
       log.error(s"[InviteCommander.isAllowed] Illegal invitation: $inviteInfo")
       airbrake.notify(new IllegalInvitationException(s"An invitation was rejected: $inviteInfo"))
@@ -423,7 +437,7 @@ class InviteCommander @Inject() (
     heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
   }
 
-  private def reportReceivedInvitation(receiverId: Id[User], socialUserNetwork: SocialNetworkType, invite: Invitation, actuallyAccepted: Boolean): Unit =
+  private def reportReceivedInvitation(receiverId: Id[User], socialUserNetwork: SocialNetworkType, invite: Invitation, actuallyAccepted: Boolean): Unit = {
     invite.senderUserId.foreach { senderId =>
       SafeFuture {
         val invitedVia = socialUserNetwork match {
@@ -456,4 +470,31 @@ class InviteCommander @Inject() (
         heimdal.trackEvent(UserEvent(receiverId, contextBuilder.build, UserEventTypes.JOINED, invite.lastSentAt getOrElse invite.createdAt))
       }
     }
+  }
+
+  def getRipestInvitees(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Invitee]] = {
+    abook.getRipestFruits(userId, page, pageSize).map { ripestFruits =>
+      val (emailConnections, socialConnections) = (ripestFruits.partition(_.connectionType == SocialNetworks.EMAIL))
+      db.readOnly { implicit session =>
+        val lastInvitedAtByEmailAddress = invitationRepo.getLastInvitedAtBySenderIdAndRecipientEmailAddresses(userId, emailConnections.flatMap(_.friendEmailAddress))
+        val lastInvitedAtBySocialUserId = invitationRepo.getLastInvitedAtBySenderIdAndRecipientSocialUserIds(userId, socialConnections.flatMap(_.friendSocialId))
+        ripestFruits.map { richConnection => richConnection.connectionType match {
+          case SocialNetworks.EMAIL =>
+            val emailAddress = richConnection.friendEmailAddress.get
+            val name = richConnection.friendName getOrElse emailAddress // Dangerous?
+            val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
+            val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
+            Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))
+          case _ =>
+            val socialUserId = richConnection.friendSocialId.get
+            val socialUserInfo = socialUserInfoRepo.get(socialUserId)
+            val name = richConnection.friendName getOrElse socialUserInfo.fullName
+            val fullSocialId = FullSocialId(richConnection.connectionType, Left(socialUserInfo.socialId))
+            val pictureUrl = socialUserInfo.getPictureUrl()
+            val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
+            Invitee(name, fullSocialId, pictureUrl, canBeInvited, lastInvitedAtBySocialUserId.get(socialUserId))
+        }}
+      }
+    }
+  }
 }
