@@ -301,7 +301,13 @@ class RichSocialConnectionRepoImpl @Inject() (
   }
 
   def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int)(implicit session: RSession): Seq[RichSocialConnection] = {
-    val q = for { row <- rows if row.state === RichSocialConnectionStates.ACTIVE && row.userId === userId && row.friendUserId.isNull && row.blocked === false} yield row
+    val q = for { row <- rows if
+      row.state === RichSocialConnectionStates.ACTIVE &&
+      row.connectionType =!= FortyTwo &&
+      row.userId === userId &&
+      row.friendUserId.isNull &&
+      row.blocked === false
+    } yield row
     q.sortBy(r => (r.commonKifiFriendsCount desc, r.kifiFriendsCount desc)).drop(page * pageSize).take(pageSize).list
   }
 
