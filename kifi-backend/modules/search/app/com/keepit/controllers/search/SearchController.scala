@@ -102,7 +102,7 @@ class SearchController @Inject()(
   private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String]) = {
     filter match {
       case Some("f") => userSearchFilterFactory.friendsOnly(userId.get, context)
-      case Some("non-f") => userSearchFilterFactory.nonFriendsOnly(userId.get, context)
+      case Some("nf") => userSearchFilterFactory.nonFriendsOnly(userId.get, context)
       case _ => userSearchFilterFactory.default(userId, context, excludeSelf = true)      // may change this later
     }
   }
