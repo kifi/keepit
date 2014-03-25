@@ -29,6 +29,7 @@ import scala.util.Failure
 import scala.Some
 import com.keepit.common.net.HttpClientImpl
 import scala.util.Success
+import com.keepit.abook.model.RichSocialConnection
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -62,6 +63,7 @@ trait ABookServiceClient extends ServiceClient {
   def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit]
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int]
+  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
 }
 
 
@@ -264,6 +266,10 @@ class ABookServiceClientImpl @Inject() (
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = {
     call(ABook.internal.countInvitationsSent(userId, friend)).map(_.json.as[Int])
   }
+
+  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = {
+    call(ABook.internal.getRipestFruits(userId, page, pageSize)).map(_.json.as[Seq[RichSocialConnection]])
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -325,5 +331,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
 
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = ???
+
+  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
 
 }

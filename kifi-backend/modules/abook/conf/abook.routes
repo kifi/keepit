@@ -34,6 +34,7 @@ POST     /internal/abook/richConnectionUpdate                   @com.keepit.aboo
 POST     /internal/abook/blockRichConnection                    @com.keepit.abook.ABookWTIController.blockRichConnection()
 GET      /internal/abook/ripestFruit                            @com.keepit.abook.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
 GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[String] ?= None)
+GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
 
 ->  / common.Routes
 
