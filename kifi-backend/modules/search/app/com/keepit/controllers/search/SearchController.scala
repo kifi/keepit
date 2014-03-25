@@ -36,6 +36,9 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.sharding.ActiveShards
+import com.keepit.typeahead.PrefixFilter
+
+
 
 
 class SearchController @Inject()(
@@ -92,6 +95,30 @@ class SearchController @Inject()(
     val res = parser.parse(queryText) match {
       case None => UserSearchResult(Array.empty[UserHit], context)
       case Some(q) => searcher.search(q, maxHits, userFilter)
+    }
+    Ok(Json.toJson(res))
+  }
+
+  private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String]) = {
+    filter match {
+      case Some("f") => userSearchFilterFactory.friendsOnly(userId.get, context)
+      case Some("nf") => userSearchFilterFactory.nonFriendsOnly(userId.get, context)
+      case _ => userSearchFilterFactory.default(userId, context, excludeSelf = true)      // may change this later
+    }
+  }
+
+  def userTypeahead() = Action(parse.json){ request =>
+    val UserSearchRequest(userIdOpt, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
+    val userId = userIdOpt.get
+    log.info(s"user search: userId = ${userId}")
+    val excludedExperiments = Seq("fake")   // TODO(yingjie): Address admins differently
+    val searchFilter = createFilter(Some(userId), Some(filter), None)
+    val searcher = searcherFactory.getUserSearcher
+    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
+    val queryTerms = PrefixFilter.normalize(queryText).split("\\s+")
+    val res = parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
+      case None => UserSearchResult(Array.empty[UserHit], context = "")
+      case Some(q) => searcher.searchPaging(q, searchFilter, 0, maxHits, queryTerms)
     }
     Ok(Json.toJson(res))
   }
