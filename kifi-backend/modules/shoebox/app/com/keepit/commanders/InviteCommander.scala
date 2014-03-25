@@ -115,66 +115,83 @@ class InviteCommander @Inject() (
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (_, in) =>
-      Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(in.state)
+    val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (invite, _) =>
+      Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)
     }
     db.readWrite { implicit s =>
-      anyPendingInvites.find(_._2.senderUserId.isDefined).map { case (_, invite) =>
+      anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId == Some(userId) =>
         val user = userRepo.get(userId)
         if (user.state == UserStates.PENDING) {
           userRepo.save(user.withState(UserStates.ACTIVE))
         }
       }
-      for ((su, invite) <- anyPendingInvites) {
+      for ((invite, originalSocialNetwork) <- anyPendingInvites) {
         connectInvitedUsers(userId, invite)
         if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
           val acceptedInvite = invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-          reportReceivedInvitation(userId, su.networkType, acceptedInvite, invId == Some(invite.externalId))
+          reportReceivedInvitation(userId, originalSocialNetwork, acceptedInvite, invId == Some(invite.externalId))
         }
       }
     }
   }
 
-  private def getOrCreateInvitesForUser(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    // todo(Léo): this method was never updated to handle email invitations. Needs to be fixed.
+  private def getOrCreateInvitesForUser(userId: Id[User], cookieInviteId: Option[ExternalId[Invitation]]): Set[(Invitation, SocialNetworkType)] = {
     db.readWrite { implicit session =>
       val userSocialAccounts = socialUserInfoRepo.getByUser(userId)
       val fortyTwoSocialAccount = userSocialAccounts.find(_.networkType == SocialNetworks.FORTYTWO).get
-      val cookieInvite = invId.flatMap { inviteExtId =>
-        Try(invitationRepo.get(inviteExtId)).toOption.map { invite =>
-          userSocialAccounts.find(_.id == invite.recipientSocialUserId) match {
-            case Some(invitedSocialAccount) => invitedSocialAccount -> invite
-            case None =>
-              // User signed up using a different social account than the one he was invited with.
-              invite.senderUserId.foreach { senderId =>
-               session.onTransactionSuccess {
-                  invite.recipientSocialUserId.foreach { recipientSocialUserId =>
-                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(recipientSocialUserId), None))
-                  }
-                  invite.recipientEmailAddress.foreach { recipientEmailAddress =>
-                    shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(recipientEmailAddress)))
-                  }
-               }
+      val userEmailAccounts = emailAddressRepo.getAllByUser(userId)
+      val cookieInvite = cookieInviteId.flatMap { inviteExtId =>
+        Try(invitationRepo.get(inviteExtId)).toOption.collect {
+          case socialInvite if socialInvite.recipientSocialUserId.isDefined => {
+            val invitedSocialUserId = socialInvite.recipientSocialUserId.get
+            userSocialAccounts.find(_.id.get == invitedSocialUserId) match {
+              case Some(invitedSocialAccount) => socialInvite -> invitedSocialAccount.networkType
+              case None => {
+                socialInvite.senderUserId.foreach { senderId =>
+                  session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(invitedSocialUserId), None)) }
+                }
+                val invitedSocialAccount = socialUserInfoRepo.get(invitedSocialUserId)
+                val fortyTwoInvite = invitationRepo.save(socialInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id))
+                fortyTwoInvite -> invitedSocialAccount.networkType
               }
-              fortyTwoSocialAccount -> invitationRepo.save(invite.copy(recipientSocialUserId = fortyTwoSocialAccount.id, recipientEContactId = None))
+            }
+          }
+          case emailInvite if emailInvite.recipientEmailAddress.isDefined => {
+            val invitedEmailAddress = emailInvite.recipientEmailAddress.get
+            userEmailAccounts.find(_.address == invitedEmailAddress) match {
+              case Some(invitedEmailAccount) => emailInvite -> SocialNetworks.EMAIL
+              case None => {
+                emailInvite.senderUserId.foreach { senderId =>
+                  session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(invitedEmailAddress))) }
+                }
+                val fortyTwoInvite = invitationRepo.save(emailInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id, recipientEContactId = None, recipientEmailAddress = None))
+                fortyTwoInvite -> SocialNetworks.EMAIL
+              }
+            }
           }
         }
       }
 
-      val otherInvites = for {
+      val otherSocialInvites = for {
         su <- userSocialAccounts
         invite <- invitationRepo.getByRecipientSocialUserId(su.id.get)
-      } yield (su, invite)
+      } yield (invite, su.networkType)
 
-      val existingInvites = otherInvites.toSet ++ cookieInvite.toSet
+      val otherEmailInvites = for {
+        emailAccount <- userEmailAccounts if emailAccount.verified
+        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address)
+      } yield (invite, SocialNetworks.EMAIL)
+
+      val existingInvites = otherSocialInvites.toSet ++ otherEmailInvites.toSet ++ cookieInvite.toSet
 
       if (existingInvites.isEmpty) {
-        Set(fortyTwoSocialAccount -> invitationRepo.save(Invitation(
+        val fakeFortyTwoInvite = invitationRepo.save(Invitation(
           createdAt = clock.now,
           senderUserId = None,
           recipientSocialUserId = fortyTwoSocialAccount.id,
           state = InvitationStates.ACTIVE
-        )))
+        ))
+        Set(fakeFortyTwoInvite -> SocialNetworks.FORTYTWO)
       } else {
         existingInvites
       }
@@ -481,7 +498,7 @@ class InviteCommander @Inject() (
         ripestFruits.map { richConnection => richConnection.connectionType match {
           case SocialNetworks.EMAIL =>
             val emailAddress = richConnection.friendEmailAddress.get
-            val name = richConnection.friendName getOrElse emailAddress // Dangerous?
+            val name = richConnection.friendName getOrElse emailAddress
             val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
             val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
             Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))

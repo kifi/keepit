@@ -21,6 +21,7 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
   def countByUser(urlId: Id[User])(implicit session: RSession): Int
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
+  def getByRecipientEmailAddress(emailAddress: String)(implicit session: RSession): Seq[Invitation]
   def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
   def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: String)(implicit session: RSession): Option[Invitation]
@@ -115,6 +116,10 @@ class InvitationRepoImpl @Inject() (
 
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation] = {
     (for(b <- rows if b.recipientSocialUserId === socialUserInfoId) yield b).list
+  }
+
+  def getByRecipientEmailAddress(emailAddress: String)(implicit session: RSession): Seq[Invitation] = {
+    (for { row <- rows if row.recipientEmailAddress === emailAddress } yield row).list
   }
 
   def getBySenderIdAndRecipientEContactId(senderId: Id[User], econtactId: Id[EContact])(implicit session: RSession): Option[Invitation] = {
