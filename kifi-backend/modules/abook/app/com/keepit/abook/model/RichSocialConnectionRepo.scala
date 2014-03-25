@@ -332,7 +332,7 @@ class RichSocialConnectionRepoImpl @Inject() (
         user_id = $userId AND
         friend_user_id is NULL AND
         blocked = false AND
-        friend_name NOT IN (SELECT DISTINCT friend_name FROM rich_social_connection WHERE user_id = $userId AND friend_user_id is NOT NULL)
+        friend_name NOT IN (SELECT DISTINCT friend_name FROM rich_social_connection WHERE user_id = $userId AND friend_user_id is NOT NULL AND friend_name is NOT NULL)
       ORDER BY common_kifi_friends_count DESC, kifi_friends_count DESC
       LIMIT ${page * pageSize}, $pageSize
     """
