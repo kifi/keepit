@@ -241,23 +241,34 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
     }
 
     override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-      val required = new ArrayBuffer[Scorer]
-      val prohibited = new ArrayBuffer[Scorer]
-      val optional = new ArrayBuffer[Scorer]
 
-      requiredWeights.foreach { w =>
-        val subScorer = w.scorer(context, true, false, acceptDocs)
-        // if a required clasuse does not have a scorer, no hit
-        if (subScorer == null) return null
-        required += subScorer
+      val required = if (requiredWeights.isEmpty) Seq.empty[Scorer] else {
+        val buf = new ArrayBuffer[Scorer]
+        requiredWeights.foreach { w =>
+          val subScorer = w.scorer(context, true, false, acceptDocs)
+          // if a required clasuse does not have a scorer, no hit
+          if (subScorer == null) return null
+          buf += subScorer
+        }
+        buf
       }
-      prohibitedWeights.foreach { w =>
-        val subScorer = w.scorer(context, true, false, acceptDocs)
-        if (subScorer != null) prohibited += subScorer
+
+      val prohibited = if (prohibitedWeights.isEmpty) Seq.empty[Scorer] else {
+        val buf = new ArrayBuffer[Scorer]
+        prohibitedWeights.foreach { w =>
+          val subScorer = w.scorer(context, true, false, acceptDocs)
+          if (subScorer != null) buf += subScorer
+        }
+        buf
       }
-      optionalWeights.foreach { w =>
-        val subScorer = w.scorer(context, true, false, acceptDocs)
-        if (subScorer != null) optional += subScorer
+
+      val optional = if (optionalWeights.isEmpty) Seq.empty[ScorerWithSemanicMatchFactor] else {
+        val buf = new ArrayBuffer[ScorerWithSemanicMatchFactor]
+        (optionalWeights zip optionalSemanticMatch).foreach { case(w, semanticMatch) =>
+          val subScorer = w.scorer(context, true, false, acceptDocs)
+          if (subScorer != null) buf += ScorerWithSemanicMatchFactor(subScorer, semanticMatch)
+        }
+        buf
       }
 
       if (required.isEmpty && optional.isEmpty) {
@@ -265,8 +276,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
         null
       } else {
         val hotDocSet = hotDocs.map { f => f.getDocIdSet(context, acceptDocs).bits() }.getOrElse(new MatchNoBits(context.reader.maxDoc))
-        val optionalWithSemanticMatch = (optional zip optionalSemanticMatch) map { case (scorer, semanticMatch) => ScorerWithSemanicMatchFactor(scorer, semanticMatch) }
-        ScorerFactory(this, disableCoord, similarity, coordFactorForRequired, percentMatch / 100f, percentMatchForHotDocs / 100f, hotDocSet, required.toArray, optionalWithSemanticMatch.toArray, prohibited.toArray)
+        ScorerFactory(this, disableCoord, similarity, coordFactorForRequired, percentMatch / 100f, percentMatchForHotDocs / 100f, hotDocSet, required, optional, prohibited)
       }
     }
   }
@@ -274,29 +284,29 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
 
 object ScorerFactory {
   def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, coordFactorForRequired: Float, percentMatch: Float, percentMatchForHot: Float, hotDocSet: Bits,
-    required: Array[Scorer],
-    optional: Array[ScorerWithSemanicMatchFactor],
-    prohibited: Array[Scorer]) = {
+    required: Seq[Scorer],
+    optional: Seq[ScorerWithSemanicMatchFactor],
+    prohibited: Seq[Scorer]) = {
     def conjunction() = {
-      new BooleanAndScorer(weight, coordFactorForRequired, required, value = 0) // value is not used
+      new BooleanAndScorer(weight, coordFactorForRequired, required.toArray, value = 0) // value is not used
     }
     def disjunction() = {
       new BooleanOrScorerWithSemanticMatch(weight: Weight, optional, percentMatch, percentMatchForHot, hotDocSet)
     }
     def prohibit(source: Scorer) = {
-      new BooleanNotScorer(weight, source, prohibited)
+      new BooleanNotScorer(weight, source, prohibited.toArray)
     }
 
     val mainScorer =
-      if (required.length > 0 && optional.length > 0) {
+      if (required.nonEmpty && optional.nonEmpty) {
         new BooleanScorer(weight, conjunction(), disjunction(), 1f)
-      } else if (required.length > 0) {
+      } else if (required.nonEmpty) {
         conjunction()
-      } else if (optional.length > 0) {
+      } else if (optional.nonEmpty) {
         disjunction()
       } else QueryUtil.emptyScorer(weight)
 
-    if (prohibited.length > 0) prohibit(mainScorer) else mainScorer
+    if (prohibited.nonEmpty) prohibit(mainScorer) else mainScorer
   }
 }
 
@@ -308,7 +318,7 @@ case class ScorerWithSemanicMatchFactor(scorer: Scorer, semanticMatchFactor: Flo
   def getSemanticMatchFactor: Float = semanticMatchFactor
 }
 
-class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Array[ScorerWithSemanicMatchFactor], percentMatchThreshold: Float, percentMatchThresholdForHot: Float, hotDocSet: Bits) extends Scorer(weight) with BooleanOrScorer with Logging {
+class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Seq[ScorerWithSemanicMatchFactor], percentMatchThreshold: Float, percentMatchThresholdForHot: Float, hotDocSet: Bits) extends Scorer(weight) with BooleanOrScorer with Logging {
 
   private var doc = -1
   private var docScore = Float.NaN
