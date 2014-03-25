@@ -594,7 +594,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = Future.successful(Map.empty)
 
-  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator): Future[Unit] = Future.successful(Unit)
+  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
 }
