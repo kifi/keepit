@@ -41,9 +41,30 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
       });
     });
 
+    function populateWithEmail(name) {
+      var alreadyHasElem = inviteList[inviteList.length - 1] && inviteList[inviteList.length - 1].custom;
+      if (name.indexOf('@') > 0 && !alreadyHasElem) {
+        // They're typing in an email address
+        console.log('adding elem', name);
+        var resultInside = _.find(inviteList, function (elem) {
+          return elem.networkType === 'email' && elem.value.split('/').splice(1).join('') === name;
+        });
+        if (!resultInside) {
+          inviteList.push({
+            label: name,
+            networkType: 'email',
+            value: 'email/' + name,
+            status: '',
+            custom: true
+          });
+        }
+      }
+    }
+
     var api = {
 
       socialSearch: function (name) {
+        populateWithEmail(name);
         return socialSearchService.get(name).then(function (results) {
           util.replaceArrayInPlace(inviteList, results);
           // find which was selected, if not:
