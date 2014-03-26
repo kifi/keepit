@@ -207,11 +207,11 @@ class TypeaheadCommander @Inject()(
       val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map(_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
         resOpt map { res => res.collect { case hit if includeHit(hit, filterJoinedUsers) => hit } }
       }
-      val usersF = searchClient.userTypeahead(userId, q, limit.getOrElse(5), filter = "f")
+      val usersF = searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "f")
       val nfUsersF = if (q.length < 3) {
         log.info(s"[searchWIS($userId,$query,$limit)] short-circuit (NF-v) as ${q.length} < 3")
         Future.successful(Seq.empty)
-      } else searchClient.userTypeahead(userId, q, limit.getOrElse(5), filter = "nf")
+      } else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
       val abookF  = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
       val topF = socialF flatMap { socialHitsOpt =>
         if (limit.exists(n => (socialHitsOpt.exists(res => (res.length > n && res.last.score == 0))))) {
