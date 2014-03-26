@@ -215,21 +215,21 @@ class SliderAdminController @Inject() (
     val details = kifInstallationStore.getRaw()
 
     val installations = db.readOnly { implicit session =>
-      kifiInstallationRepo.getLatestActive(20)
+      kifiInstallationRepo.getLatestActiveExtensionVersions(20)
     }
     Ok(html.admin.versionForm(installations, details))
   }
 
   def killVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
-    val newDetails = details.copy(killed = details.killed :+ KifiVersion(ver))
+    val newDetails = details.copy(killed = details.killed :+ KifiVersion.extVersion(ver))
     kifInstallationStore.set(newDetails)
     Ok("0")
   }
 
   def unkillVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
-    val version = KifiVersion(ver)
+    val version = KifiVersion.extVersion(ver)
     val newDetails = details.copy(killed = details.killed.filterNot(_.compare(version) == 0))
     kifInstallationStore.set(newDetails)
     Ok("0")
@@ -237,7 +237,7 @@ class SliderAdminController @Inject() (
 
   def goldenVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
-    val newDetails = details.copy(gold = KifiVersion(ver))
+    val newDetails = details.copy(gold = KifiVersion.extVersion(ver))
     kifInstallationStore.set(newDetails)
     Ok("0")
   }

@@ -242,7 +242,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   private def needsToUpdate(streamSession: StreamSession, versionOpt: Option[String]) = {
     // We only support force updates to Chrome. Other platforms (mobile) can hook in here as well.
     if (UserAgent.fromString(streamSession.userAgent).name == "Chrome") {
-      versionOpt.flatMap(v => Try(KifiVersion(v)).toOption) match {
+      versionOpt.flatMap(v => Try(KifiVersion.extVersion(v)).toOption) match {
         case Some(ver) =>
           val details = kifInstallationStore.get()
           val lessThanGold = ver < details.gold
