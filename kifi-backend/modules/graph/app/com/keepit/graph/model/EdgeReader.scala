@@ -1,12 +1,8 @@
 package com.keepit.graph.model
 
-trait EdgeKind {
-  type E <: EdgeDataReader
-}
-
 trait EdgeReader {
   protected def kind: EdgeKind
-  protected def dataReader(kind: EdgeKind): Option[EdgeDataReader]
+  protected def dataReaders: Map[EdgeKind, EdgeDataReader]
   def source: VertexId
   def destination: VertexId
   def data: EdgeDataReader

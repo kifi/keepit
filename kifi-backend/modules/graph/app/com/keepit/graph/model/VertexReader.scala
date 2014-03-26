@@ -2,13 +2,9 @@ package com.keepit.graph.model
 
 case class VertexId(id: Long) extends AnyVal
 
-trait VertexKind {
-  type V <: VertexDataReader
-}
-
 trait VertexReader {
   protected def kind: VertexKind
-  protected def dataReader(kind: VertexKind): Option[EdgeDataReader]
+  protected def dataReaders: Map[VertexKind, VertexDataReader]
   def id: VertexId
   def data: VertexDataReader
   def edgeReader: LocalEdgeReader
