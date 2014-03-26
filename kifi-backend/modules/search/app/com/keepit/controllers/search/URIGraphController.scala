@@ -59,33 +59,6 @@ class URIGraphController @Inject()(
     }
   }
 
-  def indexInfo = Action { implicit request =>
-
-    Ok(Json.toJson(
-        activeShards.shards.map{ shard =>
-          val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-          val bookmarkStore = uriGraphIndexer.bookmarkStore
-          val collectionIndexer = shardedCollectionIndexer.getIndexer(shard)
-          Seq(
-            mkIndexInfo(s"URIGraphIndex${shard.indexNameSuffix}", uriGraphIndexer),
-            mkIndexInfo(s"BookmarkStore${shard.indexNameSuffix}", bookmarkStore),
-            mkIndexInfo(s"CollectionIndex${shard.indexNameSuffix}", collectionIndexer)
-          )
-        }.flatten
-      )
-    )
-  }
-
-  private def mkIndexInfo(name: String, indexer: Indexer[_, _, _]): IndexInfo = {
-    IndexInfo(
-      name = name,
-      numDocs = indexer.numDocs,
-      sequenceNumber = indexer.commitSequenceNumber.value,
-      committedAt = indexer.committedAt,
-      indexSize = None
-    )
-  }
-
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexerFor(Id[NormalizedURI](0L))
     try {

@@ -1,6 +1,5 @@
 package com.keepit.search.graph.bookmark
 
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
@@ -13,8 +12,6 @@ import com.keepit.search.Searcher
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.util.LongArraySet
-import com.keepit.shoebox.ShoeboxServiceClient
-import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
@@ -22,8 +19,6 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.SharingUserInfo
-import com.keepit.search.graph.BaseGraphSearcher
-import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
 import com.keepit.search.graph._
 import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.BookmarkInfoAccessor
@@ -31,8 +26,6 @@ import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 import com.keepit.search.graph.LongArraySetEdgeSet
 import com.keepit.search.graph.user.UserGraphsCommander
 import play.modules.statsd.api.Statsd
-
-
 
 object URIGraphSearcher {
   def apply(uriGraphIndexer: URIGraphIndexer): URIGraphSearcher = {
