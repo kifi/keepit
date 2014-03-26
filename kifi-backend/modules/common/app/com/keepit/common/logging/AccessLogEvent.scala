@@ -35,10 +35,12 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
 
   val startTime = clock.now()
 
-  lazy val duration: Int = {
+  def laps: Int = {
     val now = clock.now()
     (now.getMillis - startTime.getMillis).toInt
   }
+
+  lazy val duration: Int = laps
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Int = NoIntValue,
