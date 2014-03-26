@@ -79,4 +79,6 @@ object URIParserUtil {
   def normalizeParamName(name: String) = encode(decodePercentEncode(name.replace('+', ' ')), paramNameReservedChars).replace(' ', '+')
 
   def normalizeParamValue(value: String) = encode(decodePercentEncode(value.replace('+', ' ')), paramValueReservedChars).replace(' ', '+')
+
+  def normalizeFragment(fragment: String) = encode(decodePercentEncode(fragment), fragmentReservedChars)
 }

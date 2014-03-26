@@ -47,7 +47,7 @@ class MobileSearchController @Inject() (
     KifiSearchResult.v1(
       decoratedResult.uuid,
       decoratedResult.query,
-      ResultUtil.toKifiSearchHits(decoratedResult.hits),
+      ResultUtil.toSanitizedKifiSearchHits(decoratedResult.hits),
       decoratedResult.myTotal,
       decoratedResult.friendsTotal,
       decoratedResult.othersTotal,
