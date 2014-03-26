@@ -50,6 +50,7 @@ class LoggingFilter() extends EssentialFilter {
             result.body(Iteratee.head[Array[Byte]]).map { fut =>
               fut.map { arrayOpt =>
                 val body = arrayOpt.map { array =>
+                  //remember its only in error cases, the string is likely to be a very small description
                   new String(array, UTF8).abbreviate(512)
                 } getOrElse null //null is usually bad, but fits the timer api
                 accessLog.add(timer.done(
