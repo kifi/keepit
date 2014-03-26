@@ -4,7 +4,7 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.strings.UTF8
+import com.keepit.common.strings._
 import com.keepit.common.logging.Access._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -49,7 +49,9 @@ class LoggingFilter() extends EssentialFilter {
           val duration: Long = if (result.header.status / 100 >= 4) {
             result.body(Iteratee.head[Array[Byte]]).map { fut =>
               fut.map { arrayOpt =>
-                val body = arrayOpt.map { array => new String(array.take(512), UTF8) } getOrElse null //null is usually bad, but fits the timer api
+                val body = arrayOpt.map { array =>
+                  new String(array, UTF8).abbreviate(512)
+                } getOrElse null //null is usually bad, but fits the timer api
                 accessLog.add(timer.done(
                   trackingId = trackingId,
                   remoteLeader = remoteIsLeader,
