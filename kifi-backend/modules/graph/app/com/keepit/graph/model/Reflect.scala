@@ -8,18 +8,28 @@ object Reflect {
     m.reflectModule(clazz.companionSymbol.asModule).instance
   }
 
-  def getSubclasses[Clazz: TypeTag]: Set[ClassSymbol] = {
-    val clazzClass = typeOf[Clazz].typeSymbol.asClass
-    require(clazzClass.isSealed, s"$clazzClass must be sealed.")
-    clazzClass.knownDirectSubclasses.map(_.asClass)
+  def getSubclasses[SealedClass: TypeTag]: Set[ClassSymbol] = {
+    val clazz = typeOf[SealedClass].typeSymbol.asClass
+    require(clazz.isSealed, s"$clazz must be sealed.")
+    clazz.knownDirectSubclasses.map(_.asClass)
   }
 
-  def checkDataReaderCompanions[DataReader: TypeTag, Kind: TypeTag] = getSubclasses[DataReader].foreach { subclass =>
-    val companionType = subclass.companionSymbol.typeSignature
-    val kindType = typeOf[Kind]
-    require(companionType <:< kindType, s"$companionType must extend $kindType")
-    val VType = companionType.member("V": TypeName).typeSignature
+  def checkDataReaders[DataReader: TypeTag, Kind: TypeTag] = getSubclasses[DataReader].foreach { subclass =>
+    checkCompanionType[Kind](subclass)
     val subclassType = subclass.toType
-    require(VType =:= subclassType, s"$VType must be $subclassType")
+    val companionType = subclass.companionSymbol.typeSignature
+    checkTypeMember(subclassType, "V", subclassType)
+    checkTypeMember(companionType, "V", subclassType)
+  }
+
+  private def checkCompanionType[ExpectedCompanion: TypeTag](clazz: ClassSymbol) = {
+    val companionType = clazz.companionSymbol.typeSignature
+    val expectedCompanionType = typeOf[ExpectedCompanion]
+    require(companionType <:< expectedCompanionType, s"$companionType must extend $expectedCompanionType")
+  }
+
+  private def checkTypeMember(owner: Type, name: TypeName, expectedType: Type) = {
+    val typeMemberType = owner.member(name).typeSignature
+    require(typeMemberType =:= expectedType, s"Type member $name in $owner is $typeMemberType, expected $expectedType")
   }
 }

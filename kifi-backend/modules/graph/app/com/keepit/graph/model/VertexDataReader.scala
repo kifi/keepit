@@ -26,7 +26,7 @@ sealed trait VertexDataReader {
 }
 
 object VertexDataReader {
-  Reflect.checkDataReaderCompanions[VertexDataReader, VertexKind]
+  Reflect.checkDataReaders[VertexDataReader, VertexKind]
   def apply(rawDataReader: RawDataReader): Map[VertexKind, VertexDataReader] = VertexKind.all.map { vertexKind =>
     vertexKind -> vertexKind(rawDataReader)
   }.toMap

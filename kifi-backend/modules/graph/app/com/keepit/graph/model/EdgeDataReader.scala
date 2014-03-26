@@ -23,7 +23,7 @@ sealed trait EdgeDataReader {
 }
 
 object EdgeDataReader {
-  Reflect.checkDataReaderCompanions[EdgeDataReader, EdgeKind]
+  Reflect.checkDataReaders[EdgeDataReader, EdgeKind]
   def apply(rawDataReader: RawDataReader): Map[EdgeKind, EdgeDataReader] = EdgeKind.all.map { edgeKind =>
     edgeKind -> edgeKind(rawDataReader)
   }.toMap
