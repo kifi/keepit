@@ -40,9 +40,6 @@ angular.module('kifi.invite', [
     };
     $scope.wtiScrollNext = wtiService.getMore;
 
-    $scope.wtiHasMore = function () {
-      return true;
-    };
 
     $scope.invite = function (friend) {
       // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?

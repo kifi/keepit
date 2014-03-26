@@ -8,7 +8,7 @@
       </div>
       <div class="kf-connection-card-container" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
         <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend"></div>
-        <span ng-click="wtiScrollNext()" ng-show="wtiHasMore()" class="kf-show-more">Show more</span>
+        <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
     </div>
