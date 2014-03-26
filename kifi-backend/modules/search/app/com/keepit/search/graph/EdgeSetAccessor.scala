@@ -91,7 +91,7 @@ abstract class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: Edge
     val filtered = buf.toArray
     Sorting.quickSort(filtered)
     val inheritedSourceId = edgeSet.sourceId
-    new LongSetEdgeSet[S, D] {
+    new LongArraySetEdgeSet[S, D] {
       override val sourceId: Id[S] = inheritedSourceId
       override val longArraySet = LongArraySet.fromSorted(filtered)
     }

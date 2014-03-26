@@ -222,7 +222,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(relevantFriendEdgeSet.destIdSet)
+    val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
     val usefulPages = browsingFilter
