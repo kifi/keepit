@@ -23,7 +23,7 @@ import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 
-case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String, externalId:Option[ExternalId[User]] = None)
+case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String)
 
 object ConnectionWithInviteStatus {
   implicit val format = (
@@ -32,8 +32,7 @@ object ConnectionWithInviteStatus {
       (__ \ 'networkType).format[String] and
       (__ \ 'image).formatNullable[String] and
       (__ \ 'value).format[String] and
-      (__ \ 'status).format[String] and
-      (__ \ 'externalId).formatNullable(ExternalId.format[User])
+      (__ \ 'status).format[String]
     )(ConnectionWithInviteStatus.apply _, unlift(ConnectionWithInviteStatus.unapply))
 }
 
@@ -286,13 +285,12 @@ class TypeaheadCommander @Inject()(
                     val picUrl = if (pictureUrl) {
                       Some(bu.pictureName) // can get full url (tbd)
                     } else None
-                    ConnectionWithInviteStatus(name, hit.score, SocialNetworks.FORTYTWO_NF.name, picUrl, s"fortytwo/${bu.externalId}", "joined", Some(bu.externalId))
+                    ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", "joined")
                 }
               }
-              val filtered = if (filterJoinedUsers) resWithStatus.filter(cis => !(cis.status == "joined" && cis.networkType != SocialNetworks.FORTYTWO.name)) else resWithStatus
               val res = limit.map{ n =>
-                filtered.take(n)
-              }.getOrElse(filtered)
+                resWithStatus.take(n)
+              }.getOrElse(resWithStatus)
               log.info(s"[searchWIS($userId,$query,$limit)] res=${res.mkString(",")}")
               res
             }
