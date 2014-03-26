@@ -31,7 +31,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
-  def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
 
   def updateUserGraph(): Unit
   def updateSearchFriendGraph(): Unit
@@ -119,10 +118,6 @@ class SearchServiceClientImpl(
 
   def updateUserIndex(): Unit = {
     broadcast(Search.internal.updateUserIndex())
-  }
-
-  def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
-    call(Search.internal.uriGraphInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>

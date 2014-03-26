@@ -144,7 +144,6 @@ object Search extends Service {
   object internal {
     def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
     def warmUpUser(id: Id[User]) = ServiceRoute(GET, s"/internal/search/warmUp/${id.id}")
-    def uriGraphInfo() = ServiceRoute(GET, "/internal/search/uriGraph/info")
     def sharingUserInfo(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/sharingUserInfo/${id.id}")
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")
     def uriGraphReindex() = ServiceRoute(POST, "/internal/search/uriGraph/reindex")

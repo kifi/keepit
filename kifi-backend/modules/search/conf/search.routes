@@ -27,7 +27,6 @@ GET         /internal/search/warmUp/:userId        @com.keepit.controllers.searc
 
 POST        /internal/search/events/browsed/:userId        @com.keepit.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
 
-GET         /internal/search/uriGraph/info        @com.keepit.controllers.search.URIGraphController.indexInfo()
 POST        /internal/search/uriGraph/sharingUserInfo/:userId        @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User])
 POST        /internal/search/uriGraph/update        @com.keepit.controllers.search.URIGraphController.updateURIGraph()
 POST        /internal/search/uriGraph/reindex        @com.keepit.controllers.search.URIGraphController.reindex()
