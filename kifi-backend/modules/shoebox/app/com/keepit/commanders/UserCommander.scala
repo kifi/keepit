@@ -244,7 +244,7 @@ class UserCommander @Inject() (
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    delay {
+    delay { synchronized {
       val guardKey = "friendsNotifiedAboutJoining"
       if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
         db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
@@ -286,7 +286,7 @@ class UserCommander @Inject() (
           category = NotificationCategory.User.FRIEND_JOINED
         )
       }
-    }
+    }}
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
