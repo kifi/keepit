@@ -47,13 +47,9 @@ class LoggingFilter() extends EssentialFilter {
 
           //report headers and query string only if there was an error
           val duration: Long = if (result.header.status / 100 >= 4) {
-            println("==============1")
             result.body(Iteratee.head[Array[Byte]]).map { fut =>
-              println("==============2")
               fut.map { arrayOpt =>
-                println("==============3")
-                val body = arrayOpt.map { array => new String(array.take(512), UTF8) } getOrElse ""
-                println("============== body: " + body)
+                val body = arrayOpt.map { array => new String(array.take(512), UTF8) } getOrElse null //null is usually bad, but fits the timer api
                 accessLog.add(timer.done(
                   trackingId = trackingId,
                   remoteLeader = remoteIsLeader,
@@ -67,13 +63,10 @@ class LoggingFilter() extends EssentialFilter {
                   body = body,
                   statusCode = result.header.status
                 ))
-                println("==============4")
               }
-              println("==============5")
             }
             timer.laps
           } else {
-            println("============== good :-(")
             accessLog.add(timer.done(
               trackingId = trackingId,
               remoteLeader = remoteIsLeader,
