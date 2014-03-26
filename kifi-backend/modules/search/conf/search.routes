@@ -36,6 +36,7 @@ POST        /internal/search/uriGraph/dumpDoc/:id        @com.keepit.controllers
 POST        /internal/search/collection/dumpDoc        @com.keepit.controllers.search.URIGraphController.dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User])
 
 POST        /internal/search/user/reindex        @com.keepit.controllers.search.UserIndexController.reindex()
+POST        /internal/search/user/update         @com.keepit.controllers.search.UserIndexController.update()
 POST        /internal/search/userGraph/update        @com.keepit.controllers.search.UserGraphController.updateUserGraph()
 POST        /internal/search/searchFriendGraph/update        @com.keepit.controllers.search.UserGraphController.updateSearchFriends()
 POST        /internal/search/userGraphs/reindex        @com.keepit.controllers.search.UserGraphController.reindex()

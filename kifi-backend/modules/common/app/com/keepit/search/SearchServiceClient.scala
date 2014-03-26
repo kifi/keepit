@@ -42,6 +42,7 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexerSequenceNumber(): Future[Int]
 
   def reindexUsers(): Unit
+  def updateUserIndex(): Unit
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
@@ -114,6 +115,10 @@ class SearchServiceClientImpl(
 
   def reindexUsers(): Unit = {
     broadcast(Search.internal.userReindex())
+  }
+
+  def updateUserIndex(): Unit = {
+    broadcast(Search.internal.updateUserIndex())
   }
 
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
