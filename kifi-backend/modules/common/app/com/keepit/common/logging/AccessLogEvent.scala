@@ -53,6 +53,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           remoteLeader: String = null,
           remoteServiceId: String = null,
           remoteHeaders: String = null,
+          remoteAddress: String = null,
           query: String = null,
           trackingId: String = null,
           method: String = null,
@@ -63,7 +64,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
           url: String = null,
           dataSize: Int = NoIntValue) = {
     val now = clock.now()
-    AccessLogEvent(
+    new AccessLogEvent(
       time = now,
       duration = (now.getMillis - startTime.getMillis).toInt,
       parsingTime = parsingTime,
@@ -77,6 +78,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
       remoteServiceType = Option(remoteServiceType),
       remoteServiceId = Option(remoteServiceId),
       remoteHeaders = Option(remoteHeaders),
+      remoteAddress = Option(remoteAddress),
       query = Option(query),
       trackingId = Option(trackingId),
       method = Option(method),
@@ -89,29 +91,30 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
   }
 }
 
-case class AccessLogEvent(
-  time: DateTime,
-  duration: Int,
-  parsingTime: Option[Int],
-  eventType: AccessLogEventType,
-  remoteTime: Option[Int],
-  statusCode: Option[Int],
-  result: Option[String],
-  error: Option[String],
-  remoteServiceType: Option[String],
-  remoteUp: Option[String],
-  remoteLeader: Option[String],
-  remoteServiceId: Option[String],
-  remoteHeaders: Option[String],
-  query: Option[String],
-  trackingId: Option[String],
-  method: Option[String],
-  currentRequestCount: Option[Int],
-  body: Option[String],
-  key: Option[String],
-  space: Option[String],
-  url: Option[String],
-  dataSize: Option[Int]) {
+class AccessLogEvent(
+  val time: DateTime,
+  val duration: Int,
+  val parsingTime: Option[Int],
+  val eventType: AccessLogEventType,
+  val remoteTime: Option[Int],
+  val statusCode: Option[Int],
+  val result: Option[String],
+  val error: Option[String],
+  val remoteServiceType: Option[String],
+  val remoteUp: Option[String],
+  val remoteLeader: Option[String],
+  val remoteServiceId: Option[String],
+  val remoteHeaders: Option[String],
+  val remoteAddress: Option[String],
+  val query: Option[String],
+  val trackingId: Option[String],
+  val method: Option[String],
+  val currentRequestCount: Option[Int],
+  val body: Option[String],
+  val key: Option[String],
+  val space: Option[String],
+  val url: Option[String],
+  val dataSize: Option[Int]) {
 
   def waitTime: Option[Int] = remoteTime.map(t => duration - t - parsingTime.getOrElse(0))
 
@@ -140,6 +143,7 @@ class AccessLog @Inject() (clock: Clock) {
       e.currentRequestCount.map("currentRequestCount:" + _) ::
       e.method.map("method:" + _) ::
       e.trackingId.map("trackingId:" + _) ::
+      e.remoteAddress.map("remoteAddress:" + _) ::
       e.key.map("key:" + _) ::
       e.space.map("space:" + _) ::
       e.remoteTime.map("remoteTime:" + _) ::
