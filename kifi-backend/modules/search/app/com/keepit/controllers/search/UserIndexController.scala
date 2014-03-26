@@ -13,4 +13,9 @@ class UserIndexController @Inject()(
     indexer.reindex()
     Ok
   }
+
+  def update() = Action { implicit request =>
+    indexer.update()
+    Ok("update user index")
+  }
 }
