@@ -26,6 +26,20 @@ object ResultUtil {
     }
   }
 
+  def toSanitizedKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
+    hits.map{ h =>
+      val json = h.sanitized.json
+      KifiSearchHit(JsObject(List(
+        "count" -> (json \ "bookmarkCount"),
+        "bookmark" -> (json \ "bookmark"),
+        "users" -> (json \ "basicUsers"),
+        "score" -> (json \ "score"),
+        "isMyBookmark" -> (json \ "isMyBookmark"),
+        "isPrivate" -> (json \ "isPrivate")
+      )))
+    }
+  }
+
   def toArticleSearchResult(
     res: DecoratedResult,
     last: Option[ExternalId[ArticleSearchResult]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
