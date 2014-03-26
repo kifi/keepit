@@ -37,15 +37,13 @@ class LoggingFilter() extends EssentialFilter {
       } else {
         val countStart = midFlightRequests.comingIn(rh)
         val timer = accessLog.timer(HTTP_IN)
-
         def logTime(result: SimpleResult): SimpleResult = {
           midFlightRequests.goingOut(rh)
           val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
           val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
           val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
           val remoteServiceType = rh.headers.get(CommonHeaders.LocalServiceType).getOrElse(null)
-
-          //report headers and query string only if there was an error
+          //report headers and query string only if there was an error (4xx or 5xx)
           val duration: Long = if (result.header.status / 100 >= 4) {
             result.body(Iteratee.head[Array[Byte]]).map { fut =>
               fut.map { arrayOpt =>
@@ -58,6 +56,7 @@ class LoggingFilter() extends EssentialFilter {
                   remoteLeader = remoteIsLeader,
                   remoteServiceId = remoteServiceId,
                   remoteServiceType = remoteServiceType,
+                  remoteAddress = rh.remoteAddress,
                   remoteHeaders = rh.headers.toSimpleMap.mkString(","),
                   query = rh.rawQueryString,
                   method = rh.method,
@@ -75,6 +74,7 @@ class LoggingFilter() extends EssentialFilter {
               remoteLeader = remoteIsLeader,
               remoteServiceId = remoteServiceId,
               remoteServiceType = remoteServiceType,
+              remoteAddress = rh.remoteAddress,
               method = rh.method,
               currentRequestCount = countStart,
               url = rh.uri,
