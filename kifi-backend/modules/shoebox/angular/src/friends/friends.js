@@ -27,8 +27,8 @@ angular.module('kifi.friends', [
 ])
 
 .directive('kfSocialInviteSearch', [ // move to /invite/
-  'inviteService',
-  function (inviteService) {
+  'inviteService', '$document',
+  function (inviteService, $document) {
     return {
       scope: {
         'friend': '&'
@@ -36,7 +36,7 @@ angular.module('kifi.friends', [
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/inviteSearch.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope, element/*, attrs*/) {
         scope.search = {};
         scope.search.showDropdown = false;
 
@@ -53,9 +53,23 @@ angular.module('kifi.friends', [
           });
         }, 200);
 
-        // scope.focus = function (e) {
-        //   console.log('focus', e);
-        // };
+        function clickOutside(e) {
+          if (scope.search.showDropdown && !element.find(e.target)[0]) { // click was outside of dropdown
+            scope.$apply(function () {
+              scope.search.showDropdown = false;
+            });
+          }
+        }
+
+        scope.invite = function (result) {
+          console.log('123', result);
+        }
+
+        scope.$on('$destroy', function () {
+          $document.off('click', clickOutside);
+        });
+
+        $document.on('click', clickOutside);
 
         scope.blur = function (e) {
           console.log('blur', e);
