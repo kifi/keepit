@@ -239,6 +239,8 @@ class UserCommander @Inject() (
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
       }
       searchClient.warmUpUser(newUser.id.get)
+      searchClient.updateUserIndex()
+
     }
     newUser
   }

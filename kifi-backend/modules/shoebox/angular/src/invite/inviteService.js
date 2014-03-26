@@ -14,6 +14,7 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
         selected,
         platformFilter;
 
+    var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn'};
     var socialSearchService = new Clutch(function (name) {
       /*
       { "label":"Adam Cornett",
@@ -30,32 +31,46 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
       }
       return $http.get(routeService.socialSearch(name)).then(function (res) {
         var results = res.data;
+
+        populateWithCustomEmail(name, results);
+
         _.forEach(results, function (result) {
           result.id = result.value.split('/').splice(1).join('');
           var trimmedLabel = result.label.trim();
           result.label = trimmedLabel ? trimmedLabel : result.id;
-          result.network = result.networkType === 'email' ? result.id : result.networkType;
+          result.network = result.networkType === 'email' ? result.id : friendlyNetworks[result.networkType] || result.networkType;
           result.iconStyle = 'kf-' + result.networkType + '-icon-micro';
         });
         return results;
       });
     });
 
-    function populateWithEmail(name) {
-      var alreadyHasElem = inviteList[inviteList.length - 1] && inviteList[inviteList.length - 1].custom;
-      if (name.indexOf('@') > 0 && !alreadyHasElem) {
+    function populateWithCustomEmail(name, results) {
+      if (name.indexOf('@') > 0) {
+        var last = results[results.length - 1];
+        if (last && last.custom) {
+          if (last.label === name) {
+            console.log('was here. no probs, returning', name);
+            return;
+          } else {
+            results.pop();
+          }
+        }
         // They're typing in an email address
-        console.log('adding elem', name);
-        var resultInside = _.find(inviteList, function (elem) {
+        var resultInside = _.find(results, function (elem) {
           return elem.networkType === 'email' && elem.value.split('/').splice(1).join('') === name;
         });
         if (!resultInside) {
-          inviteList.push({
+          console.log('adding', name)
+          results.push({
+            custom: 'email',
+            iconStyle: "kf-email-icon-micro",
+            id: name,
             label: name,
-            networkType: 'email',
-            value: 'email/' + name,
-            status: '',
-            custom: true
+            network: name,
+            networkType: "email",
+            status: "",
+            value: "email/" + name,
           });
         }
       }
@@ -64,9 +79,13 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
     var api = {
 
       socialSearch: function (name) {
-        populateWithEmail(name);
+        populateWithCustomEmail(name, inviteList);
+
         return socialSearchService.get(name).then(function (results) {
           util.replaceArrayInPlace(inviteList, results);
+
+          console.log(_.clone(results));
+
           // find which was selected, if not:
           if (results.length === 0) {
             selected = null;
@@ -82,6 +101,9 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
       socialSelected: selected,
 
       invite: function (platform, identifier) {
+
+        socialSearchService.expireAll();
+
         return null; // todo!
       },
 

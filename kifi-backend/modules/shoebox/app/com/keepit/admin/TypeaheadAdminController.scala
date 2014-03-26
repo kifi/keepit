@@ -115,8 +115,8 @@ class TypeaheadAdminController @Inject() (
     typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, filterJoinedUsers, addNFUsers) map { res => // hack
     // Ok(res.map(c => s"label=${c.label} score=${c.score} status=${c.status} value=${c.value}<br/>").mkString(""))
     Ok(
-        "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td></tr>" +
-        res.map(c => s"<tr><td>${c.label}</td><td>${c.networkType}</td><td>${c.score}</td><td>${c.status}</td><td>${c.value}</td></tr>").mkString("") +
+        "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td><td>image</td></tr>" +
+        res.map(c => s"<tr><td>${c.label}</td><td>${c.networkType}</td><td>${c.score}</td><td>${c.status}</td><td>${c.value}</td><td>${c.image}</td></tr>").mkString("") +
         "</table>"
       )
     }
