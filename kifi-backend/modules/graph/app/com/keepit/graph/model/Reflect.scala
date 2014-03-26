@@ -1,7 +1,8 @@
-package com.keepit
+package com.keepit.graph.model
+
 import scala.reflect.runtime.universe._
 
-package object graph {
+object Reflect {
   def getCompanion(clazz: ClassSymbol): Any = {
     val m = runtimeMirror(getClass.getClassLoader)
     m.reflectModule(clazz.companionSymbol.asModule).instance

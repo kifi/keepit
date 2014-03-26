@@ -1,7 +1,5 @@
 package com.keepit.graph.model
 
-import com.keepit.graph._
-
 sealed trait EdgeKind {
   type E <: EdgeDataReader
   def header: Byte
@@ -10,7 +8,7 @@ sealed trait EdgeKind {
 
 object EdgeKind {
   val all: Set[EdgeKind] = {
-    val kinds: Set[EdgeKind] = getSubclasses[EdgeKind].map(getCompanion(_).asInstanceOf[EdgeKind])
+    val kinds: Set[EdgeKind] = Reflect.getSubclasses[EdgeKind].map(Reflect.getCompanion(_).asInstanceOf[EdgeKind])
     require(kinds.size == kinds.map(_.header).size, "Duplicate EdgeKind headers")
     kinds
   }
@@ -25,7 +23,7 @@ sealed trait EdgeDataReader {
 }
 
 object EdgeDataReader {
-  checkDataReaderCompanions[EdgeDataReader, EdgeKind]
+  Reflect.checkDataReaderCompanions[EdgeDataReader, EdgeKind]
   def apply(rawDataReader: RawDataReader): Map[EdgeKind, EdgeDataReader] = EdgeKind.all.map { edgeKind =>
     edgeKind -> edgeKind(rawDataReader)
   }.toMap
