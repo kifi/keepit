@@ -239,6 +239,8 @@ class UserCommander @Inject() (
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
       }
       searchClient.warmUpUser(newUser.id.get)
+      searchClient.updateUserIndex()
+
     }
     newUser
   }
@@ -563,7 +565,6 @@ class UserCommander @Inject() (
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
             socialUserTypeahead.refresh(myUserId)
-            searchClient.updateUserIndex()
             searchClient.updateUserGraph()
             sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
             (true, "acceptedRequest")
