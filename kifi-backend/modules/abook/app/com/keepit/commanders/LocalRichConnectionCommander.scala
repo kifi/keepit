@@ -88,7 +88,7 @@ class LocalRichConnectionCommander @Inject() (
       case Failure(t) => {
         log.info("RConn: Queue call failed")
         airbrake.notify("Failed getting RichConnectionUpdate from queue", t)
-        processQueueItems()
+        //processQueueItems()
       }
     }
   }
