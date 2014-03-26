@@ -356,6 +356,7 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
         };
 
         return keepList.get(url, config).then(function (result) {
+
           var keeps = result.keeps;
           var _before = result.before;
 

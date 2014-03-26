@@ -43,7 +43,7 @@ angular.module('kifi.friends', [
         scope.results = inviteService.inviteList;
         scope.selected = inviteService.socialSelected;
 
-        scope.change = _.debounce(function (e) {
+        scope.change = _.debounce(function (e) { // todo: integrate debounce into Clutch, remove me
           inviteService.socialSearch(scope.search.name).then(function (res) {
             if (!res || res.length === 0) {
               scope.search.showDropdown = false;
