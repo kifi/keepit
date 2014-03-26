@@ -2,7 +2,7 @@
 <div class="social-invite-search">
   <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)" ng-blur="blur()">
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
-    <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status}}'">
+    <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
       <div ng-if="!result.custom">
         <div ng-if="result.image"><img ng-src="{{result.image}}" class="social-invite-image"></div>
@@ -19,12 +19,24 @@
           </div>
         </div>
 
-        <div ng-if="result.status === 'joined'">
+        <div ng-if="result.status === 'joined' && result.networkType === 'fortytwo'">
           <div class="social-invite-summary">
             <div class="social-invite-name">{{result.label}}</div>
             <div class="social-invite-network">
-              Joined Kifi
+              Your friend on Kifi
             </div>
+          </div>
+        </div>
+
+        <div ng-if="result.status === 'joined' && result.networkType === 'fortytwoNF'">
+          <div class="social-invite-summary">
+            <div class="social-invite-name">{{result.label}}</div>
+            <div class="social-invite-network">
+              Kifi user
+            </div>
+          </div>
+          <div class="social-invite-action">
+            <div class="social-invite-button" ng-click="invite(result)">Add</div>
           </div>
         </div>
 
