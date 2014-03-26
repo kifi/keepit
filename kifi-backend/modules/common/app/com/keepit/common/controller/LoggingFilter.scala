@@ -46,6 +46,8 @@ class LoggingFilter() extends EssentialFilter {
           } else (null, null) //null is bad, in this case its ok
 
 
+
+
           val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
           val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
           val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
