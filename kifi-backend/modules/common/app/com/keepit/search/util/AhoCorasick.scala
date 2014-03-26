@@ -60,7 +60,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
   private[this] var _size: Int = 0
   def size: Int = _size
 
-  private val _root: StateImpl = new StateImpl
+  private[this] val _root: StateImpl = new StateImpl
   def initialState: State[D] = _root
 
   val maxLength: Int = makeTrie(dict)

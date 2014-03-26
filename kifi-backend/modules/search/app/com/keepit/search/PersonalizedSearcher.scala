@@ -58,9 +58,8 @@ class PersonalizedSearcher(
   useNonPersonalizedContextVector: Boolean = false
 )
 extends Searcher(indexReader) with SearchSemanticContext with Logging {
-  import PersonalizedSearcher._
 
-  lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
+  private[this] lazy val clickFilter: MultiHashFilter[ClickedURI] = clickFilterFunc
 
   override def getContextVector: SemanticVector = {
     if (useNonPersonalizedContextVector){

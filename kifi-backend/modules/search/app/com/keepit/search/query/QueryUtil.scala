@@ -4,16 +4,11 @@ import com.keepit.common.logging.Logging
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
-import com.keepit.search.Searcher
-import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.ReaderUtil
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Filter
-import org.apache.lucene.search.FilteredQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
@@ -74,7 +69,7 @@ object QueryUtil extends Logging {
       val newQuery = new PhraseQuery()
       val positions = query.getPositions()
       val terms = query.getTerms()
-      val newTerms = terms.zip(positions).map{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
+      terms.zip(positions).foreach{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
       newQuery.setBoost(query.getBoost())
       newQuery
     }

@@ -2,6 +2,7 @@ package com.keepit.search.util
 
 import java.util.Arrays
 import com.keepit.common.logging.Logging
+import scala.reflect.ClassTag
 
 abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
 
@@ -12,6 +13,8 @@ abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
   override def -(elem: Long): Set[Long] = iterator.filterNot{ _ == elem }.toSet
 
   override def size = a.length
+
+  override def toArray[B >: Long](implicit classTag: ClassTag[B]): Array[Long] = a.clone()
 
   def key(index: Int): Long = a(index)
 

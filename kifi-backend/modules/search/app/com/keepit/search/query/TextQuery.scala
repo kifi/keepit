@@ -1,7 +1,6 @@
 package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.PersonalizedSearcher
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term

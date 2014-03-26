@@ -109,22 +109,21 @@ object EmptyInvertedList extends InvertedList(ArrayBuffer.empty[(Int, Array[Int]
 }
 
 class InvertedListBuilder() {
-  private[this] lazy val buf = new ArrayBuffer[(Int, Array[Int])]
-  private[this] var _isEmpty = true
+  private[this] var buf: ArrayBuffer[(Int, Array[Int])] = null
 
-  def isEmpty: Boolean = _isEmpty
+  def isEmpty: Boolean = (buf == null)
 
   def add(docid: Int, positions: Array[Int]) {
+    if (buf == null) buf = new ArrayBuffer[(Int, Array[Int])]
     buf += ((docid, positions))
-    _isEmpty = false
   }
   def add(doc: (Int, Array[Int])) {
+    if (buf == null) buf = new ArrayBuffer[(Int, Array[Int])]
     buf += doc
-    _isEmpty = false
   }
 
   def sortAndBuild: InvertedList = {
-    if (_isEmpty) {
+    if (buf == null) {
       EmptyInvertedList
     } else {
       new InvertedList(buf.sortBy(_._1))
@@ -132,7 +131,7 @@ class InvertedListBuilder() {
   }
 
   def build: InvertedList = {
-    if (_isEmpty) {
+    if (buf == null) {
       EmptyInvertedList
     } else {
       new InvertedList(buf)
