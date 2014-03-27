@@ -247,5 +247,44 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         hits.hits(0).basicUser.firstName === "xyzzzzzzzzzzzzz"
       }
     }
+
+    "search using prefix field when first name or last name have multiple tokens" in {
+      running(new TestApplication(FakeShoeboxServiceModule())){
+        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        client.saveUsers(
+          User(firstName = s"abc", lastName = s"def ghi"),
+          User(firstName = s"abc", lastName = s"xyz")
+        )
+
+        val indexer = mkUserIndexer()
+        indexer.update()
+
+        val searcher = new UserSearcher(indexer.getSearcher)
+        val analyzer = DefaultAnalyzer.defaultAnalyzer
+        val parser = new UserQueryParser(analyzer)
+        val filter = filterFactory.default(None)
+        var query = parser.parseWithUserExperimentConstrains("ab gh", Seq(), useLucenePrefixQuery = false)
+        var queryTerms = PrefixFilter.tokenize("ab gh")
+
+        var hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 1
+        hits.hits(0).basicUser.lastName === "def ghi"
+
+        query = parser.parseWithUserExperimentConstrains("ab de", Seq(), useLucenePrefixQuery = false)
+        queryTerms = PrefixFilter.tokenize("ab de")
+
+        hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 1
+        hits.hits(0).basicUser.lastName === "def ghi"
+
+        query = parser.parseWithUserExperimentConstrains("ab gh de", Seq(), useLucenePrefixQuery = false)
+        queryTerms = PrefixFilter.tokenize("ab gh de")
+
+        hits = searcher.search(query.get, 10, filter, queryTerms)
+        hits.hits.size === 1
+        hits.hits(0).basicUser.lastName === "def ghi"
+
+      }
+    }
   }
 }
