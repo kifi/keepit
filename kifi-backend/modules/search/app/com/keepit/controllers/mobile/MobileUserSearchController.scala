@@ -35,7 +35,7 @@ class MobileUserSearchController @Inject()(
   def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
     val userExps = request.experiments.map{_.value}
-    log.info(s"user search: userId = ${userId}, userExps = ${userExps.mkString(" ")}")
+    log.info(s"user search: userId = $userId, userExps = ${userExps.mkString(" ")}")
     val excludedExperiments = if (userExps.contains("admin")) Seq() else EXCLUDED_EXPERIMENTS
     val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)
