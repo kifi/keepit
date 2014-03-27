@@ -565,10 +565,12 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-            socialUserTypeahead.refresh(friendReq.senderId)
-            socialUserTypeahead.refresh(friendReq.recipientId)
-            kifiUserTypeahead.refresh(friendReq.senderId)
-            kifiUserTypeahead.refresh(friendReq.recipientId)
+            s.onTransactionSuccess {
+              Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
+                socialUserTypeahead.refresh(id)
+                kifiUserTypeahead.refresh(id)
+              }
+            }
             searchClient.updateUserGraph()
             sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
             (true, "acceptedRequest")
@@ -594,10 +596,10 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
-        socialUserTypeahead.refresh(userId)
-        socialUserTypeahead.refresh(user.id.get)
-        kifiUserTypeahead.refresh(userId)
-        kifiUserTypeahead.refresh(user.id.get)
+        Seq(userId, user.id.get) foreach { id =>
+          socialUserTypeahead.refresh(id)
+          kifiUserTypeahead.refresh(id)
+        }
         searchClient.updateUserGraph()
       }
       success
