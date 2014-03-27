@@ -10,7 +10,7 @@ import org.specs2.mutable._
 import play.api.test.Helpers._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.IdFilterCompressor
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.typeahead.PrefixFilter
 
 
