@@ -3,16 +3,6 @@ package com.keepit.model
 import scala.reflect.runtime.universe._
 
 object Reflect {
-   def getCompanion(clazz: ClassSymbol): Any = {
-     val m = runtimeMirror(getClass.getClassLoader)
-     m.reflectModule(clazz.companionSymbol.asModule).instance
-   }
-
-   def getSubclasses[SealedClass: TypeTag]: Set[ClassSymbol] = {
-     val clazz = typeOf[SealedClass].typeSymbol.asClass
-     require(clazz.isSealed, s"$clazz must be sealed.")
-     clazz.knownDirectSubclasses.map(_.asClass)
-   }
 
   def getCompanionTypeSystem[SealedClass: TypeTag, Companion: TypeTag](forwardTypeMember: String): Set[Companion] =
     getSubclasses[SealedClass].map { subclass =>
@@ -23,6 +13,17 @@ object Reflect {
      checkTypeMember(companionType, forwardTypeMember, subclassType)
      getCompanion(subclass).asInstanceOf[Companion]
    }
+
+  private def getCompanion(clazz: ClassSymbol): Any = {
+    val m = runtimeMirror(getClass.getClassLoader)
+    m.reflectModule(clazz.companionSymbol.asModule).instance
+  }
+
+  private def getSubclasses[SealedClass: TypeTag]: Set[ClassSymbol] = {
+    val clazz = typeOf[SealedClass].typeSymbol.asClass
+    require(clazz.isSealed, s"$clazz must be sealed.")
+    clazz.knownDirectSubclasses.map(_.asClass)
+  }
 
    private def checkCompanionType[ExpectedCompanion: TypeTag](clazz: ClassSymbol) = {
      val companionType = clazz.companionSymbol.typeSignature
