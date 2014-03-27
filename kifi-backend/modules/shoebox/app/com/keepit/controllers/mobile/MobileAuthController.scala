@@ -36,31 +36,44 @@ import scala.util.Success
 import com.keepit.social.UserIdentity
 import play.api.mvc.Cookie
 import com.keepit.social.SocialId
+import com.keepit.common.net.UserAgent
 
 
 class MobileAuthController @Inject() (
-  airbrakeNotifier:AirbrakeNotifier,
-  actionAuthenticator:ActionAuthenticator,
+  airbrakeNotifier: AirbrakeNotifier,
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   clock: Clock,
   socialUserInfoRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
-  kifiInstallationRepo: KifiInstallationRepo,
+  installationRepo: KifiInstallationRepo,
   authHelper:AuthHelper
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-//  def registerVersion() = JsonAction.authenticatedParseJson { request =>
-//    val json = request.body
-//    val version = KifiIPhoneVersion((json \ "version").as[String])
-//    val userId = (json \ "userId").as[Id[User]])
-//    kifiInstallationRepo.
-//
-//    Ok(Json.obj(
-//      "version" -> kifiVersion.externalId
-//    ))
-//  }
+  def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
+    val json = request.body
+    val version = KifiIPhoneVersion((json \ "version").as[String])
+    val (installation, newInstallation) = db.readOnly{ implicit s => installationRepo.getOpt(request.userId, version, KifiInstallationPlatform.IPhone) } match {
+      case None =>
+        val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+        db.readWrite { implicit s =>
+          (installationRepo.save(KifiInstallation(userId = request.userId, userAgent = agent, version = version, platform = KifiInstallationPlatform.IPhone)), true)
+        }
+      case Some(existing) if !existing.isActive =>
+        db.readWrite { implicit s =>
+          (installationRepo.save(existing.withState(KifiInstallationStates.ACTIVE)), false)
+        }
+      case Some(active) =>
+        (active, false)
+    }
+
+    Ok(Json.obj(
+      "installation" -> installation.externalId.toString,
+      "newInstallation" -> newInstallation
+    ))
+  }
 
   def accessTokenSignup(providerName:String) = Action(parse.tolerantJson) { implicit request =>
     val resOpt = for {
