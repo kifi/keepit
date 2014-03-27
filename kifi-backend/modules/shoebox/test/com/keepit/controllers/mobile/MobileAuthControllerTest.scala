@@ -52,8 +52,8 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         userRepo.save(User(firstName = "Andrew", lastName = "C"))
       }
 
-      val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerVersion().toString
-      path === "/m/1/version/register"
+      val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerIPhoneVersion().toString
+      path === "/m/1/iphone/version/register"
 
       inject[FakeActionAuthenticator].setUser(user)
       val existing = {

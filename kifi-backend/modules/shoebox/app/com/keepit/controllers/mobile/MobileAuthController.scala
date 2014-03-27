@@ -52,7 +52,7 @@ class MobileAuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  def registerVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
+  def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
     val json = request.body
     val version = KifiIPhoneVersion((json \ "version").as[String])
     val (installation, newInstallation) = db.readOnly{ implicit s => installationRepo.getOpt(request.userId, version, KifiInstallationPlatform.IPhone) } match {
