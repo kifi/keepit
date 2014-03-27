@@ -26,7 +26,7 @@ case class Keep(
   source: KeepSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
   seq: SequenceNumber[Keep] = SequenceNumber.ZERO
-) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep]{
+) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] with KeepGlobalId {
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 

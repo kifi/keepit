@@ -24,7 +24,7 @@ case class User(
   userPictureId: Option[Id[UserPicture]] = None,
   seq: SequenceNumber[User] = SequenceNumber.ZERO,
   primaryEmailId: Option[Id[EmailAddress]] = None
-) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] with UserWithGlobalId {
+) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] with UserGlobalId {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
