@@ -2,7 +2,6 @@ package com.keepit.search.result
 
 import com.keepit.search.SearchConfig
 import com.keepit.search.util.HitQueue
-import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 import play.api.libs.json.JsNumber
@@ -151,11 +150,8 @@ object ResultMerger {
     val idBuf = new ArrayBuffer[Long]
     jsons.foreach{ json => idBuf ++= (json \ "ids").as[Seq[Long]] }
 
-    val scBuf = new ArrayBuffer[Float](idBuf.size)
-    jsons.foreach{ json => scBuf ++= (json \ "scores").as[Seq[Float]] }
-
     val ids = idBuf.toSet.toArray
-    val friendStats = FriendStats(ids, new Array[Float](ids.size))
+    val friendStats = FriendStats(ids, new Array[Float](ids.length))
 
     var i = 0
     jsons.foreach{ json =>
