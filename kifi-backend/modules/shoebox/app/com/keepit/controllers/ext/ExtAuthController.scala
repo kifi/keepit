@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import scala.concurrent.Future
+import scala.util.Failure
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
@@ -16,13 +16,13 @@ import com.keepit.common.social.{FacebookSocialGraph, LinkedInSocialGraph}
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.KifiInstallation
-import com.keepit.social.{SecureSocialClientIds, BasicUser}
+import com.keepit.social.{BasicUser, SecureSocialClientIds}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-import securesocial.core.{OAuth2Info, Registry}
+import securesocial.core.{OAuth2Provider, Registry}
 
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -59,7 +59,7 @@ class ExtAuthController @Inject() (
          if (kiId.isEmpty) {
              // They sent an invalid id. Bug on client side?
              airbrake.notify(AirbrakeError(
-               method = Some(request.method.toUpperCase()),
+               method = Some(request.method.toUpperCase),
                userId = request.user.id,
                userName = Some(request.user.fullName),
                url = Some(request.path),
@@ -123,20 +123,19 @@ class ExtAuthController @Inject() (
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
-  def accessTokenLogin(providerName: String) = Action.async(parse.json) { implicit request =>
-    Registry.providers.get(providerName) map { provider =>
-      (providerName match {
-        case "linkedin" => linkedIn.vetJsAccessToken(provider, request.body)
-        case "facebook" => facebook.vetJsAccessToken(provider, request.body)
-        case _ => Future.failed(new IllegalArgumentException(providerName))
+  def jsTokenLogin(providerName: String) = Action(parse.json) { implicit request =>
+    Registry.providers.get(providerName) map (_.asInstanceOf[OAuth2Provider].settings) map { settings =>
+      ((providerName match {
+        case "linkedin" => linkedIn.vetJsAccessToken(settings, request.body)
+        case "facebook" => facebook.vetJsAccessToken(settings, request.body)
+        case _ => Failure(new IllegalArgumentException("Provider: " + providerName))
       }) map { identityId =>
         authCommander.loginWithTrustedSocialIdentity(identityId)
       } recover { case t =>
-        println(s"-----------EAC: ${t.getClass} ${t.getMessage}")
-        t.printStackTrace
+        airbrake.notify(AirbrakeError.incoming(request, t, "could not log in"))
         BadRequest(Json.obj("error" -> "problem_vetting_token"))
-      }
-    } getOrElse Future.successful(BadRequest(Json.obj("error" -> "no_such_provider")))
+      }).get
+    } getOrElse BadRequest(Json.obj("error" -> "no_such_provider"))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

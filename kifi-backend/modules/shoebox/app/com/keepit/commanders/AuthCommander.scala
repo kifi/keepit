@@ -2,35 +2,33 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail._
 import com.keepit.common.performance.timing
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import com.keepit.common.time.Clock
-import com.keepit.common._
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal._
 import com.keepit.model._
-// import securesocial.core._
 import com.keepit.social.{SocialId, SocialNetworks, SocialNetworkType, UserIdentity}
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, RequestHeader, SimpleResult}
-import play.api.mvc.Results.{BadRequest, NotFound, Ok}
+import play.api.mvc.{RequestHeader, SimpleResult}
+import play.api.mvc.Results.{NotFound, Ok}
 
 import scala.Some
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 import securesocial.core.{Authenticator, AuthenticationMethod, Events, Identity, IdentityId, IdentityProvider}
-import securesocial.core.{LoginEvent, OAuth1Provider, OAuth2Info, PasswordInfo, Registry, SecureSocial, SocialUser, UserService}
-import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
+import securesocial.core.{LoginEvent, OAuth1Provider, PasswordInfo, Registry, SecureSocial, SocialUser, UserService}
+import securesocial.core.providers.utils.GravatarHelper
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {

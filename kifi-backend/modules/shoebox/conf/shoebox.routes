@@ -87,7 +87,7 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
-POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.accessTokenLogin(provider: String)
+POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
