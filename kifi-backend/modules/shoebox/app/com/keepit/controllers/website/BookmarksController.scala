@@ -42,7 +42,7 @@ class BookmarksController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
-    bookmarksCommander: BookmarksCommander,
+    bookmarksCommander: KeepsCommander,
     userValueRepo: UserValueRepo,
     clock: Clock,
     heimdalContextBuilder: HeimdalContextBuilderFactory

@@ -134,7 +134,7 @@ object KeepSource {
   }
 }
 
-object BookmarkFactory {
+object KeepFactory {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep =
     Keep(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)

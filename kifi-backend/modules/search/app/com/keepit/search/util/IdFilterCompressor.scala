@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.util
 
 import org.apache.lucene.store.OutputStreamDataOutput
 import org.apache.lucene.store.InputStreamDataInput

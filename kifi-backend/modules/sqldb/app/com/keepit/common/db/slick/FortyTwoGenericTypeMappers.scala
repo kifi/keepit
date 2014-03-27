@@ -49,7 +49,6 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
     case "" => Nil
     case trimmed => trimmed.split(",") map { addr => new GenericEmailAddress(addr.trim) }
   })
-  implicit val kifiVersionMapper = MappedColumnType.base[KifiVersion, String](_.toString, KifiVersion.apply)
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)

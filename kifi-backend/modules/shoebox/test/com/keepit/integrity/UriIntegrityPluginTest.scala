@@ -163,16 +163,16 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = "google"))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = "googleBetter"))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm0.id.get, collectionId = c0.id.get))
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm0better.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm0.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm0better.id.get, collectionId = c0.id.get))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm1.id.get, collectionId = c0.id.get))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2.id.get, collectionId = c0.id.get))
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c0.id.get, state = KeepToCollectionStates.INACTIVE))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm2.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm2better.id.get, collectionId = c0.id.get, state = KeepToCollectionStates.INACTIVE))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1better.id.get, collectionId = c1.id.get))
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c1.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm1better.id.get, collectionId = c1.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm2better.id.get, collectionId = c1.id.get))
 
             collectionRepo.collectionChanged(c0.id.get, true)
             collectionRepo.collectionChanged(c1.id.get, true)
@@ -184,13 +184,13 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val (uris, betterUris, bms, betterBms) = setup()
 
         db.readOnly{ implicit s =>
-          keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(bms(1).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(bms(2).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(1).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(2).id.get).size === 1
 
-          keepToCollectionRepo.getByBookmark(betterBms(0).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(betterBms(1).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(betterBms(2).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 1
         }
 
         plugin.handleChangedUri(URIMigration(uris(0).id.get, betterUris(0).id.get))
@@ -200,12 +200,12 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.batchURIMigration()
 
         db.readOnly{ implicit s =>
-          keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 0
-          keepToCollectionRepo.getByBookmark(bms(1).id.get).size === 0
-          keepToCollectionRepo.getByBookmark(bms(2).id.get).size === 0
-          keepToCollectionRepo.getByBookmark(betterBms(0).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(betterBms(1).id.get).size === 2
-          keepToCollectionRepo.getByBookmark(betterBms(2).id.get).size === 2
+          keepToCollectionRepo.getByKeep(bms(0).id.get).size === 0
+          keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
+          keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0
+          keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
         }
 
       }

@@ -1,12 +1,9 @@
 package com.keepit.search
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsValue}
 import play.modules.statsd.api.Statsd
-import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.util.Try
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.akka.MonitoredAwait
@@ -17,11 +14,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
-import com.keepit.search._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.ResultDecorator
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.result.ResultMerger

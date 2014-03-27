@@ -37,7 +37,7 @@ private class RawKeepImporterActor @Inject() (
   scraper: ScrapeSchedulerPlugin,
   keptAnalytics: KeepingAnalytics,
   kifiInstallationRepo: KifiInstallationRepo,
-  bookmarksCommanderProvider: Provider[BookmarksCommander],
+  bookmarksCommanderProvider: Provider[KeepsCommander],
   searchClient: SearchServiceClient,
   clock: Clock
 ) extends FortyTwoActor(airbrake) with Logging {

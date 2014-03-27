@@ -6,31 +6,21 @@ import org.specs2.mutable._
 
 import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.inject._
-import com.keepit.common.time._
 import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.google.inject.Injector
 
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.Json
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
 
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.IdFilterCompressor
 
-
-import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.user.UserIndexer
-import com.keepit.search.user.{UserSearchFilterFactory, UserQueryParser}
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.search.user.UserSearchFilterFactory
 
 
 class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {

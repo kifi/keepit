@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model.{KifiVersion, User, SocialUserInfo, ExperimentType}
+import com.keepit.model.{KifiExtVersion, User, SocialUserInfo, ExperimentType}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -242,7 +242,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   private def needsToUpdate(streamSession: StreamSession, versionOpt: Option[String]) = {
     // We only support force updates to Chrome. Other platforms (mobile) can hook in here as well.
     if (UserAgent.fromString(streamSession.userAgent).name == "Chrome") {
-      versionOpt.flatMap(v => Try(KifiVersion(v)).toOption) match {
+      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption) match {
         case Some(ver) =>
           val details = kifInstallationStore.get()
           val lessThanGold = ver < details.gold

@@ -5,6 +5,7 @@ import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.model.Collection
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.search.util.IdFilterCompressor
 import scala.concurrent.duration._
 import scala.concurrent.Future
 

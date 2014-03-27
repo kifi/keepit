@@ -11,15 +11,13 @@ import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUser
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Promise
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import java.io.StringReader
 import play.api.libs.json._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.ArticleSearchResult
 import com.keepit.search.Lang
 import com.keepit.search.SearchConfigExperiment
@@ -46,13 +44,16 @@ class ResultDecorator(
   ): DecoratedResult = {
     val hits = result.hits
     val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
-    val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], BasicUser]) else shoeboxClient.getBasicUsers(users.toSeq)
+    val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], JsObject]) else {
+      shoeboxClient.getBasicUsers(users.toSeq).map{ _.map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) } }
+    }
     val expertsFuture = Promise.successful(List.empty[Id[User]]).future  // TODO: revisit
 
     val highlightedHits = highlight(hits)
 
-    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users").map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) }
+    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
     val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserMap)
+
     val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val experts = expertIds.flatMap{ expert => basicUserMap.get(expert) }
 
@@ -102,15 +103,6 @@ object Highlighter extends Logging {
       parser.parse(queryText).map{ query => QueryUtil.getTerms("", query).map(_.text) }.getOrElse(Set.empty)
     } else {
       Set.empty
-    }
-  }
-
-  def highlight(text: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
-    terms match {
-      case Some(terms) => highlight(text, analyzer, field, terms)
-      case _ =>
-        log.error("no term specified")
-        emptyMatches
     }
   }
 

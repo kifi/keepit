@@ -6,13 +6,11 @@ import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time.Clock
 import com.keepit.common.net.UserAgent
-import scala.slick.jdbc.{PositionedResult, GetResult}
 import org.joda.time.DateTime
-import com.keepit.common.time.zones
 
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
-  def getLatestActive(count: Int)(implicit session: RSession): Seq[(KifiVersion, DateTime, Int)]
+  def getLatestActiveExtensionVersions(count: Int)(implicit session: RSession): Seq[(KifiExtVersion, DateTime, Int)]
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
 }
@@ -26,20 +24,38 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   type RepoImpl = KifiInstallationTable
   class KifiInstallationTable(tag: Tag) extends RepoTable[KifiInstallation](db, tag, "kifi_installation") with ExternalIdColumn[KifiInstallation] {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def version = column[KifiVersion]("version", O.NotNull)
+    def version = column[String]("version", O.NotNull)
     def userAgent = column[UserAgent]("user_agent", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, externalId, version, userAgent, state) <> ((KifiInstallation.apply _).tupled, KifiInstallation.unapply _)
+    def platform = column[String]("platform", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) <> (rowToObj, objToRow)
+  }
+
+  private val rowToObj: ((Option[Id[KifiInstallation]], DateTime, DateTime, Id[User], ExternalId[KifiInstallation], String, UserAgent, String, State[KifiInstallation])) => KifiInstallation = {
+    case (id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) => {
+      val kifiInstallationPlatform = KifiInstallationPlatform(platform)
+      val kifiVersion: KifiVersion = kifiInstallationPlatform match {
+        case KifiInstallationPlatform.IPhone => KifiIPhoneVersion(version)
+        case KifiInstallationPlatform.Extension => KifiExtVersion(version)
+      }
+      KifiInstallation(id, createdAt, updatedAt, userId, externalId, kifiVersion, userAgent, kifiInstallationPlatform, state)
+    }
+  }
+
+  private val objToRow: KifiInstallation => Option[(Option[Id[KifiInstallation]], DateTime, DateTime, Id[User], ExternalId[KifiInstallation], String, UserAgent, String, State[KifiInstallation])] = {
+    case KifiInstallation(id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) =>
+      Some((id, createdAt, updatedAt, userId, externalId, version.toString, userAgent, platform.name, state))
+    case _ => None
   }
 
   def table(tag: Tag) = new KifiInstallationTable(tag)
   initTable()
 
-  def getLatestActive(count: Int)(implicit session: RSession): Seq[(KifiVersion, DateTime, Int)] = {
+  def getLatestActiveExtensionVersions(count: Int)(implicit session: RSession): Seq[(KifiExtVersion, DateTime, Int)] = {
     import scala.slick.jdbc.StaticQuery.interpolation
     // select version,min(updated_at) as min, count(*) as count from kifi_installation group by version having count > 3 order by min desc limit 20;
-    val interpolated = sql"""select version, min(updated_at) as min, count(*) as c from kifi_installation group by version order by min desc limit $count"""
+    val interpolated = sql"""select version, min(updated_at) as min, count(*) as c from kifi_installation where platform = '#${KifiInstallationPlatform.Extension.name}' group by version order by min desc limit $count"""
     interpolated.as[(String, DateTime, Int)].list().map { case (versionStr, max, count) =>
-      (KifiVersion(versionStr), max, count)
+      (KifiExtVersion(versionStr), max, count)
     }.sortWith((a,b) => a._1 > b._1)
   }
 

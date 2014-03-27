@@ -17,7 +17,7 @@ import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import java.io.IOException
-import java.io.StringReader
+import java.io.Reader
 import com.keepit.common.logging.Logging
 
 
@@ -102,6 +102,11 @@ trait Indexable[T, S] extends Logging{
   }
 
   protected def buildTextField(fieldName: String, fieldValue: String, analyzer: Analyzer): Field = {
+    val ts = analyzer.createLazyTokenStream(fieldName, fieldValue)
+    new Field(fieldName, ts, textFieldType)
+  }
+
+  protected def buildTextField(fieldName: String, fieldValue: Reader, analyzer: Analyzer): Field = {
     val ts = analyzer.createLazyTokenStream(fieldName, fieldValue)
     new Field(fieldName, ts, textFieldType)
   }

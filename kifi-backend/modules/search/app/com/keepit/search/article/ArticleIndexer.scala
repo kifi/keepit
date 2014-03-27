@@ -20,6 +20,7 @@ import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
+import com.keepit.search.util.MultiStringReader
 
 
 class ArticleIndexer(
@@ -77,17 +78,6 @@ object ArticleIndexer extends Logging {
   ) extends Indexable[NormalizedURI, NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
-    private def enrichedContent(article: Article): String = {
-      val c = article.description match {
-        case Some(desc) => desc + "\n\n" + article.content
-        case None => article.content
-      }
-      article.media match {
-        case Some(media) => c + "\n\n" + media
-        case None => c
-      }
-    }
-
     private def getArticle(id: Id[NormalizedURI], maxRetry: Int, minSleepTime: Long): Option[Article] = {
       var sleepTime = minSleepTime
       var retry = maxRetry
@@ -129,18 +119,22 @@ object ArticleIndexer extends Logging {
           val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
           val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
 
-          val content = (Seq(article.content) ++ article.description ++ article.keywords).mkString("\n\n")
+          val content = Array(
+            article.content, "\n\n",
+            article.description.getOrElse(""), "\n\n",
+            article.keywords.getOrElse(""), "\n\n",
+            article.media.getOrElse(""))
           val titleAndUrl = article.title + " " + urlToIndexableString(uri.url)
 
           doc.add(buildTextField("t", titleAndUrl, titleAnalyzer))
           doc.add(buildTextField("ts", titleAndUrl, titleAnalyzerWithStemmer))
 
-          doc.add(buildTextField("c", content, contentAnalyzer))
-          doc.add(buildTextField("cs", content, contentAnalyzerWithStemmer))
+          doc.add(buildTextField("c", new MultiStringReader(content), contentAnalyzer))
+          doc.add(buildTextField("cs", new MultiStringReader(content), contentAnalyzerWithStemmer))
 
           val builder = new SemanticVectorBuilder(60)
           builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
-          builder.load(contentAnalyzerWithStemmer.tokenStream("c", content))
+          builder.load(contentAnalyzerWithStemmer.tokenStream("c", new MultiStringReader(content)))
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 
