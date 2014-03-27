@@ -87,6 +87,9 @@ class KifiInstallationTest extends Specification with ShoeboxTestInjector {
           all.size === 1
           all.head === installExt
           installationRepo.getOpt(user.id.get, installExt.externalId) === Some(installExt)
+          installationRepo.getOpt(user.id.get, KifiExtVersion("1.1.1"), KifiInstallationPlatform.Extension) === Some(installExt)
+          installationRepo.getOpt(user.id.get, KifiExtVersion("1.1.2"), KifiInstallationPlatform.Extension) === None
+          installationRepo.getOpt(user.id.get, KifiExtVersion("1.1.1"), KifiInstallationPlatform.IPhone) === None
           val versions = installationRepo.getLatestActiveExtensionVersions(20)
           versions.size === 1
           versions.head._1 === KifiExtVersion(1, 1, 1)

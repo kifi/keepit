@@ -7,12 +7,14 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time.Clock
 import com.keepit.common.net.UserAgent
 import org.joda.time.DateTime
+import com.keepit.model.KifiInstallationPlatform
 
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
   def getLatestActiveExtensionVersions(count: Int)(implicit session: RSession): Seq[(KifiExtVersion, DateTime, Int)]
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
+  def getOpt(userId: Id[User], version: KifiVersion, platform: KifiInstallationPlatform)(implicit session: RSession): Option[KifiInstallation]
 }
 
 @Singleton
@@ -64,6 +66,9 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
 
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
     (for(k <- rows if k.userId === userId && k.externalId === externalId) yield k).firstOption
+
+  def getOpt(userId: Id[User], version: KifiVersion, platform: KifiInstallationPlatform)(implicit session: RSession): Option[KifiInstallation] =
+    (for(k <- rows if k.userId === userId && k.version === version.toString && k.platform === platform.name) yield k).firstOption
 
   override def invalidateCache(kifiInstallation: KifiInstallation)(implicit session: RSession): Unit = {
     versionCache.set(ExtensionVersionInstallationIdKey(kifiInstallation.externalId), kifiInstallation.version.toString)
