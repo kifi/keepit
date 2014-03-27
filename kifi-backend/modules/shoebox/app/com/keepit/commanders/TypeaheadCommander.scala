@@ -23,6 +23,7 @@ import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import Logging.LoggerWithPrefix
+import scala.collection.mutable.ArrayBuffer
 
 case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String)
 
@@ -190,10 +191,94 @@ class TypeaheadCommander @Inject()(
   private def includeHit(hit:TypeaheadHit[SocialUserBasicInfo], filterJoinedUsers:Boolean):Boolean = {
     if (!filterJoinedUsers) true else hit.info.networkType match {
       case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN => hit.info.userId.isEmpty
-      case SocialNetworks.FORTYTWO => false // for now, we use search API instead
+      case SocialNetworks.FORTYTWO => false // see KifiUserTypeahead!
       case _ => true
     }
   }
+
+  private def fetchAll(socialF: Future[Option[Seq[TypeaheadHit[SocialUserBasicInfo]]]],
+                       kifiF: Future[Option[Seq[TypeaheadHit[User]]]],
+                       abookF: Future[Option[Seq[TypeaheadHit[EContact]]]],
+                       nfUsersF: Future[Seq[TypeaheadHit[BasicUser]]]) = {
+    for {
+      socialHitsOpt <- socialF
+      kifiHitsOpt <- kifiF
+      abookHitsOpt <- abookF
+      nfUserHits <- nfUsersF
+    } yield {
+      val socialHitsTup = socialHitsOpt.getOrElse(Seq.empty).map(h => (h.info.networkType, h))
+      val kifiHitsTup = kifiHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.FORTYTWO, h))
+      val abookHitsTup = abookHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.EMAIL, h))
+      val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
+      log.infoP(s"social.len=${socialHitsTup.length} kifi.len=${kifiHitsTup.length} abook.len=${abookHitsTup.length} nf.len=${nfUserHits.length}")
+      val sorted = (socialHitsTup ++ kifiHitsTup ++ abookHitsTup ++ nfUserHitsTup).sorted(hitOrd)
+      log.infoP(s"all.sorted(len=${sorted.length}):${sorted.take(10).mkString(",")}")
+      Some(sorted)
+    }
+  }
+
+  private def aggregate(userId: Id[User], q: String, limit: Option[Int], filterJoinedUsers: Boolean): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
+    implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
+    val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
+      resOpt map { res =>
+        res.collect {
+          case hit if includeHit(hit, filterJoinedUsers) => hit
+        }
+      }
+    }
+    val kifiF = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
+    val abookF = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
+    val nfUsersF = if (q.length < 3) Future.successful(Seq.empty) else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
+
+    limit match {
+      case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
+      case Some(n) =>
+        val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])] // can use minHeap
+        socialF flatMap { socialHitsOpt =>
+          val socialHits = socialHitsOpt.getOrElse(Seq.empty).map(h => (h.info.networkType, h)).sorted(hitOrd)
+          zHits ++= socialHits.takeWhile(t => t._2.score == 0)
+          val topF = if (zHits.length >= n) {
+            val res = zHits.take(n)
+            log.infoP(s"short-circuit (social) res=${res.mkString(",")}")
+            Future.successful(Option(res))
+          } else {
+            val future = kifiF flatMap { kifiHitsOpt =>
+              val kifiHits = kifiHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
+              zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
+              if (zHits.length >= n) {
+                val res = zHits.take(n)
+                log.infoP(s"short-circuit (social+kifi) res=${res.mkString(",")}")
+                Future.successful(Option(res))
+              } else {
+                abookF flatMap { abookHitsOpt =>
+                  val abookHits = abookHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
+                  zHits ++= abookHits.takeWhile(t => t._2.score == 0)
+                  if (zHits.length >= n) {
+                    val res = zHits.take(n)
+                    log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
+                    Future.successful(Option(res))
+                  } else {
+                    nfUsersF map { nfUserRes =>
+                      val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
+                      zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
+                      if (zHits.length >= n) {
+                        Option(zHits.take(n))
+                      } else { // combine all & sort
+                        Some((socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(n))
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            future
+          }
+          topF
+        }
+    }
+  }
+
+
 
   def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
     implicit val prefix = LogPrefix(s"searchWIS($userId,$query,$limit)")
@@ -208,51 +293,7 @@ class TypeaheadCommander @Inject()(
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map(_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
-        resOpt map { res => res.collect { case hit if includeHit(hit, filterJoinedUsers) => hit } }
-      }
-      val kifiF  = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
-      val nfUsersF = if (q.length < 3) {
-        log.infoP(s"short-circuit (NF-v) as ${q.length} < 3")
-        Future.successful(Seq.empty)
-      } else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
-      val abookF  = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
-      val topF = socialF flatMap { socialHitsOpt =>
-        if (limit.exists(n => (socialHitsOpt.exists(res => (res.length > n && res.last.score == 0))))) {
-          socialF map { socialHitsOpt =>
-            socialHitsOpt map { hits =>
-              val res = hits.map(h => (h.info.networkType, h)).sorted(hitOrd)
-              log.infoP(s"short-circuit res(len=${res.length}):${res.mkString(",")}")
-              res
-            }
-          }
-        } else {
-          for { // simple but not efficient
-            kifiHitsOpt  <- kifiF
-            nfUserHits   <- nfUsersF
-            abookHitsOpt <- abookF
-          } yield {
-            val socialHits    = socialHitsOpt.getOrElse(Seq.empty)
-            val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
-            log.infoP(s"social(len=${socialHits.length}):${socialHits.mkString(",")}")
-            val kifiHits      = kifiHitsOpt.getOrElse(Seq.empty)
-            log.infoP(s"kifi(len=${kifiHits.length}):${kifiHits.mkString(",")}")
-            val kifiHitsTup   = kifiHits.map(h => (SocialNetworks.FORTYTWO, h))
-            val abookHits     = abookHitsOpt.getOrElse(Seq.empty)
-            val abookHitsTup  = abookHits.map(h => (SocialNetworks.EMAIL, h))
-            log.infoP(s"abook(len=${abookHits.length}):${abookHits.mkString(",")}")
-            val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
-            log.infoP(s"nf(len=${nfUserHits.length}):${nfUserHits.mkString(",")}")
-            val combined = (socialHitsTup ++ kifiHitsTup ++ abookHitsTup ++ nfUserHitsTup)
-            log.infoP(s"combined(len=${combined.length}):${combined.mkString(",")}")
-            val sorted = combined.sorted(hitOrd)
-            log.infoP(s"sorted(len=${sorted.length}):${sorted.mkString(",")}")
-            Some(sorted)
-          }
-        }
-      }
-
-
+      val topF: Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = aggregate(userId, q, limit, filterJoinedUsers)
       topF flatMap { topOpt =>
         topOpt match {
           case None => Future.successful(Seq.empty[ConnectionWithInviteStatus])
