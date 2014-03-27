@@ -63,7 +63,9 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         contentType(result) must beSome("application/json");
 
         val installation = db.readWrite {implicit s =>
-          installationRepo.getOpt(user.id.get, KifiIPhoneVersion("1.2.3"), KifiInstallationPlatform.IPhone).get
+          val all = installationRepo.all()(s)
+          all.size === 1
+          all.head
         }
 
         val expected = Json.parse(s"""
@@ -73,13 +75,52 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         installation
       }
       {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
+        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3", "installation" -> existing.externalId.toString))
         val result = route(request).get
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
         val expected = Json.parse(s"""
           {"installation":"${existing.externalId}","newInstallation":false}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+        db.readOnly {implicit s =>
+          installationRepo.count === 1
+          installationRepo.all().head.version.toString === "1.2.3"
+        }
+      }
+      {
+        db.readOnly {implicit s =>
+          installationRepo.get(existing.externalId).version.toString === "1.2.3"
+          installationRepo.get(existing.externalId) === existing
+        }
+        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.4", "installation" -> existing.externalId.toString))
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.parse(s"""
+          {"installation":"${existing.externalId}","newInstallation":false}
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+        db.readWrite {implicit s =>
+          installationRepo.count === 1
+          installationRepo.all().head.version.toString === "1.2.4"
+        }
+      }
+      {
+        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val newOne = db.readWrite {implicit s =>
+          val all = installationRepo.all()
+          all.size === 2
+          all(1)
+        }
+        val expected = Json.parse(s"""
+          {"installation":"${newOne.externalId}","newInstallation":true}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
