@@ -1,5 +1,7 @@
 package com.keepit.graph.model
 
+import com.keepit.model.Reflect
+
 sealed trait VertexKind {
   type V <: VertexDataReader
   def header: Byte
@@ -7,13 +9,11 @@ sealed trait VertexKind {
 }
 
 object VertexKind {
-  val all: Set[VertexKind] = {
-    val kinds: Set[VertexKind] = Reflect.getSubclasses[VertexKind].map(Reflect.getCompanion(_).asInstanceOf[VertexKind])
-    require(kinds.size == kinds.map(_.header).size, "Duplicate VertexKind headers")
-    kinds
+  val all: Set[VertexKind] = Reflect.getCompanionTypeSystem[VertexDataReader, VertexKind]("V")
+  private val byHeader = {
+    require(all.size == all.map(_.header).size, "Duplicate VertexKind headers")
+    all.map { vertexKind => vertexKind.header -> vertexKind }.toMap
   }
-
-  private val byHeader = all.map { vertexKind => vertexKind.header -> vertexKind }.toMap
   def apply(header: Byte): VertexKind = byHeader(header)
 }
 
@@ -26,7 +26,6 @@ sealed trait VertexDataReader {
 }
 
 object VertexDataReader {
-  Reflect.checkDataReaders[VertexDataReader, VertexKind]
   def apply(rawDataReader: RawDataReader): Map[VertexKind, VertexDataReader] = VertexKind.all.map { vertexKind =>
     vertexKind -> vertexKind(rawDataReader)
   }.toMap
