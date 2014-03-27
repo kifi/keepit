@@ -212,7 +212,6 @@ class TypeaheadCommander @Inject()(
         resOpt map { res => res.collect { case hit if includeHit(hit, filterJoinedUsers) => hit } }
       }
       val kifiF  = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
-      val usersF = searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "f")
       val nfUsersF = if (q.length < 3) {
         log.infoP(s"short-circuit (NF-v) as ${q.length} < 3")
         Future.successful(Seq.empty)
@@ -230,7 +229,6 @@ class TypeaheadCommander @Inject()(
         } else {
           for { // simple but not efficient
             kifiHitsOpt  <- kifiF
-            userHits     <- usersF
             nfUserHits   <- nfUsersF
             abookHitsOpt <- abookF
           } yield {
@@ -238,17 +236,13 @@ class TypeaheadCommander @Inject()(
             val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
             val kifiHits      = kifiHitsOpt.getOrElse(Seq.empty)
             log.infoP(s"kifi(len=${kifiHits.length}):${kifiHits.mkString(",")}")
-            log.infoP(s"user(len=${userHits.length}):${userHits.mkString(",")}")
-            if (kifiHits.length != userHits.length) {
-              log.warnP(s"kifi.len(${kifiHits.length}) != userHits.len(${userHits.length}); kifiHits=${kifiHits.mkString(",")} userHits=${userHits.mkString(",")}")
-            }
             val kifiHitsTup   = kifiHits.map(h => (SocialNetworks.FORTYTWO, h))
-            val userHitsTup   = userHits.map(h => (SocialNetworks.FORTYTWO, h))
-            val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
             val abookHits     = abookHitsOpt.getOrElse(Seq.empty)
             val abookHitsTup  = abookHits.map(h => (SocialNetworks.EMAIL, h))
-            log.infoP(s"social(len=${socialHits.length}):${socialHits.mkString(",")} users(len=${userHits.length}):${userHits.mkString(",")} nf(len=${nfUserHits.length}):${nfUserHits.mkString(",")} abook(len=${abookHits.length}):${abookHits.mkString(",")}")
-            val combined = (socialHitsTup ++ kifiHitsTup ++ nfUserHitsTup ++ abookHitsTup)
+            log.infoP(s"social(len=${socialHits.length}):${socialHits.mkString(",")} kifi(len=${kifiHits.length}):${kifiHits.mkString(",")} abook(len=${abookHits.length}):${abookHits.mkString(",")}")
+            val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
+            log.infoP(s"nf(len=${nfUserHits.length}):${nfUserHits.mkString(",")}")
+            val combined = (socialHitsTup ++ kifiHitsTup ++ abookHitsTup ++ nfUserHitsTup)
             log.infoP(s"combined(len=${combined.length}):${combined.mkString(",")}")
             val sorted = combined.sorted(hitOrd)
             log.infoP(s"sorted(len=${sorted.length}):${sorted.mkString(",")}")
