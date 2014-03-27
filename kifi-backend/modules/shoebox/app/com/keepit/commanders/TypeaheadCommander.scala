@@ -3,10 +3,10 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
-import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.social.{BasicUser, SocialNetworkType, SocialNetworks}
 import scala.concurrent.Future
@@ -22,6 +22,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import Logging.LoggerWithPrefix
 
 case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String)
 
@@ -45,6 +46,7 @@ class TypeaheadCommander @Inject()(
   invitationRepo: InvitationRepo,
   abookServiceClient: ABookServiceClient,
   socialUserTypeahead: SocialUserTypeahead,
+  kifiUserTypeahead: KifiUserTypeahead,
   econtactTypeahead: EContactTypeahead,
   searchClient: SearchServiceClient,
   systemAdminMailSender:SystemAdminMailSender
@@ -193,7 +195,9 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean, addNFUsers:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
+  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
+    implicit val prefix = LogPrefix(s"searchWIS($userId,$query,$limit)")
+
     val socialInvitesF = db.readOnlyAsync { implicit ro =>
       invitationRepo.getSocialInvitesBySenderId(userId) // not cached
     }
@@ -207,9 +211,10 @@ class TypeaheadCommander @Inject()(
       val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map(_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
         resOpt map { res => res.collect { case hit if includeHit(hit, filterJoinedUsers) => hit } }
       }
+      val kifiF  = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
       val usersF = searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "f")
       val nfUsersF = if (q.length < 3) {
-        log.info(s"[searchWIS($userId,$query,$limit)] short-circuit (NF-v) as ${q.length} < 3")
+        log.infoP(s"short-circuit (NF-v) as ${q.length} < 3")
         Future.successful(Seq.empty)
       } else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
       val abookF  = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
@@ -218,27 +223,35 @@ class TypeaheadCommander @Inject()(
           socialF map { socialHitsOpt =>
             socialHitsOpt map { hits =>
               val res = hits.map(h => (h.info.networkType, h)).sorted(hitOrd)
-              log.info(s"[searchWIS($userId,$query,$limit)] short-circuit res(len=${res.length}):${res.mkString(",")}")
+              log.infoP(s"short-circuit res(len=${res.length}):${res.mkString(",")}")
               res
             }
           }
         } else {
-          for { // simple but not efficient -- profiling needed
-            userHits <- usersF
-            nfUserHits <- nfUsersF
+          for { // simple but not efficient
+            kifiHitsOpt  <- kifiF
+            userHits     <- usersF
+            nfUserHits   <- nfUsersF
             abookHitsOpt <- abookF
           } yield {
             val socialHits    = socialHitsOpt.getOrElse(Seq.empty)
             val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
+            val kifiHits      = kifiHitsOpt.getOrElse(Seq.empty)
+            log.infoP(s"kifi(len=${kifiHits.length}):${kifiHits.mkString(",")}")
+            log.infoP(s"user(len=${userHits.length}):${userHits.mkString(",")}")
+            if (kifiHits.length != userHits.length) {
+              log.warnP(s"kifi.len(${kifiHits.length}) != userHits.len(${userHits.length}); kifiHits=${kifiHits.mkString(",")} userHits=${userHits.mkString(",")}")
+            }
+            val kifiHitsTup   = kifiHits.map(h => (SocialNetworks.FORTYTWO, h))
             val userHitsTup   = userHits.map(h => (SocialNetworks.FORTYTWO, h))
             val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
             val abookHits     = abookHitsOpt.getOrElse(Seq.empty)
             val abookHitsTup  = abookHits.map(h => (SocialNetworks.EMAIL, h))
-            log.info(s"[searchWIS($userId,$query,$limit)] social(len=${socialHits.length}):${socialHits.mkString(",")} users(len=${userHits.length}):${userHits.mkString(",")} nf(len=${nfUserHits.length}):${nfUserHits.mkString(",")} abook(len=${abookHits.length}):${abookHits.mkString(",")}")
-            val combined = (socialHitsTup ++ userHitsTup ++ nfUserHitsTup ++ abookHitsTup)
-            log.info(s"[searchWIS($userId,$query,$limit)] combined(len=${combined.length}):${combined.mkString(",")}")
+            log.infoP(s"social(len=${socialHits.length}):${socialHits.mkString(",")} users(len=${userHits.length}):${userHits.mkString(",")} nf(len=${nfUserHits.length}):${nfUserHits.mkString(",")} abook(len=${abookHits.length}):${abookHits.mkString(",")}")
+            val combined = (socialHitsTup ++ kifiHitsTup ++ nfUserHitsTup ++ abookHitsTup)
+            log.infoP(s"combined(len=${combined.length}):${combined.mkString(",")}")
             val sorted = combined.sorted(hitOrd)
-            log.info(s"[searchWIS($userId,$query,$limit)] sorted(len=${sorted.length}):${sorted.mkString(",")}")
+            log.infoP(s"sorted(len=${sorted.length}):${sorted.mkString(",")}")
             Some(sorted)
           }
         }
@@ -282,19 +295,21 @@ class TypeaheadCommander @Inject()(
                       }
                     } getOrElse ""
                     ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status)
-                  case SocialNetworks.FORTYTWO | SocialNetworks.FORTYTWO_NF =>
+                  case SocialNetworks.FORTYTWO =>
+                    val u = hit.info.asInstanceOf[User]
+                    val picUrl = if (pictureUrl) u.pictureName else None
+                    ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
+                  case SocialNetworks.FORTYTWO_NF =>
                     val bu = hit.info.asInstanceOf[BasicUser]
                     val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
-                    val picUrl = if (pictureUrl) {
-                      Some(bu.pictureName) // can get full url (tbd)
-                    } else None
+                    val picUrl = if (pictureUrl) Some(bu.pictureName) else None
                     ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", "joined")
                 }
               }
               val res = limit.map{ n =>
                 resWithStatus.take(n)
               }.getOrElse(resWithStatus)
-              log.info(s"[searchWIS($userId,$query,$limit)] res=${res.mkString(",")}")
+              log.infoP(s"result=${res.mkString(",")}")
               res
             }
           }

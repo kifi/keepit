@@ -9,7 +9,7 @@ import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.typeahead.socialusers.SocialUserTypeaheadCache
+import com.keepit.typeahead.socialusers.{KifiUserTypeaheadCache, SocialUserTypeaheadCache}
 import com.keepit.typeahead.abook.EContactTypeaheadCache
 
 case class
@@ -217,7 +217,12 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def socialUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserTypeaheadCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+    new SocialUserTypeaheadCache(stats, accessLog, (outerRepo, 15 minutes))
+
+  @Singleton
+  @Provides
+  def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 15 minutes))
 
   @Singleton
   @Provides

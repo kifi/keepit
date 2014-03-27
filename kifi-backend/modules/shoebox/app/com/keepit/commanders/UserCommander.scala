@@ -33,7 +33,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.concurrent.ExecutionContext
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -99,6 +99,7 @@ class UserCommander @Inject() (
   clock: Clock,
   scheduler: Scheduler,
   socialUserTypeahead: SocialUserTypeahead,
+  kifiUserTypeahead: KifiUserTypeahead,
   elizaServiceClient: ElizaServiceClient,
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
@@ -564,7 +565,10 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-            socialUserTypeahead.refresh(myUserId)
+            socialUserTypeahead.refresh(friendReq.senderId)
+            socialUserTypeahead.refresh(friendReq.recipientId)
+            kifiUserTypeahead.refresh(friendReq.senderId)
+            kifiUserTypeahead.refresh(friendReq.recipientId)
             searchClient.updateUserGraph()
             sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
             (true, "acceptedRequest")
@@ -591,6 +595,9 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
         socialUserTypeahead.refresh(userId)
+        socialUserTypeahead.refresh(user.id.get)
+        kifiUserTypeahead.refresh(userId)
+        kifiUserTypeahead.refresh(user.id.get)
         searchClient.updateUserGraph()
       }
       success

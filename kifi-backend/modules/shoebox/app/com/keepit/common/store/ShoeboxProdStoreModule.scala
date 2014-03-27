@@ -9,7 +9,7 @@ import com.keepit.common.time.Clock
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 import play.api.Play._
-import com.keepit.typeahead.socialusers.{S3SocialUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore}
+import com.keepit.typeahead.socialusers._
 import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
@@ -44,6 +44,13 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def socialUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserTypeaheadStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.social.bucket").get)
     new S3SocialUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Singleton
+  @Provides
+  def kifiUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifiUserTypeaheadStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.kifi.bucket").get)
+    new S3KifiUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
   }
 
   @Singleton
@@ -85,6 +92,14 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     whenConfigured("amazon.s3.typeahead.social.bucket")(
       prodStoreModule.socialUserTypeaheadStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemorySocialUserTypeaheadStoreImpl())
+  }
+
+  @Singleton
+  @Provides
+  def kifiUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifiUserTypeaheadStore = {
+    whenConfigured("amazon.s3.typeahead.kifi.bucket")(
+      prodStoreModule.kifiUserTypeaheadStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryKifiUserTypeaheadStoreImpl())
   }
 
   @Singleton

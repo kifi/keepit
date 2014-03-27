@@ -244,7 +244,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 
-GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, filterJoinedUsers:Boolean ?= true, addNFUsers:Boolean ?= false)
+GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, filterJoinedUsers:Boolean ?= true)
 
 GET     /site/user/socialConnections    @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
@@ -440,9 +440,10 @@ POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminC
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
-GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], search:String ?= "")
-GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], search:String ?= "")
-GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], search:String ?= "", limit:Int ?= 5, pictureUrl:Boolean ?= true, filterJoinedUsers:Boolean ?= true, addNFUsers:Boolean ?= true)
+GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], query:String ?= "", limit:Int ?= 5, pictureUrl:Boolean ?= true, filterJoinedUsers:Boolean ?= true)
 GET     /admin/typeahead/refreshPrefixFilter        @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFilter(userId:Id[User])
 POST    /admin/typeahead/refreshPrefixFiltersByIds  @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFiltersByIds()
 GET     /admin/typeahead/refreshAllPrefixFilters    @com.keepit.controllers.admin.TypeaheadAdminController.refreshAllPrefixFilters()
