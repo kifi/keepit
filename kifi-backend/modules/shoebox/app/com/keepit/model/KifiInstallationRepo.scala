@@ -31,11 +31,19 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   }
 
   private val rowToObj: ((Option[Id[KifiInstallation]], DateTime, DateTime, Id[User], ExternalId[KifiInstallation], String, UserAgent, String, State[KifiInstallation])) => KifiInstallation = {
-    case (id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) => KifiInstallation(id, createdAt, updatedAt, userId, externalId, KifiExtVersion(version), userAgent, KifiInstallationPlatform(platform), state)
+    case (id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) => {
+      val kifiInstallationPlatform = KifiInstallationPlatform(platform)
+      val kifiVersion: KifiVersion = kifiInstallationPlatform match {
+        case KifiInstallationPlatform.IPhone => KifiIPhoneVersion(version)
+        case KifiInstallationPlatform.Extension => KifiExtVersion(version)
+      }
+      KifiInstallation(id, createdAt, updatedAt, userId, externalId, kifiVersion, userAgent, kifiInstallationPlatform, state)
+    }
   }
 
   private val objToRow: KifiInstallation => Option[(Option[Id[KifiInstallation]], DateTime, DateTime, Id[User], ExternalId[KifiInstallation], String, UserAgent, String, State[KifiInstallation])] = {
-    case KifiInstallation(id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) => Some((id, createdAt, updatedAt, userId, externalId, version.toString, userAgent, platform.name, state))
+    case KifiInstallation(id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) =>
+      Some((id, createdAt, updatedAt, userId, externalId, version.toString, userAgent, platform.name, state))
     case _ => None
   }
 
