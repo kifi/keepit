@@ -63,9 +63,9 @@ object KeepInfosWithCollection {
   )(KeepInfosWithCollection.apply _)
 }
 
-class BookmarksCommander @Inject() (
+class KeepsCommander @Inject() (
     db: Database,
-    bookmarkInterner: KeepInterner,
+    keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
@@ -92,7 +92,7 @@ class BookmarksCommander @Inject() (
     val keepsWithCollIds = db.readOnly { implicit s =>
       val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
       keeps.map{ keep =>
-        val collIds = keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
+        val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
         (keep, collIds)
       }
     }
@@ -112,7 +112,7 @@ class BookmarksCommander @Inject() (
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (keeps, _) = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
+    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
 
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -137,7 +137,7 @@ class BookmarksCommander @Inject() (
           }
         }
       }.flatten
-      val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForBookmark(bm.id.get)).toSet
+      val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForKeep(bm.id.get)).toSet
       collIds.foreach{ cid => collectionRepo.collectionChanged(cid) }
       bms
     }
@@ -164,11 +164,11 @@ class BookmarksCommander @Inject() (
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
-      val created = (keepsById.keySet -- existing.map(_.bookmarkId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
+      val created = (keepsById.keySet -- existing.map(_.keepId)) map { bid =>
+        keepToCollectionRepo.save(KeepToCollection(keepId = bid, collectionId = collection.id.get))
       }
       val activated = existing collect {
-        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
+        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
@@ -176,7 +176,7 @@ class BookmarksCommander @Inject() (
 
       val tagged = (activated ++ created).toSet
       val taggingAt = currentDateTime
-      tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.bookmarkId), context, taggingAt))
+      tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt))
       tagged
     } tap { _ => searchClient.updateURIGraph() }
   }
@@ -185,20 +185,20 @@ class BookmarksCommander @Inject() (
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val removed = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
-        case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.bookmarkId) =>
+        case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
       }
 
       collectionRepo.collectionChanged(collection.id.get)
 
       val removedAt = currentDateTime
-      removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.bookmarkId), context, removedAt))
+      removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt))
       removed.toSet
     } tap { _ => searchClient.updateURIGraph() }
   }
 
   def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val (bookmarks, _) = bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
+    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag, bookmarks)
   }
 
@@ -218,12 +218,12 @@ class BookmarksCommander @Inject() (
     db.readWrite { implicit s =>
       for {
         uri <- uriRepo.getByUri(url)
-        bookmark <- keepRepo.getByUriAndUser(uri.id.get, userId)
+        keep <- keepRepo.getByUriAndUser(uri.id.get, userId)
         collection <- collectionRepo.getOpt(id)
       } {
-        keepToCollectionRepo.remove(bookmarkId = bookmark.id.get, collectionId = collection.id.get)
+        keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
         collectionRepo.collectionChanged(collection.id.get)
-        keptAnalytics.untaggedPage(collection, bookmark, context)
+        keptAnalytics.untaggedPage(collection, keep, context)
       }
     }
     searchClient.updateURIGraph()
@@ -233,8 +233,8 @@ class BookmarksCommander @Inject() (
     db.readWrite { implicit s =>
       for {
         uri <- uriRepo.getByUri(url).toSeq
-        bookmark <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
-        ktc <- keepToCollectionRepo.getByBookmark(bookmark.id.get)
+        keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        ktc <- keepToCollectionRepo.getByKeep(keep.id.get)
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
         collectionRepo.collectionChanged(ktc.collectionId)
@@ -247,8 +247,8 @@ class BookmarksCommander @Inject() (
     db.readOnly { implicit s =>
       for {
         uri <- uriRepo.getByUri(url).toSeq
-        bookmark <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
-        collectionId <- keepToCollectionRepo.getCollectionsForBookmark(bookmark.id.get)
+        keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        collectionId <- keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       } yield {
         collectionRepo.get(collectionId)
       }
@@ -256,7 +256,7 @@ class BookmarksCommander @Inject() (
   }
 
   def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Keep]] = {
-    val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
+    val (bookmarks, _) = keepInterner.internRawBookmarks(
       rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
       userId,
       mutatePrivacy = true,

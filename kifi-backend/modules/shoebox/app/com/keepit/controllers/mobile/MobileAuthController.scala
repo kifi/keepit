@@ -18,11 +18,24 @@ import scala.util.Success
 import play.api.mvc.Cookie
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.social.{SocialNetworkType, SocialId, UserIdentity}
-import com.keepit.model.{SocialUserInfoRepo, UserRepo}
+import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.providers.ProviderController
+import com.keepit.commanders.KeepInfosWithCollection
+import com.keepit.common.db.Id
+import securesocial.core.IdentityId
+import scala.util.Failure
+import scala.Some
+import play.api.mvc.SimpleResult
+import play.api.libs.json.JsNumber
+import securesocial.core.LoginEvent
+import securesocial.core.OAuth2Info
+import scala.util.Success
+import com.keepit.social.UserIdentity
+import play.api.mvc.Cookie
+import com.keepit.social.SocialId
 
 
 class MobileAuthController @Inject() (
@@ -32,10 +45,22 @@ class MobileAuthController @Inject() (
   clock: Clock,
   socialUserInfoRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
+  kifiInstallationRepo: KifiInstallationRepo,
   authHelper:AuthHelper
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
+
+//  def registerVersion() = JsonAction.authenticatedParseJson { request =>
+//    val json = request.body
+//    val version = KifiIPhoneVersion((json \ "version").as[String])
+//    val userId = (json \ "userId").as[Id[User]])
+//    kifiInstallationRepo.
+//
+//    Ok(Json.obj(
+//      "version" -> kifiVersion.externalId
+//    ))
+//  }
 
   def accessTokenSignup(providerName:String) = Action(parse.tolerantJson) { implicit request =>
     val resOpt = for {

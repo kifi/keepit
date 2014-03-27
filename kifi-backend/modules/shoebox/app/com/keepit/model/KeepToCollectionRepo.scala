@@ -8,23 +8,23 @@ import com.keepit.common.time._
 
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
-  def getCollectionsForBookmark(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
-  def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]]
+  def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
+  def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
-  def getByBookmark(keepId: Id[Keep],
+  def getByKeep(keepId: Id[Keep],
                     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                    (implicit session: RSession): Seq[KeepToCollection]
   def getByCollection(collId: Id[Collection],
                       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                      (implicit session: RSession): Seq[KeepToCollection]
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int
-  def remove(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit
-  def getOpt(bookmarkId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
+  def remove(keepId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit
+  def getOpt(keepId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
 }
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
-   collectionsForBookmarkCache: CollectionsForKeepCache,
+   collectionsForKeepCache: CollectionsForKeepCache,
    keepRepoProvider: Provider[KeepRepoImpl],
    val db: DataBaseComponent,
    val clock: Clock)
@@ -35,13 +35,13 @@ class KeepToCollectionRepoImpl @Inject() (
   private lazy val keepRepo = keepRepoProvider.get
 
   override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
-    collectionsForBookmarkCache.set(CollectionsForKeepKey(ktc.bookmarkId),
-      (for (c <- rows if c.bookmarkId === ktc.bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
+    collectionsForKeepCache.set(CollectionsForKeepKey(ktc.keepId),
+      (for (c <- rows if c.bookmarkId === ktc.keepId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list)
   }
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
-    collectionsForBookmarkCache.remove(CollectionsForKeepKey(ktc.bookmarkId))
+    collectionsForKeepCache.remove(CollectionsForKeepKey(ktc.keepId))
   }
 
   type RepoImpl = KeepToCollectionTable
@@ -55,17 +55,17 @@ class KeepToCollectionRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToCollectionTable(tag)
   initTable()
 
-  def getCollectionsForBookmark(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]] =
-    collectionsForBookmarkCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
+  def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]] =
+    collectionsForKeepCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
       (for (c <- rows if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.collectionId).list
     }
 
-  def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]] =
+  def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]] =
       (for (c <- rows if c.collectionId === collectionId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.bookmarkId).list
 
-  def getByBookmark(keepId: Id[Keep],
+  def getByKeep(keepId: Id[Keep],
                     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
                    (implicit session: RSession): Seq[KeepToCollection] =
     (for (c <- rows if c.bookmarkId === keepId && c.state =!= excludeState.getOrElse(null)) yield c).list
