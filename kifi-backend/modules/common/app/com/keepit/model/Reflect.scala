@@ -14,13 +14,13 @@ object Reflect {
      clazz.knownDirectSubclasses.map(_.asClass)
    }
 
-  def getCompanionTypeSystem[SealedClass: TypeTag, Companion: TypeTag](typeMember: String): Set[Companion] =
+  def getCompanionTypeSystem[SealedClass: TypeTag, Companion: TypeTag](forwardTypeMember: String): Set[Companion] =
     getSubclasses[SealedClass].map { subclass =>
      checkCompanionType[Companion](subclass)
      val subclassType = subclass.toType
      val companionType = subclass.companionSymbol.typeSignature
-     checkTypeMember(subclassType, typeMember, subclassType)
-     checkTypeMember(companionType, typeMember, subclassType)
+     checkTypeMember(subclassType, forwardTypeMember, subclassType)
+     checkTypeMember(companionType, forwardTypeMember, subclassType)
      getCompanion(subclass).asInstanceOf[Companion]
    }
 
