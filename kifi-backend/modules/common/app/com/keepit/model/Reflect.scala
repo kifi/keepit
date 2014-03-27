@@ -4,13 +4,13 @@ import scala.reflect.runtime.universe._
 
 object Reflect {
 
-  def getCompanionTypeSystem[SealedClass: TypeTag, Companion: TypeTag](forwardTypeMember: String): Set[Companion] =
+  def getCompanionTypeSystem[SealedClass: TypeTag, Companion: TypeTag](forwardTypeReference: String): Set[Companion] =
     getSubclasses[SealedClass].map { subclass =>
      checkCompanionType[Companion](subclass)
      val subclassType = subclass.toType
      val companionType = subclass.companionSymbol.typeSignature
-     checkTypeMember(subclassType, forwardTypeMember, subclassType)
-     checkTypeMember(companionType, forwardTypeMember, subclassType)
+     checkTypeMember(subclassType, forwardTypeReference, subclassType)
+     checkTypeMember(companionType, forwardTypeReference, subclassType)
      getCompanion(subclass).asInstanceOf[Companion]
    }
 
