@@ -56,7 +56,7 @@ case object UserGlobalId extends GlobalIdCompanion {
 trait KeepGlobalId extends ModelGlobalId[Keep] { self: Keep => type G = KeepGlobalId; }
 
 case object KeepGlobalId extends GlobalIdCompanion {
-  type G = KeepWithGlobalId
+  type G = KeepGlobalId
   type M = Keep
   val header = TypeHeader[M](2)
 }
