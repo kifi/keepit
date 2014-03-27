@@ -81,22 +81,26 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         contentType(result) must beSome("application/json");
 
         val expected = Json.parse(s"""
-          {"installation":"${existing.externalId}","newInstallation":true}
+          {"installation":"${existing.externalId}","newInstallation":false}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
-        db.readWrite {implicit s =>
+        db.readOnly {implicit s =>
           installationRepo.count === 1
           installationRepo.all().head.version.toString === "1.2.3"
         }
       }
       {
+        db.readOnly {implicit s =>
+          installationRepo.get(existing.externalId).version.toString === "1.2.3"
+          installationRepo.get(existing.externalId) === existing
+        }
         val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.4", "installation" -> existing.externalId.toString))
         val result = route(request).get
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
         val expected = Json.parse(s"""
-          {"installation":"${existing.externalId}","newInstallation":true}
+          {"installation":"${existing.externalId}","newInstallation":false}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
         db.readWrite {implicit s =>
@@ -110,13 +114,15 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
+        val newOne = db.readWrite {implicit s =>
+          val all = installationRepo.all()
+          all.size === 2
+          all(1)
+        }
         val expected = Json.parse(s"""
-          {"installation":"${existing.externalId}","newInstallation":false}
+          {"installation":"${newOne.externalId}","newInstallation":true}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
-        db.readWrite {implicit s =>
-          installationRepo.count === 2
-        }
       }
 
     }
