@@ -64,7 +64,7 @@ class PageCommander @Inject() (
         keepRepo.getByUriAndUser(uri.id.get, userId)
       }
       val tags: Seq[Collection] = bookmark.map { bm =>
-        keepToCollectionRepo.getCollectionsForBookmark(bm.id.get).map { collId =>
+        keepToCollectionRepo.getCollectionsForKeep(bm.id.get).map { collId =>
           collectionRepo.get(collId)
         }
       }.getOrElse(Seq())

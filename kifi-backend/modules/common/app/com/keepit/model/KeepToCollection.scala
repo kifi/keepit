@@ -10,7 +10,7 @@ import com.keepit.serializer.TraversableFormat
 
 case class KeepToCollection(
   id: Option[Id[KeepToCollection]] = None,
-  bookmarkId: Id[Keep],
+  keepId: Id[Keep],
   collectionId: Id[Collection],
   state: State[KeepToCollection] = KeepToCollectionStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
@@ -22,10 +22,10 @@ case class KeepToCollection(
   def inactivate(): KeepToCollection = this.copy(state = KeepToCollectionStates.INACTIVE)
 }
 
-case class CollectionsForKeepKey(bookmarkId: Id[Keep]) extends Key[Seq[Id[Collection]]] {
+case class CollectionsForKeepKey(keepId: Id[Keep]) extends Key[Seq[Id[Collection]]] {
   override val version = 2
   val namespace = "collections_for_bookmark"
-  def toKey(): String = bookmarkId.toString
+  def toKey(): String = keepId.toString
 }
 
 class CollectionsForKeepCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)

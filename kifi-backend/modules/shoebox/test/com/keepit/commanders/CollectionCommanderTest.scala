@@ -48,9 +48,9 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
             collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
             collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
             Nil
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = collections(0).id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = collections(0).id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = collections(1).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(0).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(1).id.get))
           (user1, collections, bookmark1, bookmark2)
         }
 

@@ -33,7 +33,7 @@ class MobileBookmarksController @Inject() (
   pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
   actionAuthenticator: ActionAuthenticator,
-  bookmarksCommander: BookmarksCommander,
+  bookmarksCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory)

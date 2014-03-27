@@ -68,8 +68,8 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
           val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1, externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Baking", createdAt = t2, externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
 
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll2.id.get))
 
           (user1, uri)
         }

@@ -92,7 +92,7 @@ class UserCommander @Inject() (
   userCache: SocialUserInfoUserCache,
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialGraphPlugin: SocialGraphPlugin,
-  bookmarkCommander: BookmarksCommander,
+  bookmarkCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
