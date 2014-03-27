@@ -2,9 +2,10 @@
 
 angular.module('kifi.friends', [
   'util',
+  'kifi.social',
   'kifi.profileService',
   'kifi.routeService',
-  'kifi.inviteService' // for kfSocialInviteSearch
+  'kifi.inviteService' // needed for kfSocialInviteSearch
 ])
 
 .config([
@@ -22,7 +23,6 @@ angular.module('kifi.friends', [
   function ($scope, $window) {
     $window.document.title = 'Kifi • Your Friends on Kifi';
 
-    // plenty to do!
   }
 ])
 

@@ -39,7 +39,8 @@ module.exports = function (grunt) {
         libCss: [
           'lib/normalize-css/normalize.css',
           'managed-lib/bootstrap/bootstrap.css',
-          'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css'
+          'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css',
+          'managed-lib/pace/pace.css'
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
