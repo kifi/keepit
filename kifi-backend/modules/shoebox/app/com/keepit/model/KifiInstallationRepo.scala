@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time.Clock
 import com.keepit.common.net.UserAgent
 import org.joda.time.DateTime
-import com.keepit.model.KifiInstallationPlatform
 
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
