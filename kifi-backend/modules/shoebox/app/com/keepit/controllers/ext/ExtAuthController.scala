@@ -1,26 +1,34 @@
 package com.keepit.controllers.ext
 
+import scala.concurrent.Future
+
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
+import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.net._
-import com.keepit.model._
+import com.keepit.common.social.{FacebookSocialGraph, LinkedInSocialGraph}
 import com.keepit.heimdal._
+import com.keepit.model._
+import com.keepit.model.KifiInstallation
 import com.keepit.social.{SecureSocialClientIds, BasicUser}
-import com.keepit.common.crypto.SimpleDESCrypt
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import com.keepit.model.KifiInstallation
+import play.api.mvc.Action
+
+import securesocial.core.{OAuth2Info, Registry}
 
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   airbrake: AirbrakeNotifier,
+  authCommander: AuthCommander,
   userRepo: UserRepo,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
@@ -29,7 +37,9 @@ class ExtAuthController @Inject() (
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
-  secureSocialClientIds: SecureSocialClientIds)
+  secureSocialClientIds: SecureSocialClientIds,
+  facebook: FacebookSocialGraph,
+  linkedIn: LinkedInSocialGraph)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private val crypt = new SimpleDESCrypt
@@ -111,6 +121,22 @@ class ExtAuthController @Inject() (
       "eip" -> encryptedIp,
       "notAuthed" -> notAuthed
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+  }
+
+  def accessTokenLogin(providerName: String) = Action.async(parse.json) { implicit request =>
+    Registry.providers.get(providerName) map { provider =>
+      (providerName match {
+        case "linkedin" => linkedIn.vetJsAccessToken(provider, request.body)
+        case "facebook" => facebook.vetJsAccessToken(provider, request.body)
+        case _ => Future.failed(new IllegalArgumentException(providerName))
+      }) map { identityId =>
+        authCommander.loginWithTrustedSocialIdentity(identityId)
+      } recover { case t =>
+        println(s"-----------EAC: ${t.getClass} ${t.getMessage}")
+        t.printStackTrace
+        BadRequest(Json.obj("error" -> "problem_vetting_token"))
+      }
+    } getOrElse Future.successful(BadRequest(Json.obj("error" -> "no_such_provider")))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
