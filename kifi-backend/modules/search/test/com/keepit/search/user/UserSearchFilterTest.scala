@@ -1,7 +1,6 @@
 package com.keepit.search.user
 
 import org.specs2.mutable.Specification
-import com.google.inject.Singleton
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model.User
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
@@ -9,8 +8,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.TestApplication
 import play.api.test.Helpers.running
-import com.keepit.search.IdFilterCompressor
-
+import com.keepit.search.util.IdFilterCompressor
 
 
 class UserSearchFilterTest extends Specification with ApplicationInjector {

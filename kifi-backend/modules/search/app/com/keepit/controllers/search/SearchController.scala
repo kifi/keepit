@@ -3,43 +3,27 @@ package com.keepit.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
-import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search._
-import com.keepit.search.{MutableHit, SearcherHitQueue}
-import org.apache.commons.math3.linear.{EigenDecomposition, Array2DRowRealMatrix}
 import play.api.mvc.Action
-import scala.collection.mutable.ArrayBuffer
-import scala.math.{abs, sqrt}
 import views.html
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.model.User
 import scala.concurrent.Await
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.Random
 import play.api.libs.json._
-import com.keepit.search.LangDetector
-import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserQueryParser
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.semantic.SemanticVector
-import com.keepit.social.BasicUser
 import com.keepit.search.user.UserHit
 import com.keepit.search.user.UserSearchResult
-import com.keepit.search.IdFilterCompressor
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.typeahead.PrefixFilter
-
-
-
 
 class SearchController @Inject()(
     shards: ActiveShards,

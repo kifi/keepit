@@ -6,7 +6,7 @@ import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import com.keepit.search.IdFilterCompressor
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.Searcher
 import com.keepit.social.BasicUser
 import com.keepit.typeahead.PrefixMatching
