@@ -44,11 +44,14 @@ trait KifiVersion {
 case class KifiExtVersion(major: Int, minor: Int, patch: Int, tag: String = "") extends KifiVersion with Ordered[KifiExtVersion]
 
 object KifiVersion extends Logging {
-  private val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,7})(?:-([a-zA-Z0-9-])+)?""".r
+  val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,7})(?:-([a-zA-Z0-9-])+)?""".r
+}
 
-  def extVersion(version: String): KifiExtVersion = {
+object KifiExtVersion {
+
+  def apply(version: String): KifiExtVersion = {
     version match {
-      case R(major, minor, patch, tag) =>
+      case KifiVersion.R(major, minor, patch, tag) =>
         KifiExtVersion(major.toInt, minor.toInt, patch.toInt, Option(tag).getOrElse(""))
       case _ =>
         throw new Exception("Invalid kifi ext version: " + version)
@@ -58,7 +61,7 @@ object KifiVersion extends Logging {
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiExtVersion] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiExtVersion]] = {
       stringBinder.bind(key, params) map {
-        case Right(version) => Right(KifiVersion.extVersion(version))
+        case Right(version) => Right(KifiExtVersion(version))
         case _ => Left("Unable to bind a KifiVersion")
       }
     }

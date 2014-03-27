@@ -16,7 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 case class KifiInstallationDetails(gold: KifiExtVersion, killed: Seq[KifiExtVersion])
 
 trait KifInstallationStore extends ObjectStore[String, KifiInstallationDetails] {
-  protected val defaultValue = KifiInstallationDetails(KifiVersion.extVersion("2.8.55"), Nil)
+  protected val defaultValue = KifiInstallationDetails(KifiExtVersion("2.8.55"), Nil)
   def get(): KifiInstallationDetails
   def getRaw(): KifiInstallationDetails
   def set(newDetails: KifiInstallationDetails)
@@ -62,7 +62,7 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
 
 object S3KifInstallationStoreImpl {
   implicit val versionFormat = new Format[KifiExtVersion] {
-    def reads(json: JsValue) = JsSuccess(KifiVersion.extVersion(json.as[String]))
+    def reads(json: JsValue) = JsSuccess(KifiExtVersion(json.as[String]))
     def writes(version: KifiExtVersion) = JsString(version.toString)
   }
   implicit val detailsFormat = Json.format[KifiInstallationDetails]

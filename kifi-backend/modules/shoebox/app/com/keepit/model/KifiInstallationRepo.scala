@@ -31,7 +31,7 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   }
 
   private val rowToObj: ((Option[Id[KifiInstallation]], DateTime, DateTime, Id[User], ExternalId[KifiInstallation], String, UserAgent, String, State[KifiInstallation])) => KifiInstallation = {
-    case (id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) => KifiInstallation(id, createdAt, updatedAt, userId, externalId, KifiVersion.extVersion(version), userAgent, KifiInstallationPlatform(platform), state)
+    case (id, createdAt, updatedAt, userId, externalId, version, userAgent, platform, state) => KifiInstallation(id, createdAt, updatedAt, userId, externalId, KifiExtVersion(version), userAgent, KifiInstallationPlatform(platform), state)
   }
 
   private val objToRow: KifiInstallation => Option[(Option[Id[KifiInstallation]], DateTime, DateTime, Id[User], ExternalId[KifiInstallation], String, UserAgent, String, State[KifiInstallation])] = {
@@ -47,7 +47,7 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
     // select version,min(updated_at) as min, count(*) as count from kifi_installation group by version having count > 3 order by min desc limit 20;
     val interpolated = sql"""select version, min(updated_at) as min, count(*) as c from kifi_installation where platform = '#${KifiInstallationPlatform.Extension.name}' group by version order by min desc limit $count"""
     interpolated.as[(String, DateTime, Int)].list().map { case (versionStr, max, count) =>
-      (KifiVersion.extVersion(versionStr), max, count)
+      (KifiExtVersion(versionStr), max, count)
     }.sortWith((a,b) => a._1 > b._1)
   }
 

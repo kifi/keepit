@@ -11,11 +11,11 @@ class KifiInstallationTest extends Specification with ShoeboxTestInjector {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {
-      val v0 = KifiVersion.extVersion("0.0.0")
-      val v1 = KifiVersion.extVersion("2.1.0")
-      val v2 = KifiVersion.extVersion("2.1.0")
-      val v3 = KifiVersion.extVersion("3.0.1")
-      val v4 = KifiVersion.extVersion("2.4.8")
+      val v0 = KifiExtVersion("0.0.0")
+      val v1 = KifiExtVersion("2.1.0")
+      val v2 = KifiExtVersion("2.1.0")
+      val v3 = KifiExtVersion("3.0.1")
+      val v4 = KifiExtVersion("2.4.8")
 
       v0 must be_<  (v1)
       v1 must be_== (v1)
@@ -25,7 +25,7 @@ class KifiInstallationTest extends Specification with ShoeboxTestInjector {
       v4 must be_>  (v2)
     }
     "fail to parse an invalid version string" in {
-      KifiVersion.extVersion("foo") must throwA[Exception]
+      KifiExtVersion("foo") must throwA[Exception]
     }
     "persist" in {
       withDb() { implicit injector =>
@@ -33,7 +33,7 @@ class KifiInstallationTest extends Specification with ShoeboxTestInjector {
           val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith"))
           val install = installationRepo.save(KifiInstallation(
             userId = user.id.get,
-            version = KifiVersion.extVersion("1.1.1"),
+            version = KifiExtVersion("1.1.1"),
             externalId = ExternalId[KifiInstallation](),
             userAgent = UserAgent.fromString("my browser"),
             platform = KifiInstallationPlatform.Extension))
@@ -55,7 +55,7 @@ class KifiInstallationTest extends Specification with ShoeboxTestInjector {
         db.readWrite {implicit s =>
           installationRepo.save(KifiInstallation(
             userId = user.id.get,
-            version = KifiVersion.extVersion("1.1.1"),
+            version = KifiExtVersion("1.1.1"),
             externalId = ExternalId[KifiInstallation](),
             userAgent = UserAgent.fromString("my other browser"),
             platform = KifiInstallationPlatform.Extension))
