@@ -507,7 +507,7 @@ class InviteCommander @Inject() (
             val socialUserInfo = socialUserInfoRepo.get(socialUserId)
             val name = richConnection.friendName getOrElse socialUserInfo.fullName
             val fullSocialId = FullSocialId(richConnection.connectionType, Left(socialUserInfo.socialId))
-            val pictureUrl = socialUserInfo.getPictureUrl()
+            val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
             val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
             Invitee(name, fullSocialId, pictureUrl, canBeInvited, lastInvitedAtBySocialUserId.get(socialUserId))
         }}

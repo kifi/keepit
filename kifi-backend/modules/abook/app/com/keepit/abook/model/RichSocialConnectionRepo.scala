@@ -214,7 +214,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       val q = sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count + 1
-        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
+        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.map(s => "'" + s + "'").mkString(",")})
       """
       q.execute()
     }
@@ -238,7 +238,7 @@ class RichSocialConnectionRepoImpl @Inject() (
       val q = sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count - 1
-        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
+        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.map(s => "'" + s + "'").mkString(",")})
       """
       q.execute()
     }
