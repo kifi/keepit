@@ -3,28 +3,20 @@ package com.keepit.controllers.mobile
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, MobileController}
 import com.keepit.common.logging.Logging
-import play.api.libs.json.{JsValue, JsNumber, Json}
+import play.api.libs.json.Json
 import securesocial.core._
 import play.api.mvc._
 import scala.util.Try
 import com.keepit.controllers.core.{AuthController, AuthHelper}
-import securesocial.core.IdentityId
-import scala.util.Failure
-import scala.Some
-import play.api.mvc.SimpleResult
-import securesocial.core.LoginEvent
-import securesocial.core.OAuth2Info
-import scala.util.Success
-import play.api.mvc.Cookie
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.social.{SocialNetworkType, SocialId, UserIdentity}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.social.SocialNetworkType
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.ExternalId
 import com.keepit.common.time.Clock
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.providers.ProviderController
-import com.keepit.commanders.KeepInfosWithCollection
-import com.keepit.common.db.Id
+import com.keepit.common.db.ExternalId
 import securesocial.core.IdentityId
 import scala.util.Failure
 import scala.Some
@@ -54,18 +46,37 @@ class MobileAuthController @Inject() (
 
   def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
     val json = request.body
+    val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiIPhoneVersion((json \ "version").as[String])
-    val (installation, newInstallation) = db.readOnly{ implicit s => installationRepo.getOpt(request.userId, version, KifiInstallationPlatform.IPhone) } match {
+    val (installation, newInstallation) = installationIdOpt map {id =>
+      db.readOnly { implicit s => installationRepo.get(id) }
+    } match {
       case None =>
         val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
         db.readWrite { implicit s =>
+          log.info(s"installation for user ${request.userId} does not exist, creating a new one")
           (installationRepo.save(KifiInstallation(userId = request.userId, userAgent = agent, version = version, platform = KifiInstallationPlatform.IPhone)), true)
         }
       case Some(existing) if !existing.isActive =>
         db.readWrite { implicit s =>
-          (installationRepo.save(existing.withState(KifiInstallationStates.ACTIVE)), false)
+          log.info(s"activating installation $existing with latest version")
+          (installationRepo.save(existing.withState(KifiInstallationStates.ACTIVE).withVersion(version)), false)
         }
+      case Some(existing) if existing.userId != request.userId =>
+        db.readWrite { implicit s =>
+          log.info(s"installation $existing is not of user ${request.userId}, creating a new installation for user")
+          val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+          (installationRepo.save(KifiInstallation(userId = request.userId, userAgent = agent, version = version, platform = KifiInstallationPlatform.IPhone)), true)
+        }
+      case Some(active) if active.version.asInstanceOf[KifiIPhoneVersion] < version =>
+        db.readWrite { implicit s =>
+            log.info(s"installation ${active.externalId} for user ${request.userId} exist but outdated, updating")
+            (installationRepo.save(active.withVersion(version)), false)
+        }
+      case Some(active) if active.version.asInstanceOf[KifiIPhoneVersion] > version =>
+        throw new Exception(s"TIME TRAVEL!!! installation ${active.externalId} for user ${request.userId} has version ${active.version} while we got from client an older version $version")
       case Some(active) =>
+        log.info(s"installation ${active.externalId} for user ${request.userId} exist and version match")
         (active, false)
     }
 
