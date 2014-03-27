@@ -10,8 +10,7 @@ case class TypeHeader[M <: ModelWithGlobalId[M]](code: Short) {
 case class GlobalId(id: Long) extends AnyVal {
   def code: Short = (id >> 48).toShort
   def value: Long = id & GlobalId.maxId
-  def toId[M <: ModelWithGlobalId[M]: TypeHeader]: Id[M] = {
-    val header = implicitly[TypeHeader[M]]
+  def toId[M <: ModelWithGlobalId[M]](implicit header: TypeHeader[M]): Id[M] = {
     require((code == header.code), "Invalid GlobalId")
     Id[M](value)
   }
@@ -20,8 +19,7 @@ case class GlobalId(id: Long) extends AnyVal {
 
 object GlobalId {
   val maxId: Long = (1.toLong << 48) - 1
-  def apply[M <: ModelWithGlobalId[M]: TypeHeader](id: Id[M]): GlobalId = {
-    val header = implicitly[TypeHeader[M]]
+  def apply[M <: ModelWithGlobalId[M]](id: Id[M])(implicit header: TypeHeader[M]): GlobalId = {
     require(id.id <= maxId, "Id too large to be globalized")
     GlobalId((header.shifted | id.id))
   }
