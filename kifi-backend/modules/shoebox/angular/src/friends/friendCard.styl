@@ -25,10 +25,16 @@
 
     display: inline-block
     padding-top: 20px
+    overflow: hidden
+    white-space: nowrap
+    width: calc(100% - 100px)
 
     .kf-friend-card-name
       font-size: 120%
       color: black
+      text-overflow: ellipsis;
+      overflow: hidden;
+
 
     .kf-friend-card-count
       font-size: 90%
