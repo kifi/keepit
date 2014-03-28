@@ -60,7 +60,9 @@ angular.module('kifi.invite', [
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
+        scope.networks = profileService.networks;
 
+        profileService.getNetworks();
       }
     }
   }

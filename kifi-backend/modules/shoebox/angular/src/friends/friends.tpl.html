@@ -1,18 +1,19 @@
 <div ng-controller="FriendsCtrl">
   <div class="friends-wrapper" antiscroll="{ autoHide: false }">
     <div class="friends">
-      <h2>Kifi Friends (235)</h2>
+      <h2>Kifi Friends <span ng-show="friends.length > 0">({{friends.length}})</span></h2>
       <p>Search your friends list by name or email address.</p>
 
       <div kf-social-invite-well></div>
 
-      <div class="friends-list">
-        <div class="friends-list-header">You have {{friends.length}} kifi friends | <a href="/invite">Invite more friends</a> </div>
+      <div class="friends-list" ng-show="friends.length > 0">
+        <div class="friends-list-header">You have {{friends.length}} Kifi friends | <a href="/invite">Invite more friends</a> </div>
         <div kf-friend-card ng-repeat="friend in friends" friend="friend"></div>
       </div>
 
-<!--       If less than 10 suggestions: <div kf-social-connect-networks></div>
- -->
+      <div ng-if="friendsRequested && friends.length <= 10" class="social-connect-friends">
+        <div kf-social-connect-networks></div>
+      </div>
 
     </div>
   </div>
