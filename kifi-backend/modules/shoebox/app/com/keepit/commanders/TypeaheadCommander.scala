@@ -228,7 +228,7 @@ class TypeaheadCommander @Inject()(
     }
     val kifiF = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
     val abookF = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
-    val nfUsersF = if (q.length < 3) Future.successful(Seq.empty) else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
+    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
 
     limit match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
