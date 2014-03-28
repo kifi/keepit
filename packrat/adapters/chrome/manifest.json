@@ -4,6 +4,7 @@
   "description": "Search like normal, find like never before",
   "version": "see build.properties",
   "manifest_version": 2,
+  "content_security_policy": "default-src 'self'; connect-src dev.ezkeep.com https://api.kifi.com https://search.kifi.com wss://eliza.kifi.com https://api.airbrake.io https://api.mixpanel.com",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",
