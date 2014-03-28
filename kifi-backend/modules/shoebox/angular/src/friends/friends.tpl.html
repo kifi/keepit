@@ -6,9 +6,14 @@
 
       <div kf-social-invite-well></div>
 
+      <div class="friends-list">
+        <div class="friends-list-header">You have {{friends.length}} kifi friends | <a href="/invite">Invite more friends</a> </div>
+        <div kf-friend-card ng-repeat="friend in friends" friend="friend"></div>
+      </div>
 
 <!--       If less than 10 suggestions: <div kf-social-connect-networks></div>
  -->
+
     </div>
   </div>
 </div>

@@ -1,41 +1,35 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
+import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, MobileController}
+import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import play.api.libs.json.Json
-import securesocial.core._
-import play.api.mvc._
-import scala.util.Try
+import com.keepit.common.net.UserAgent
+import com.keepit.social.{SocialId, UserIdentity}
 import com.keepit.controllers.core.{AuthController, AuthHelper}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.social.SocialNetworkType
 import com.keepit.model._
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.ExternalId
 import com.keepit.common.time.Clock
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.providers.ProviderController
-import com.keepit.common.db.ExternalId
-import securesocial.core.IdentityId
-import scala.util.Failure
-import scala.Some
-import play.api.mvc.SimpleResult
-import play.api.libs.json.JsNumber
-import securesocial.core.LoginEvent
-import securesocial.core.OAuth2Info
-import scala.util.Success
-import com.keepit.social.UserIdentity
-import play.api.mvc.Cookie
-import com.keepit.social.SocialId
-import com.keepit.common.net.UserAgent
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsNumber, Json}
+import play.api.mvc.{Action, Cookie, Session, SimpleResult}
+
+import scala.util.{Failure, Success, Try}
+
+import securesocial.core.{Authenticator, Events, IdentityId, IdentityProvider, LoginEvent}
+import securesocial.core.{OAuth1Provider, OAuth2Info, Registry, SecureSocial, SocialUser, UserService}
 
 class MobileAuthController @Inject() (
   airbrakeNotifier: AirbrakeNotifier,
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   clock: Clock,
+  authCommander: AuthCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
   installationRepo: KifiInstallationRepo,
@@ -43,6 +37,8 @@ class MobileAuthController @Inject() (
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
+
+  def whatIsMyIp() = Action { request => Ok(request.remoteAddress) }
 
   def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
     val json = request.body
@@ -140,43 +136,23 @@ class MobileAuthController @Inject() (
   }
 
   def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
-    log.info(s"[accessTokenLogin($providerName)] ${request.body}")
-    val resOpt:Option[Result] =
-      for {
-      provider   <- Registry.providers.get(providerName)
-      oauth2Info <- request.body.asOpt[OAuth2Info]
+    (for {
+      provider <- Registry.providers.get(providerName)
+      oAuth2Info <- request.body.asOpt[OAuth2Info]
     } yield {
       Try {
-        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))) // get fb socialId
+        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
       } match {
-        case Success(filledUser) =>
-          UserService.find(filledUser.identityId) map { identity =>
-            db.readOnly(attempts = 2) { implicit s =>
-              socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
-            } match {
-              case None => // kifi user does not exist
-                log.info(s"[accessTokenLogin($providerName)] kifi user does not exist for social user $filledUser")
-                NotFound(Json.obj("error" -> "user_not_found")) // err on the conservative side
-              case Some(userId) =>
-                log.info(s"[accessTokenLogin($providerName)] kifi userId=$userId for social user $filledUser")
-                val newSession = Events.fire(new LoginEvent(identity)).getOrElse(session)
-                Authenticator.create(identity) fold (
-                  error => throw error,
-                  authenticator =>
-                    Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-                      .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                      .withCookies(authenticator.toCookie)
-                )
-            }
-          } getOrElse NotFound(Json.obj("error" -> "user not found"))
+        case Success(socialUser) =>
+          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
         case Failure(t) =>
-          log.error(s"[accessTokenLogin($provider)] Caught Exception($t) during fillProfile; token=${oauth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-          BadRequest(Json.obj("error" -> "invalid token"))
+          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+          BadRequest(Json.obj("error" -> "invalid_token"))
       }
+    }) getOrElse {
+      BadRequest(Json.obj("error" -> "invalid_arguments"))
     }
-    resOpt getOrElse BadRequest(Json.obj("error" -> "invalid arguments"))
   }
-
 
   def socialFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),

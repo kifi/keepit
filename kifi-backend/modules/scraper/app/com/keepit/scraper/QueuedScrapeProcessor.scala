@@ -19,7 +19,7 @@ import play.api.libs.json.Json
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.{Promise, Future}
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{URI, HttpClient}
 import com.keepit.common.plugin.SchedulingProperties
 import java.util.concurrent._
 import scala.concurrent.forkjoin.{ForkJoinTask, ForkJoinPool}
@@ -275,16 +275,17 @@ class QueuedScrapeProcessor @Inject() (
   }
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    val extractor = extractorProviderTypeOpt match {
-      case Some(t) if (t == ExtractorProviderTypes.LINKEDIN_ID) => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
+      val extractor = extractorProviderTypeOpt match {
+      case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
       case _ => extractorFactory(url)
     }
 
     val callable = new TracedCallable[Option[BasicArticle]] {
       def doWork = {
+        if (URI.parse(url).get.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
         val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
         val res = fetchStatus.statusCode match {
-          case HttpStatus.SC_OK if !(helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) => Some(worker.basicArticle(url, extractor))
+          case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl) => Some(worker.basicArticle(url, extractor))
           case _ => None
         }
         res

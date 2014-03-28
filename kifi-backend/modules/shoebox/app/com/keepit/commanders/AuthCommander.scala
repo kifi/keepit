@@ -1,35 +1,34 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
-import com.keepit.common.time.Clock
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
-import com.keepit.model._
-import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
-import com.keepit.common.mail._
-import com.keepit.common.db.{ExternalId, Id}
-import securesocial.core._
-import com.keepit.social._
-import securesocial.core.providers.utils.{PasswordHasher, GravatarHelper}
-import securesocial.core.IdentityId
-import securesocial.core.PasswordInfo
-import com.keepit.social.UserIdentity
-import com.keepit.social.SocialId
-import com.keepit.common.logging.Logging
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.keepit.controllers.core.AuthHelper
+
+import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common._
+import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail._
 import com.keepit.common.performance.timing
-import scala.concurrent.Future
+import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
+import com.keepit.common.time.Clock
+import com.keepit.common.logging.Logging
+import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal._
-import securesocial.core.IdentityId
+import com.keepit.model._
+import com.keepit.social.{SocialId, SocialNetworks, SocialNetworkType, UserIdentity}
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import play.api.mvc.{RequestHeader, SimpleResult}
+import play.api.mvc.Results.{NotFound, Ok}
+
 import scala.Some
-import securesocial.core.PasswordInfo
-import com.keepit.social.SocialId
-import com.keepit.social.UserIdentity
+import scala.concurrent.Future
+
+import securesocial.core.{Authenticator, AuthenticationMethod, Events, Identity, IdentityId, IdentityProvider}
+import securesocial.core.{LoginEvent, OAuth1Provider, PasswordInfo, Registry, SecureSocial, SocialUser, UserService}
+import securesocial.core.providers.utils.GravatarHelper
 
 case class EmailPassword(email: String, password: Array[Char])
 object EmailPassword {
@@ -95,7 +94,7 @@ class AuthCommander @Inject()(
   airbrakeNotifier: AirbrakeNotifier,
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
-  socialRepo: SocialUserInfoRepo,
+  socialUserInfoRepo: SocialUserInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   userValueRepo: UserValueRepo,
   passwordResetRepo: PasswordResetRepo,
@@ -133,7 +132,7 @@ class AuthCommander @Inject()(
     val userIdFromEmailIdentity = for {
       identity <- identityOpt
       socialUserInfo <- db.readOnly { implicit s =>
-        socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
+        socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
       }
       userId <- socialUserInfo.userId
     } yield {
@@ -143,7 +142,7 @@ class AuthCommander @Inject()(
 
     val confusedCompilerUserId = userIdFromEmailIdentity getOrElse {
       val userIdOpt = for {
-        socialUserInfo <- db.readOnly { implicit s =>socialRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO) }
+        socialUserInfo <- db.readOnly { implicit s => socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO) }
         userId <- socialUserInfo.userId
       } yield userId
       userIdOpt.get
@@ -196,7 +195,7 @@ class AuthCommander @Inject()(
 
     val resultFuture = SafeFuture {
       val identity = db.readOnly { implicit session =>
-        socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
+        socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
       } getOrElse (identityOpt.get)
 
       val passwordInfo = identity.passwordInfo.get
@@ -238,5 +237,27 @@ class AuthCommander @Inject()(
     inviteExtIdOpt.foreach { invite => contextBuilder += ("acceptedInvite", invite.id) }
 
     heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
+  }
+
+  def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): SimpleResult = {
+    log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
+    UserService.find(identityId) flatMap { identity =>
+      db.readOnly(attempts = 2) { implicit s =>
+        socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
+      } map { su => (su.userId, identity) }
+    } map { case (userId, identity) =>
+      log.info(s"[loginWithTrustedSocialIdentity($identityId)] kifi user $userId")
+      val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
+      Authenticator.create(identity) fold (
+        error => throw error,
+        authenticator =>
+          Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
+            .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+            .withCookies(authenticator.toCookie)
+      )
+    } getOrElse {
+      log.info(s"[loginWithTrustedSocialIdentity($identityId})] no kifi user")
+      NotFound(Json.obj("error" -> "user_not_found"))
+    }
   }
 }

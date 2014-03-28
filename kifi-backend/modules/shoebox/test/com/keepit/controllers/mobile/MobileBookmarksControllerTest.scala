@@ -343,7 +343,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
           {
             "id":"${bookmark2.externalId.toString}",
             "title":"A1",
-            "url":"http://www.amazon.com/",
+            "url":"http://www.amazon.com",
             "isPrivate":false,
             "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
             "others":1,
@@ -352,7 +352,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
           {
             "id":"${bookmark1.externalId.toString}",
             "title":"G1",
-            "url":"http://www.google.com/",
+            "url":"http://www.google.com",
             "isPrivate":false,
             "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
             "others":-1,
@@ -420,7 +420,7 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
             {
               "id":"${bookmark2.externalId.toString}",
               "title":"A1",
-              "url":"http://www.amazon.com/",
+              "url":"http://www.amazon.com",
               "isPrivate":false,
               "createdAt":"2013-02-16T23:59:00.000Z",
               "others":-1,
@@ -538,6 +538,49 @@ class MobileBookmarksControllerTest extends Specification with ApplicationInject
             "keeps":[{"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false},
                      {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true},
                      {"id":"${externalIdForTitle("title 31")}","title":"title 31","url":"http://www.hi.com31","isPrivate":false}],
+            "addedToCollection":3
+          }
+        """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "addKeeps" in  {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+        }
+        val withCollection =
+          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", false) ::
+          KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", true) ::
+          KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", false) ::
+          Nil
+        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+
+        val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeeps().toString
+        path === "/m/2/keeps/add"
+
+        val json = Json.obj(
+          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
+          "keeps" -> JsArray(keepsAndCollections.keeps map {k => Json.toJson(k)})
+        )
+        inject[FakeActionAuthenticator].setUser(user)
+        val request = FakeRequest("POST", path).withJsonBody(json)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        sourceForTitle("title 11") === KeepSource.mobile
+        sourceForTitle("title 21") === KeepSource.mobile
+        sourceForTitle("title 31") === KeepSource.mobile
+
+        stateForTitle("title 11") === "active"
+        stateForTitle("title 21") === "active"
+        stateForTitle("title 31") === "active"
+
+        val expected = Json.parse(s"""
+          {
+            "keepCount":3,
             "addedToCollection":3
           }
         """)
