@@ -89,7 +89,6 @@ class AirbrakeSender @Inject() (
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture(DirectUrl("http://airbrakeapp.com/notifier_api/v2/notices"), xml, defaultFailureHandler) map { res =>
       try {
-        val x : String = res.body
         val xmlRes = res.xml
         val id = (xmlRes \ "id").head.text
         val url = (xmlRes \ "url").head.text
