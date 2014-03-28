@@ -1,22 +1,5 @@
 package com.keepit.graph.model
 
-import com.keepit.model.Reflect
-
-sealed trait VertexKind {
-  type V <: VertexDataReader
-  def header: Byte
-  def apply(rawDataReader: RawDataReader): V
-}
-
-object VertexKind {
-  val all: Set[VertexKind] = Reflect.getCompanionTypeSystem[VertexDataReader, VertexKind]("V")
-  private val byHeader = {
-    require(all.size == all.map(_.header).size, "Duplicate VertexKind headers")
-    all.map { vertexKind => vertexKind.header -> vertexKind }.toMap
-  }
-  def apply(header: Byte): VertexKind = byHeader(header)
-}
-
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 
 sealed trait VertexDataReader {
@@ -32,30 +15,29 @@ object VertexDataReader {
 }
 
 trait UserDataReader extends VertexDataReader { type V = UserDataReader }
-object UserDataReader extends VertexKind {
+case object UserDataReader extends VertexKind {
   type V = UserDataReader
-  val header = 0.toByte
+  val header = KindHeader[V](1)
   def apply(rawDataReader: RawDataReader): V = ???
 }
 
 trait UriDataReader extends VertexDataReader { type V = UriDataReader }
-object UriDataReader extends VertexKind {
+case object UriDataReader extends VertexKind {
   type V = UriDataReader
-  val header = 1.toByte
+  val header = KindHeader[V](2)
   def apply(rawDataReader: RawDataReader): V = ???
 }
 
 trait TagDataReader extends VertexDataReader { type V = TagDataReader }
-object TagDataReader extends VertexKind {
+case object TagDataReader extends VertexKind {
   type V = TagDataReader
-  val header = 2.toByte
+  val header = KindHeader[V](3)
   def apply(rawDataReader: RawDataReader): V = ???
 }
 
 trait ThreadDataReader extends VertexDataReader { type V = ThreadDataReader }
-object ThreadDataReader extends VertexKind {
+case object ThreadDataReader extends VertexKind {
   type V = ThreadDataReader
-  val header = 3.toByte
+  val header = KindHeader[V](4)
   def apply(rawDataReader: RawDataReader): V = ???
 }
-
