@@ -32,32 +32,32 @@ var iframeDialog = function () {
       iframeOrigin = origin;
       return this;
     },
-    toggle: function (name) {
+    toggle: function (name, data) {
       if ($dialog) {
         hide();
         if (name && name !== $dialog.data('name')) {
-          show(name);
+          show(name, data);
         }
       } else {
-        show(name);
+        show(name, data);
       }
     }
   };
 
-  function show(name) {
+  function show(name, data) {
     var config = configs[name];
     if (config) {
-      $dialog = buildAndShow(config);
+      $dialog = buildAndShow(config, data);
       $dialog.data('name', name);
       document.addEventListener('keydown', onKeyDown, true);
       window.addEventListener('message', config.onMessage);
     }
   }
 
-  function buildAndShow(config) {
+  function buildAndShow(config, data) {
     var $d = $(render(config.templatePath, {
       logo: api.url('images/kifi_logo.png'),
-      iframeSrc: iframeOrigin + '/blank.html'
+      iframeSrc: iframeOrigin + '/blank.html#' + Object.keys(data).reduce(function (f, k) {return (f ? f + '&' : '') + k + '=' + data[k]}, '')
     }));
     $d.find('.kifi-dialog-box').css({
       height: config.height,
@@ -105,8 +105,8 @@ var iframeDialog = function () {
 
   function onLoginMessage(e) {
     if (e.origin === iframeOrigin) {
-      if (e.data.url) {
-        api.port.emit('open_login_popup', e.data);
+      if (e.data.path) {
+        api.port.emit('open_tab', e.data.path);
         hide();
       } else if (e.data.authenticated) {
         api.port.emit('logged_in');
