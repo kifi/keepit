@@ -1,7 +1,6 @@
 package com.keepit.search
 
-import com.keepit.search.article.ArticleIndexer
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
@@ -19,24 +18,17 @@ import com.keepit.search.query.parser.MainQueryParserFactory
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
-import com.keepit.search.semantic.SemanticVectorSearcher
 import com.keepit.search.tracker.BrowsingHistoryTracker
 import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.sharding.Shard
-import com.keepit.search.sharding.ShardedArticleIndexer
-import com.keepit.search.sharding.ShardedURIGraphIndexer
-import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
-import com.keepit.search.sharding._
 import com.keepit.search.graph.user.UserGraphsCommander
+import com.keepit.search.sharding._
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -151,11 +143,6 @@ class MainSearcherFactory @Inject() (
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphSearcher = getURIGraphSearcher(shard, userId)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
-  }
-
-  def semanticVectorSearcher(shard: Shard[NormalizedURI]) = {
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    new SemanticVectorSearcher(articleSearcher)
   }
 
   def getLangProfileFuture(shards: Seq[Shard[NormalizedURI]], userId: Id[User], limit: Int): Future[Map[Lang, Float]] = consolidateLangProfReq((userId, limit)){ case (userId, limit) =>

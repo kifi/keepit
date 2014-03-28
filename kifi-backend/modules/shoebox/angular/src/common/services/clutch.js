@@ -7,8 +7,6 @@ angular.module('kifi.clutch', [])
 
     var Clutch = (function () {
 
-      var config, getter, _cache;
-
       var defaultConfig = {
         remoteError: 'ignore', // used
         cache: false, // todo
@@ -20,17 +18,17 @@ angular.module('kifi.clutch', [])
 
       var now = Date.now || function () { return new Date().getTime(); };
 
-      function Clutch(func, _config) {
-        config = _.assign({}, defaultConfig, _config);
-        getter = func;
-        _cache = {};
+      function Clutch(func, config) {
+        this._config = _.assign({}, defaultConfig, config);
+        this._getter = func;
+        this._cache = {};
       }
 
       // Returns a $q promise that will be resolved with the value
       // If value is cached, the promise is resolved immediately.
       Clutch.prototype.get = function () {
         var key = stringize(arguments);
-        var hit = _cache[key];
+        var hit = this._cache[key];
 
         if (!hit) {
           // Never been refreshed.
@@ -38,9 +36,9 @@ angular.module('kifi.clutch', [])
         } else if (!hit.value) {
           // Previous refresh did not finish.
           return hit.q;
-        } else if (isExpired(hit.time, config.cacheDuration)) {
+        } else if (isExpired(hit.time, this._config.cacheDuration)) {
           // Value exists, but is expired.
-          if (config.returnPreviousOnExpire) {
+          if (this._config.returnPreviousOnExpire) {
             // Trigger refresh, and return previous future
             refresh.apply(this, key, arguments);
             return $q.when(hit.value);
@@ -51,30 +49,35 @@ angular.module('kifi.clutch', [])
       };
 
       Clutch.prototype.contains = function () {
-        return !!_cache[stringize(arguments)];
+        return !!this._cache[stringize(arguments)];
       };
 
       Clutch.prototype.refresh = function () {
         var key = stringize(arguments);
-        return refresh(key, arguments);
+        return refresh.call(this, key, arguments);
       };
 
       Clutch.prototype.age = function () {
         var key = stringize(arguments);
-        return key && _cache[key] && now() - _cache[key].time;
+        return key && this._cache[key] && now() - this._cache[key].time;
       };
 
       Clutch.prototype.isExpired = function () {
         var key = stringize(arguments);
-        var prev = key && _cache[key];
-        return prev && isExpired(prev.time, config.cacheDuration);
+        var prev = key && this._cache[key];
+        return prev && isExpired(prev.time, this._config.cacheDuration);
       };
 
       Clutch.prototype.expire = function () {
         var key = stringize(arguments);
-        var prev = _cache[key];
-        delete _cache[key];
+        var prev = this._cache[key];
+        delete this._cache[key];
         return prev;
+      };
+
+      Clutch.prototype.expireAll = function () {
+        this._cache.length = 0;
+        return;
       };
 
       //
@@ -90,17 +93,19 @@ angular.module('kifi.clutch', [])
         return now() - hitTime > duration;
       }
 
+      // call by setting this correctly
       function refresh(key, args) {
         var deferred = $q.defer();
-        var resultQ = getter.apply(this, args);  // todo: check if getter returns a $q promise?
+        var resultQ = this._getter.apply(this, args);  // todo: check if getter returns a $q promise?
 
-        var obj = _cache[key] || {};
+        var obj = this._cache[key] || {};
 
         // Save the promise so we return the same promise if
         // multiple requests come in before it's resolved.
         obj.q = deferred.promise;
 
-        _cache[key] = obj; // todo: needed?
+        this._cache[key] = obj; // todo: needed?
+        var that = this;
 
         resultQ.then(function success(result) {
           obj.time = now();
@@ -108,7 +113,7 @@ angular.module('kifi.clutch', [])
           if (!obj.value) {
             // It's never been set before.
             obj.value = result;
-            _cache[key] = obj;
+            that._cache[key] = obj;
           } else {
             if (angular.isArray(result)) {
               util.replaceArrayInPlace(obj.value, result);
@@ -120,7 +125,7 @@ angular.module('kifi.clutch', [])
           }
           deferred.resolve(obj.value);
         })['catch'](function (reason) {
-          if (obj.value && config.remoteError === 'ignore') {
+          if (obj.value && that._config.remoteError === 'ignore') {
             deferred.resolve(obj.value);
           } else {
             deferred.reject(reason);

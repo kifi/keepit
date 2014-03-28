@@ -18,7 +18,14 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       var invited = (friend.lastInvitedAt != null);
       var canInvite = friend.canBeInvited;
 
-      scope.mainImage = friend.pictureUrl || 'http://lorempixel.com/g/64/64/technics/Email';
+      if (friend.pictureUrl != null) {
+        scope.mainImage = friend.pictureUrl;
+      } else if (network === 'email') {
+        scope.mainImage = '/img/email-icon.png';
+      } else {
+        scope.mainImage = 'https://www.kifi.com/assets/img/ghost.100.png';
+      }
+
       scope.mainLabel = friend.name;
       scope.hidden = false;
 
@@ -31,7 +38,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       };
       scope.closeAction = function () {
         scope.hidden = true;
-        var data = { 'fullSocialId' : friend.fullSocialId }
+        var data = { 'fullSocialId' : friend.fullSocialId };
         $http.post(routeService.blockWtiConnection, data);
       };
       if (invited) {
@@ -46,7 +53,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
         }
       } else {
         scope.invited = false;
-        scope.byline = network === 'email' ? inNetworkId : 'A friend on ' + network.charAt(0).toUpperCase() + network.slice(1);
+        scope.byline = network === 'email' ? inNetworkId : network.charAt(0).toUpperCase() + network.slice(1);
         scope.actionText = 'Add';
       }
     }

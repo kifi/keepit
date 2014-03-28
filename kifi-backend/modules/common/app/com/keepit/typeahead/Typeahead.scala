@@ -7,10 +7,11 @@ import com.keepit.common.performance._
 import com.keepit.model.User
 import scala.concurrent._
 import scala.concurrent.duration._
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable.ArrayBuffer
+import Logging.LoggerWithPrefix
 
 trait Typeahead[E, I] extends Logging {
 
@@ -134,17 +135,25 @@ trait Typeahead[E, I] extends Logging {
 
   def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
 
-  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = {
-    log.info(s"[refreshByIds] begin re-indexing for #${userIds.length} users ...")
+  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = { // consider using zk and/or sqs to track progress
+    implicit val prefix = LogPrefix(s"refreshByIds(#ids=${userIds.length})")
     implicit val fj = ExecutionContext.fj
-    val futures = new ArrayBuffer[Future[Unit]]
-    for (userId <- userIds) {
-      futures += refresh(userId).map{ filter =>
-        log.info(s"[refreshByIds] done with re-indexing for ${userId}; filter=${filter}")
+
+    log.infoP(s"begin re-indexing users ...")
+    val grouped = userIds.grouped(100)
+    val resF = grouped.zipWithIndex.map { case (batch, i) =>
+      log.infoP(s"begin re-indexing for batch $i/${grouped.length} ...")
+      val futures = batch.map { userId =>
+        refresh(userId).map { filter =>
+          log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
+        }
+      }
+      Future.sequence(futures).map{ _ =>
+        log.infoP(s"done with re-indexing for batch $i/${grouped.length}")
       }
     }
-    Future.sequence(futures.toSeq).map{ _ =>
-      log.info(s"[refreshByIds] done with re-indexing for #${userIds.length} users.")
+    Future.sequence(resF).map{ u =>
+      log.infoP(s"done with re-indexing.")
     }
   }
 

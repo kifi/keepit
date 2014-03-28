@@ -18,6 +18,7 @@ angular.module('kifi', [
   'kifi.tagKeeps',
   'kifi.profile',
   'kifi.friends',
+  'kifi.social',
   'kifi.invite',
   'kifi.invite.connectionCard',
   'kifi.invite.wtiService',

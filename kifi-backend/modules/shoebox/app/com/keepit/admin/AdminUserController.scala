@@ -164,7 +164,7 @@ class AdminUserController @Inject() (
       val collections = db.readWrite { implicit s =>
         val bookmark = keepRepo.get(id)
         val userId = bookmark.userId
-        val existing = keepToCollectionRepo.getByBookmark(id, excludeState = None).map(k => k.collectionId -> k).toMap
+        val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
         val colls = collectionNames.map { name =>
           val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
             case Some(coll) if coll.isActive => coll
@@ -174,7 +174,7 @@ class AdminUserController @Inject() (
           existing.get(collection.id.get) match {
             case Some(ktc) if ktc.isActive => ktc
             case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-            case None => keepToCollectionRepo.save(KeepToCollection(bookmarkId = id, collectionId = collection.id.get))
+            case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
           }
           collection
         }
@@ -244,7 +244,7 @@ class AdminUserController @Inject() (
       case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
     }
     val bookmarkFilter = collectionFilter.map { collId =>
-      db.readOnly { implicit s => keepToCollectionRepo.getBookmarksInCollection(collId) }
+      db.readOnly { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
     }
     val filteredBookmarks = db.readOnly { implicit s =>
       val query = bookmarkSearch.getOrElse("")
@@ -255,7 +255,7 @@ class AdminUserController @Inject() (
         bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
       }) collect {
         case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
-          val colls = keepToCollectionRepo.getCollectionsForBookmark(mark.id.get).map(collectionRepo.get).map(_.name)
+          val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
           (mark, uri, colls)
       }
     }

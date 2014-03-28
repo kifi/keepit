@@ -82,7 +82,7 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "fortytwo.franz" % "franz_2.10" % "0.3.0",
+    "fortytwo.franz" % "franz_2.10" % "0.3.1",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -141,6 +141,8 @@ object ApplicationBuild extends Build {
   )
 
   lazy val cortexDependencies = Seq()
+
+  lazy val graphDependencies = Seq()
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
@@ -252,6 +254,10 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-cortex.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
 
+  lazy val graph = play.Project("graph", appVersion, graphDependencies, path=file("modules/graph")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
+  ).dependsOn(common % "test->test;compile->compile")
+
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
     .settings(
       aggregate in update := false,
@@ -269,12 +275,13 @@ object ApplicationBuild extends Build {
       heimdal % "test->test;compile->compile",
       abook % "test->test;compile->compile",
       scraper % "test->test;compile->compile",
-      cortex % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex)
+      cortex % "test->test;compile->compile",
+      graph % "test->test;compile->compile")
+    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, graph)
 
   override def rootProject = Some(kifiBackend)
 }

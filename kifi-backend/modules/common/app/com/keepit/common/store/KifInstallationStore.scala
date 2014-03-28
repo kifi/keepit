@@ -1,7 +1,7 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.KifiVersion
+import com.keepit.model.{KifiExtVersion, KifiVersion}
 import com.amazonaws.services.s3._
 import play.api.libs.json._
 import java.util.concurrent.{Callable, TimeUnit}
@@ -13,10 +13,10 @@ import com.keepit.common.concurrent.PimpMyFuture._
 import play.api.libs.concurrent.Execution.Implicits._
 
 
-case class KifiInstallationDetails(gold: KifiVersion, killed: Seq[KifiVersion])
+case class KifiInstallationDetails(gold: KifiExtVersion, killed: Seq[KifiExtVersion])
 
 trait KifInstallationStore extends ObjectStore[String, KifiInstallationDetails] {
-  protected val defaultValue = KifiInstallationDetails(KifiVersion("2.8.55"), Nil)
+  protected val defaultValue = KifiInstallationDetails(KifiExtVersion("2.8.55"), Nil)
   def get(): KifiInstallationDetails
   def getRaw(): KifiInstallationDetails
   def set(newDetails: KifiInstallationDetails)
@@ -61,9 +61,9 @@ class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
 }
 
 object S3KifInstallationStoreImpl {
-  implicit val versionFormat = new Format[KifiVersion] {
-    def reads(json: JsValue) = JsSuccess(KifiVersion(json.as[String]))
-    def writes(version: KifiVersion) = JsString(version.toString)
+  implicit val versionFormat = new Format[KifiExtVersion] {
+    def reads(json: JsValue) = JsSuccess(KifiExtVersion(json.as[String]))
+    def writes(version: KifiExtVersion) = JsString(version.toString)
   }
   implicit val detailsFormat = Json.format[KifiInstallationDetails]
 }

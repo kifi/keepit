@@ -33,7 +33,7 @@ class MobileBookmarksController @Inject() (
   pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
   actionAuthenticator: ActionAuthenticator,
-  bookmarksCommander: BookmarksCommander,
+  bookmarksCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
@@ -64,19 +64,15 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def keepMultiple() = JsonAction.authenticated { request =>
-    request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
-      val source = KeepSource.mobile
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-      val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
-      Ok(Json.obj(
-        "keeps" -> keeps,
-        "addedToCollection" -> addedToCollection
-      ))
-    } getOrElse {
-      log.error(s"can't parse object from request ${request.body} for user ${request.user}")
-      BadRequest(Json.obj("error" -> "Could not parse object from request body"))
-    }
+  def keepMultiple() = JsonAction.authenticatedParseJson { request =>
+    val fromJson = request.body.as[KeepInfosWithCollection]
+    val source = KeepSource.mobile
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
+    Ok(Json.obj(
+      "keeps" -> keeps,
+      "addedToCollection" -> addedToCollection
+    ))
   }
 
   def unkeepMultiple() = JsonAction.authenticated { request =>

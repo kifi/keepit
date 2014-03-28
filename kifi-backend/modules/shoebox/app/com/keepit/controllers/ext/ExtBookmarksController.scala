@@ -49,7 +49,7 @@ class ExtBookmarksController @Inject() (
   collectionRepo: CollectionRepo,
   healthcheck: HealthcheckPlugin,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  bookmarksCommander: BookmarksCommander,
+  bookmarksCommander: KeepsCommander,
   userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier,
   kifiInstallationRepo: KifiInstallationRepo,

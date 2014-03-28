@@ -79,11 +79,11 @@ class UriIntegrityActor @Inject()(
 
     val collectionsToUpdate = deactivatedBms.flatten.map {
       case (oldBm, None) => {
-        keepToCollectionRepo.getCollectionsForBookmark(oldBm.id.get).toSet
+        keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
       }
       case (oldBm, Some(newBm)) => {
         var collections = Set.empty[Id[Collection]]
-        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
+        keepToCollectionRepo.getByKeep(oldBm.id.get, excludeState = None).foreach { ktc =>
           collections += ktc.collectionId
           keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId) match {
             case Some(newKtc) =>
@@ -92,7 +92,7 @@ class UriIntegrityActor @Inject()(
               }
               keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
             case None =>
-              keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
+              keepToCollectionRepo.save(ktc.copy(keepId = newBm.id.get))
           }
         }
         collections

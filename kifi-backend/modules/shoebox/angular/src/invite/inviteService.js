@@ -12,61 +12,76 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
     var whoToInviteList = [],
         inviteList = [], // used for typeahead dropdown for invite search
         selected,
-        platformFilter;
+        platformFilter,
+        lastSearch;
 
+    var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn'};
     var socialSearchService = new Clutch(function (name) {
-      /*
-      { "label":"Adam Cornett",
-        "score":0,
-        "networkType":"facebook",
-        "image":"https://graph.facebook.com/44302919/picture?width=75&height=75",
-        "value":"facebook/44302919",
-        "status":"",
-        "id":"44302919",
-        "network":"facebook" }
-      */
       if (!name || !name.trim()) {
         return $q.when([]);
       }
       return $http.get(routeService.socialSearch(name)).then(function (res) {
         var results = res.data;
-        _.forEach(results, function (result) {
-          result.id = result.value.split('/').splice(1).join('');
-          var trimmedLabel = result.label.trim();
-          result.label = trimmedLabel ? trimmedLabel : result.id;
-          result.network = result.networkType === 'email' ? result.id : result.networkType;
-          result.iconStyle = 'kf-' + result.networkType + '-icon-micro';
-        });
+        _.forEach(results, augmentSocialResult);
         return results;
       });
     });
 
-    function populateWithEmail(name) {
-      var alreadyHasElem = inviteList[inviteList.length - 1] && inviteList[inviteList.length - 1].custom;
-      if (name.indexOf('@') > 0 && !alreadyHasElem) {
+    var customEmail = {
+      custom: 'email',
+      iconStyle: 'kf-email-icon-micro',
+      networkType: "email",
+      status: '',
+    };
+
+    function augmentSocialResult(result) {
+      result.socialId = result.value.split('/').splice(1).join('');
+      var trimmedLabel = result.label.trim();
+      result.label = trimmedLabel ? trimmedLabel : result.socialId;
+      result.network = result.networkType === 'email' ? result.socialId : friendlyNetworks[result.networkType] || result.networkType;
+      result.iconStyle = 'kf-' + result.networkType + '-icon-micro';
+      if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
+        result.image = routeService.formatPicUrl(result.socialId, result.image);
+      }
+      return result;
+    }
+
+    function populateWithCustomEmail(name, results) {
+      if (name.indexOf('@') > 0) {
+        var last = results[results.length - 1];
+        if (last && last.custom) {
+          if (last.label === name) {
+            return;
+          } else {
+            results.pop();
+          }
+        }
         // They're typing in an email address
-        console.log('adding elem', name);
-        var resultInside = _.find(inviteList, function (elem) {
+        var resultInside = _.find(results, function (elem) {
           return elem.networkType === 'email' && elem.value.split('/').splice(1).join('') === name;
         });
         if (!resultInside) {
-          inviteList.push({
-            label: name,
-            networkType: 'email',
-            value: 'email/' + name,
-            status: '',
-            custom: true
-          });
+          customEmail.socialId = name;
+          customEmail.label = name;
+          customEmail.network = name;
+          customEmail.value = 'email/' + name;
+          results.push(augmentSocialResult(customEmail));
         }
       }
+
     }
 
     var api = {
 
       socialSearch: function (name) {
-        populateWithEmail(name);
+        lastSearch = name;
+        populateWithCustomEmail(name, inviteList);
+
         return socialSearchService.get(name).then(function (results) {
+
+          populateWithCustomEmail(lastSearch, results);
           util.replaceArrayInPlace(inviteList, results);
+
           // find which was selected, if not:
           if (results.length === 0) {
             selected = null;
@@ -82,6 +97,9 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
       socialSelected: selected,
 
       invite: function (platform, identifier) {
+
+        socialSearchService.expireAll();
+
         return null; // todo!
       },
 

@@ -33,7 +33,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.concurrent.ExecutionContext
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -92,13 +92,14 @@ class UserCommander @Inject() (
   userCache: SocialUserInfoUserCache,
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialGraphPlugin: SocialGraphPlugin,
-  bookmarkCommander: BookmarksCommander,
+  bookmarkCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   abookServiceClient: ABookServiceClient,
   postOffice: LocalPostOffice,
   clock: Clock,
   scheduler: Scheduler,
   socialUserTypeahead: SocialUserTypeahead,
+  kifiUserTypeahead: KifiUserTypeahead,
   elizaServiceClient: ElizaServiceClient,
   searchClient: SearchServiceClient,
   s3ImageStore: S3ImageStore,
@@ -239,12 +240,14 @@ class UserCommander @Inject() (
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
       }
       searchClient.warmUpUser(newUser.id.get)
+      searchClient.updateUserIndex()
+
     }
     newUser
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    delay {
+    delay { synchronized {
       val guardKey = "friendsNotifiedAboutJoining"
       if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
         db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
@@ -286,7 +289,7 @@ class UserCommander @Inject() (
           category = NotificationCategory.User.FRIEND_JOINED
         )
       }
-    }
+    }}
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
@@ -562,7 +565,12 @@ class UserCommander @Inject() (
 
             elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
             elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-            socialUserTypeahead.refresh(myUserId)
+            s.onTransactionSuccess {
+              Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
+                socialUserTypeahead.refresh(id)
+                kifiUserTypeahead.refresh(id)
+              }
+            }
             searchClient.updateUserGraph()
             sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
             (true, "acceptedRequest")
@@ -588,7 +596,10 @@ class UserCommander @Inject() (
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
-        socialUserTypeahead.refresh(userId)
+        Seq(userId, user.id.get) foreach { id =>
+          socialUserTypeahead.refresh(id)
+          kifiUserTypeahead.refresh(id)
+        }
         searchClient.updateUserGraph()
       }
       success

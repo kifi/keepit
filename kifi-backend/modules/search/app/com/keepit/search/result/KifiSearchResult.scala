@@ -1,14 +1,15 @@
 package com.keepit.search.result
 
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model._
-import com.keepit.social.BasicUser
-import play.api.libs.json._
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URISanitizer
+import com.keepit.model._
 import com.keepit.serializer.TraversableFormat
 import com.keepit.search.ArticleSearchResult
 import com.keepit.search.Scoring
 import com.keepit.search.SearchConfigExperiment
+import com.keepit.social.BasicUser
+import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import scala.math.BigDecimal.double2bigDecimal
 import scala.math.BigDecimal.int2bigDecimal
@@ -160,8 +161,12 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
+  def sanitized: DetailedSearchHit = {
+    set("bookmark", bookmark.sanitized.json)
+  }
+
   def set(key: String, value: JsValue): DetailedSearchHit = {
-    new DetailedSearchHit((json - key) + (key ->value))
+    new DetailedSearchHit((json - key) + (key -> value))
   }
 
   override def toString(): String = json.toString()
@@ -228,6 +233,17 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
 
   def addCollections(collections: Seq[ExternalId[Collection]]): BasicSearchHit = {
     if (collections.isEmpty) this else new BasicSearchHit(json + ("tags" -> Json.toJson(collections.map(_.id))))
+  }
+
+  def sanitized: BasicSearchHit = {
+    val rawURL = url
+    val sanitizedURL = URISanitizer.sanitize(url)
+    if (rawURL == sanitizedURL) this else set("url", JsString(sanitizedURL))
+    set("url", JsString(sanitizedURL))
+  }
+
+  def set(key: String, value: JsValue): BasicSearchHit = {
+    new BasicSearchHit((json - key) + (key -> value))
   }
 
   private def readMatches(matches: JsValue): Seq[(Int, Int)] = {

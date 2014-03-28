@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.util
 
 import org.specs2.mutable._
 import scala.util.Random

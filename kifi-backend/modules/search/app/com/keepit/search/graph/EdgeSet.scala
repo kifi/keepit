@@ -91,10 +91,15 @@ trait IdSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
 }
 
 trait LongSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
+  override lazy val destIdSet: Set[Id[D]] = new IdSetWrapper[D](destIdLongSet)
+  override def size = destIdLongSet.size
+}
+
+trait LongArraySetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
   protected val longArraySet: LongArraySet
   override def accessor: EdgeSetAccessor[S, D] = new LongArrayBasedEdgeInfoAccessorImpl(this, longArraySet: LongArraySet)
   override def destIdLongSet = longArraySet
-  override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(Id[D](_))
+  override lazy val destIdSet: Set[Id[D]] = new IdSetWrapper[D](destIdLongSet)
   override def size = longArraySet.size
 }
 

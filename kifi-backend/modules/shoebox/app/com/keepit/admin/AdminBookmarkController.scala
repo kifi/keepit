@@ -148,9 +148,21 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = searchServiceClient.uriGraphIndexInfo() map { infos =>
-      (infos filter (_.name.startsWith("BookmarkStore"))).map{_.numDocs}.sum
+    val bookmarkTotalCountFuture = {
+      Future.sequence(searchServiceClient.indexInfoList()).map{ results =>
+        var countMap = Map.empty[String, Int]
+        results.flatMap(_._2).foreach{ info =>
+          if (info.name.startsWith("BookmarkStore")) {
+            countMap.get(info.name) match {
+              case Some(count) if count >= info.numDocs =>
+              case _ => countMap += (info.name -> info.numDocs)
+            }
+          }
+        }
+        countMap.values.sum
+      }
     }
+
     val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
       keepRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), KeepSource.bookmarkImport)
     }}}
