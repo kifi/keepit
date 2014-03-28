@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{LogPrefix, Logging}
+import com.keepit.common.performance.timing
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
@@ -13,17 +14,14 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import com.keepit.typeahead.TypeaheadHit
 import play.api.libs.functional.syntax._
-import play.api.libs.json.JsString
-import scala.Some
 import com.keepit.model.SocialUserConnectionsKey
-import play.api.libs.json.JsObject
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import Logging.LoggerWithPrefix
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{TreeSet, ArrayBuffer}
 
 case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String)
 
@@ -45,6 +43,7 @@ class TypeaheadCommander @Inject()(
   socialConnectionRepo: SocialConnectionRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
+  emailAddressRepo: EmailAddressRepo,
   abookServiceClient: ABookServiceClient,
   socialUserTypeahead: SocialUserTypeahead,
   kifiUserTypeahead: KifiUserTypeahead,
@@ -217,7 +216,24 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limit: Option[Int]): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
+  private def buildEmailSet(kifiHits: Seq[(SocialNetworkType, TypeaheadHit[User])]) = timing(s"buildEmailSet(ids=${kifiHits.map(_._2.info.id.get).mkString(",")})") {
+    if (kifiHits.isEmpty) TreeSet.empty[String] // use map if need to track userId -> emails
+    else {
+      val emailSet = new TreeSet[String]
+      kifiHits.foreach { h =>
+        val uId = h._2.info.id.get
+        val emails = db.readOnly {
+          implicit ro =>
+            emailAddressRepo.getAllByUser(uId) // todo: +cache
+        }
+        emailSet ++= emails.map { _.address }
+      }
+      log.info(s"[buildEmailSet(ids=${kifiHits.map(_._2.info.id.get).mkString(",")})] res=${emailSet.mkString(",")}")
+      emailSet
+    }
+  }
+
+  private def aggregate(userId: Id[User], q: String, limit: Option[Int], dedupEmail:Boolean): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
     val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
       resOpt map { res =>
@@ -242,8 +258,12 @@ class TypeaheadCommander @Inject()(
             log.infoP(s"short-circuit (social) res=${res.mkString(",")}")
             Future.successful(Option(res))
           } else {
-            val future = kifiF flatMap { kifiHitsOpt =>
+            kifiF flatMap { kifiHitsOpt =>
               val kifiHits = kifiHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
+              val emailF = if (!dedupEmail) Future.successful(TreeSet.empty[String]) else Future { buildEmailSet(kifiHits) } recover { case t:Throwable =>
+                log.error(s"Caught exception $t while building email set for users(len=${kifiHits.length}):${kifiHits.map(_._2.info)}")
+                TreeSet.empty[String]
+              }
               zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
               if (zHits.length >= n) {
                 val res = zHits.take(n)
@@ -251,27 +271,33 @@ class TypeaheadCommander @Inject()(
                 Future.successful(Option(res))
               } else {
                 abookF flatMap { abookHitsOpt =>
-                  val abookHits = abookHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
-                  zHits ++= abookHits.takeWhile(t => t._2.score == 0)
-                  if (zHits.length >= n) {
-                    val res = zHits.take(n)
-                    log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
-                    Future.successful(Option(res))
-                  } else {
-                    nfUsersF map { nfUserRes =>
-                      val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
-                      zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
-                      if (zHits.length >= n) {
-                        Option(zHits.take(n))
-                      } else { // combine all & sort
-                        Some((socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(n))
+                  emailF flatMap { emails =>
+                    val abookHitsRes = abookHitsOpt.getOrElse(Seq.empty)
+                    val abookHits = abookHitsRes.filter { h =>
+                      val dup = emails.contains(h.info.email)
+                      log.infoP(s"${h.info.email} DUP detected; hit=$h; Discard") // can fix-up user hit score if needed
+                      !dup
+                    }.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
+                    zHits ++= abookHits.takeWhile(t => t._2.score == 0)
+                    if (zHits.length >= n) {
+                      val res = zHits.take(n)
+                      log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
+                      Future.successful(Option(res))
+                    } else {
+                      nfUsersF map { nfUserRes =>
+                        val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
+                        zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
+                        if (zHits.length >= n) {
+                          Option(zHits.take(n))
+                        } else { // combine all & sort
+                          Some((socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(n))
+                        }
                       }
                     }
                   }
                 }
               }
             }
-            future
           }
           topF
         }
@@ -324,7 +350,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
+  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, dedupEmail:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
     implicit val prefix = LogPrefix(s"searchWIS($userId,$query,$limit)")
 
     val socialInvitesF = db.readOnlyAsync { implicit ro =>
@@ -337,7 +363,7 @@ class TypeaheadCommander @Inject()(
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      val topF: Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = aggregate(userId, q, limit)
+      val topF: Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = aggregate(userId, q, limit, dedupEmail)
       topF flatMap { topOpt =>
         topOpt match {
           case None => Future.successful(Seq.empty[ConnectionWithInviteStatus])
