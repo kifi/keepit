@@ -4,4 +4,9 @@
     <div class="kf-friend-card-name" title="{{name}}">{{name}}</div>
     <div class="kf-friend-card-count" title="{{friendCount}}">{{friendCount}} friends on Kifi</div>
   </span>
+  <span class="kf-friend-card-button">Friends</span>
+  <ul class="kf-dropdown-menu kf-friend-card-menu">
+    <li><a href="javascript:" ng-click="unsearchfriend()">Hide {{possesive}} keeps in my search results</a></li>
+    <li><a href="javascript:" ng-click="unfriend()">Unfriend</a></li>
+  </ul>
 </div>

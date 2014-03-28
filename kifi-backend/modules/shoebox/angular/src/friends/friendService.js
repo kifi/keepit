@@ -21,7 +21,9 @@ angular.module('kifi.friendService', [])
         if (!friendsRequested) {
           friendsRequested = true;
           return $http.get(routeService.friends).then(function (res) {
-            friends.push.apply(friends, res.data.friends);
+            friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
+              return !friend.unfriended;
+            }));
             console.log(friends)
             return friends;
           });
