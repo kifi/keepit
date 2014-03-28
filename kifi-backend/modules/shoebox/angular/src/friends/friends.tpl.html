@@ -1,14 +1,19 @@
 <div ng-controller="FriendsCtrl">
   <div class="friends-wrapper" antiscroll="{ autoHide: false }">
     <div class="friends">
-      <div kf-social-invite-search></div>
-      <h2>A giant, partial list of your friends</h2>
-      <p>You likely have tons of friends on Kifi, because you're using the AngularJS site and AngularJS developers are usually big hits at parties.</p>
-      <div kf-social-connect-networks></div>
+      <h2>Kifi Friends (235)</h2>
+      <p>Search your friends list by name or email address.</p>
+
+      <div kf-social-invite-well></div>
+
       <div class="friends-list">
         <div class="friends-list-header">You have {{friends.length}} kifi friends | <a href="/invite">Invite more friends</a> </div>
         <div kf-friend-card ng-repeat="friend in friends" friend="friend"></div>
-      <div>
+      </div>
+
+<!--       If less than 10 suggestions: <div kf-social-connect-networks></div>
+ -->
+
     </div>
   </div>
 </div>

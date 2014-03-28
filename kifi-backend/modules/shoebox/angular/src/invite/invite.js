@@ -4,7 +4,8 @@ angular.module('kifi.invite', [
   'util',
   'kifi.profileService',
   'kifi.routeService',
-  'jun.facebook'
+  'jun.facebook',
+  'kifi.inviteService'
 ])
 
 .config([
@@ -47,5 +48,72 @@ angular.module('kifi.invite', [
       $window.alert('Inviting ' + friend);
     };
 
+  }
+])
+
+.directive('kfSocialInviteWell', [
+  'profileService',
+  function (profileService) {
+    return {
+      scope: {},
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/inviteWell.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+
+      }
+    }
+  }
+])
+
+.directive('kfSocialInviteSearch', [
+  'inviteService', '$document',
+  function (inviteService, $document) {
+    return {
+      scope: {},
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/inviteSearch.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        scope.search = {};
+        scope.search.showDropdown = false;
+
+        scope.results = inviteService.inviteList;
+        scope.selected = inviteService.socialSelected;
+
+        scope.change = _.debounce(function (e) { // todo: integrate debounce into Clutch, remove me
+          inviteService.socialSearch(scope.search.name).then(function (res) {
+            if (!res || res.length === 0) {
+              scope.search.showDropdown = false;
+            } else {
+              scope.search.showDropdown = true;
+            }
+          });
+        }, 200);
+
+        function clickOutside(e) {
+          if (scope.search.showDropdown && !element.find(e.target)[0]) { // click was outside of dropdown
+            scope.$apply(function () {
+              scope.search.showDropdown = false;
+            });
+          }
+        }
+
+        scope.invite = function (result) {
+          console.log('this person:', result);
+        }
+
+        scope.$on('$destroy', function () {
+          $document.off('click', clickOutside);
+        });
+
+        $document.on('click', clickOutside);
+
+        scope.blur = function (e) {
+          return true;
+        };
+
+      }
+    };
   }
 ]);
