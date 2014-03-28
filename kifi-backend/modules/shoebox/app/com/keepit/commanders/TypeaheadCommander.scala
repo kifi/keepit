@@ -188,8 +188,8 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def includeHit(hit:TypeaheadHit[SocialUserBasicInfo], filterJoinedUsers:Boolean):Boolean = {
-    if (!filterJoinedUsers) true else hit.info.networkType match {
+  private def includeHit(hit:TypeaheadHit[SocialUserBasicInfo]):Boolean = {
+    hit.info.networkType match {
       case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN => hit.info.userId.isEmpty
       case SocialNetworks.FORTYTWO => false // see KifiUserTypeahead!
       case _ => true
@@ -217,12 +217,12 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limit: Option[Int], filterJoinedUsers: Boolean): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
+  private def aggregate(userId: Id[User], q: String, limit: Option[Int]): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
     val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
       resOpt map { res =>
         res.collect {
-          case hit if includeHit(hit, filterJoinedUsers) => hit
+          case hit if includeHit(hit) => hit
         }
       }
     }
@@ -280,7 +280,7 @@ class TypeaheadCommander @Inject()(
 
 
 
-  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
+  def searchWithInviteStatus(userId:Id[User], query:String, limit:Option[Int], pictureUrl:Boolean):Future[Seq[ConnectionWithInviteStatus]] = {
     implicit val prefix = LogPrefix(s"searchWIS($userId,$query,$limit)")
 
     val socialInvitesF = db.readOnlyAsync { implicit ro =>
@@ -293,7 +293,7 @@ class TypeaheadCommander @Inject()(
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      val topF: Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = aggregate(userId, q, limit, filterJoinedUsers)
+      val topF: Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = aggregate(userId, q, limit)
       topF flatMap { topOpt =>
         topOpt match {
           case None => Future.successful(Seq.empty[ConnectionWithInviteStatus])
