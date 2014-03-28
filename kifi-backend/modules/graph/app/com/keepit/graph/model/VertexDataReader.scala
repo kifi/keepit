@@ -9,35 +9,42 @@ sealed trait VertexDataReader {
 }
 
 object VertexDataReader {
-  def apply(rawDataReader: RawDataReader): Map[VertexKind, VertexDataReader] = VertexKind.all.map { vertexKind =>
-    vertexKind -> vertexKind(rawDataReader)
-  }.toMap
+  def apply(rawDataReader: RawDataReader): Map[VertexKind, VertexDataReader] = {
+    VertexKind.all.map { vertexKind => vertexKind -> vertexKind(rawDataReader) }.toMap
+  }
 }
 
-trait UserDataReader extends VertexDataReader { type V = UserDataReader }
-case object UserDataReader extends VertexKind {
-  type V = UserDataReader
+trait UserReader extends VertexDataReader { type V = UserReader }
+case object UserReader extends VertexKind {
+  type V = UserReader
   val header = KindHeader[V](1)
   def apply(rawDataReader: RawDataReader): V = ???
 }
 
-trait UriDataReader extends VertexDataReader { type V = UriDataReader }
-case object UriDataReader extends VertexKind {
-  type V = UriDataReader
+trait UriReader extends VertexDataReader { type V = UriReader }
+case object UriReader extends VertexKind {
+  type V = UriReader
   val header = KindHeader[V](2)
   def apply(rawDataReader: RawDataReader): V = ???
 }
 
-trait TagDataReader extends VertexDataReader { type V = TagDataReader }
-case object TagDataReader extends VertexKind {
-  type V = TagDataReader
+trait TagReader extends VertexDataReader { type V = TagReader }
+case object TagReader extends VertexKind {
+  type V = TagReader
   val header = KindHeader[V](3)
   def apply(rawDataReader: RawDataReader): V = ???
 }
 
-trait ThreadDataReader extends VertexDataReader { type V = ThreadDataReader }
-case object ThreadDataReader extends VertexKind {
-  type V = ThreadDataReader
+trait ThreadReader extends VertexDataReader { type V = ThreadReader }
+case object ThreadReader extends VertexKind {
+  type V = ThreadReader
   val header = KindHeader[V](4)
+  def apply(rawDataReader: RawDataReader): V = ???
+}
+
+trait SocialAccountReader extends VertexDataReader { type V = SocialAccountReader }
+case object SocialAccountReader extends VertexKind {
+  type V = ThreadReader
+  val header = KindHeader[V](5)
   def apply(rawDataReader: RawDataReader): V = ???
 }

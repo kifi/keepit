@@ -6,8 +6,7 @@ sealed trait EdgeDataReader {
 }
 
 object EdgeDataReader {
-  def apply(rawDataReader: RawDataReader): Map[EdgeKind, EdgeDataReader] = EdgeKind.all.map { edgeKind =>
-    edgeKind -> edgeKind(rawDataReader)
-  }.toMap
+  def apply(rawDataReader: RawDataReader): Map[EdgeKind, EdgeDataReader] = {
+    EdgeKind.all.map { edgeKind => edgeKind -> edgeKind(rawDataReader) }.toMap
+  }
 }
-
