@@ -30,6 +30,7 @@ angular.module('kifi.routeService', [])
       tagOrdering: route('/collections/ordering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
+      friends: route('/user/friends'),
       socialSearch: function (name, limit) {
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
