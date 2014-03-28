@@ -3,14 +3,13 @@
 angular.module('kifi.social', [])
 
 .directive('kfSocialConnectNetworks', [
-  '$document',
-  function ($document) {
+  function () {
     return {
       scope: {},
       replace: true,
       restrict: 'A',
       templateUrl: 'social/connectNetworks.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (/*scope, element, attrs*/) {
 
       }
     };
