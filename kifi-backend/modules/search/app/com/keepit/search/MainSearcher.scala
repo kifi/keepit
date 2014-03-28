@@ -349,14 +349,13 @@ class MainSearcher(
     val (show, svVar) =  if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, personalizedSearcher)
 
     val shardHits = toDetailedSearchHits(hitList)
-    val collections = parser.collectionIds.map(getCollectionExternalId)
 
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    ShardSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, collections.toSeq, svVar, show)
+    ShardSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
   private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
@@ -384,22 +383,12 @@ class MainSearcher(
     }
   }
 
-  private[this] var collectionIdCache: Map[Long, ExternalId[Collection]] = Map()
-
-  private def getCollectionExternalId(id: Long): ExternalId[Collection] = {
-    collectionIdCache.getOrElse(id, {
-      val extId = collectionSearcher.getExternalId(id)
-      collectionIdCache += (id -> extId)
-      extId
-    })
-  }
-
   private[this] def toBasicSearchHit(h: MutableArticleHit): BasicSearchHit = {
     val uriId = Id[NormalizedURI](h.id)
     if (h.isMyBookmark) {
       val collections = {
         val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
-        if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
+        if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => collectionSearcher.getExternalId(id) }.collect{ case Some(extId) => extId })
       }
       val r = getBookmarkRecord(uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${uriId}"))
       BasicSearchHit(Some(r.title), r.url, collections, r.externalId)
