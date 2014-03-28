@@ -177,7 +177,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 }
 
 function onGetFail(uri, done, failures, req) {
-  if (req.status !== 403) {
+  if ([403,404].indexOf(req.status) < 0) {
     if (failures < 10) {
       var ms = failures * 2000;
       log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
@@ -2251,18 +2251,7 @@ function deauthenticate() {
   log("[deauthenticate]")();
   clearSession();
   store('logout', Date.now());
-  api.popup.open({
-    name: "kifi-deauthenticate",
-    url: webBaseUri() + "/logout#_=_",
-    width: 200,
-    height: 100}, {
-    navigate: function(url) {
-      if (url == webBaseUri() + "/#_=_") {
-        log("[deauthenticate] closing popup")();
-        this.close();
-      }
-    }
-  })
+  ajax('GET', '/logout');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
