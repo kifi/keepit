@@ -4,7 +4,7 @@
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
       <div ng-if="!result.custom">
-        <div ng-if="result.image"><img ng-src="{{result.image}}" class="social-invite-image"></div>
+        <div ng-if="result.networkType !== 'email'"><img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image"></div>
 
         <div ng-if="!result.status">
           <div class="social-invite-summary">

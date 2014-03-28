@@ -16,7 +16,6 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       var network = friend.fullSocialId.split('/')[0];
       var inNetworkId = friend.fullSocialId.split('/')[1];
       var invited = (friend.lastInvitedAt != null);
-      var canInvite = friend.canBeInvited;
 
       if (friend.pictureUrl != null) {
         scope.mainImage = friend.pictureUrl;

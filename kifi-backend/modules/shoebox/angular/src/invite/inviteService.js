@@ -12,7 +12,6 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
     var whoToInviteList = [],
         inviteList = [], // used for typeahead dropdown for invite search
         selected,
-        platformFilter,
         lastSearch;
 
     var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn'};
@@ -30,8 +29,8 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
     var customEmail = {
       custom: 'email',
       iconStyle: 'kf-email-icon-micro',
-      networkType: "email",
-      status: '',
+      networkType: 'email',
+      status: ''
     };
 
     function augmentSocialResult(result) {
@@ -100,19 +99,12 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
 
         socialSearchService.expireAll();
 
-        return null; // todo!
+        return platform + identifier; // todo!
       },
 
       getWhoToInvite: function () {
         // use $http if request is needed
         return $q.when(whoToInviteList); // todo!
-      },
-
-      find: function (query, platform) {
-        if (platform === undefined) {
-          // handle no platform, which means search everywhere
-        }
-        return null; // todo!
       }
 
     };
