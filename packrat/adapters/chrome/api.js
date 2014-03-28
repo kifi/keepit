@@ -508,31 +508,6 @@ var api = (function createApi() {
       el.src = path;
       el.play();
     },
-    popup: {
-      open: function(options, handlers) {
-        var popupWinId, popupTabId;
-        options.type = "popup";
-        delete options.name;
-        chrome.windows.create(options, errors.wrap(function (win) {
-          popupWinId = win.id;
-          popupTabId = win.tabs[0].id;
-        }));
-        if (handlers && handlers.navigate) {
-          var onUpdated = errors.wrap(function (tabId, changed, tab) {
-            if (tabId == popupTabId && changed.status === 'loading') {
-              handlers.navigate.call({close: function() {
-                chrome.windows.remove(popupWinId);
-              }}, changed.url);
-            }
-          });
-          var onClosed = errors.wrap(function (winId) {
-            chrome.tabs.onUpdated.removeListener(onUpdated);
-            chrome.windows.onRemoved.removeListener(onClosed);
-          });
-          chrome.tabs.onUpdated.addListener(onUpdated);
-          chrome.windows.onRemoved.addListener(onClosed);
-        }
-      }},
     port: {
       on: function (handlers) {
         for (var k in handlers) {

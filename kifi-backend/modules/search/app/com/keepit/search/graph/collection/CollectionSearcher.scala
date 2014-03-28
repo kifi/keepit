@@ -51,10 +51,10 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
     UserToCollectionEdgeSet(userToCollection.sourceId, searcher, intersection.toArray)
   }
 
-  def getExternalId(id: Id[Collection]): ExternalId[Collection] = getExternalId(id.id)
+  def getExternalId(id: Id[Collection]): Option[ExternalId[Collection]] = getExternalId(id.id)
 
-  def getExternalId(id: Long): ExternalId[Collection] = {
-    ExternalId[Collection](searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).get)
+  def getExternalId(id: Long): Option[ExternalId[Collection]] = {
+    searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).map{ ExternalId[Collection](_) }
   }
 
   def getName(id: Id[Collection]): String = getName(id.id)
@@ -70,6 +70,16 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
 
 class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNameIndexSearcher: Searcher, userId: Id[User]) extends CollectionSearcher(collectionIndexSearcher) {
   lazy val myCollectionEdgeSet: UserToCollectionEdgeSet = getUserToCollectionEdgeSet(userId)
+
+  private[this] var collectionIdCache: Map[Long, Option[ExternalId[Collection]]] = Map()
+
+  override def getExternalId(id: Long): Option[ExternalId[Collection]] = {
+    collectionIdCache.getOrElse(id, {
+      val extId = super.getExternalId(id)
+      collectionIdCache += (id -> extId)
+      extId
+    })
+  }
 
   def detectCollectionNames(stems: IndexedSeq[Term], partialMatch: Boolean): Set[(Int, Int, Long)] = {
     collectionNameIndexSearcher.findDocIdAndAtomicReaderContext(userId.id) match {

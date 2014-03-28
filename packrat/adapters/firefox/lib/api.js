@@ -154,51 +154,6 @@ exports.play = function(path) {
   nsISound.play(nsIIO.newURI(self.data.url(path), null, null));
 };
 
-exports.popup = {
-  open: function(options, handlers) {
-    var onReady = errors.wrap(function onReady(tab) {
-      handlers.navigate.call(tab, tab.url);
-    });
-    var win = windows.open({
-      url: options.url,
-      onOpen: errors.wrap(function() {
-        if (handlers && handlers.navigate) {
-          win.tabs.activeTab.on("ready", onReady);
-        }
-      }),
-      onClose: errors.wrap(function() {
-        win.tabs.activeTab.removeListener("ready", onReady);
-      })
-    });
-
-    // Below are some failed attempts at opening a popup window...
-    // UPDATE: see https://addons.mozilla.org/en-US/developers/docs/sdk/1.12/modules/sdk/frame/utils.html
-
-    // win.window, win.document, win.getInterface
-    // var win = require("api-utils/window/utils").open(options.url, {
-    //   name: options.name,
-    //   features: {
-    //     centerscreen: true,
-    //     width: options.width || undefined,
-    //     height: options.height || undefined}});
-    // var { Cc, Ci } = require('chrome')
-    // var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].getService(Ci.nsIWindowWatcher);
-    // log("=========== OPENED:", typeof ww.getChromeForWindow(win));
-    // timers.setTimeout(function() {
-    //   win.close();
-    // }, 50000);
-
-    // ww.registerNotification({
-    //   observe: function(aSubject, aTopic, aData) {
-    //     log("============== OBSERVED!", aSubject, aTopic, aData);
-    //   }});
-
-    // WORKS! win.getInterface(Ci.nsIWebNavigation);
-    // FAILS! win.getInterface(Ci.nsIWebBrowser);
-    // FAILS! win.getInterface(Ci.nsIWebProgress);
-    // FAILS! win.getXULWindow()
-  }};
-
 var portHandlers, portMessageTypes;
 exports.port = {
   on: function (handlers) {
