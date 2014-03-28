@@ -9,7 +9,7 @@ import com.keepit.model.NotificationCategory
 
 case class FakeHealthcheckModule() extends HealthCheckModule {
   def configure(): Unit = {
-    install(new TestAmazonMailModule())
+    install(TestAmazonMailModule())
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[Babysitter].to[FakeBabysitter]
   }

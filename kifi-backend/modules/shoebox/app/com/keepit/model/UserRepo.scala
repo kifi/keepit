@@ -149,7 +149,9 @@ class UserRepoImpl @Inject() (
     }
 
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
-    invalidateMixpanel(user)
+    session.onTransactionSuccess {
+      invalidateMixpanel(user)
+    }
   }
 
   private def invalidateMixpanel(user: User) = SafeFuture {

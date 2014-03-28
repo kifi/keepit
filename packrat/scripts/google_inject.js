@@ -126,7 +126,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       }
       $bar.addClass('kifi-loading');
     }
-    $status.removeAttr('href data-n');
+    $status.removeAttr('href data-n data-of');
     $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
 
@@ -149,6 +149,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
       }
+      removeResults();
 
       response = resp;
       // if (isFirst && resp.filter && resp.filter.who) {  // restoring previous filter (user navigated back) // TODO: make this work again
@@ -584,10 +585,13 @@ if (searchUrlRe.test(document.URL)) !function () {
     });
   }
 
-  function attachResults() {
+  function removeResults() {
     $res.find('#kifi-res-list,.kifi-res-end').remove();
+    $res.find('.kifi-res-box').finish().removeAttr('style');
+  }
+
+  function attachResults() {
     $res.find('.kifi-res-box')
-      .finish().removeAttr('style')
       .append(render('html/search/google_hits', {
           results: response.hits,
           self: response.me,

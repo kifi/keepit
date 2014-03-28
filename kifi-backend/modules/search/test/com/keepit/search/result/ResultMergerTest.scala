@@ -58,7 +58,6 @@ class ResultMergerTest extends Specification{
       friendsTotal = 2,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L), scores = Array(2.4f)),
-      collections = Seq(),
       svVariance = 0f,
       show = true
     )
@@ -71,7 +70,6 @@ class ResultMergerTest extends Specification{
       friendsTotal = 1,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L, 3L), scores = Array(2f, 1.8f)),
-      collections = Seq(),
       svVariance = 0.1f,
       show = true
     )

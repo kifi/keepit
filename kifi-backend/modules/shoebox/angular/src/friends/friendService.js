@@ -25,7 +25,6 @@ angular.module('kifi.friendService', [])
             friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
               return !friend.unfriended;
             }));
-            console.log(friends)
             return friends;
           });
         } else {

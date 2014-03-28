@@ -60,15 +60,17 @@ angular.module('kifi.invite', [
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
+        scope.networks = profileService.networks;
 
+        profileService.getNetworks();
       }
-    }
+    };
   }
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document',
-  function (inviteService, $document) {
+  'inviteService', '$document', '$log',
+  function (inviteService, $document, $log) {
     return {
       scope: {},
       replace: true,
@@ -81,7 +83,7 @@ angular.module('kifi.invite', [
         scope.results = inviteService.inviteList;
         scope.selected = inviteService.socialSelected;
 
-        scope.change = _.debounce(function (e) { // todo: integrate debounce into Clutch, remove me
+        scope.change = _.debounce(function () { // todo: integrate debounce into Clutch, remove me
           inviteService.socialSearch(scope.search.name).then(function (res) {
             if (!res || res.length === 0) {
               scope.search.showDropdown = false;
@@ -100,8 +102,8 @@ angular.module('kifi.invite', [
         }
 
         scope.invite = function (result) {
-          console.log('this person:', result);
-        }
+          $log('this person:', result);
+        };
 
         scope.$on('$destroy', function () {
           $document.off('click', clickOutside);
@@ -109,7 +111,7 @@ angular.module('kifi.invite', [
 
         $document.on('click', clickOutside);
 
-        scope.blur = function (e) {
+        scope.blur = function () {
           return true;
         };
 

@@ -2,9 +2,9 @@ package com.keepit.search
 
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
-import com.keepit.common.controller.{ShoeboxServiceController, ServiceController, SearchServiceController}
+import com.keepit.common.controller.{ServiceController, SearchServiceController}
 import com.keepit.common.logging.Logging
-import com.keepit.test.DeprecatedSearchApplication
+import com.keepit.test.{SearchApplicationInjector, DeprecatedSearchApplication}
 import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc.Controller
@@ -12,10 +12,9 @@ import play.api.test.Helpers.running
 import scala.collection.JavaConversions._
 import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import net.spy.memcached.MemcachedClient
-import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
 
-class SearchModuleTest extends Specification with Logging with ApplicationInjector {
+class SearchModuleTest extends Specification with Logging with SearchApplicationInjector {
 
   private def isSearchController(clazz: Class[_]): Boolean = {
     if (classOf[Controller] isAssignableFrom clazz) {

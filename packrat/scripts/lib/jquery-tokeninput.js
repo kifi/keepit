@@ -607,8 +607,15 @@
       selectedDropdownItem = null;
 
       var items = results.map(formatDropdownItem);
-      $('<ul/>')
-        .on('mouseover', 'li', function () {
+      var $ul = $('<ul/>')
+        .append(items)
+        .appendTo($dropdown);
+      if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
+        selectDropdownItem(items[0]);
+      }
+      showDropdown();
+      setTimeout(function () {
+        $ul.on('mouseover', 'li', function () {
           selectDropdownItem(this);
         })
         .on('mousedown', 'li', function (e) {
@@ -616,13 +623,8 @@
             handleItemChosen(this);
             return false;
           }
-        })
-        .append(items)
-        .appendTo($dropdown);
-      if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
-        selectDropdownItem(items[0]);
-      }
-      showDropdown();
+        });
+      });
     }
 
     function formatDropdownItem(result) {

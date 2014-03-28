@@ -177,7 +177,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 }
 
 function onGetFail(uri, done, failures, req) {
-  if (req.status !== 403) {
+  if ([403,404].indexOf(req.status) < 0) {
     if (failures < 10) {
       var ms = failures * 2000;
       log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
@@ -945,8 +945,14 @@ api.port.on({
   play_alert: function() {
     playNotificationSound();
   },
-  web_base_uri: function(_, respond) {
-    respond(webBaseUri());
+  auth_info: function(_, respond) {
+    var dev = api.mode.isDev();
+    respond({
+      origin: webBaseUri(),
+      data: {
+        facebook: dev ? 530357056981814 : 104629159695560,
+        linkedin: dev ? 'ovlhms1y0fjr' : 'r11loldy9zlg'
+      }});
   },
   search_friends: function(data, respond, tab) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
@@ -981,6 +987,9 @@ api.port.on({
       });
     }
   },
+  open_tab: function (path) {
+    api.tabs.open(webBaseUri() + path);
+  },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
@@ -1002,28 +1011,6 @@ api.port.on({
       locator: '/messages',
       composeTo: friendsById && friendsById[SUPPORT.id] || SUPPORT
     }, {queue: 1});
-  },
-  open_login_popup: function(o) {
-    var baseUri = webBaseUri();
-    api.popup.open({
-      name: o.id || "kifi-popup",
-      url: o.url,
-      width: 1020,
-      height: 530}, {
-      navigate: function(url) {
-        var popup = this;
-        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-          ajax("GET", "/ext/authed", function (loggedIn) {
-            if (loggedIn !== false) {
-              authenticate(function() {
-                log("[open_login_popup] closing popup")();
-                popup.close();
-              });
-            }
-          });
-        }
-      }
-    });
   },
   logged_in: authenticate.bind(null, api.noop),
   remove_notification: function (threadId) {
@@ -2264,18 +2251,7 @@ function deauthenticate() {
   log("[deauthenticate]")();
   clearSession();
   store('logout', Date.now());
-  api.popup.open({
-    name: "kifi-deauthenticate",
-    url: webBaseUri() + "/logout#_=_",
-    width: 200,
-    height: 100}, {
-    navigate: function(url) {
-      if (url == webBaseUri() + "/#_=_") {
-        log("[deauthenticate] closing popup")();
-        this.close();
-      }
-    }
-  })
+  ajax('GET', '/logout');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
