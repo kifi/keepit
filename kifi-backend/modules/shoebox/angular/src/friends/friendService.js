@@ -12,6 +12,7 @@ angular.module('kifi.friendService', [])
     var friends = [];
     var requests = [];
     var friendsRequested = false;
+    var friendRequestsRequested = false;
     var api = {
       connectWithKifiUser: function (userId) {
         return userId; // todo!
@@ -33,10 +34,25 @@ angular.module('kifi.friendService', [])
       },
 
       getRequests: function () {
-        return $q.when(requests); // todo!
+        if (!friendRequestsRequested) {
+          friendRequestsRequested = true;
+          return $http.get(routeService.incomingFriendRequests).then(function (res) {
+            console.log(res)
+            requests.push.apply(requests, res.data);
+            requests.push.apply(requests, JSON.parse(JSON.stringify(res.data)));
+            requests.push.apply(requests, JSON.parse(JSON.stringify(res.data)));
+            requests.push.apply(requests, JSON.parse(JSON.stringify(res.data)));
+            console.log(requests)
+            return requests;
+          });
+        } else {
+          return $q.when(requests);
+        }
       },
 
-      friends: friends
+      friends: friends,
+
+      requests: requests
     };
 
     return api;

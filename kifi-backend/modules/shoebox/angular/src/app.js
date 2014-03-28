@@ -20,6 +20,7 @@ angular.module('kifi', [
   'kifi.friends',
   'kifi.friendService',
   'kifi.friends.friendCard',
+  'kifi.friends.friendRequestCard',
   'kifi.social',
   'kifi.invite',
   'kifi.invite.connectionCard',
