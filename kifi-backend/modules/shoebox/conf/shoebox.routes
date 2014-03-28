@@ -109,17 +109,21 @@ GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleIPhoneTempForDev(token: String)
 
 ##########################################
-# Mobile V1
+# Mobile
 ##########################################
+GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
+
 GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.getFriendsDetails()
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+
 ## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
 POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.addKeeps()
+
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
 POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrl()
 POST    /m/1/keeps/imageUrls                @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrls()

@@ -38,6 +38,8 @@ class MobileAuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
+  def whatIsMyIp() = Action { request => Ok(request.remoteAddress) }
+
   def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
     val json = request.body
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
