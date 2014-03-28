@@ -1,6 +1,7 @@
 package com.keepit.graph.model
 
 import com.keepit.model.Reflect
+import scala.util.Try
 
 case class KindHeader[T](code: Byte) { // extends AnyVal
   require(code > 0, "Kind header must be positive")
@@ -37,7 +38,11 @@ object VertexKind {
 }
 
 case class VertexId(id: Long) extends AnyVal {
-  def asId[V <: VertexDataReader](implicit header: KindHeader[V]): Option[VertexDataId[V]] = if (code == header.code) Some(VertexDataId[V](dataId)) else None
+  def asId[V <: VertexDataReader](implicit header: KindHeader[V]): VertexDataId[V] = {
+    require(code == header.code, "Invalid VertexId")
+    VertexDataId[V](dataId)
+  }
+  def asIdOpt[V <: VertexDataReader](implicit header: KindHeader[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
   override def toString() = VertexKind(code) + "|" + dataId
   private def code: Byte = (id >> VertexId.dataIdSpace).toByte
   private def dataId: Long = id & VertexId.maxVertexDataId
