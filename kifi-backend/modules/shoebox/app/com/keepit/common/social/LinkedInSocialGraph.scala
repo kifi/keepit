@@ -1,8 +1,8 @@
 package com.keepit.common.social
 
+import java.nio.charset.StandardCharsets.US_ASCII
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import java.security.SecureRandom
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -16,11 +16,9 @@ import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{CallTimeouts, NonOKResponseException, HttpClient, DirectUrl}
-import com.keepit.common.time._
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
-import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph, SecureSocialClientIds}
-
+import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
 import play.api.http.Status._
 import play.api.libs.json._
@@ -28,21 +26,17 @@ import play.api.libs.ws.{Response, WS}
 
 import securesocial.core.{IdentityId, OAuth2Settings}
 import securesocial.core.providers.LinkedInProvider.LinkedIn
-import java.nio.charset.StandardCharsets.US_ASCII
 
 object LinkedInSocialGraph {
   val ProfileFields = Seq("id","firstName","lastName","picture-urls::(original);secure=true","publicProfileUrl")
   val ProfileFieldSelector = ProfileFields.mkString("(",",",")")
   val ConnectionsPageSize = 500
-  val SecureRandom = new SecureRandom()
 }
 
 class LinkedInSocialGraph @Inject() (
     client: HttpClient,
     db: Database,
-    clock: Clock,
-    socialRepo: SocialUserInfoRepo,
-    secureSocialClientIds: SecureSocialClientIds)
+    socialUserInfoRepo: SocialUserInfoRepo)
   extends SocialGraph with Logging {
 
   import LinkedInSocialGraph.ProfileFieldSelector
@@ -55,7 +49,7 @@ class LinkedInSocialGraph @Inject() (
     def fail(msg: String, state: State[SocialUserInfo] = FETCH_FAIL) {
       log.warn(msg)
       db.readWrite { implicit s =>
-        socialRepo.save(socialUserInfo.withState(state).withLastGraphRefresh())
+        socialUserInfoRepo.save(socialUserInfo.withState(state).withLastGraphRefresh())
       }
     }
 
@@ -75,7 +69,7 @@ class LinkedInSocialGraph @Inject() (
     } else {
       log.warn(s"LinkedIn app not authorized with OAuth2 for $socialUserInfo; not fetching connections.")
       db.readWrite { implicit s =>
-        socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+        socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
       }
       None
     }
@@ -106,7 +100,7 @@ class LinkedInSocialGraph @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // LinkedIn has no way of doing this through the API
     db.readWrite { implicit s =>
-      socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+      socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
     }
     Future.successful(())
   }
@@ -147,17 +141,7 @@ class LinkedInSocialGraph @Inject() (
 
   /**
    * @param settings The LinkedIn IdentityProvider settings
-   * @param json The LinkedIn JS API secure cookie JSON, which looks like:
-   * {{{
-   *   {
-   *     "access_token": "JLHAX38MUY45Jwng4IQ3Md09UCy-_SxyZx4z",
-   *     "member_id": "Aor3grqQ9s",
-   *     "signature": "REe+slSueMZGhkc7PaMy6x7os14=",
-   *     "signature_method": "HMAC-SHA1",
-   *     "signature_order": ["access_token","member_id"],
-   *     "signature_version": "1"
-   *   }
-   * }}}
+   * @param json The LinkedIn JS API secure cookie JSON
    * @return the user's confirmed LinkedIn identity
    */
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = Try {

@@ -5,7 +5,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 import com.google.inject.Inject
 import com.keepit.common.db.State
@@ -171,6 +171,11 @@ class FacebookSocialGraph @Inject() (
     (json \ "gender").asOpt[String].map(Gender.key -> Gender(_).toString)
   ).flatten.toMap
 
+  /**
+   * @param settings The Facebook IdentityProvider settings
+   * @param json The Facebook JS API authResponse JSON
+   * @return the user's confirmed Facebook identity
+   */
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = Try {
     (json \ "accessToken").as[String] // not bothering to persist because it's short-lived
 
@@ -181,7 +186,7 @@ class FacebookSocialGraph @Inject() (
     mac.init(new SecretKeySpec(settings.clientSecret.getBytes(US_ASCII), "HmacSHA256"))
     val computedSignature = mac.doFinal(payload.getBytes(US_ASCII))
     if (java.util.Arrays.equals(base64.decode(signature), computedSignature)) {
-      val o = Json.parse(base64.decode(payload)) //{"algorithm":"HMAC-SHA256","code":"...","issued_at":1395951692,"user_id":"100005000345440"}
+      val o = Json.parse(base64.decode(payload))
       val userId = (o \ "user_id").as[String]
       val issuedAt = (o \ "issued_at").as[Long]
       val now = clock.getMillis / 1000

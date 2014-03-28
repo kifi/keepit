@@ -7,11 +7,14 @@ import com.keepit.common.net.{FakeClientResponse, FakeHttpClientModule, HttpUri}
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
+import com.keepit.social.{SocialNetworks, SocialId}
 import com.keepit.test._
 
-import play.api.test.Helpers._
+import play.api.libs.json.Json
+
+import scala.util.Success
+
 import securesocial.core._
-import com.keepit.social.{SocialNetworks, SocialId}
 
 class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
 
@@ -47,7 +50,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
         val socialUserInfo = inject[Database].readWrite { implicit s =>
           inject[SocialUserInfoRepo].save(unsaved)
         }
-        println("SOCIALUSERINFO: " + socialUserInfo)
+        // println("SOCIALUSERINFO: " + socialUserInfo)
         unsaved.userId === user.id
         socialUserInfo.userId === user.id
         socialUserInfo.fullName === "Greg Methvin"
@@ -71,6 +74,33 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
           conn.pictureUrl.get == "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"
         } must beTrue
       }
+    }
+
+    "vet a valid JS API access token" in {
+      val userId = "or3grqQ9s"
+      val json = Json.obj(
+        "access_token" -> "LHAX38MUY45Jwng4IQ3Md09UCy-_SxyZx4z",
+        "member_id" -> userId,
+        "signature" -> "KaYAPLonVoD3KhZ9Og5MQ1x4MRA",
+        "signature_method" -> "HMAC-SHA1",
+        "signature_order" -> Seq("access_token", "member_id"))
+      val settings = OAuth2Settings("", "", "__app_id__", "__app_secret__", None)
+      val graph = new LinkedInSocialGraph(null, null, null)
+      val identity = graph.vetJsAccessToken(settings, json)
+      identity === Success(IdentityId(userId = userId, providerId = "linkedin"))
+    }
+
+    "vet an invalid JS API access token" in {
+      val userId = "or3grqQ9s"
+      val json = Json.obj(
+        "access_token" -> "LHAX38MUY45Jwng4IQ3Md09UCy-_SxyZx4z",
+        "member_id" -> userId,
+        "signature" -> "incorrect",
+        "signature_method" -> "HMAC-SHA1",
+        "signature_order" -> Seq("access_token", "member_id"))
+      val settings = OAuth2Settings("", "", "__app_id__", "__app_secret__", None)
+      val graph = new LinkedInSocialGraph(null, null, null)
+      graph.vetJsAccessToken(settings, json).isFailure === true
     }
   }
 
