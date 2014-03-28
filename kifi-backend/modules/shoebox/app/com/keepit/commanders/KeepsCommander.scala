@@ -18,17 +18,18 @@ import com.keepit.common.social.BasicUserRepo
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.{net, KestrelCombinator}
+import com.keepit.common.net.URISanitizer
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
 case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
 
-class FullKeepInfoWriter extends Writes[FullKeepInfo] {
+class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
   def writes(info: FullKeepInfo) = Json.obj(
     "id" -> info.bookmark.externalId.id,
     "title" -> info.bookmark.title,
-    "url" -> info.bookmark.url,
+    "url" -> (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
     "isPrivate" -> info.bookmark.isPrivate,
     "createdAt" -> info.bookmark.createdAt,
     "others" -> info.others,
