@@ -23,14 +23,6 @@ angular.module('kifi.invite', [
   function ($scope, $http, profileService, routeService, $window, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
-    // bogus data just to get everyone started
-    var friend = {
-      image: 'https://graph.facebook.com/71105121/picture?width=75&height=75',
-      label: 'Andrew Conner',
-      status: 'joined',
-      value: 'facebook/71105121'
-    };
-    $scope.friends = [friend];
 
     wtiService.loadInitial();
     $scope.whoToInvite = wtiService.list;
