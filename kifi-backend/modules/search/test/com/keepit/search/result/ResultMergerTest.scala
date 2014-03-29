@@ -124,8 +124,8 @@ class ResultMergerTest extends Specification{
 
   "result merger" should {
     "work" in {
-      val conf = new SearchConfig(SearchConfig.defaultParams ++ Map(("usefulPageBoost", "0f"), ("sharingBoostInNetwork", "0f")))
-      val merged = ResultMerger.merge(shardResults, maxHits = 2, enableTailCutting = false , config = SearchConfig.defaultConfig)
+      val resultMerger = new ResultMerger(enableTailCutting = false , config = SearchConfig.defaultConfig)
+      val merged = resultMerger.merge(shardResults, maxHits = 2)
 
       merged.hits === expectedMerge.hits
       merged.myTotal === expectedMerge.myTotal

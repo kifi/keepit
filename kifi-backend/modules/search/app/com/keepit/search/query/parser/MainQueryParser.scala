@@ -48,7 +48,9 @@ class MainQueryParser(
   override val lang: Lang = analyzer.lang
 
   var collectionIds = Set.empty[Long]
+  var parsedQuery: Option[Query] = None
 
+  var totalParseTime: Long = 0L
   var phraseDetectionTime: Long = 0L
   var nlpPhraseDetectionTime: Long = 0L
 
@@ -57,7 +59,9 @@ class MainQueryParser(
   }
 
   def parse(queryText: CharSequence, collectionSearcher: Option[CollectionSearcherWithUser]): Option[Query] = {
-    super.parse(queryText).map{ query =>
+    val tParse = System.currentTimeMillis
+
+    parsedQuery = super.parse(queryText).map{ query =>
       val numTextQueries = textQueries.size
       if (numTextQueries <= 0) query
       else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
@@ -106,6 +110,9 @@ class MainQueryParser(
         }
       }
     }
+    totalParseTime = System.currentTimeMillis - tParse
+
+    parsedQuery
   }
 
   private[this] lazy val phTerms: IndexedSeq[Term] = {
