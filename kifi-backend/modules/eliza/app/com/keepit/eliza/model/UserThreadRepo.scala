@@ -6,18 +6,15 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.model.{User, NormalizedURI}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUserLikeEntity, BasicUser}
 
-import play.api.libs.json.{Json, JsValue, JsNull, JsObject}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsValue, JsNull}
 
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 
 import scala.slick.jdbc.StaticQuery
-import scala.concurrent.{Future, Promise}
+import com.keepit.eliza.commanders.RawNotifications
 
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
@@ -39,33 +36,33 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): Future[Seq[JsObject]]
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): RawNotifications
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): Future[Seq[JsObject]]
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): RawNotifications
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): RawNotifications
 
-  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]]
+  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int)
 
@@ -114,8 +111,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 class UserThreadRepoImpl @Inject() (
     val clock: Clock,
     val db: DataBaseComponent,
-    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache,
-    shoebox: ShoeboxServiceClient //todo: Its wrong to have a shoebox client here, this should go in the contoller layer
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache
   )
   extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
 
@@ -152,57 +148,6 @@ class UserThreadRepoImpl @Inject() (
   override def invalidateCache(model: UserThread)(implicit session: RSession): Unit = {
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
   }
-
-  private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
-    shoebox.getUserOpt(basicUser.externalId) map { userOpt=>
-      userOpt.map(BasicUser.fromUser(_)).getOrElse(basicUser)
-    } recover {
-      case _:Throwable => basicUser
-    }
-  }
-
-  private def updateSenderAndParticipants(data: JsObject): Future[JsObject] = {
-    val author: Option[BasicUser] = (data \ "author").asOpt[BasicUser]
-    val participantsOpt: Option[Seq[BasicUserLikeEntity]] = (data \ "participants").asOpt[Seq[BasicUserLikeEntity]]
-    participantsOpt.map { participants =>
-      val updatedAuthorFuture : Future[Option[BasicUser]] =
-        author.map(updateBasicUser).map(fut=>fut.map(Some(_))).getOrElse(Promise.successful(None.asInstanceOf[Option[BasicUser]]).future)
-      val updatedParticipantsFuture : Future[Seq[BasicUserLikeEntity]]= Future.sequence(participants.map{ participant =>
-        val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
-          case p : BasicUser => updateBasicUser(p)
-          case _ => Promise.successful(participant).future
-        }
-        updatedParticipant
-      })
-
-      updatedParticipantsFuture.flatMap{ updatedParticipants =>
-        updatedAuthorFuture.map{ updatedAuthor =>
-          data.deepMerge(Json.obj(
-            "author" -> updatedAuthor,
-            "participants" -> updatedParticipants
-          ))
-        }
-      }
-    } getOrElse {
-      Promise.successful(data).future
-    }
-  }
-
-  private def updateSendableNotification(data: JsValue, unread: Boolean): Option[Future[JsObject]] = {
-    data match {
-      case x: JsObject => Some(updateSenderAndParticipants(x.deepMerge(
-        if (unread) Json.obj("unread" -> unread) else Json.obj("unread" -> unread, "unreadAuthors" -> 0)
-      )))
-      case _ => None
-    }
-  }
-
-  private def updateSendableNotifications(rawNotifications: Seq[(JsValue, Boolean)]): Future[Seq[JsObject]] = {
-    Future.sequence(rawNotifications.map { case (data, unread) =>
-      updateSendableNotification(data, unread)
-    }.filter(_.isDefined).map(_.get))
-  }
-
 
   def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]] = {
     uriIdOpt.map{ uriId =>
@@ -260,7 +205,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.id === userThreadId) yield (row.muted, row.updatedAt)).update((muted, clock.now()))
   }
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.lastMsgFromOther.isNotNull &&
@@ -269,10 +214,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.notificationUpdatedAt < time &&
@@ -282,10 +227,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.notificationUpdatedAt > time &&
@@ -295,10 +240,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
@@ -306,10 +251,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.notificationUpdatedAt < time &&
@@ -318,10 +263,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.notificationUpdatedAt > time &&
@@ -330,10 +275,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.unread &&
@@ -342,10 +287,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.unread &&
@@ -355,10 +300,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.muted &&
@@ -367,10 +312,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.muted &&
@@ -380,10 +325,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
      (for (row <- rows if row.user === userId &&
                            row.started &&
@@ -392,10 +337,10 @@ class UserThreadRepoImpl @Inject() (
      .sortBy(row => (row.notificationUpdatedAt) desc)
      .take(howMany).map(row => (row.lastNotification, row.unread))
      .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.started &&
@@ -405,10 +350,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.uriId === uriId &&
@@ -417,10 +362,10 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
-  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Future[Seq[JsObject]] = {
+  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): RawNotifications = {
     val rawNotifications =
       (for (row <- rows if row.user === userId &&
                             row.uriId === uriId &&
@@ -430,7 +375,7 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread))
       .list
-    updateSendableNotifications(rawNotifications)
+    new RawNotifications(rawNotifications)
   }
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int) = {
