@@ -36,12 +36,7 @@ angular.module('kifi.friendService', [])
         if (!friendRequestsRequested) {
           friendRequestsRequested = true;
           return $http.get(routeService.incomingFriendRequests).then(function (res) {
-            console.log(res)
             requests.push.apply(requests, res.data);
-            requests.push.apply(requests, JSON.parse(JSON.stringify(res.data)));
-            requests.push.apply(requests, JSON.parse(JSON.stringify(res.data)));
-            requests.push.apply(requests, JSON.parse(JSON.stringify(res.data)));
-            console.log(requests)
             return requests;
           });
         } else {

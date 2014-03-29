@@ -27,7 +27,7 @@ angular.module('kifi.friends', [
     var requestsCollapsed = true;
     $scope.requestsToShow = 2;
     $scope.requestsToggleText = 'See all requests';
-    $scope.toggleRequestExpansion = function() {
+    $scope.toggleRequestExpansion = function () {
       requestsCollapsed = !requestsCollapsed;
       if (requestsCollapsed) {
         $scope.requestsToShow = 2;
