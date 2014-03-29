@@ -27,11 +27,11 @@ angular.module('kifi.friends.friendCard', [])
         scope.searchFriend = friend.searchFriend;
 
         scope.unfriend = function () {
-          $log('Not actually Unfriending ' + scope.name);
+          $log.log('Not actually Unfriending ' + scope.name);
         };
 
         scope.unsearchfriend = function () {
-          $log('Not actually Unsearchfriending ' + scope.name);
+          $log.log('Not actually Unsearchfriending ' + scope.name);
         };
 
       }
