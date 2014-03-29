@@ -25,7 +25,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
 
-class ExtBookmarksControllerTest extends Specification with ApplicationInjector {
+class ExtKeepsControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -62,9 +62,9 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
           keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
 
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -129,9 +129,9 @@ class ExtBookmarksControllerTest extends Specification with ApplicationInjector 
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
 
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::

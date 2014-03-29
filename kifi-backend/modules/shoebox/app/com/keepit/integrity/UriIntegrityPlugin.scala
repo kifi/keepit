@@ -66,8 +66,8 @@ class UriIntegrityActor @Inject()(
           Some(oldBm, None)
         }
         case Some(bm) =>
-          if (oldBm.state == BookmarkStates.ACTIVE) {
-            if (bm.state == BookmarkStates.INACTIVE) keepRepo.save(bm.withActive(true))
+          if (oldBm.state == KeepStates.ACTIVE) {
+            if (bm.state == KeepStates.INACTIVE) keepRepo.save(bm.withActive(true))
             keepRepo.save(oldBm.withActive(false))
             keepRepo.deleteCache(oldBm)
             Some(oldBm, Some(bm))

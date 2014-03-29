@@ -3,7 +3,7 @@ package com.keepit.search.graph.bookmark
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.model._
-import com.keepit.model.BookmarkStates._
+import com.keepit.model.KeepStates._
 import com.keepit.search.index._
 import java.io.StringReader
 import org.apache.lucene.index.Term
