@@ -80,7 +80,7 @@ class KeepToCollectionRepoImpl @Inject() (
     Query((for {
       c <- this.rows
       b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collId &&
-         b.state === BookmarkStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
+         b.state === KeepStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
     } yield c).length).firstOption.getOrElse(0)
   }
 
@@ -100,7 +100,7 @@ class KeepToCollectionRepoImpl @Inject() (
     val res = (for {
       c <- this.rows
       b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collectionId &&
-                                 b.state === BookmarkStates.ACTIVE &&
+                                 b.state === KeepStates.ACTIVE &&
                                  c.state === KeepToCollectionStates.ACTIVE
     } yield (b.uriId, b.createdAt)) list;
 

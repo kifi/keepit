@@ -15,9 +15,9 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
-  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep]
-  def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
@@ -32,9 +32,9 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
-  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean
+  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
-  def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Keep]
+  def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
 }
 
 @Singleton
@@ -50,8 +50,8 @@ class KeepRepoImpl @Inject() (
 
   private val sequence = db.getSequence[Keep]("bookmark_sequence")
 
-  type RepoImpl = BookmarkTable
-  class BookmarkTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with NamedColumns with SeqNumberColumn[Keep]{
+  type RepoImpl = KeepTable
+  class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with NamedColumns with SeqNumberColumn[Keep]{
     def title = column[String]("title", O.Nullable)//indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)//indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
@@ -65,7 +65,7 @@ class KeepRepoImpl @Inject() (
       userId, state, source, kifiInstallation.?, seq) <> ((Keep.apply _).tupled, Keep.unapply _)
   }
 
-  def table(tag: Tag) = new BookmarkTable(tag)
+  def table(tag: Tag) = new KeepTable(tag)
   initTable()
 
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
@@ -92,22 +92,22 @@ class KeepRepoImpl @Inject() (
   override def deleteCache(bookmark: Keep)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(KeepCountKey(Some(bookmark.userId)))
-    latestBookmarkUriCache.remove(LatestBookmarkUriKey(bookmark.uriId))
+    latestBookmarkUriCache.remove(LatestKeepUriKey(bookmark.uriId))
   }
 
   override def invalidateCache(bookmark: Keep)(implicit session: RSession): Unit = {
-    if (bookmark.state == BookmarkStates.INACTIVE) {
+    if (bookmark.state == KeepStates.INACTIVE) {
       deleteCache(bookmark)
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
       countCache.remove(KeepCountKey(Some(bookmark.userId)))
-      latestBookmarkUriCache.set(LatestBookmarkUriKey(bookmark.uriId), bookmark)
+      latestBookmarkUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
     }
   }
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     bookmarkUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
-      val bookmarks = (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+      val bookmarks = (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.ACTIVE) yield b).list
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
     }
@@ -119,13 +119,13 @@ class KeepRepoImpl @Inject() (
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep] =
     (for(b <- rows if b.title === title) yield b).list
 
-  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
     (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).list
 
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep] =
-    (for(b <- rows if b.uriId === uriId && b.state === BookmarkStates.ACTIVE && b.title.isNull) yield b).list
+    (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE && b.title.isNull) yield b).list
 
-  def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
+  def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
     (for(b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
@@ -136,17 +136,17 @@ class KeepRepoImpl @Inject() (
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries instead of raw strings.
     val interpolated = (beforeId map get, afterId map get) match {
       case (None, None) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}' order by bm.created_at desc, bm.id desc limit $count;"""
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}' order by bm.created_at desc, bm.id desc limit $count;"""
       case (None, Some(after)) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get}))
                order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), None) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get}))
                order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), Some(after)) =>
-        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+        sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get}))
                and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get}))
                order by bm.created_at desc, bm.id desc limit $count;"""
@@ -163,21 +163,21 @@ class KeepRepoImpl @Inject() (
     val interpolated = (beforeId map get, afterId map get) match {
       case (None, None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
-                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE}' order by bm.created_at desc, bm.id desc limit $count;"""
       case (None, Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
-                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE}' and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get}))
                 order by bm.created_at desc, bm.id desc limit $count;"""
       case (Some(before), None) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
-                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get}))
                 order by bm.created_at desc, bm.id desc limit $count"""
       case (Some(before), Some(after)) =>
         sql"""select #$bookmarkColumnOrder from bookmark bm left join keep_to_collection kc on (bm.id = kc.bookmark_id)
-                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${BookmarkStates.ACTIVE}'
+                where kc.collection_id = ${collectionId} and bm.user_id = ${userId} and bm.state = '#${KeepStates.ACTIVE}'
                 and kc.state='#${KeepToCollectionStates.ACTIVE}' and (bm.created_at < ${before.createdAt} or (bm.created_at = ${before.createdAt} and bm.id < ${before.id.get}))
                 and (bm.created_at > ${after.createdAt} or (bm.created_at = ${after.createdAt} and bm.id > ${after.id.get}))
                 order by bm.created_at desc, bm.id desc limit $count;"""
@@ -189,33 +189,33 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
     if (includePrivate) {
       countCache.getOrElse(KeepCountKey(Some(userId))) {
-        val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${BookmarkStates.ACTIVE}'"
+        val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
         sql.as[Int].first
       }
     } else {
-      val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${BookmarkStates.ACTIVE}' and is_private = false"
+      val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = false"
       sql.as[Int].first
     }
   }
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
-    val privateCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${BookmarkStates.ACTIVE}' and is_private = true".as[Int].first()
-    val publicCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${BookmarkStates.ACTIVE}' and is_private = false".as[Int].first()
+    val privateCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = true".as[Int].first()
+    val publicCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = false".as[Int].first()
     (privateCount, publicCount)
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
 
-    val sql = sql"select count(*) as c from bookmark where updated_at between ${from} and ${to} and state='#${BookmarkStates.ACTIVE}';"
+    val sql = sql"select count(*) as c from bookmark where updated_at between ${from} and ${to} and state='#${KeepStates.ACTIVE}';"
     sql.as[Int].first
   }
 
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
 
-    val sql = sql"select count(*) as c from bookmark b where b.state = '#${BookmarkStates.ACTIVE}' and b.source=${source} and updated_at between ${from} and ${to};"
+    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.source=${source} and updated_at between ${from} and ${to};"
     sql.as[Int].first
   }
 
@@ -223,8 +223,8 @@ class KeepRepoImpl @Inject() (
 
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int =
     Query((for {
-      b1 <- rows if b1.userId === userId && b1.state === BookmarkStates.ACTIVE
-      b2 <- rows if b2.userId === otherUserId && b2.state === BookmarkStates.ACTIVE && b2.uriId === b1.uriId && !b2.isPrivate
+      b1 <- rows if b1.userId === userId && b1.state === KeepStates.ACTIVE
+      b2 <- rows if b2.userId === otherUserId && b2.state === KeepStates.ACTIVE && b2.uriId === b1.uriId && !b2.isPrivate
     } yield b2.id).countDistinct).first
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep] =
@@ -245,7 +245,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep] = {
-    latestBookmarkUriCache.getOrElseOpt(LatestBookmarkUriKey(uriId)) {
+    latestBookmarkUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
       val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId } yield bookmark
       val max = bookmarks.map(_.updatedAt).max
       val latest = for { bookmark <- bookmarks if bookmark.updatedAt >= max } yield bookmark
@@ -253,7 +253,7 @@ class KeepRepoImpl @Inject() (
     }
   }
 
-  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Boolean = {
+  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Boolean = {
     (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
   }
 
@@ -262,7 +262,7 @@ class KeepRepoImpl @Inject() (
       case (id, source) => (Id[User](id), KeepSource.get(source))
     }.groupBy(_._1).mapValues(_.map(_._2))
 
-  def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(BookmarkStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+  def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
     val bookmarks = for { bookmark <- rows if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
     val min = bookmarks.map(_.createdAt).min
     val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark
