@@ -25,7 +25,7 @@ import com.keepit.common.db.{Id, ExternalId}
 
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.commanders.{MessagingCommander, MessagingIndexCommander}
+import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 

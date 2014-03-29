@@ -1,13 +1,11 @@
-package com.keepit.eliza.commanders
+package com.keepit.eliza.model
 
 import com.keepit.eliza.MessageLookHereRemover
 import com.keepit.search.message.{ThreadContent, FULL}
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.db.slick.Database
 import com.keepit.model.User
-import com.keepit.social.BasicUser
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.eliza.model._
 import com.google.inject.Inject
 
 import scala.concurrent.Future
