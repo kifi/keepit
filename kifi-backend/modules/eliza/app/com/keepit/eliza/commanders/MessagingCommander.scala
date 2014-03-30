@@ -737,7 +737,7 @@ class MessagingCommander @Inject() (
         messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
         true
       }
-    })
+    }, Some("Adding Participants to Thread"))
   }
 
   def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
