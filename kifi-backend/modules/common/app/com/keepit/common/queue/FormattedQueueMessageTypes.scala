@@ -29,7 +29,7 @@ object RichConnectionUpdateMessage {
       case e: Block => Companion.writes(e)
       case e: RecordVerifiedEmail => Companion.writes(e)
     }
-    private val readsFunc = Companion.reads(InternRichConnection, RemoveRichConnection, RecordKifiConnection, RemoveKifiConnection, RecordInvitation, RecordFriendUserId, Block, RecordVerifiedEmail)
+    private val readsFunc = Companion.reads(InternRichConnection, RemoveRichConnection, RecordKifiConnection, RemoveKifiConnection, RecordInvitation, CancelInvitation, RecordFriendUserId, Block, RecordVerifiedEmail)
     def reads(json: JsValue) = readsFunc(json)
   }
 }
