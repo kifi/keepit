@@ -99,9 +99,9 @@ class SearchCommanderImpl @Inject() (
       val resultMerger = new ResultMerger(enableTailCutting, config)
 
       timing.factory
-      val future = Future.traverse(shards.shards){ shard =>
+      val searchers = mainSearcherFactory(shards.shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+      val future = Future.traverse(searchers){ searcher =>
         SafeFuture{
-          val searcher = mainSearcherFactory(shard, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
           debug.foreach{ searcher.debug(_) }
           searcher.search()
         }
