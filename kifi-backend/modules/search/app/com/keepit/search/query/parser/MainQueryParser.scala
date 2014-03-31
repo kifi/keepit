@@ -54,11 +54,9 @@ class MainQueryParser(
   var phraseDetectionTime: Long = 0L
   var nlpPhraseDetectionTime: Long = 0L
 
-  override def parse(queryText: CharSequence): Option[Query] = {
-    throw new UnsupportedOperationException("use parse(queryText,collectionSearcher)")
-  }
+  override def parse(queryText: CharSequence): Option[Query] = parse(queryText, Seq[CollectionSearcherWithUser]())
 
-  def parse(queryText: CharSequence, collectionSearcher: Option[CollectionSearcherWithUser]): Option[Query] = {
+  def parse(queryText: CharSequence, collectionSearchers: Seq[CollectionSearcherWithUser]): Option[Query] = {
     val tParse = System.currentTimeMillis
 
     parsedQuery = super.parse(queryText).map{ query =>
@@ -69,8 +67,8 @@ class MainQueryParser(
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, lang) else null
 
         // detect collection names and augment TextQueries
-        collectionSearcher.foreach{ cs =>
-          val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap{ t => t.stems.map{ s => t } }
+        val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap{ t => t.stems.map{ s => t } }
+        collectionSearchers.foreach{ cs =>
           cs.detectCollectionNames(phStemmedTerms, true).foreach{ case (index, length, collectionId) =>
             collectionIds += collectionId
             var i = index
