@@ -66,6 +66,7 @@ class BookmarkStore(
             id = Some(Id[Keep](bookmarkId)),
             title = Some(rec.title),
             url = rec.url,
+            urlId = Id[URL](-1),
             createdAt = new DateTime(rec.createdAt),
             uriId = rec.uriId,
             isPrivate = rec.isPrivate,

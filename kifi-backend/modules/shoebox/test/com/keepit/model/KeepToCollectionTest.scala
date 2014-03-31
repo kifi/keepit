@@ -30,13 +30,13 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
           val url4 = urlRepo.save(URLFactory(url = uri4.url, normalizedUriId = uri4.id.get))
 
-          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
-          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
-          val bookmark3 = keepRepo.save(Keep(title = Some("C1"), userId = user1.id.get, url = url3.url, urlId = url3.id,
+          val bookmark3 = keepRepo.save(Keep(title = Some("C1"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
-          keepRepo.save(Keep(title = Some("D1"), userId = user1.id.get, url = url4.url, urlId = url4.id,
+          keepRepo.save(Keep(title = Some("D1"), userId = user1.id.get, url = url4.url, urlId = url4.id.get,
             uriId = uri4.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
 
           val collectionRepo = inject[CollectionRepo]

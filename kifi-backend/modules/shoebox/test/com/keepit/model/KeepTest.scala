@@ -8,6 +8,7 @@ import com.keepit.common.db.slick._
 
 import com.keepit.test._
 import com.google.inject.Injector
+import com.keepit.common.db.Id
 
 class KeepTest extends Specification with ShoeboxTestInjector {
 
@@ -30,13 +31,13 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
-      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
-      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id,
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
         uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), isPrivate = true))
-      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1)))
 
       (user1, user2, uri1, uri2, uri3, url1, url2)
@@ -151,7 +152,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite{ implicit s =>
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+          keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
           uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
         }
         db.readWrite{ implicit s =>
@@ -177,25 +178,26 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
     "get the latest updated bookmark for a specific uri" in {
       withDb() { implicit injector =>
-        val (uri, uriId, url, firstUserId, secondUserId) = db.readWrite{ implicit s =>
+        val (uri, uriId, url, firstUserId, secondUserId, urlId) = db.readWrite{ implicit s =>
           val uri = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com"))
+          val urlId = urlRepo.save(URL(url = uri.url, domain = Some("kifi.com"), normalizedUriId = uri.id.get)).id.get
           val uriId = uri.id.get
           val url = uri.url
           val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi")).id.get
           val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith")).id.get
-          (uri, uriId, url, firstUserId, secondUserId)
+          (uri, uriId, url, firstUserId, secondUserId, urlId)
         }
         db.readOnly{ implicit s =>
           keepRepo.latestBookmark(uriId) === None
         }
         val firstUserBookmark = db.readWrite{ implicit s =>
-          keepRepo.save(Keep(userId = firstUserId, uriId = uriId, url = url, source = hover))
+          keepRepo.save(Keep(userId = firstUserId, uriId = uriId, urlId = urlId, url = url, source = hover))
         }
         db.readOnly{ implicit s =>
           keepRepo.latestBookmark(uriId).flatMap(_.id) === firstUserBookmark.id
         }
         val secondUserBookmark = db.readWrite{ implicit s =>
-          keepRepo.save(Keep(userId = secondUserId, uriId = uriId, url = url, source = hover))
+          keepRepo.save(Keep(userId = secondUserId, uriId = uriId, urlId = urlId, url = url, source = hover))
         }
         db.readOnly{ implicit s =>
           keepRepo.latestBookmark(uriId).flatMap(_.id) === secondUserBookmark.id

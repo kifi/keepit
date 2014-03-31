@@ -32,9 +32,9 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       val hover = KeepSource.keeper
 
       val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
-        urlId = url1.id, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
+        urlId = url1.id.get, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
       val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
-        urlId = url2.id, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
+        urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
 
       val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1))
       val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Apparel", createdAt = t1))
