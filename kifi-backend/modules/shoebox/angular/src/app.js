@@ -41,7 +41,8 @@ angular.module('kifi', [
   'kifi.undo',
   'jun.facebook',
   'ngDragDrop',
-  'ui.slider'
+  'ui.slider',
+  'angulartics'
 ])
 
 // fix for when ng-view is inside of ng-include:
