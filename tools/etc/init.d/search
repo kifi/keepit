@@ -24,7 +24,7 @@ pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (P
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
 javaDebug="-Xrunjdwp:transport=dt_socket,address=8765,server=y,suspend=n"
-javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:PermSize=128m -XX:MaxPermSize=200m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
+javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:PermSize=128m -XX:MaxPermSize=200m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=80 -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
 #echo applDir=$applDir
 classpathLine=`grep "classpath=" $applDir/start | sed 's/.*"\(.*\)".*/\1/'`
 #echo classpathLine=$classpathLine
