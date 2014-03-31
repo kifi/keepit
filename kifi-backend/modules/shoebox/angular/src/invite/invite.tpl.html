@@ -7,9 +7,6 @@
 
       <h3>People you may want to add to Kifi</h3>
 
-      <div ng-repeat="friend in friends">
-        <div ng-click="invite(friend)">Invite {{friend.label}}!</div>
-      </div>
       <div class="kf-connection-card-container" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
         <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend"></div>
         <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
