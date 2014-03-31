@@ -67,18 +67,13 @@ class MainSearcherFactory @Inject() (
     val clickHistoryFuture = getClickHistoryFuture(userId)
     val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
-    val socialGraphInfosAndArticleSearhcers = shards.map{ shard =>
-      (shard, getSocialGraphInfo(shard, userId, filter), shardedArticleIndexer.getIndexer(shard).getSearcher)
-    }
 
     val parser = parserFactory(lang1, lang2, config)
-    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
-    parser.setPercentMatch(config.asFloat("percentMatch"))
-    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
 
-    parser.parse(queryString, socialGraphInfosAndArticleSearhcers.map(_._2.collectionSearcher))
+    val searchers = shards.map{ shard =>
+      val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
+      val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
 
-    socialGraphInfosAndArticleSearhcers.map{ case (shard, socialGraphInfo, articleSearcher) =>
       new MainSearcher(
           userId,
           lang1,
@@ -87,7 +82,7 @@ class MainSearcherFactory @Inject() (
           filter,
           config,
           parser,
-          shardedArticleIndexer.getIndexer(shard).getSearcher,
+          articleSearcher,
           socialGraphInfo,
           clickBoostsFuture,
           browsingHistoryFuture,
@@ -96,6 +91,13 @@ class MainSearcherFactory @Inject() (
           airbrake
       )
     }
+
+    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
+    parser.setPercentMatch(config.asFloat("percentMatch"))
+    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
+    parser.parse(queryString, searchers.map(_.collectionSearcher))
+
+    searchers
   }
 
   def apply(
