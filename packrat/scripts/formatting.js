@@ -121,84 +121,57 @@ function convertDraftToText(html) {
   return $('<div>').html(html).text().trim();
 }
 
-function auxDataFormatter() {
-  var auxData = this.auxData;
-  switch (auxData[0]) {
-    case 'add_participants':
-      return addParticipantsFormatter(auxData[1], auxData[2]);
-  }
-  return '';
-}
+var formatAuxData = (function () {
+  'use strict';
+  var formatters = {
+    add_participants: function (actor, added) {
+      if (isMe(actor)) {
+        return 'You added ' + boldNamesOf(added) + '.';
+      }
+      if (added.some(isMe)) {
+        return boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
+      }
+      return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
+    }
+  };
 
-function nameFormatter(user) {
-  var str;
-  if (isSessionUser(user)) {
-    str = 'You';
-  }
-  else {
-    str = Mustache.escape(user.firstName + ' ' + user.lastName);
-  }
-  return str;
-}
+  return function () {
+    var arr = this.auxData, formatter = formatters[arr[0]];
+    return formatter ? formatter.apply(null, arr.slice(1)) : '';
+  };
 
-function boldify(str) {
-  return '<b>' + str + '</b>';
-}
-
-/**
-    3.1. The added user sees: "You were added by Effi Fuks-Leichtag"
-    3.2. The inviting user sees: "Joon Ho Cho was successfully added"
-    3.3. everyone else see: "Joon Ho Cho was added by Effi Fuks-Leichtag"
-    3.4. If several users were added at the same time by the same user it will look like:
-           3.4.1. The added user sees: "You, Danny Bluemenfeld and Jared Jacobs were added by Effi Fuks-Leichtag"
-           3.4.2. The inviting user sees:  "Joon Ho Cho, Danny Bluemenfeld and Jared Jacobs were successfully added"
-           3.4.3. everyone else see: "Joon Ho Cho, Danny Bluemenfeld and Jared Jacobs were added by Effi Fuks-Leichtag"
- */
-
-function namesFormatter(users) {
-  switch (users.length) {
-  case 0:
-    return '';
-  case 1:
-    return boldify(nameFormatter(users[0]));
-  case 2:
-    return boldify(nameFormatter(users[0])) + ' and ' + boldify(nameFormatter(users[1]));
-  default:
-    var lastIndex = users.length - 1;
-    return users.slice(0, lastIndex).map(nameFormatter).map(boldify).join(', ') + ', and ' + boldify(nameFormatter(users[lastIndex]));
+  function isMe(user) {
+    return user.id === me.id;
   }
-}
 
-function addParticipantsFormatter(actor, addedUsers) {
-  var str;
-  if (isSessionUser(actor)) {
-    // session user added
-    str = 'You added ' + namesFormatter(addedUsers) + '.';
+  function bold(html) {
+    return '<b>' + html + '</b>';
   }
-  else if (addedUsers.some(isSessionUser)) {
-    // session user was added
-    addedUsers = addedUsers.slice();
-    bringSessionUserToFront(addedUsers);
-    str = namesFormatter(addedUsers) + ' were added by ' + nameFormatter(actor) + '.';
-  }
-  else {
-    str = nameFormatter(actor) + ' added ' + namesFormatter(addedUsers) + '.';
-  }
-  return str;
-  //return str + ' to the conversation.';
-}
 
-function isSessionUser(user) {
-  return user.id === me.id;
-}
+  function nameOf(user) {
+    return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+  }
 
-function bringSessionUserToFront(users) {
-  for (var i = 1, len = users.length; i < len; i++) {
-    var user = users[i];
-    if (isSessionUser(user)) {
-      users.splice(i, 1);
-      users.unshift(user);
-      break;
+  function boldNamesOf(users) {
+    var names = users.map(nameOf).map(bold);
+    if (users.length <= 2) {
+      return names.join(' and ');
+    } else {
+      var last = names.pop();
+      return names.join(', ') + ' and ' + last;
     }
   }
-}
+
+  function meInFront(users) {
+    var arr = users.slice();
+    for (var i = 1; i < arr.length; i++) {
+      var user = arr[i];
+      if (isMe(user)) {
+        arr.splice(i, 1);
+        arr.unshift(user);
+        break;
+      }
+    }
+    return arr;
+  }
+}());
