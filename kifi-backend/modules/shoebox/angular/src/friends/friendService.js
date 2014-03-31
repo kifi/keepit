@@ -50,7 +50,40 @@ angular.module('kifi.friendService', [])
 
       friends: friends,
 
-      requests: requests
+      requests: requests,
+
+      unSearchFriend: function (userExtId) {
+        return $http.post(env.xhrBase + '/user/' + userExtId + '/exclude', {}).then(function () {
+          api.getKifiFriends();
+        });
+      },
+
+      reSearchFriend: function (userExtId) {
+        return $http.post(env.xhrBase + '/user/' + userExtId + '/include', {}).then(function () {
+          api.getKifiFriends();
+        });
+      },
+
+      acceptRequest: function (extId) {
+        return $http.post(env.xhrBase + '/user/' + extId + '/friend', {}).then(function () {
+          api.getRequests();
+          api.getKifiFriends();
+        });
+      },
+
+      ignoreRequest: function (extId) {
+        return $http.post(env.xhrBase + '/user/' + extId + '/ignoreRequest', {}).then(function () {
+          api.getRequests();
+        });
+      },
+
+      unfriend: function (userExtId) {
+        return $http.post(env.xhrBase + '/user/' + userExtId + '/unfriend', {}).then(function () {
+          api.getKifiFriends();
+        });
+      }
+
+
     };
 
     return api;

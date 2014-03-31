@@ -4,8 +4,8 @@ angular.module('kifi.friends.friendCard', [])
 
 
 .directive('kfFriendCard', [
-  '$log',
-  function ($log) {
+  '$log', 'friendService',
+  function ($log, friendService) {
     return {
       scope: {
         'friend': '&'
@@ -27,11 +27,15 @@ angular.module('kifi.friends.friendCard', [])
         scope.searchFriend = friend.searchFriend;
 
         scope.unfriend = function () {
-          $log.log('Not actually Unfriending ' + scope.name);
+          friendService.unfriend(friend.id);
         };
 
         scope.unsearchfriend = function () {
-          $log.log('Not actually Unsearchfriending ' + scope.name);
+          friendService.unSearchFriend(friend.id);
+        };
+
+        scope.researchfriend = function () {
+          friendService.reSearchFriend(friend.id);
         };
 
       }
