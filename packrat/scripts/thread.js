@@ -193,7 +193,7 @@ panes.thread = function () {
 
   function renderMessage(m) {
     m.formatMessage = getTextFormatter;
-    m.formatAuxData = auxDataFormatter;
+    m.formatAuxData = formatAuxData;
     m.formatLocalDate = getLocalDateFormatter;
     m.isLoggedInUser = m.user && m.user.id === me.id;
     return $(render('html/keeper/message', m))
