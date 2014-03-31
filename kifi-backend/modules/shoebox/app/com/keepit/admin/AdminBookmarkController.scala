@@ -127,7 +127,7 @@ class AdminBookmarksController @Inject() (
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
     def bookmarksInfos() = {
-      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(BookmarkStates.INACTIVE)) } } } flatMap { bookmarks =>
+      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } } flatMap { bookmarks =>
         val usersFuture = future { timing("load user") { db.readOnly { implicit s =>
           bookmarks map (_.userId) map { id =>
             userMap.getOrElseUpdate(id, userRepo.get(id))

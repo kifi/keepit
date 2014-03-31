@@ -1,35 +1,14 @@
 package com.keepit.search
 
-import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.graph.bookmark._
-import com.keepit.search.index.VolatileIndexDirectoryImpl
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.article.ArticleIndexer
-import com.keepit.search.phrasedetector._
-import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.time._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
-import scala.math._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.search.graph.collection._
 import com.keepit.common.akka.MonitoredAwait
-import scala.concurrent.Promise
 import scala.Some
-import com.keepit.model.NormalizedURI
-import com.keepit.model.User
-import com.keepit.inject._
-import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
-import play.api.Play.current
-import com.keepit.search.user.UserIndexer
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import akka.actor.ActorSystem
+import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ActiveShardsSpecParser
@@ -52,7 +31,6 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
         userGraphIndexer.update()
-        val (friendsFuture, unfriendsFuture) = (userGraphsCommander.getConnectedUsersFuture(users(0).id.get), userGraphsCommander.getUnfriendedFuture(users(0).id.get))
 
         def myBookmarkExternalId = getBookmarkByUriAndUser(uris(0).id.get, users(0).id.get).get.externalId
 
@@ -64,6 +42,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
           searchConfigManager,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
+          inject[SpellCorrector],
           inject[AirbrakeNotifier],
           inject[ShoeboxServiceClient],
           inject[MonitoredAwait],

@@ -9,7 +9,7 @@ import com.keepit.common.db.slick._
 import com.keepit.test._
 import com.google.inject.Injector
 
-class BookmarkTest extends Specification with ShoeboxTestInjector {
+class KeepTest extends Specification with ShoeboxTestInjector {
 
   val hover = KeepSource.keeper
   val initLoad = KeepSource.bookmarkImport

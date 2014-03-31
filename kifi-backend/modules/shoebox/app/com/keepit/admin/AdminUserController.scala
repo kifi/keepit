@@ -224,7 +224,7 @@ class AdminUserController @Inject() (
     }
 
     val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
-      val bookmarks = keepRepo.getByUser(userId, Some(BookmarkStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)

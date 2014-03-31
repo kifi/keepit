@@ -31,7 +31,7 @@ import scala.Some
 import play.api.libs.json.JsObject
 import scala.concurrent.duration.Duration
 
-class BookmarksController @Inject() (
+class KeepsController @Inject() (
     db: Database,
     userRepo: UserRepo,
     keepRepo: KeepRepo,

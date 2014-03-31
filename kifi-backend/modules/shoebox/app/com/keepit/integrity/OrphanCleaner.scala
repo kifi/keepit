@@ -162,8 +162,8 @@ class OrphanCleaner @Inject() (
       db.readWrite{ implicit s =>
         bookmarks.foreach { case bookmark =>
           val (turnedActive, fixedScrapeInfo) = bookmark.state match {
-            case BookmarkStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
-            case BookmarkStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
+            case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
+            case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
           }
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1

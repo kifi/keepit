@@ -6,16 +6,30 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math._
 import play.api.libs.json.JsNumber
 
-object ResultMerger {
+class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
+  // get config params
+  private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
+  private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
+  private[this] val recencyBoost = config.asFloat("recencyBoost")
+  private[this] val newContentBoost = config.asFloat("newContentBoost")
+  private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
+  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
+  private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
+  private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
+  private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
 
-  def merge(results: Seq[ShardSearchResult], maxHits: Int, enableTailCutting: Boolean, config: SearchConfig): MergedSearchResult = {
+  // tailCutting is set to low when a non-default filter is in use
+  private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
+
+  def merge(results: Seq[ShardSearchResult], maxHits: Int): MergedSearchResult = {
     if (results.size == 1) {
       val head = results.head
       MergedSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.show, head.svVariance)
     } else {
       val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
       val friendStats = mergeFriendStats(results)
-      val hits = mergeHits(results, maxHits, enableTailCutting, config)
+      val hits = mergeHits(results, maxHits)
       val show = results.exists(_.show) // TODO: how to merge the show flag?
 
       MergedSearchResult(
@@ -30,22 +44,7 @@ object ResultMerger {
     }
   }
 
-  private def mergeHits(results: Seq[ShardSearchResult], maxHits: Int, enableTailCutting: Boolean, config: SearchConfig): Seq[DetailedSearchHit] = {
-    // get config params
-    val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
-    val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
-    val recencyBoost = config.asFloat("recencyBoost")
-    val newContentBoost = config.asFloat("newContentBoost")
-    val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-    val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
-    val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-    val minMyBookmarks = config.asInt("minMyBookmarks")
-    val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-    val usefulPageBoost = config.asFloat("usefulPageBoost")
-
-    // tailCutting is set to low when a non-default filter is in use
-    val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
-
+  private def mergeHits(results: Seq[ShardSearchResult], maxHits: Int): Seq[DetailedSearchHit] = {
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
     val othersHits = createQueue(maxHits * 5)
@@ -150,7 +149,7 @@ object ResultMerger {
     val idBuf = new ArrayBuffer[Long]
     jsons.foreach{ json => idBuf ++= (json \ "ids").as[Seq[Long]] }
 
-    val ids = idBuf.toSet.toArray
+    val ids = idBuf.toSet[Long].toArray
     val friendStats = FriendStats(ids, new Array[Float](ids.length))
 
     var i = 0

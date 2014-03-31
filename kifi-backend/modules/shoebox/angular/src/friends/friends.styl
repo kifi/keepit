@@ -32,6 +32,11 @@
   .friend-requests
     margin-top: 30px
     margin-bottom: 40px
+    transition: transform 1s
+    transform: scaleY(0)
+
+    &.unfold
+      transform: scaleY(1)
 
     .friend-requests-badge
       background-color: #F58182

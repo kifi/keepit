@@ -22,9 +22,11 @@ angular.module('kifi.friendService', [])
         if (!friendsRequested) {
           friendsRequested = true;
           return $http.get(routeService.friends).then(function (res) {
+            friends.length = 0;
             friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
               return !friend.unfriended;
             }));
+            friendsRequested = false;
             return friends;
           });
         } else {
@@ -36,7 +38,9 @@ angular.module('kifi.friendService', [])
         if (!friendRequestsRequested) {
           friendRequestsRequested = true;
           return $http.get(routeService.incomingFriendRequests).then(function (res) {
+            requests.length = 0;
             requests.push.apply(requests, res.data);
+            friendRequestsRequested = false;
             return requests;
           });
         } else {

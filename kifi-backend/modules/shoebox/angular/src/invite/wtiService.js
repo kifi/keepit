@@ -31,11 +31,11 @@ angular.module('kifi.invite.wtiService', [])
         return more;
       },
       loadInitial: function () {
-        if (list.length === 0) {
-          api.getMore().then(function () {
-            api.getMore();
-          });
-        }
+        list.length = 0;
+        page = 0;
+        api.getMore().then(function () {
+          api.getMore();
+        });
       },
       list: list
     };

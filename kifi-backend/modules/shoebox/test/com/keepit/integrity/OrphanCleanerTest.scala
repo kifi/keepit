@@ -233,7 +233,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
 
         // test: to ACTIVE
         db.readWrite { implicit session =>
-          bms.foreach{ bm => bmRepo.save(bm.copy(state = BookmarkStates.INACTIVE)) }
+          bms.foreach{ bm => bmRepo.save(bm.copy(state = KeepStates.INACTIVE)) }
         }
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
@@ -276,9 +276,9 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
 
         // test: sequence of changes
         db.readWrite { implicit session =>
-          bmRepo.save(bms(0).copy(state = BookmarkStates.ACTIVE))
-          bmRepo.save(bms(1).copy(state = BookmarkStates.ACTIVE))
-          bmRepo.save(obms(0).copy(state = BookmarkStates.INACTIVE))
+          bmRepo.save(bms(0).copy(state = KeepStates.ACTIVE))
+          bmRepo.save(bms(1).copy(state = KeepStates.ACTIVE))
+          bmRepo.save(obms(0).copy(state = KeepStates.INACTIVE))
         }
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
@@ -295,10 +295,10 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           scrapeInfoRepo.getByUriId(uris(4).id.get) === None
         }
         db.readWrite { implicit session =>
-          bmRepo.save(bms(0).copy(state = BookmarkStates.INACTIVE))
-          bmRepo.save(bms(1).copy(state = BookmarkStates.INACTIVE))
-          bmRepo.save(obms(0).copy(state = BookmarkStates.ACTIVE))
-          bmRepo.save(obms(1).copy(state = BookmarkStates.INACTIVE))
+          bmRepo.save(bms(0).copy(state = KeepStates.INACTIVE))
+          bmRepo.save(bms(1).copy(state = KeepStates.INACTIVE))
+          bmRepo.save(obms(0).copy(state = KeepStates.ACTIVE))
+          bmRepo.save(obms(1).copy(state = KeepStates.INACTIVE))
         }
         cleaner.clean(readOnly = false)
         db.readOnly{ implicit s =>
