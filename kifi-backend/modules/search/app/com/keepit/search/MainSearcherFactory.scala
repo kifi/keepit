@@ -55,6 +55,50 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
 
   def apply(
+    shards: Seq[Shard[NormalizedURI]],
+    userId: Id[User],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig
+  ): Seq[MainSearcher] = {
+    val clickHistoryFuture = getClickHistoryFuture(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
+    val socialGraphInfosAndArticleSearhcers = shards.map{ shard =>
+      (shard, getSocialGraphInfo(shard, userId, filter), shardedArticleIndexer.getIndexer(shard).getSearcher)
+    }
+
+    val parser = parserFactory(lang1, lang2, config)
+    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
+    parser.setPercentMatch(config.asFloat("percentMatch"))
+    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
+
+    parser.parse(queryString, socialGraphInfosAndArticleSearhcers.map(_._2.collectionSearcher))
+
+    socialGraphInfosAndArticleSearhcers.map{ case (shard, socialGraphInfo, articleSearcher) =>
+      new MainSearcher(
+          userId,
+          lang1,
+          lang2,
+          numHitsToReturn,
+          filter,
+          config,
+          parser,
+          shardedArticleIndexer.getIndexer(shard).getSearcher,
+          socialGraphInfo,
+          clickBoostsFuture,
+          browsingHistoryFuture,
+          clickHistoryFuture,
+          monitoredAwait,
+          airbrake
+      )
+    }
+  }
+
+  def apply(
     shard: Shard[NormalizedURI],
     userId: Id[User],
     queryString: String,
@@ -63,36 +107,9 @@ class MainSearcherFactory @Inject() (
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig
-  ) = {
-    val clickHistoryFuture = getClickHistoryFuture(userId)
-    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
-    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
-    val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-
-    val parser = parserFactory(lang1, lang2, config)
-    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
-    parser.setPercentMatch(config.asFloat("percentMatch"))
-    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
-
-    parser.parse(queryString, Some(socialGraphInfo.collectionSearcher))
-
-    new MainSearcher(
-        userId,
-        lang1,
-        lang2,
-        numHitsToReturn,
-        filter,
-        config,
-        parser,
-        articleSearcher,
-        socialGraphInfo,
-        clickBoostsFuture,
-        browsingHistoryFuture,
-        clickHistoryFuture,
-        monitoredAwait,
-        airbrake
-    )
+  ): MainSearcher = {
+    val searchers = apply(Seq(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
+    searchers(0)
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
