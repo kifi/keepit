@@ -16,9 +16,9 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.controllers.website.routes
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
-import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{SecureSocialClientIds, SocialId, SocialNetworkType, SocialNetworks}
+import com.keepit.social.{SocialNetworkType, SocialNetworks}
+import com.keepit.common.ImmediateMap
 
 import java.net.URLEncoder
 
@@ -27,8 +27,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration.Duration
+import scala.concurrent.Future
 import scala.util.Try
 import com.keepit.common.queue.{RecordInvitation, CancelInvitation}
 import com.keepit.abook.ABookServiceClient
@@ -40,7 +39,6 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.SecureSocialClientIds
-import com.keepit.commanders.InviteInfo
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.social.SocialId
 
@@ -244,23 +242,26 @@ class InviteCommander @Inject() (
   }
 
   def invite(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteStatus] = {
-    getInviteInfo(userId, fullSocialId, subject, message, source).map {
+    getInviteInfo(userId, fullSocialId, subject, message, source).flatMap {
       case inviteInfo if isAllowed(inviteInfo) => processInvite(inviteInfo)
-      case _ => InviteStatus.forbidden
+      case _ => Future.successful(InviteStatus.forbidden)
     }
   }
 
-  private def processInvite(inviteInfo: InviteInfo): InviteStatus = {
+  private def processInvite(inviteInfo: InviteInfo): Future[InviteStatus] = {
     log.info(s"[processInvite] Processing: $inviteInfo")
-    val inviteStatus = inviteInfo.friend match {
-      case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.FACEBOOK => handleFacebookInvite(inviteInfo)
+    val inviteStatusFuture = inviteInfo.friend match {
+      case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.FACEBOOK => Future.successful(handleFacebookInvite(inviteInfo))
       case Left(socialUserInfo) if socialUserInfo.networkType == SocialNetworks.LINKEDIN => sendInvitationForLinkedIn(inviteInfo)
-      case Right(eContact) => sendEmailInvitation(inviteInfo)
-      case _ => InviteStatus.unsupportedNetwork
+      case Right(eContact) => Future.successful(sendEmailInvitation(inviteInfo))
+      case _ => Future.successful(InviteStatus.unsupportedNetwork)
     }
-    if (inviteStatus.sent) { reportSentInvitation(inviteStatus.savedInvite.get, inviteInfo) }
-    log.info(s"[processInvite] Processed: $inviteStatus")
-    inviteStatus
+
+    inviteStatusFuture imap { case inviteStatus =>
+      log.info(s"[processInvite] Processed: $inviteStatus")
+      if (inviteStatus.sent) { reportSentInvitation(inviteStatus.savedInvite.get, inviteInfo) }
+      inviteStatus
+    }
   }
 
   private def sendEmailInvitation(inviteInfo:InviteInfo): InviteStatus = {
@@ -295,46 +296,47 @@ class InviteCommander @Inject() (
     }
   }
 
-  private def sendInvitationForLinkedIn(inviteInfo:InviteInfo): InviteStatus = {
+  private def sendInvitationForLinkedIn(inviteInfo: InviteInfo): Future[InviteStatus] = {
     val invite = getInvitation(inviteInfo)
     val userId = inviteInfo.userId
-    db.readWrite(attempts = 2) { implicit s =>
-      val socialUserInfo = inviteInfo.friend.left.get
-      val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
-      val path = routes.InviteController.acceptInvite(invite.externalId).url
-      val subject = inviteInfo.subject.getOrElse(s"Kifi -- ${me.fullName.split(' ')(0)} invites you to Kifi") // todo: same for email
-      val message = inviteInfo.message.getOrElse(
-        """
-          |Please accept my invitation to kifi.
-          |
-          |What is kifi and why should I join?
-          |
-          |Kifi (short for keep it find it) allows you to easily keep and tag
-          |anything you find online - an article, video, picture, email, anything -
-          |then quickly find it on top of your favorite search engine results,
-          |together with relevant pages that your friends kept, too.
-          |
-          |Kifi also lets you message your friends about what you keep and
-          |find alongside any web page, to get their opinion or gain from their
-          |expertise.
-          | """.stripMargin
-      )
-      val messageWithUrl = s"$message\n$baseUrl$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
-      log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
-      val resp = Await.result(linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl), Duration.Inf) // todo(ray): refactor; map future resp
-      log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
-      if (resp.status != Status.CREATED) { // per LinkedIn doc
-        airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
-        log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite): ${resp.body}")
-        if (resp.status == Status.UNAUTHORIZED) {
-          val latestSocialUserInfo = socialUserInfoRepo.get(socialUserInfo.id.get)
-          socialUserInfoRepo.save(latestSocialUserInfo.copy(state = SocialUserInfoStates.APP_NOT_AUTHORIZED))
+    val me = db.readOnly { implicit s => socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get }
+    val socialUserInfo = inviteInfo.friend.left.get
+    val path = routes.InviteController.acceptInvite(invite.externalId).url
+    val subject = inviteInfo.subject.getOrElse(s"Kifi -- ${me.fullName.split(' ')(0)} invites you to Kifi") // todo: same for email
+    val message = inviteInfo.message.getOrElse(
+      """
+        |Please accept my invitation to kifi.
+        |
+        |What is kifi and why should I join?
+        |
+        |Kifi (short for keep it find it) allows you to easily keep and tag
+        |anything you find online - an article, video, picture, email, anything -
+        |then quickly find it on top of your favorite search engine results,
+        |together with relevant pages that your friends kept, too.
+        |
+        |Kifi also lets you message your friends about what you keep and
+        |find alongside any web page, to get their opinion or gain from their
+        |expertise.
+        | """.stripMargin
+    )
+    val messageWithUrl = s"$message\n$baseUrl$path\n\nKifi is available for desktop only on chrome and firefox.\nSafari, Internet Explorer and mobile are coming soon!"
+    log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
+    linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl).map { resp =>
+      db.readWrite(attempts = 2) { implicit session =>
+        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
+        if (resp.status != Status.CREATED) { // per LinkedIn doc
+          airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
+          log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite): ${resp.body}")
+          if (resp.status == Status.UNAUTHORIZED) {
+            val latestSocialUserInfo = socialUserInfoRepo.get(socialUserInfo.id.get)
+            socialUserInfoRepo.save(latestSocialUserInfo.copy(state = SocialUserInfoStates.APP_NOT_AUTHORIZED))
+          }
+          InviteStatus.linkedInError(resp.status)
+        } else {
+          val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
+          log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] savedInvite=${saved}")
+          InviteStatus.sent(saved)
         }
-        InviteStatus.linkedInError(resp.status)
-      } else {
-        val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
-        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] savedInvite=${saved}")
-        InviteStatus.sent(saved)
       }
     }
   }
