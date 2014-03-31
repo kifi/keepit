@@ -17,9 +17,7 @@ import com.keepit.controllers.website.routes
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{EContact, EmailAddressRepo, Invitation, InvitationRepo, InvitationStates, NotificationCategory}
-import com.keepit.model.{SocialConnection, SocialConnectionRepo, SocialConnectionStates, SocialUserInfo, SocialUserInfoRepo}
-import com.keepit.model.{User, UserConnectionRepo, UserRepo, UserStates}
+import com.keepit.model._
 import com.keepit.social.{SecureSocialClientIds, SocialId, SocialNetworkType, SocialNetworks}
 
 import java.net.URLEncoder
@@ -37,6 +35,14 @@ import com.keepit.abook.ABookServiceClient
 
 import akka.actor.Scheduler
 import org.joda.time.DateTime
+import com.keepit.model.SocialConnection
+import play.api.libs.json.JsString
+import scala.Some
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.social.SecureSocialClientIds
+import com.keepit.commanders.InviteInfo
+import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.social.SocialId
 
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String]) {
   override def toString(): String = s"${network.name}/${identifier.left.map(_.id).merge}"
@@ -78,6 +84,7 @@ object InviteStatus {
   }
   def clientHandle(savedInvite: Invitation) = InviteStatus(false, Some(savedInvite), "client_handle")
   def facebookError(code: Int, savedInvite: Option[Invitation]) = InviteStatus(false, savedInvite, s"facebook_error_$code")
+  def linkedInError(code: Int) = InviteStatus(false, None, s"linkedin_error_{$code}")
   val unknownError = InviteStatus(false, None, "unknown_error")
   val forbidden = InviteStatus(false, None, "over_invite_limit")
   val notFound = InviteStatus(false, None, "invite_not_found")
@@ -291,7 +298,7 @@ class InviteCommander @Inject() (
   private def sendInvitationForLinkedIn(inviteInfo:InviteInfo): InviteStatus = {
     val invite = getInvitation(inviteInfo)
     val userId = inviteInfo.userId
-    val savedOpt:Option[Invitation] = db.readWrite(attempts = 2) { implicit s =>
+    db.readWrite(attempts = 2) { implicit s =>
       val socialUserInfo = inviteInfo.friend.left.get
       val me = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get
       val path = routes.InviteController.acceptInvite(invite.externalId).url
@@ -318,18 +325,17 @@ class InviteCommander @Inject() (
       log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
       if (resp.status != Status.CREATED) { // per LinkedIn doc
         airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
-        None
+        log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite): ${resp.body}")
+        if (resp.status == Status.UNAUTHORIZED) {
+          val latestSocialUserInfo = socialUserInfoRepo.get(socialUserInfo.id.get)
+          socialUserInfoRepo.save(latestSocialUserInfo.copy(state = SocialUserInfoStates.APP_NOT_AUTHORIZED))
+        }
+        InviteStatus.linkedInError(resp.status)
       } else {
         val saved = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
         log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] savedInvite=${saved}")
-        Some(saved)
+        InviteStatus.sent(saved)
       }
-    }
-    savedOpt match {
-      case Some(saved) => InviteStatus.sent(saved)
-      case None =>
-        log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite)")
-        InviteStatus.unknownError
     }
   }
 
@@ -390,7 +396,7 @@ class InviteCommander @Inject() (
   private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteInfo] = {
     val (friendFuture, invitationsSentFuture) = fullSocialId.identifier match {
       case Left(socialId) =>
-        val friendSocialUserInfo =  db.readOnly() { implicit session =>socialUserInfoRepo.get(socialId, fullSocialId.network) }
+        val friendSocialUserInfo =  db.readOnly() { implicit session => socialUserInfoRepo.get(socialId, fullSocialId.network) }
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
