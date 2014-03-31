@@ -6,11 +6,8 @@ import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.inject._
-import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
-import com.google.inject.Injector
-import play.api.Play._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
@@ -22,6 +19,7 @@ import com.keepit.search.sharding.Shard
 import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
+import org.apache.lucene.search.{Explanation, Query}
 
 class MobileSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -182,5 +180,7 @@ class FixedResultSearchCommander extends SearchCommander {
     results(query)
   }
 
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }
