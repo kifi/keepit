@@ -5,7 +5,9 @@ angular.module('kifi.invite', [
   'kifi.profileService',
   'kifi.routeService',
   'jun.facebook',
-  'kifi.inviteService'
+  'kifi.inviteService',
+  'kifi.social',
+  'kifi.modal'
 ])
 
 .config([
@@ -53,6 +55,8 @@ angular.module('kifi.invite', [
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
         scope.networks = profileService.networks;
+
+        scope.data = scope.data || {};
 
         profileService.getNetworks();
       }
