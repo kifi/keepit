@@ -21,6 +21,7 @@ import com.keepit.search.result.DecoratedResult
 import com.keepit.search.result.ResultMerger
 import com.keepit.search.result.ResultUtil
 import com.keepit.search.spellcheck.SpellCorrector
+import org.apache.lucene.search.{Explanation, Query}
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -39,6 +40,15 @@ trait SearchCommander {
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None) : DecoratedResult
+
+  def explain(
+    userId: Id[User],
+    uriId: Id[NormalizedURI],
+    lang: Option[String],
+    experiments: Set[ExperimentType],
+    query: String): Option[(Query, Explanation)]
+
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
 
   def warmUp(userId: Id[User]): Unit
 }
@@ -245,6 +255,31 @@ class SearchCommanderImpl @Inject() (
       case None =>
         if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
         else SearchFilter.default(context)
+    }
+  }
+
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = {
+    val (config, _) = searchConfigManager.getConfig(userId, experiments)
+    val langs = lang match {
+      case Some(str) => str.split(",").toSeq.map(Lang(_))
+      case None => Seq(Lang("en"))
+    }
+
+    shards.find(uriId).flatMap{ shard =>
+      val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
+      searcher.explain(uriId)
+    }
+  }
+
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
+    uriIds.map{ uriId =>
+      shards.find(uriId) match {
+        case Some(shard) =>
+          val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
+          searcher.getSharingUserInfo(uriId)
+        case None =>
+          throw new Exception("shard not found")
+      }
     }
   }
 
