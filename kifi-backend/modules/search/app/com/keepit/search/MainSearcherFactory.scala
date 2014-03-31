@@ -6,7 +6,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -29,6 +28,7 @@ import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcher
 import com.keepit.search.graph.user.UserGraphsCommander
 import com.keepit.search.sharding._
+import com.keepit.search.query.HotDocSetFilter
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -42,7 +42,6 @@ class MainSearcherFactory @Inject() (
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
     shoeboxClient: ShoeboxServiceClient,
-    spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier,
     implicit private val clock: Clock,
@@ -71,21 +70,26 @@ class MainSearcherFactory @Inject() (
     val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
 
+    val parser = parserFactory(lang1, lang2, config)
+    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
+    parser.setPercentMatch(config.asFloat("percentMatch"))
+    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
+
+    parser.parse(queryString, Some(socialGraphInfo.collectionSearcher))
+
     new MainSearcher(
         userId,
-        queryString,
         lang1,
         lang2,
         numHitsToReturn,
         filter,
         config,
+        parser,
         articleSearcher,
-        parserFactory,
         socialGraphInfo,
         clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,
-        spellCorrector,
         monitoredAwait,
         airbrake
     )

@@ -20,6 +20,7 @@ import com.keepit.search.result.ResultDecorator
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.result.ResultMerger
 import com.keepit.search.result.ResultUtil
+import com.keepit.search.spellcheck.SpellCorrector
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -47,6 +48,7 @@ class SearchCommanderImpl @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
+  spellCorrector: SpellCorrector,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait,
@@ -94,6 +96,8 @@ class SearchCommanderImpl @Inject() (
     }
 
     val mergedResult = {
+      val resultMerger = new ResultMerger(enableTailCutting, config)
+
       timing.factory
       val future = Future.traverse(shards.shards){ shard =>
         SafeFuture{
@@ -105,7 +109,7 @@ class SearchCommanderImpl @Inject() (
 
       timing.search
       val results = monitoredAwait.result(future, 10 seconds, "slow search")
-      ResultMerger.merge(results, maxHits, enableTailCutting, config)
+      resultMerger.merge(results, maxHits)
     }
 
     timing.decoration
