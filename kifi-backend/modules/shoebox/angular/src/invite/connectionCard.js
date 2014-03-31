@@ -3,7 +3,7 @@
 angular.module('kifi.invite.connectionCard', ['angularMoment'])
 
 
-.directive('kfConnectionCard', ['$window', '$http', 'routeService', function ($window, $http, routeService) {
+.directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', function ($window, $http, routeService, inviteService) {
   return {
     scope: {
       'friend': '&'
@@ -33,7 +33,18 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       scope.email    = network === 'email';
 
       scope.action = function () {
-        $window.alert('Inviting: ' + friend.name);
+        $window.open("http://facebook.com", "_blank");
+        inviteService.invite(network, inNetworkId).then(function () {
+          scope.invited = true;
+          scope.actionText = 'Resend';
+          var inviteText = 'Invited just now';
+          if (network === 'email') {
+            scope.byline = inNetworkId;
+            scope.byline2 = inviteText;
+          } else {
+            scope.byline = inviteText;
+          }
+        });
       };
       scope.closeAction = function () {
         scope.hidden = true;
