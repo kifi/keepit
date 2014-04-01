@@ -1,9 +1,10 @@
 'use strict';
 
-angular.module('kifi.social', [])
+angular.module('kifi.social', ['kifi.socialService'])
 
 .directive('kfSocialConnectNetworks', [
-  function () {
+  'socialService',
+  function (socialService) {
     return {
       scope: {},
       replace: true,
@@ -12,6 +13,13 @@ angular.module('kifi.social', [])
       link: function (scope/*, element, attrs*/) {
         scope.data = scope.data || {};
         scope.data.show = true;
+        scope.facebook = socialService.facebook;
+        scope.linkedin = socialService.linkedin;
+        scope.gmail = socialService.gmail;
+
+
+        socialService.refresh();
+
       }
     };
   }

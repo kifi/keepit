@@ -1,16 +1,14 @@
 'use strict';
 
-angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
+angular.module('kifi.profileService', ['kifi.routeService'])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', '$FB', '$window',
-  function ($http, env, $q, util, routeService, $FB, $window) {
+  '$http', 'env', '$q', 'util', 'routeService',
+  function ($http, env, $q, util, routeService) {
 
     var me = {
       seqNum: 0
     };
-    var addressBooks = [],
-        networks = [];
 
     function updateMe(data) {
       angular.forEach(data, function (val, key) {
@@ -37,18 +35,6 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
         return updateMe(res.data);
       });
     }
-
-    function fetchAddressBooks() {
-      return $http.get(routeService.abooksUrl).then(function (res) {
-        util.replaceArrayInPlace(addressBooks, res.data);
-        return addressBooks;
-      });
-    }
-
-    function getAddressBooks() {
-      return addressBooks.length > 0 ? $q.when(addressBooks) : fetchAddressBooks();
-    }
-
 
     function getPrimaryEmail(emails) {
       return _.find(emails, 'isPrimary') || emails[0] || null;
@@ -175,49 +161,11 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       });
     }
 
-    function getNetworks() {
-      $http.get(routeService.networks).then(function (res) {
-        util.replaceArrayInPlace(networks, res.data);
-        me.facebookConnected = !!_.find(networks, function (n) {
-          return n.network === 'facebook';
-        });
-        me.linkedInConnected = !!_.find(networks, function (n) {
-          return n.network === 'linkedin';
-        });
-        me.seqNum++;
-        return res.data;
-      });
-    }
-
-    var social = {
-      connectFacebook: function () {
-        $window.location.href = routeService.linkNetwork('facebook');
-      },
-      connectLinkedIn: function () {
-        $window.location.href = routeService.linkNetwork('linkedin');
-      },
-      disconnectFacebook: function () {
-        return $http.post(routeService.disconnectNetwork('facebook')).then(function (res) {
-          me.facebookConnected = false;
-          me.seqNum++;
-          return res;
-        });
-      },
-      disconnectLinkedIn: function () {
-        return $http.post(routeService.disconnectNetwork('linkedin')).then(function (res) {
-          me.linkedInConnected = false;
-          me.seqNum++;
-          return res;
-        });
-      }
-    };
-
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
-      getAddressBooks: getAddressBooks,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
@@ -228,10 +176,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
-      sendChangePassword: sendChangePassword,
-      social: social,
-      getNetworks: getNetworks,
-      networks: networks
+      sendChangePassword: sendChangePassword
     };
   }
 ]);
