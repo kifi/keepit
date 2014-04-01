@@ -3,10 +3,15 @@
 angular.module('kifi.socialService', [])
 
 .factory('socialService', [
-  'profileService', 'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q',
-  function (profileService, routeService, $http, util, $rootScope, Clutch, $window, $q) {
+  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q',
+  function (routeService, $http, util, $rootScope, Clutch, $window, $q) {
 
-    var networks = [], facebook = {}, linkedin = {}, gmail = [], addressBooks = [];
+    var networks = [],
+        facebook = {},
+        linkedin = {},
+        gmail = [],
+        addressBooks = [],
+        expiredTokens = {};
 
     var clutchConfig = {
       cacheDuration: 5000
@@ -39,7 +44,7 @@ angular.module('kifi.socialService', [])
     var api = {
       networks: networks,
       addressBooks: addressBooks,
-      refresh: function() {
+      refresh: function () {
         return $q.all([addressBooksBackend.get(), networksBackend.get()]);
       },
       facebook: facebook,
@@ -54,6 +59,10 @@ angular.module('kifi.socialService', [])
         $window.location.href = routeService.linkNetwork('linkedin');
       },
 
+      importGmail: function () {
+        $window.location.href = routeService.importGmail;
+      },
+
       disconnectFacebook: function () {
         return $http.post(routeService.disconnectNetwork('facebook')).then(function (res) {
           util.replaceObjectInPlace(facebook, {});
@@ -66,7 +75,17 @@ angular.module('kifi.socialService', [])
           util.replaceObjectInPlace(linkedin, {});
           return res;
         });
-      }
+      },
+
+      setExpiredTokens: function (networks) {
+        var obj = {};
+        networks.forEach(function (network) {
+          obj[network] = true;
+        });
+        util.replaceObjectInPlace(expiredTokens, obj);
+      },
+
+      expiredTokens: expiredTokens
     };
 
     return api;

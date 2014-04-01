@@ -16,6 +16,10 @@ angular.module('kifi.social', ['kifi.socialService'])
         scope.facebook = socialService.facebook;
         scope.linkedin = socialService.linkedin;
         scope.gmail = socialService.gmail;
+        scope.expiredTokens = socialService.expiredTokens;
+        scope.connectFacebook = socialService.connectFacebook;
+        scope.connectLinkedIn = socialService.connectLinkedIn;
+        scope.importGmail = socialService.importGmail;
 
 
         socialService.refresh();

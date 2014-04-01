@@ -3,8 +3,8 @@
 angular.module('kifi.profileService', ['kifi.routeService'])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService',
-  function ($http, env, $q, util, routeService) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService',
+  function ($http, env, $q, util, routeService, socialService) {
 
     var me = {
       seqNum: 0
@@ -17,6 +17,7 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       me.picUrl = routeService.formatPicUrl(me.id, me.pictureName);
       me.primaryEmail = getPrimaryEmail(me.emails);
       me.seqNum++;
+      socialService.setExpiredTokens(me.notAuthed);
       return me;
     }
 
