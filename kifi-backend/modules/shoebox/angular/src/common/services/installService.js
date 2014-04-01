@@ -18,7 +18,7 @@ angular.module('kifi.installService', [])
           }, function () {
             api.installed = false;
             api.installInProgress = false;
-            api.error = true
+            api.error = true;
           });
         } else if (isFirefox && supported) {
           $window.location.href = '//www.kifi.com/assets/plugins/kifi-beta.xpi';
