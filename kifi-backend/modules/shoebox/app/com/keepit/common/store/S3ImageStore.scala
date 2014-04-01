@@ -1,32 +1,35 @@
 package com.keepit.common.store
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.util.Try
-import org.joda.time.Weeks
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.{CopyObjectRequest, PutObjectResult, ObjectMetadata}
+import com.amazonaws.services.s3.model.PutObjectResult
+
 import com.google.inject.{ImplementedBy, Inject, Singleton}
+
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
-import com.keepit.model._
-import play.api.libs.ws.WS
-import com.keepit.social.SocialNetworks
 import com.keepit.common.net.URI
-import java.io._
-import javax.imageio.ImageIO
+import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.model.{SocialUserInfo, SocialUserInfoRepo, User, UserRepo, UserValueRepo}
+import com.keepit.model.{UserPicture, UserPictureRepo, UserPictureSource, UserPictureSources, UserPictureStates}
+import com.keepit.social.SocialNetworks
+
 import org.apache.commons.lang3.RandomStringUtils
-import java.awt.image.BufferedImage
+import org.joda.time.Weeks
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import scala.util.Failure
-import scala.util.Success
-import com.keepit.model.UserPictureSource
-import java.awt.Color
+import play.api.libs.ws.WS
+
+import java.awt.image.BufferedImage
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
+import javax.imageio.ImageIO
+
+import scala.concurrent.{Future, Promise}
+import scala.util.{Failure, Success, Try}
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)
@@ -77,6 +80,7 @@ class S3ImageStoreImpl @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock,
     userPictureRepo: UserPictureRepo,
+    eliza: ElizaServiceClient,
     val config: S3ImageConfig
   ) extends S3ImageStore with S3Helper with Logging {
 
@@ -214,6 +218,7 @@ class S3ImageStoreImpl @Inject() (
         }
       }
     }
+    eliza.sendToUser(userId, Json.arr("new_pic", pictureName))
   }
 
   def readImage(file: File): BufferedImage = {
