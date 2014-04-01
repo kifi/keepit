@@ -12,6 +12,10 @@
         <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
+      <div ng-if="whoToInvite.length < 6" class="social-connect-friends">
+        <div kf-social-connect-networks></div>
+      </div>
+
     </div>
   </div>
 </div>

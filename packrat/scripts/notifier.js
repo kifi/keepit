@@ -72,7 +72,7 @@ var notifier = function () {
     }
 
     var $item = $(render('html/notify_box', {
-      formatSnippet: getSnippetFormatter,
+      formatSnippet: formatMessage.snippet,
       title: params.title,
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,

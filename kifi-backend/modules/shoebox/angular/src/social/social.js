@@ -9,8 +9,9 @@ angular.module('kifi.social', [])
       replace: true,
       restrict: 'A',
       templateUrl: 'social/connectNetworks.tpl.html',
-      link: function (/*scope, element, attrs*/) {
-
+      link: function (scope/*, element, attrs*/) {
+        scope.data = scope.data || {};
+        scope.data.show = true;
       }
     };
   }
