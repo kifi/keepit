@@ -6,15 +6,13 @@ class GraphManagerTest extends Specification {
 
   "GraphManager" should {
     "instantiate consistent VertexDataReaders" in {
-      VertexKind
       VertexDataReader
-      "All good" === "All good"
+      VertexKind.all must not be empty
     }
 
     "instantiate consistent EdgeDataReaders" in {
-      EdgeKind
       EdgeDataReader
-      "All good" === "All good"
+      EdgeKind.all must not be empty
     }
   }
 }

@@ -1,8 +1,8 @@
 package com.keepit.graph.model
 
 trait VertexReader {
-  protected def kind: VertexKind
-  protected def dataReaders: Map[VertexKind, VertexDataReader]
+  // protected def dataReaders: Map[VertexKind, VertexDataReader]
+  def kind: VertexKind[_ <: VertexDataReader]
   def id: VertexId
   def data: VertexDataReader
   def edgeReader: LocalEdgeReader

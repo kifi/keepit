@@ -1,6 +1,7 @@
 package com.keepit.graph.model
 
-case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
+import com.keepit.common.reflection.CompanionTypeSystem
+
 
 sealed trait VertexDataReader {
   type V <: VertexDataReader
@@ -9,42 +10,57 @@ sealed trait VertexDataReader {
 }
 
 object VertexDataReader {
-  def apply(rawDataReader: RawDataReader): Map[VertexKind, VertexDataReader] = {
+  def apply(rawDataReader: RawDataReader): Map[VertexKind[_ <: VertexDataReader], VertexDataReader] = {
     VertexKind.all.map { vertexKind => vertexKind -> vertexKind(rawDataReader) }.toMap
   }
 }
 
-trait UserReader extends VertexDataReader { type V = UserReader }
-case object UserReader extends VertexKind {
+sealed trait VertexKind[V <: VertexDataReader] {
+  implicit def header: KindHeader[V]
+  def apply(rawDataReader: RawDataReader): V
+}
+
+object VertexKind {
+  val all: Set[VertexKind[_ <: VertexDataReader]] = CompanionTypeSystem[VertexDataReader, VertexKind[_ <: VertexDataReader]]("V")
+  private val byHeader: Map[Byte, VertexKind[_ <: VertexDataReader]] = {
+    require(all.size == all.map(_.header).size, "Duplicate VertexKind headers")
+    all.map { vertexKind => vertexKind.header.code -> vertexKind }.toMap
+  }
+  def apply(header: Byte): VertexKind[_ <: VertexDataReader] = byHeader(header)
+}
+
+trait UserReader extends VertexDataReader {
   type V = UserReader
-  val header = KindHeader[V](1)
-  def apply(rawDataReader: RawDataReader): V = ???
+  def dump = Array.empty
+}
+case object UserReader extends VertexKind[UserReader] {
+  val header = KindHeader[UserReader](1)
+  def apply(rawDataReader: RawDataReader): UserReader = ???
 }
 
-trait UriReader extends VertexDataReader { type V = UriReader }
-case object UriReader extends VertexKind {
+trait UriReader extends VertexDataReader {
   type V = UriReader
-  val header = KindHeader[V](2)
-  def apply(rawDataReader: RawDataReader): V = ???
+  def dump = Array.empty
+}
+case object UriReader extends VertexKind[UriReader] {
+  val header = KindHeader[UriReader](2)
+  def apply(rawDataReader: RawDataReader): UriReader = ???
 }
 
-trait TagReader extends VertexDataReader { type V = TagReader }
-case object TagReader extends VertexKind {
+trait TagReader extends VertexDataReader {
   type V = TagReader
-  val header = KindHeader[V](3)
-  def apply(rawDataReader: RawDataReader): V = ???
+  def dump = Array.empty
+}
+case object TagReader extends VertexKind[TagReader] {
+  val header = KindHeader[TagReader](3)
+  def apply(rawDataReader: RawDataReader): TagReader = ???
 }
 
-trait ThreadReader extends VertexDataReader { type V = ThreadReader }
-case object ThreadReader extends VertexKind {
+trait ThreadReader extends VertexDataReader {
   type V = ThreadReader
-  val header = KindHeader[V](4)
-  def apply(rawDataReader: RawDataReader): V = ???
+  def dump = Array.empty
 }
-
-trait SocialAccountReader extends VertexDataReader { type V = SocialAccountReader }
-case object SocialAccountReader extends VertexKind {
-  type V = ThreadReader
-  val header = KindHeader[V](5)
-  def apply(rawDataReader: RawDataReader): V = ???
+case object ThreadReader extends VertexKind[ThreadReader] {
+  val header = KindHeader[ThreadReader](4)
+  def apply(rawDataReader: RawDataReader): ThreadReader = ???
 }

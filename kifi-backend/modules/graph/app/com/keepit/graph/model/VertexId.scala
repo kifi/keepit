@@ -1,40 +1,9 @@
 package com.keepit.graph.model
 
-import com.keepit.model.Reflect
 import scala.util.Try
 
 case class KindHeader[T](code: Byte) { // extends AnyVal
   require(code > 0, "Kind header must be positive")
-}
-
-trait EdgeKind {
-  type E <: EdgeDataReader
-  implicit def header: KindHeader[E]
-  def apply(rawDataReader: RawDataReader): E
-}
-
-object EdgeKind {
-  val all: Set[EdgeKind] = Reflect.getCompanionTypeSystem[EdgeDataReader, EdgeKind]("E")
-  private val byHeader: Map[Byte, EdgeKind] = {
-    require(all.size == all.map(_.header).size, "Duplicate EdgeKind headers")
-    all.map { edgeKind => edgeKind.header.code -> edgeKind }.toMap
-  }
-  def apply(header: Byte): EdgeKind = byHeader(header)
-}
-
-trait VertexKind {
-  type V <: VertexDataReader
-  implicit def header: KindHeader[V]
-  def apply(rawDataReader: RawDataReader): V
-}
-
-object VertexKind {
-  val all: Set[VertexKind] = Reflect.getCompanionTypeSystem[VertexDataReader, VertexKind]("V")
-  private val byHeader: Map[Byte, VertexKind] = {
-    require(all.size == all.map(_.header).size, "Duplicate VertexKind headers")
-    all.map { vertexKind => vertexKind.header.code -> vertexKind }.toMap
-  }
-  def apply(header: Byte): VertexKind = byHeader(header)
 }
 
 case class VertexId(id: Long) extends AnyVal {
@@ -43,7 +12,8 @@ case class VertexId(id: Long) extends AnyVal {
     VertexDataId[V](dataId)
   }
   def asIdOpt[V <: VertexDataReader](implicit header: KindHeader[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
-  override def toString() = VertexKind(code) + "|" + dataId
+  override def toString() =  kind + "|" + dataId
+  private def kind: VertexKind[_ <: VertexDataReader] = VertexKind(code)
   private def code: Byte = (id >> VertexId.dataIdSpace).toByte
   private def dataId: Long = id & VertexId.maxVertexDataId
 }
