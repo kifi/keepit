@@ -99,7 +99,8 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
         socialSearchService.expireAll();
 
         return $http.post(routeService.invite, {
-          id: platform + '/' + identifier
+          id: platform + '/' + identifier,
+          source: 'site'
         }).then(function (res) {
           if (res.data.url) {
             $window.open(res.data.url, "_blank");
