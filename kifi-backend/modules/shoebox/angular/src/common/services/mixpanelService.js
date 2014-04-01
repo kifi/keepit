@@ -51,9 +51,6 @@
     function registerPageTrackForUser(mixpanel, path, origin) {
       if (userId) {
         var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
-        if (!oldId) {
-          return;
-        }
         try {
           if (!origin) {
             origin = $window.location.origin;
@@ -65,7 +62,9 @@
             userStatus: getUserStatus()
           });
         } finally {
-          mixpanel.identify(oldId);
+          if (!oldId) {
+            mixpanel.identify(oldId);
+          }
         }
       } else {
         identifiedViewEventQueue.push(path);
@@ -87,11 +86,10 @@
       });
     }
 
-    angulartics.waitForVendorApi('mixpanel', 5000, function (mixpanel) {
-      console.log("mixpanel.get_distinct_id = " + mixpanel.get_distinct_id
-      console.log("mixpanel.get_distinct_id() = " + mixpanel.get_distinct_id())
+    angulartics.waitForVendorApi('mixpanel', 5000, function (/*mixpanel*/) {
       $analyticsProvider.registerPageTrack(function (path) {
         if (profileService && $window) {
+          var mixpanel = $window.mixpanel;
           var normalizedPath = getLocation(path);
           registerPageTrackForVisitor(mixpanel, normalizedPath, $window);
           registerPageTrackForUser(mixpanel, normalizedPath, $window, profileService);
@@ -99,16 +97,18 @@
       });
     });
 
-    angulartics.waitForVendorApi('mixpanel', 5000, function (mixpanel) {
+    angulartics.waitForVendorApi('mixpanel', 5000, function (/*mixpanel*/) {
       $analyticsProvider.registerEventTrack(function (action, properties) {
-        mixpanel.track(action, properties);
+        if ($window) {
+          var mixpanel = $window.mixpanel;
+          mixpanel.track(action, properties);
+        }
       });
     });
   }])
   .run([
       'profileService', '$window',
       function (p, w) {
-        console.log('run hit');
         $window = w;
         profileService = p;
       }
