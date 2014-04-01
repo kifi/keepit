@@ -6,9 +6,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.util.BytesRef
 import scala.collection.mutable
-import scala.math._
 import scala.util.Random
-import scala.util.Sorting
 import java.util.Arrays
 
 class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
@@ -43,7 +41,7 @@ object SemanticVector {
       arr(i) = rnd.nextGaussian().toFloat
       i += 1
     }
-    Sorting.quickSort(arr)
+    Arrays.sort(arr)
     arr
   }
   private[this] val similarityScore = {

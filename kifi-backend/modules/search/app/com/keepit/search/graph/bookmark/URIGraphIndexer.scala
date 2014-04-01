@@ -151,7 +151,7 @@ object URIGraphIndexer {
       val bookmarkIdsFields = buildBookmarkIdField(publicBookmarks.toSeq, privateBookmarks.toSeq)
       bookmarkIdsFields.foreach{doc.add}
 
-      val titles = buildBookmarkTitleList(publicBookmarks.toSeq, privateBookmarks.toSeq, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+      val titles = buildBookmarkTitleList(publicBookmarks.toSeq, privateBookmarks.toSeq, DefaultAnalyzer.defaultLang) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
       val title = buildLineField(URIGraphFields.titleField, titles){ (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.getAnalyzer(lang)
