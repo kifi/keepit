@@ -3,8 +3,8 @@
 angular.module('kifi.socialService', [])
 
 .factory('socialService', [
-  'profileService', '$http', 'util',
-  function (routeService, $http, util) {
+  'profileService', 'routeService', '$http', 'util',
+  function (profileService, routeService, $http, util) {
 
     var networks = [], me = {};
 
