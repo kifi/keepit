@@ -1,24 +1,15 @@
 package com.keepit.controllers.ext
 
 import com.keepit.classify.{Domain, DomainRepo, DomainStates}
+import com.keepit.commanders.UserCommander
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.net.URI
 import com.keepit.model._
-import com.keepit.common.time._
-import com.keepit.commanders.{UserCommander, BasicSocialUser}
 
-import play.api.Play.current
-import play.api.http.ContentTypes.JSON
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 
 import com.google.inject.Inject
-import com.keepit.common.net.URI
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{Event, EventFamilies, Events}
 
 class ExtUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -29,13 +20,9 @@ class ExtUserController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getLoggedIn() = JsonAction(allowPending = true)(authenticatedAction = { request =>
-    if (request.user.state == UserStates.ACTIVE) {
-      Ok("true").as(JSON)
-    } else {
-      Forbidden("0").as(JSON) // TODO: change to Ok("false") once all extensions are at 2.6.37 or later
-    }
+    Ok(Json.toJson(request.user.state == UserStates.ACTIVE))
   }, unauthenticatedAction = { request =>
-    Forbidden("0").as(JSON) // TODO: change to Ok("false") once all extensions are at 2.6.37 or later
+    Ok(Json.toJson(false))
   })
 
   def getFriends() = JsonAction.authenticated { request =>

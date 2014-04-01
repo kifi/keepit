@@ -103,6 +103,7 @@ IFS="$savedIFS"
 # TODO: factor kifi-specific stuff below out of this script
 if [ "$1" == "package" ]; then
   cd out/chrome
+  sed -i '' -e 's/http:\/\/dev.ezkeep.com:9000 ws:\/\/dev.ezkeep.com:9000 //' manifest.json
   zip -rDq ../kifi-beta.zip * -x "*/.*"
   cd - > /dev/null
 

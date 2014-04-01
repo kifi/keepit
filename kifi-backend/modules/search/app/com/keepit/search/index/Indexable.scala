@@ -182,7 +182,7 @@ trait Indexable[T, S] extends Logging{
         case _ => ""
       }
       val path = u.path.map{ p =>
-      URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
+        URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
       }
       host + " " + path
     }

@@ -216,7 +216,15 @@ class RichSocialConnectionRepoImpl @Inject() (
         SET common_kifi_friends_count = common_kifi_friends_count + 1
         WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
       """
-      q.execute()
+      try {
+        q.execute()
+      } catch {
+        case t: Throwable => {
+          val stmnt : String = q.getStatement
+          log.error(s"Error executing query < ${stmnt} > => ${t.toString}")
+          throw t
+        }
+      }
     }
 
 

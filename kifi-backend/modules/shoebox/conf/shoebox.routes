@@ -91,7 +91,7 @@ POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthControlle
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
-GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
+GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)

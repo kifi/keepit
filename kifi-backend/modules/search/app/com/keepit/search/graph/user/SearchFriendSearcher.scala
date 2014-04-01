@@ -3,10 +3,10 @@ package com.keepit.search.graph.user
 import com.keepit.search.Searcher
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.URIList
+import com.keepit.search.util.LongArraySet
 import com.keepit.common.db.Id
 import com.keepit.model.User
-import org.apache.lucene.util.BytesRef
-import com.keepit.search.graph.Util
+import java.util.Arrays
 
 // Actually search for unfriended
 class SearchFriendSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher) {
@@ -16,6 +16,8 @@ class SearchFriendSearcher(searcher: Searcher) extends BaseGraphSearcher(searche
 
   def getUnfriended(userId: Id[User]): Set[Long] = {
     val docid = getDocId(userId.id)
-    getLongArray(unfriendedList, docid).toSet
+    val arr = getLongArray(unfriendedList, docid)
+    Arrays.sort(arr)
+    LongArraySet.fromSorted(arr)
   }
 }

@@ -24,7 +24,7 @@ object WrappedIndexReader {
     val oldInner = oldReader.inner
     val newInner = DirectoryReader.openIfChanged(oldInner)
     if (newInner != null) {
-      var oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
+      val oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
       doOpen(newInner, oldIdMappers)
     } else {
       oldReader
