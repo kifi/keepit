@@ -3,7 +3,7 @@
 angular.module('kifi.friends.friendRequestCard', [])
 
 
-.directive('kfFriendRequestCard', ['$log', function ($log) {
+.directive('kfFriendRequestCard', ['$log', 'friendService', function ($log, friendService) {
   return {
     scope: {
       'request': '&'
@@ -17,11 +17,11 @@ angular.module('kifi.friends.friendRequestCard', [])
       scope.mainImage = '//djty7jcqog9qu.cloudfront.net/users/' + friend.id + '/pics/200/' + friend.pictureName;
 
       scope.accept = function () {
-        $log.log('Not actually accepting friend request from ' + scope.name);
+        friendService.acceptRequest(friend.id);
       };
 
       scope.ignore = function () {
-        $log.log('Not actually ignoring friend request from ' + scope.name);
+        friendService.ignoreRequest(friend.id);
       };
     }
   };

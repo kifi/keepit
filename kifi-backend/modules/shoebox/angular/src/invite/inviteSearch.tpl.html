@@ -73,4 +73,18 @@
       <div class="clearfix"></div>
     </li>
   </ul>
+  <div ng-click="data.showModalX = true">Show me the Modal!</div>
+  <div kf-modal show="data.showModalX">
+    <div kf-basic-modal-content class="friend-not-found-modal">
+      <h1> We couldn't find any friends matching </h1>
+      <h2> '{{search.name}}' </h2>
+      <h3> How to fix it </h3>
+      <ul>
+        <li>Your friends list might not be up to date. <a href="javascript:">Try refreshing it.</a></li>
+        <li>Some of your friends may have privacy settings that prevent us from showing them. Tell them to go to kifi.com and sign up.
+        <li>Or just <a href="http://support.kifi.com/customer/portal/emails/new">contact us.</a></li>
+      </ul>
+
+    </div>
+  </div>
 </div>

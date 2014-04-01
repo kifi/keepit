@@ -17,7 +17,7 @@ case class Keep(
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
   uriId: Id[NormalizedURI],
-  urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
+  urlId: Id[URL],
   url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
@@ -43,7 +43,7 @@ case class Keep(
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
-  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
+  def withUrlId(urlId: Id[URL]) = copy(urlId = urlId)
 
   def withUrl(url: String) = copy(url = url)
 
@@ -60,7 +60,7 @@ object Keep {
     (__ \ 'externalId).format(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'urlId).formatNullable(Id.format[URL]) and
+    (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
     (__ \ 'isPrivate).format[Boolean] and
@@ -137,6 +137,6 @@ object KeepSource {
 object KeepFactory {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep =
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, isPrivate = isPrivate)
 
 }

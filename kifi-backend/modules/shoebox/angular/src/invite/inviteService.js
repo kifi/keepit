@@ -3,14 +3,13 @@
 angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch',
-  function ($http, env, $q, routeService, util, Clutch) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
-    var whoToInviteList = [],
-        inviteList = [], // used for typeahead dropdown for invite search
+    var inviteList = [], // used for typeahead dropdown for invite search
         selected,
         lastSearch;
 
@@ -99,12 +98,16 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
 
         socialSearchService.expireAll();
 
-        return platform + identifier; // todo!
-      },
-
-      getWhoToInvite: function () {
-        // use $http if request is needed
-        return $q.when(whoToInviteList); // todo!
+        return $http.post(routeService.invite, {
+          id: platform + '/' + identifier
+        }).then(function (res) {
+          if (res.data.url) {
+            $window.open(res.data.url, "_blank");
+          }
+        }, function (err) {
+          $log.log(err);
+          throw err;
+        });
       }
 
     };
