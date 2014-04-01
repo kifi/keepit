@@ -8,7 +8,9 @@ angular.module('kifi.profile', [
   'kifi.profileEmailAddresses',
   'kifi.profileChangePassword',
   'kifi.profileImage',
-  'jun.facebook'
+  'jun.facebook',
+  'angulartics',
+  'kifi.mixpanel'
 ])
 
 .config([
@@ -24,6 +26,8 @@ angular.module('kifi.profile', [
 .controller('ProfileCtrl', [
   '$scope', '$http', 'profileService', 'routeService', '$window',
   function ($scope, $http, profileService, routeService, $window) {
+
+    // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
     $window.document.title = 'Kifi • Your Profile';
     profileService.getNetworks();
