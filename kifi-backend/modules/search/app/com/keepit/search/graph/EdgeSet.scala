@@ -1,18 +1,13 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db.Id
-import com.keepit.common.logging.Logging
-import com.keepit.search.index.IdMapper
 import com.keepit.search.Searcher
 import com.keepit.search.query.QueryUtil._
-import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import scala.util.Sorting
 import org.apache.lucene.index.Term
 import com.keepit.search.util.LongArraySet
-import org.joda.time.DateTime
-import scala.collection.mutable.ArrayBuffer
+import java.util.Arrays
 
 trait EdgeSet[S,D] {
   val sourceId: Id[S]
@@ -74,7 +69,7 @@ trait DbIdSetEdgeSet[S,D] extends EdgeSet[S, D] {
       case _ =>
         val mapper = searcher.indexReader.asAtomicReader.getIdMapper
         val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
-        Sorting.quickSort(docids)
+        Arrays.sort(docids)
         cache = (searcher, docids)
         docids
     }

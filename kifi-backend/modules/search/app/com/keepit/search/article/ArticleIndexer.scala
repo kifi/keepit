@@ -9,7 +9,6 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
-import com.keepit.search.Lang
 import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
 import scala.util.Success
@@ -109,8 +108,8 @@ object ArticleIndexer extends Logging {
           uri.restriction.map{ reason =>
             doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
           }
-          val titleLang = article.titleLang.getOrElse(Lang("en"))
-          val contentLang = article.contentLang.getOrElse(Lang("en"))
+          val titleLang = article.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
+          val contentLang = article.contentLang.getOrElse(DefaultAnalyzer.defaultLang)
           doc.add(buildKeywordField("cl", contentLang.lang))
           doc.add(buildKeywordField("tl", titleLang.lang))
 
@@ -124,10 +123,10 @@ object ArticleIndexer extends Logging {
             article.description.getOrElse(""), "\n\n",
             article.keywords.getOrElse(""), "\n\n",
             article.media.getOrElse(""))
-          val titleAndUrl = article.title + " " + urlToIndexableString(uri.url)
+          val titleAndUrl = Array(article.title, "\n\n", urlToIndexableString(uri.url).getOrElse(""))
 
-          doc.add(buildTextField("t", titleAndUrl, titleAnalyzer))
-          doc.add(buildTextField("ts", titleAndUrl, titleAnalyzerWithStemmer))
+          doc.add(buildTextField("t", new MultiStringReader(titleAndUrl), titleAnalyzer))
+          doc.add(buildTextField("ts", new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
 
           doc.add(buildTextField("c", new MultiStringReader(content), contentAnalyzer))
           doc.add(buildTextField("cs", new MultiStringReader(content), contentAnalyzerWithStemmer))
