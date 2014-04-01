@@ -145,22 +145,23 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       } yield {
         val userId = socialUser.userId.get
         val userAgent = request.headers.get("User-Agent").getOrElse("NA")
-        val adminUserIdOpt = if (experiments.contains(ExperimentType.ADMIN)) Some(userId) else None
-        adminUserIdOpt.flatMap(_ => impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))) match {
-          case Some(impExtUserId) =>
+        if (experiments.contains(ExperimentType.ADMIN)) {
+          impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
             for {
               impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
               impSocUserInfo <- shoebox.getSocialUserInfosByUserId(impUserId)
             } yield {
-              StreamSession(impUserId, impSocUserInfo.head, experiments, adminUserIdOpt, userAgent)
+              StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), userAgent)
             }
-          case _ =>
-            Future.successful(StreamSession(userId, socialUser, experiments, adminUserIdOpt, userAgent))
+          } getOrElse {
+            Future.successful(StreamSession(userId, socialUser, experiments, Some(userId), userAgent))
+          }
+        } else {
+          Future.successful(StreamSession(userId, socialUser, experiments, None, userAgent))
         }
       }) flatMap identity
     }
   }
-
 
   def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     val connectTimer = accessLog.timer(WS_IN)
