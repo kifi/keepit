@@ -1,5 +1,5 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)" ng-blur="blur()">
+  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)">
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
@@ -63,7 +63,27 @@
         </div>
       </div>
 
+      <div ng-if="result.custom === 'cant_find'" class="fill-parent clickable" ng-click="data.showCantFindModal = true">
+        <img src="/img/friend-missing@2x.png" class="social-invite-image cant-find">
+        <div class="social-invite-summary">
+          <div class="social-invite-name social-invite-custom-email">Can't find your friend?</div>
+        </div>
+      </div>
+
       <div class="clearfix"></div>
     </li>
   </ul>
+  <div kf-modal show="data.showCantFindModal">
+    <div kf-basic-modal-content class="friend-not-found-modal">
+      <h1> We couldn't find any friends matching </h1>
+      <h2> '{{search.name}}' </h2>
+      <h3> How to fix it </h3>
+      <ul>
+        <li>Your friends list might not be up to date. <a href="javascript:">Try refreshing it.</a></li>
+        <li>Some of your friends may have privacy settings that prevent us from showing them. Tell them to go to kifi.com and sign up.
+        <li>Or just <a href="http://support.kifi.com/customer/portal/emails/new">contact us.</a></li>
+      </ul>
+
+    </div>
+  </div>
 </div>

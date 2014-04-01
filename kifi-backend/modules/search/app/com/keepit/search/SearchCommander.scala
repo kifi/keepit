@@ -22,6 +22,7 @@ import com.keepit.search.result.ResultMerger
 import com.keepit.search.result.ResultUtil
 import com.keepit.search.spellcheck.SpellCorrector
 import org.apache.lucene.search.{Explanation, Query}
+import com.keepit.search.index.DefaultAnalyzer
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -199,7 +200,7 @@ class SearchCommanderImpl @Inject() (
       }
       if (langs.isEmpty) {
         log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-        Set(Lang("en"))
+        Set(DefaultAnalyzer.defaultLang)
       } else {
         langs
       }
@@ -262,7 +263,7 @@ class SearchCommanderImpl @Inject() (
     val (config, _) = searchConfigManager.getConfig(userId, experiments)
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
-      case None => Seq(Lang("en"))
+      case None => Seq(DefaultAnalyzer.defaultLang)
     }
 
     shards.find(uriId).flatMap{ shard =>

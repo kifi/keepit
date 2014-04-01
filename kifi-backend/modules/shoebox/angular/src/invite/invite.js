@@ -5,7 +5,9 @@ angular.module('kifi.invite', [
   'kifi.profileService',
   'kifi.routeService',
   'jun.facebook',
-  'kifi.inviteService'
+  'kifi.inviteService',
+  'kifi.social',
+  'kifi.modal'
 ])
 
 .config([
@@ -54,6 +56,8 @@ angular.module('kifi.invite', [
       link: function (scope/*, element, attrs*/) {
         scope.networks = profileService.networks;
 
+        scope.data = scope.data || {};
+
         profileService.getNetworks();
       }
     };
@@ -71,13 +75,29 @@ angular.module('kifi.invite', [
       link: function (scope, element/*, attrs*/) {
         scope.search = {};
         scope.search.showDropdown = false;
+        scope.data = scope.data || {};
 
-        scope.results = inviteService.inviteList;
+        scope.results = [];
         scope.selected = inviteService.socialSelected;
 
-        scope.change = _.debounce(function () { // todo: integrate debounce into Clutch, remove me
+        scope.change = _.debounce(function () { // todo: integrate service-wide debounce into Clutch, remove me
           inviteService.socialSearch(scope.search.name).then(function (res) {
-            if (!res || res.length === 0) {
+
+            var set = _.clone(res);
+
+            var socialConns = _.filter(res, function (result) {
+              return result.network && result.network.indexOf('fortytwo') === -1;
+            }).length;
+
+            if (scope.search.name.length > 2 && (res.length < 3 || socialConns < 3)) {
+              set.push({
+                custom: 'cant_find'
+              });
+            }
+
+            scope.results = set;
+
+            if (!set || set.length === 0) {
               scope.search.showDropdown = false;
             } else {
               scope.search.showDropdown = true;
@@ -94,7 +114,7 @@ angular.module('kifi.invite', [
         }
 
         scope.invite = function (result) {
-          $log('this person:', result);
+          $log.log('this person:', result);
         };
 
         scope.$on('$destroy', function () {
@@ -102,10 +122,6 @@ angular.module('kifi.invite', [
         });
 
         $document.on('click', clickOutside);
-
-        scope.blur = function () {
-          return true;
-        };
 
       }
     };
