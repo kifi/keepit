@@ -1,7 +1,10 @@
-var getTextFormatter = (function () {
+// @require scripts/emoji.js
+
+var formatMessage = (function () {
   'use strict';
   // tip: debuggex.com helps clarify regexes
-  var kifiSelMarkdownLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
+  var kifiSelMarkdownToLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
+  var kifiSelMarkdownToTextRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
   var escapedRightParenRe = /\\\)/g;
   var escapedRightBracketRe = /\\\]/g;
   var emailAddrRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)(?:\b|$)/;
@@ -9,25 +12,55 @@ var getTextFormatter = (function () {
   var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
   var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
 
-  function format(text, render) {
+  var formatAsHtml =
+    processKifiSelMarkdownToLinksThen.bind(
+      null,
+      processEmailAddressesThen.bind(
+        null,
+        processUrls.bind(
+          null,
+          processEmoji)),
+      processEmoji);
+
+  var formatAsHtmlSnippet =
+    processKifiSelMarkdownToTextThen.bind(
+      null,
+      processEmoji);
+
+  function renderAndFormatFull(text, render) {
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return processLineBreaks(processLookHereLinksEtc(render(text)));
+    return processLineBreaks(formatAsHtml(render(text)));
   }
 
-  function processLookHereLinksEtc(text) {
-    var parts = text.split(kifiSelMarkdownLinkRe);
+  function renderAndFormatSnippet(text, render) {
+    // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
+    var html = formatAsHtmlSnippet(render(text));
+    // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
+    return html.length > 200 ? html.substring(0, 190) + '…' : html;
+  }
+
+  function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
+    var parts = text.split(kifiSelMarkdownToLinkRe);
     for (var i = 1; i < parts.length; i += 3) {
       parts[i] = '<a href="x-kifi-sel:' + parts[i+1].replace(escapedRightParenRe, ')') + '">' +
-        Mustache.escape(parts[i].replace(escapedRightBracketRe, ']'));
+        processInside(parts[i].replace(escapedRightBracketRe, ']'));
       parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {
-      parts[i] = processEmailAddressesEtc(parts[i]);
+      parts[i] = processBetween(parts[i]);
     }
     return parts.join('');
   }
 
-  function processEmailAddressesEtc(text) {
+  function processKifiSelMarkdownToTextThen(process, text) {
+    var parts = text.split(kifiSelMarkdownToTextRe);
+    for (var i = 1; i < parts.length; i += 2) {
+      parts[i] = parts[i].replace(escapedRightBracketRe, ']');
+    }
+    return process(parts.join(''));
+  }
+
+  function processEmailAddressesThen(process, text) {
     if (~text.indexOf('@', 1)) {
       var parts = text.split(emailAddrRe);
       for (var i = 1; i < parts.length; i += 2) {
@@ -35,15 +68,15 @@ var getTextFormatter = (function () {
         parts[i] = '<a href="mailto:' + escapedAddr + '">' + escapedAddr + '</a>';
       }
       for (var i = 0; i < parts.length; i += 2) {
-        parts[i] = processUrlsEtc(parts[i]);
+        parts[i] = process(parts[i]);
       }
       return parts.join('');
     } else {
-      return processUrlsEtc(text);
+      return process(text);
     }
   }
 
-  function processUrlsEtc(text) {
+  function processUrls(process, text) {
     var parts = text.split(uriRe);
     for (var i = 1; i < parts.length; i += 3) {
       var uri = parts[i];
@@ -55,9 +88,13 @@ var getTextFormatter = (function () {
       parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {
-      parts[i] = Mustache.escape(parts[i]);
+      parts[i] = process(parts[i]);
     }
     return parts.join('');
+  }
+
+  function processEmoji(text) {
+    return Mustache.escape(emoji.supported() ? emoji.decode(text) : text);
   }
 
   function processLineBreaks(html) {
@@ -70,55 +107,40 @@ var getTextFormatter = (function () {
       '</div><div class="kifi-message-p">';
   }
 
-  return function() {
-    return format;
+  return {
+    full: function() {
+      return renderAndFormatFull;
+    },
+    snippet: function () {
+      return renderAndFormatSnippet;
+    }
   };
 }());
 
-var getSnippetFormatter = (function () {
-  'use strict';
-  var kifiSelMarkdownLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
-  var escapedRightBracketRe = /\\\]/g;
-  return function () {
-    return function(text, render) {
-      // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
-      text = render(text);
-
-      // plain-textify look-here links (from markdown)
-      var parts = text.split(kifiSelMarkdownLinkRe);
-      for (var i = 1; i < parts.length; i += 2) {
-        parts[i] = parts[i].replace(escapedRightBracketRe, ']');
-      }
-
-      var escaped = Mustache.escape(parts.join(''));
-      return escaped.length > 200 ? escaped.substring(0, 190) + '…' : escaped;
-    };
-  };
-}());
-
-function getLocalDateFormatter() {
+function formatLocalDate() {
  'use strict';
   return function(text, render) {
     try {
       return new Date(render(text)).toString();
     } catch (e) {
-      return "";
+      return '';
     }
   }
 }
 
 function convertDraftToText(html) {
  'use strict';
-  html = html
+  var html2 = html
     .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
     .replace(/<br\s*[\/]?>/gi, '\n')
     .replace(/<\/div><div>/gi, '\n')
     .replace(/<div\s*[\/]?>/gi, '\n')
     .replace(/<\/div>/gi, '')
     .replace(/<a [^>]*\bhref="x-kifi-sel:([^"]*)"[^>]*>(.*?)<\/a>/gi, function($0, $1, $2) {
-      return "[" + $2.replace(/\]/g, "\\]") + "](x-kifi-sel:" + $1.replace(/\)/g, "\\)") + ")";
+      return '[' + $2.replace(/\]/g, '\\]') + '](x-kifi-sel:' + $1.replace(/\)/g, '\\)') + ')';
     });
-  return $('<div>').html(html).text().trim();
+  html2 = emoji.encode(html2);
+  return $('<div>').html(html2).text().trim();
 }
 
 var formatAuxData = (function () {
