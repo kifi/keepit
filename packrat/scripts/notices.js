@@ -173,8 +173,8 @@ panes.notices = function () {
 
   function renderOne(notice) {
     notice.isVisited = !notice.unread;
-    notice.formatMessage = getSnippetFormatter;
-    notice.formatLocalDate = getLocalDateFormatter;
+    notice.formatMessage = formatMessage.snippet;
+    notice.formatLocalDate = formatLocalDate;
     notice.cdnBase = cdnBase;
     switch (notice.category) {
     case 'message':
