@@ -1,10 +1,14 @@
 'use strict';
 
-angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
+angular.module('kifi.keepService', [
+    'kifi.undo',
+    'kifi.clutch',
+    'angulartics'
+  ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch) {
+    '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics) {
 
     var list = [],
       selected = {},
@@ -574,6 +578,12 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
           if (!data.mayHaveMore) {
             end = true;
           }
+
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'searchKifi',
+            'hits': hits.size,
+            'mayHaveMore': data.mayHaveMore
+          });
 
           _.forEach(hits, processHit);
 
