@@ -1,5 +1,5 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)" ng-blur="blur()">
+  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)">
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
@@ -63,11 +63,17 @@
         </div>
       </div>
 
+      <div ng-if="result.custom === 'cant_find'" class="fill-parent clickable" ng-click="data.showCantFindModal = true">
+        <img src="/img/friend-missing@2x.png" class="social-invite-image cant-find">
+        <div class="social-invite-summary">
+          <div class="social-invite-name social-invite-custom-email">Can't find your friend?</div>
+        </div>
+      </div>
+
       <div class="clearfix"></div>
     </li>
   </ul>
-  <div ng-click="data.showModalX = true">Show me the Modal!</div>
-  <div kf-modal show="data.showModalX">
+  <div kf-modal show="data.showCantFindModal">
     <div kf-basic-modal-content class="friend-not-found-modal">
       <h1> We couldn't find any friends matching </h1>
       <h2> '{{search.name}}' </h2>
