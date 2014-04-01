@@ -36,7 +36,7 @@
 
     function getUserStatus() {
       var userStatus = 'standard';
-      if (profileService.me && profileService.me.experiments) {
+      if (profileService && profileService.me && profileService.me.experiments) {
         var experiments = profileService.me.experiments;
         if (experiments.indexOf('fake') > -1) {
           userStatus = 'fake';
@@ -68,21 +68,21 @@
         }
       } else {
         identifiedViewEventQueue.push(path);
-        if (profileService.me && profileService.me.id) {
+        if (profileService && profileService.me && profileService.me.id) {
           userId = profileService.me.id;
           var toSend = identifiedViewEventQueue.slice();
           identifiedViewEventQueue.length = 0;
           toSend.forEach(function (path) {
-            registerPageTrackForUser(mixpanel, path, $window.location.origin);
+            registerPageTrackForUser(mixpanel, path, origin);
           });
         }
       }
     }
 
-    function registerPageTrackForVisitor(mixpanel, path) {
+    function registerPageTrackForVisitor(mixpanel, path, origin) {
       mixpanel.track('visitor_viewed_page', {
         type: getLocation(path),
-        origin: $window.location.origin
+        origin: origin
       });
     }
 
@@ -91,8 +91,9 @@
         if (profileService && $window) {
           var mixpanel = $window.mixpanel;
           var normalizedPath = getLocation(path);
-          registerPageTrackForVisitor(mixpanel, normalizedPath, $window);
-          registerPageTrackForUser(mixpanel, normalizedPath, $window, profileService);
+          var origin = $window.location.origin;
+          registerPageTrackForVisitor(mixpanel, normalizedPath, origin);
+          registerPageTrackForUser(mixpanel, normalizedPath, origin);
         }
       });
     });
