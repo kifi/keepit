@@ -75,6 +75,7 @@ angular.module('kifi.invite', [
       link: function (scope, element/*, attrs*/) {
         scope.search = {};
         scope.search.showDropdown = false;
+        scope.data = scope.data || {};
 
         scope.results = [];
         scope.selected = inviteService.socialSelected;
@@ -85,7 +86,7 @@ angular.module('kifi.invite', [
             var set = _.clone(res);
 
             var socialConns = _.filter(res, function (result) {
-              return result.network && result.network.indexOf('fortytwo') == -1;
+              return result.network && result.network.indexOf('fortytwo') === -1;
             }).length;
 
             if (scope.search.name.length > 2 && (res.length < 3 || socialConns < 3)) {

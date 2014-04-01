@@ -102,7 +102,7 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
           id: platform + '/' + identifier
         }).then(function (res) {
           if (res.data.url) {
-            $window.open(res.data.url, "_blank");
+            $window.open(res.data.url, '_blank');
           }
         }, function (err) {
           $log.log(err);

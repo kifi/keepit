@@ -33,7 +33,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       scope.email    = network === 'email';
 
       scope.action = function () {
-        $window.open("http://facebook.com", "_blank");
+        $window.open('http://facebook.com', '_blank');
         inviteService.invite(network, inNetworkId).then(function () {
           scope.invited = true;
           scope.actionText = 'Resend';
