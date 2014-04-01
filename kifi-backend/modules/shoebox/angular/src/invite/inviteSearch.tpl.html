@@ -1,5 +1,5 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)" ng-blur="blur()">
+  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)">
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
@@ -60,6 +60,13 @@
         </div>
         <div class="social-invite-action">
           <div class="social-invite-button" ng-click="invite(result)">Add</div>
+        </div>
+      </div>
+
+      <div ng-if="result.custom === 'cant_find'">
+        <img src="/img/friend-missing@2x.png" class="social-invite-image cant-find">
+        <div class="social-invite-summary">
+          <div class="social-invite-name social-invite-custom-email">Can't find your friend?</div>
         </div>
       </div>
 
