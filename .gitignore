@@ -138,3 +138,7 @@ node_modules
 kifi-backend/modules/common/.idea
 assets.tsv
 patch.diff
+
+# IDEA #
+###########
+kifi-backend/modules/shoebox/angular/.idea/*

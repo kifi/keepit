@@ -59,6 +59,7 @@
           mixpanel.track('user_viewed_page', {
             type: getLocation(path),
             origin: origin,
+            siteVersion: 2,
             userStatus: getUserStatus()
           });
         } finally {
@@ -82,7 +83,8 @@
     function registerPageTrackForVisitor(mixpanel, path, origin) {
       mixpanel.track('visitor_viewed_page', {
         type: getLocation(path),
-        origin: origin
+        origin: origin,
+        siteVersion: 2
       });
     }
 
