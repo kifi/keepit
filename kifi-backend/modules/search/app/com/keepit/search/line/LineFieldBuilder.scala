@@ -49,8 +49,10 @@ class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStr
       val (lineStart, lineEnd) = lineRange(lineNo)
       incr = lineStart - curPos
       posLimit = lineEnd - 1
+      baseTokenStream.end()
+      baseTokenStream.close()
       baseTokenStream = tokenStreamFunc(fieldName, text, lang)
-      baseTokenStream.reset
+      baseTokenStream.reset()
       baseTermAttr =
         if (baseTokenStream.hasAttribute(classOf[CharTermAttribute])) {
           baseTokenStream.getAttribute(classOf[CharTermAttribute])
@@ -81,4 +83,7 @@ class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStr
       case false => false
     }
   }
+
+  override def end(): Unit = baseTokenStream.end()
+  override def close(): Unit = baseTokenStream.close()
 }

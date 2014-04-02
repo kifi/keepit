@@ -279,6 +279,6 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
     }
   }
 
-  override def freq() = 1
+  override def freq(): Int = 1
 }
 
