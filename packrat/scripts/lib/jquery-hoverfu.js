@@ -113,10 +113,8 @@
         attach($h, opts);
         $h.position(opts.position).css({visibility: '', display: ''}).detach();
       }
-      if (opts.canLeaveFor) {
-        $h.on("mouseover.hoverfu", $.proxy(onMouseOver, null, null))
-          .on("mouseout.hoverfu", onMouseOut);
-      }
+      $h.on("mouseover.hoverfu", $.proxy(onMouseOver, null, null))
+        .on("mouseout.hoverfu", onMouseOut);
       var ms = showImmediately ? 0 : (opts.mustHoverFor || 0) - (Date.now() - createStartTime);
       if (ms > 0) {
         data.show = setTimeout(show.bind(a), ms);
@@ -156,50 +154,51 @@
     if (data.showing) {
       data.showing = false;
       data.fadeOutStartTime = Date.now();
-      data.$h.removeClass("kifi-showing").on("transitionend", function end(e) {
+      data.$h.removeClass("kifi-showing").on("transitionend", function (e) {
         if (e.target === this && e.originalEvent.propertyName === "opacity") {
           delete data.fadeOutStartTime;
-          data.$h.off("transitionend", end).remove();
+          data.$h.remove();
           delete data.$h;
           if (data.mouseoverTimeStamp > data.mouseoutTimeStamp && this.contains(data.mouseoverEl)) {
             console.log("[hoverfu.hide:transitionend] faking mouseout");
-            data.$a.trigger($.Event("mouseout", {relatedTarget: doc, hoverfu: 'fake'}));
+            data.$a.trigger($.Event("mouseout", {relatedTarget: doc, originalEvent: {}, hoverfu: 'fake'}));
           }
         }
       });
-    } else if (!isFadingOut(data)) {
+    } else if (data.$h && !isFadingOut(data)) {
+      data.$h.remove();
       delete data.$h;
     }
   }
   function onMouseOver(create, e) {  // $a or $h
-    if (e.relatedTarget && this.contains(e.relatedTarget) || e.originalEvent.isTrusted === false) return;
-    var data = getData(this);
+    var data = getData(this), a = data.$a[0], h = (data.$h || [])[0], rT = e.relatedTarget;
+    if (rT && (a.contains(rT) || h && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
     if (e.originalEvent.hoverfu === data) return;  // e.g. mouseover $h from containing $a propagated up to $a
     e.originalEvent.hoverfu = data;
     data.mouseoverTimeStamp = e.timeStamp || Date.now();
     data.mouseoverEl = e.target;
-    if (!data.$h) {
+    if (!h) {
       createHover(data, create);
     } else if (data.showing) {
       clearTimeout(data.hide), delete data.hide;
       if (data.opts.canLeaveFor) {
         $(doc).off("mousemove.hoverfu");
       }
-      if (data.opts.hideAfter && this === data.$a[0]) {
+      if (data.opts.hideAfter && this === a) {
         data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
       }
     }
   }
   function onMouseOut(e) {  // $a or $h
-    if (e.relatedTarget && this.contains(e.relatedTarget) || e.originalEvent.isTrusted === false) return;
-    var data = getData(this), a = data.$a[0], edge;
+    var data = getData(this), a = data.$a[0], h = (data.$h || [])[0], rT = e.relatedTarget, edge;
+    if (rT && (a.contains(rT) || h && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
     clearTimeout(data.show), delete data.show;
     data.mouseoutTimeStamp = e.timeStamp || Date.now();
     if (data.showing) {
       if (data.opts.hideAfter) {
         clearTimeout(data.hide), delete data.hide;
       }
-      if (data.opts.canLeaveFor && (edge = between(this, this === a ? data.$h[0] : a, e.clientX, e.clientY))) {
+      if (data.opts.canLeaveFor && (edge = between(this, this === a ? h : a, e.clientX, e.clientY))) {
         data.hide = setTimeout(hide.bind(a), data.opts.canLeaveFor);
         data.x = e.clientX;
         data.y = e.clientY;
@@ -207,7 +206,8 @@
       } else {
         hide.call(a);
       }
-    } else if (!isFadingOut(data)) {
+    } else if (h && !isFadingOut(data)) {
+      data.$h.remove();
       delete data.$h;
     }
   }

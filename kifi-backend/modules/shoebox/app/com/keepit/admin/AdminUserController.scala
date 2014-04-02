@@ -448,17 +448,18 @@ class AdminUserController @Inject() (
   def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit request =>
       val user = userRepo.get(userId)
-      val pics = userPictureRepo.getByUser(userId)
-      val pic = pics.find(_.id.get == pictureId)
-      if (pic.isEmpty) {
-        Forbidden
-      } else {
+      userPictureRepo.getByUser(userId).find(_.id.get == pictureId) tap { pic =>
         if (pic.get.state != UserPictureStates.ACTIVE) {
           userPictureRepo.save(pic.get.withState(UserPictureStates.ACTIVE))
         }
         userRepo.save(user.copy(pictureName = Some(pic.get.name), userPictureId = pic.get.id))
       }
+    } tap { pic =>
+      eliza.sendToUser(userId, Json.arr("new_pic", pic.get.name))
+    } map { _ =>
       Ok
+    } getOrElse {
+      BadRequest
     }
   }
 

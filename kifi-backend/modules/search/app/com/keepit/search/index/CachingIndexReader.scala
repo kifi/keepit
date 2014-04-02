@@ -19,15 +19,12 @@ import org.apache.lucene.index.Terms
 import org.apache.lucene.index.TermsEnum
 import org.apache.lucene.index.TermsEnum.SeekStatus
 import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.Query
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.FixedBitSet
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.SortedMap
-import scala.collection.SortedSet
-import java.util.Arrays
 import java.util.Comparator
 import java.util.{Iterator=>JIterator}
 

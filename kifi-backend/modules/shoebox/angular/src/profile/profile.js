@@ -8,7 +8,9 @@ angular.module('kifi.profile', [
   'kifi.profileEmailAddresses',
   'kifi.profileChangePassword',
   'kifi.profileImage',
-  'jun.facebook'
+  'jun.facebook',
+  'angulartics',
+  'kifi.mixpanel'
 ])
 
 .config([
@@ -22,11 +24,13 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window',
-  function ($scope, $http, profileService, routeService, $window) {
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, profileService, routeService, $window, socialService) {
+
+    // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
     $window.document.title = 'Kifi • Your Profile';
-    profileService.getNetworks();
+    socialService.refresh();
 
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
@@ -149,58 +153,66 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfLinkedinConnectButton', [
-  'profileService',
-  function (profileService) {
+  'socialService',
+  function (socialService) {
     return {
       restrict: 'A',
       link: function (scope) {
-        scope.isLinkedInConnected = (profileService.me && profileService.me.linkedInConnected) || false;
+        scope.isLinkedInConnected = socialService.linkedin && !!socialService.linkedin.profileUrl;
+
+        scope.linkedin = socialService.linkedin;
 
         scope.$watch(function () {
-          return profileService.me.linkedInConnected;
-        }, function (status) {
-          scope.isLinkedInConnected = status;
-          var li = _.find(profileService.networks, function (n) {
-            return n.network === 'linkedin';
-          });
-          scope.liProfileUrl = li && li.profileUrl;
+          return socialService.linkedin && socialService.linkedin.profileUrl;
+        }, function () {
+          var linkedin = socialService.linkedin;
+          if (linkedin && linkedin.profileUrl) {
+            scope.isLinkedInConnected = true;
+            scope.liProfileUrl = linkedin.profileUrl;
+          }
         });
 
-        scope.connectLinkedIn = profileService.social.connectLinkedIn;
-        scope.disconnectLinkedIn = profileService.social.disconnectLinkedIn;
+        socialService.refresh();
+
+        scope.connectLinkedIn = socialService.connectLinkedIn;
+        scope.disconnectLinkedIn = socialService.disconnectLinkedIn;
       }
     };
   }
 ])
 
 .directive('kfFacebookConnectButton', [
-  'profileService',
-  function (profileService) {
+  'socialService',
+  function (socialService) {
     return {
       restrict: 'A',
       link: function (scope) {
-        scope.isFacebookConnected = (profileService.me && profileService.me.facebookConnected) || false;
+        scope.isFacebookConnected = socialService.facebook && !!socialService.facebook.profileUrl;
+
+        scope.facebook = socialService.facebook;
 
         scope.$watch(function () {
-          return profileService.me.facebookConnected;
-        }, function (status) {
-          scope.isFacebookConnected = status;
-          var fb = _.find(profileService.networks, function (n) {
-            return n.network === 'facebook';
-          });
-          scope.fbProfileUrl = fb && fb.profileUrl;
+          return socialService.facebook && socialService.facebook.profileUrl;
+        }, function () {
+          var facebook = socialService.facebook;
+          if (facebook && facebook.profileUrl) {
+            scope.isFacebookConnected = true;
+            scope.fbProfileUrl = facebook.profileUrl;
+          }
         });
 
-        scope.connectFacebook = profileService.social.connectFacebook;
-        scope.disconnectFacebook = profileService.social.disconnectFacebook;
+        socialService.refresh();
+
+        scope.connectFacebook = socialService.connectFacebook;
+        scope.disconnectFacebook = socialService.disconnectFacebook;
       }
     };
   }
 ])
 
 .directive('kfEmailImport', [
-  'profileService', '$window', 'env',
-  function (profileService, $window, env) {
+  'profileService', '$window', 'env', 'socialService',
+  function (profileService, $window, env, socialService) {
     return {
       restrict: 'A',
       replace: true,
@@ -210,9 +222,9 @@ angular.module('kifi.profile', [
 
         scope.addressBookImportText = 'Import a Gmail account';
 
-        profileService.getAddressBooks().then(function (data) {
-          scope.addressBooks = data;
-          if (data && data.length > 0) {
+        socialService.refresh().then(function () {
+          scope.addressBooks = socialService.addressBooks;
+          if (socialService.addressBooks && socialService.addressBooks.length > 0) {
             scope.addressBookImportText = 'Import another Gmail account';
           }
         });

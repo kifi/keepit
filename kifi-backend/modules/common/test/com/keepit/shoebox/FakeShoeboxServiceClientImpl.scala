@@ -381,12 +381,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
 
-  def uriChannelFanout(uri: String,msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
-  def userChannelFanout(userId: com.keepit.common.db.Id[com.keepit.model.User],msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
-  def uriChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
-  def userChannelBroadcastFanout(msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
-  def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
-
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]] = {
