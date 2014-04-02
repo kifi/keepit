@@ -5,8 +5,7 @@ angular.module('kifi.friends', [
   'kifi.social',
   'kifi.profileService',
   'kifi.routeService',
-  'kifi.invite',
-  'angulartics'
+  'kifi.invite'
 ])
 
 .config([
@@ -20,8 +19,8 @@ angular.module('kifi.friends', [
 ])
 
 .controller('FriendsCtrl', [
-  '$scope', '$window', 'friendService', '$analytics',
-  function ($scope, $window, friendService, $analytics) {
+  '$scope', '$window', 'friendService',
+  function ($scope, $window, friendService) {
     $window.document.title = 'Kifi • Your Friends on Kifi';
 
     $scope.requests = friendService.requests;
@@ -42,11 +41,6 @@ angular.module('kifi.friends', [
     $scope.friends = friendService.friends;
     friendService.getKifiFriends();
     friendService.getRequests();
-
-    $analytics.eventTrack('user_clicked_page', {
-      'action': 'addFriends'
-    });
-
   }
 ]);
 
