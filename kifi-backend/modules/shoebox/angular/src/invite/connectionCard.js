@@ -6,7 +6,8 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
 .directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', function ($window, $http, routeService, inviteService) {
   return {
     scope: {
-      'friend': '&'
+      'friend': '&',
+      'refreshScroll': '='
     },
     replace: true,
     restrict: 'A',
@@ -65,6 +66,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
         scope.byline = network === 'email' ? inNetworkId : network.charAt(0).toUpperCase() + network.slice(1);
         scope.actionText = 'Add';
       }
+      scope.refreshScroll();
     }
   };
 }]);
