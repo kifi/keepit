@@ -15,7 +15,7 @@ object EdgeDataReader {
 
 sealed trait EdgeKind[E <: EdgeDataReader] {
   implicit def kind: EdgeKind[E] = this
-  implicit def header: KindHeader[E]
+  implicit def header: Byte
   def apply(rawDataReader: RawDataReader): E
   def dump(data: E): Array[Byte]
 }
@@ -23,19 +23,19 @@ sealed trait EdgeKind[E <: EdgeDataReader] {
 object EdgeKind {
   val all: Set[EdgeKind[_ <: EdgeDataReader]] = CompanionTypeSystem[EdgeDataReader, EdgeKind[_ <: EdgeDataReader]]("E")
   private val byHeader: Map[Byte, EdgeKind[_ <: EdgeDataReader]] = {
+    require(all.forall(_.header > 0), "EdgeKind headers must be positive.")
     require(all.size == all.map(_.header).size, "Duplicate EdgeKind headers")
-    all.map { edgeKind => edgeKind.header.code -> edgeKind }.toMap
+    all.map { edgeKind => edgeKind.header -> edgeKind }.toMap
   }
   def apply(header: Byte): EdgeKind[_ <: EdgeDataReader] = byHeader(header)
 }
 
 trait NoEdgeDataReader extends EdgeDataReader {
   type E = NoEdgeDataReader
-  def kind: NoEdgeDataReader
 }
 
 case object NoEdgeDataReader extends EdgeKind[NoEdgeDataReader] with NoEdgeDataReader {
-  val header = KindHeader[NoEdgeDataReader](1)
+  val header = 1.toByte
   def apply(rawDataReader: RawDataReader): NoEdgeDataReader = this
   def dump(data: NoEdgeDataReader): Array[Byte] = Array.empty
 }

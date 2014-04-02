@@ -2,13 +2,9 @@ package com.keepit.graph.model
 
 import scala.util.Try
 
-case class KindHeader[T](code: Byte) { // extends AnyVal
-  require(code > 0, "Kind header must be positive")
-}
-
 case class VertexId(id: Long) extends AnyVal {
   def asId[V <: VertexDataReader](implicit kind: VertexKind[V]): VertexDataId[V] = {
-    require(code == kind.header.code, "Invalid VertexId")
+    require(code == kind.header, "Invalid VertexId")
     VertexDataId[V](dataId)
   }
   def asIdOpt[V <: VertexDataReader](implicit kind: VertexKind[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
@@ -23,8 +19,8 @@ object VertexId {
   val headerSpace = 8
   val dataIdSpace = totalSpace - headerSpace
   val maxVertexDataId: Long = (1.toLong << dataIdSpace) - 1
-  def apply[V <: VertexDataReader](id: VertexDataId[V])(implicit header: KindHeader[V]): VertexId = {
+  def apply[V <: VertexDataReader](id: VertexDataId[V])(implicit kind: VertexKind[V]): VertexId = {
     require(id.id <= maxVertexDataId, s"VertexDataId $id is too large to be globalized")
-    VertexId((header.code.toLong << dataIdSpace) | id.id)
+    VertexId((kind.header.toLong << dataIdSpace) | id.id)
   }
 }
