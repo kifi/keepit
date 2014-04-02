@@ -155,8 +155,13 @@ class SemanticVectorBuilder(windowSize: Int) {
   def load(tokenStream: TokenStream) {
     val termAttr = tokenStream.getAttribute(classOf[CharTermAttribute])
 
-    tokenStream.reset()
-    while (tokenStream.incrementToken()) if (termAttr.length > 0) add(new String(termAttr.buffer, 0, termAttr.length))
+    try {
+      tokenStream.reset()
+      while (tokenStream.incrementToken()) if (termAttr.length > 0) add(new String(termAttr.buffer, 0, termAttr.length))
+      tokenStream.end()
+    } finally {
+      tokenStream.close()
+    }
     flush
   }
 

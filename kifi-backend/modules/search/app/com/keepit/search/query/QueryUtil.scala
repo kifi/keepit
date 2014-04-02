@@ -172,12 +172,15 @@ object QueryUtil extends Logging {
     val ts = analyzer.tokenStream("foo", new StringReader(queryText))
     val offset = ts.addAttribute(classOf[OffsetAttribute])
     val startOffsets = ListBuffer.empty[(Int, Int)]
-    ts.reset()
-    while (ts.incrementToken()){
-      startOffsets.append((offset.startOffset, offset.endOffset))
+    try {
+      ts.reset()
+      while (ts.incrementToken()){
+        startOffsets.append((offset.startOffset, offset.endOffset))
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
-    ts.end()
-    ts.close()
     startOffsets.toSeq
   }
 }

@@ -42,12 +42,17 @@ trait FieldDecoder {
     val out = ArrayBuffer.empty[(String, Int, String)]
     var pos = 0
 
-    ts.reset()
-    while (ts.incrementToken()) {
-      val term = termAttr.map(a => new String(a.buffer, 0, a.length)).getOrElse("")
-      pos += posIncrAttr.map(a => a.getPositionIncrement).getOrElse(0)
-      val payload = payloadAttr.map(a => a.getPayload()).map(p => decodePayload(p)).getOrElse("")
-      out.append((term, pos, payload))
+    try {
+      ts.reset()
+      while (ts.incrementToken()) {
+        val term = termAttr.map(a => new String(a.buffer, 0, a.length)).getOrElse("")
+        pos += posIncrAttr.map(a => a.getPositionIncrement).getOrElse(0)
+        val payload = payloadAttr.map(a => a.getPayload()).map(p => decodePayload(p)).getOrElse("")
+        out.append((term, pos, payload))
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
     out
   }
