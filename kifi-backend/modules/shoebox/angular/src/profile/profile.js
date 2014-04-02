@@ -9,8 +9,7 @@ angular.module('kifi.profile', [
   'kifi.profileChangePassword',
   'kifi.profileImage',
   'jun.facebook',
-  'angulartics',
-  'kifi.mixpanel'
+  'angulartics'
 ])
 
 .config([

@@ -3,7 +3,7 @@
 */
 (function (angular) {
   'use strict';
-  var $window, profileService;
+  var $window, $log, profileService;
 
   /**
    * @name kifi.mixpanel
@@ -48,7 +48,7 @@
       return userStatus;
     }
 
-    function registerPageTrackForUser(mixpanel, path, origin) {
+    function pageTrackForUser(mixpanel, path, origin) {
       if (userId) {
         var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
         try {
@@ -56,6 +56,7 @@
             origin = $window.location.origin;
           }
           mixpanel.identify(userId);
+          $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
           mixpanel.track('user_viewed_page', {
             type: getLocation(path),
             origin: origin,
@@ -74,13 +75,14 @@
           var toSend = identifiedViewEventQueue.slice();
           identifiedViewEventQueue.length = 0;
           toSend.forEach(function (path) {
-            registerPageTrackForUser(mixpanel, path, origin);
+            pageTrackForUser(mixpanel, path, origin);
           });
         }
       }
     }
 
-    function registerPageTrackForVisitor(mixpanel, path, origin) {
+    function pageTrackForVisitor(mixpanel, path, origin) {
+      $log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
       mixpanel.track('visitor_viewed_page', {
         type: getLocation(path),
         origin: origin,
@@ -94,8 +96,8 @@
           var mixpanel = $window.mixpanel;
           var normalizedPath = getLocation(path);
           var origin = $window.location.origin;
-          registerPageTrackForVisitor(mixpanel, normalizedPath, origin);
-          registerPageTrackForUser(mixpanel, normalizedPath, origin);
+          pageTrackForVisitor(mixpanel, normalizedPath, origin);
+          pageTrackForUser(mixpanel, normalizedPath, origin);
         }
       });
     });
@@ -104,16 +106,18 @@
       $analyticsProvider.registerEventTrack(function (action, properties) {
         if ($window) {
           var mixpanel = $window.mixpanel;
+          $log.log('mixpanelService.eventTrack(' + action + ')', properties);
           mixpanel.track(action, properties);
         }
       });
     });
   }])
   .run([
-      'profileService', '$window',
-      function (p, w) {
+      'profileService', '$window', '$log',
+      function (p, w, l) {
         $window = w;
         profileService = p;
+        $log = l;
       }
     ]);
 
