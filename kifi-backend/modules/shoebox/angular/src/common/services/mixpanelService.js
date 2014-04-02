@@ -56,7 +56,7 @@
             origin = $window.location.origin;
           }
           mixpanel.identify(userId);
-          $log.log('mixpanelService.registerPageTrackForUser(' + path + '):' + origin);
+          $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
           mixpanel.track('user_viewed_page', {
             type: getLocation(path),
             origin: origin,
@@ -75,7 +75,7 @@
           var toSend = identifiedViewEventQueue.slice();
           identifiedViewEventQueue.length = 0;
           toSend.forEach(function (path) {
-            registerPageTrackForUser(mixpanel, path, origin);
+            pageTrackForUser(mixpanel, path, origin);
           });
         }
       }
