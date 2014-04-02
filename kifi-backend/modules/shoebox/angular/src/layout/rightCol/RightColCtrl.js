@@ -11,9 +11,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       return installService.installInProgress;
     };
 
-    $scope.triggerInstall = function () {
-      installService.triggerInstall();
-    };
+    $scope.triggerInstall = installService.triggerInstall();
 
     // onboarding.js is using these functions
     $window.getMe = function () {

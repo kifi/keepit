@@ -429,7 +429,6 @@ angular.module('kifi.detail',
 
         var scrollRefresh = _.throttle(function () {
           scope.refreshScroll();
-          console.log("JUHU!");
         }, 150);
         $window.addEventListener('resize', scrollRefresh);
         scope.$on('$destroy', function () {
