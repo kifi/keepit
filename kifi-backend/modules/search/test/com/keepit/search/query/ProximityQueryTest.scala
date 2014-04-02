@@ -64,7 +64,7 @@ class ProximityQueryTest extends Specification {
     DirectoryReader.open(ramDir)
   }
 
-  val reader = new SlowCompositeReaderWrapper(indexReader)
+  val reader = SlowCompositeReaderWrapper.wrap(indexReader)
   val readerContextLeaves = reader.leaves()
   val readerContext = readerContextLeaves.get(0)
 
