@@ -3,10 +3,11 @@
 angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope) {
 
     $scope.search = {};
+    $scope.data = $scope.data || {};
 
     $scope.isEmpty = function () {
       return !$scope.search.text;
@@ -74,7 +75,7 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     function handleInjectedState(state) {
       if (state) {
         if (state.m && state.m === '1') {
-          $scope.showEmailModal = true;
+          $scope.data.showEmailModal = true;
           $scope.modal = 'email';
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];
@@ -86,6 +87,37 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       }
     }
     handleInjectedState(injectedState.state);
+
+    function initBookmarkImport(count, msgEvent) {
+      $scope.modal = 'import_bookmarks';
+      $scope.data.showImportModal = true;
+      $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
+    }
+
+    $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
+      initBookmarkImport(count, msgEvent);
+    });
+
+    $scope.importBookmarks = function () {
+      $scope.data.showImportModal = false;
+
+      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+      if (!kifiVersion) {
+        $scope.modal = 'import_bookmarks_error';
+        $scope.data.showImportError = true;
+        return;
+      }
+
+      var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+      if (event) {
+        event.source.postMessage('import_bookmarks', $scope.msgEvent.origin);
+      } else {
+        $window.postMessage('import_bookmarks', '*');
+      }
+      $scope.modal = 'import_bookmarks2';
+      $scope.data.showImportModal2 = true;
+    };
 
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');

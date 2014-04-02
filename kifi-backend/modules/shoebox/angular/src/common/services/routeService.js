@@ -20,6 +20,7 @@ angular.module('kifi.routeService', [])
       linkNetwork: function (network) {
         return env.origin + '/link/' + network;
       },
+      prefs: route('/user/prefs'),
       importGmail: env.origin + '/importContacts', // wtf, why top level route?
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),

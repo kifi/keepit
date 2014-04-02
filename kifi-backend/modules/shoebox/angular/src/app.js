@@ -140,6 +140,18 @@ angular.module('kifi', [
   }
 ])
 
+.run([
+  'profileService',
+  function (profileService) {
+    // Initial data loading:
+
+    profileService.fetchPrefs().then(function (res) {
+      // handle onboarding / imports
+      return res;
+    });
+  }
+])
+
 .controller('AppCtrl', [
 
   function () {}
