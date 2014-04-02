@@ -165,14 +165,18 @@ angular.module('kifi.keepService', [
       preview: function (keep) {
         if (keep == null) {
           api.clearState();
-        }
-        else {
+        } else {
           singleKeepBeingPreviewed = true;
           isDetailOpen = true;
         }
         selectedIdx = keepIdx(keep);
         previewed = keep;
         api.getChatter(previewed);
+
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'preview',
+          'selectedIdx': selectedIdx
+        });
 
         return keep;
       },

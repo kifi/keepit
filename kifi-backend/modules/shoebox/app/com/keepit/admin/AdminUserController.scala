@@ -22,7 +22,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data._
 import play.api.data.Forms._
@@ -448,15 +448,14 @@ class AdminUserController @Inject() (
   def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit request =>
       val user = userRepo.get(userId)
-      userPictureRepo.getByUser(userId).find(_.id.get == pictureId) tap { pic =>
-        if (pic.get.state != UserPictureStates.ACTIVE) {
-          userPictureRepo.save(pic.get.withState(UserPictureStates.ACTIVE))
+      userPictureRepo.getByUser(userId).find(_.id.get == pictureId) map { pic =>
+        if (pic.state != UserPictureStates.ACTIVE) {
+          userPictureRepo.save(pic.withState(UserPictureStates.ACTIVE))
         }
-        userRepo.save(user.copy(pictureName = Some(pic.get.name), userPictureId = pic.get.id))
+        userRepo.save(user.copy(pictureName = Some(pic.name), userPictureId = pic.id))
       }
-    } tap { pic =>
-      eliza.sendToUser(userId, Json.arr("new_pic", pic.get.name))
-    } map { _ =>
+    } map { user =>
+      eliza.sendToUser(userId, Json.arr("new_pic", BasicUser.fromUser(user).pictureName))
       Ok
     } getOrElse {
       BadRequest

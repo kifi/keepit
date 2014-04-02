@@ -11,15 +11,10 @@
       </div>
     </li>
     <li class="install-kifi">
-      <a class="kf-footer-item-link" href="#"  ng-click="data.showInstall = true">
+      <a class="kf-footer-item-link" href="javascript:"  ng-click="triggerInstall()">
         <span class="kf-footer-item-icon kf-footer-item-icon-install"></span>
-        Install the extension
+        <span ng-show="!installInProgress()">Install the extension</span><span ng-show="installInProgress()">Installing...</span>
       </a>
-      <div kf-modal show="data.showInstall">
-        <div kf-basic-modal-content centered="true" title="Email verified" action-text="Continue">
-          Thanks for verifying your email address.
-        </div>
-      </div>
     </li>
     <li>
       <a class="kf-footer-item-link" href="friends/invite">
