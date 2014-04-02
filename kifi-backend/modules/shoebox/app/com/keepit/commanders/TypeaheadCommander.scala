@@ -259,11 +259,8 @@ class TypeaheadCommander @Inject()(
             Future.successful(Option(res))
           } else {
             kifiF flatMap { kifiHitsOpt =>
-              val kifiHits = kifiHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
-              val emailF = if (!dedupEmail) Future.successful(TreeSet.empty[String]) else Future { buildEmailSet(kifiHits) } recover { case t:Throwable =>
-                log.error(s"Caught exception $t while building email set for users(len=${kifiHits.length}):${kifiHits.map(_._2.info)}")
-                TreeSet.empty[String]
-              }
+              val kifiRes = kifiHitsOpt.getOrElse(Seq.empty)
+              val kifiHits  = kifiRes.map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
               zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
               if (zHits.length >= n) {
                 val res = zHits.take(n)
@@ -271,27 +268,37 @@ class TypeaheadCommander @Inject()(
                 Future.successful(Option(res))
               } else {
                 abookF flatMap { abookHitsOpt =>
-                  emailF flatMap { emails =>
-                    val abookHitsRes = abookHitsOpt.getOrElse(Seq.empty)
-                    val abookHits = abookHitsRes.filter { h =>
-                      val dup = emails.contains(h.info.email)
-                      log.infoP(s"${h.info.email} DUP detected; hit=$h; Discard") // can fix-up user hit score if needed
-                      !dup
-                    }.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
-                    zHits ++= abookHits.takeWhile(t => t._2.score == 0)
-                    if (zHits.length >= n) {
-                      val res = zHits.take(n)
-                      log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
-                      Future.successful(Option(res))
-                    } else {
-                      nfUsersF map { nfUserRes =>
-                        val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
-                        zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
-                        if (zHits.length >= n) {
-                          Option(zHits.take(n))
-                        } else { // combine all & sort
-                          Some((socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(n))
+                  val abookRes = abookHitsOpt.getOrElse(Seq.empty)
+                  val filteredABookHits = if (!dedupEmail) abookRes else {
+                    val kifiUsers = kifiRes.map(h => h.info.id.get -> h).toMap
+                    abookRes.filterNot { h =>
+                      h.info.contactUserId.exists { uId => // todo: confirm this field is updated properly
+                        kifiUsers.get(uId).exists { userHit =>
+                          if (userHit.score <= h.score) {
+                            log.infoP(s"DUP econtact (${h.info.email}) discarded; userHit=${userHit.info} econtactHit=${h.info}")
+                            true // todo: transform to User
+                          } else {
+                            log.warnP(s"DUP econtact ${h.info} has better score than user ${userHit}")
+                            false
+                          }
                         }
+                      }
+                    }
+                  }
+                  val abookHits = filteredABookHits.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
+                  zHits ++= abookHits.takeWhile(t => t._2.score == 0)
+                  if (zHits.length >= n) {
+                    val res = zHits.take(n)
+                    log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
+                    Future.successful(Option(res))
+                  } else {
+                    nfUsersF map { nfUserRes =>
+                      val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
+                      zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
+                      if (zHits.length >= n) {
+                        Option(zHits.take(n))
+                      } else { // combine all & sort
+                        Some((socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(n))
                       }
                     }
                   }
@@ -338,7 +345,7 @@ class TypeaheadCommander @Inject()(
           case SocialNetworks.FORTYTWO =>
             val u = hit.info.asInstanceOf[User]
             val picUrl = if (pictureUrl) {
-              u.pictureName.map{ pn => if (pn.endsWith(".jpg")) pn else s"$pn.jpg" } // User and BasicUser currently persist pictureName different (might fix in db)
+              u.pictureName.map{ pn => s"$pn.jpg" } // old bug
             } else None
             ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
           case SocialNetworks.FORTYTWO_NF =>
