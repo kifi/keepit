@@ -3,7 +3,7 @@
 */
 (function (angular) {
   'use strict';
-  var $window, profileService;
+  var $window, $log, profileService;
 
   /**
    * @name kifi.mixpanel
@@ -56,6 +56,7 @@
             origin = $window.location.origin;
           }
           mixpanel.identify(userId);
+          $log.log('mixpanelService.registerPageTrackForUser(' + path + '):' + origin);
           mixpanel.track('user_viewed_page', {
             type: getLocation(path),
             origin: origin,
@@ -81,6 +82,7 @@
     }
 
     function registerPageTrackForVisitor(mixpanel, path, origin) {
+      $log.log('mixpanelService.registerPageTrackForVisitor(' + path + '):' + origin);
       mixpanel.track('visitor_viewed_page', {
         type: getLocation(path),
         origin: origin,
@@ -104,16 +106,18 @@
       $analyticsProvider.registerEventTrack(function (action, properties) {
         if ($window) {
           var mixpanel = $window.mixpanel;
+          $log.log('mixpanelService.registerEventTrack(' + action + ')', properties);
           mixpanel.track(action, properties);
         }
       });
     });
   }])
   .run([
-      'profileService', '$window',
-      function (p, w) {
+      'profileService', '$window', '$log'
+      function (p, w, l) {
         $window = w;
         profileService = p;
+        $log = l;
       }
     ]);
 
