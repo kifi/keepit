@@ -42,8 +42,6 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $rootScope.$emit('import.bookmarks');
     };
 
-
-
     $window.addEventListener('message', function (event) {
       if (event.data && event.data.bookmarkCount > 0) {
         $rootScope.$emit('import.bookmarks', event.data.bookmarkCount, event);

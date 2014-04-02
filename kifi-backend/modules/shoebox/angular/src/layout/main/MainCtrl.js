@@ -88,10 +88,14 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     }
     handleInjectedState(injectedState.state);
 
-    $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
+    function initBookmarkImport(count, msgEvent) {
       $scope.modal = 'import_bookmarks';
       $scope.data.showImportModal = true;
-      $scope.msgEvent = msgEvent || false;
+      $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
+    }
+
+    $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
+      initBookmarkImport(count, msgEvent);
     });
 
     $scope.importBookmarks = function () {

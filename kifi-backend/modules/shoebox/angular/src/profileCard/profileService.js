@@ -12,6 +12,7 @@ angular.module('kifi.profileService', [
     var me = {
       seqNum: 0
     };
+    var prefs = {};
 
     function updateMe(data) {
       angular.forEach(data, function (val, key) {
@@ -172,11 +173,20 @@ angular.module('kifi.profileService', [
       });
     }
 
+    function fetchPrefs() {
+      return $http.get(routeService.prefs).then(function (p) {
+        util.replaceObjectInPlace(prefs, p.data);
+        return p.data;
+      });
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
+      fetchPrefs: fetchPrefs,
+      prefs: prefs,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
