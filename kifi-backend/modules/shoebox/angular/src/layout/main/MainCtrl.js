@@ -1,10 +1,13 @@
 'use strict';
 
-angular.module('kifi.layout.main', ['kifi.undo'])
+angular.module('kifi.layout.main', [
+  'kifi.undo',
+  'angulartics'
+])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope', '$analytics',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope, $analytics) {
 
     $scope.search = {};
     $scope.data = $scope.data || {};
@@ -108,6 +111,10 @@ angular.module('kifi.layout.main', ['kifi.undo'])
         $scope.data.showImportError = true;
         return;
       }
+
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'bookmarkImport'
+      });
 
       var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
       if (event) {

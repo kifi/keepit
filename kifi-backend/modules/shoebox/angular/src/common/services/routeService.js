@@ -9,6 +9,10 @@ angular.module('kifi.routeService', [])
       return env.xhrBase + url;
     }
 
+    function searchRoute(url) {
+      return env.xhrBaseSearch + url;
+    }
+
     function formatPicUrl(userId, pictureName, size) {
       return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
     }
@@ -35,6 +39,8 @@ angular.module('kifi.routeService', [])
       friends: route('/user/friends'),
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
+      search: searchRoute('/site/search'),
+      searchAnalytics: searchRoute('/site/...'),
       socialSearch: function (name, limit) {
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
