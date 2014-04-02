@@ -22,7 +22,6 @@ angular.module('kifi.installService', [])
         if (isChrome && supported) {
           api.installInProgress = true;
           $window.chrome.webstore.install('https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin', function () {
-            console.log("success");
             api.installed = true;
             api.installInProgress = false;
             api.error = false;
