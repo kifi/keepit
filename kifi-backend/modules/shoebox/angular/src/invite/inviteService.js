@@ -26,7 +26,7 @@ angular.module('kifi.inviteService', [
         var results = res.data;
         _.forEach(results, augmentSocialResult);
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'socialSearch'
+          'action': 'searchContacts'
         });
         return results;
       });
