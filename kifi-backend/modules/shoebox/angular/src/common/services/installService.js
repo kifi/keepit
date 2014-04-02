@@ -5,8 +5,8 @@ angular.module('kifi.installService', [])
 .factory('installService', ['$window',
   function ($window) {
     var isChrome = $window.chrome && $window.chrome.webstore && $window.chrome.webstore.install;
-    var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ~$window.navigator.userAgent.indexOf('Firefox');
-    var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [,999])[1];
+    var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ($window.navigator.userAgent.indexOf('Firefox') > -1);
+    var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [null, 999])[1];
     var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
 
     var api = {
