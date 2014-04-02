@@ -15,7 +15,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{SocialUserInfo, SocialUserInfoRepo, User, UserRepo, UserValueRepo}
 import com.keepit.model.{UserPicture, UserPictureRepo, UserPictureSource, UserPictureSources, UserPictureStates}
-import com.keepit.social.SocialNetworks
+import com.keepit.social.{BasicUser, SocialNetworks}
 
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.Weeks
@@ -201,24 +201,26 @@ class S3ImageStoreImpl @Inject() (
       if (user.userPictureId.isEmpty) {
         // User has no picture set
         val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
-        userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id))
+        Some(userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id)))
+      } else if (user.pictureName == Some(pictureName)) {
+        val prevPic = userPictureRepo.get(user.userPictureId.get)
+        userPictureRepo.save(prevPic) // touch updatedAt
+        None
       } else {
-        if (user.pictureName.isDefined && user.pictureName.get == pictureName) {
-          val prevPic = userPictureRepo.get(user.userPictureId.get)
-          userPictureRepo.save(prevPic) // touch updatedAt
+        val userPicRecord = userPictureRepo.save(
+          userPictureRepo.getByName(userId, pictureName)
+            .getOrElse(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
+            .withState(UserPictureStates.ACTIVE)
+        )
+        if (setDefault) {
+          Some(userRepo.save(user.copy(userPictureId = userPicRecord.id, pictureName = Some(pictureName))))
         } else {
-          val userPicRecord = userPictureRepo.save(
-            userPictureRepo.getByName(userId, pictureName)
-              .getOrElse(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
-              .withState(UserPictureStates.ACTIVE)
-          )
-          if (setDefault) {
-            userRepo.save(user.copy(userPictureId = userPicRecord.id, pictureName = Some(pictureName)))
-          }
+          None
         }
       }
+    } map { user =>
+      eliza.sendToUser(userId, Json.arr("new_pic", BasicUser.fromUser(user).pictureName))
     }
-    eliza.sendToUser(userId, Json.arr("new_pic", pictureName))
   }
 
   def readImage(file: File): BufferedImage = {
