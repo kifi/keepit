@@ -37,10 +37,15 @@ trait KifiVersion {
 
   assert(major >= 0 && minor >= 0 && patch >= 0)
 
-  def compareIt(that: KifiVersion) =
-    ((this.major - that.major) << 20) +
-      ((this.minor - that.minor) << 10) +
-      (this.patch - that.patch)
+  def compareIt(that: KifiVersion) = {
+    if (this.major != that.major) {
+      this.major - that.major
+    } else if (this.minor != that.minor) {
+      this.minor - that.minor
+    } else {
+      this.patch - that.patch
+    }
+  }
 
   override def toString = {
     Seq(major, minor, patch).mkString(".") + (if(tag != "") "-" + tag else "")
