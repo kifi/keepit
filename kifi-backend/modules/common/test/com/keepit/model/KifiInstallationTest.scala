@@ -15,6 +15,8 @@ class KifiInstallationTest extends Specification {
       val v2 = KifiExtVersion("2.1.0")
       val v3 = KifiExtVersion("3.0.1")
       val v4 = KifiExtVersion("2.4.8")
+      val v5 = KifiExtVersion("2.8.9990")
+      val v6 = KifiExtVersion("2.9.22")
 
       v0 must be_<  (v1)
       v1 must be_== (v1)
@@ -22,6 +24,7 @@ class KifiInstallationTest extends Specification {
       v1 must be_<  (v3)
       v3 must be_>  (v4)
       v4 must be_>  (v2)
+      v5 must be_<  (v6)
     }
     "parse version strings and order correctly for iphone" in {
       val v0 = KifiIPhoneVersion("0.0.0")
