@@ -198,6 +198,8 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
       pos = Int.MaxValue
     }
   }
+
+  def cost(): Long = tp.cost()
 }
 
 class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float, powerFactor: Float) extends Scorer(weight) with Logging {
@@ -269,5 +271,6 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   }
 
   override def freq(): Int = 1
+  override def cost(): Long = tps.map(_.cost()).sum
 }
 

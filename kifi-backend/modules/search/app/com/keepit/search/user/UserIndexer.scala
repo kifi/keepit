@@ -20,7 +20,7 @@ import com.keepit.typeahead.PrefixFilter
 
 
 object UserIndexer {
-  val luceneVersion = Version.LUCENE_41
+  val luceneVersion = Version.LUCENE_47
 
   val FULLNAME_FIELD = "u_fullname"
   val EMAILS_FIELD = "u_emails"

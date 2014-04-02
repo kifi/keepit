@@ -46,7 +46,7 @@ class TermStatsReaderImpl(indexReader: IndexReader, field: String) extends TermS
   override def numDocs = reader.numDocs()
 
   override def getSimpleTermStats(term: String): SimpleTermStats  = {
-    val found = termsEnum.seekExact(new BytesRef(term), true)
+    val found = termsEnum.seekExact(new BytesRef(term))
     var ret = Set.empty[Int]
     if (!found) return SimpleTermStats(0, ret, 0f)
 
@@ -61,7 +61,7 @@ class TermStatsReaderImpl(indexReader: IndexReader, field: String) extends TermS
   }
 
   override def getDocsAndPositions(term: String, liveDocs: Bits = null): Map[Int, Array[Int]] = {
-    val found = termsEnum.seekExact(new BytesRef(term), true)
+    val found = termsEnum.seekExact(new BytesRef(term))
     if (!found) return Map()
     val docsAndPos = termsEnum.docsAndPositions(liveDocs, null)
     var ret = Map.empty[Int, Array[Int]]

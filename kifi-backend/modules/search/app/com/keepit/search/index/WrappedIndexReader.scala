@@ -120,5 +120,6 @@ class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMa
   override def numDocs() = inner.numDocs()
   override def fields() = inner.fields()
   override def getLiveDocs() = inner.getLiveDocs()
+  override def getDocsWithField(field: String) = inner.getDocsWithField(field)
   protected def doClose() = {}
 }

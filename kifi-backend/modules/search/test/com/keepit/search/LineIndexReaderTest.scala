@@ -24,7 +24,7 @@ import com.keepit.search.Lang
 class LineIndexReaderTest extends Specification {
 
   val indexingAnalyzer = DefaultAnalyzer.defaultAnalyzer
-  val config = new IndexWriterConfig(Version.LUCENE_41, indexingAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_47, indexingAnalyzer)
 
   val ramDir = new RAMDirectory
   val reader = SlowCompositeReaderWrapper.wrap(populateIndex)

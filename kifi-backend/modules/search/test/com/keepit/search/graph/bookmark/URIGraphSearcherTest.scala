@@ -65,6 +65,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       }
       NO_MORE_DOCS
     }
+    def cost(): Long = ids.length.toLong
   }
 
   "URIGraph" should {

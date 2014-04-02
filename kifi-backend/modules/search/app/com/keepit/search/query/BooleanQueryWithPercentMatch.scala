@@ -269,7 +269,8 @@ object BooleanScorer {
             prohibited: Seq[Scorer],
             hotDocSet: Bits) = {
     def conjunction() = {
-      new BooleanAndScorer(weight, coordFactorForRequired, required.toArray, requiredValue)
+      val sorted = required.sortBy(_.cost())
+      new BooleanAndScorer(weight, coordFactorForRequired, sorted.toArray, requiredValue)
     }
     def disjunction() = {
       new BooleanOrScorerImpl(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
@@ -327,6 +328,8 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = required.cost()
 }
 
 class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Scorer], val value: Float) extends Scorer(weight) {
@@ -374,6 +377,8 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = scorers(0).cost()
 }
 
 trait BooleanOrScorer extends Scorer
@@ -449,6 +454,8 @@ extends Scorer(weight) with BooleanOrScorer with Logging {
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = scorers.map(_.cost()).sum
 }
 
 class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {
@@ -478,6 +485,8 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = scorer.cost()
 
   private def isProhibited = {
     prohibited.exists{ n =>

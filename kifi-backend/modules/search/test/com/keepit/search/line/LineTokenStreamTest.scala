@@ -1,23 +1,17 @@
 package com.keepit.search.line
 
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.Lang
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ArrayBuffer
-import scala.math._
 import java.io.StringReader
 
 class LineTokenStreamTest extends Specification {
   val en = Lang("en")
-  val analyzer = new WhitespaceAnalyzer(Version.LUCENE_41)
+  val analyzer = new WhitespaceAnalyzer(Version.LUCENE_47)
   "LineTokenStream" should {
     "tokenize strings aligning the position according to the line number" in {
       val ts = new LineTokenStream("B", Seq((0, "a b c", en), (1, "d", en), (2, "e f", en)), (f, t: String, l) => analyzer.tokenStream(f, new StringReader(t)))
@@ -30,6 +24,8 @@ class LineTokenStreamTest extends Specification {
         curPos += posIncrAttr.getPositionIncrement
         buf += ((curPos, charAttr.toString))
       }
+      ts.end()
+      ts.close()
       buf.toArray === expected
     }
 

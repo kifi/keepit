@@ -37,10 +37,15 @@ trait KifiVersion {
 
   assert(major >= 0 && minor >= 0 && patch >= 0)
 
-  def compareIt(that: KifiVersion) =
-    ((this.major - that.major) << 20) +
-      ((this.minor - that.minor) << 10) +
-      (this.patch - that.patch)
+  def compareIt(that: KifiVersion) = {
+    if (this.major != that.major) {
+      this.major - that.major
+    } else if (this.minor != that.minor) {
+      this.minor - that.minor
+    } else {
+      this.patch - that.patch
+    }
+  }
 
   override def toString = {
     Seq(major, minor, patch).mkString(".") + (if(tag != "") "-" + tag else "")
@@ -55,7 +60,7 @@ case class KifiExtVersion(major: Int, minor: Int, patch: Int, tag: String = "") 
   def compare(that: KifiExtVersion) = compareIt(that)
 }
 
-object KifiVersion extends Logging {
+object KifiVersion {
   val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,7})(?:-([a-zA-Z0-9-])+)?""".r
 }
 

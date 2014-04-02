@@ -140,6 +140,8 @@ class SemanticVectorScorerImpl(weight: SemanticVectorWeight, tp: SemanticVectorE
 
   override def freq(): Int = 1
 
+  override def cost(): Long = tp.cost()
+
   override def getSemanticVectorBytesRef(): BytesRef = {
     if (scoredDoc < doc) {
       scoredDoc = doc
@@ -159,6 +161,7 @@ class EmptySemanticVectorScorerImpl(weight: SemanticVectorWeight, vector: Semant
   override def advance(target: Int): Int = NO_MORE_DOCS
   override def score(): Float = 0.0f
   override def freq(): Int = 0
+  override def cost(): Long = 0L
   override def getNumPayloadsUsed: Int = 0
 }
 
