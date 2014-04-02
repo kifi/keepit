@@ -995,7 +995,9 @@ api.port.on({
            friends ? [me].concat(friends) : [me, SUPPORT] :
            friends || [SUPPORT]);
       results = sf.filter(data.q, candidates, getName);
-      friendSearchCache.put(data, results);
+      if (friends) {
+        friendSearchCache.put(data, results);
+      }
     }
     if (results.length > data.n) {
       results = results.slice(0, data.n);
@@ -2151,7 +2153,7 @@ function getPrefs(next) {
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
     log('[gotPrefs]', o)();
     if (me) {
-      me = o.user;
+      me = standardizeUser(o.user);
       prefs = o.prefs;
       eip = o.eip;
       socket.send(['eip', eip]);
