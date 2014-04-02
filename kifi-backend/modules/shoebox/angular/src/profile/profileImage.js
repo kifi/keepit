@@ -1,10 +1,12 @@
 'use strict';
 
-angular.module('kifi.profileImage', [])
+angular.module('kifi.profileImage', [
+  'angulartics'
+])
 
 .directive('kfProfileImage', [
-  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'profileService',
-  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, profileService) {
+  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'profileService', '$analytics',
+  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, profileService, $analytics) {
     return {
       restrict: 'A',
       replace: true,

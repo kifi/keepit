@@ -1,10 +1,13 @@
 'use strict';
 
-angular.module('kifi.profileService', ['kifi.routeService'])
+angular.module('kifi.profileService', [
+  'kifi.routeService',
+  'angulartics'
+])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService',
-  function ($http, env, $q, util, routeService, socialService) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics',
+  function ($http, env, $q, util, routeService, socialService, $analytics) {
 
     var me = {
       seqNum: 0
