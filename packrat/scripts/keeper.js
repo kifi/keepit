@@ -46,11 +46,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
           return;
         }
       }
-      if ($slider) {
-        hideSlider('esc');
-        e.preventDefault();
-        e.stopPropagation();
-      }
     }
   }
 
