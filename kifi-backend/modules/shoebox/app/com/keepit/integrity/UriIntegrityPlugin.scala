@@ -17,7 +17,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.commanders.BookmarkInterner
+import com.keepit.commanders.KeepInterner
 import com.keepit.scraper.ScrapeSchedulerPlugin
 
 trait UriChangeMessage
@@ -32,8 +32,8 @@ class UriIntegrityActor @Inject()(
   clock: Clock,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
-  bookmarkRepo: BookmarkRepo,
-  bookmarkInterner: BookmarkInterner,
+  keepRepo: KeepRepo,
+  bookmarkInterner: KeepInterner,
   deepLinkRepo: DeepLinkRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   scraper: ScrapeSchedulerPlugin,
@@ -45,31 +45,31 @@ class UriIntegrityActor @Inject()(
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
-    bookmarkRepo.getByUrlId(urlId).groupBy(_.userId)
+  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Keep]] = {
+    keepRepo.getByUrlId(urlId).groupBy(_.userId)
   }
 
-  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Bookmark]] = {
-    bookmarkRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
+  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Keep]] = {
+    keepRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
   }
 
   /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Bookmark]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
+  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Keep]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
 
     val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
       val oldBm = bms.head
-      bookmarkRepo.getByUriAndUserAllStates(newUriId, userId) match {
+      keepRepo.getByUriAndUserAllStates(newUriId, userId) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
-          bookmarkRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
-          bookmarkRepo.save(oldBm.withNormUriId(newUriId))
+          keepRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+          keepRepo.save(oldBm.withNormUriId(newUriId))
           Some(oldBm, None)
         }
         case Some(bm) =>
-          if (oldBm.state == BookmarkStates.ACTIVE) {
-            if (bm.state == BookmarkStates.INACTIVE) bookmarkRepo.save(bm.withActive(true))
-            bookmarkRepo.save(oldBm.withActive(false))
-            bookmarkRepo.deleteCache(oldBm)
+          if (oldBm.state == KeepStates.ACTIVE) {
+            if (bm.state == KeepStates.INACTIVE) keepRepo.save(bm.withActive(true))
+            keepRepo.save(oldBm.withActive(false))
+            keepRepo.deleteCache(oldBm)
             Some(oldBm, Some(bm))
           } else {
             None
@@ -79,11 +79,11 @@ class UriIntegrityActor @Inject()(
 
     val collectionsToUpdate = deactivatedBms.flatten.map {
       case (oldBm, None) => {
-        keepToCollectionRepo.getCollectionsForBookmark(oldBm.id.get).toSet
+        keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
       }
       case (oldBm, Some(newBm)) => {
         var collections = Set.empty[Id[Collection]]
-        keepToCollectionRepo.getByBookmark(oldBm.id.get, excludeState = None).foreach { ktc =>
+        keepToCollectionRepo.getByKeep(oldBm.id.get, excludeState = None).foreach { ktc =>
           collections += ktc.collectionId
           keepToCollectionRepo.getOpt(newBm.id.get, ktc.collectionId) match {
             case Some(newKtc) =>
@@ -92,7 +92,7 @@ class UriIntegrityActor @Inject()(
               }
               keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
             case None =>
-              keepToCollectionRepo.save(ktc.copy(bookmarkId = newBm.id.get))
+              keepToCollectionRepo.save(ktc.copy(keepId = newBm.id.get))
           }
         }
         collections

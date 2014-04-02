@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
-import com.keepit.common.zookeeper.{ServiceInstance, ServiceCluster}
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
@@ -18,7 +18,7 @@ import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
+import com.keepit.eliza.model.{MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
 
 import akka.actor.Scheduler
 
@@ -30,7 +30,9 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]]
+
+  def unsendNotification(messageHandle: Id[MessageHandle]): Unit
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -73,7 +75,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj(
       "userIds"   -> userIds.toSeq,
@@ -85,11 +87,20 @@ class ElizaServiceClientImpl @Inject() (
       "sticky"    -> sticky,
       "category"  -> category
     )
-    call(Eliza.internal.sendGlobalNotification, payload)
+    call(Eliza.internal.sendGlobalNotification, payload).map { response =>
+      Id[MessageHandle](response.body.toLong)
+    }
+  }
+
+  val longTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
+
+  def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
+    //yes, we really want this one to get through. considering pushing the message to SQS later on.
+    call(Eliza.internal.unsendNotification(messageHandle), attempts = 6, callTimeouts = longTimeout)
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
-    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), callTimeouts = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000)))
+    call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), callTimeouts = longTimeout)
       .map{ response =>
         val json = Json.parse(response.body).as[JsArray]
         json.value.map(_.as[ThreadContent])
@@ -127,7 +138,16 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     p.future
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Unit = {}
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]] = {
+    val p = Promise.successful(Id[MessageHandle](42.toLong))
+    p.future
+  }
+
+  var unsentNotificationIds = List[Id[MessageHandle]]()
+
+  def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
+    unsentNotificationIds = messageHandle :: unsentNotificationIds
+  }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())

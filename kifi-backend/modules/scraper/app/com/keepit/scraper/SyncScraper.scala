@@ -94,7 +94,7 @@ class SyncScraper @Inject() (
         // check if document is not changed or does not need to be reindexed
         if (latestUri.title == Option(article.title) && // title change should always invoke indexing
           latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
-          latestUri.state != NormalizedURIStates.SCRAPE_FAILED &&
+          latestUri.state != NormalizedURIStates.SCRAPE_FAILED && latestUri.state != NormalizedURIStates.ACTIVE &&
           signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
@@ -337,7 +337,7 @@ class SyncScraper @Inject() (
   private def hasFishy301(movedUri: NormalizedURI): Boolean = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
     lazy val isFishy = helper.syncGetLatestBookmark(movedUri.id.get).filter(_.updatedAt.isAfter(currentDateTime.minusHours(1))) match {
-      case Some(recentKeep) if recentKeep.source != BookmarkSource.bookmarkImport => true
+      case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
       case Some(importedBookmark) => {
         val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString()
         (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)

@@ -4,14 +4,14 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{BookmarkRepo, CollectionRepo, Collection, User}
+import com.keepit.model.{KeepRepo, CollectionRepo, Collection, User}
 import com.keepit.search.SearchServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class AdminURIGraphController @Inject()(
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  bookmarkRepo: BookmarkRepo,
+  keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
   searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
@@ -24,9 +24,9 @@ class AdminURIGraphController @Inject()(
 
   def update(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     // bump up seqNum
-    val bookmarks = db.readOnly { implicit s => bookmarkRepo.getByUser(userId) }
+    val bookmarks = db.readOnly { implicit s => keepRepo.getByUser(userId) }
     bookmarks.grouped(1000).foreach { group =>
-      db.readWrite { implicit s => group.foreach(bookmarkRepo.save) }
+      db.readWrite { implicit s => group.foreach(keepRepo.save) }
     }
 
     val collections = db.readOnly(implicit s => collectionRepo.getByUser(userId))

@@ -1,7 +1,7 @@
 ##########################################
 # Search Extension API
 ##########################################
-GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
+GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
 GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
@@ -13,11 +13,20 @@ GET         /search/users/search        @com.keepit.controllers.ext.ExtUserSearc
 ##########################################
 # Mobile V1
 ##########################################
-GET         /m/1/search        @com.keepit.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+GET         /m/1/search        @com.keepit.controllers.mobile.MobileSearchController.searchV1(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 GET         /m/1/search/users/page        @com.keepit.controllers.mobile.MobileUserSearchController.pageV1(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
 GET         /m/1/search/users/search        @com.keepit.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 POST        /m/1/search/events/clickedSearchResult        @com.keepit.controllers.mobile.MobileSearchEventController.clickedSearchResult()
 POST        /m/1/search/events/searched        @com.keepit.controllers.mobile.MobileSearchEventController.searched()
+
+##########################################
+# Search Website API
+##########################################
+GET         /site/search                        @com.keepit.controllers.website.WebsiteSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
+GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
+POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
+POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
+
 
 ##########################################
 # INTERNAL ROUTES/Search
@@ -27,8 +36,7 @@ GET         /internal/search/warmUp/:userId        @com.keepit.controllers.searc
 
 POST        /internal/search/events/browsed/:userId        @com.keepit.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
 
-GET         /internal/search/uriGraph/info        @com.keepit.controllers.search.URIGraphController.indexInfo()
-POST        /internal/search/uriGraph/sharingUserInfo/:userId        @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User])
+POST        /internal/search/uriGraph/sharingUserInfo/:userId        @com.keepit.controllers.search.SearchController.sharingUserInfo(userId: Id[User])
 POST        /internal/search/uriGraph/update        @com.keepit.controllers.search.URIGraphController.updateURIGraph()
 POST        /internal/search/uriGraph/reindex        @com.keepit.controllers.search.URIGraphController.reindex()
 POST        /internal/search/uriGraph/dumpDoc/:id        @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
@@ -36,6 +44,7 @@ POST        /internal/search/uriGraph/dumpDoc/:id        @com.keepit.controllers
 POST        /internal/search/collection/dumpDoc        @com.keepit.controllers.search.URIGraphController.dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User])
 
 POST        /internal/search/user/reindex        @com.keepit.controllers.search.UserIndexController.reindex()
+POST        /internal/search/user/update        @com.keepit.controllers.search.UserIndexController.update()
 POST        /internal/search/userGraph/update        @com.keepit.controllers.search.UserGraphController.updateUserGraph()
 POST        /internal/search/searchFriendGraph/update        @com.keepit.controllers.search.UserGraphController.updateSearchFriends()
 POST        /internal/search/userGraphs/reindex        @com.keepit.controllers.search.UserGraphController.reindex()
@@ -46,13 +55,15 @@ GET         /internal/search/index/sequenceNumber        @com.keepit.controllers
 POST        /internal/search/index/refreshSearcher        @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
 POST        /internal/search/index/refreshPhrases        @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
 POST        /internal/search/index/dumpDoc/:id        @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
-GET         /internal/search/index/refreshWriter       @com.keepit.controllers.search.ArticleIndexerController.refreshWriter()
+GET         /internal/search/index/refreshWriter        @com.keepit.controllers.search.ArticleIndexerController.refreshWriter()
 
 GET         /internal/search/indexInfo/listAll        @com.keepit.controllers.search.IndexInfoController.listAll
 
 
 POST        /internal/search/search/users        @com.keepit.controllers.search.SearchController.searchUsers()
+POST        /internal/search/search/userTypeahead        @com.keepit.controllers.search.SearchController.userTypeahead()
 POST        /internal/search/search/keeps        @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
+POST        /internal/search/search/sharingUserInfo/:userId        @com.keepit.controllers.search.SearchController.sharingUserInfo(userId: Id[User])
 GET         /internal/search/search/explainResult        @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.controllers.search.SearchController.searchWithConfig
 

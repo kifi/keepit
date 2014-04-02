@@ -14,10 +14,9 @@ import com.keepit.typeahead._
 import scala.concurrent.duration.Duration
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.store.{InMemoryObjectStore, S3Bucket}
-import scala.concurrent.{Await, Future}
+import com.keepit.common.store.{S3Bucket}
+import scala.concurrent.{Future}
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._

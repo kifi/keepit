@@ -24,12 +24,12 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def bookmarkUriUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BookmarkUriUserCache(stats, accessLog, (outerRepo, 7 days))
+    new KeepUriUserCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides
   def bookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BookmarkCountCache(stats, accessLog, (outerRepo, 1 day))
+    new KeepCountCache(stats, accessLog, (outerRepo, 1 day))
 
   @Singleton
   @Provides

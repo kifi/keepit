@@ -8,19 +8,22 @@ import com.keepit.search.index.WrappedSubReader
 object ArticleVisibility {
   private[this] val fieldName = "visibility"
   val restrictedTerm = new Term(fieldName, "redirect")      // "redirect" is misleading. It's really "restricted", because of fishy 301, or porn, etc. Should change this when we reindexing
+
+  @inline
+  def apply(reader: WrappedSubReader): ArticleVisibility = {
+    val iter: DocIdSetIterator = {
+      val it = reader.termDocsEnum(restrictedTerm)
+      if (it == null) QueryUtil.emptyDocsEnum else it
+    }
+    new ArticleVisibility(iter)
+  }
 }
 
-class ArticleVisibility(reader: WrappedSubReader) {
-  import ArticleVisibility._
-
-  private[this] val redirect: DocIdSetIterator = {
-    val it = reader.termDocsEnum(restrictedTerm)
-    if (it == null) QueryUtil.emptyDocsEnum else it
-  }
+class ArticleVisibility(val iter: DocIdSetIterator) extends AnyVal {
 
   def isVisible(doc: Int): Boolean = {
-    if (redirect.docID < doc) redirect.advance(doc)
+    if (iter.docID < doc) iter.advance(doc)
 
-    (redirect.docID > doc)
+    (iter.docID > doc)
   }
 }

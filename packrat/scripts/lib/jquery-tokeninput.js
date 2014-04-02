@@ -41,8 +41,8 @@
     dropdown: 'dropdown',
     dropdownSearching: 'dropdown-searching',
     dropdownItem: 'dropdown-item',
-    dropdownItemAutoSelect: 'dropdown-item-autoselect',
-    dropdownItemSelected: 'dropdown-item-selected',
+    dropdownItemToken: 'dropdown-item-token',
+    dropdownItemSelected: 'dropdown-item-selected'
   };
 
   // Input box position "enum"
@@ -219,21 +219,41 @@
             break;
 
           case KEY.TAB:
+            if (selectedDropdownItem) {
+              if (selectedDropdownItem.classList.contains(classes.dropdownItemToken) && !event.shiftKey) {
+                handleItemChosen(selectedDropdownItem);
+                return false;
+              } else {
+                var $item = $(selectedDropdownItem)[event.shiftKey ? 'prev' : 'next']('.' + classes.dropdownItem);
+                if ($item.length || event.shiftKey) {
+                  selectDropdownItem($item[0]);
+                  return false;
+                }
+              }
+            } else if (!event.shiftKey) {
+              var $item = $dropdown.find('.' + classes.dropdownItem);
+              if ($item.length) {
+                selectDropdownItem($item[0]);
+                return false;
+              }
+            }
+            break;
+
+          case KEY.COMMA:
+            if ($(selectedDropdownItem).hasClass(classes.dropdownItemToken)) {
+              handleItemChosen(selectedDropdownItem);
+            }
+            return false;
+
           case KEY.ENTER:
           case KEY.NUMPAD_ENTER:
-          case KEY.COMMA:
             if (selectedDropdownItem) {
               handleItemChosen(selectedDropdownItem);
-              return false;
-            }
-            if (this.value) {
+            } else if (this.value) {
               this.value = '';
               handleQueryChange();
             }
-            if (event.keyCode !== KEY.TAB) {
-              return false;
-            }
-            break;
+            return false;
 
           case KEY.ESC:
             hideDropdown();
@@ -254,7 +274,7 @@
       .addClass(classes.list)
       .click(function (event) {
         var $li = $(event.target).closest('li');
-        if ($li.data('tokeninput')) {
+        if ($li.data('tokenInput')) {
           toggleSelectToken($li);
         } else {
           if (selectedToken) {
@@ -309,7 +329,7 @@
     //
 
     this.clear = function () {
-      $tokenList.children("li").each(function() {
+      $tokenList.children('li').each(function() {
         if ($(this).children("input").length === 0) {
           deleteToken($(this));
         }
@@ -321,9 +341,9 @@
     };
 
     this.remove = function (item) {
-      $tokenList.children("li").each(function() {
+      $tokenList.children('li').each(function() {
         if ($(this).children("input").length === 0) {
-          var currToken = $(this).data("tokeninput");
+          var currToken = $(this).data('tokenInput');
           var match = true;
           for (var prop in item) {
             if (item[prop] !== currToken[prop]) {
@@ -396,7 +416,7 @@
     }
 
     function handleItemChosen(el) {
-      var item = $.data(el, 'tokeninput');
+      var item = $.data(el, 'tokenInput');
       if (!settings.onSelect || settings.onSelect.call($hiddenInput, item, el) !== false) {
         addToken(item);
         $hiddenInput.change();
@@ -408,7 +428,7 @@
       var $token = $(settings.formatToken(item))
         .addClass(classes.token)
         .insertBefore($inputToken)
-        .data('tokeninput', item);
+        .data('tokenInput', item);
 
       // The 'delete token' button
       $('<span>×</span>')
@@ -428,7 +448,7 @@
       if (tokens.length > 0 && settings.preventDuplicates) {
         var foundToken;
         $tokenList.children().each(function () {
-          var data = $.data(this, 'tokeninput');
+          var data = $.data(this, 'tokenInput');
           if (data && data[settings.tokenValue] === item[settings.tokenValue]) {
             foundToken = this;
             return false;
@@ -517,7 +537,7 @@
 
     // Delete a token from the token list
     function deleteToken($token) {
-      var item = $token.data('tokeninput');
+      var item = $token.data('tokenInput');
 
       var index = $token.prevAll().length;
       if (index > selectedTokenIndex) {
@@ -587,8 +607,15 @@
       selectedDropdownItem = null;
 
       var items = results.map(formatDropdownItem);
-      $('<ul/>')
-        .on('mouseover', 'li', function () {
+      var $ul = $('<ul/>')
+        .append(items)
+        .appendTo($dropdown);
+      if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
+        selectDropdownItem(items[0]);
+      }
+      showDropdown();
+      setTimeout(function () {
+        $ul.on('mouseover', 'li', function () {
           selectDropdownItem(this);
         })
         .on('mousedown', 'li', function (e) {
@@ -596,19 +623,14 @@
             handleItemChosen(this);
             return false;
           }
-        })
-        .append(items)
-        .appendTo($dropdown);
-      if (items.length && items[0].classList.contains(classes.dropdownItemAutoSelect)) {
-        selectDropdownItem(items[0]);
-      }
-      showDropdown();
+        });
+      });
     }
 
     function formatDropdownItem(result) {
       return $(settings.formatResult(result))
         .addClass(classes.dropdownItem)
-        .data('tokeninput', result)[0];
+        .data('tokenInput', result)[0];
     }
 
     // Highlight an item in the results dropdown (or pass null to deselect)

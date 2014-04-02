@@ -91,6 +91,8 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
   private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
+  private[this] var adjustment = 0
+  private[this] var lastId = -1
   private[this] val ids = new Array[Int](bufSize)
   private[this] val matching = new Array[Boolean](bufSize)
   private[this] var state: State[Match] = phraseMatcher.initialState
@@ -110,12 +112,20 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
   def begin(): Unit = {
     bufferedPos = -1
     processedPos = -1
+    adjustment = 0
+    lastId = -1
     state = phraseMatcher.initialState
     matchedPhrases = Set.empty[PhraseMatch]
     localAlignment.begin()
   }
 
-  def update(id: Int, pos: Int, weight: Float): Unit = { // weight is ignored
+  def update(id: Int, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
+    if (rawPos == bufferedPos) {
+      if (id == lastId) return // dedup
+      adjustment += 1
+    }
+    lastId = id
+    val pos = rawPos + adjustment
     if (pos - bufferedPos > 1) { // found a gap, flush buffer
       flush()
       processedPos = pos - 1

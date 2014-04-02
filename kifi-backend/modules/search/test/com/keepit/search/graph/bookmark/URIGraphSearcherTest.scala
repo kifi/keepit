@@ -65,6 +65,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       }
       NO_MORE_DOCS
     }
+    def cost(): Long = ids.length.toLong
   }
 
   "URIGraph" should {
@@ -149,7 +150,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         users.sliding(3).foreach{ friends =>
           val friendIds = friends.map(_.id.get).toSet
-          val userToUserEdgeSet = UserToUserEdgeSet(Id[User](1000), friendIds)
+          val userToUserEdgeSet = UserToUserEdgeSet.fromIdSet(Id[User](1000), friendIds)
 
           expectedUriToUserEdges.map{ case (uri, users) =>
             val expected = (users.map(_.id.get).toSet intersect friendIds)
@@ -178,7 +179,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000)).destIdSet.isEmpty === true
 
-        val emptyUserToUserEdgeSet = UserToUserEdgeSet(Id[User](10000), Set.empty[Id[User]])
+        val emptyUserToUserEdgeSet = UserToUserEdgeSet.fromIdSet(Id[User](10000), Set.empty[Id[User]])
 
         emptyUserToUserEdgeSet.destIdSet.isEmpty === true
 
@@ -186,7 +187,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
 
-        val userToUserEdgeSet = UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
+        val userToUserEdgeSet = UserToUserEdgeSet.fromIdSet(Id[User](10000), users.map(_.id.get).toSet)
         searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
       }
     }

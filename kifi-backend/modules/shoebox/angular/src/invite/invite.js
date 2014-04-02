@@ -4,7 +4,10 @@ angular.module('kifi.invite', [
   'util',
   'kifi.profileService',
   'kifi.routeService',
-  'jun.facebook'
+  'jun.facebook',
+  'kifi.inviteService',
+  'kifi.social',
+  'kifi.modal'
 ])
 
 .config([
@@ -13,26 +16,27 @@ angular.module('kifi.invite', [
     $routeProvider.when('/invite', {
       templateUrl: 'invite/invite.tpl.html',
       controller: 'InviteCtrl'
+    }).when('/friends/invite', {
+      redirectTo: '/invite'
     });
   }
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window',
-  function ($scope, $http, profileService, routeService, $window) {
-
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService',
+  function ($scope, $http, profileService, routeService, $window, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
-    // bogus data just to get everyone started
-    var friend = {
-      image: 'https://graph.facebook.com/71105121/picture?width=75&height=75',
-      label: 'Andrew Conner',
-      status: 'joined',
-      value: 'facebook/71105121'
-    };
-    $scope.friends = [friend];
 
-    $scope.whoToInvite = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]; //data is not currently used, just need some number of elements
+    wtiService.loadInitial();
+    $scope.whoToInvite = wtiService.list;
+
+    $scope.wtiScrollDistance = '100%';
+    $scope.isWTIScrollDisabled = function () {
+      return !wtiService.hasMore();
+    };
+    $scope.wtiScrollNext = wtiService.getMore;
+
 
     $scope.invite = function (friend) {
       // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?
@@ -40,5 +44,88 @@ angular.module('kifi.invite', [
       $window.alert('Inviting ' + friend);
     };
 
+  }
+])
+
+.directive('kfSocialInviteWell', [
+  'socialService',
+  function (socialService) {
+    return {
+      scope: {},
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/inviteWell.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+        scope.networks = socialService.networks;
+
+        scope.data = scope.data || {};
+
+        socialService.refresh();
+      }
+    };
+  }
+])
+
+.directive('kfSocialInviteSearch', [
+  'inviteService', '$document', '$log',
+  function (inviteService, $document, $log) {
+    return {
+      scope: {},
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/inviteSearch.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        scope.search = {};
+        scope.search.showDropdown = false;
+        scope.data = scope.data || {};
+
+        scope.results = [];
+        scope.selected = inviteService.socialSelected;
+
+        scope.change = _.debounce(function () { // todo: integrate service-wide debounce into Clutch, remove me
+          inviteService.socialSearch(scope.search.name).then(function (res) {
+
+            var set = _.clone(res);
+
+            var socialConns = _.filter(res, function (result) {
+              return result.network && result.network.indexOf('fortytwo') === -1;
+            }).length;
+
+            if (scope.search.name.length > 2 && (res.length < 3 || socialConns < 3)) {
+              set.push({
+                custom: 'cant_find'
+              });
+            }
+
+            scope.results = set;
+
+            if (!set || set.length === 0) {
+              scope.search.showDropdown = false;
+            } else {
+              scope.search.showDropdown = true;
+            }
+          });
+        }, 200);
+
+        function clickOutside(e) {
+          if (scope.search.showDropdown && !element.find(e.target)[0]) { // click was outside of dropdown
+            scope.$apply(function () {
+              scope.search.showDropdown = false;
+            });
+          }
+        }
+
+        scope.invite = function (result) {
+          $log.log('this person:', result);
+        };
+
+        scope.$on('$destroy', function () {
+          $document.off('click', clickOutside);
+        });
+
+        $document.on('click', clickOutside);
+
+      }
+    };
   }
 ]);

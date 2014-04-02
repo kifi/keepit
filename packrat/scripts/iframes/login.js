@@ -17,6 +17,72 @@ document.addEventListener('keydown', function (e) {
 (function (withJQuery) {
   'use strict';
 
+  var creds = {}, on = {creds: function () {}};
+  var appIds = location.hash.substr(1).split('&').reduce(function (o, s) {
+    var arr = s.split('=');
+    o[arr[0]] = arr[1];
+    return o;
+  }, {});
+
+  window.fbAsyncInit = function () {
+    FB.Event.subscribe('auth.statusChange', function (o) {
+      var r = o && o.authResponse;
+      var id = r && r.userID;
+      if (id) {
+        pics.show('facebook', 'https://graph.facebook.com/' + id + '/picture?return_ssl_resources=1&width=50&height=50');
+        on.creds('facebook', creds.facebook = r);
+      } else {
+        pics.hide('facebook');
+      }
+    });
+    FB.init({appId: appIds.facebook, status: true});
+  };
+
+  window.onLoadLinkedInApi = function () {
+    IN.Event.on(IN, 'auth', function (o) {
+      IN.API.Profile('me').fields(['id','picture-url;secure=true']).result(function (o) {
+        var r = o && o.values && o.values[0];
+        if (r.pictureUrl) {
+          pics.show('linkedin', r.pictureUrl);
+        } else {
+          pics.hide('linkedin');
+        }
+        var cookieName = 'linkedin_oauth_' + appIds.linkedin;
+        var cookie = readCookie(cookieName);
+        if (cookie) {
+          on.creds('linkedin', creds.linkedin = JSON.parse(cookie));
+        }
+        clearCookie(cookieName);
+        clearCookie(cookieName + '_crc');
+      });
+    });
+
+    function readCookie(name) {
+      var v = new RegExp('(?:^|; )' + name + '=([^;]*)').exec(document.cookie);
+      return v && decodeURIComponent(v[1]);
+    }
+
+    function clearCookie(name) {
+      document.cookie = name + '=; expires=' + new Date(0).toUTCString();
+    }
+  };
+
+  var pics = {
+    show: function (nw, url) {
+      var img = new Image;
+      img.onload = function () {
+        var parEl = document.querySelector('.' + nw + '>.form-network-icon');
+        parEl.innerHTML = '';
+        parEl.appendChild(this);
+      };
+      img.className = 'form-network-pic';
+      img.src = url;
+    },
+    hide: function (nw) {
+      document.querySelector('.' + nw + '>.form-network-icon').innerHTML = '';
+    }
+  };
+
   var s = document.createElement('SCRIPT');
   s.src = '//connect.facebook.net/en_US/all.js';
   s.id = 'facebook-jssdk';
@@ -24,48 +90,23 @@ document.addEventListener('keydown', function (e) {
 
   s = document.createElement('SCRIPT');
   s.src = '//platform.linkedin.com/in.js';
-  s.textContent = ['api_key:r11loldy9zlg', 'onLoad:onLoadLinkedInApi', 'authorize:true'].join('\n');
+  s.textContent = ['api_key:' + appIds.linkedin, 'onLoad:onLoadLinkedInApi', 'authorize:true', 'credentials_cookie:true'].join('\n');
   document.head.appendChild(s);
 
-  window.fbAsyncInit = function () {
-    FB.Event.subscribe('auth.statusChange', function (o) {
-      var id = o && o.authResponse && o.authResponse.userID;
-      id && showNetworkPic('facebook', 'https://graph.facebook.com/' + id + '/picture?return_ssl_resources=1&width=50&height=50');
-    });
-    FB.init({appId: 104629159695560, status: true});
-  };
-
-  window.onLoadLinkedInApi = function () {
-    IN.User.isAuthorized() && IN.API.Profile('me').fields('picture-url;secure=true').result(function (o) {
-      var url = o && o.values && o.values[0] && o.values[0].pictureUrl;
-      url && showNetworkPic('linkedin', url);
-    });
-  };
-
-  function showNetworkPic(network, url) {
-    var img = new Image;
-    img.onload = function () {
-      var parEl = document.querySelector('.form-network.' + network + '>.form-network-icon');
-      parEl.innerHTML = '';
-      parEl.appendChild(this);
-    };
-    img.className = 'form-network-pic';
-    img.src = url;
-  }
-
+  s = document.head.querySelector('script[src$="jquery.js"]');
   if (window.$) {
-    withJQuery();
+    withJQuery.call(s, creds, pics, on);
   } else {
-    document.head.querySelector('script[src$="jquery.js"]').addEventListener('load', withJQuery);
+    s.addEventListener('load', withJQuery.bind(s, creds, pics, on));
   }
-}(function () {
+}(function (creds, pics, on) {
   'use strict';
 
-  (function () {
+  (function (script) {
     var s = document.createElement('SCRIPT');
-    s.src = this.src.replace('jquery', 'jquery-ui-position');
+    s.src = script.src.replace('jquery', 'jquery-ui-position');
     document.body.appendChild(s);
-  }).call(this);
+  })(this);
 
   $.postJson = function (uri, data) {
     return $.ajax({
@@ -84,10 +125,54 @@ document.addEventListener('keydown', function (e) {
     this.offsetHeight;
   }
 
-  $('.form-network').click(function () {
-    parent.postMessage({url: this.href}, '*');
+  var $a = $('.form-network').click(function () {
+    var now = Date.now();
+    var data = $(this).data();
+    if (now - (data.clickedAt || 0) > 1000) {
+      data.clickedAt = now;
+      var c = creds[data.nw];
+      if (c) {
+        authenticateViaNetwork(data, c);
+      } else {
+        showNetworkLoginPopup(data);
+      }
+    }
     return false;
   });
+  on.creds = function (nw, nwCreds) {
+    var data = $a.filter('.' + nw).data();
+    if (data.clickedAt) {
+      authenticateViaNetwork(data, nwCreds);
+    }
+  };
+  function authenticateViaNetwork(data, nwCreds) {
+    $.postJson('/ext/auth/' + data.nw, nwCreds)
+    .done(function () {
+      parent.postMessage({authenticated: true}, '*');
+    })
+    .fail(function (xhr) {
+      if ((xhr.responseJSON || {}).error === 'user_not_found') {
+        parent.postMessage({path: '/login/' + data.nw}, '*');
+      } else {
+        delete creds[data.nw];
+        pics.hide(data.nw);
+        if (data.clickedAt > (data.poppedAt || 0)) {
+          showNetworkLoginPopup(nw);
+        }
+      }
+    });
+  }
+  function showNetworkLoginPopup(data) {
+    data.poppedAt = Date.now();
+    switch (data.nw) {
+      case 'facebook':
+        FB.login($.noop, {scope: 'email'});
+        break;
+      case 'linkedin':
+        IN.UI.Authorize().place();
+        break;
+    }
+  }
 
   var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   function showError($in, msg) {

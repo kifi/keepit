@@ -20,7 +20,7 @@ import com.keepit.typeahead.PrefixFilter
 
 
 object UserIndexer {
-  val luceneVersion = Version.LUCENE_41
+  val luceneVersion = Version.LUCENE_47
 
   val FULLNAME_FIELD = "u_fullname"
   val EMAILS_FIELD = "u_emails"
@@ -117,9 +117,9 @@ class UserIndexer(
     val experiments: Seq[ExperimentType]) extends Indexable[User, User] {
 
     private def genPrefix(user: User): Set[String] = {
-      val fn = PrefixFilter.normalize(user.firstName).take(PREFIX_MAX_LEN)
-      val ln = PrefixFilter.normalize(user.lastName).take(PREFIX_MAX_LEN)
-      ((0 to fn.length).map{ i => fn.slice(0, i + 1) } ++ (0 to ln.length).map{ i => ln.slice(0, i + 1)}).toSet
+      val tokens = PrefixFilter.tokenize(user.firstName + " " + user.lastName).map{_.take(PREFIX_MAX_LEN)}
+      val prefixes = tokens.flatMap{ token => (0 until token.length).map{ i => token.slice(0, i + 1) }}
+      prefixes.toSet
     }
 
     override def buildDocument = {

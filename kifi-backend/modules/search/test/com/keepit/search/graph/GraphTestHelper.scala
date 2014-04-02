@@ -21,7 +21,7 @@ import play.api.test.Helpers._
 
 trait GraphTestHelper extends ApplicationInjector {
 
-  val source = BookmarkSource("test")
+  val source = KeepSource("test")
   val bigDataSize = 8000
 
   def initData = {
@@ -95,7 +95,7 @@ trait GraphTestHelper extends ApplicationInjector {
         contentLang = Some(Lang("en")))
   }
 
-  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], mixPrivate: Boolean = false, uniqueTitle: Option[String] = None): List[Bookmark] = {
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], mixPrivate: Boolean = false, uniqueTitle: Option[String] = None): List[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
     val (privateEdges, publicEdges) = edges.partition {case (uri, user, _) => (uri.id.get.id + user.id.get.id) % 2 == 0}
@@ -104,12 +104,12 @@ trait GraphTestHelper extends ApplicationInjector {
     bookmarks.toList
   }
 
-  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])]): Seq[Bookmark] = {
+  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])]): Seq[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveBookmarksByEdges(edges, source = source)
   }
 
-  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None): Seq[Bookmark] = {
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None): Seq[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveBookmarksByUser(edgesByUser, uniqueTitle = uniqueTitle, source = source)
   }
@@ -120,7 +120,7 @@ trait GraphTestHelper extends ApplicationInjector {
     collection
   }
 
-  def saveBookmarksToCollection(collection: Collection, bookmarks: Seq[Bookmark]): Collection = {
+  def saveBookmarksToCollection(collection: Collection, bookmarks: Seq[Keep]): Collection = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveBookmarksToCollection(collection.id.get, bookmarks:_*)
     fakeShoeboxServiceClient.getCollection(collection.id.get)
@@ -149,12 +149,12 @@ trait GraphTestHelper extends ApplicationInjector {
     fakeShoeboxServiceClient.saveConnections(connections)
   }
 
-  def getBookmarksByUser(userId: Id[User]): Seq[Bookmark] = {
+  def getBookmarksByUser(userId: Id[User]): Seq[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     await(fakeShoeboxServiceClient.getBookmarks(userId))
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Option[Bookmark] = {
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Option[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     await(fakeShoeboxServiceClient.getBookmarkByUriAndUser(uriId, userId))
   }

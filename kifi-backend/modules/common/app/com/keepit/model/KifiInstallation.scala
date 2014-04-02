@@ -10,43 +10,113 @@ import play.api.mvc.JavascriptLitteral
 import com.keepit.common.cache._
 import scala.concurrent.duration.Duration
 
-case class KifiVersion(major: Int, minor: Int, patch: Int, tag: String = "") extends Ordered[KifiVersion]  {
-  assert(major >= 0 && minor >= 0 && patch >= 0)
-  def compare(that: KifiVersion) =
-    ((this.major - that.major) << 20) +
-    ((this.minor - that.minor) << 10) +
-    (this.patch - that.patch)
-  override def toString = {
-    Seq(major,minor,patch).mkString(".") + (if(tag != "") "-" + tag else "")
+sealed trait KifiInstallationPlatform {
+  def name: String
+}
+
+object KifiInstallationPlatform {
+
+  sealed trait IPhonePlatform extends KifiInstallationPlatform
+  sealed trait ExtPlatform extends KifiInstallationPlatform
+
+  object Extension extends ExtPlatform { val name = "extension" }
+  object IPhone extends IPhonePlatform { val name = "iphone" }
+
+  def apply(name: String): KifiInstallationPlatform = name.toLowerCase match {
+    case Extension.name => Extension
+    case IPhone.name => IPhone
   }
 }
 
-object KifiVersion extends Logging {
-  private val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,7})(?:-([a-zA-Z0-9-])+)?""".r
+trait KifiVersion {
 
-  def apply(version: String): KifiVersion = {
-    version match {
-      case R(major, minor, patch, tag) =>
-        KifiVersion(major.toInt, minor.toInt, patch.toInt, Option(tag).getOrElse(""))
-      case _ =>
-        throw new Exception("Invalid kifi version: " + version)
+  def major: Int
+  def minor: Int
+  def patch: Int
+  def tag: String
+
+  assert(major >= 0 && minor >= 0 && patch >= 0)
+
+  def compareIt(that: KifiVersion) = {
+    if (this.major != that.major) {
+      this.major - that.major
+    } else if (this.minor != that.minor) {
+      this.minor - that.minor
+    } else {
+      this.patch - that.patch
     }
   }
 
-  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiVersion] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiVersion]] = {
+  override def toString = {
+    Seq(major, minor, patch).mkString(".") + (if(tag != "") "-" + tag else "")
+  }
+}
+
+case class KifiIPhoneVersion(major: Int, minor: Int, patch: Int, tag: String = "") extends KifiVersion with Ordered[KifiIPhoneVersion] {
+  def compare(that: KifiIPhoneVersion) = compareIt(that)
+}
+
+case class KifiExtVersion(major: Int, minor: Int, patch: Int, tag: String = "") extends KifiVersion with Ordered[KifiExtVersion] {
+  def compare(that: KifiExtVersion) = compareIt(that)
+}
+
+object KifiVersion {
+  val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,7})(?:-([a-zA-Z0-9-])+)?""".r
+}
+
+object KifiExtVersion {
+
+  def apply(version: String): KifiExtVersion = {
+    version match {
+      case KifiVersion.R(major, minor, patch, tag) =>
+        KifiExtVersion(major.toInt, minor.toInt, patch.toInt, Option(tag).getOrElse(""))
+      case _ =>
+        throw new Exception("Invalid kifi ext version: " + version)
+    }
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiExtVersion] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiExtVersion]] = {
       stringBinder.bind(key, params) map {
-        case Right(version) => Right(KifiVersion(version))
+        case Right(version) => Right(KifiExtVersion(version))
         case _ => Left("Unable to bind a KifiVersion")
       }
     }
-    override def unbind(key: String, kifiVersion: KifiVersion): String = {
+    override def unbind(key: String, kifiVersion: KifiExtVersion): String = {
       stringBinder.unbind(key, kifiVersion.toString)
     }
   }
 
-  implicit def litteral = new JavascriptLitteral[KifiVersion] {
-    def to(value: KifiVersion) = value.toString
+  implicit def litteral = new JavascriptLitteral[KifiExtVersion] {
+    def to(value: KifiExtVersion) = value.toString
+  }
+}
+
+object KifiIPhoneVersion {
+
+  def apply(version: String): KifiIPhoneVersion = {
+    version match {
+      case KifiVersion.R(major, minor, patch, tag) =>
+        KifiIPhoneVersion(major.toInt, minor.toInt, patch.toInt, Option(tag).getOrElse(""))
+      case _ =>
+        throw new Exception("Invalid kifi ext version: " + version)
+    }
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiIPhoneVersion] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiIPhoneVersion]] = {
+      stringBinder.bind(key, params) map {
+        case Right(version) => Right(KifiIPhoneVersion(version))
+        case _ => Left("Unable to bind a KifiVersion")
+      }
+    }
+    override def unbind(key: String, kifiVersion: KifiIPhoneVersion): String = {
+      stringBinder.unbind(key, kifiVersion.toString)
+    }
+  }
+
+  implicit def litteral = new JavascriptLitteral[KifiIPhoneVersion] {
+    def to(value: KifiIPhoneVersion) = value.toString
   }
 }
 
@@ -58,8 +128,15 @@ case class KifiInstallation (
   externalId: ExternalId[KifiInstallation] = ExternalId(),
   version: KifiVersion,
   userAgent: UserAgent,
+  platform: KifiInstallationPlatform,
   state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
 ) extends ModelWithExternalId[KifiInstallation] with ModelWithState[KifiInstallation] {
+
+  version match {
+    case KifiIPhoneVersion(_, _, _, _) => require(platform == KifiInstallationPlatform.IPhone)
+    case KifiExtVersion(_, _, _, _) => require(platform == KifiInstallationPlatform.Extension)
+  }
+
   def withId(id: Id[KifiInstallation]): KifiInstallation = copy(id = Some(id))
   def withUpdateTime(time: DateTime): KifiInstallation = copy(updatedAt = time)
   def withVersion(version: KifiVersion): KifiInstallation = copy(version = version)

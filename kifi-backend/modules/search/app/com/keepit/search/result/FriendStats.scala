@@ -10,8 +10,8 @@ import scala.math.BigDecimal.double2bigDecimal
 import scala.math.BigDecimal.long2bigDecimal
 
 object FriendStats extends Logging {
-  def apply(idSet: Set[Id[User]]) = {
-    val ids = idSet.map(_.id).toArray
+  def apply(idSet: Set[Long]) = {
+    val ids = idSet.toArray
     val mapper = new ArrayIdMapper(ids)
     val scores = new Array[Float](mapper.maxDoc)
     new FriendStats(ids, scores, mapper)

@@ -5,11 +5,8 @@ import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.inject._
-import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
-import com.google.inject.Injector
-import play.api.Play._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
@@ -21,6 +18,7 @@ import com.keepit.search.sharding.Shard
 import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
+import org.apache.lucene.search.{Explanation, Query}
 
 class ExtSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -131,7 +129,7 @@ class FixedResultSearchCommander extends SearchCommander {
               ExternalId[Collection]("c17da7ce-64bb-4c91-8832-1f1a6a88b7be"),
               ExternalId[Collection]("19ccb3db-4e18-4ade-91bd-1a98ef33aa63")
             )),
-            Some(ExternalId[Bookmark]("604754fb-182d-4c39-a314-2d1994b24159")),  // bookmarkId
+            Some(ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159")),  // bookmarkId
             Some(Seq((9, 13))),  // title matches
             None // url matches
           ),
@@ -181,5 +179,7 @@ class FixedResultSearchCommander extends SearchCommander {
     results(query)
   }
 
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }

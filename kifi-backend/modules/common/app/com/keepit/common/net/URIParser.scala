@@ -3,9 +3,10 @@ package com.keepit.common.net
 
 import scala.util.parsing.combinator.RegexParsers
 
-object URIParser extends RegexParsers {
+object URIParser extends URIParserGrammar
+
+trait URIParserGrammar extends RegexParsers {
   // this does not handle relative URI well
-  import URIParserUtil._
 
   override def skipWhitespace = false
 
@@ -14,7 +15,7 @@ object URIParser extends RegexParsers {
   def hierarchicalUri: Parser[URI] = ((scheme <~ ":").? <~ "//") ~ authority ~ (path?) ~ ("?" ~> query).? ~ ("#" ~> fragment).? ^^ {
     case scheme~authority~path~query~fragment =>
       val (userInfo, host, port) = authority
-      URI(scheme, userInfo, host, normalizePort(scheme, port), path, query, fragment)
+      URI(scheme, userInfo, host, URIParserUtil.normalizePort(scheme, port), path, query, fragment)
   }
 
   def opaqueUri: Parser[URI] = (scheme <~ ":") ~ (""".*""".r ?) ^^ {
@@ -57,6 +58,15 @@ object URIParser extends RegexParsers {
     case name~value => Param(normalizeParamName(name), value.map(normalizeParamValue))
   }
 
-  def fragment: Parser[String] = """.*""".r ^^ { fragment => encode(decodePercentEncode(fragment), fragmentReservedChars) }
+  def fragment: Parser[String] = """.*""".r ^^ { fragment => normalizeFragment(fragment) }
+
+  def normalizePath(components: Seq[String]): Seq[String] = URIParserUtil.normalizePath(components)
+  def normalizePathComponent(component: String): String = URIParserUtil.normalizePathComponent(component)
+  def normalizeParams(params: Seq[Param]): Seq[Param] = URIParserUtil.normalizeParams(params)
+  def normalizeParamName(name: String): String = URIParserUtil.normalizeParamName(name)
+  def normalizeParamValue(value: String): String = URIParserUtil.normalizeParamValue(value)
+  def normalizeFragment(fragment: String): String = URIParserUtil.normalizeFragment(fragment)
 }
+
+
 

@@ -62,7 +62,7 @@
   "validthis": true,
 
   // Environments
-  "browser": false,
+  "browser": true,
   "couch": false,
   "devel": false,
   "dojo": false,
@@ -86,7 +86,8 @@
   // Globals
   "globals": {
     "angular": true,
-    "_": true
+    "_": true,
+    "angulartics": true
   },
 
   "-W093": false,

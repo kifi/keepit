@@ -1,13 +1,11 @@
 package com.keepit.search
 
-import com.keepit.search.article.ArticleIndexer
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -19,24 +17,18 @@ import com.keepit.search.query.parser.MainQueryParserFactory
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
-import com.keepit.search.semantic.SemanticVectorSearcher
 import com.keepit.search.tracker.BrowsingHistoryTracker
 import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.sharding.Shard
-import com.keepit.search.sharding.ShardedArticleIndexer
-import com.keepit.search.sharding.ShardedURIGraphIndexer
-import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.graph.collection.CollectionSearcher
-import com.keepit.search.sharding._
 import com.keepit.search.graph.user.UserGraphsCommander
+import com.keepit.search.sharding._
+import com.keepit.search.query.HotDocSetFilter
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -50,7 +42,6 @@ class MainSearcherFactory @Inject() (
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
     shoeboxClient: ShoeboxServiceClient,
-    spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier,
     implicit private val clock: Clock,
@@ -64,6 +55,52 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
 
   def apply(
+    shards: Seq[Shard[NormalizedURI]],
+    userId: Id[User],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig
+  ): Seq[MainSearcher] = {
+    val clickHistoryFuture = getClickHistoryFuture(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
+
+    val parser = parserFactory(lang1, lang2, config)
+
+    val searchers = shards.map{ shard =>
+      val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
+      val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+
+      new MainSearcher(
+          userId,
+          lang1,
+          lang2,
+          numHitsToReturn,
+          filter,
+          config,
+          parser,
+          articleSearcher,
+          socialGraphInfo,
+          clickBoostsFuture,
+          browsingHistoryFuture,
+          clickHistoryFuture,
+          monitoredAwait,
+          airbrake
+      )
+    }
+
+    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
+    parser.setPercentMatch(config.asFloat("percentMatch"))
+    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
+    parser.parse(queryString, searchers.map(_.collectionSearcher))
+
+    searchers
+  }
+
+  def apply(
     shard: Shard[NormalizedURI],
     userId: Id[User],
     queryString: String,
@@ -72,31 +109,9 @@ class MainSearcherFactory @Inject() (
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig
-  ) = {
-    val clickHistoryFuture = getClickHistoryFuture(userId)
-    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
-    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
-    val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-
-    new MainSearcher(
-        userId,
-        queryString,
-        lang1,
-        lang2,
-        numHitsToReturn,
-        filter,
-        config,
-        articleSearcher,
-        parserFactory,
-        socialGraphInfo,
-        clickBoostsFuture,
-        browsingHistoryFuture,
-        clickHistoryFuture,
-        spellCorrector,
-        monitoredAwait,
-        airbrake
-    )
+  ): MainSearcher = {
+    val searchers = apply(Seq(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
+    searchers(0)
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
@@ -151,11 +166,6 @@ class MainSearcherFactory @Inject() (
     val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
     val uriGraphSearcher = getURIGraphSearcher(shard, userId)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
-  }
-
-  def semanticVectorSearcher(shard: Shard[NormalizedURI]) = {
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    new SemanticVectorSearcher(articleSearcher)
   }
 
   def getLangProfileFuture(shards: Seq[Shard[NormalizedURI]], userId: Id[User], limit: Int): Future[Map[Lang, Float]] = consolidateLangProfReq((userId, limit)){ case (userId, limit) =>

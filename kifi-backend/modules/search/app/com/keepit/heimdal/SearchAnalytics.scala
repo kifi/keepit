@@ -12,6 +12,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.social.BasicUser
+import com.keepit.common.net.URI
 
 case class SearchEngine(name: String) {
   override def toString = name
@@ -172,8 +173,7 @@ class SearchAnalytics @Inject() (
     val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
 
     // Search Context
-    contextBuilder += ("origin", searchContext.origin)
-    contextBuilder += ("source", getSource(searchContext.origin))
+    addOriginInformation(contextBuilder, searchContext.origin)
     contextBuilder += ("sessionId", searchContext.sessionId)
     searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
     contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
@@ -243,7 +243,17 @@ class SearchAnalytics @Inject() (
     else others
   }
 
-  private def getSource(origin: String): String = origin.split('.').reverse(1)
+  private def addOriginInformation(contextBuilder: HeimdalContextBuilder, rawOrigin: String): Unit = {
+    val (origin, source) = URI.parse(rawOrigin).toOption.flatMap(_.host) match {
+      case Some(googleHost) if googleHost.domain.contains("google") => (googleHost.name, "Google")
+      case Some(kifiHost) if kifiHost.domain.contains("kifi") => (kifiHost.name, "Site")
+      case Some(otherHost) => (otherHost.name, "Unknown")
+      case None if rawOrigin == "mobile" => ("mobile", "iOS App")
+      case None => (rawOrigin, "Unknown")
+    }
+    contextBuilder += ("origin", origin)
+    contextBuilder += ("source", source)
+  }
 
   private val own = "own"
   private val friends = "friends"

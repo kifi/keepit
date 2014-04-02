@@ -1,14 +1,15 @@
 package com.keepit.search.result
 
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model._
-import com.keepit.social.BasicUser
-import play.api.libs.json._
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URISanitizer
+import com.keepit.model._
 import com.keepit.serializer.TraversableFormat
 import com.keepit.search.ArticleSearchResult
 import com.keepit.search.Scoring
 import com.keepit.search.SearchConfigExperiment
+import com.keepit.social.BasicUser
+import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import scala.math.BigDecimal.double2bigDecimal
 import scala.math.BigDecimal.int2bigDecimal
@@ -101,7 +102,6 @@ class ShardSearchResult(val json: JsValue) extends AnyVal {
   def friendsTotal: Int = (json \ "friendsTotal").as[Int]
   def othersTotal: Int = (json \ "othersTotal").as[Int]
   def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
-  def collections: Seq[ExternalId[Collection]] = (json \ "tags").as[JsArray].value.map(id => ExternalId[Collection](id.as[String]))
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
   def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
@@ -113,7 +113,6 @@ object ShardSearchResult extends Logging {
     friendsTotal: Int,
     othersTotal: Int,
     friendStats: FriendStats,
-    collections: Seq[ExternalId[Collection]],
     svVariance: Float, // TODO: remove
     show: Boolean // TODO: remove
   ): ShardSearchResult = {
@@ -124,7 +123,6 @@ object ShardSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "tags" -> JsArray(collections.map{ id => JsString(id.id) }),
         "svVariance" -> JsNumber(svVariance), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))
@@ -160,8 +158,12 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
+  def sanitized: DetailedSearchHit = {
+    set("bookmark", bookmark.sanitized.json)
+  }
+
   def set(key: String, value: JsValue): DetailedSearchHit = {
-    new DetailedSearchHit((json - key) + (key ->value))
+    new DetailedSearchHit((json - key) + (key -> value))
   }
 
   override def toString(): String = json.toString()
@@ -205,7 +207,7 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
   def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
-  def bookmarkId: Option[ExternalId[Bookmark]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Bookmark])
+  def bookmarkId: Option[ExternalId[Keep]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Keep])
 
   def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {
     var matchesJson = Json.obj()
@@ -230,6 +232,17 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
     if (collections.isEmpty) this else new BasicSearchHit(json + ("tags" -> Json.toJson(collections.map(_.id))))
   }
 
+  def sanitized: BasicSearchHit = {
+    val rawURL = url
+    val sanitizedURL = URISanitizer.sanitize(url)
+    if (rawURL == sanitizedURL) this else set("url", JsString(sanitizedURL))
+    set("url", JsString(sanitizedURL))
+  }
+
+  def set(key: String, value: JsValue): BasicSearchHit = {
+    new BasicSearchHit((json - key) + (key -> value))
+  }
+
   private def readMatches(matches: JsValue): Seq[(Int, Int)] = {
     matches.asOpt[JsArray] map {
      case JsArray(pairs) => pairs.map { case JsArray(Seq(JsNumber(start), JsNumber(len))) => (start.toInt, (start + len).toInt) }
@@ -242,7 +255,7 @@ object BasicSearchHit extends Logging {
     title: Option[String],
     url: String,
     collections: Option[Seq[ExternalId[Collection]]] = None,
-    bookmarkId: Option[ExternalId[Bookmark]] = None,
+    bookmarkId: Option[ExternalId[Keep]] = None,
     titleMatches: Option[Seq[(Int, Int)]] = None,
     urlMatches: Option[Seq[(Int, Int)]] = None
   ): BasicSearchHit = {

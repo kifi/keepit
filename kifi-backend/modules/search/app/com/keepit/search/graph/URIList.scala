@@ -1,6 +1,6 @@
 package com.keepit.search.graph
 
-import com.keepit.model.{BookmarkUriAndTime, NormalizedURI, Bookmark}
+import com.keepit.model.{KeepUriAndTime, NormalizedURI, Keep}
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
@@ -15,8 +15,8 @@ trait URIList {
   def createdAt: Array[Long]
 }
 
-class SortedBookmarks(bookmarks: Seq[Bookmark]) {
-  def toSeq: Seq[Bookmark] = bookmarks
+class SortedBookmarks(bookmarks: Seq[Keep]) {
+  def toSeq: Seq[Keep] = bookmarks
 }
 
 object URIList {
@@ -41,13 +41,13 @@ object URIList {
     override def createdAt: Array[Long] = Array.empty[Long]
   }
 
-  def sortBookmarks(bookmarks: Seq[Bookmark]): (SortedBookmarks/*public*/, SortedBookmarks/*private*/) = {
+  def sortBookmarks(bookmarks: Seq[Keep]): (SortedBookmarks/*public*/, SortedBookmarks/*private*/) = {
     // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
     val sortedBookmarks = bookmarks.sortWith{ (a, b) =>
       (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
     }
-    val privateBookmarks = new ArrayBuffer[Bookmark]
-    val publicBookmarks = new ArrayBuffer[Bookmark]
+    val privateBookmarks = new ArrayBuffer[Keep]
+    val publicBookmarks = new ArrayBuffer[Keep]
 
     sortedBookmarks.headOption match {
       case Some(firstBookmark) =>
@@ -67,12 +67,12 @@ object URIList {
     (new SortedBookmarks(publicBookmarks), new SortedBookmarks(privateBookmarks))
   }
 
-  def toByteArray(uris: Seq[BookmarkUriAndTime]): Array[Byte] = {
+  def toByteArray(uris: Seq[KeepUriAndTime]): Array[Byte] = {
     // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
     val sortedBookmarks = uris.sortWith{ (a, b) =>
       (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
     }
-    val allBookmarks = new ArrayBuffer[BookmarkUriAndTime]
+    val allBookmarks = new ArrayBuffer[KeepUriAndTime]
 
     sortedBookmarks.headOption match {
       case Some(firstBookmark) =>
@@ -90,9 +90,9 @@ object URIList {
     toByteArrayFromSorted(allBookmarks)
   }
 
-  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq map {b => BookmarkUriAndTime(b.uriId, b.createdAt) } )
+  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq map {b => KeepUriAndTime(b.uriId, b.createdAt) } )
 
-  private def toByteArrayFromSorted(sortedBookmarks: Seq[BookmarkUriAndTime]): Array[Byte] = {
+  private def toByteArrayFromSorted(sortedBookmarks: Seq[KeepUriAndTime]): Array[Byte] = {
     val size = sortedBookmarks.size
     val baos = new ByteArrayOutputStream(size * 4)
     val out = new OutputStreamDataOutput(baos)

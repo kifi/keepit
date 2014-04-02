@@ -2,9 +2,9 @@ package com.keepit.search.graph
 
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.db.Id
-import scala.util.Sorting
 import com.keepit.search.util.LongArraySet
 import com.keepit.common.logging.Logging
+import java.util.Arrays
 
 trait EdgeSetAccessor[S, D] {
   protected val edgeSet: EdgeSet[S, D]
@@ -89,9 +89,9 @@ abstract class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: Edge
       i += 1
     }
     val filtered = buf.toArray
-    Sorting.quickSort(filtered)
+    Arrays.sort(filtered)
     val inheritedSourceId = edgeSet.sourceId
-    new LongSetEdgeSet[S, D] {
+    new LongArraySetEdgeSet[S, D] {
       override val sourceId: Id[S] = inheritedSourceId
       override val longArraySet = LongArraySet.fromSorted(filtered)
     }

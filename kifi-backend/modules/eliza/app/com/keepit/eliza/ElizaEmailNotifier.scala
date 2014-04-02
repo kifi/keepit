@@ -9,10 +9,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.common.strings._
-import com.keepit.model.{NotificationCategory, UserStates, User}
+import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.{ElectronicMail,EmailAddresses}
 import com.keepit.inject.AppScoped
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -20,7 +19,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Inject, ImplementedBy}
 
 import scala.concurrent.duration._
-import scala.concurrent.Await
 import scala.util.matching.Regex.Match
 
 import akka.util.Timeout
@@ -47,9 +45,13 @@ class ElizaEmailNotifierActor @Inject() (
 
   def receive = {
     case SendEmails =>
+      val now = clock.now
+      val startTime = now.minusMinutes(15)
       val unseenUserThreads = db.readOnly { implicit session =>
-        userThreadRepo.getUserThreadsForEmailing(clock.now.minusMinutes(15))
+        userThreadRepo.getUserThreadsForEmailing(startTime)
       }
+      val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
+      log.info(s"[now:$now] [cut:$startTime] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
       unseenUserThreads.foreach { userThread =>
         sendEmailViaShoebox(userThread)
       }
@@ -57,6 +59,14 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
   private def sendEmailViaShoebox(userThread: UserThread): Unit = {
+    log.info(s"processing user thread $userThread")
+    val now = clock.now
+    airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
+    airbrake.verify(userThread.unread, s"${userThread.summary} not unread")
+    airbrake.verify(!userThread.notificationEmailed, s"${userThread.summary} notification already emailed")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
+    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
+
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
 
     //everyone exception user who we about to email
@@ -70,13 +80,18 @@ class ElizaEmailNotifierActor @Inject() (
       ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
     } reverse
 
+    log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
+      s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
+      s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
+
     if (threadItems.nonEmpty) {
       val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
-      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator)
+      shoebox.sendUnreadMessages(threadItems, otherParticipants, userThread.user, title, thread.deepLocator, userThread.notificationUpdatedAt)
     }
     db.readWrite{ implicit session =>
       userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
     }
+    log.info(s"processed user thread $userThread")
   }
 }
 

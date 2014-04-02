@@ -29,7 +29,7 @@ case class ProdSimpleQueueModule() extends SimpleQueueModule with Logging {
   @Singleton
   @Provides
   def richConnectionUpdateQueue(basicAWSCreds:BasicAWSCredentials): SQSQueue[RichConnectionUpdateMessage] = {
-    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1)
+    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
     client.formatted[RichConnectionUpdateMessage](QueueName("rich-connection-update-prod-b"))
   }
 

@@ -2,64 +2,42 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, MobileController, ActionAuthenticator}
-import com.keepit.commanders.{InviteInfo, InviteCommander}
+import com.keepit.commanders.{FailedInvitationException, InviteStatus, FullSocialId, InviteCommander}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.keepit.abook.ABookServiceClient
-import scala.util.{Failure, Success}
-import play.api.Play._
-import scala.util.Success
-import scala.util.Failure
-import com.keepit.common.db.Id
-import com.keepit.model.{InvitationStates, Invitation, SocialUserInfo, User}
-import play.api.mvc.Result
-import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
-import com.keepit.inject.FortyTwoConfig
-
+import com.keepit.social.SocialNetworks
+import scala.concurrent.Future
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileInviteController @Inject()(
-  actionAuthenticator:ActionAuthenticator,
+  actionAuthenticator: ActionAuthenticator,
   inviteCommander:InviteCommander,
-  abookServiceClient:ABookServiceClient,
-  fortytwoConfig: FortyTwoConfig
+  airbrake: AirbrakeNotifier
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
   def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
-    val inviteInfoOpt = Json.fromJson[InviteInfo](request.body).asOpt
-    log.info(s"[inviteConnection(${request.userId})] invite=$inviteInfoOpt")
-    inviteInfoOpt map { inviteInfo =>
-      val userId = request.userId
-      val user = request.user
-      if (inviteInfo.fullSocialId.network == "email") {
-        abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
-          econtactTr match {
-            case Success(c) =>
-              inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo, "mobile")
-              log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
-              Ok(Json.obj("code" -> "invitation_sent"))
-            case Failure(e) =>
-              log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
-              BadRequest(Json.obj("code" -> "invalid_arguments"))
+    (request.body \ "fullSocialId").asOpt[FullSocialId] match {
+      case None => Future.successful(BadRequest("0"))
+      case Some(fullSocialId) => {
+        val subject = (request.body \ "subject").asOpt[String]
+        val message = (request.body \ "message").asOpt[String]
+        val source = "mobile"
+        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
+          case inviteStatus if inviteStatus.sent => {
+            log.info(s"[inviteConnection] Invite sent: $inviteStatus")
+            Ok(Json.obj("code" -> "invitation_sent"))
+          }
+          case InviteStatus(false, Some(facebookInvite), code @ "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
+            val json = Json.obj("code" -> code, "link" -> inviteCommander.acceptUrl(facebookInvite.externalId), "redirectUri" -> inviteCommander.fbConfirmUrl(facebookInvite.externalId, source))
+            log.info(s"[inviteConnection] Redirecting user ${request.userId} to Facebook: $json")
+            Ok(json)
+          case failedInviteStatus => {
+            log.error(s"[inviteConnection] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+            airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
+            Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error"))
           }
         }
-      } else {
-        val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, "mobile")
-        log.info(s"[inviteConnection(${request.userId})] inviteStatus=$inviteStatus")
-        if (inviteStatus.sent) resolve(Ok(Json.obj("code" -> "invitation_sent")))
-        else if (inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") { // special handling
-          inviteStatus.savedInvite match {
-            case Some(saved) =>
-              resolve(Ok(Json.obj("code" -> "client_handle", "invite" -> Json.toJson[Invitation](saved))))
-            case None => { // shouldn't happen
-              log.error(s"[processInvite($userId,$user,$inviteInfo)] Could not send Facebook invite")
-              resolve(Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_error")))
-            }
-          }
-        } else resolve(BadRequest(Json.obj("code" -> "invite_not_sent")))
       }
-    } getOrElse resolve(BadRequest(Json.obj("code" -> "invalid_arguments")))
+    }
   }
-
 }

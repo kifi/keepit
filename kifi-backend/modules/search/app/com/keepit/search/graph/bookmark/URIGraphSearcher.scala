@@ -1,6 +1,5 @@
 package com.keepit.search.graph.bookmark
 
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
@@ -13,8 +12,6 @@ import com.keepit.search.Searcher
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.util.LongArraySet
-import com.keepit.shoebox.ShoeboxServiceClient
-import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
@@ -22,17 +19,13 @@ import scala.concurrent.duration._
 import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.SharingUserInfo
-import com.keepit.search.graph.BaseGraphSearcher
-import com.keepit.search.graph.bookmark.BookmarkRecordSerializer._
 import com.keepit.search.graph._
 import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
-import com.keepit.search.graph.LongSetEdgeSet
+import com.keepit.search.graph.LongArraySetEdgeSet
 import com.keepit.search.graph.user.UserGraphsCommander
 import play.modules.statsd.api.Statsd
-
-
 
 object URIGraphSearcher {
   def apply(uriGraphIndexer: URIGraphIndexer): URIGraphSearcher = {
@@ -48,7 +41,7 @@ object URIGraphSearcher {
 
 class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {
 
-  def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = UserToUserEdgeSet(sourceId, destIdSet)
+  def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = UserToUserEdgeSet.fromIdSet(sourceId, destIdSet)
 
   def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = UriToUserEdgeSet(sourceId, searcher)
 
@@ -72,7 +65,7 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
     val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
 
     while (iter.nextDoc != NO_MORE_DOCS) intersection += iter.docID
-    UserToUserEdgeSet(friends.sourceId, searcher, intersection.toArray)
+    UserToUserEdgeSet.fromDocIds(friends.sourceId, searcher, intersection.toArray)
   }
 
   def intersectAny(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): Boolean = {
@@ -104,7 +97,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
 
     Future{ Statsd.timing("mainSearch.friendIdsFutureWait", waitTime) }
 
-    UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
+    UserToUserEdgeSet.fromLongSet(myUserId, friendIds)
   }
 
   lazy val friendsUriEdgeSets = {
@@ -121,8 +114,8 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
 
     Future{ Statsd.timing("mainSearch.searchFriendsFutureWait", waitTime) }
 
-    if (unfriended.isEmpty) UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds))
-    else UserToUserEdgeSet(myUserId, new IdSetWrapper[User](friendIds -- unfriended))
+    if (unfriended.isEmpty) UserToUserEdgeSet.fromLongSet(myUserId, friendIds)
+    else UserToUserEdgeSet.fromLongSet(myUserId, (friendIds -- unfriended))
   }
 
   lazy val searchFriendsUriEdgeSets = {
@@ -198,13 +191,19 @@ class UserInfo(val id: Id[User], val publicList: URIList, val privateList: URILi
 abstract class UserToUserEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, User]
 
 object UserToUserEdgeSet{
-  def apply(sourceId: Id[User], destIds: Set[Id[User]]): UserToUserEdgeSet = {
+  def fromIdSet(sourceId: Id[User], destIds: Set[Id[User]]): UserToUserEdgeSet = {
     new UserToUserEdgeSet(sourceId) with IdSetEdgeSet[User, User] {
       override def destIdSet: Set[Id[User]] = destIds
     }
   }
 
-  def apply(sourceId: Id[User], currentSearcher: Searcher, destIds: Array[Int]): UserToUserEdgeSet = {
+  def fromLongSet(sourceId: Id[User], destIds: Set[Long]): UserToUserEdgeSet = {
+    new UserToUserEdgeSet(sourceId) with LongSetEdgeSet[User, User] {
+      override def destIdLongSet: Set[Long] = destIds
+    }
+  }
+
+  def fromDocIds(sourceId: Id[User], currentSearcher: Searcher, destIds: Array[Int]): UserToUserEdgeSet = {
     new UserToUserEdgeSet(sourceId) with DocIdSetEdgeSet[User, User] {
       override val docids: Array[Int] = destIds
       override val searcher: Searcher = currentSearcher
@@ -220,7 +219,7 @@ abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet
 object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongArraySetEdgeSet[User, NormalizedURI] {
       override val longArraySet = set
 
       override def getPublicList = if (isPublicEdgeSet) Some(uriList) else None
@@ -247,7 +246,7 @@ object UserToUriEdgeSet {
       val set = LongArraySet.from(concat(publicIds, privateIds))
       val pubListSize = publicIds.length
 
-      new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
+      new UserToUriEdgeSet(sourceId) with LongArraySetEdgeSet[User, NormalizedURI] {
         override val longArraySet = set
         override def getPublicList = Some(publicList)
         override def getPrivateList = Some(privateList)
@@ -273,7 +272,7 @@ object UserToUriEdgeSet {
     val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
 
     val pubListSize = publicList.size
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongArraySetEdgeSet[User, NormalizedURI] {
       override protected val longArraySet = set
       override def getPublicList = Some(publicList)
       override def getPrivateList = Some(privateList)

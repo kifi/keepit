@@ -1,6 +1,9 @@
 package com.keepit.search.query
 
-import com.keepit.search.{MultiHashFilter}
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.db.Id
+import com.keepit.model.User
+import com.keepit.search.MultiHashFilter
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.index.WrappedSubReader
@@ -11,26 +14,29 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.Filter
 import org.apache.lucene.util.Bits
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
-class HotDocSetFilter extends Filter {
-  private[this] var browsingFilter: MultiHashFilter[BrowsedURI] = null
-  private[this] var boosts: ResultClickBoosts = null
+class HotDocSetFilter(
+  userId: Id[User],
+  clickBoostsFuture: Future[ResultClickBoosts],
+  browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
+  monitoredAwait: MonitoredAwait
+) extends Filter {
 
-  def set(browsingHistoryFilter: MultiHashFilter[BrowsedURI], clickBoosts: ResultClickBoosts): Unit = {
-    browsingFilter = browsingHistoryFilter
-    boosts = clickBoosts
-  }
+  private[this] lazy val browsingFilter: MultiHashFilter[BrowsedURI] =
+    monitoredAwait.result(browsingHistoryFuture, 40 millisecond, s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI])
+
+  private[this] lazy val boosts: ResultClickBoosts =
+    monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
 
   override def getDocIdSet(context: AtomicReaderContext, acceptDocs: Bits): DocIdSet = {
-    if (browsingFilter == null || boosts == null) throw new IllegalStateException("missing browsing history and result click boosts")
-
     context.reader match {
       case reader: WrappedSubReader =>
         new DocIdSet {
           override def iterator(): DocIdSetIterator = throw new UnsupportedOperationException
           override def bits(): Bits = new HotDocSet(browsingFilter, boosts, reader.getIdMapper)
         }
-
       case _ => throw new IllegalArgumentException("the reader is not WrappedSubReader")
     }
   }

@@ -37,7 +37,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope, element /*, attrs*/ ) {
-        keepService.reset();
 
         scope.select = keepService.select;
         scope.unselect = keepService.unselect;
@@ -76,7 +75,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         }
 
         function keepKeyBindings(e) {
-          if (e && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
+          var meta = e && (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey);
+          if (e && !meta && e.currentTarget && e.currentTarget.activeElement && e.currentTarget.activeElement.tagName === 'BODY') {
             var captured = false;
             /* jshint maxcomplexity: false */
             switch (e.which) {

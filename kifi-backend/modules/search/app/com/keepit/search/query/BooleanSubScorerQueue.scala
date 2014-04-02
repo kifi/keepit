@@ -4,8 +4,8 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 
 object BooleanSubScorerQueue {
-  def apply(scorers: Array[BooleanScoreDoc]) = {
-    val pq = new BooleanSubScorerQueue(scorers.length)
+  def apply(scorers: Seq[BooleanScoreDoc]) = {
+    val pq = new BooleanSubScorerQueue(scorers.size)
     scorers.foreach{ pq.insertWithOverflow(_) }
     pq
   }
@@ -46,5 +46,7 @@ class BooleanScoreDoc(scorer: Scorer, val value: Float) {
     _doc = scorer.nextDoc()
     sc
   }
+
+  def cost(): Long = scorer.cost()
 }
 

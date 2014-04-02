@@ -1,43 +1,88 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
+import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, MobileController}
-import com.keepit.common.logging.Logging
-import play.api.libs.json.{JsValue, JsNumber, Json}
-import securesocial.core._
-import play.api.mvc._
-import scala.util.Try
-import com.keepit.controllers.core.{AuthController, AuthHelper}
-import securesocial.core.IdentityId
-import scala.util.Failure
-import scala.Some
-import play.api.mvc.SimpleResult
-import securesocial.core.LoginEvent
-import securesocial.core.OAuth2Info
-import scala.util.Success
-import play.api.mvc.Cookie
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.social.{SocialNetworkType, SocialId, UserIdentity}
-import com.keepit.model.{SocialUserInfoRepo, UserRepo}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.UserAgent
+import com.keepit.social.{SocialId, UserIdentity}
+import com.keepit.controllers.core.{AuthController, AuthHelper}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.social.SocialNetworkType
+import com.keepit.model._
 import com.keepit.common.time.Clock
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.providers.ProviderController
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsNumber, Json}
+import play.api.mvc.{Action, Cookie, Session, SimpleResult}
+
+import scala.util.{Failure, Success, Try}
+
+import securesocial.core.{Authenticator, Events, IdentityId, IdentityProvider, LoginEvent}
+import securesocial.core.{OAuth1Provider, OAuth2Info, Registry, SecureSocial, SocialUser, UserService}
 
 class MobileAuthController @Inject() (
-  airbrakeNotifier:AirbrakeNotifier,
-  actionAuthenticator:ActionAuthenticator,
+  airbrakeNotifier: AirbrakeNotifier,
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   clock: Clock,
+  authCommander: AuthCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
+  installationRepo: KifiInstallationRepo,
   authHelper:AuthHelper
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  def accessTokenSignup(providerName:String) = Action(parse.json) { implicit request =>
+  def whatIsMyIp() = Action { request => Ok(request.remoteAddress) }
+
+  def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
+    val json = request.body
+    val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
+    val version = KifiIPhoneVersion((json \ "version").as[String])
+    val (installation, newInstallation) = installationIdOpt map {id =>
+      db.readOnly { implicit s => installationRepo.get(id) }
+    } match {
+      case None =>
+        val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+        db.readWrite { implicit s =>
+          log.info(s"installation for user ${request.userId} does not exist, creating a new one")
+          (installationRepo.save(KifiInstallation(userId = request.userId, userAgent = agent, version = version, platform = KifiInstallationPlatform.IPhone)), true)
+        }
+      case Some(existing) if !existing.isActive =>
+        db.readWrite { implicit s =>
+          log.info(s"activating installation $existing with latest version")
+          (installationRepo.save(existing.withState(KifiInstallationStates.ACTIVE).withVersion(version)), false)
+        }
+      case Some(existing) if existing.userId != request.userId =>
+        db.readWrite { implicit s =>
+          log.info(s"installation $existing is not of user ${request.userId}, creating a new installation for user")
+          val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+          (installationRepo.save(KifiInstallation(userId = request.userId, userAgent = agent, version = version, platform = KifiInstallationPlatform.IPhone)), true)
+        }
+      case Some(active) if active.version.asInstanceOf[KifiIPhoneVersion] < version =>
+        db.readWrite { implicit s =>
+            log.info(s"installation ${active.externalId} for user ${request.userId} exist but outdated, updating")
+            (installationRepo.save(active.withVersion(version)), false)
+        }
+      case Some(active) if active.version.asInstanceOf[KifiIPhoneVersion] > version =>
+        throw new Exception(s"TIME TRAVEL!!! installation ${active.externalId} for user ${request.userId} has version ${active.version} while we got from client an older version $version")
+      case Some(active) =>
+        log.info(s"installation ${active.externalId} for user ${request.userId} exist and version match")
+        (active, false)
+    }
+
+    Ok(Json.obj(
+      "installation" -> installation.externalId.toString,
+      "newInstallation" -> newInstallation
+    ))
+  }
+
+  def accessTokenSignup(providerName:String) = Action(parse.tolerantJson) { implicit request =>
     val resOpt = for {
       provider   <- Registry.providers.get(providerName)
       oauth2Info <- request.body.asOpt[OAuth2Info]
@@ -90,44 +135,24 @@ class MobileAuthController @Inject() (
     resOpt getOrElse BadRequest(Json.obj("error" -> "invalid arguments"))
   }
 
-  def accessTokenLogin(providerName: String) = Action(parse.json) { implicit request =>
-    log.info(s"[accessTokenLogin($providerName)] ${request.body}")
-    val resOpt:Option[Result] =
-      for {
-      provider   <- Registry.providers.get(providerName)
-      oauth2Info <- request.body.asOpt[OAuth2Info]
+  def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
+    (for {
+      provider <- Registry.providers.get(providerName)
+      oAuth2Info <- request.body.asOpt[OAuth2Info]
     } yield {
       Try {
-        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))) // get fb socialId
+        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
       } match {
-        case Success(filledUser) =>
-          UserService.find(filledUser.identityId) map { identity =>
-            db.readOnly(attempts = 2) { implicit s =>
-              socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
-            } match {
-              case None => // kifi user does not exist
-                log.info(s"[accessTokenLogin($providerName)] kifi user does not exist for social user $filledUser")
-                NotFound(Json.obj("error" -> "user_not_found")) // err on the conservative side
-              case Some(userId) =>
-                log.info(s"[accessTokenLogin($providerName)] kifi userId=$userId for social user $filledUser")
-                val newSession = Events.fire(new LoginEvent(identity)).getOrElse(session)
-                Authenticator.create(identity) fold (
-                  error => throw error,
-                  authenticator =>
-                    Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-                      .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                      .withCookies(authenticator.toCookie)
-                )
-            }
-          } getOrElse NotFound(Json.obj("error" -> "user not found"))
+        case Success(socialUser) =>
+          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
         case Failure(t) =>
-          log.error(s"[accessTokenLogin($provider)] Caught Exception($t) during fillProfile; token=${oauth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-          BadRequest(Json.obj("error" -> "invalid token"))
+          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+          BadRequest(Json.obj("error" -> "invalid_token"))
       }
+    }) getOrElse {
+      BadRequest(Json.obj("error" -> "invalid_arguments"))
     }
-    resOpt getOrElse BadRequest(Json.obj("error" -> "invalid arguments"))
   }
-
 
   def socialFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),

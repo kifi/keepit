@@ -1,20 +1,15 @@
 package com.keepit.controllers.ext
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.Action
 import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.result.DecoratedResult
-import com.keepit.search.IdFilterCompressor
 import com.keepit.search.result.KifiSearchResult
 import com.keepit.search.result.ResultUtil
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
 
 class ExtSearchController @Inject() (
@@ -38,14 +33,14 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
 
-    val debugOpt = debug.flatMap{ v => if (request.experiments.contains(ADMIN)) Some(v) else None } // debug is only for admin
+    val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debug)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debugOpt)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
-  //external (from the extension/website)
+  //external (from the extension)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok

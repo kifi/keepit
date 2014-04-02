@@ -243,7 +243,7 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def accessTokenCallback(provider:String) = Action(parse.json) { implicit request =>
+  def accessTokenCallback(provider:String) = Action(parse.tolerantJson) { implicit request =>
     log.info(s"[oauth2.accessTokenCallback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val json = request.body

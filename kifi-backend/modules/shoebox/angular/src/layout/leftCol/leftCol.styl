@@ -22,14 +22,21 @@
   height: 29px
   background: url(/img/kifi-logo.png) 0/100%
 
-  &:after
-    position: absolute
-    content: "beta"
-    left: 56px
-    bottom: 0
-    font-size: 10px
-    line-height: 10px
-    font-weight: 300
-    font-style: italic
-    font-smoothing: antialiased
-    color: #fff
+.kf-header-callout-wrap
+  position: relative
+
+a.kf-header-callout
+  position: absolute
+  left: 3px
+  bottom: 5px
+  width: 60px
+  font-size: 10px
+  line-height: 10px
+  font-weight: 300
+  font-style: italic
+  font-smoothing: antialiased
+  color: #fff
+  text-decoration: none
+
+a.kf-header-callout:hover
+  text-decoration: underline

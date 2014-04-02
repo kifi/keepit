@@ -1,32 +1,33 @@
+##########################################
+# Site API
+##########################################
+
+POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
 
 ##########################################
 # Extension API
 ##########################################
 
+GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
 POST    /eliza/messages                   @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageAction()
 POST    /eliza/messages/:parentId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
-
-POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
-
-GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
-
-## Deprecated, kill after Eduardo gives an OK
-POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
-
 
 ##########################################
 # Mobile V1
 ##########################################
 
+GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
 GET     /m/1/eliza/notifications          @com.keepit.eliza.controllers.mobile.MobileMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
 POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 POST    /m/1/eliza/messages/:parentId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
-GET     /m/1/eliza/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
 POST    /m/1/eliza/devices/:deviceType    @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 GET     /m/1/eliza/thread/:threadId       @com.keepit.eliza.controllers.mobile.MobileMessagingController.getCompactThread(threadId: String)
 GET     /m/1/eliza/getThread              @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThread(threadId: String)
 GET     /m/1/eliza/getThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThreadsByUrl(url: String)
 GET     /m/1/eliza/hasThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.hasThreadsByUrl(url: String)
+
+## Deprecated, kill after Eduardo gives an OK
+POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 ##########################################
 # INTERNAL ROUTES/Eliza
@@ -40,6 +41,7 @@ GET   /internal/eliza/getUserThreadStats        @com.keepit.eliza.controllers.in
 GET   /internal/eliza/sequenceNumber/renormalization @com.keepit.eliza.controllers.internal.ElizaController.getRenormalizationSequenceNumber()
 
 POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.controllers.internal.MessagingController.sendGlobalNotification
+GET   /internal/eliza/unsendNotification        @com.keepit.eliza.controllers.internal.MessagingController.unsendNotification(id: Long)
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications

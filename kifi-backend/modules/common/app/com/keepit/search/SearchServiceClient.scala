@@ -18,6 +18,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 import com.keepit.search.feed.Feed
+import com.keepit.typeahead.TypeaheadHit
+import com.keepit.social.BasicUser
+import com.keepit.typeahead.PrefixMatching
+import com.keepit.typeahead.PrefixFilter
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -27,7 +31,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
-  def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
 
   def updateUserGraph(): Unit
   def updateSearchFriendGraph(): Unit
@@ -38,6 +41,7 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexerSequenceNumber(): Future[Int]
 
   def reindexUsers(): Unit
+  def updateUserIndex(): Unit
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
@@ -45,6 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
+  def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def correctSpelling(text: String, enableBoost: Boolean): Future[String]
@@ -111,8 +116,8 @@ class SearchServiceClientImpl(
     broadcast(Search.internal.userReindex())
   }
 
-  def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
-    call(Search.internal.uriGraphInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
+  def updateUserIndex(): Unit = {
+    broadcast(Search.internal.updateUserIndex())
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>
@@ -155,6 +160,26 @@ class SearchServiceClientImpl(
       Json.fromJson[UserSearchResult](r.json).get
     }
   }
+
+  def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = {
+    val payload = Json.toJson(UserSearchRequest(Some(userId), query, maxHits, context, filter))
+    call(Search.internal.userTypeahead(), payload).map{ r =>
+      val userSearchResult = Json.fromJson[UserSearchResult](r.json).get
+      if (userSearchResult.hits.isEmpty) Seq[TypeaheadHit[BasicUser]]()
+      else {
+        val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+        var ordinal = 0
+        userSearchResult.hits.map{ hit =>
+          val name = hit.basicUser.firstName + " " + hit.basicUser.lastName
+          val normalizedName = PrefixFilter.normalize(name)
+          val score = PrefixMatching.distance(normalizedName, queryTerms)
+          ordinal += 1
+          new TypeaheadHit[BasicUser](score, name, ordinal,hit.basicUser)
+        }
+      }
+    }
+  }
+
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
     call(Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))

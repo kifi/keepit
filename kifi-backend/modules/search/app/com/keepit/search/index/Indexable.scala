@@ -17,7 +17,7 @@ import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import java.io.IOException
-import java.io.StringReader
+import java.io.Reader
 import com.keepit.common.logging.Logging
 
 
@@ -106,6 +106,11 @@ trait Indexable[T, S] extends Logging{
     new Field(fieldName, ts, textFieldType)
   }
 
+  protected def buildTextField(fieldName: String, fieldValue: Reader, analyzer: Analyzer): Field = {
+    val ts = analyzer.createLazyTokenStream(fieldName, fieldValue)
+    new Field(fieldName, ts, textFieldType)
+  }
+
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
   def buildIdValueField[V](field: String, typedId: Id[V]): Field = new NumericDocValuesField(field, typedId.id)
 
@@ -177,7 +182,7 @@ trait Indexable[T, S] extends Logging{
         case _ => ""
       }
       val path = u.path.map{ p =>
-      URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
+        URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
       }
       host + " " + path
     }

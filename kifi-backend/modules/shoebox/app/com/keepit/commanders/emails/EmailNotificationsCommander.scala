@@ -2,23 +2,34 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{ElectronicMailRepo, LocalPostOffice, EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{LocalPostOffice, EmailAddresses, ElectronicMail}
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.eliza.model.ThreadItem
 import scala.Some
 import com.keepit.model.DeepLocator
 import com.keepit.common.logging.Logging
+import org.joda.time.DateTime
+import com.keepit.common.time._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class EmailNotificationsCommander @Inject() (
   localPostOffice: LocalPostOffice,
   userRepo: UserRepo,
   deepLinkRepo: DeepLinkRepo,
   emailRepo: EmailAddressRepo,
-  db: Database) extends Logging {
+  db: Database,
+  clock: Clock,
+  airbrake: AirbrakeNotifier) extends Logging {
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipantIds: Seq[Id[User]],
-                         recipientUserId: Id[User], title: String, deepLocator: DeepLocator): Unit = db.readWrite { implicit session =>
+                         recipientUserId: Id[User], title: String, deepLocator: DeepLocator,
+                         notificationUpdatedAt: Option[DateTime]): Unit = db.readWrite { implicit session =>
+    notificationUpdatedAt foreach { time =>
+      val now = clock.now
+      airbrake.verify(time.isAfter(now.minusMinutes(30)), s"notificationUpdatedAt $time of thread was more then 30min ago. " +
+        s"recipientUserId: $recipientUserId, deepLocator: $deepLocator")
+    }
     //if user is not active, skip it!
     val recipient = userRepo.get(recipientUserId)
     if (recipient.state == UserStates.ACTIVE) {

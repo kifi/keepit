@@ -1,7 +1,7 @@
 package com.keepit.search.article
 
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
@@ -9,19 +9,17 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
-import com.keepit.search.Lang
 import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
-import com.google.inject.Inject
 import scala.util.Success
 import com.keepit.search.article.ArticleRecordSerializer._
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
-import com.keepit.search.index.IndexWarmer
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
+import com.keepit.search.util.MultiStringReader
 
 
 class ArticleIndexer(
@@ -31,8 +29,6 @@ class ArticleIndexer(
   extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
 
   import ArticleIndexer.ArticleIndexable
-
-  override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
   override val commitBatchSize = 1000
 
@@ -81,17 +77,6 @@ object ArticleIndexer extends Logging {
   ) extends Indexable[NormalizedURI, NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
-    private def enrichedContent(article: Article): String = {
-      val c = article.description match {
-        case Some(desc) => desc + "\n\n" + article.content
-        case None => article.content
-      }
-      article.media match {
-        case Some(media) => c + "\n\n" + media
-        case None => c
-      }
-    }
-
     private def getArticle(id: Id[NormalizedURI], maxRetry: Int, minSleepTime: Long): Option[Article] = {
       var sleepTime = minSleepTime
       var retry = maxRetry
@@ -123,8 +108,8 @@ object ArticleIndexer extends Logging {
           uri.restriction.map{ reason =>
             doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
           }
-          val titleLang = article.titleLang.getOrElse(Lang("en"))
-          val contentLang = article.contentLang.getOrElse(Lang("en"))
+          val titleLang = article.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
+          val contentLang = article.contentLang.getOrElse(DefaultAnalyzer.defaultLang)
           doc.add(buildKeywordField("cl", contentLang.lang))
           doc.add(buildKeywordField("tl", titleLang.lang))
 
@@ -133,18 +118,22 @@ object ArticleIndexer extends Logging {
           val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
           val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
 
-          val content = (Seq(article.content) ++ article.description ++ article.keywords).mkString("\n\n")
-          val titleAndUrl = article.title + " " + urlToIndexableString(uri.url)
+          val content = Array(
+            article.content, "\n\n",
+            article.description.getOrElse(""), "\n\n",
+            article.keywords.getOrElse(""), "\n\n",
+            article.media.getOrElse(""))
+          val titleAndUrl = Array(article.title, "\n\n", urlToIndexableString(uri.url).getOrElse(""))
 
-          doc.add(buildTextField("t", titleAndUrl, titleAnalyzer))
-          doc.add(buildTextField("ts", titleAndUrl, titleAnalyzerWithStemmer))
+          doc.add(buildTextField("t", new MultiStringReader(titleAndUrl), titleAnalyzer))
+          doc.add(buildTextField("ts", new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
 
-          doc.add(buildTextField("c", content, contentAnalyzer))
-          doc.add(buildTextField("cs", content, contentAnalyzerWithStemmer))
+          doc.add(buildTextField("c", new MultiStringReader(content), contentAnalyzer))
+          doc.add(buildTextField("cs", new MultiStringReader(content), contentAnalyzerWithStemmer))
 
           val builder = new SemanticVectorBuilder(60)
           builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
-          builder.load(contentAnalyzerWithStemmer.tokenStream("c", content))
+          builder.load(contentAnalyzerWithStemmer.tokenStream("c", new MultiStringReader(content)))
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 

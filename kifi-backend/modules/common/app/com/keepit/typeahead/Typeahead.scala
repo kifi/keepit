@@ -7,10 +7,11 @@ import com.keepit.common.performance._
 import com.keepit.model.User
 import scala.concurrent._
 import scala.concurrent.duration._
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable.ArrayBuffer
+import Logging.LoggerWithPrefix
 
 trait Typeahead[E, I] extends Logging {
 
@@ -51,7 +52,7 @@ trait Typeahead[E, I] extends Logging {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {
         case None =>
-          log.warn(s"[search($userId,$query)] NO FILTER found. res=NONE")
+          log.warn(s"[search($userId,$query)] NO FILTER found")
           None
         case Some(filter) =>
           if (filter.isEmpty) {
@@ -67,20 +68,20 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
+  def asyncTopN(userId: Id[User], query: String, limit:Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[TypeaheadHit[I]]]] = {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {
         case None =>
-          log.warn(s"[asyncSearch($userId,$query)] NO FILTER found")
+          log.warn(s"[asyncTopN($userId,$query)] NO FILTER found")
           Future.successful(None)
         case Some(filter) =>
           if (filter.isEmpty) {
-            log.info(s"[asyncSearch($userId,$query)] filter is EMPTY")
+            log.info(s"[asyncTopN($userId,$query)] filter is EMPTY")
             Future.successful(None)
           } else {
             val queryTerms = PrefixFilter.normalize(query).split("\\s+")
             asyncGetInfos(filter.filterBy(queryTerms)).map { infos =>
-              search(infos, queryTerms)
+              topN(infos, queryTerms, limit)
             }(ExecutionContext.fj)
           }
       }
@@ -89,19 +90,32 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search(${queryTerms.mkString(",")},#infos=${infos.length})") {
+  def topN(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]):Option[Seq[TypeaheadHit[I]]] = {
     if (queryTerms.length > 0) {
       var ordinal = 0
       val hits = infos.map{ info =>
         ordinal += 1
         val name = PrefixFilter.normalize(extractName(info))
         TypeaheadHit(PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
-      }.collect{ case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem }.sorted.map(_.info)
-
-      Some(hits)
+      }.collect{
+        case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem
+      }.sorted
+      val top = limit map (n => hits.take(n)) getOrElse hits
+      top.foreach { s => log.info(s"[topN(${queryTerms.mkString(",")},$limit,#infos=${infos.length})] top=${top.mkString(",")}")}
+      Some(top)
     } else {
       None
     }
+  }
+
+  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
+    asyncTopN(userId, query, None).map { o =>
+      o map { s => s.map(_.info) }
+    }(ExecutionContext.fj)
+  }
+
+  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search(${queryTerms.mkString(",")},#infos=${infos.length})") {
+    topN(infos, queryTerms, None) map { s => s.map(_.info) }
   }
 
   def build(id: Id[User]): Future[PrefixFilter[E]] = {
@@ -121,13 +135,26 @@ trait Typeahead[E, I] extends Logging {
 
   def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
 
-  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = {
+  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = { // consider using zk and/or sqs to track progress
+    implicit val prefix = LogPrefix(s"refreshByIds(#ids=${userIds.length})")
     implicit val fj = ExecutionContext.fj
-    val futures = new ArrayBuffer[Future[Unit]]
-    for (userId <- userIds) {
-      futures += refresh(userId).map{ _ => }
+
+    log.infoP(s"begin re-indexing users ...")
+    val grouped = userIds.grouped(100)
+    val resF = grouped.zipWithIndex.map { case (batch, i) =>
+      log.infoP(s"begin re-indexing for batch $i/${grouped.length} ...")
+      val futures = batch.map { userId =>
+        refresh(userId).map { filter =>
+          log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
+        }
+      }
+      Future.sequence(futures).map{ _ =>
+        log.infoP(s"done with re-indexing for batch $i/${grouped.length}")
+      }
     }
-    Future.sequence(futures.toSeq).map{ _ => }
+    Future.sequence(resF).map{ u =>
+      log.infoP(s"done with re-indexing.")
+    }
   }
 
   def refreshAll(): Future[Unit]

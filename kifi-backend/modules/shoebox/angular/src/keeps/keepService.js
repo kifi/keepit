@@ -1,10 +1,14 @@
 'use strict';
 
-angular.module('kifi.keepService', ['kifi.undo'])
+angular.module('kifi.keepService', [
+  'kifi.undo',
+  'kifi.clutch',
+  'angulartics'
+])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService) {
 
     var list = [],
       selected = {},
@@ -114,6 +118,25 @@ angular.module('kifi.keepService', ['kifi.undo'])
     }
 
 
+
+    var keepList = new Clutch(function (url, config) {
+      $log.log('keepService.getList()', config && config.params);
+
+      return $http.get(url, config).then(function (res) {
+        var data = res.data,
+          keeps = data.keeps || [];
+
+        _.forEach(keeps, function (keep) {
+          keep.isMyBookmark = true;
+        });
+
+        fetchScreenshots(keeps);
+
+        return { keeps: keeps, before: data.before };
+      });
+    });
+
+
     var api = {
       list: list,
 
@@ -142,14 +165,18 @@ angular.module('kifi.keepService', ['kifi.undo'])
       preview: function (keep) {
         if (keep == null) {
           api.clearState();
-        }
-        else {
+        } else {
           singleKeepBeingPreviewed = true;
           isDetailOpen = true;
         }
         selectedIdx = keepIdx(keep);
         previewed = keep;
         api.getChatter(previewed);
+
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'preview',
+          'selectedIdx': selectedIdx
+        });
 
         return keep;
       },
@@ -336,28 +363,21 @@ angular.module('kifi.keepService', ['kifi.undo'])
           params: params
         };
 
-        $log.log('keepService.getList()', params);
+        return keepList.get(url, config).then(function (result) {
 
-        return $http.get(url, config).then(function (res) {
-          var data = res.data,
-            keeps = data.keeps || [];
+          var keeps = result.keeps;
+          var _before = result.before;
+
           if (!keeps.length) {
             end = true;
           }
 
-          if (!data.before) {
+          if (!_before) {
             list.length = 0;
           }
 
           list.push.apply(list, keeps);
           before = list.length ? list[list.length - 1].id : null;
-
-          _.forEach(keeps, function (keep) {
-            keep.isMyBookmark = true;
-          });
-
-          fetchScreenshots(keeps);
-
           return keeps;
         });
       },
@@ -451,6 +471,9 @@ angular.module('kifi.keepService', ['kifi.undo'])
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
             keep.unkept = false;
           });
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'keep'
+          });
           return keeps;
         });
       },
@@ -495,6 +518,9 @@ angular.module('kifi.keepService', ['kifi.undo'])
             api.keep(keeps);
           });
 
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unkeep'
+          });
           return keeps;
         });
       },
@@ -543,7 +569,7 @@ angular.module('kifi.keepService', ['kifi.undo'])
           return $q.when([]);
         }
 
-        var url = env.xhrBaseSearch,
+        var url = routeService.search,
           data = {
             params: {
               q: query || void 0,
@@ -562,6 +588,12 @@ angular.module('kifi.keepService', ['kifi.undo'])
           if (!data.mayHaveMore) {
             end = true;
           }
+
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'searchKifi',
+            'hits': hits.size,
+            'mayHaveMore': data.mayHaveMore
+          });
 
           _.forEach(hits, processHit);
 

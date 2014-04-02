@@ -28,8 +28,8 @@ private case object ProcessKeeps
 private class RawKeepImporterActor @Inject() (
   db: Database,
   rawKeepRepo: RawKeepRepo,
-  bookmarkInternerProvider: Provider[BookmarkInterner],
-  bookmarkRepo: BookmarkRepo,
+  bookmarkInternerProvider: Provider[KeepInterner],
+  keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userValueRepo: UserValueRepo,
   airbrake: AirbrakeNotifier,
@@ -37,7 +37,7 @@ private class RawKeepImporterActor @Inject() (
   scraper: ScrapeSchedulerPlugin,
   keptAnalytics: KeepingAnalytics,
   kifiInstallationRepo: KifiInstallationRepo,
-  bookmarksCommanderProvider: Provider[BookmarksCommander],
+  bookmarksCommanderProvider: Provider[KeepsCommander],
   searchClient: SearchServiceClient,
   clock: Clock
 ) extends FortyTwoActor(airbrake) with Logging {
@@ -94,7 +94,7 @@ private class RawKeepImporterActor @Inject() (
       }
 
       if (successes.nonEmpty) {
-        if (source == BookmarkSource.bookmarkImport && installationId.isDefined) {
+        if (source == KeepSource.bookmarkImport && installationId.isDefined) {
           // User selected to import Léo
           val tagName = db.readOnly { implicit session =>
             "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")

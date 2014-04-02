@@ -20,13 +20,16 @@
                     UserId:<input type="number" name="userId" value="@user.id.get">
                 </div>
                 <div class="form-group">
-                    Prefix:<input type="text" name="search" onkeyup="submit()">
+                    Limit:<input type="number" name="limit" value="10">
+                </div>
+                <div class="form-group">
+                    Prefix:<input type="text" name="query" onkeyup="submit()">
                 </div>
             </form>
         </tr>
     </table>
     <div>
-        <iframe name="search_frame" src="@com.keepit.controllers.admin.routes.TypeaheadAdminController.search(user.id.get)" width="800"/>
+        <iframe name="search_frame" src="@com.keepit.controllers.admin.routes.TypeaheadAdminController.search(user.id.get)" width="800" height="300"/>
     </div>
     <br/>
 }

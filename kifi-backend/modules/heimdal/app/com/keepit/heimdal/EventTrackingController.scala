@@ -25,7 +25,7 @@ class EventTrackingController @Inject() (
     }
   }
 
-  def trackInternalEventAction = Action(parse.json) { request =>
+  def trackInternalEventAction = Action(parse.tolerantJson) { request =>
     SafeFuture{
       trackInternalEvent(request.body)
     }(SlowRunningExecutionContext.ec)

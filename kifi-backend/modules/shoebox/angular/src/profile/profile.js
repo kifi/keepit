@@ -7,7 +7,9 @@ angular.module('kifi.profile', [
   'kifi.routeService',
   'kifi.profileEmailAddresses',
   'kifi.profileChangePassword',
-  'jun.facebook'
+  'kifi.profileImage',
+  'jun.facebook',
+  'angulartics'
 ])
 
 .config([
@@ -21,11 +23,13 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window',
-  function ($scope, $http, profileService, routeService, $window) {
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, profileService, routeService, $window, socialService) {
+
+    // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
     $window.document.title = 'Kifi • Your Profile';
-    profileService.getNetworks();
+    socialService.refresh();
 
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
@@ -148,58 +152,66 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfLinkedinConnectButton', [
-  'profileService',
-  function (profileService) {
+  'socialService',
+  function (socialService) {
     return {
       restrict: 'A',
       link: function (scope) {
-        scope.isLinkedInConnected = (profileService.me && profileService.me.linkedInConnected) || false;
+        scope.isLinkedInConnected = socialService.linkedin && !!socialService.linkedin.profileUrl;
+
+        scope.linkedin = socialService.linkedin;
 
         scope.$watch(function () {
-          return profileService.me.linkedInConnected;
-        }, function (status) {
-          scope.isLinkedInConnected = status;
-          var li = _.find(profileService.networks, function (n) {
-            return n.network === 'linkedin';
-          });
-          scope.liProfileUrl = li && li.profileUrl;
+          return socialService.linkedin && socialService.linkedin.profileUrl;
+        }, function () {
+          var linkedin = socialService.linkedin;
+          if (linkedin && linkedin.profileUrl) {
+            scope.isLinkedInConnected = true;
+            scope.liProfileUrl = linkedin.profileUrl;
+          }
         });
 
-        scope.connectLinkedIn = profileService.social.connectLinkedIn;
-        scope.disconnectLinkedIn = profileService.social.disconnectLinkedIn;
+        socialService.refresh();
+
+        scope.connectLinkedIn = socialService.connectLinkedIn;
+        scope.disconnectLinkedIn = socialService.disconnectLinkedIn;
       }
     };
   }
 ])
 
 .directive('kfFacebookConnectButton', [
-  'profileService',
-  function (profileService) {
+  'socialService',
+  function (socialService) {
     return {
       restrict: 'A',
       link: function (scope) {
-        scope.isFacebookConnected = (profileService.me && profileService.me.facebookConnected) || false;
+        scope.isFacebookConnected = socialService.facebook && !!socialService.facebook.profileUrl;
+
+        scope.facebook = socialService.facebook;
 
         scope.$watch(function () {
-          return profileService.me.facebookConnected;
-        }, function (status) {
-          scope.isFacebookConnected = status;
-          var fb = _.find(profileService.networks, function (n) {
-            return n.network === 'facebook';
-          });
-          scope.fbProfileUrl = fb && fb.profileUrl;
+          return socialService.facebook && socialService.facebook.profileUrl;
+        }, function () {
+          var facebook = socialService.facebook;
+          if (facebook && facebook.profileUrl) {
+            scope.isFacebookConnected = true;
+            scope.fbProfileUrl = facebook.profileUrl;
+          }
         });
 
-        scope.connectFacebook = profileService.social.connectFacebook;
-        scope.disconnectFacebook = profileService.social.disconnectFacebook;
+        socialService.refresh();
+
+        scope.connectFacebook = socialService.connectFacebook;
+        scope.disconnectFacebook = socialService.disconnectFacebook;
       }
     };
   }
 ])
 
 .directive('kfEmailImport', [
-  'profileService', '$window', 'env',
-  function (profileService, $window, env) {
+  'profileService', '$window', 'env', 'socialService',
+  function (profileService, $window, env, socialService) {
     return {
       restrict: 'A',
       replace: true,
@@ -209,116 +221,15 @@ angular.module('kifi.profile', [
 
         scope.addressBookImportText = 'Import a Gmail account';
 
-        profileService.getAddressBooks().then(function (data) {
-          scope.addressBooks = data;
-          if (data && data.length > 0) {
+        socialService.refresh().then(function () {
+          scope.addressBooks = socialService.addressBooks;
+          if (socialService.addressBooks && socialService.addressBooks.length > 0) {
             scope.addressBookImportText = 'Import another Gmail account';
           }
         });
 
         scope.importGmailContacts = function () {
           $window.location = env.origin + '/importContacts';
-        };
-      }
-    };
-  }
-])
-
-.directive('kfProfileImage', [
-  '$compile', '$templateCache', '$window', '$q', '$http', 'env',
-  function ($compile, $templateCache, $window, $q, $http, env) {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        picUrl: '='
-      },
-      templateUrl: 'profile/profileImage.tpl.html',
-      link: function (scope, element) {
-        var fileInput = element.find('input');
-
-        var URL = $window.URL || $window.webkitURL,
-          PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
-          PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
-
-        var photoXhr2;
-
-        function uploadPhotoXhr2(files) {
-          var file = Array.prototype.filter.call(files, isImage)[0];
-          if (file) {
-            if (photoXhr2) {
-              photoXhr2.abort();
-            }
-
-            var xhr = new $window.XMLHttpRequest();
-            photoXhr2 = xhr;
-
-            var deferred = $q.defer();
-
-            xhr.withCredentials = true;
-            xhr.upload.addEventListener('progress', function (e) {
-              if (e.lengthComputable) {
-                deferred.notify(e.loaded / e.total);
-              }
-            });
-
-            xhr.addEventListener('load', function () {
-              deferred.resolve(JSON.parse(xhr.responseText));
-            });
-
-            xhr.addEventListener('loadend', function () {
-              if (photoXhr2 === xhr) {
-                photoXhr2 = null;
-              }
-              //todo(martin) We cannot directly check the state of the promise
-              /*if (deferred.state() === 'pending') {
-                deferred.reject();
-              }*/
-            });
-
-            xhr.open('POST', PHOTO_BINARY_UPLOAD_URL, true);
-            xhr.send(file);
-
-            return {
-              file: file,
-              promise: deferred.promise
-            };
-          }
-
-          //todo(martin): Notify user
-        }
-
-        function isImage(file) {
-          return file.type.search(/^image\/(?:bmp|jpg|jpeg|png|gif)$/) === 0;
-        }
-
-        scope.selectFile = function () {
-          fileInput.click();
-        };
-
-        scope.fileChosen = function (files) {
-          var upload = uploadPhotoXhr2(files);
-          if (upload) {
-            var localPhotoUrl = URL.createObjectURL(upload.file);
-            var img = new $window.Image();
-            img.onload = function () {
-              var image = this;
-              upload.promise.then(function (result) {
-                $http.post(PHOTO_CROP_UPLOAD_URL, {
-                  picToken: result && result.token,
-                  picWidth: image.width,
-                  picHeight: image.height,
-                  cropX: image.x,
-                  cropY: image.y,
-                  cropSize: Math.min(image.width, image.height)
-                })
-                .then(function () {
-                  scope.picUrl = result.url;
-                });
-              });
-            };
-            img.src = localPhotoUrl;
-          }
         };
       }
     };

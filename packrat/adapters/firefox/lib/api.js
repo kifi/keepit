@@ -154,51 +154,6 @@ exports.play = function(path) {
   nsISound.play(nsIIO.newURI(self.data.url(path), null, null));
 };
 
-exports.popup = {
-  open: function(options, handlers) {
-    var onReady = errors.wrap(function onReady(tab) {
-      handlers.navigate.call(tab, tab.url);
-    });
-    var win = windows.open({
-      url: options.url,
-      onOpen: errors.wrap(function() {
-        if (handlers && handlers.navigate) {
-          win.tabs.activeTab.on("ready", onReady);
-        }
-      }),
-      onClose: errors.wrap(function() {
-        win.tabs.activeTab.removeListener("ready", onReady);
-      })
-    });
-
-    // Below are some failed attempts at opening a popup window...
-    // UPDATE: see https://addons.mozilla.org/en-US/developers/docs/sdk/1.12/modules/sdk/frame/utils.html
-
-    // win.window, win.document, win.getInterface
-    // var win = require("api-utils/window/utils").open(options.url, {
-    //   name: options.name,
-    //   features: {
-    //     centerscreen: true,
-    //     width: options.width || undefined,
-    //     height: options.height || undefined}});
-    // var { Cc, Ci } = require('chrome')
-    // var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].getService(Ci.nsIWindowWatcher);
-    // log("=========== OPENED:", typeof ww.getChromeForWindow(win));
-    // timers.setTimeout(function() {
-    //   win.close();
-    // }, 50000);
-
-    // ww.registerNotification({
-    //   observe: function(aSubject, aTopic, aData) {
-    //     log("============== OBSERVED!", aSubject, aTopic, aData);
-    //   }});
-
-    // WORKS! win.getInterface(Ci.nsIWebNavigation);
-    // FAILS! win.getInterface(Ci.nsIWebBrowser);
-    // FAILS! win.getInterface(Ci.nsIWebProgress);
-    // FAILS! win.getXULWindow()
-  }};
-
 var portHandlers, portMessageTypes;
 exports.port = {
   on: function (handlers) {
@@ -218,11 +173,15 @@ function bindPortHandlers(worker, page) {
 }
 var onPortMessage = errors.wrap(function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
-  portHandlers[type](data, respondToTab.bind(this, callbackId), page);
+  portHandlers[type](data, respondToTab.bind(this, callbackId, page), page);
 });
-function respondToTab(callbackId, response) {
+function respondToTab(callbackId, page, response) {
   if (this.handling) {
-    this.port.emit('api:respond', callbackId, response);
+    if (pages[page.id] === page) {
+      this.port.emit('api:respond', callbackId, response);
+    } else {
+      log('[respondToTab] page hidden', page.id, callbackId);
+    }
   }
 }
 
@@ -663,11 +622,15 @@ var workerOnApiHandling = errors.wrap(function workerOnApiHandling(page, worker,
 });
 
 var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, injectedJs, paths, callbackId) {
-  var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
-  log('[api:require] tab:', page.id, o);
-  mergeArr(page.injectedCss, o.styles);
-  mergeArr(injectedJs, o.scripts);
-  worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+  if (pages[page.id] === page) {
+    var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
+    log('[api:require]', page.id, o);
+    mergeArr(page.injectedCss, o.styles);
+    mergeArr(injectedJs, o.scripts);
+    worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+  } else {
+    log('[api:require] page hidden', page.id, o);
+  }
 });
 
 const {PageMod} = require('sdk/page-mod');

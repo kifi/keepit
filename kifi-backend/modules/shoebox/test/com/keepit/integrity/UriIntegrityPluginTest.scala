@@ -22,7 +22,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
@@ -40,10 +40,10 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
-            val hover = BookmarkSource.keeper
-            val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = nuri0.id.get, source = hover))
-            val bm2 = bmRepo.save(Bookmark(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id, uriId = nuri2.id.get, source = hover))
-            val bm3 = bmRepo.save(Bookmark(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id, uriId = nuri2.id.get, source = hover))
+            val hover = KeepSource.keeper
+            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover))
+            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = nuri2.id.get, source = hover))
+            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get, uriId = nuri2.id.get, source = hover))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -113,7 +113,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val uriRepo = inject[NormalizedURIRepo]
         val collectionRepo = inject[CollectionRepo]
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
-        val bmRepo = inject[BookmarkRepo]
+        val bmRepo = inject[KeepRepo]
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
 
@@ -150,29 +150,29 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
-            val hover = BookmarkSource.keeper
-            val bm0 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = uri0.id.get, source = hover))
-            val bm0better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id,  uriId = uri0better.id.get, source = hover))
+            val hover = KeepSource.keeper
+            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,  uriId = uri0.id.get, source = hover))
+            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,  uriId = uri0better.id.get, source = hover))
 
-            val bm1 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id,  uriId = uri1.id.get, source = hover))
-            val bm1better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id,  uriId = uri1better.id.get, source = hover))
+            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,  uriId = uri1.id.get, source = hover))
+            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,  uriId = uri1better.id.get, source = hover))
 
-            val bm2 = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id,  uriId = uri2.id.get, source = hover))
-            val bm2better = bmRepo.save(Bookmark(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id,  uriId = uri2better.id.get, source = hover))
+            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,  uriId = uri2.id.get, source = hover))
+            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,  uriId = uri2better.id.get, source = hover))
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = "google"))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = "googleBetter"))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm0.id.get, collectionId = c0.id.get))
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm0better.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm0.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm0better.id.get, collectionId = c0.id.get))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm1.id.get, collectionId = c0.id.get))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2.id.get, collectionId = c0.id.get))
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c0.id.get, state = KeepToCollectionStates.INACTIVE))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm2.id.get, collectionId = c0.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm2better.id.get, collectionId = c0.id.get, state = KeepToCollectionStates.INACTIVE))
 
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm1better.id.get, collectionId = c1.id.get))
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bm2better.id.get, collectionId = c1.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm1better.id.get, collectionId = c1.id.get))
+            keepToCollectionRepo.save(KeepToCollection(keepId = bm2better.id.get, collectionId = c1.id.get))
 
             collectionRepo.collectionChanged(c0.id.get, true)
             collectionRepo.collectionChanged(c1.id.get, true)
@@ -184,13 +184,13 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val (uris, betterUris, bms, betterBms) = setup()
 
         db.readOnly{ implicit s =>
-          keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(bms(1).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(bms(2).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(1).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(2).id.get).size === 1
 
-          keepToCollectionRepo.getByBookmark(betterBms(0).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(betterBms(1).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(betterBms(2).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 1
         }
 
         plugin.handleChangedUri(URIMigration(uris(0).id.get, betterUris(0).id.get))
@@ -200,12 +200,12 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.batchURIMigration()
 
         db.readOnly{ implicit s =>
-          keepToCollectionRepo.getByBookmark(bms(0).id.get).size === 0
-          keepToCollectionRepo.getByBookmark(bms(1).id.get).size === 0
-          keepToCollectionRepo.getByBookmark(bms(2).id.get).size === 0
-          keepToCollectionRepo.getByBookmark(betterBms(0).id.get).size === 1
-          keepToCollectionRepo.getByBookmark(betterBms(1).id.get).size === 2
-          keepToCollectionRepo.getByBookmark(betterBms(2).id.get).size === 2
+          keepToCollectionRepo.getByKeep(bms(0).id.get).size === 0
+          keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
+          keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0
+          keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
         }
 
       }

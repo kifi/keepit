@@ -1,5 +1,5 @@
 package com.keepit.search.line
-import org.apache.lucene.analysis.Analyzer
+
 import org.apache.lucene.document.Field
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
@@ -31,7 +31,6 @@ class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStr
 
   private[this] var baseTokenStream = LineField.emptyTokenStream
 
-  private[this] var gap = 0
   private[this] var curPos = 0
   private[this] var posLimit = 0
   private[this] var baseTermAttr: CharTermAttribute = null
@@ -50,8 +49,10 @@ class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStr
       val (lineStart, lineEnd) = lineRange(lineNo)
       incr = lineStart - curPos
       posLimit = lineEnd - 1
+      baseTokenStream.end()
+      baseTokenStream.close()
       baseTokenStream = tokenStreamFunc(fieldName, text, lang)
-      baseTokenStream.reset
+      baseTokenStream.reset()
       baseTermAttr =
         if (baseTokenStream.hasAttribute(classOf[CharTermAttribute])) {
           baseTokenStream.getAttribute(classOf[CharTermAttribute])
@@ -82,4 +83,7 @@ class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStr
       case false => false
     }
   }
+
+  override def end(): Unit = baseTokenStream.end()
+  override def close(): Unit = baseTokenStream.close()
 }

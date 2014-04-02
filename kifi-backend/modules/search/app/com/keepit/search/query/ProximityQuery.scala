@@ -1,8 +1,6 @@
 package com.keepit.search.query
 
-import com.keepit.search.Searcher
 import com.keepit.search.query.QueryUtil._
-import com.keepit.search.util.AhoCorasick
 import com.keepit.search.util.LocalAlignment
 import com.keepit.search.util.LocalAlignment._
 import org.apache.lucene.index.AtomicReaderContext
@@ -16,7 +14,6 @@ import org.apache.lucene.search.ComplexExplanation
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
@@ -41,13 +38,20 @@ object ProximityQuery extends Logging {
       }
     }
 
-    val dict = (posNotInPhrase.filter{ _ >= 0 }.map{ pos => (Seq(termIds(pos)), TermMatch(pos).asInstanceOf[Match]) } ++
-      phrases.map{ case (pos, len) => (termIds.slice(pos, pos + len).toSeq, (if (len == 1) TermMatch(pos) else PhraseMatch(pos, len)).asInstanceOf[Match]) })
+    var dict = Map.empty[Seq[Int], Match]
+    dict = posNotInPhrase.filter{ _ >= 0 }.foldLeft(dict){ (d, pos) => d + (Seq(termIds(pos)) -> TermMatch(pos).asInstanceOf[Match]) }
+    phrases.foldLeft(dict){ case (d, (pos, len)) =>
+      if (pos + len <= termIds.length) {
+        val key = termIds.slice(pos, pos + len).toSeq
+        val value = (if (len == 1) TermMatch(pos) else PhraseMatch(pos, len)).asInstanceOf[Match]
 
-    // verify
-    dict.foreach{ case (p, m) => if (p.size != m.len) log.error(s"bad phrase: ($p, $m)") }
+        if (key.size != len) log.error(s"bad phrase: ($key, $value)") // verify
 
-    dict
+        d + (key -> value)
+      } else {
+        d
+      }
+    }.toSeq
   }
 }
 
@@ -194,6 +198,8 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
       pos = Int.MaxValue
     }
   }
+
+  def cost(): Long = tp.cost()
 }
 
 class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float, powerFactor: Float) extends Scorer(weight) with Logging {
@@ -265,5 +271,6 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   }
 
   override def freq(): Int = 1
+  override def cost(): Long = tps.map(_.cost()).sum
 }
 

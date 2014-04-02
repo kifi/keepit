@@ -8,7 +8,6 @@
 
 var iframeDialog = function () {
   'use strict';
-  var iframeOrigin = 'https://www.kifi.com';
   var configs = {
     login: {
       height: 372,
@@ -28,36 +27,31 @@ var iframeDialog = function () {
   });
 
   return {
-    origin: function (origin) {
-      iframeOrigin = origin;
-      return this;
-    },
-    toggle: function (name) {
+    toggle: function (name, origin, data) {
       if ($dialog) {
         hide();
         if (name && name !== $dialog.data('name')) {
-          show(name);
+          show(name, origin, data);
         }
       } else {
-        show(name);
+        show(name, origin, data);
       }
     }
   };
 
-  function show(name) {
+  function show(name, origin, data) {
     var config = configs[name];
     if (config) {
-      $dialog = buildAndShow(config);
-      $dialog.data('name', name);
+      $dialog = buildAndShow(config, origin, data).data({name: name, origin: origin});
       document.addEventListener('keydown', onKeyDown, true);
       window.addEventListener('message', config.onMessage);
     }
   }
 
-  function buildAndShow(config) {
+  function buildAndShow(config, origin, data) {
     var $d = $(render(config.templatePath, {
       logo: api.url('images/kifi_logo.png'),
-      iframeSrc: iframeOrigin + '/blank.html'
+      iframeSrc: origin + '/blank.html#' + Object.keys(data).reduce(function (f, k) {return (f ? f + '&' : '') + k + '=' + data[k]}, '')
     }));
     $d.find('.kifi-dialog-box').css({
       height: config.height,
@@ -104,9 +98,9 @@ var iframeDialog = function () {
   }
 
   function onLoginMessage(e) {
-    if (e.origin === iframeOrigin) {
-      if (e.data.url) {
-        api.port.emit('open_login_popup', e.data);
+    if ($dialog && e.origin === $dialog.data('origin')) {
+      if (e.data.path) {
+        api.port.emit('open_tab', e.data.path);
         hide();
       } else if (e.data.authenticated) {
         api.port.emit('logged_in');

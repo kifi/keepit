@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.commanders.{RawBookmarkRepresentation, BookmarkInterner}
+import com.keepit.commanders.{RawBookmarkRepresentation, KeepInterner}
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -47,7 +47,7 @@ private object KeepType {
 class MailToKeepActor @Inject() (
     airbrake: AirbrakeNotifier,
     settings: MailToKeepServerSettings,
-    bookmarkInterner: BookmarkInterner,
+    bookmarkInterner: KeepInterner,
     postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
@@ -108,7 +108,7 @@ class MailToKeepActor @Inject() (
                   implicit val context = HeimdalContext.empty
                   val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
                     Seq(RawBookmarkRepresentation(url = uri.toString, isPrivate = (keepType == KeepType.Private))),
-                    user.id.get, BookmarkSource.email, mutatePrivacy = true)
+                    user.id.get, KeepSource.email, mutatePrivacy = true)
                   val bookmark = bookmarks.head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
                   sendReply(

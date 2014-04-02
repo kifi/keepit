@@ -4,12 +4,11 @@ import play.api.libs.json._
 import com.google.inject.Inject
 import com.keepit.common.controller.{MobileController, SearchServiceController, ActionAuthenticator}
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.result.DecoratedResult
-import com.keepit.search.IdFilterCompressor
 import com.keepit.search.result.KifiSearchResult
 import com.keepit.search.result.ResultUtil
+import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
 
 class MobileSearchController @Inject() (
@@ -47,7 +46,7 @@ class MobileSearchController @Inject() (
     KifiSearchResult.v1(
       decoratedResult.uuid,
       decoratedResult.query,
-      ResultUtil.toKifiSearchHits(decoratedResult.hits),
+      ResultUtil.toSanitizedKifiSearchHits(decoratedResult.hits),
       decoratedResult.myTotal,
       decoratedResult.friendsTotal,
       decoratedResult.othersTotal,

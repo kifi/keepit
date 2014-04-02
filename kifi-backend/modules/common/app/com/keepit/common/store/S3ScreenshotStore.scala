@@ -167,12 +167,12 @@ class S3ScreenshotStoreImpl(
   }
   private def mailNotify(msg:String, t:Option[Throwable]):Unit = mailNotify(msg, msg, t)
 
-  private def fetch(url:String, timeout:Int):Future[Response] = {
+  private def fetchWithRetry(url:String, timeout:Int):Future[Response] = {
     val count = new AtomicInteger()
     val resolver:PartialFunction[Throwable, Boolean] = { case t:Throwable =>
       count.getAndIncrement
       // random delay or backoff
-      mailNotify(s"fetch($url): attempt#(${count.get}) failed with $t", Some(t)) // intermittent embedly/site failures
+      mailNotify(s"[fetchWithRetry($url)] attempt#(${count.get}) failed with $t", Some(t)) // intermittent embedly/site failures
       true
     }
     RetryFuture(attempts = 2, resolver){
@@ -183,16 +183,22 @@ class S3ScreenshotStoreImpl(
   private def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] = {
     val url = embedlyUrl(uri.url)
     fetchPageInfoConsolidator(url) { urlString =>
-      fetch(url, 120000) map { resp =>
+      fetchWithRetry(url, 120000) map { resp =>
         log.info(s"[getExtractResponse(${uri.id},${uri.url})] resp.status=${resp.statusText} body=${resp.body}")
         resp.status match {
           case Status.OK =>
             val js = Json.parse(resp.body) // resp.json has some issues
-            val pageInfoOpt = Json.fromJson[EmbedlyExtractResponse](js).asOpt
-            log.info(s"[getExtractResponse(${uri.id},${uri.url})] json=${js} pageInfoOpt=$pageInfoOpt")
-            pageInfoOpt
+            val extractRespOpt = js.validate[EmbedlyExtractResponse].fold(
+              valid = (res => Some(res)),
+              invalid = (e => {
+                mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] Failed to parse JSON: body=${resp.body} errors=${e.toString}", None)
+                None
+              })
+            )
+            log.info(s"[getExtractResponse(${uri.id},${uri.url})] extractRespOpt=$extractRespOpt")
+            extractRespOpt
           case _ => // todo(ray): need better handling of error codes
-            mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] ERROR while invoking ($url): status=${resp.status} body=${resp.body} originalUrl=$url", None)
+            mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] ERROR while invoking ($url): status=${resp.status} body=${resp.body}", None)
             None
         }
       } recover { case t:Throwable =>

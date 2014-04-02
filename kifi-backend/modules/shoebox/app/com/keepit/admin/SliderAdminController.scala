@@ -185,7 +185,6 @@ class SliderAdminController @Inject() (
 
     val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.IMPORTED_DOMAIN_TAGS).map { rawEvents =>
       rawEvents.value.map { json =>
-        println(json)
         val createdAt = DateTimeJsonFormat.reads(json \ "time" \ "$date").get
         val context = (json \ "context").as[HeimdalContext]
         val eventName = context.getSeq[String]("eventName").get.head
@@ -216,21 +215,21 @@ class SliderAdminController @Inject() (
     val details = kifInstallationStore.getRaw()
 
     val installations = db.readOnly { implicit session =>
-      kifiInstallationRepo.getLatestActive(20)
+      kifiInstallationRepo.getLatestActiveExtensionVersions(20)
     }
     Ok(html.admin.versionForm(installations, details))
   }
 
   def killVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
-    val newDetails = details.copy(killed = details.killed :+ KifiVersion(ver))
+    val newDetails = details.copy(killed = details.killed :+ KifiExtVersion(ver))
     kifInstallationStore.set(newDetails)
     Ok("0")
   }
 
   def unkillVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
-    val version = KifiVersion(ver)
+    val version = KifiExtVersion(ver)
     val newDetails = details.copy(killed = details.killed.filterNot(_.compare(version) == 0))
     kifInstallationStore.set(newDetails)
     Ok("0")
@@ -238,7 +237,7 @@ class SliderAdminController @Inject() (
 
   def goldenVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
-    val newDetails = details.copy(gold = KifiVersion(ver))
+    val newDetails = details.copy(gold = KifiExtVersion(ver))
     kifInstallationStore.set(newDetails)
     Ok("0")
   }

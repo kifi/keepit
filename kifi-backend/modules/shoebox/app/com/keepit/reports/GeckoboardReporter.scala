@@ -4,7 +4,7 @@ import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.geckoboard._
 import akka.actor._
 import akka.util.Timeout
-import com.keepit.model.BookmarkRepo
+import com.keepit.model.KeepRepo
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}

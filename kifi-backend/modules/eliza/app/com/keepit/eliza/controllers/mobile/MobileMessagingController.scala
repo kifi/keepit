@@ -35,7 +35,7 @@ class MobileMessagingController @Inject() (
     }
     noticesFuture.map {notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices, numUnreadUnmuted))
+      Ok(Json.arr("notifications", notices.jsons, numUnreadUnmuted))
     }
   }
 

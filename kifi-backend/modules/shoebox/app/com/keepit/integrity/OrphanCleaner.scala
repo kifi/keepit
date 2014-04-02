@@ -3,7 +3,7 @@ package com.keepit.integrity
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.commanders.BookmarkInterner
+import com.keepit.commanders.KeepInterner
 import com.keepit.common.zookeeper.{SequenceNumberCentralConfigKey, LongCentralConfigKey, CentralConfig}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -18,8 +18,8 @@ class OrphanCleaner @Inject() (
   nuriRepo: NormalizedURIRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   scraper: ScrapeSchedulerPlugin,
-  bookmarkRepo: BookmarkRepo,
-  bookmarkInterner: BookmarkInterner,
+  keepRepo: KeepRepo,
+  bookmarkInterner: KeepInterner,
   centralConfig: CentralConfig,
   airbrake: AirbrakeNotifier
   ) extends Logging {
@@ -35,7 +35,7 @@ class OrphanCleaner @Inject() (
 
   val renormalizedURLSeqKey = OrphanCleanerSequenceNumberKey[RenormalizedURL]("RenormalizedURLSeq")
   val changedURISeqKey = OrphanCleanerSequenceNumberKey[ChangedURI]("ChangedURISeq")
-  val bookmarkSeqKey = OrphanCleanerSequenceNumberKey[Bookmark]("BookmarkSeq")
+  val bookmarkSeqKey = OrphanCleanerSequenceNumberKey[Keep]("BookmarkSeq")
   val normalizedURISeqKey = OrphanCleanerSequenceNumberKey[NormalizedURI]("NormalizedURISeq")
 
   private def getSequenceNumber[T](key: OrphanCleanerSequenceNumberKey[T]): SequenceNumber[T] = centralConfig(key) getOrElse(SequenceNumber.MinValue[T])
@@ -55,7 +55,7 @@ class OrphanCleaner @Inject() (
   private def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
     val currentUri = nuriRepo.get(uriId)
     val activeScrapeInfoOption = scrapeInfoRepo.getByUriId(uriId).filterNot(_.state == ScrapeInfoStates.INACTIVE)
-    val isActuallyKept = hasKnownKeep || bookmarkRepo.exists(uriId)
+    val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
 
     if (isActuallyKept) {
       // Make sure the uri is not inactive and has a scrape info
@@ -156,14 +156,14 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing Bookmarks")
     while (!done) {
-      val bookmarks = db.readOnly{ implicit s => bookmarkRepo.getBookmarksChanged(seq, 100) }
+      val bookmarks = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 100) }
       done = bookmarks.isEmpty
 
       db.readWrite{ implicit s =>
         bookmarks.foreach { case bookmark =>
           val (turnedActive, fixedScrapeInfo) = bookmark.state match {
-            case BookmarkStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
-            case BookmarkStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
+            case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
+            case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
           }
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1

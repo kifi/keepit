@@ -4,37 +4,29 @@ import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, AuthenticatedRequest, ActionAuthenticator, WebsiteController}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{Id, ExternalId, State}
-import com.keepit.common.net.HttpClient
-import com.keepit.common.social._
-import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.db.{ExternalId, State}
 import com.keepit.model._
 import com.keepit.social._
-import com.keepit.common.akka.{TimeoutFuture, SafeFuture}
+import com.keepit.common.akka.TimeoutFuture
 import com.keepit.heimdal._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-
-import play.api._
-import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
 import play.api.templates.Html
-import com.keepit.common.mail._
 import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.model.Invitation
-import scala.util.{Failure, Try, Success}
-import com.keepit.commanders.{FullSocialId, InviteInfo, InviteCommander}
+import com.keepit.commanders.{FailedInvitationException, InviteStatus, FullSocialId, InviteCommander}
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.util.{Success, Failure, Try}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
 class InviteController @Inject() (db: Database,
   userRepo: UserRepo,
-  userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
   emailRepo: EmailAddressRepo,
   userConnectionRepo: UserConnectionRepo,
@@ -42,13 +34,10 @@ class InviteController @Inject() (db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialGraphPlugin: SocialGraphPlugin,
   actionAuthenticator: ActionAuthenticator,
-  httpClient: HttpClient,
-  eventContextBuilder: HeimdalContextBuilderFactory,
-  heimdal: HeimdalServiceClient,
   abookServiceClient: ABookServiceClient,
-  postOffice: LocalPostOffice,
   inviteCommander: InviteCommander,
-  fortytwoConfig: FortyTwoConfig
+  fortytwoConfig: FortyTwoConfig,
+  airbrake: AirbrakeNotifier
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite = HtmlAction.authenticated { implicit request =>
@@ -57,45 +46,42 @@ class InviteController @Inject() (db: Database,
 
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
 
-  def inviteConnection = HtmlAction.authenticated { implicit request =>
-    val (fullSocialId, subject, message) = request.request.body.asFormUrlEncoded match {
-      case Some(form) =>
-        (form.get("fullSocialId").map(_.head).getOrElse(""),
-          form.get("subject").map(_.head),
-          form.get("message").map(_.head))
-      case None => ("", None, None)
-    }
-
-    if (fullSocialId.split("/").length != 2) CloseWindow() else {
-      val inviteInfo = InviteInfo(FullSocialId(fullSocialId), subject, message)
-      processInvite(request.userId, request.user, inviteInfo)
-    }
-  }
-
-  def processInvite(userId: Id[User], user: User, inviteInfo: InviteInfo): SimpleResult = {
-    if (inviteInfo.fullSocialId.network == "email") {
-      abookServiceClient.getOrCreateEContact(userId, inviteInfo.fullSocialId.id) map { econtactTr =>
-        econtactTr match {
-          case Success(c) =>
-            inviteCommander.sendInvitationForContact(userId, c, user, inviteInfo, "site")
-            log.info(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] invite sent successfully")
-          case Failure(e) =>
-            log.warn(s"[inviteConnection-email(${inviteInfo.fullSocialId.id}, $userId)] cannot locate or create econtact entry; Error: $e; Cause: ${e.getCause}")
-        }
-      }
-      CloseWindow()
-    } else {
-      val inviteStatus = inviteCommander.processSocialInvite(userId, inviteInfo, "site")
-      if (!inviteStatus.sent && inviteInfo.fullSocialId.network.equalsIgnoreCase("facebook") && inviteStatus.code == "client_handle") {
-        inviteStatus.savedInvite match {
-          case Some(invitation) =>
-            Redirect(inviteCommander.fbInviteUrl(invitation, inviteInfo.fullSocialId.socialId))
-          case None => { // shouldn't happen
-            log.error(s"[processInvite($userId,$user,$inviteInfo)] Could not send Facebook invite")
+  def inviteConnection = HtmlAction.authenticatedAsync { implicit request =>
+    val form = request.body.asFormUrlEncoded.get
+    Try(FullSocialId(form.get("fullSocialId").get.head)) match {
+      case Failure(_) => Future.successful(BadRequest("0"))
+      case Success(fullSocialId) =>
+        val subject = form.get("subject").map(_.head)
+        val message = form.get("message").map(_.head)
+        val source = "site"
+        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
+          case inviteStatus if inviteStatus.sent => {
+            log.info(s"[inviteConnection] Invite sent: $inviteStatus")
+            CloseWindow()
+          }
+          case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
+            val facebookUrl = inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source)
+            log.info(s"[inviteConnection] Redirecting user ${request.userId} to Facebook: $facebookUrl")
+            Redirect(facebookUrl)
+          case failedInviteStatus => {
+            log.error(s"[inviteConnection] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+            airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
             InternalServerError("0")
           }
         }
-      } else CloseWindow()
+    }
+  }
+
+  def confirmInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]) = Action { request =>
+    val inviteStatus = inviteCommander.confirmFacebookInvite(id: ExternalId[Invitation], source, errorMsg: Option[String], errorCode: Option[Int])
+    if (inviteStatus.sent) {
+      log.info(s"[confirmInvite] Facebook invite sent: $inviteStatus")
+      CloseWindow()
+    }
+    else {
+      log.error(s"[confirmInvite] Unexpected error while processing Facebook invitation ${id} from ${source}: ${inviteStatus} $errorMsg }")
+      airbrake.notify(new FailedInvitationException(inviteStatus, Some(id), None, None))
+      Redirect(routes.HomeController.home)
     }
   }
 
@@ -152,21 +138,4 @@ class InviteController @Inject() (db: Database,
           resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
       }
   })
-
-  def confirmInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]) = Action {
-    db.readWrite { implicit session =>
-      val invitation = invitationRepo.getOpt(id)
-      invitation match {
-        case Some(invite) =>
-          if (errorCode.isEmpty) {
-            invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
-            inviteCommander.reportSentInvitation(invite, SocialNetworks.FACEBOOK, None)
-          }
-          CloseWindow()
-        case None =>
-          Redirect(routes.HomeController.home)
-      }
-    }
-  }
-
 }

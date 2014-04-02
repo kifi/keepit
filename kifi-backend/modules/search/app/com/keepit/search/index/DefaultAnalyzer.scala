@@ -1,6 +1,5 @@
 package com.keepit.search.index
 
-import java.io.Reader
 import java.lang.reflect.Constructor
 import org.apache.lucene.analysis.ar.ArabicNormalizationFilter
 import org.apache.lucene.analysis.ar.ArabicStemFilter
@@ -16,7 +15,6 @@ import org.apache.lucene.analysis.es.SpanishLightStemFilter
 import org.apache.lucene.analysis.fa.PersianCharFilter
 import org.apache.lucene.analysis.fa.PersianNormalizationFilter
 import org.apache.lucene.analysis.fi.FinnishLightStemFilter
-import org.apache.lucene.analysis.util.ElisionFilter
 import org.apache.lucene.analysis.fr.FrenchLightStemFilter
 import org.apache.lucene.analysis.hi.HindiNormalizationFilter
 import org.apache.lucene.analysis.hi.HindiStemFilter
@@ -24,14 +22,12 @@ import org.apache.lucene.analysis.hu.HungarianLightStemFilter
 import org.apache.lucene.analysis.id.IndonesianStemFilter
 import org.apache.lucene.analysis.in.IndicNormalizationFilter
 import org.apache.lucene.analysis.it.ItalianLightStemFilter
-import org.apache.lucene.analysis.ja.JapaneseTokenizer
-import org.apache.lucene.analysis.ja.JapaneseKatakanaStemFilter
-import org.apache.lucene.analysis.ja.JapaneseReadingFormFilter
+import org.apache.lucene.analysis.ja.{JapaneseTokenizerFactory, JapaneseTokenizer, JapaneseKatakanaStemFilter, JapaneseReadingFormFilter}
 import org.apache.lucene.analysis.lv.LatvianStemFilter
 import org.apache.lucene.analysis.no.NorwegianLightStemFilter
 import org.apache.lucene.analysis.pt.PortugueseLightStemFilter
 import org.apache.lucene.analysis.ru.RussianLightStemFilter
-import org.apache.lucene.analysis.standard.StandardTokenizer
+import org.apache.lucene.analysis.standard.StandardTokenizerFactory
 import org.apache.lucene.analysis.sv.SwedishLightStemFilter
 import org.apache.lucene.analysis.th.ThaiWordFilter
 import org.apache.lucene.analysis.tr.TurkishLowerCaseFilter
@@ -43,29 +39,38 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.Tokenizer
 import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.analysis.util.TokenizerFactory
 import org.apache.lucene.util.Version
 import com.keepit.common.logging.Logging
 import com.keepit.search.Lang
-import LuceneVersion.version
 import scala.reflect.ClassTag
 import java.io.Reader
 import java.io.StringReader
+import java.util.{HashMap=>JMap}
 
 object LuceneVersion {
-  val version = Version.LUCENE_41
+  val version = Version.LUCENE_47
 }
 
 object DefaultAnalyzer {
-  import LuceneVersion.version
-
   implicit def langCodeToLang(langCode: String): Lang = Lang(langCode)
 
   val defaultLang = Lang("en")
-  private[this] val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, defaultLang).withFilter[EmptyTokenFilter]
-  private[this] val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja").withFilter[EmptyTokenFilter]
+
+  private[this] val stdAnalyzer = {
+    val args = new JMap[String, String]()
+    args.put("luceneMatchVersion", "4.7")
+    args.put("maxTokenLength", "256")
+    new Analyzer(new StandardTokenizerFactory(args), Nil, None, defaultLang).withFilter[EmptyTokenFilter]
+  }
+  private[this] val jaAnalyzer = {
+    val args = new JMap[String, String]()
+    args.put("luceneMatchVersion", "4.7")
+    args.put("mode", "search")
+    args.put("discardPunctuation", "true")
+    new Analyzer(new JapaneseTokenizerFactory(args), Nil, None, "ja").withFilter[EmptyTokenFilter]
+  }
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
@@ -130,35 +135,20 @@ object DefaultAnalyzer {
   )
 
   def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
-  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.get(lang.lang).getOrElse(getAnalyzer(lang))
-}
-
-class DefaultTokenizerFactory extends TokenizerFactory {
-  override def create(reader: Reader): Tokenizer = {
-    var tokenizer = new StandardTokenizer(version, reader)
-    tokenizer.setMaxTokenLength(256)
-    tokenizer
-  }
-}
-
-class JapaneseTokenizerFactory extends TokenizerFactory {
-  override def create(reader: Reader): Tokenizer = {
-    new JapaneseTokenizer(reader, null, true, JapaneseTokenizer.Mode.SEARCH)
-  }
+  def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, getAnalyzer(lang))
 }
 
 class Analyzer(tokenizerFactory: TokenizerFactory,
                factories: List[TokenFilterFactory],
                charFilterConstructor: Option[Constructor[CharFilter]],
                val lang: Lang) extends LAnalyzer with Logging {
-  import LuceneVersion.version
 
   def withLang(newLang: Lang): Analyzer = new Analyzer(tokenizerFactory, factories, charFilterConstructor, newLang)
 
   def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): Analyzer = {
     try {
       val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
-      withFilter(WrapperTokenFilterFactory(constructor, version))
+      withFilter(WrapperTokenFilterFactory(constructor, LuceneVersion.version))
     } catch {
       case ex: NoSuchMethodException =>
         try {
@@ -196,11 +186,14 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
   }
 
   def createLazyTokenStream(field: String, text: String) = new LazyTokenStream(field, text, this)
+  def createLazyTokenStream(field: String, textReader: Reader) = new LazyTokenStream(field, textReader, this)
 
   def getStopWords: Option[CharArraySet] = factories.collectFirst{ case sf: StopFilterFactory => sf.stopWords }
 }
 
-class LazyTokenStream(field: String, text: String, analyzer: Analyzer) extends TokenStream {
+class LazyTokenStream(field: String, textReader: Reader, analyzer: Analyzer) extends TokenStream {
+  def this(field: String, text: String, analyzer: Analyzer) = this(field, new StringReader(text), analyzer)
+
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
 
@@ -210,7 +203,7 @@ class LazyTokenStream(field: String, text: String, analyzer: Analyzer) extends T
 
   override def incrementToken(): Boolean = {
     if (baseTokenStream == null) {
-      baseTokenStream = analyzer.tokenStream(field, new StringReader(text))
+      baseTokenStream = analyzer.tokenStream(field, textReader)
       baseTokenStream.reset()
       baseTermAttr = baseTokenStream.getAttribute(classOf[CharTermAttribute])
       if (baseTokenStream.hasAttribute(classOf[PositionIncrementAttribute]))

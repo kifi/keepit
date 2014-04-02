@@ -17,8 +17,15 @@ angular.module('kifi', [
   'kifi.search',
   'kifi.tagKeeps',
   'kifi.profile',
+  'kifi.friends',
+  'kifi.friendService',
+  'kifi.friends.friendCard',
+  'kifi.friends.friendRequestCard',
+  'kifi.social',
+  'kifi.socialService',
   'kifi.invite',
   'kifi.invite.connectionCard',
+  'kifi.invite.wtiService',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
@@ -33,8 +40,12 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
+  'kifi.installService',
   'jun.facebook',
-  'ngDragDrop'
+  'ngDragDrop',
+  'ui.slider',
+  'angulartics',
+  'kifi.mixpanel'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -92,7 +103,7 @@ angular.module('kifi', [
       origin: origin,
       xhrBase: origin + '/site',
       xhrBaseEliza: origin.replace('www', 'eliza') + '/eliza/site',
-      xhrBaseSearch: origin.replace('www', 'search') + '/search',
+      xhrBaseSearch: origin.replace('www', 'search'),
       picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
     };
   }
@@ -126,6 +137,18 @@ angular.module('kifi', [
       state: state,
       pushState: pushState
     };
+  }
+])
+
+.run([
+  'profileService',
+  function (profileService) {
+    // Initial data loading:
+
+    profileService.fetchPrefs().then(function (res) {
+      // handle onboarding / imports
+      return res;
+    });
   }
 ])
 

@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{WebsiteController, ScraperServiceController, ActionAuthenticator}
+import com.keepit.common.controller.{ScraperServiceController, ActionAuthenticator}
 import com.keepit.model._
 import play.api.mvc.Action
 import play.api.libs.json._
@@ -18,7 +18,7 @@ class ScraperController @Inject() (
   airbrake: AirbrakeNotifier,
   actionAuthenticator:ActionAuthenticator,
   scrapeProcessor: ScrapeProcessor
-) extends WebsiteController(actionAuthenticator) with ScraperServiceController with Logging {
+) extends ScraperServiceController with Logging {
 
   def getBasicArticle() = Action.async(parse.json) { request =>
     log.info(s"getBasicArticle body=${request.body}")

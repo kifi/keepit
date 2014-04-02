@@ -1,7 +1,6 @@
 package com.keepit.search.query
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.PersonalizedSearcher
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
@@ -280,6 +279,12 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
     }
   }
 
-  override def freq() = 1
+  override def freq(): Int = 1
+
+  override def cost(): Long = {
+    (if (personalScorer == null) 0L else  personalScorer.cost)
+    + (if (regularScorer  == null) 0L else regularScorer.cost)
+    + (if (semanticScorer == null) 0L else semanticScorer.cost)
+  }
 }
 

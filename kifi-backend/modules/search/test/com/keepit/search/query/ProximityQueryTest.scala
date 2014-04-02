@@ -31,7 +31,7 @@ import com.keepit.search.SearchConfig
 
 class ProximityQueryTest extends Specification {
 
-  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
 
   val gapPenalty = SearchConfig.defaultConfig.asFloat("proximityGapPenalty")
   val proximityThreshold =  SearchConfig.defaultConfig.asFloat("proximityThreshold")
@@ -64,7 +64,7 @@ class ProximityQueryTest extends Specification {
     DirectoryReader.open(ramDir)
   }
 
-  val reader = new SlowCompositeReaderWrapper(indexReader)
+  val reader = SlowCompositeReaderWrapper.wrap(indexReader)
   val readerContextLeaves = reader.leaves()
   val readerContext = readerContextLeaves.get(0)
 

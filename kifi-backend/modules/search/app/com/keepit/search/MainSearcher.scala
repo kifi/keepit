@@ -1,46 +1,32 @@
 package com.keepit.search
 
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
-import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.graph.bookmark.BookmarkRecord
-import com.keepit.search.graph.EdgeSetAccessor
-import com.keepit.search.graph.collection.CollectionSearcherWithUser
-import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
-import com.keepit.search.graph.bookmark.UserToUriEdgeSet
 import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
-import com.keepit.search.spellcheck.SpellCorrector
-import com.keepit.search.query.HotDocSetFilter
-import com.keepit.search.query.QueryUtil
-import com.keepit.search.query.TextQuery
-import com.keepit.search.query.parser.{MainQueryParser, MainQueryParserFactory}
+import com.keepit.search.query.parser.MainQueryParser
 import com.keepit.search.semantic.SemanticVector
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
-import org.apache.lucene.util.PriorityQueue
-import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
 import play.modules.statsd.api.Statsd
 import scala.math._
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
-import scala.concurrent.future
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
 import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
-import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
@@ -49,30 +35,24 @@ import com.keepit.search.result.FriendStats
 
 class MainSearcher(
     userId: Id[User],
-    queryString: String,
     lang1: Lang,
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
+    parser: MainQueryParser,
     articleSearcher: Searcher,
-    parserFactory: MainQueryParserFactory,
     socialGraphInfo: SocialGraphInfo,
     clickBoostsFuture: Future[ResultClickBoosts],
     browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
-    spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
 
-  private[this] var parser: MainQueryParser = null
-  def getParserUsed: Option[MainQueryParser] = Option(parser)
-
   private[this] var parsedQuery: Option[Query] = None
-  def getParsedQuery: Option[Query] = parsedQuery
 
   private[this] val currentTime = currentDateTime.getMillis()
   private[this] val timeLogs = new SearchTimeLogs()
@@ -82,8 +62,6 @@ class MainSearcher(
   // get config params
   private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
-  private[this] val percentMatch = config.asFloat("percentMatch")
-  private[this] val percentMatchForHotDocs = config.asFloat("percentMatchForHotDocs")
   private[this] val recencyBoost = config.asFloat("recencyBoost")
   private[this] val newContentBoost = config.asFloat("newContentBoost")
   private[this] val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
@@ -96,7 +74,6 @@ class MainSearcher(
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
-  private[this] val homePageBoost = config.asFloat("homePageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
@@ -130,9 +107,9 @@ class MainSearcher(
     users.foldLeft(sharingUsers.size.toFloat){ (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  private def getNonPersonalizedQueryContextVector(queryParser: MainQueryParser): SemanticVector = {
+  private def getNonPersonalizedQueryContextVector(parser: MainQueryParser): SemanticVector = {
     val newSearcher = articleSearcher.withSemanticContext
-    queryParser.svTerms.foreach{ t => newSearcher.addContextTerm(t)}
+    parser.svTerms.foreach{ t => newSearcher.addContextTerm(t)}
     newSearcher.getContextVector
   }
 
@@ -148,17 +125,10 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    var tParse = currentDateTime.getMillis()
-
-    val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang1, lang2, config)
-    parser.setPercentMatch(percentMatch)
-    parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
-
-    parsedQuery = parser.parse(queryString, Some(collectionSearcher))
+    parsedQuery = parser.parsedQuery
     val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
 
-    timeLogs.queryParsing = currentDateTime.getMillis() - tParse
+    timeLogs.queryParsing = parser.totalParseTime
     timeLogs.phraseDetection = parser.phraseDetectionTime
     timeLogs.nlpPhraseDetection = parser.nlpPhraseDetectionTime
 
@@ -181,9 +151,9 @@ class MainSearcher(
       timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
       val tLucene = currentDateTime.getMillis()
-      hotDocs.set(browsingFilter, clickBoosts)
+
       personalizedSearcher.doSearch(weight){ (scorer, reader) =>
-        val visibility = new ArticleVisibility(reader)
+        val visibility = ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
@@ -234,7 +204,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(relevantFriendEdgeSet.destIdSet)
+    val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
     val usefulPages = browsingFilter
@@ -358,17 +328,16 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) =  if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, personalizedSearcher)
+    val (show, svVar) =  if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser, personalizedSearcher)
 
     val shardHits = toDetailedSearchHits(hitList)
-    val collections = parser.collectionIds.map(getCollectionExternalId)
 
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    ShardSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, collections.toSeq, svVar, show)
+    ShardSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
   private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
@@ -396,22 +365,12 @@ class MainSearcher(
     }
   }
 
-  private[this] var collectionIdCache: Map[Long, ExternalId[Collection]] = Map()
-
-  private def getCollectionExternalId(id: Long): ExternalId[Collection] = {
-    collectionIdCache.getOrElse(id, {
-      val extId = collectionSearcher.getExternalId(id)
-      collectionIdCache += (id -> extId)
-      extId
-    })
-  }
-
   private[this] def toBasicSearchHit(h: MutableArticleHit): BasicSearchHit = {
     val uriId = Id[NormalizedURI](h.id)
     if (h.isMyBookmark) {
       val collections = {
         val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
-        if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => getCollectionExternalId(id) })
+        if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => collectionSearcher.getExternalId(id) }.collect{ case Some(extId) => extId })
       }
       val r = getBookmarkRecord(uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${uriId}"))
       BasicSearchHit(Some(r.title), r.url, collections, r.externalId)
@@ -421,15 +380,14 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[Hit[MutableArticleHit]], personalizedSearcher: Option[PersonalizedSearcher]) = {
+  private[this] def classify(hitList: List[Hit[MutableArticleHit]], parser: MainQueryParser, personalizedSearcher: Option[PersonalizedSearcher]) = {
     def classify(scoring: Scoring, hit: MutableArticleHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
       (if (hit.isMyBookmark) scoring.recencyScore/5.0f else 0.0f) + scoring.textScore > minScore
     }
 
     if (filter.isDefault && isInitialSearch) {
-      val textQueries = getParserUsed.map{ _.textQueries }.getOrElse(Seq.empty[TextQuery])
-      val svVar = SemanticVariance.svVariance(textQueries, hitList.map(_.hit.id).toSet, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+      val svVar = SemanticVariance.svVariance(parser.textQueries, hitList.map(_.hit.id).toSet, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
       val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble/0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
 
@@ -460,18 +418,11 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    val hotDocs = new HotDocSetFilter()
-    parser = parserFactory(lang1, lang2, config)
-    parser.setPercentMatch(percentMatch)
-    parser.setPercentMatchForHotDocs(percentMatchForHotDocs, hotDocs)
-
     val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
 
-    parser.parse(queryString, Some(collectionSearcher)).map{ query =>
+    parser.parsedQuery.map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
-      val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      hotDocs.set(browsingFilter, clickBoosts)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }
@@ -488,12 +439,6 @@ class MainSearcher(
   def timing(): Unit = {
     SafeFuture {
       timeLogs.send()
-
-      articleSearcher.indexWarmer.foreach{ warmer =>
-        parsedQuery.foreach{ query =>
-            warmer.addTerms(QueryUtil.getTerms(query))
-        }
-      }
 
       val timeLimit = 1000L
       // search is a little slow after service restart. allow some grace period

@@ -60,16 +60,16 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
 
           val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
-          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id,
-            uriId = uri.id.get, source = BookmarkSource.keeper, createdAt = t1.plusMinutes(3)))
-          bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url.url, urlId = url.id,
-            uriId = uri.id.get, source = BookmarkSource.bookmarkImport, createdAt = t2.plusDays(1)))
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id.get,
+            uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3)))
+          keepRepo.save(Keep(title = None, userId = user2.id.get, url = url.url, urlId = url.id.get,
+            uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1)))
 
           val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1, externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Baking", createdAt = t2, externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
 
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll2.id.get))
 
           (user1, uri)
         }

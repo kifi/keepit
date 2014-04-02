@@ -19,15 +19,12 @@ import org.apache.lucene.index.Terms
 import org.apache.lucene.index.TermsEnum
 import org.apache.lucene.index.TermsEnum.SeekStatus
 import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.Query
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.FixedBitSet
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.SortedMap
-import scala.collection.SortedSet
-import java.util.Arrays
 import java.util.Comparator
 import java.util.{Iterator=>JIterator}
 
@@ -73,6 +70,7 @@ class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) e
   override def getNormValues(field: String): NumericDocValues = null
   override def hasDeletions() = false
   override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
+  override def getDocsWithField(field: String): Bits = throw new UnsupportedOperationException()
   protected def doClose() {}
 }
 
@@ -109,22 +107,21 @@ object EmptyInvertedList extends InvertedList(ArrayBuffer.empty[(Int, Array[Int]
 }
 
 class InvertedListBuilder() {
-  private[this] lazy val buf = new ArrayBuffer[(Int, Array[Int])]
-  private[this] var _isEmpty = true
+  private[this] var buf: ArrayBuffer[(Int, Array[Int])] = null
 
-  def isEmpty: Boolean = _isEmpty
+  def isEmpty: Boolean = (buf == null)
 
   def add(docid: Int, positions: Array[Int]) {
+    if (buf == null) buf = new ArrayBuffer[(Int, Array[Int])]
     buf += ((docid, positions))
-    _isEmpty = false
   }
   def add(doc: (Int, Array[Int])) {
+    if (buf == null) buf = new ArrayBuffer[(Int, Array[Int])]
     buf += doc
-    _isEmpty = false
   }
 
   def sortAndBuild: InvertedList = {
-    if (_isEmpty) {
+    if (buf == null) {
       EmptyInvertedList
     } else {
       new InvertedList(buf.sortBy(_._1))
@@ -132,7 +129,7 @@ class InvertedListBuilder() {
   }
 
   def build: InvertedList = {
-    if (_isEmpty) {
+    if (buf == null) {
       EmptyInvertedList
     } else {
       new InvertedList(buf)
@@ -208,7 +205,9 @@ class CachedTerms(termMap: SortedMap[BytesRef, InvertedList], numDocs: Int) exte
 
   override def hasPositions() = true
 
-  override def hasPayloads() = false;
+  override def hasPayloads() = false
+
+  override def hasFreqs() = true
 
   override def getComparator(): Comparator[BytesRef] = null
 }
@@ -220,7 +219,7 @@ class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnu
 
   override def getComparator(): Comparator[BytesRef] = null
 
-  override def seekCeil(text: BytesRef, useCache: Boolean): SeekStatus = {
+  override def seekCeil(text: BytesRef): SeekStatus = {
     currentCollection = terms.from(text)
     currentEntry = currentCollection.headOption
     currentEntry.headOption match {
@@ -306,5 +305,7 @@ class CachedDocsAndPositionsEnum(list: InvertedList) extends DocsAndPositionsEnu
   override def endOffset(): Int = -1
 
   override def getPayload(): BytesRef = null
+
+  override def cost(): Long = dlist.length.toLong
 }
 

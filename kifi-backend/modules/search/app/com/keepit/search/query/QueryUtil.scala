@@ -4,16 +4,11 @@ import com.keepit.common.logging.Logging
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
-import com.keepit.search.Searcher
-import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.ReaderUtil
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Filter
-import org.apache.lucene.search.FilteredQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
@@ -56,6 +51,7 @@ object QueryUtil extends Logging {
     override def nextDoc(): Int = NO_MORE_DOCS
     override def advance(target: Int): Int = NO_MORE_DOCS
     override def freq() = 0
+    override def cost(): Long = 0L
   }
 
   def copy(query: TermQuery, field: String): Query = {
@@ -74,7 +70,7 @@ object QueryUtil extends Logging {
       val newQuery = new PhraseQuery()
       val positions = query.getPositions()
       val terms = query.getTerms()
-      val newTerms = terms.zip(positions).map{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
+      terms.zip(positions).foreach{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
       newQuery.setBoost(query.getBoost())
       newQuery
     }
@@ -106,7 +102,7 @@ object QueryUtil extends Logging {
       val terms = fields.terms(term.field())
       if (terms != null) {
         val termsEnum = terms.iterator(null)
-        if (termsEnum.seekExact(term.bytes(), true)) {
+        if (termsEnum.seekExact(term.bytes())) {
           return termsEnum.docs(acceptDocs, null)
         }
       }
@@ -120,7 +116,7 @@ object QueryUtil extends Logging {
       val terms = fields.terms(term.field())
       if (terms != null) {
         val termsEnum = terms.iterator(null)
-        if (termsEnum.seekExact(term.bytes(), true)) {
+        if (termsEnum.seekExact(term.bytes())) {
           return termsEnum.docsAndPositions(acceptDocs, null)
         }
       }
@@ -155,6 +151,7 @@ object QueryUtil extends Logging {
       override def startOffset(): Int = tp.startOffset()
       override def endOffset(): Int = tp.endOffset()
       override def getPayload(): BytesRef = tp.getPayload()
+      override def cost(): Long = 0L
     }
   }
 
@@ -167,6 +164,7 @@ object QueryUtil extends Logging {
     override def startOffset(): Int = -1
     override def endOffset(): Int = -1
     override def getPayload(): BytesRef = null
+    override def cost(): Long = 0L
   }
 
   def emptyDocIdSetIterator: DocIdSetIterator = EmptyDocsAndPositionsEnum
@@ -177,12 +175,15 @@ object QueryUtil extends Logging {
     val ts = analyzer.tokenStream("foo", new StringReader(queryText))
     val offset = ts.addAttribute(classOf[OffsetAttribute])
     val startOffsets = ListBuffer.empty[(Int, Int)]
-    ts.reset()
-    while (ts.incrementToken()){
-      startOffsets.append((offset.startOffset, offset.endOffset))
+    try {
+      ts.reset()
+      while (ts.incrementToken()){
+        startOffsets.append((offset.startOffset, offset.endOffset))
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
-    ts.end()
-    ts.close()
     startOffsets.toSeq
   }
 }

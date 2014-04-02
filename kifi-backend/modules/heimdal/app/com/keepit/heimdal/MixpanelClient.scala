@@ -82,6 +82,6 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
         case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data")
         case response => response
       }
-    )
+    , Some("Mixpanel Event Forwarding"))
   }
 }

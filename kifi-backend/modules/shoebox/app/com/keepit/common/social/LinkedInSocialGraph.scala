@@ -1,6 +1,15 @@
 package com.keepit.common.social
 
+import java.nio.charset.StandardCharsets.US_ASCII
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+
 import scala.concurrent.Future
+import scala.util.Try
+
+import oauth.signpost.exception.OAuthExpectationFailedException
+
+import org.apache.commons.codec.binary.Base64
 
 import com.google.inject.Inject
 import com.keepit.common.db.State
@@ -13,7 +22,10 @@ import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGra
 
 import play.api.http.Status._
 import play.api.libs.json._
-import play.api.libs.ws.WS
+import play.api.libs.ws.{Response, WS}
+
+import securesocial.core.{IdentityId, OAuth2Settings}
+import securesocial.core.providers.LinkedInProvider.LinkedIn
 
 object LinkedInSocialGraph {
   val ProfileFields = Seq("id","firstName","lastName","picture-urls::(original);secure=true","publicProfileUrl")
@@ -24,8 +36,8 @@ object LinkedInSocialGraph {
 class LinkedInSocialGraph @Inject() (
     client: HttpClient,
     db: Database,
-    socialRepo: SocialUserInfoRepo
-  ) extends SocialGraph with Logging {
+    socialUserInfoRepo: SocialUserInfoRepo)
+  extends SocialGraph with Logging {
 
   import LinkedInSocialGraph.ProfileFieldSelector
 
@@ -37,7 +49,7 @@ class LinkedInSocialGraph @Inject() (
     def fail(msg: String, state: State[SocialUserInfo] = FETCH_FAIL) {
       log.warn(msg)
       db.readWrite { implicit s =>
-        socialRepo.save(socialUserInfo.withState(state).withLastGraphRefresh())
+        socialUserInfoRepo.save(socialUserInfo.withState(state).withLastGraphRefresh())
       }
     }
 
@@ -57,7 +69,7 @@ class LinkedInSocialGraph @Inject() (
     } else {
       log.warn(s"LinkedIn app not authorized with OAuth2 for $socialUserInfo; not fetching connections.")
       db.readWrite { implicit s =>
-        socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+        socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
       }
       None
     }
@@ -80,7 +92,7 @@ class LinkedInSocialGraph @Inject() (
       case jsv if (jsv \ "id").asOpt[String].exists(_ != "private") => createSocialUserInfo(jsv)
     }
 
-  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String) =
+  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String): Future[Response] =
     WS.url(sendMessageUrl(getAccessToken(from)))
       .withHeaders("x-li-format" -> "json", "Content-Type" -> "application/json")
       .post(sendMessageBody(to.socialId, subject, message))
@@ -88,7 +100,7 @@ class LinkedInSocialGraph @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // LinkedIn has no way of doing this through the API
     db.readWrite { implicit s =>
-      socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+      socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
     }
     Future.successful(())
   }
@@ -126,6 +138,30 @@ class LinkedInSocialGraph @Inject() (
       )
     } getOrElse sui
   }
+
+  /**
+   * @param settings The LinkedIn IdentityProvider settings
+   * @param json The LinkedIn JS API secure cookie JSON
+   * @return the user's confirmed LinkedIn identity
+   */
+  def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = Try {
+    (json \ "access_token").as[String]  // not a valid OAuth 1.0a or 2.0 token
+    val memberId = (json \ "member_id").as[String]
+
+    // verify signature
+    // #2 at developer.linkedin.com/documents/exchange-jsapi-tokens-rest-api-oauth-tokens
+    val signature = (json \ "signature").as[String]
+    val signatureOrder = (json \ "signature_order").as[Seq[String]]
+    val signatureBase = signatureOrder.fold(""){ case (b, k) => b + (json \ k).as[String] }
+    val mac = Mac.getInstance("HmacSHA1")
+    mac.init(new SecretKeySpec(settings.clientSecret.getBytes(US_ASCII), "HmacSHA1"))
+    val computedSignature = mac.doFinal(signatureBase.getBytes(US_ASCII))
+    if (java.util.Arrays.equals(new Base64().decode(signature), computedSignature)) {
+      IdentityId(userId = memberId, providerId = LinkedIn)
+    } else {
+      throw new OAuthExpectationFailedException("signature mismatch")
+    }
+  } // Note: See this method's revision history for working OAuth 1.0a token exchange code
 
   val TWO_MINUTES = 2 * 60 * 1000
   private def getJson(url: String): JsValue = client.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES), maxJsonParseTime = Some(20000))).get(DirectUrl(url), client.ignoreFailure).json

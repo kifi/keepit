@@ -82,15 +82,15 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "fortytwo.franz" % "franz_2.10" % "0.3.0",
+    "fortytwo.franz" % "franz_2.10" % "0.3.1",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
-    "org.apache.lucene" % "lucene-core" % "4.2.1", // todo(andrew/yasuhiro): remove from common
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1" // todo(andrew/yasuhiro): remove from common
+    "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0" // todo(andrew/yasuhiro): remove from common
   ) map (_.excludeAll(
     ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),
@@ -104,8 +104,8 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
       from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
-    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.2.1",
-    "org.apache.lucene" % "lucene-suggest" % "4.2.1"
+    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.7.0",
+    "org.apache.lucene" % "lucene-suggest" % "4.7.0"
   )
 
   lazy val sqldbDependencies = Seq(
@@ -139,8 +139,10 @@ object ApplicationBuild extends Build {
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.tika" % "tika-parsers" % "1.3"
   )
-  
+
   lazy val cortexDependencies = Seq()
+
+  lazy val graphDependencies = Seq()
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
@@ -247,9 +249,13 @@ object ApplicationBuild extends Build {
   lazy val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-scraper.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
-  
+
   lazy val cortex = play.Project("cortex", appVersion, cortexDependencies, path=file("modules/cortex")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-cortex.conf"): _*
+  ).dependsOn(common % "test->test;compile->compile")
+
+  lazy val graph = play.Project("graph", appVersion, graphDependencies, path=file("modules/graph")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
 
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
@@ -262,19 +268,20 @@ object ApplicationBuild extends Build {
       commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
     )
     .dependsOn(
-      common % "test->test;compile->compile", 
-      search % "test->test;compile->compile", 
-      shoebox % "test->test;compile->compile", 
-      eliza % "test->test;compile->compile", 
-      heimdal % "test->test;compile->compile", 
-      abook % "test->test;compile->compile", 
+      common % "test->test;compile->compile",
+      search % "test->test;compile->compile",
+      shoebox % "test->test;compile->compile",
+      eliza % "test->test;compile->compile",
+      heimdal % "test->test;compile->compile",
+      abook % "test->test;compile->compile",
       scraper % "test->test;compile->compile",
-      cortex % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex)
+      cortex % "test->test;compile->compile",
+      graph % "test->test;compile->compile")
+    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, graph)
 
   override def rootProject = Some(kifiBackend)
 }

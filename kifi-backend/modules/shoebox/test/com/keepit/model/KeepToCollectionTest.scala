@@ -10,8 +10,8 @@ import com.keepit.common.db.slick.DBSession.RSession
 
 class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
 
-  val hover = BookmarkSource.keeper
-  val initLoad = BookmarkSource.bookmarkImport
+  val hover = KeepSource.keeper
+  val initLoad = KeepSource.bookmarkImport
   def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
 
   "KeepToCollectionTest " should {
@@ -30,34 +30,34 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
           val url4 = urlRepo.save(URLFactory(url = uri4.url, normalizedUriId = uri4.id.get))
 
-          val bookmark1 = bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = BookmarkSource.keeper, state = BookmarkStates.ACTIVE))
-          val bookmark2 = bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-            uriId = uri2.id.get, source = BookmarkSource.keeper, state = BookmarkStates.ACTIVE))
-          val bookmark3 = bookmarkRepo.save(Bookmark(title = Some("C1"), userId = user1.id.get, url = url3.url, urlId = url3.id,
-            uriId = uri3.id.get, source = BookmarkSource.keeper, state = BookmarkStates.ACTIVE))
-          bookmarkRepo.save(Bookmark(title = Some("D1"), userId = user1.id.get, url = url4.url, urlId = url4.id,
-            uriId = uri4.id.get, source = BookmarkSource.keeper, state = BookmarkStates.ACTIVE))
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+          val bookmark3 = keepRepo.save(Keep(title = Some("C1"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+          keepRepo.save(Keep(title = Some("D1"), userId = user1.id.get, url = url4.url, urlId = url4.id.get,
+            uriId = uri4.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
 
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
                             collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
                             collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
                             Nil
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = collections(0).id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = collections(0).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(0).id.get))
 
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = collections(1).id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = collections(2).id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark3.id.get, collectionId = collections(1).id.get))
-          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark3.id.get, collectionId = collections(2).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(1).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(2).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark3.id.get, collectionId = collections(1).id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark3.id.get, collectionId = collections(2).id.get))
           (bookmark1, bookmark2, collections)
         }
 
         db.readOnly { implicit s =>
           val uris = keepToCollectionRepo.getUriIdsInCollection(collections(0).id.get)
           uris.length === 2
-          uris === Seq(BookmarkUriAndTime(bookmark1.uriId, bookmark1.createdAt), BookmarkUriAndTime(bookmark2.uriId, bookmark2.createdAt))
+          uris === Seq(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
         }
       }
     }

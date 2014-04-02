@@ -57,8 +57,8 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       léoToMarvin.connectionType === SocialNetworks.FACEBOOK
       léoToMarvin.kifiFriendsCount === 1
       léoToMarvin.commonKifiFriendsCount === 0
-      léoToMarvin.invitation === None
-      léoToMarvin.invitationCount === 0
+      léoToMarvin.invitationsSent === 0
+      léoToMarvin.invitedBy === 0
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, Some(facebookLéo), Left(facebookMarvin)) === léoToMarvin
@@ -126,8 +126,8 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       léoToGrassfed42.connectionType === SocialNetworks.EMAIL
       léoToGrassfed42.kifiFriendsCount === 1
       léoToGrassfed42.commonKifiFriendsCount === 0
-      léoToGrassfed42.invitation === None
-      léoToGrassfed42.invitationCount === 0
+      léoToGrassfed42.invitationsSent === 0
+      léoToGrassfed42.invitedBy === 0
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, None, Right(contact42)) === léoToGrassfed42
@@ -136,43 +136,40 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
     }
 
     "keep track of invitations" in {
-      val léoToMarvinInvitation = Id[Invitation](12)
-      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, léoToMarvinInvitation, Left(facebookMarvin.id.get)) }
+      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, Left(facebookMarvin.id.get)) }
 
       db.readOnly { implicit session =>
         val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
-        stephenToMarvin.invitation === None
-        stephenToMarvin.invitationCount === 1
+        stephenToMarvin.invitationsSent === 0
+        stephenToMarvin.invitedBy === 1
 
         val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
-        léoToMarvin.invitation === Some(léoToMarvinInvitation)
-        léoToMarvin.invitationCount === 1
+        léoToMarvin.invitationsSent === 1
+        léoToMarvin.invitedBy === 1
       }
 
-      val stephenToMarvinInvitation = Id[Invitation](13)
-      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiStephen, stephenToMarvinInvitation, Left(facebookMarvin.id.get)) }
+      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiStephen, Left(facebookMarvin.id.get)) }
 
       db.readOnly { implicit session =>
         val stephenToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiStephen, Left(facebookMarvin.id.get)).get
-        stephenToMarvin.invitation === Some(stephenToMarvinInvitation)
-        stephenToMarvin.invitationCount === 2
+        stephenToMarvin.invitationsSent === 1
+        stephenToMarvin.invitedBy === 2
 
         val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
-        léoToMarvin.invitation === Some(léoToMarvinInvitation)
-        léoToMarvin.invitationCount === 2
+        léoToMarvin.invitationsSent === 1
+        léoToMarvin.invitedBy === 2
       }
 
-      val léoToGrassfed42Invitation = Id[Invitation](14)
-      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, léoToGrassfed42Invitation, Right(contact42.email)) }
+      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, Right(contact42.email)) }
 
       db.readOnly { implicit session =>
         val léoToGrassfed42 = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(contact42.email)).get
-        léoToGrassfed42.invitation === Some(léoToGrassfed42Invitation)
-        léoToGrassfed42.invitationCount === 1
+        léoToGrassfed42.invitationsSent === 1
+        léoToGrassfed42.invitedBy === 1
 
         val léoToMarvin = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Left(facebookMarvin.id.get)).get
-        léoToMarvin.invitation === Some(léoToMarvinInvitation)
-        léoToMarvin.invitationCount === 2
+        léoToMarvin.invitationsSent === 1
+        léoToMarvin.invitedBy === 2
       }
     }
 

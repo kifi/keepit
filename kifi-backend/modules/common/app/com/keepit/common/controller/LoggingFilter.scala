@@ -4,6 +4,7 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.strings._
 import com.keepit.common.logging.Access._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -36,28 +37,55 @@ class LoggingFilter() extends EssentialFilter {
       } else {
         val countStart = midFlightRequests.comingIn(rh)
         val timer = accessLog.timer(HTTP_IN)
-
         def logTime(result: SimpleResult): SimpleResult = {
           midFlightRequests.goingOut(rh)
           val trackingId = rh.headers.get(CommonHeaders.TrackingId).getOrElse(null)
           val remoteServiceId = rh.headers.get(CommonHeaders.LocalServiceId).getOrElse(null)
           val remoteIsLeader = rh.headers.get(CommonHeaders.IsLeader).getOrElse(null)
           val remoteServiceType = rh.headers.get(CommonHeaders.LocalServiceType).getOrElse(null)
-          val event = accessLog.add(timer.done(
-            trackingId = trackingId,
-            remoteLeader = remoteIsLeader,
-            remoteServiceId = remoteServiceId,
-            remoteServiceType = remoteServiceType,
-            method = rh.method,
-            currentRequestCount = countStart,
-            url = rh.uri,
-            statusCode = result.header.status
-          ))
-          val headers = (CommonHeaders.ResponseTime -> event.duration.toString) ::
+          //report headers and query string only if there was an error (4xx or 5xx)
+          val duration: Long = if (result.header.status / 100 >= 4) {
+            result.body(Iteratee.head[Array[Byte]]).map { fut =>
+              fut.map { arrayOpt =>
+                val body = arrayOpt.map { array =>
+                  //remember its only in error cases, the string is likely to be a very small description
+                  new String(array, UTF8).abbreviate(512)
+                } getOrElse null //null is usually bad, but fits the timer api
+                accessLog.add(timer.done(
+                  trackingId = trackingId,
+                  remoteLeader = remoteIsLeader,
+                  remoteServiceId = remoteServiceId,
+                  remoteServiceType = remoteServiceType,
+                  remoteAddress = rh.remoteAddress,
+                  remoteHeaders = rh.headers.toSimpleMap.mkString(","),
+                  query = rh.rawQueryString,
+                  method = rh.method,
+                  currentRequestCount = countStart,
+                  url = rh.uri,
+                  body = body,
+                  statusCode = result.header.status
+                ))
+              }
+            }
+            timer.laps
+          } else {
+            accessLog.add(timer.done(
+              trackingId = trackingId,
+              remoteLeader = remoteIsLeader,
+              remoteServiceId = remoteServiceId,
+              remoteServiceType = remoteServiceType,
+              remoteAddress = rh.remoteAddress,
+              method = rh.method,
+              currentRequestCount = countStart,
+              url = rh.uri,
+              statusCode = result.header.status
+            )).duration
+          }
+          val headers = (CommonHeaders.ResponseTime -> duration.toString) ::
                         (CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N")) ::
                         (CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA")) ::
                         Nil
-          val headersWithCount = if (event.duration > 30) {
+          val headersWithCount = if (duration > 30) {
             (CommonHeaders.MidFlightRequestCount -> midFlightRequests.count.toString) :: headers
           } else {
             headers

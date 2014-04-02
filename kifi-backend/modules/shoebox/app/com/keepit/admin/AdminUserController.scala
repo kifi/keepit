@@ -22,7 +22,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data._
 import play.api.data.Forms._
@@ -77,7 +77,7 @@ class AdminUserController @Inject() (
     normalizedURIRepo: NormalizedURIRepo,
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
-    bookmarkRepo: BookmarkRepo,
+    keepRepo: KeepRepo,
     socialConnectionRepo: SocialConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -158,13 +158,13 @@ class AdminUserController @Inject() (
     } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, econtacts))
   }
 
-  def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction.authenticated { implicit request =>
+  def updateCollectionsForBookmark(id: Id[Keep]) = AdminHtmlAction.authenticated { implicit request =>
     request.request.body.asFormUrlEncoded.map { _.map(r => (r._1 -> r._2.head)) }.map { map =>
       val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty)
       val collections = db.readWrite { implicit s =>
-        val bookmark = bookmarkRepo.get(id)
+        val bookmark = keepRepo.get(id)
         val userId = bookmark.userId
-        val existing = keepToCollectionRepo.getByBookmark(id, excludeState = None).map(k => k.collectionId -> k).toMap
+        val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
         val colls = collectionNames.map { name =>
           val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
             case Some(coll) if coll.isActive => coll
@@ -174,7 +174,7 @@ class AdminUserController @Inject() (
           existing.get(collection.id.get) match {
             case Some(ktc) if ktc.isActive => ktc
             case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-            case None => keepToCollectionRepo.save(KeepToCollection(bookmarkId = id, collectionId = collection.id.get))
+            case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
           }
           collection
         }
@@ -224,7 +224,7 @@ class AdminUserController @Inject() (
     }
 
     val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
-      val bookmarks = bookmarkRepo.getByUser(userId, Some(BookmarkStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
@@ -244,7 +244,7 @@ class AdminUserController @Inject() (
       case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
     }
     val bookmarkFilter = collectionFilter.map { collId =>
-      db.readOnly { implicit s => keepToCollectionRepo.getBookmarksInCollection(collId) }
+      db.readOnly { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
     }
     val filteredBookmarks = db.readOnly { implicit s =>
       val query = bookmarkSearch.getOrElse("")
@@ -255,7 +255,7 @@ class AdminUserController @Inject() (
         bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
       }) collect {
         case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
-          val colls = keepToCollectionRepo.getCollectionsForBookmark(mark.id.get).map(collectionRepo.get).map(_.name)
+          val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
           (mark, uri, colls)
       }
     }
@@ -278,7 +278,7 @@ class AdminUserController @Inject() (
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-    val (privateKeeps, publicKeeps) = bookmarkRepo.getPrivatePublicCountByUser(user.id.get)
+    val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
@@ -448,17 +448,17 @@ class AdminUserController @Inject() (
   def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit request =>
       val user = userRepo.get(userId)
-      val pics = userPictureRepo.getByUser(userId)
-      val pic = pics.find(_.id.get == pictureId)
-      if (pic.isEmpty) {
-        Forbidden
-      } else {
-        if (pic.get.state != UserPictureStates.ACTIVE) {
-          userPictureRepo.save(pic.get.withState(UserPictureStates.ACTIVE))
+      userPictureRepo.getByUser(userId).find(_.id.get == pictureId) map { pic =>
+        if (pic.state != UserPictureStates.ACTIVE) {
+          userPictureRepo.save(pic.withState(UserPictureStates.ACTIVE))
         }
-        userRepo.save(user.copy(pictureName = Some(pic.get.name), userPictureId = pic.get.id))
+        userRepo.save(user.copy(pictureName = Some(pic.name), userPictureId = pic.id))
       }
+    } map { user =>
+      eliza.sendToUser(userId, Json.arr("new_pic", BasicUser.fromUser(user).pictureName))
       Ok
+    } getOrElse {
+      BadRequest
     }
   }
 
@@ -616,8 +616,8 @@ class AdminUserController @Inject() (
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
-        val keeps = bookmarkRepo.getCountByUser(userId)
-        val publicKeeps = bookmarkRepo.getCountByUser(userId, includePrivate = false)
+        val keeps = keepRepo.getCountByUser(userId)
+        val publicKeeps = keepRepo.getCountByUser(userId, includePrivate = false)
         val privateKeeps = keeps - publicKeeps
         properties += ("keeps", keeps)
         properties += ("publicKeeps", publicKeeps)
@@ -794,7 +794,7 @@ class AdminUserController @Inject() (
         }
 
         // URI Graph
-        bookmarkRepo.getByUser(userId).foreach { bookmark => bookmarkRepo.save(bookmark.withActive(false)) }
+        keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
         collectionRepo.getByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
 
         // Personal Info
@@ -810,7 +810,7 @@ class AdminUserController @Inject() (
       val credentials = userCredRepo.findByUserIdOpt(userId)
       val installations = kifiInstallationRepo.all(userId)
       val tags = collectionRepo.getByUser(userId)
-      val keeps = bookmarkRepo.getByUser(userId)
+      val keeps = keepRepo.getByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
       val userConnections = userConnectionRepo.getConnectedUsers(userId)

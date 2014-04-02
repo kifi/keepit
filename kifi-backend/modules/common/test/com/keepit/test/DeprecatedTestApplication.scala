@@ -7,6 +7,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck._
+import com.keepit.common.mail.TestAmazonMailModule
 import com.keepit.common.net.{FakeClientResponse, HttpUri}
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
@@ -54,5 +55,6 @@ case class DeprecatedTestModule() extends ScalaModule {
     install(TestSearchServiceClientModule())
     install(FakeHttpClientModule(FakeClientResponse.emptyFakeHttpClient))
     install(TestFortyTwoModule())
+    install(TestAmazonMailModule())
   }
 }

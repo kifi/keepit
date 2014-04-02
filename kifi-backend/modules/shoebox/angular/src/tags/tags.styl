@@ -77,6 +77,9 @@ nav-item()
   line-height: 36px
   white-space: nowrap
 
+  .kf-dropdown-menu
+    right: 21px
+
   .kf-nav-link
     // for some reason kf-nav-link may remain stuck in :hover state when using Chrome
     // - may be due to DOM manipulation such as adding/removing elements.
@@ -86,10 +89,10 @@ nav-item()
     &.hover
       background-color: #e9ecf2
 
-  &.highlight
-  &.drop-hover
-    .kf-nav-link
-      background-color: #6fa6ef
+  .highlight,
+  .kf-drag-target.kf-drag-target.kf-drag-target // specificity
+    background-color: #6fa6ef
+    color: white
 
     .kf-tag-caption
     .kf-tag-name
@@ -195,10 +198,6 @@ nav-item()
       border-top-color: white
 
 
-  .kf-drag-mask
-  .kf-tag-drag-mask
-    border-color: #b8c5d3
-
 .kf-tag-new-location-mask
   pointer-events: none
   border-style: solid
@@ -209,9 +208,6 @@ nav-item()
     border-color: rgba(184,197,211,0)
     transition: all 1.5s
 
-.kf-candidate-tag-drag-target
-  .kf-tag-drag-mask
-    display: block
 
 .kf-tag-rename.kf-tag-rename
   padding: 0

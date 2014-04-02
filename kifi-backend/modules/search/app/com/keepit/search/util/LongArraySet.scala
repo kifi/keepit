@@ -2,6 +2,7 @@ package com.keepit.search.util
 
 import java.util.Arrays
 import com.keepit.common.logging.Logging
+import scala.reflect.ClassTag
 
 abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
 

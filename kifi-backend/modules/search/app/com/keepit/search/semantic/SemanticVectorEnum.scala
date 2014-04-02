@@ -13,6 +13,8 @@ class SemanticVectorEnum(inner: DocsAndPositionsEnum) extends DocIdSetIterator w
 
   override def advance(target: Int): Int = inner.advance(target)
 
+  override def cost(): Long = inner.cost()
+
   def getSemanticVector(): BytesRef = {
     if (inner.freq() > 0) {
       inner.nextPosition()

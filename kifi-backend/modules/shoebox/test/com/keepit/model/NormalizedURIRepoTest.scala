@@ -22,9 +22,9 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long")
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-      bookmarkRepo.save(BookmarkFactory(uri = uri1, userId = user1.id.get, title = Some("my title is short"), url = url1, source = BookmarkSource("NA")))
-      bookmarkRepo.save(BookmarkFactory(uri = uri2, userId = user1.id.get, title = Some("my title is long"), url = url2, source = BookmarkSource("NA")))
-      bookmarkRepo.save(BookmarkFactory(uri = uri2, userId = user2.id.get, title = Some("my title is long"), url = url2, source = BookmarkSource("NA")))
+      keepRepo.save(KeepFactory(uri = uri1, userId = user1.id.get, title = Some("my title is short"), url = url1, source = KeepSource("NA")))
+      keepRepo.save(KeepFactory(uri = uri2, userId = user1.id.get, title = Some("my title is long"), url = url2, source = KeepSource("NA")))
+      keepRepo.save(KeepFactory(uri = uri2, userId = user2.id.get, title = Some("my title is long"), url = url2, source = KeepSource("NA")))
     }
   }
 
@@ -33,7 +33,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          bookmarkRepo.page(0, 10).size === 3
+          keepRepo.page(0, 10).size === 3
         }
       }
     }
@@ -41,7 +41,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          bookmarkRepo.page(0, 2).size === 2
+          keepRepo.page(0, 2).size === 2
         }
       }
     }
@@ -49,7 +49,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          bookmarkRepo.page(1, 2).size === 1
+          keepRepo.page(1, 2).size === 1
         }
       }
     }
@@ -57,7 +57,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          bookmarkRepo.page(2, 2).size === 0
+          keepRepo.page(2, 2).size === 0
         }
       }
     }

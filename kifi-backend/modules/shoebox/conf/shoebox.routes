@@ -87,11 +87,11 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
-
+POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
-GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
+GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
@@ -109,15 +109,21 @@ GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleIPhoneTempForDev(token: String)
 
 ##########################################
-# Mobile V1
+# Mobile
 ##########################################
+GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
+
 GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
 GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.getFriendsDetails()
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+
+## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
+POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.addKeeps()
+
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
 POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrl()
 POST    /m/1/keeps/imageUrls                @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrls()
@@ -141,9 +147,13 @@ POST    /m/1/auth/sign-up                       @com.keepit.controllers.mobile.M
 POST    /m/1/auth/email-finalize                @com.keepit.controllers.mobile.MobileAuthController.userPassFinalizeAccountAction()
 POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
 POST    /m/1/auth/social-finalize               @com.keepit.controllers.mobile.MobileAuthController.socialFinalizeAccountAction()
+
 POST    /m/1/social-link/:provider              @com.keepit.controllers.mobile.MobileAuthController.linkSocialNetwork(provider)
+
 POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.MobileAuthController.forgotPassword()
 POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
+
+POST    /m/1/iphone/version/register            @com.keepit.controllers.mobile.MobileAuthController.registerIPhoneVersion()
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
 GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocial(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
@@ -190,7 +200,7 @@ GET     /unsupported                @com.keepit.controllers.website.HomeControll
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
 
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
@@ -202,26 +212,26 @@ POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitl
 ##########################################
 
 
-GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
-POST    /site/keeps/add             @com.keepit.controllers.website.BookmarksController.keepMultiple()
-POST    /site/keeps/remove          @com.keepit.controllers.website.BookmarksController.unkeepMultiple()
-GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
-GET     /site/keeps/import/status   @com.keepit.controllers.website.BookmarksController.importStatus()
-GET     /site/keeps/:id             @com.keepit.controllers.website.BookmarksController.getKeepInfo(id: ExternalId[Bookmark])
-POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksController.updateKeepInfo(id: ExternalId[Bookmark])
-POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
-GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
-POST    /site/keeps/screenshot      @com.keepit.controllers.website.BookmarksController.getScreenshotUrl()
-POST    /site/keeps/imageUrl        @com.keepit.controllers.website.BookmarksController.getImageUrl()
-POST    /site/keeps/imageUrls       @com.keepit.controllers.website.BookmarksController.getImageUrls()
+GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple()
+POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
+GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
+GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
+GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep])
+POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
+POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
+GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.KeepsController.mutualKeeps(id: ExternalId[User])
+POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
+POST    /site/keeps/imageUrl        @com.keepit.controllers.website.KeepsController.getImageUrl()
+POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
 
-GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
-POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
-POST    /site/collections/create    @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
-POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
-POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection])
+GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
+POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
+POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection(id = "")
+POST    /site/collections/:id/update @com.keepit.controllers.website.KeepsController.saveCollection(id: String)
+POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -243,7 +253,10 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
-GET     /site/user/allConnections       @com.keepit.controllers.website.TypeaheadController.getAllConnections(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= true)
+POST    /site/user/invite           @com.keepit.controllers.ext.ExtInviteController.invite()
+
+GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+
 GET     /site/user/socialConnections    @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
@@ -251,7 +264,8 @@ POST    /site/user/prefs            @com.keepit.controllers.website.UserControll
 POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: String)
-GET     /site/friends/wti           @com.keepit.controllers.website.WTIController.wti(page: Int ?= 0)
+GET     /site/friends/wti           @com.keepit.controllers.website.WTIController.getRipestInvitees(page: Int ?= 0, pageSize: Int ?= 20)
+POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block()
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
@@ -280,11 +294,11 @@ POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
-GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
+GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
-POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
+POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
@@ -356,7 +370,7 @@ GET     /admin/user/:id/prefixSocialSearch  @com.keepit.controllers.admin.AdminU
 GET     /admin/user/:id/prefixContactSearch @com.keepit.controllers.admin.AdminUserController.prefixContactSearch(id:Id[User], query:String ?= "")
 POST    /admin/user/:user1/connect  @com.keepit.controllers.admin.AdminUserController.connectUsers(user1: Id[User])
 POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperiment(id: Id[User], exp: String)
-POST    /admin/user/bookmarks/:id/collections @com.keepit.controllers.admin.AdminUserController.updateCollectionsForBookmark(id: Id[Bookmark])
+POST    /admin/user/bookmarks/:id/collections @com.keepit.controllers.admin.AdminUserController.updateCollectionsForBookmark(id: Id[Keep])
 DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/name        @com.keepit.controllers.admin.AdminUserController.changeUsersName(id: Id[User])
 POST    /admin/user/:id/pic         @com.keepit.controllers.admin.AdminUserController.setUserPicture(id: Id[User], pictureId: Id[UserPicture])
@@ -437,12 +451,14 @@ POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminC
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
-GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], search:String ?= "")
-GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], search:String ?= "")
-GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], search:String ?= "")
+GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], query:String ?= "", limit:Int ?= 5, pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 GET     /admin/typeahead/refreshPrefixFilter        @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFilter(userId:Id[User])
 POST    /admin/typeahead/refreshPrefixFiltersByIds  @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFiltersByIds()
 GET     /admin/typeahead/refreshAllPrefixFilters    @com.keepit.controllers.admin.TypeaheadAdminController.refreshAllPrefixFilters()
+GET     /admin/typeahead/:filterType/refreshAll         @com.keepit.controllers.admin.TypeaheadAdminController.refreshAll(filterType:String)
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
@@ -516,7 +532,7 @@ GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keep
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.internal.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.internal.ShoeboxController.getBookmarks(userId: Id[User])
-GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Bookmark], fetchSize: Int)
+GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.internal.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
 GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.internal.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
