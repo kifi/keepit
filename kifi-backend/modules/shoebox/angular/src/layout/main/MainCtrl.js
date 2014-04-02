@@ -10,6 +10,7 @@ angular.module('kifi.layout.main', [
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope, $analytics) {
 
     $scope.search = {};
+    $scope.data = $scope.data || {};
 
     $scope.isEmpty = function () {
       return !$scope.search.text;
@@ -77,7 +78,7 @@ angular.module('kifi.layout.main', [
     function handleInjectedState(state) {
       if (state) {
         if (state.m && state.m === '1') {
-          $scope.showEmailModal = true;
+          $scope.data.showEmailModal = true;
           $scope.modal = 'email';
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];

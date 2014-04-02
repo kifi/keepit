@@ -3,8 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope) {
     $scope.data = $scope.data || {};
 
     $scope.installInProgress = function () {
@@ -37,6 +37,19 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $scope.$apply();
       //initBookmarkImport();
     };
+
+    $scope.importBookmarks = function () {
+      $rootScope.$emit('import.bookmarks');
+    };
+
+    $window.addEventListener('message', function (event) {
+      if (event.data && event.data.bookmarkCount > 0) {
+        $rootScope.$emit('import.bookmarks', event.data.bookmarkCount, event);
+      }
+    });
+    $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+
+
 
     var updateHeight = _.throttle(function () {
       $element.css('height', $window.innerHeight + 'px');
