@@ -26,6 +26,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   'use strict';
   log('[google_inject]')();
 
+  var origin = location.origin;
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
   var $status = $bar.find('.kifi-res-bar-status');
@@ -75,7 +76,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     api.port.emit("log_search_event", [
       "searched",
       {
-        "origin": window.location.origin,
+        "origin": origin,
         "uuid": response.uuid,
         "experimentId": response.experimentId,
         "query": response.query,
@@ -307,7 +308,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       api.port.emit("log_search_event", [
         "resultClicked",
         {
-          "origin": window.location.origin,
+          "origin": origin,
           "uuid": isKifi ? hit.uuid : response.uuid,
           "filter": filter,
           "maxResults": response.prefs.maxResults,

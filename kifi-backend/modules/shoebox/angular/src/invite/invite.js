@@ -46,19 +46,19 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteWell', [
-  'profileService',
-  function (profileService) {
+  'socialService',
+  function (socialService) {
     return {
       scope: {},
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        scope.networks = profileService.networks;
+        scope.networks = socialService.networks;
 
         scope.data = scope.data || {};
 
-        profileService.getNetworks();
+        socialService.refresh();
       }
     };
   }

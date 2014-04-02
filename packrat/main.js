@@ -2121,11 +2121,12 @@ function getTags(next) {
 }
 
 function getPrefs(next) {
-  ajax('GET', '/ext/prefs', function gotPrefs(arr) {
-    log('[gotPrefs]', arr)();
+  ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
+    log('[gotPrefs]', o)();
     if (me) {
-      prefs = arr[1];
-      eip = arr[2];
+      me = o.user;
+      prefs = o.prefs;
+      eip = o.eip;
       socket.send(['eip', eip]);
     }
     if (next) next();
