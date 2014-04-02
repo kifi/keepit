@@ -243,13 +243,13 @@ class SearchAnalytics @Inject() (
     else others
   }
 
-  private def addOriginInformation(contextBuilder: HeimdalContextBuilder, reportedOrigin: String): Unit = {
-    val (origin, source) = URI.parse(reportedOrigin).toOption.flatMap(_.host) match {
+  private def addOriginInformation(contextBuilder: HeimdalContextBuilder, rawOrigin: String): Unit = {
+    val (origin, source) = URI.parse(rawOrigin).toOption.flatMap(_.host) match {
       case Some(googleHost) if googleHost.domain.contains("google") => (googleHost.name, "Google")
       case Some(kifiHost) if kifiHost.domain.contains("kifi") => (kifiHost.name, "Site")
       case Some(otherHost) => (otherHost.name, "Unknown")
-      case None if reportedOrigin == "mobile" => ("mobile", "iOS App")
-      case None => (origin, "Unknown")
+      case None if rawOrigin == "mobile" => ("mobile", "iOS App")
+      case None => (rawOrigin, "Unknown")
     }
     contextBuilder += ("origin", origin)
     contextBuilder += ("source", source)
