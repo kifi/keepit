@@ -1,13 +1,13 @@
 'use strict';
 
 angular.module('kifi.keepService', [
-    'kifi.undo',
-    'kifi.clutch',
-    'angulartics'
-  ])
+  'kifi.undo',
+  'kifi.clutch',
+  'angulartics'
+])
 
 .factory('keepService', [
-    '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics',
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics',
   function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics) {
 
     var list = [],
