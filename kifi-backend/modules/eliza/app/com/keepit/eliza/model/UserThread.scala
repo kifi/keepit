@@ -40,5 +40,5 @@ case class UserThread(
 
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $thread, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
-    s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
+    s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
 }
