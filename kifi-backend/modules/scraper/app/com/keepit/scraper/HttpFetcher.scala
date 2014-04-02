@@ -36,6 +36,8 @@ import java.security.cert.CertPathBuilderException
 import sun.security.validator.ValidatorException
 import com.keepit.common.plugin.SchedulingProperties
 
+import com.keepit.common.net.URI
+
 trait HttpFetcher {
   val NO_OP = {is:HttpInputStream => }
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
@@ -157,13 +159,13 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
                   ft.killCount.incrementAndGet()
                   log.info(s"[enforcer] ${ft.htpGet.getURI} isAborted=${ft.htpGet.isAborted}")
                   if (!ft.htpGet.isAborted) {
-                    log.warn(s"[enforcer] failed to abort long ($runMillis ms) fetch task ${ft}; calling interrupt ...")
+                    log.warn(s"[enforcer] failed to abort long ($runMillis ms) fetch task $ft; calling interrupt ...")
                     ft.thread.interrupt
                     if (ft.thread.isInterrupted) {
-                      log.warn(s"[enforcer] thread ${ft.thread} has been interrupted for fetch task ${ft}")
+                      log.warn(s"[enforcer] thread ${ft.thread} has been interrupted for fetch task $ft")
                       // removeRef -- maybe later
                     } else {
-                      val msg = s"[enforcer] attempt# ${ft.killCount.get} failed to interrupt ${ft.thread} for fetch task ${ft}"
+                      val msg = s"[enforcer] attempt# ${ft.killCount.get} failed to interrupt ${ft.thread} for fetch task $ft"
                       log.error(msg)
                       if (ft.killCount.get % 5 == 0)
                         airbrake.notify(msg)
@@ -211,6 +213,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   }
 
   private def fetchHandler(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpFetchHandlerResult = {
+    if (URI.parse(url).get.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
     implicit val httpGet = new HttpGet(url)
     implicit val httpContext = new BasicHttpContext()
 
@@ -267,7 +270,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
     responseOpt match {
       case None =>
         HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) FAILED to execute ($fetchInfo)"), httpContext)
-      case Some(response) if (httpGet.isAborted) =>
+      case Some(response) if httpGet.isAborted =>
         HttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) has been ABORTED ($fetchInfo)"), httpContext)
       case Some(response) => {
         val statusCode = response.getStatusLine.getStatusCode

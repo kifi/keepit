@@ -13,13 +13,12 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.similarities.Similarity
-import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.Bits.MatchNoBits
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
-import java.util.{ArrayList, List => JList}
+import java.util.{List => JList}
 import com.keepit.common.logging.Logging
 
 trait PercentMatchQuery extends Query {
