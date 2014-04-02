@@ -1,10 +1,12 @@
 'use strict';
 
-angular.module('kifi.socialService', [])
+angular.module('kifi.socialService', [
+  'angulartics'
+])
 
 .factory('socialService', [
-  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q',
-  function (routeService, $http, util, $rootScope, Clutch, $window, $q) {
+  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q', '$analytics',
+  function (routeService, $http, util, $rootScope, Clutch, $window, $q, $analytics) {
 
     var networks = [],
         facebook = {},
@@ -52,20 +54,32 @@ angular.module('kifi.socialService', [])
       gmail: gmail,
 
       connectFacebook: function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'connectFacebook'
+        });
         $window.location.href = routeService.linkNetwork('facebook');
       },
 
       connectLinkedIn: function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'connectLinkedIn'
+        });
         $window.location.href = routeService.linkNetwork('linkedin');
       },
 
       importGmail: function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'importGmail'
+        });
         $window.location.href = routeService.importGmail;
       },
 
       disconnectFacebook: function () {
         return $http.post(routeService.disconnectNetwork('facebook')).then(function (res) {
           util.replaceObjectInPlace(facebook, {});
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'disconnectFacebook'
+          });
           return res;
         });
       },
@@ -73,6 +87,9 @@ angular.module('kifi.socialService', [])
       disconnectLinkedIn: function () {
         return $http.post(routeService.disconnectNetwork('linkedin')).then(function (res) {
           util.replaceObjectInPlace(linkedin, {});
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'disconnectLinkedin'
+          });
           return res;
         });
       },

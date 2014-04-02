@@ -471,6 +471,9 @@ angular.module('kifi.keepService', [
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
             keep.unkept = false;
           });
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'keep'
+          });
           return keeps;
         });
       },
@@ -515,6 +518,9 @@ angular.module('kifi.keepService', [
             api.keep(keeps);
           });
 
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unkeep'
+          });
           return keeps;
         });
       },

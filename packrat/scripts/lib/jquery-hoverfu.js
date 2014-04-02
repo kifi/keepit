@@ -113,8 +113,10 @@
         attach($h, opts);
         $h.position(opts.position).css({visibility: '', display: ''}).detach();
       }
-      $h.on("mouseover.hoverfu", $.proxy(onMouseOver, null, null))
-        .on("mouseout.hoverfu", onMouseOut);
+      if (opts.canLeaveFor) {
+        $h.on("mouseover.hoverfu", $.proxy(onMouseOver, null, null))
+          .on("mouseout.hoverfu", onMouseOut);
+      }
       var ms = showImmediately ? 0 : (opts.mustHoverFor || 0) - (Date.now() - createStartTime);
       if (ms > 0) {
         data.show = setTimeout(show.bind(a), ms);
@@ -172,7 +174,7 @@
   }
   function onMouseOver(create, e) {  // $a or $h
     var data = getData(this), a = data.$a[0], h = (data.$h || [])[0], rT = e.relatedTarget;
-    if (rT && (a.contains(rT) || h && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
+    if (rT && (a.contains(rT) || h && data.opts.canLeaveFor && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
     if (e.originalEvent.hoverfu === data) return;  // e.g. mouseover $h from containing $a propagated up to $a
     e.originalEvent.hoverfu = data;
     data.mouseoverTimeStamp = e.timeStamp || Date.now();
@@ -191,7 +193,7 @@
   }
   function onMouseOut(e) {  // $a or $h
     var data = getData(this), a = data.$a[0], h = (data.$h || [])[0], rT = e.relatedTarget, edge;
-    if (rT && (a.contains(rT) || h && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
+    if (rT && (a.contains(rT) || h && data.opts.canLeaveFor && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
     clearTimeout(data.show), delete data.show;
     data.mouseoutTimeStamp = e.timeStamp || Date.now();
     if (data.showing) {

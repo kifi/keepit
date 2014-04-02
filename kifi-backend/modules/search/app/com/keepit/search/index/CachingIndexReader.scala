@@ -204,7 +204,7 @@ class CachedTerms(termMap: SortedMap[BytesRef, InvertedList], numDocs: Int) exte
 
   override def hasPositions() = true
 
-  override def hasPayloads() = false;
+  override def hasPayloads() = false
 
   override def getComparator(): Comparator[BytesRef] = null
 }

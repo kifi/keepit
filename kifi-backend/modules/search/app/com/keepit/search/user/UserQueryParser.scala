@@ -5,11 +5,9 @@ import com.keepit.search.query.parser.QueryParser
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.document.Field
-import com.keepit.search.index.Indexable
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.{PrefixQuery, WildcardQuery}
+import org.apache.lucene.search.PrefixQuery
 import com.keepit.search.query.parser.QuerySpec
 import java.io.StringReader
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
@@ -58,15 +56,20 @@ class UserQueryParser(
 
   private def genNameQuery(queryText: CharSequence): Option[BooleanQuery] = {
 
-    val ts = analyzer.tokenStream(UserIndexer.FULLNAME_FIELD, new StringReader(queryText.toString))
-    ts.reset()
-
-    val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val bq = new BooleanQuery
+    val ts = analyzer.tokenStream(UserIndexer.FULLNAME_FIELD, new StringReader(queryText.toString))
+    try {
+      ts.reset()
 
-    while (ts.incrementToken) {
-      val tq = new PrefixQuery(new Term(UserIndexer.FULLNAME_FIELD, new String(termAttr.buffer(), 0, termAttr.length())))
-      bq.add(tq, Occur.MUST)
+      val termAttr = ts.getAttribute(classOf[CharTermAttribute])
+
+      while (ts.incrementToken) {
+        val tq = new PrefixQuery(new Term(UserIndexer.FULLNAME_FIELD, new String(termAttr.buffer(), 0, termAttr.length())))
+        bq.add(tq, Occur.MUST)
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
 
     if (bq.clauses.size > 0) Some(bq) else None

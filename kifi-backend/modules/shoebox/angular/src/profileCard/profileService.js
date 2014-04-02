@@ -1,10 +1,13 @@
 'use strict';
 
-angular.module('kifi.profileService', ['kifi.routeService'])
+angular.module('kifi.profileService', [
+  'kifi.routeService',
+  'angulartics'
+])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService',
-  function ($http, env, $q, util, routeService, socialService) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics',
+  function ($http, env, $q, util, routeService, socialService, $analytics) {
 
     var me = {
       seqNum: 0
@@ -33,6 +36,9 @@ angular.module('kifi.profileService', ['kifi.routeService'])
 
     function postMe(data) {
       return $http.post(routeService.profileUrl, data).then(function (res) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'updateProfile'
+        });
         return updateMe(res.data);
       });
     }
@@ -159,6 +165,10 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       return $http.post(routeService.userPasswordUrl, {
         oldPassword: oldPassword,
         newPassword: newPassword
+      }).then(function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'changePassword'
+        });
       });
     }
 

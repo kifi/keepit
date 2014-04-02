@@ -64,5 +64,8 @@ class PhraseTokenStream(field: String, text: String, analyzer: Analyzer, removeS
     }
   }
 
-  override def reset() {}
+  override def reset(): Unit = {}
+
+  override def end(): Unit = baseTokenStream.end()
+  override def close(): Unit = baseTokenStream.close()
 }

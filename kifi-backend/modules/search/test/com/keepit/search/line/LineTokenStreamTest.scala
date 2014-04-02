@@ -43,6 +43,8 @@ class LineTokenStreamTest extends Specification {
         count += 1
         curPos += posIncrAttr.getPositionIncrement
       }
+      ts.end()
+      ts.close()
       count === 3000
       curPos === LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP - 1
     }
@@ -58,6 +60,8 @@ class LineTokenStreamTest extends Specification {
         curPos += posIncrAttr.getPositionIncrement
         ((curPos % LineField.MAX_POSITION_PER_LINE) < (LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP)) === true
       }
+      ts.end()
+      ts.close()
       count === 5000 * 3
       curPos === LineField.MAX_POSITION_PER_LINE * 3 - LineField.LINE_GAP - 1
     }

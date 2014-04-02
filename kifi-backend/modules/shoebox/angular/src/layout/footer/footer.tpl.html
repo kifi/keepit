@@ -13,7 +13,10 @@
     <li class="install-kifi">
       <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
         <span class="kf-footer-item-icon kf-footer-item-icon-install"></span>
-        <span ng-show="!installInProgress()">Install the extension</span><span ng-show="installInProgress()">Installing...</span>
+        <span ng-show="!installInProgress() && !installError()">Install the extension</span>
+        <span ng-show="installInProgress()">Installing...</span>
+        <span ng-show="installed()">Installed!</span>
+        <span ng-show="installError()">Please try again later</span>
       </a>
     </li>
     <li>

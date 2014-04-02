@@ -378,6 +378,33 @@ var socketHandlers = {
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
+  new_pic: function (name) {
+    log('[socket:new_pic]', name)();
+    if (me) {
+      me.pictureName = name;
+      emitAllTabs('me_change', me);
+      for (var thId in messageData) {
+        var arr = messageData[thId];
+        for (var i = 0; i < arr.length; i++) {
+          var m = arr[i];
+          updatePic(m.user);
+          m.participants.forEach(updatePic);
+        }
+      }
+      for (var thId in threadsById) {
+        var th = threadsById[thId];
+        if (th.category === 'message') {
+          updatePic(th.author);
+          th.participants.forEach(updatePic);
+        }
+      }
+    }
+    function updatePic(u) {
+      if (u.id === me.id) {
+        u.pictureName = name;
+      }
+    }
+  },
   new_friends: function (fr) {
     log('[socket:new_friends]', fr)();
     if (friends) {
@@ -968,7 +995,9 @@ api.port.on({
            friends ? [me].concat(friends) : [me, SUPPORT] :
            friends || [SUPPORT]);
       results = sf.filter(data.q, candidates, getName);
-      friendSearchCache.put(data, results);
+      if (friends) {
+        friendSearchCache.put(data, results);
+      }
     }
     if (results.length > data.n) {
       results = results.slice(0, data.n);
@@ -2124,7 +2153,7 @@ function getPrefs(next) {
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
     log('[gotPrefs]', o)();
     if (me) {
-      me = o.user;
+      me = standardizeUser(o.user);
       prefs = o.prefs;
       eip = o.eip;
       socket.send(['eip', eip]);
