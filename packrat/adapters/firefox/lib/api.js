@@ -173,11 +173,15 @@ function bindPortHandlers(worker, page) {
 }
 var onPortMessage = errors.wrap(function onPortMessage(page, type, data, callbackId) {
   log('[worker.port.on] message:', type, 'data:', data, 'callbackId:', callbackId);
-  portHandlers[type](data, respondToTab.bind(this, callbackId), page);
+  portHandlers[type](data, respondToTab.bind(this, callbackId, page), page);
 });
-function respondToTab(callbackId, response) {
+function respondToTab(callbackId, page, response) {
   if (this.handling) {
-    this.port.emit('api:respond', callbackId, response);
+    if (pages[page.id] === page) {
+      this.port.emit('api:respond', callbackId, response);
+    } else {
+      log('[respondToTab] page hidden', page.id, callbackId);
+    }
   }
 }
 
@@ -618,11 +622,15 @@ var workerOnApiHandling = errors.wrap(function workerOnApiHandling(page, worker,
 });
 
 var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, injectedJs, paths, callbackId) {
-  var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
-  log('[api:require] tab:', page.id, o);
-  mergeArr(page.injectedCss, o.styles);
-  mergeArr(injectedJs, o.scripts);
-  worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+  if (pages[page.id] === page) {
+    var o = deps(paths, merge(merge({}, page.injectedCss), injectedJs));
+    log('[api:require]', page.id, o);
+    mergeArr(page.injectedCss, o.styles);
+    mergeArr(injectedJs, o.scripts);
+    worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+  } else {
+    log('[api:require] page hidden', page.id, o);
+  }
 });
 
 const {PageMod} = require('sdk/page-mod');
