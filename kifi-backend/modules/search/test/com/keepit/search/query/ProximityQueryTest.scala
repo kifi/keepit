@@ -31,7 +31,7 @@ import com.keepit.search.SearchConfig
 
 class ProximityQueryTest extends Specification {
 
-  val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
+  val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
 
   val gapPenalty = SearchConfig.defaultConfig.asFloat("proximityGapPenalty")
   val proximityThreshold =  SearchConfig.defaultConfig.asFloat("proximityThreshold")

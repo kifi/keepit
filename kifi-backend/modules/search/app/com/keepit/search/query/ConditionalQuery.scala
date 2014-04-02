@@ -140,4 +140,5 @@ class ConditionalScorer(weight: ConditionalWeight, sourceScorer: Scorer, conditi
   }
   override def score(): Float = sourceScorer.score()
   override def freq(): Int = 1
+  override def cost(): Long = sourceScorer.cost()
 }

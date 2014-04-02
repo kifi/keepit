@@ -51,6 +51,7 @@ object QueryUtil extends Logging {
     override def nextDoc(): Int = NO_MORE_DOCS
     override def advance(target: Int): Int = NO_MORE_DOCS
     override def freq() = 0
+    override def cost(): Long = 0L
   }
 
   def copy(query: TermQuery, field: String): Query = {
@@ -101,7 +102,7 @@ object QueryUtil extends Logging {
       val terms = fields.terms(term.field())
       if (terms != null) {
         val termsEnum = terms.iterator(null)
-        if (termsEnum.seekExact(term.bytes(), true)) {
+        if (termsEnum.seekExact(term.bytes())) {
           return termsEnum.docs(acceptDocs, null)
         }
       }
@@ -115,7 +116,7 @@ object QueryUtil extends Logging {
       val terms = fields.terms(term.field())
       if (terms != null) {
         val termsEnum = terms.iterator(null)
-        if (termsEnum.seekExact(term.bytes(), true)) {
+        if (termsEnum.seekExact(term.bytes())) {
           return termsEnum.docsAndPositions(acceptDocs, null)
         }
       }
@@ -150,6 +151,7 @@ object QueryUtil extends Logging {
       override def startOffset(): Int = tp.startOffset()
       override def endOffset(): Int = tp.endOffset()
       override def getPayload(): BytesRef = tp.getPayload()
+      override def cost(): Long = 0L
     }
   }
 
@@ -162,6 +164,7 @@ object QueryUtil extends Logging {
     override def startOffset(): Int = -1
     override def endOffset(): Int = -1
     override def getPayload(): BytesRef = null
+    override def cost(): Long = 0L
   }
 
   def emptyDocIdSetIterator: DocIdSetIterator = EmptyDocsAndPositionsEnum

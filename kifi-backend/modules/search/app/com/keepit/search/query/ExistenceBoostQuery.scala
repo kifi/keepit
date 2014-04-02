@@ -129,4 +129,5 @@ extends Scorer(weight) with Logging {
   }
 
   override def freq(): Int = 1
+  override def cost(): Long = textScorer.cost()
 }

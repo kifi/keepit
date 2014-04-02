@@ -123,6 +123,8 @@ class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, seman
 
   override def freq(): Int = 1
 
+  override def cost(): Long = semanticScorers.map(_.cost()).sum
+
   def processSemanticVector(process: (Term, Array[Byte], Int, Int) => Unit) = {
     val isPersonalHit: Boolean = (personalScorer != null && personalScorer.docID == doc)
 

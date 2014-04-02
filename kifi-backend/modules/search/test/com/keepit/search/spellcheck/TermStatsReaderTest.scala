@@ -33,7 +33,7 @@ class TermStatsReaderTest extends Specification {
   "TermStatsReader" should {
     "read simple stats" in {
       val articleIndexDir = new VolatileIndexDirectoryImpl()
-      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+      val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
@@ -54,7 +54,7 @@ class TermStatsReaderTest extends Specification {
     "retrieve docs and positions for liveDocs" in {
 
       val articleIndexDir = new VolatileIndexDirectoryImpl()
-      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+      val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }

@@ -54,6 +54,8 @@ trait EdgeSet[S,D] {
         while (curDoc < target) nextDoc
         curDoc
       }
+
+      def cost(): Long = docids.length.toLong
     }
   }
 }

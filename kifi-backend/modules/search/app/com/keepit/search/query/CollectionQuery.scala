@@ -88,5 +88,6 @@ class CollectionScorer(weight: CollectionWeight, iterator: DocIdSetIterator, sco
   override def advance(target: Int): Int = iterator.advance(target)
   override def score(): Float = scoreValue
   override def freq(): Int = 1
+  override def cost(): Long = iterator.cost()
 }
 

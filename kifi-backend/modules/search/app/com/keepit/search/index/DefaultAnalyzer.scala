@@ -22,14 +22,12 @@ import org.apache.lucene.analysis.hu.HungarianLightStemFilter
 import org.apache.lucene.analysis.id.IndonesianStemFilter
 import org.apache.lucene.analysis.in.IndicNormalizationFilter
 import org.apache.lucene.analysis.it.ItalianLightStemFilter
-import org.apache.lucene.analysis.ja.JapaneseTokenizer
-import org.apache.lucene.analysis.ja.JapaneseKatakanaStemFilter
-import org.apache.lucene.analysis.ja.JapaneseReadingFormFilter
+import org.apache.lucene.analysis.ja.{JapaneseTokenizerFactory, JapaneseTokenizer, JapaneseKatakanaStemFilter, JapaneseReadingFormFilter}
 import org.apache.lucene.analysis.lv.LatvianStemFilter
 import org.apache.lucene.analysis.no.NorwegianLightStemFilter
 import org.apache.lucene.analysis.pt.PortugueseLightStemFilter
 import org.apache.lucene.analysis.ru.RussianLightStemFilter
-import org.apache.lucene.analysis.standard.StandardTokenizer
+import org.apache.lucene.analysis.standard.StandardTokenizerFactory
 import org.apache.lucene.analysis.sv.SwedishLightStemFilter
 import org.apache.lucene.analysis.th.ThaiWordFilter
 import org.apache.lucene.analysis.tr.TurkishLowerCaseFilter
@@ -41,27 +39,38 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.analysis.Tokenizer
 import org.apache.lucene.analysis.util.CharArraySet
 import org.apache.lucene.analysis.util.TokenizerFactory
 import org.apache.lucene.util.Version
 import com.keepit.common.logging.Logging
 import com.keepit.search.Lang
-import LuceneVersion.version
 import scala.reflect.ClassTag
 import java.io.Reader
 import java.io.StringReader
+import java.util.{HashMap=>JMap}
 
 object LuceneVersion {
-  val version = Version.LUCENE_41
+  val version = Version.LUCENE_47
 }
 
 object DefaultAnalyzer {
   implicit def langCodeToLang(langCode: String): Lang = Lang(langCode)
 
   val defaultLang = Lang("en")
-  private[this] val stdAnalyzer = new Analyzer(new DefaultTokenizerFactory, Nil, None, defaultLang).withFilter[EmptyTokenFilter]
-  private[this] val jaAnalyzer = new Analyzer(new JapaneseTokenizerFactory, Nil, None, "ja").withFilter[EmptyTokenFilter]
+
+  private[this] val stdAnalyzer = {
+    val args = new JMap[String, String]()
+    args.put("luceneMatchVersion", "4.7")
+    args.put("maxTokenLength", "256")
+    new Analyzer(new StandardTokenizerFactory(args), Nil, None, defaultLang).withFilter[EmptyTokenFilter]
+  }
+  private[this] val jaAnalyzer = {
+    val args = new JMap[String, String]()
+    args.put("luceneMatchVersion", "4.7")
+    args.put("mode", "search")
+    args.put("discardPunctuation", "true")
+    new Analyzer(new JapaneseTokenizerFactory(args), Nil, None, "ja").withFilter[EmptyTokenFilter]
+  }
 
   val defaultAnalyzer: Analyzer = stdAnalyzer.withFilter[LowerCaseFilter] // lower case, no stopwords
 
@@ -127,20 +136,6 @@ object DefaultAnalyzer {
 
   def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
   def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, getAnalyzer(lang))
-}
-
-class DefaultTokenizerFactory extends TokenizerFactory {
-  override def create(reader: Reader): Tokenizer = {
-    var tokenizer = new StandardTokenizer(version, reader)
-    tokenizer.setMaxTokenLength(256)
-    tokenizer
-  }
-}
-
-class JapaneseTokenizerFactory extends TokenizerFactory {
-  override def create(reader: Reader): Tokenizer = {
-    new JapaneseTokenizer(reader, null, true, JapaneseTokenizer.Mode.SEARCH)
-  }
 }
 
 class Analyzer(tokenizerFactory: TokenizerFactory,

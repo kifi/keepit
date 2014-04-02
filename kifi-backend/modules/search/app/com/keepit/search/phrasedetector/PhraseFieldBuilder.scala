@@ -4,15 +4,11 @@ import com.keepit.search.Lang
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Indexable
 import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.document.Field
-import org.apache.lucene.document.FieldType
-import org.apache.lucene.document.TextField
 import java.io.StringReader
-import org.apache.lucene.util.Version
 
 trait PhraseFieldBuilder {
   def buildPhraseField(fieldName: String, text: String, lang: Lang) = {
