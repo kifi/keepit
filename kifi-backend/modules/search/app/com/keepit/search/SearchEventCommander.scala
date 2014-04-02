@@ -51,10 +51,8 @@ class SearchEventCommander @Inject() (
   private def getDestinationUrl(searchResultUrl: String, searchEngine: SearchEngine): Option[String] = {
     searchEngine match {
       case SearchEngine.Google => searchResultUrl match {
-        case URI(_, _, Some(Host("com", "youtube", _*)), _, _, _, _) => Some(searchResultUrl)
-        case URI(_, _, Some(Host("org", "wikipedia", _*)), _, _, _, _) => Some(searchResultUrl)
         case URI(_, _, Some(host), _, Some("/url"), Some(query), _) if host.domain.contains("google") => query.params.find(_.name == "url").flatMap { _.decodedValue }
-        case _ => None
+        case _ => Some(searchResultUrl)
       }
       case _ => None
     }
