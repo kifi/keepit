@@ -10,5 +10,5 @@ trait VertexReader {
 
 trait GlobalVertexReader extends VertexReader {
   protected def moveTo(vertex: VertexId): Unit
-  def moveTo[V <: VertexDataReader](vertex: VertexDataId[V]): Unit
+  def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit
 }

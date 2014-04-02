@@ -10,8 +10,8 @@ EdgeReader {
 }
 
 trait GlobalEdgeReader extends EdgeReader {
-  protected def moveTo(from: VertexId, to: VertexId): Unit
-  def moveTo[S <: VertexDataReader, D <: VertexDataReader](from: VertexDataId[S], to: VertexDataId[D]): Unit
+  protected def moveTo(source: VertexId, destination: VertexId): Unit
+  def moveTo[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Unit
   def sourceVertex: VertexReader
   def destinationVertex: VertexReader
 }

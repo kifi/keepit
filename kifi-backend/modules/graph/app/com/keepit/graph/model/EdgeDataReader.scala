@@ -4,7 +4,7 @@ import com.keepit.common.reflection.CompanionTypeSystem
 
 sealed trait EdgeDataReader {
   type E <: EdgeDataReader
-  def dump: Array[Byte]
+  def kind: EdgeKind[E]
 }
 
 object EdgeDataReader {
@@ -14,8 +14,10 @@ object EdgeDataReader {
 }
 
 sealed trait EdgeKind[E <: EdgeDataReader] {
+  implicit def kind: EdgeKind[E] = this
   implicit def header: KindHeader[E]
   def apply(rawDataReader: RawDataReader): E
+  def dump(data: E): Array[Byte]
 }
 
 object EdgeKind {
@@ -29,10 +31,11 @@ object EdgeKind {
 
 trait NoEdgeDataReader extends EdgeDataReader {
   type E = NoEdgeDataReader
-  val dump = Array.empty[Byte]
+  def kind: NoEdgeDataReader
 }
 
 case object NoEdgeDataReader extends EdgeKind[NoEdgeDataReader] with NoEdgeDataReader {
-  val header = KindHeader[E](1)
-  def apply(rawDataReader: RawDataReader): E = this
+  val header = KindHeader[NoEdgeDataReader](1)
+  def apply(rawDataReader: RawDataReader): NoEdgeDataReader = this
+  def dump(data: NoEdgeDataReader): Array[Byte] = Array.empty
 }
