@@ -7,11 +7,11 @@ case class KindHeader[T](code: Byte) { // extends AnyVal
 }
 
 case class VertexId(id: Long) extends AnyVal {
-  def asId[V <: VertexDataReader](implicit header: KindHeader[V]): VertexDataId[V] = {
-    require(code == header.code, "Invalid VertexId")
+  def asId[V <: VertexDataReader](implicit kind: VertexKind[V]): VertexDataId[V] = {
+    require(code == kind.header.code, "Invalid VertexId")
     VertexDataId[V](dataId)
   }
-  def asIdOpt[V <: VertexDataReader](implicit header: KindHeader[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
+  def asIdOpt[V <: VertexDataReader](implicit kind: VertexKind[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
   override def toString() =  kind + "|" + dataId
   private def kind: VertexKind[_ <: VertexDataReader] = VertexKind(code)
   private def code: Byte = (id >> VertexId.dataIdSpace).toByte
