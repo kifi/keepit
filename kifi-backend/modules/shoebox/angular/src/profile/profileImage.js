@@ -246,6 +246,9 @@ angular.module('kifi.profileImage', [])
                 profileService.fetchMe();
                 scope.showImageUploadingModal.value = false;
                 scope.resetChooseImage();
+                $analytics.eventTrack('user_clicked_page', {
+                  'action': 'uploadImage'
+                });
               }, imageUploadError);
             }, imageUploadError);
           } else {

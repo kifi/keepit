@@ -33,6 +33,9 @@ angular.module('kifi.profileService', ['kifi.routeService'])
 
     function postMe(data) {
       return $http.post(routeService.profileUrl, data).then(function (res) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'updateProfile'
+        });
         return updateMe(res.data);
       });
     }
@@ -159,6 +162,10 @@ angular.module('kifi.profileService', ['kifi.routeService'])
       return $http.post(routeService.userPasswordUrl, {
         oldPassword: oldPassword,
         newPassword: newPassword
+      }).then(function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'changePassword'
+        });
       });
     }
 
