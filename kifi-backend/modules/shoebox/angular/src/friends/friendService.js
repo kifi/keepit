@@ -1,10 +1,12 @@
 'use strict';
 
-angular.module('kifi.friendService', [])
+angular.module('kifi.friendService', [
+  'angulartics'
+])
 
 .factory('friendService', [
-  '$http', 'env', '$q', 'routeService',
-  function ($http, env, $q, routeService) {
+  '$http', 'env', '$q', 'routeService', '$analytics',
+  function ($http, env, $q, routeService, $analytics) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -55,12 +57,18 @@ angular.module('kifi.friendService', [])
       unSearchFriend: function (userExtId) {
         return $http.post(env.xhrBase + '/user/' + userExtId + '/exclude', {}).then(function () {
           api.getKifiFriends();
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'hideFriendInSearch'
+          });
         });
       },
 
       reSearchFriend: function (userExtId) {
         return $http.post(env.xhrBase + '/user/' + userExtId + '/include', {}).then(function () {
           api.getKifiFriends();
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unHideFriendInSearch'
+          });
         });
       },
 
@@ -68,18 +76,27 @@ angular.module('kifi.friendService', [])
         return $http.post(env.xhrBase + '/user/' + extId + '/friend', {}).then(function () {
           api.getRequests();
           api.getKifiFriends();
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'acceptRequest'
+          });
         });
       },
 
       ignoreRequest: function (extId) {
         return $http.post(env.xhrBase + '/user/' + extId + '/ignoreRequest', {}).then(function () {
           api.getRequests();
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'ignoreRequest'
+          });
         });
       },
 
       unfriend: function (userExtId) {
         return $http.post(env.xhrBase + '/user/' + userExtId + '/unfriend', {}).then(function () {
           api.getKifiFriends();
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unFriend'
+          });
         });
       }
 
