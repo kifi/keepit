@@ -15,9 +15,14 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
     val ts = a.tokenStream("sv", new StringReader(queryText))
     val ta = ts.addAttribute(classOf[CharTermAttribute])
     var s = Set.empty[Term]
-    ts.reset
-    while(ts.incrementToken()){
-      s += new Term("sv", ta.toString)
+    try {
+      ts.reset
+      while(ts.incrementToken()){
+        s += new Term("sv", ta.toString)
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
     s
   }

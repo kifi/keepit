@@ -316,6 +316,7 @@ case class ScorerWithSemanicMatchFactor(scorer: Scorer, semanticMatchFactor: Flo
   def docID(): Int = scorer.docID()
   def score(): Float = scorer.score()
   def getSemanticMatchFactor: Float = semanticMatchFactor
+  def cost(): Long = scorer.cost()
 }
 
 class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Seq[ScorerWithSemanicMatchFactor], percentMatchThreshold: Float, percentMatchThresholdForHot: Float, hotDocSet: Bits) extends Scorer(weight) with BooleanOrScorer with Logging {
@@ -400,4 +401,5 @@ class BooleanOrScorerWithSemanticMatch(weight: Weight, subScorers: Seq[ScorerWit
 
   override def freq(): Int = numMatches
 
+  override def cost(): Long = subScorers.map(_.cost()).sum
 }

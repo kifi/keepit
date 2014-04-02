@@ -35,7 +35,7 @@ class TermScorerTest extends Specification {
   "TermScorer" should {
     "work" in {
       val articleIndexDir = new VolatileIndexDirectoryImpl()
-      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+      val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
@@ -54,7 +54,7 @@ class TermScorerTest extends Specification {
       def log2(x: Double) = log(x)/log(2)
 
       val articleIndexDir = new VolatileIndexDirectoryImpl()
-      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+      val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
       val indexWriter = new IndexWriter(articleIndexDir, config)
       val texts = Seq("ab x1 x2 x3 x4 cd", "ab x1 x2 x3 x4 x5 x6 cd", "ab ab y1 y2 ab ab")
       texts.foreach{ x => indexWriter.addDocument(mkDoc(x)) }

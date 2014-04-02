@@ -35,8 +35,8 @@ class DefaultAnalyzerTest extends Specification {
     "tokenize a string nicely" in {
       toTokenList(analyzer.tokenStream("b", "DefaultAnalyzer should tokenize a string nicely")) ===
         List[Token](("<ALPHANUM>", "defaultanalyzer", 1),
-                    ("<ALPHANUM>", "tokenize", 1),
-                    ("<ALPHANUM>", "string", 1),
+                    ("<ALPHANUM>", "tokenize", 2),
+                    ("<ALPHANUM>", "string", 2),
                     ("<ALPHANUM>", "nicely", 1))
     }
 
@@ -101,9 +101,9 @@ class DefaultAnalyzerTest extends Specification {
       val ja = DefaultAnalyzer.getAnalyzer(Lang("ja"))
 
       toJaTokenList(ja.tokenStream("b", "茄子とししとうの煮浸し")) ===
-        List[Token]("茄子", "ししとう", "煮浸し")
+        List[Token]("茄子", ("ししとう", 2), ("煮浸し", 2))
       toJaTokenList(ja.tokenStream("b", "＜日本学術会議＞大震災など緊急事態発生時の対応指針")) ===
-        List[Token]("日本", "学術", "会議", "大", ("大震災", 0), "震災", "緊急", "事態", "発生", "時", "対応", "指針")
+        List[Token]("日本", "学術", "会議", "大", ("大震災", 0), "震災", ("緊急", 2), "事態", "発生", "時", ("対応", 2), "指針")
       toJaTokenList(ja.tokenStream("b", "コンピューター")) ===
         List[Token]("コンピュータ")
     }
@@ -112,9 +112,9 @@ class DefaultAnalyzerTest extends Specification {
       val ja = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("ja"))
 
       toJaTokenList(ja.tokenStream("b", "＜日本学術会議＞大震災など緊急事態発生時の対応指針")) ===
-        List[Token]("ニッポン", "ガクジュツ", "カイギ", "ダイ", ("ダイシンサイ", 0), "シンサイ", "キンキュウ", "ジタイ", "ハッセイ", "ジ", "タイオウ", "シシン")
+        List[Token]("ニッポン", "ガクジュツ", "カイギ", "ダイ", ("ダイシンサイ", 0), "シンサイ", ("キンキュウ", 2), "ジタイ", "ハッセイ", "ジ", ("タイオウ", 2), "シシン")
       toJaTokenList(ja.tokenStream("b", "なすの田舎風しょうゆ煮")) ===
-        List[Token]("ナス", "イナカ", "フウ", "ショウユ", "ニ")
+        List[Token]("ナス", ("イナカ", 2), "フウ", "ショウユ", "ニ")
     }
 
     "tokenize Japanese text for highlighting" in {
@@ -150,6 +150,8 @@ class DefaultAnalyzerTest extends Specification {
     while (ts.incrementToken) {
       ret = Token(typeAcc(typeAttr), new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
     }
+    ts.end()
+    ts.close()
     ret.reverse
   }
 
@@ -163,6 +165,8 @@ class DefaultAnalyzerTest extends Specification {
     while (ts.incrementToken) {
       ret = Token(null, new String(termAttr.buffer, 0, termAttr.length), posIncrAttr.getPositionIncrement) :: ret
     }
+    ts.end()
+    ts.close()
     ret.reverse
   }
 
@@ -179,6 +183,8 @@ class DefaultAnalyzerTest extends Specification {
         val thisEnd = offsetAttr.endOffset()
         ret = HighlightToken(termString, thisStart, thisEnd) :: ret
       }
+      ts.end()
+      ts.close()
     }
     ret.reverse
   }

@@ -279,6 +279,12 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
     }
   }
 
-  override def freq() = 1
+  override def freq(): Int = 1
+
+  override def cost(): Long = {
+    (if (personalScorer == null) 0L else  personalScorer.cost)
+    + (if (regularScorer  == null) 0L else regularScorer.cost)
+    + (if (semanticScorer == null) 0L else semanticScorer.cost)
+  }
 }
 

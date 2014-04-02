@@ -46,5 +46,7 @@ class BooleanScoreDoc(scorer: Scorer, val value: Float) {
     _doc = scorer.nextDoc()
     sc
   }
+
+  def cost(): Long = scorer.cost()
 }
 

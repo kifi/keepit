@@ -64,9 +64,14 @@ class UserQueryParser(
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val bq = new BooleanQuery
 
-    while (ts.incrementToken) {
-      val tq = new PrefixQuery(new Term(UserIndexer.FULLNAME_FIELD, new String(termAttr.buffer(), 0, termAttr.length())))
-      bq.add(tq, Occur.MUST)
+    try {
+      while (ts.incrementToken) {
+        val tq = new PrefixQuery(new Term(UserIndexer.FULLNAME_FIELD, new String(termAttr.buffer(), 0, termAttr.length())))
+        bq.add(tq, Occur.MUST)
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
 
     if (bq.clauses.size > 0) Some(bq) else None

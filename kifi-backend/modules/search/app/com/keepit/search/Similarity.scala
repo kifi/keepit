@@ -9,12 +9,10 @@ import org.apache.lucene.search.similarities.DefaultSimilarity
 object Similarity extends Logging {
   // TF resilient to big documents (high term freq) and spam.
   trait NewTF extends DefaultSimilarity {
-    override def tf(freq: Int) = tf(freq.toFloat)
     override def tf(freq: Float) = 1.0f - (1.0f / (freq + 1.0f))
   }
   // disables TF
   trait NoTF extends DefaultSimilarity {
-    override def tf(freq: Int) = 1.0f
     override def tf(freq: Float) = 1.0f
   }
 

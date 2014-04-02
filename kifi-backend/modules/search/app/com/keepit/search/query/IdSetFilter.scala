@@ -38,6 +38,7 @@ class IdSetFilter(val ids: Set[Long]) extends Filter {
                 do { nextDoc() } while (doc < target)
                 doc
               }
+              override def cost(): Long = ids.size.toLong
             }
           }
         }
