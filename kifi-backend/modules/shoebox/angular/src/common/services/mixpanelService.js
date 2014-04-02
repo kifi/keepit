@@ -48,7 +48,7 @@
       return userStatus;
     }
 
-    function registerPageTrackForUser(mixpanel, path, origin) {
+    function pageTrackForUser(mixpanel, path, origin) {
       if (userId) {
         var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
         try {
@@ -81,8 +81,8 @@
       }
     }
 
-    function registerPageTrackForVisitor(mixpanel, path, origin) {
-      $log.log('mixpanelService.registerPageTrackForVisitor(' + path + '):' + origin);
+    function pageTrackForVisitor(mixpanel, path, origin) {
+      $log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
       mixpanel.track('visitor_viewed_page', {
         type: getLocation(path),
         origin: origin,
@@ -96,8 +96,8 @@
           var mixpanel = $window.mixpanel;
           var normalizedPath = getLocation(path);
           var origin = $window.location.origin;
-          registerPageTrackForVisitor(mixpanel, normalizedPath, origin);
-          registerPageTrackForUser(mixpanel, normalizedPath, origin);
+          pageTrackForVisitor(mixpanel, normalizedPath, origin);
+          pageTrackForUser(mixpanel, normalizedPath, origin);
         }
       });
     });
@@ -106,14 +106,14 @@
       $analyticsProvider.registerEventTrack(function (action, properties) {
         if ($window) {
           var mixpanel = $window.mixpanel;
-          $log.log('mixpanelService.registerEventTrack(' + action + ')', properties);
+          $log.log('mixpanelService.eventTrack(' + action + ')', properties);
           mixpanel.track(action, properties);
         }
       });
     });
   }])
   .run([
-      'profileService', '$window', '$log'
+      'profileService', '$window', '$log',
       function (p, w, l) {
         $window = w;
         profileService = p;

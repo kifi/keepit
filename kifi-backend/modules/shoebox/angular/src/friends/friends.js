@@ -44,8 +44,7 @@ angular.module('kifi.friends', [
     friendService.getRequests();
 
     $analytics.eventTrack('user_clicked_page', {
-      'action': 'addFriends',
-      'friends': $scope.friends.size
+      'action': 'addFriends'
     });
 
   }
