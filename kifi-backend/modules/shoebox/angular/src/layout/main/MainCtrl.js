@@ -91,7 +91,29 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
       $scope.modal = 'import_bookmarks';
       $scope.data.showImportModal = true;
+      $scope.msgEvent = msgEvent || false;
     });
+
+    $scope.importBookmarks = function () {
+      $scope.data.showImportModal = false;
+
+      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+      if (!kifiVersion) {
+        $scope.modal = 'import_bookmarks_error';
+        $scope.data.showImportError = true;
+        return;
+      }
+
+      var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+      if (event) {
+        event.source.postMessage('import_bookmarks', $scope.msgEvent.origin);
+      } else {
+        $window.postMessage('import_bookmarks', '*');
+      }
+      $scope.modal = 'import_bookmarks2';
+      $scope.data.showImportModal2 = true;
+    };
 
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
