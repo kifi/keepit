@@ -11,15 +11,21 @@
       </div>
     </li>
     <li class="install-kifi">
-      <a class="kf-footer-item-link" href="javascript:"  ng-click="triggerInstall()">
+      <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
         <span class="kf-footer-item-icon kf-footer-item-icon-install"></span>
         <span ng-show="!installInProgress()">Install the extension</span><span ng-show="installInProgress()">Installing...</span>
       </a>
     </li>
     <li>
-      <a class="kf-footer-item-link" href="friends/invite">
+      <a class="kf-footer-item-link" href="/invite">
         <span class="kf-footer-item-icon kf-footer-item-icon-friends"></span>
         Find friends
+      </a>
+    </li>
+    <li>
+      <a class="kf-footer-item-link" href="javascript:" ng-click="importBookmarks()">
+        <span class="kf-footer-item-icon kf-footer-item-icon-install"></span>
+        Import your bookmarks
       </a>
     </li>
   </ul>

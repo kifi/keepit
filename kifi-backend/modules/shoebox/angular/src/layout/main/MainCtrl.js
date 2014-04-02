@@ -3,10 +3,11 @@
 angular.module('kifi.layout.main', ['kifi.undo'])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope) {
 
     $scope.search = {};
+    $scope.data = $scope.data || {};
 
     $scope.isEmpty = function () {
       return !$scope.search.text;
@@ -74,7 +75,7 @@ angular.module('kifi.layout.main', ['kifi.undo'])
     function handleInjectedState(state) {
       if (state) {
         if (state.m && state.m === '1') {
-          $scope.showEmailModal = true;
+          $scope.data.showEmailModal = true;
           $scope.modal = 'email';
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];
@@ -86,6 +87,11 @@ angular.module('kifi.layout.main', ['kifi.undo'])
       }
     }
     handleInjectedState(injectedState.state);
+
+    $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
+      $scope.modal = 'import_bookmarks';
+      $scope.data.showImportModal = true;
+    });
 
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
