@@ -44,7 +44,7 @@ class SharedWsMessagingController @Inject() (
     protected val userExperimentCommander: RemoteUserExperimentCommander,
     val kifInstallationStore: KifInstallationStore,
     val accessLog: AccessLog,
-    val shutdownCommander: ShutdownCommander
+    val shoutdownListener: WebsocketsShutdownListener
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
