@@ -3,9 +3,15 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService) {
     $scope.data = $scope.data || {};
+
+    $scope.installInProgress = function () {
+      return installService.installInProgress;
+    };
+
+    $scope.triggerInstall = installService.triggerInstall();
 
     // onboarding.js is using these functions
     $window.getMe = function () {

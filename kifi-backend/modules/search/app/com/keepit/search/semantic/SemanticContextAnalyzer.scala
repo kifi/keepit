@@ -2,7 +2,6 @@ package com.keepit.search.semantic
 
 import com.keepit.search.Searcher
 import com.keepit.search.index.Analyzer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import java.io.StringReader
 import org.apache.lucene.index.Term
 import scala.math.sqrt

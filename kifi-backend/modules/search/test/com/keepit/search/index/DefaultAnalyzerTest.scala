@@ -2,10 +2,6 @@ package com.keepit.search.index
 
 import com.keepit.search.Lang
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
@@ -13,7 +9,6 @@ import org.apache.lucene.analysis.tokenattributes.TypeAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.util.CharArraySet
-import org.apache.lucene.util.Version
 import java.io.Reader
 import java.io.StringReader
 
@@ -158,7 +153,6 @@ class DefaultAnalyzerTest extends Specification {
   private def toJaTokenList(ts: TokenStream): List[Token] = {
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
-    val typeAcc = new TypeAttributeAccessor
 
     var ret: List[Token] = Nil
     ts.reset()

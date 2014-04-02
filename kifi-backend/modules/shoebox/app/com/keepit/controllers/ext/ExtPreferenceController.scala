@@ -7,15 +7,16 @@ import com.keepit.common.crypto.SimpleDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.ElectronicMailCategory
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.social.BasicUser
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{__, JsNumber, Json}
 
-import scala.math.{max, min}
 import scala.concurrent.Future
+import scala.math.{max, min}
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -98,11 +99,18 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
-  def getPrefs() = JsonAction.authenticatedAsync { request =>
+  def getPrefs(version: Int) = JsonAction.authenticatedAsync { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
     loadUserPrefs(request.user.id.get) map {prefs =>
-      Ok(Json.arr("prefs", prefs, encryptedIp))
+      if (version == 1) {
+        Ok(Json.arr("prefs", prefs, encryptedIp))
+      } else {
+        Ok(Json.obj(
+          "user" -> BasicUser.fromUser(request.user),
+          "prefs" -> prefs,
+          "eip" -> encryptedIp))
+      }
     }
   }
 

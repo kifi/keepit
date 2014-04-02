@@ -33,6 +33,8 @@ angular.module('kifi.modal', [])
           $scope.show = false;
         };
 
+        this.show = $scope.show || false;
+
         $scope.hideModal = this.hideModal;
 
         function exitModal(evt) {
@@ -45,6 +47,7 @@ angular.module('kifi.modal', [])
         $scope.$watch(function () {
           return $scope.show;
         }, function () {
+          this.show = $scope.show || false;
           if ($scope.show) {
             $document.on('keydown', exitModal);
           } else {
@@ -76,7 +79,8 @@ angular.module('kifi.modal', [])
 ])
 
 .directive('kfBasicModalContent', [
-  function () {
+  '$window',
+  function ($window) {
     return {
       restrict: 'A',
       replace: true,
@@ -102,6 +106,29 @@ angular.module('kifi.modal', [])
         scope.hideAndAction = function () {
           kfModalCtrl.hideModal(scope.action);
         };
+
+        var wrap = element.find('.dialog-body-wrap');
+
+        var resizeWindow = _.debounce(function () {
+          var winHeight = $window.document.body.clientHeight;
+          wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
+        }, 100);
+
+        resizeWindow();
+
+        scope.$watch(function () {
+          return kfModalCtrl.show;
+        }, function (show) {
+          if (show) {
+            $window.addEventListener('resize', resizeWindow);
+          } else {
+            $window.removeEventListener('resize', resizeWindow);
+          }
+        });
+
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', resizeWindow);
+        });
       }
     };
   }

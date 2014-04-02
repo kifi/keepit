@@ -1,16 +1,17 @@
 'use strict';
 
-angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
+angular.module('kifi.profileService', [
+  'kifi.routeService',
+  'angulartics'
+])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', '$FB', '$window',
-  function ($http, env, $q, util, routeService, $FB, $window) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics',
+  function ($http, env, $q, util, routeService, socialService, $analytics) {
 
     var me = {
       seqNum: 0
     };
-    var addressBooks = [],
-        networks = [];
 
     function updateMe(data) {
       angular.forEach(data, function (val, key) {
@@ -19,6 +20,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       me.picUrl = routeService.formatPicUrl(me.id, me.pictureName);
       me.primaryEmail = getPrimaryEmail(me.emails);
       me.seqNum++;
+      socialService.setExpiredTokens(me.notAuthed);
       return me;
     }
 
@@ -34,21 +36,12 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
 
     function postMe(data) {
       return $http.post(routeService.profileUrl, data).then(function (res) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'updateProfile'
+        });
         return updateMe(res.data);
       });
     }
-
-    function fetchAddressBooks() {
-      return $http.get(routeService.abooksUrl).then(function (res) {
-        util.replaceArrayInPlace(addressBooks, res.data);
-        return addressBooks;
-      });
-    }
-
-    function getAddressBooks() {
-      return addressBooks.length > 0 ? $q.when(addressBooks) : fetchAddressBooks();
-    }
-
 
     function getPrimaryEmail(emails) {
       return _.find(emails, 'isPrimary') || emails[0] || null;
@@ -172,52 +165,18 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       return $http.post(routeService.userPasswordUrl, {
         oldPassword: oldPassword,
         newPassword: newPassword
+      }).then(function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'changePassword'
+        });
       });
     }
-
-    function getNetworks() {
-      $http.get(routeService.networks).then(function (res) {
-        util.replaceArrayInPlace(networks, res.data);
-        me.facebookConnected = !!_.find(networks, function (n) {
-          return n.network === 'facebook';
-        });
-        me.linkedInConnected = !!_.find(networks, function (n) {
-          return n.network === 'linkedin';
-        });
-        me.seqNum++;
-        return res.data;
-      });
-    }
-
-    var social = {
-      connectFacebook: function () {
-        $window.location.href = routeService.linkNetwork('facebook');
-      },
-      connectLinkedIn: function () {
-        $window.location.href = routeService.linkNetwork('linkedin');
-      },
-      disconnectFacebook: function () {
-        return $http.post(routeService.disconnectNetwork('facebook')).then(function (res) {
-          me.facebookConnected = false;
-          me.seqNum++;
-          return res;
-        });
-      },
-      disconnectLinkedIn: function () {
-        return $http.post(routeService.disconnectNetwork('linkedin')).then(function (res) {
-          me.linkedInConnected = false;
-          me.seqNum++;
-          return res;
-        });
-      }
-    };
 
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
-      getAddressBooks: getAddressBooks,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
@@ -228,10 +187,7 @@ angular.module('kifi.profileService', ['kifi.routeService', 'jun.facebook'])
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
-      sendChangePassword: sendChangePassword,
-      social: social,
-      getNetworks: getNetworks,
-      networks: networks
+      sendChangePassword: sendChangePassword
     };
   }
 ]);

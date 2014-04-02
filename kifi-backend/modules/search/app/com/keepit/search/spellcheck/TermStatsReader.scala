@@ -1,6 +1,5 @@
 package com.keepit.search.spellcheck
 
-import org.apache.lucene.store.Directory
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.CompositeReader
 import org.apache.lucene.index.IndexReader
