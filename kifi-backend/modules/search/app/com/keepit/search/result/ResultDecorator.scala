@@ -151,6 +151,8 @@ object Highlighter extends Logging {
     } else {
       if (ts.hasAttribute(classOf[OffsetAttribute])) log.error("offset attribute not found")
       if (ts.hasAttribute(classOf[CharTermAttribute])) log.error("char term attribute not found")
+      ts.end()
+      ts.close()
       emptyMatches
     }
   }

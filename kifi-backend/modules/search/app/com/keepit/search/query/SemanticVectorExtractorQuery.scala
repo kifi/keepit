@@ -91,7 +91,7 @@ class SemanticVectorExtractorWeight(query: SemanticVectorExtractorQuery, semanti
   }
 }
 
-class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, semanticScores: Seq[SemanticVectorScorer], personalScorer: Scorer) extends Scorer(weight) {
+class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, semanticScorers: Seq[SemanticVectorScorer], personalScorer: Scorer) extends Scorer(weight) {
   private[this] var doc = -1
 
   override def docID(): Int = doc
@@ -101,7 +101,7 @@ class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, seman
   override def advance(target: Int): Int = {
     if (doc < NO_MORE_DOCS) {
       doc = if (doc < target) target else doc + 1
-      val docS = semanticScores.foldLeft(NO_MORE_DOCS){ (minDoc, semanticScorer) =>
+      val docS = semanticScorers.foldLeft(NO_MORE_DOCS){ (minDoc, semanticScorer) =>
         if (semanticScorer != null) {
           val d = if (semanticScorer.docID < doc) semanticScorer.advance(doc) else semanticScorer.docID
           min(minDoc, d)
@@ -121,12 +121,12 @@ class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, seman
 
   override def score(): Float = throw new UnsupportedOperationException
 
-  override def freq() = 1
+  override def freq(): Int = 1
 
   def processSemanticVector(process: (Term, Array[Byte], Int, Int) => Unit) = {
     val isPersonalHit: Boolean = (personalScorer != null && personalScorer.docID == doc)
 
-    semanticScores.foreach{ semanticScorer =>
+    semanticScorers.foreach{ semanticScorer =>
       if (semanticScorer != null && semanticScorer.docID == doc) {
         val bytesRef = semanticScorer.getSemanticVectorBytesRef()
         if (bytesRef == null) {

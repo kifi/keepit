@@ -56,8 +56,6 @@ object TokenFilterFactories {
 }
 
 class StopFilterFactories {
-  import LuceneVersion.version
-
   val Arabic = loadFrom[ArabicAnalyzer]
   val Bulgarian = loadFrom[BulgarianAnalyzer]
   val Czech = loadFrom[CzechAnalyzer]
@@ -88,7 +86,7 @@ class StopFilterFactories {
     var reader: Reader = null
     try {
       reader = IOUtils.getDecodingReader(classOf[SnowballFilter], stopWordFile, IOUtils.CHARSET_UTF_8)
-      val stopSet = WordlistLoader.getSnowballWordSet(reader, Version.LUCENE_41)
+      val stopSet = WordlistLoader.getSnowballWordSet(reader, LuceneVersion.version)
       load(stopSet)
     } catch {
       case ex: IOException =>
@@ -107,7 +105,7 @@ class StopFilterFactories {
       val file = "stopwords.txt"
       val clazz = m.runtimeClass
       reader = IOUtils.getDecodingReader(clazz.getResourceAsStream(file), IOUtils.CHARSET_UTF_8)
-      val stopSet = WordlistLoader.getWordSet(reader, comment, new CharArraySet(version, 16, ignoreCase))
+      val stopSet = WordlistLoader.getWordSet(reader, comment, new CharArraySet(LuceneVersion.version, 16, ignoreCase))
       load(stopSet)
     } catch {
       case ex: IOException =>

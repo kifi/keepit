@@ -147,14 +147,13 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
                factories: List[TokenFilterFactory],
                charFilterConstructor: Option[Constructor[CharFilter]],
                val lang: Lang) extends LAnalyzer with Logging {
-  import LuceneVersion.version
 
   def withLang(newLang: Lang): Analyzer = new Analyzer(tokenizerFactory, factories, charFilterConstructor, newLang)
 
   def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): Analyzer = {
     try {
       val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
-      withFilter(WrapperTokenFilterFactory(constructor, version))
+      withFilter(WrapperTokenFilterFactory(constructor, LuceneVersion.version))
     } catch {
       case ex: NoSuchMethodException =>
         try {
