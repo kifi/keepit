@@ -43,9 +43,9 @@
     <h3>EContacts (total = @econtacts.size)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>EContactId</th><th>Name</th><th>Email</th></tr>
+            <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th><th>ContactUserId</th></tr>
             @for(contact <- econtacts) {
-            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td></tr>
+            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td><td>@contact.contactUserId</td></tr>
             }
         </table>
     </div>
