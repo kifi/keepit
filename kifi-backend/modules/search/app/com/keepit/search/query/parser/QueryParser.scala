@@ -37,25 +37,29 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
 
   protected def getFieldQuery(field: String, queryText: String, quoted: Boolean, analyzer: Analyzer): Option[Query] = {
     val it = new TermIterator(field, queryText, analyzer) with Position
-    if (it.hasNext) {
-      var term = it.next()
-      var pos = it.position
+    try {
+      if (it.hasNext) {
+        var term = it.next()
+        var pos = it.position
 
-      val query = if (!it.hasNext) {
-        new TermQuery(term)
-      } else {
-        val phraseQuery = new PhraseQuery()
-        phraseQuery.add(term, pos)
-        while (it.hasNext) {
-          term = it.next()
-          pos = it.position
+        val query = if (!it.hasNext) {
+          new TermQuery(term)
+        } else {
+          val phraseQuery = new PhraseQuery()
           phraseQuery.add(term, pos)
+          while (it.hasNext) {
+            term = it.next()
+            pos = it.position
+            phraseQuery.add(term, pos)
+          }
+          phraseQuery
         }
-        phraseQuery
+        Some(query)
+      } else {
+        None
       }
-      Some(query)
-    } else {
-      None
+    } finally {
+      it.close()
     }
   }
 
