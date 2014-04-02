@@ -1,6 +1,5 @@
 package com.keepit.search.spellcheck
 
-import org.apache.lucene.store.Directory
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.CompositeReader
 import org.apache.lucene.index.IndexReader
@@ -32,7 +31,7 @@ class TermStatsReaderImpl(indexReader: IndexReader, field: String) extends TermS
 
   private[this] val reader: AtomicReader = indexReader match {
     case atomicReader: AtomicReader => atomicReader
-    case compositeReader: CompositeReader => new SlowCompositeReaderWrapper(compositeReader)
+    case compositeReader: CompositeReader => SlowCompositeReaderWrapper.wrap(compositeReader)
     case _ => throw new IllegalArgumentException(s"unsupported index reader type: ${indexReader.getClass}")
   }
 
