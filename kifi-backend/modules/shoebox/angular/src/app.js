@@ -40,6 +40,7 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
+  'kifi.installService',
   'jun.facebook',
   'ngDragDrop',
   'ui.slider',
