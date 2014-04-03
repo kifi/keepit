@@ -409,8 +409,8 @@ var api = (function createApi() {
   }
 
   var onXhrLoadEnd = errors.wrap(function onXhrLoadEnd(done, fail) {
-    if (this.status >= 200 && this.status < 300) {
-      if (done) done(/^application\/json/.test(this.getResponseHeader('Content-Type')) ? JSON.parse(this.responseText) : this);
+    if (this.status >= 200 && this.status < 300 && /^application\/json/.test(this.getResponseHeader('Content-Type'))) {
+      if (done) done(JSON.parse(this.responseText));
     } else {
       if (fail) fail(this);
     }

@@ -197,8 +197,8 @@ exports.request = function(method, url, data, done, fail) {
   require('sdk/request').Request(options)[method.toLowerCase()]();
 };
 var onRequestEnd = errors.wrap(function onRequestEnd(done, fail, resp) {
-  if (resp.status >= 200 && resp.status < 300) {
-    if (done) done(resp.json || resp);
+  if (resp.status >= 200 && resp.status < 300 && /^application\/json/.test(resp.headers['Content-Type'])) {
+    if (done) done(resp.json);
   } else {
     if (fail) fail(resp);
   }

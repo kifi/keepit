@@ -1524,17 +1524,16 @@ function searchOnServer(request, respond) {
     delete searchFilterCache[request.query];
   }
 
-  var maxHits = 5;
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
-    maxHits: maxHits,
+    maxHits: 5,
     lastUUID: request.lastUUID,
     context: request.context,
     kifiVersion: api.version,
     w: request.whence};
 
-  var respHandler = function(resp) {
+  ajax('search', 'GET', '/search', params, function (resp) {
     log('[searchOnServer] response:', resp)();
     resp.filter = request.filter;
     resp.me = me;
@@ -1544,13 +1543,11 @@ function searchOnServer(request, respond) {
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.hits.forEach(processSearchHit);
-    if (resp.hits.length < maxHits && (params.context || params.f)) {
+    if (resp.hits.length < params.maxHits && (params.context || params.f)) {
       resp.mayHaveMore = false;
     }
     respond(resp);
-  };
-
-  ajax("search", "GET", "/search", params, respHandler);
+  });
   return true;
 }
 
@@ -1577,7 +1574,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax("GET", "/ext/authed", function(loggedIn) {
+      ajax("GET", "/ext/authed", function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
