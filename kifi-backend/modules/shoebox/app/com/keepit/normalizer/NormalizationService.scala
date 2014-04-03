@@ -56,7 +56,13 @@ class NormalizationServiceImpl @Inject() (
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = {
     log.info(s"[processUpdate($currentReference,${candidates.mkString(",")})")
-    val contentChecks = db.readOnly { implicit session => priorKnowledge.getContentChecks(currentReference.url, currentReference.signature) }
+    val contentChecks = db.readOnly { implicit session =>
+      Try { java.net.URI.create(currentReference.url) } match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
+        case Success(uri) => log.info(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
+        case Failure(t)   => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
+      }
+      priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
+    }
     val findStrongerCandidate = FindStrongerCandidate(currentReference, Action(currentReference, contentChecks))
 
     for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(candidates) } yield {
