@@ -181,7 +181,9 @@ var api = (function createApi() {
     chrome.tabs.get(newTabId, safeCreatePageAndInjectContentScripts);
   }));
   var safeCreatePageAndInjectContentScripts = errors.wrap(function (tab) {
-    createPageAndInjectContentScripts(tab);
+    if (tab) {
+      createPageAndInjectContentScripts(tab);
+    }
   });
 
   chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
