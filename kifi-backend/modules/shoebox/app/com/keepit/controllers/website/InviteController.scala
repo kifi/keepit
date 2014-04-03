@@ -22,6 +22,7 @@ import com.keepit.commanders.{FailedInvitationException, InviteStatus, FullSocia
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{Success, Failure, Try}
+import play.api.libs.json.Json
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -69,6 +70,37 @@ class InviteController @Inject() (db: Database,
             InternalServerError("0")
           }
         }
+    }
+  }
+
+  //will replace 'invite' and be renamed once the new site is fully released.
+  //At which point we can also remove the two step facebook invitation process
+  def inviteV2() = JsonAction.authenticatedParseJsonAsync { request =>
+    val fullSocialIdOption = (request.body \ "id").asOpt[FullSocialId]
+    fullSocialIdOption match {
+      case None => Future.successful(BadRequest("0"))
+      case Some(fullSocialId) => {
+        inviteCommander.invite(request.userId, fullSocialId, None, None, "site").map {
+          case inviteStatus if inviteStatus.sent => {
+            log.info(s"[invite] Invite sent: $inviteStatus")
+            Ok(Json.obj("sent" -> true))
+          }
+          case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
+            val json = Json.obj(
+              "url" -> inviteCommander.acceptUrl(facebookInvite.externalId)
+            )
+            inviteCommander.confirmFacebookInvite(facebookInvite.externalId, "site", None, None)
+            log.info(s"[inviteV2] ${request.userId} to Facebook")
+            Ok(json)
+          case failedInviteStatus => {
+            log.error(s"[invite] Unexpected error while processing invitation from ${request.userId} to ${fullSocialId}: $failedInviteStatus")
+            airbrake.notify(new FailedInvitationException(failedInviteStatus, None, Some(request.userId), Some(fullSocialId)))
+            Ok(Json.obj(
+              "error" -> failedInviteStatus.code
+            ))
+          }
+        }
+      }
     }
   }
 

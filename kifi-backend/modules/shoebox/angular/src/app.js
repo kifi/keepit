@@ -84,7 +84,8 @@ angular.module('kifi', [
       .appId(dev ? '530357056981814' : '104629159695560')
       // https://developers.facebook.com/docs/facebook-login/permissions
       .scope('email')
-      .cookie(true);
+      .cookie(true)
+      .logging(false);
   }
 ])
 
