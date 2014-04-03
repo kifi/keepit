@@ -14,12 +14,7 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import com.keepit.search.graph.bookmark._
-import com.google.inject.Singleton
 import com.keepit.search.graph.GraphTestHelper
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.graph.user._
 import com.keepit.search.Lang
 
 
@@ -222,11 +217,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         addConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
 
-        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-        userGraphsCommander.clear()
-        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander)
-        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, userGraphsCommander)
+        userGraphsSearcherFactory.clear()
+        val searcher0 = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
+        val searcher1 = URIGraphSearcher(users(1).id.get, indexer, userGraphsSearcherFactory(users(1).id.get))
 
         searcher0.search(personaltitle).keySet === Set(2L, 4L, 6L)
         searcher1.search(personaltitle).keySet === Set(1L, 3L, 5L)
@@ -250,11 +245,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
-        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-        userGraphsCommander.clear()
+        userGraphsSearcherFactory.clear()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
 
         def mkSiteQuery(site: String) = {
           new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
@@ -292,11 +287,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
-        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-        userGraphsCommander.clear()
+        userGraphsSearcherFactory.clear()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
 
         def mkQuery(word: String) = new TermQuery(new Term("title", word))
 
@@ -332,11 +327,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
-        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-        userGraphsCommander.clear()
+         userGraphsSearcherFactory.clear()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
 
         uris.take(3).foreach{ uri =>
           val uriId =  uri.id.get
@@ -362,11 +357,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         indexer.update() === 1
 
         addConnections(Map(users(0).id.get -> Set()))
-        val (userGraph, _, userGraphsCommander) = mkUserGraphsCommander()
+        val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-        userGraphsCommander.clear()
+         userGraphsSearcherFactory.clear()
 
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsCommander)
+        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
 
         searcher.getLangProfile() === Map(Lang("en") -> 3)
       }
