@@ -203,6 +203,27 @@ angular.module('jun.facebook', [])
 		});
 	};
 
+	this.ui = function () {
+		var apiArgs = arguments;
+
+		// https://developers.facebook.com/docs/javascript/reference/FB.ui
+		return that.init().then(function (FB) {
+			var deferred = $q.defer(),
+				args = Array.prototype.slice.call(apiArgs),
+				callback;
+
+			if (typeof args[args.length - 1] === 'function') {
+				callback = args.pop();
+			}
+
+			args.push(angular.bind(deferred, handleResponse));
+
+			FB.ui.apply(FB, args);
+
+			return addCallbackToPromise(deferred, callback);
+		});
+	};
+
 	this.login = function (callback, opts) {
 		// https://developers.facebook.com/docs/reference/javascript/FB.login
 		return that.init().then(function (FB) {

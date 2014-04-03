@@ -7,12 +7,15 @@ angular.module('kifi.inviteService', [
 ])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics',
-  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$FB',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics, $FB) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
+
+    $FB.getLoginStatus(); //This causes the Facebook SDK to initialize properly. Don't remove!
+
     var inviteList = [], // used for typeahead dropdown for invite search
         selected,
         lastSearch;
@@ -105,21 +108,52 @@ angular.module('kifi.inviteService', [
 
         socialSearchService.expireAll();
 
-        return $http.post(routeService.invite, {
-          id: platform + '/' + identifier,
-          source: 'site'
-        }).then(function (res) {
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'inviteFriend',
-            'platform': platform
+        var deferred = $q.defer();
+
+        function doInvite() {
+          $http.post(routeService.invite, {
+            id: platform + '/' + identifier
+          }).then(function (res) {
+            $analytics.eventTrack('user_clicked_page', {
+              'action': 'inviteFriend',
+              'platform': platform
+            });
+            if (res.data.url && platform === 'facebok') {
+              $FB.ui({
+                method: 'send',
+                link: 'https://www.kifi.com',
+                to: identifier
+              });
+              deferred.resolve('');
+            } else if (res.data.error) {
+              //something went wrong, could be token, could be rate limit
+              //still need to deal with that properly
+              $log.log(res.data.error);
+              deferred.reject('');
+            } else {
+              deferred.resolve('');
+            }
+          }, function (err) {
+            $log.log(err);
+            throw err;
           });
-          if (res.data.url) {
-            $window.open(res.data.url, '_blank');
-          }
-        }, function (err) {
-          $log.log(err);
-          throw err;
-        });
+        }
+
+        //login if needed
+        if ($FB.FB.getAuthResponse()) {
+          doInvite();
+        } else {
+          $FB.FB.login(function (response) {
+            if (response.authResponse) {
+              doInvite();
+            }
+            //else user cancelled login. Do nothing further.
+          });
+        }
+
+
+        return deferred.promise;
+
       }
 
     };
