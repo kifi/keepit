@@ -123,6 +123,10 @@ angular.module('kifi.search', ['util', 'kifi.keepService'])
     $scope.scrollDistance = '100%';
     $scope.scrollDisabled = false;
 
+    $scope.analyticsTrack = function (keep, $event) {
+      console.log('logged!', keep, $event);
+    }
+
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
         return;
