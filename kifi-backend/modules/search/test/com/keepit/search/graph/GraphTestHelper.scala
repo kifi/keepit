@@ -1,6 +1,5 @@
 package com.keepit.search.graph
 
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
@@ -16,7 +15,6 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
 import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.Play.current
 import play.api.test.Helpers._
 
 trait GraphTestHelper extends ApplicationInjector {
@@ -136,11 +134,11 @@ trait GraphTestHelper extends ApplicationInjector {
     new StandaloneCollectionIndexer(collectionDir, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
-  def mkUserGraphsCommander() = {
+  def mkUserGraphsSearcherFactory() = {
     val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val commander = new UserGraphsCommander(userGraphIndexer, searchFriendIndexer)
-    (userGraphIndexer, searchFriendIndexer, commander)
+    val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
+    (userGraphIndexer, searchFriendIndexer, userGraphsSearcherFactory)
   }
 
 

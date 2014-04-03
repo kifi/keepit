@@ -26,7 +26,7 @@ import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcher
-import com.keepit.search.graph.user.UserGraphsCommander
+import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
 import com.keepit.search.query.HotDocSetFilter
 
@@ -34,7 +34,7 @@ import com.keepit.search.query.HotDocSetFilter
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
-    userGraphsCommander: UserGraphsCommander,
+    userGraphsSearcherFactory: UserGraphsSearcherFactory,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
     shardedCollectionIndexer: ShardedCollectionIndexer,
     parserFactory: MainQueryParserFactory,
@@ -124,7 +124,7 @@ class MainSearcherFactory @Inject() (
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
-    userGraphsCommander.clear()
+    userGraphsSearcherFactory.clear()
   }
 
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
@@ -135,7 +135,8 @@ class MainSearcherFactory @Inject() (
 
   private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)).future
+    val userGraphsSearcher = userGraphsSearcherFactory(userId)
+    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsSearcher)).future
   }
 
   def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {
