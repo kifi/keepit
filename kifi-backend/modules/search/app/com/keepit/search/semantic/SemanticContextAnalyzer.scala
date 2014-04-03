@@ -2,7 +2,6 @@ package com.keepit.search.semantic
 
 import com.keepit.search.Searcher
 import com.keepit.search.index.Analyzer
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import java.io.StringReader
 import org.apache.lucene.index.Term
 import scala.math.sqrt
@@ -15,9 +14,14 @@ class SemanticContextAnalyzer(searcher: Searcher, analyzer: Analyzer, stemAnalyz
     val ts = a.tokenStream("sv", new StringReader(queryText))
     val ta = ts.addAttribute(classOf[CharTermAttribute])
     var s = Set.empty[Term]
-    ts.reset
-    while(ts.incrementToken()){
-      s += new Term("sv", ta.toString)
+    try {
+      ts.reset
+      while(ts.incrementToken()){
+        s += new Term("sv", ta.toString)
+      }
+      ts.end()
+    } finally {
+      ts.close()
     }
     s
   }

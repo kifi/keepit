@@ -8,7 +8,7 @@ import com.keepit.common.store.ObjectStore
 import com.keepit.common.store.InMemoryObjectStore
 
 case class VersionedStoreKey[K, M <: StatModel](key: K, version: ModelVersion[M]){
-  def toKey(): String = "version_" + version.toString + "/" + key.toString
+  def toKey(): String = "version_" + version.version + "/" + key.toString
 }
 
 /**

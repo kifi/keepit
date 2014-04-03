@@ -1,10 +1,14 @@
 'use strict';
 
-angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
+angular.module('kifi.tagService', [
+  'kifi.keepService',
+  'kifi.routeService',
+  'angulartics'
+])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope', 'keepService', 'routeService',
-  function ($http, env, $q, $rootScope, keepService, routeService) {
+  '$http', 'env', '$q', '$rootScope', 'keepService', 'routeService', '$analytics',
+  function ($http, env, $q, $rootScope, keepService, routeService, $analytics) {
     var list = [],
       tagsById = {},
       fetchAllPromise = null;
@@ -35,6 +39,9 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
         keeps: keeps
       };
       $http.post(url, payload).then(function (res) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'addKeepsToTag'
+        });
         if (res.data && res.data.addedToCollection) {
           updateKeepCount(tag.id, res.data.addedToCollection);
           // broadcast change to interested parties
@@ -62,7 +69,11 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
           list[i].id = srcTagId;
         }
       }
-      $http.post(routeService.tagOrdering, _.pluck(list, 'id'));
+      $http.post(routeService.tagOrdering, _.pluck(list, 'id')).then(function () {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'reorderTag'
+        });
+      });
       api.fetchAll();
     }
 
@@ -118,6 +129,9 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
           var tag = res.data;
           tag.keeps = tag.keeps || 0;
           list.unshift(tag);
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'createTag'
+          });
           return tag;
         });
       },
@@ -134,6 +148,9 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
         return $http.post(url).then(function () {
           removeTag(tagId);
           $rootScope.$emit('tags.remove', tagId);
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'removeTag'
+          });
           return tagId;
         });
       },
@@ -154,6 +171,9 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
           name: name
         }).then(function (res) {
           var tag = res.data;
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'renameTag'
+          });
           return renameTag(tag.id, tag.name);
         });
       },
@@ -165,6 +185,9 @@ angular.module('kifi.tagService', ['kifi.keepService', 'kifi.routeService'])
           // broadcast change to interested parties
           keepIds.forEach(function (keepId) {
             $rootScope.$emit('tags.removeFromKeep', {tagId: tagId, keepId: keepId});
+          });
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'removeKeepsFromTag'
           });
           return res;
         });

@@ -25,7 +25,7 @@ import org.apache.lucene.store.RAMDirectory
 class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
-    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_41)
+    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_47)
     val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
   }
 

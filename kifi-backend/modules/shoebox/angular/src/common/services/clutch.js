@@ -19,7 +19,7 @@ angular.module('kifi.clutch', [])
       var now = Date.now || function () { return new Date().getTime(); };
 
       function Clutch(func, config) {
-        this._config = _.assign({}, defaultConfig, config);
+        this._config = _.defaults({}, config, defaultConfig);
         this._getter = func;
         this._cache = {};
       }

@@ -7,6 +7,7 @@ import com.keepit.scraper.extractor.{ExtractorProviderTypes}
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.net.{URI, URIParser}
+import scala.util.{Failure, Success, Try}
 
 trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolean]] {
   def getFailedAttempts(): Set[(String, String)]
@@ -16,11 +17,16 @@ trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolea
 
 case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit scraperPlugin: ScrapeSchedulerPlugin) extends ContentCheck with Logging {
 
+  Try { java.net.URI.create(referenceUrl) } match { // for debugging bad reference urls
+    case Success(uri) => log.info(s"[SignatureCheck] refUrl=$referenceUrl uri=$uri")
+    case Failure(t)   => throw new IllegalArgumentException(s"SignatureCheck -- failed to parse refUrl=$referenceUrl; Exception=$t; Cause=${t.getCause}", t)
+  }
+
   def isDefinedAt(candidate: NormalizationCandidate) = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
 
   private def signature(url: String): Future[Option[Signature]] = URI.parse(url).get.host match {
-    case Some(_) => scraperPlugin.getSignature(url, None)
-    case None => throw new IllegalArgumentException(s"url $url has no host!")
+    case Some(h) if h.name.trim.nonEmpty => scraperPlugin.getSignature(url, None)
+    case _ => throw new IllegalArgumentException(s"url $url has no host!")
   }
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {

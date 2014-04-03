@@ -19,6 +19,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.db.slick.Database.Slave
 import org.joda.time.DateTime
+import scala.util.Try
 
 case object CheckOverdues
 case object CheckOverdueCount
@@ -169,8 +170,19 @@ class ScrapeSchedulerPluginImpl @Inject() (
   }
 
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
-    val proxyOpt = db.readOnly { implicit s => urlPatternRuleRepo.getProxy(url) }
-    log.info(s"[getSignature] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-    scraperClient.getSignature(url, proxyOpt, extractorProviderType)
+    Try {
+      val uri = java.net.URI.create(url) // given current impl of HttpFetcher, java.net.URI is needed
+      val proxyOpt = db.readOnly { implicit s => urlPatternRuleRepo.getProxy(url) }
+      log.info(s"[getSignature] invoke (remote) Scraper service; url=$url uri=$uri proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+      scraperClient.getSignature(url, proxyOpt, extractorProviderType)
+    } recover {
+      case t:Throwable =>
+        val msg = s"Caught exception $t while parsing $url for getSignature; Cause=${t.getCause}"
+        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.ENG), // sorry about the spam -- will tweak
+          subject = s"ScrapeScheduler.getSignature($url) -- $msg",
+          htmlBody = s"$msg\n${t.getStackTraceString}",
+          category = NotificationCategory.System.ADMIN))
+        Future.successful(None)
+    } getOrElse Future.successful(None)
   }
 }

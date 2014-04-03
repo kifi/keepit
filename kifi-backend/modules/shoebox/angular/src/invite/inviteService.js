@@ -1,10 +1,14 @@
 'use strict';
 
-angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
+angular.module('kifi.inviteService', [
+  'util',
+  'kifi.clutch',
+  'angulartics'
+])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log',
-  function ($http, env, $q, routeService, util, Clutch, $window, $log) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -21,6 +25,9 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
       return $http.get(routeService.socialSearch(name)).then(function (res) {
         var results = res.data;
         _.forEach(results, augmentSocialResult);
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'searchContacts'
+        });
         return results;
       });
     });
@@ -102,6 +109,10 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
           id: platform + '/' + identifier,
           source: 'site'
         }).then(function (res) {
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'inviteFriend',
+            'platform': platform
+          });
           if (res.data.url) {
             $window.open(res.data.url, '_blank');
           }

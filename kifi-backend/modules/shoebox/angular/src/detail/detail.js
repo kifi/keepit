@@ -21,6 +21,9 @@ angular.module('kifi.detail',
         scope.closeDetail = keepService.clearState;
         scope.me = profileService.me;
 
+
+
+
         scope.$watch(scope.getPreviewed, function (keep) {
           scope.keep = keep;
         });
@@ -401,9 +404,9 @@ angular.module('kifi.detail',
   }
 ])
 
-.directive('kfKeepDetail', [
+.directive('kfKeepDetail', [ '$window',
 
-  function () {
+  function ($window) {
     var YOUTUBE_REGEX = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
 
     function isYoutubeVideo(url) {
@@ -423,6 +426,15 @@ angular.module('kifi.detail',
       restrict: 'A',
       templateUrl: 'detail/keepDetail.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
+
+        var scrollRefresh = _.throttle(function () {
+          scope.refreshScroll();
+        }, 150);
+        $window.addEventListener('resize', scrollRefresh);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', scrollRefresh);
+        });
+        scope.refreshScroll();
 
         function testEmbed(keep) {
           if (keep) {

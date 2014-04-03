@@ -23,8 +23,6 @@ object UserThreadRepo {
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
-  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean=false)(implicit session: RWSession) : UserThread
-
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
   def markAllRead(user: Id[User])(implicit session: RWSession) : Unit
@@ -154,27 +152,20 @@ class UserThreadRepoImpl @Inject() (
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
   }
 
+  //recording persisted user threads only for the sake of understanding why user messages are sent very late in ElizaEmailNotifierActor
+  //once we'll figure it out this save method can be removed
+  override def save(model: UserThread)(implicit session: RWSession): UserThread = {
+    val saved = super.save(model)
+    log.info(s"persisting: ${model.summary}")
+    saved
+  }
+
   def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]] = {
     uriIdOpt.map { uriId =>
       (for (row <- rows if row.user === userId && row.uriId === uriId) yield row.thread).list
     } getOrElse {
       (for (row <- rows if row.user === userId) yield row.thread).list
     }
-  }
-
-  // todo: Remove, not needed and breaks repo conventions
-  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]], started: Boolean = false)(implicit session: RWSession): UserThread = {
-    val userThread = UserThread(
-      id = None,
-      user = user,
-      thread = thread,
-      uriId = uriIdOpt,
-      lastSeen = None,
-      lastMsgFromOther = None,
-      lastNotification = JsNull,
-      started = started
-    )
-    save(userThread)
   }
 
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {

@@ -11,7 +11,7 @@ import com.keepit.model.User
 import com.keepit.search.graph.URIList
 import com.keepit.search.graph.bookmark.URIGraphCommander
 import com.keepit.search.graph.bookmark.URIGraphSearcher
-import com.keepit.search.graph.user.UserGraphsCommander
+import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphCommanderFactory
@@ -19,13 +19,13 @@ import com.keepit.search.graph.bookmark.URIGraphCommanderFactory
 
 class FeedCommanderFactory @Inject()(
   uriGraphCommanderFactory: URIGraphCommanderFactory,
-  userGraphsCommander: UserGraphsCommander,
+  userGraphsSearcherFactory: UserGraphsSearcherFactory,
   shoeboxClient: ShoeboxServiceClient,
   feedMetaInfoProvider: FeedMetaInfoProvider
 ){
   def apply(userId: Id[User]): FeedCommander = {
     val ugCmdr = uriGraphCommanderFactory(userId)
-    new FeedCommanderImpl(userGraphsCommander, ugCmdr, shoeboxClient, feedMetaInfoProvider)
+    new FeedCommanderImpl(userGraphsSearcherFactory, ugCmdr, shoeboxClient, feedMetaInfoProvider)
   }
 }
 
@@ -36,18 +36,12 @@ trait FeedCommander {
 }
 
 class FeedCommanderImpl(
-  userGraphsCommander: UserGraphsCommander,
+  userGraphsSearcherFactory: UserGraphsSearcherFactory,
   uriGraphCommander: URIGraphCommander,
   shoeboxClient: ShoeboxServiceClient,
   feedMetaInfoProvider: FeedMetaInfoProvider
 ) extends FeedCommander {
   val feedFilter = new CompositeFeedFilter(new BasicFeedFilter())
-
-  private def getSearchFriends(userId: Id[User]): Set[Id[User]] = {
-    val friends = Await.result(userGraphsCommander.getConnectedUsersFuture(userId), 5 seconds)
-    val unfriends = Await.result(userGraphsCommander.getUnfriendedFuture(userId), 5 seconds)
-    (friends -- unfriends).map{Id[User](_)}
-  }
 
   private def aggregateAndSort(uriLists: Seq[URIList]): Seq[(Long, Long)] = {
     // for same uri, take oldest kept time
@@ -65,12 +59,13 @@ class FeedCommanderImpl(
       uriList.publicList.getOrElse(URIList.empty).ids ++ uriList.privateList.getOrElse(URIList.empty).ids
     }.flatten.toSet
 
-    val friends = getSearchFriends(userId)
+    val userGraphsSearcher = userGraphsSearcherFactory(userId)
+    val friends = userGraphsSearcher.getSearchFriends()
     val shards = uriGraphCommander.getIndexShards
-    val uriGraphSearchers = shards.map{ shard => (shard, URIGraphSearcher(userId, uriGraphCommander.getIndexer(shard), userGraphsCommander))}.toMap
+    val uriGraphSearchers = shards.map{ shard => (shard, URIGraphSearcher(userId, uriGraphCommander.getIndexer(shard), userGraphsSearcher))}.toMap
     val uriLists = shards.map{ shard =>
       val uriLists = friends.map{ id =>
-        uriGraphCommander.getUserUriList(id, publicOnly = true, shard)
+        uriGraphCommander.getUserUriList(Id[User](id), publicOnly = true, shard)
       }
       aggregateAndSort(uriLists.flatMap{_.publicList}.toSeq).take(limit)
     }.flatten

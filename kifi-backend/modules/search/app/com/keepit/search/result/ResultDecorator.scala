@@ -113,18 +113,23 @@ object Highlighter extends Logging {
     if (ts.hasAttribute(classOf[OffsetAttribute]) && ts.hasAttribute(classOf[CharTermAttribute])) {
       val termAttr = ts.getAttribute(classOf[CharTermAttribute])
       val offsetAttr = ts.getAttribute(classOf[OffsetAttribute])
-      ts.reset()
-      while (ts.incrementToken()) {
-        val termString = new String(termAttr.buffer(), 0, termAttr.length())
-        if (terms.contains(termString)) {
-          val thisStart = offsetAttr.startOffset()
-          val thisEnd = offsetAttr.endOffset()
-          positions.get(thisStart) match {
-            case Some(endOffset) =>
-              if (endOffset < thisEnd) positions += (thisStart -> thisEnd)
-            case _ => positions += (thisStart -> thisEnd)
+      try {
+        ts.reset()
+        while (ts.incrementToken()) {
+          val termString = new String(termAttr.buffer(), 0, termAttr.length())
+          if (terms.contains(termString)) {
+            val thisStart = offsetAttr.startOffset()
+            val thisEnd = offsetAttr.endOffset()
+            positions.get(thisStart) match {
+              case Some(endOffset) =>
+                if (endOffset < thisEnd) positions += (thisStart -> thisEnd)
+              case _ => positions += (thisStart -> thisEnd)
+            }
           }
         }
+        ts.end()
+      } finally {
+        ts.close()
       }
       var curStart = -1
       var curEnd = -1
@@ -146,6 +151,8 @@ object Highlighter extends Logging {
     } else {
       if (ts.hasAttribute(classOf[OffsetAttribute])) log.error("offset attribute not found")
       if (ts.hasAttribute(classOf[CharTermAttribute])) log.error("char term attribute not found")
+      ts.end()
+      ts.close()
       emptyMatches
     }
   }

@@ -70,6 +70,7 @@ class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) e
   override def getNormValues(field: String): NumericDocValues = null
   override def hasDeletions() = false
   override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
+  override def getDocsWithField(field: String): Bits = throw new UnsupportedOperationException()
   protected def doClose() {}
 }
 
@@ -204,7 +205,9 @@ class CachedTerms(termMap: SortedMap[BytesRef, InvertedList], numDocs: Int) exte
 
   override def hasPositions() = true
 
-  override def hasPayloads() = false;
+  override def hasPayloads() = false
+
+  override def hasFreqs() = true
 
   override def getComparator(): Comparator[BytesRef] = null
 }
@@ -216,7 +219,7 @@ class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnu
 
   override def getComparator(): Comparator[BytesRef] = null
 
-  override def seekCeil(text: BytesRef, useCache: Boolean): SeekStatus = {
+  override def seekCeil(text: BytesRef): SeekStatus = {
     currentCollection = terms.from(text)
     currentEntry = currentCollection.headOption
     currentEntry.headOption match {
@@ -302,5 +305,7 @@ class CachedDocsAndPositionsEnum(list: InvertedList) extends DocsAndPositionsEnu
   override def endOffset(): Int = -1
 
   override def getPayload(): BytesRef = null
+
+  override def cost(): Long = dlist.length.toLong
 }
 

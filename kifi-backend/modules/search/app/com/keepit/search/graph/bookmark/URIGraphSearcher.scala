@@ -24,7 +24,7 @@ import com.keepit.search.graph.bookmark.URIGraphFields._
 import com.keepit.search.graph.BookmarkInfoAccessor
 import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 import com.keepit.search.graph.LongArraySetEdgeSet
-import com.keepit.search.graph.user.UserGraphsCommander
+import com.keepit.search.graph.user.UserGraphsSearcher
 import play.modules.statsd.api.Statsd
 
 object URIGraphSearcher {
@@ -33,9 +33,9 @@ object URIGraphSearcher {
     new URIGraphSearcher(indexSearcher, storeSearcher)
   }
 
-  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, userGraphsCommander: UserGraphsCommander): URIGraphSearcherWithUser = {
+  def apply(userId: Id[User], uriGraphIndexer: URIGraphIndexer, userGraphsSearcher: UserGraphsSearcher): URIGraphSearcherWithUser = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
-    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, userGraphsCommander)
+    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, userGraphsSearcher)
   }
 }
 
@@ -73,11 +73,13 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
   }
 }
 
-class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsCommander: UserGraphsCommander)
+class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsSearcher: UserGraphsSearcher)
   extends URIGraphSearcher(searcher, storeSearcher) {
 
-  private[this] val friendIdsFuture: Future[Set[Long]] = userGraphsCommander.getConnectedUsersFuture(myUserId)
-  private[this] val unfriendedFuture: Future[Set[Long]] = userGraphsCommander.getUnfriendedFuture(myUserId)
+  if (userGraphsSearcher.userId != myUserId) throw new IllegalArgumentException("user id mismatch")
+
+  private[this] val friendIdsFuture: Future[Set[Long]] = userGraphsSearcher.getConnectedUsersFuture()
+  private[this] val unfriendedFuture: Future[Set[Long]] = userGraphsSearcher.getUnfriendedFuture()
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)

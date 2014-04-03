@@ -60,6 +60,7 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   override def getSortedSetDocValues(field: String): SortedSetDocValues = null
   override def hasDeletions() = mainReader.hasDeletions()
   override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
+  override def getDocsWithField(field: String) = throw new UnsupportedOperationException()
   protected def doClose() {}
 }
 

@@ -41,8 +41,6 @@ angular.module('kifi.friends', [
     $scope.friends = friendService.friends;
     friendService.getKifiFriends();
     friendService.getRequests();
-
-
   }
 ]);
 
