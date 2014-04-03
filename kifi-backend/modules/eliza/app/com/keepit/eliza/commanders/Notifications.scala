@@ -57,13 +57,19 @@ class NotificationUpdater @Inject() (
   }
 
   private def updateSendableNotification(rawNotification: RawNotification): Option[Future[JsObject]] = {
-    @inline def updates = if (rawNotification._2)  // unread
-      Json.obj("unread" -> true)
+    @inline def updates(o: JsObject) = if (rawNotification._2)  // unread
+      Json.obj(
+        "unread" -> true,
+        "unreadMessages" -> math.max(1, (o \ "unreadMessages").asOpt[Int].getOrElse(0)),
+        "unreadAuthors" -> math.max(1, (o \ "unreadAuthors").asOpt[Int].getOrElse(0)))
     else
-      Json.obj("unread" -> false, "unreadAuthors" -> 0)
+      Json.obj(
+        "unread" -> false,
+        "unreadMessages" -> 0,
+        "unreadAuthors" -> 0)
 
     rawNotification._1 match {
-      case o: JsObject => Some(updateSenderAndParticipants(o ++ updates))
+      case o: JsObject => Some(updateSenderAndParticipants(o ++ updates(o)))
       case _ => None
     }
   }
