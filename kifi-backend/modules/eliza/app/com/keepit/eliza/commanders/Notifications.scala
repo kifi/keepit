@@ -1,27 +1,31 @@
 package com.keepit.eliza.commanders
 
-import play.api.libs.json.{JsValue, Json, JsObject}
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
+import com.keepit.eliza.model.UserThreadRepo.RawNotification
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{BasicUserLikeEntity, BasicUser}
-import scala.concurrent.{Promise, Future}
+
+import play.api.libs.json.{JsValue, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-class RawNotifications(private[commanders] val jsonList: List[(play.api.libs.json.JsValue, Boolean)])
+import scala.concurrent.Future
 
 private[commanders] case class Notifications(jsons: Seq[JsObject])
 
 class NotificationUpdater @Inject() (
   shoebox: ShoeboxServiceClient) {
 
-  def update(rawNotifications: RawNotifications): Future[Notifications] =
-    updateSendableNotifications(rawNotifications.jsonList) map { jsons => Notifications(jsons) }
+  def update(rawNotification: RawNotification): Future[JsObject] =
+    updateSendableNotification(rawNotification).get
+
+  def update(rawNotifications: List[RawNotification]): Future[Notifications] =
+    updateSendableNotifications(rawNotifications) map Notifications
 
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
     shoebox.getUserOpt(basicUser.externalId) map { userOpt =>
       userOpt.map(BasicUser.fromUser).getOrElse(basicUser)
-    } recover {
-      case _:Throwable => basicUser
+    } recover { case _ =>
+      basicUser
     }
   }
 
@@ -30,17 +34,17 @@ class NotificationUpdater @Inject() (
     val participantsOpt: Option[Seq[BasicUserLikeEntity]] = (data \ "participants").asOpt[Seq[BasicUserLikeEntity]]
     participantsOpt.map { participants =>
       val updatedAuthorFuture : Future[Option[BasicUser]] =
-        author.map(updateBasicUser).map(fut=>fut.map(Some(_))).getOrElse(Promise.successful(None.asInstanceOf[Option[BasicUser]]).future)
+        author.map(updateBasicUser).map(fut=>fut.map(Some(_))).getOrElse(Future.successful(None.asInstanceOf[Option[BasicUser]]))
       val updatedParticipantsFuture : Future[Seq[BasicUserLikeEntity]]= Future.sequence(participants.map{ participant =>
         val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
-          case p : BasicUser => updateBasicUser(p)
-          case _ => Promise.successful(participant).future
+          case p: BasicUser => updateBasicUser(p)
+          case _ => Future.successful(participant)
         }
         updatedParticipant
       })
 
-      updatedParticipantsFuture.flatMap{ updatedParticipants =>
-        updatedAuthorFuture.map{ updatedAuthor =>
+      updatedParticipantsFuture.flatMap { updatedParticipants =>
+        updatedAuthorFuture.map { updatedAuthor =>
           data.deepMerge(Json.obj(
             "author" -> updatedAuthor,
             "participants" -> updatedParticipants
@@ -48,24 +52,24 @@ class NotificationUpdater @Inject() (
         }
       }
     } getOrElse {
-      Promise.successful(data).future
+      Future.successful(data)
     }
   }
 
-  private def updateSendableNotification(data: JsValue, unread: Boolean): Option[Future[JsObject]] = {
-    data match {
-      case x: JsObject => Some(updateSenderAndParticipants(x.deepMerge(
-        if (unread) Json.obj("unread" -> unread) else Json.obj("unread" -> unread, "unreadAuthors" -> 0)
-      )))
+  private def updateSendableNotification(rawNotification: RawNotification): Option[Future[JsObject]] = {
+    @inline def updates = if (rawNotification._2)  // unread
+      Json.obj("unread" -> true)
+    else
+      Json.obj("unread" -> false, "unreadAuthors" -> 0)
+
+    rawNotification._1 match {
+      case o: JsObject => Some(updateSenderAndParticipants(o ++ updates))
       case _ => None
     }
   }
 
-  private def updateSendableNotifications(rawNotifications: Seq[(JsValue, Boolean)]): Future[Seq[JsObject]] = {
-    Future.sequence(rawNotifications.map { case (data, unread) =>
-      updateSendableNotification(data, unread)
-    }.filter(_.isDefined).map(_.get))
+  private def updateSendableNotifications(rawNotifications: Seq[RawNotification]): Future[Seq[JsObject]] = {
+    Future.sequence(rawNotifications.map(updateSendableNotification).flatten)
   }
-
 
 }

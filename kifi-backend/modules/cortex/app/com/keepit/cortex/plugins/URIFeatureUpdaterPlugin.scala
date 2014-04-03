@@ -19,4 +19,3 @@ abstract class URIFeatureUpdater[M <: StatModel](
   protected def getSeqNumber(uri: NormalizedURI): SequenceNumber[NormalizedURI] = uri.seq
   protected def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get
 }
-

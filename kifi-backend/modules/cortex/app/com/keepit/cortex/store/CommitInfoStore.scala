@@ -21,5 +21,3 @@ abstract class S3CommitInfoStore[T, M <: StatModel](
 ) extends S3JsonStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M]
 
 class InMemoryCommitInfoStore[T, M <: StatModel] extends InMemoryObjectStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M]
-
-

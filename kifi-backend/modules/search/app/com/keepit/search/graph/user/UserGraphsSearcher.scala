@@ -58,4 +58,3 @@ class UserGraphsSearcher(
     if (unfriends.isEmpty) friends else (friends -- unfriends)
   }
 }
-

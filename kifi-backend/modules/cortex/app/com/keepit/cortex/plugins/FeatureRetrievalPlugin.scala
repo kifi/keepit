@@ -39,4 +39,3 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
     }
   }
 }
-
