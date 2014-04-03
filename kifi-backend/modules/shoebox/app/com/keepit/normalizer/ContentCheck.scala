@@ -7,6 +7,7 @@ import com.keepit.scraper.extractor.{ExtractorProviderTypes}
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.net.{URI, URIParser}
+import scala.util.{Failure, Success, Try}
 
 trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolean]] {
   def getFailedAttempts(): Set[(String, String)]
@@ -19,8 +20,8 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
   def isDefinedAt(candidate: NormalizationCandidate) = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
 
   private def signature(url: String): Future[Option[Signature]] = URI.parse(url).get.host match {
-    case Some(_) => scraperPlugin.getSignature(url, None)
-    case None => throw new IllegalArgumentException(s"url $url has no host!")
+    case Some(h) if h.name.trim.nonEmpty => scraperPlugin.getSignature(url, None)
+    case _ => throw new IllegalArgumentException(s"url $url has no host!")
   }
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {
