@@ -12,6 +12,9 @@ class WordFeatureTest extends Specification with WordFeatureTestHelper {
       doc = Document("intel and amd are bros".split(" "))
       fakeDocRep.apply(doc).get.vectorize === Array(1f, 0f)
 
+      doc = Document("intel intel intel !!!".split(" "))
+      fakeDocRep.apply(doc).get.vectorize === Array(1f, 0f)
+
       doc = Document("apple intel".split(" "))
       fakeDocRep.apply(doc).get.vectorize === Array(1.5f/2, 0.5f/2)
 
