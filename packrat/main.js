@@ -802,7 +802,7 @@ api.port.on({
       emitThreadInfoToTab(th, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id], function (th) {
+      socket.send(['get_one_thread', id], function (th) {
         standardizeNotification(th);
         updateIfJustRead(th);
         threadsById[th.thread] = th;
