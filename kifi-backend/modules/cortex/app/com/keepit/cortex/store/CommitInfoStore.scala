@@ -7,8 +7,6 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.common.store.S3JsonStore
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.core.StatModel
-import com.keepit.cortex.plugins.CommitInfo
-import com.keepit.cortex.plugins.CommitInfoKey
 import play.api.libs.json.Format
 import com.keepit.common.store.InMemoryObjectStore
 
