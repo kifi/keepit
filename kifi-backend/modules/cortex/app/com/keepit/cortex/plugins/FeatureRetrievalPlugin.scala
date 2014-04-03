@@ -6,6 +6,8 @@ import com.keepit.cortex.store.CommitInfoStore
 import com.keepit.cortex.store.VersionedStore
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.FeatureRepresenter
+import com.keepit.cortex.store.FeatureStoreSequenceNumber
+import com.keepit.cortex.store.CommitInfoKey
 
 trait FeatureRetrievalPlugin
 

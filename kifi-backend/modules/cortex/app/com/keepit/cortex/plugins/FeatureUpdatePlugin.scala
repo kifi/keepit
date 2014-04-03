@@ -14,49 +14,63 @@ import com.keepit.cortex.store.CommitInfoStore
 import com.keepit.common.db.ModelWithSeqNumber
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.FeatureRepresentation
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.SchedulerPlugin
+import scala.concurrent.duration._
+import com.keepit.cortex.store.FeatureStoreSequenceNumber
+import com.keepit.cortex.store.CommitInfo
+import com.keepit.cortex.store.CommitInfoKey
 
 
-case class CommitInfo[T, M <: StatModel](
-  seq: FeatureStoreSequenceNumber[T, M],
-  version: ModelVersion[M],
-  committedAt: DateTime
-)
-
-object CommitInfo {
-  def infoReads[T, M <: StatModel]: Reads[CommitInfo[T, M]] = new Reads[CommitInfo[T, M]]{
-    def reads(json: JsValue): JsResult[CommitInfo[T, M]] = {
-      val seq = (json \ "seq").as[Long]
-      val ver = (json \ "version").as[Int]
-      val time = DateTimeJsonFormat.reads(json \ "committedAt").get
-      JsSuccess(CommitInfo[T, M](FeatureStoreSequenceNumber[T, M](seq), new ModelVersion[M](ver), time))
-    }
-  }
-
-  def infoWrites[T, M <: StatModel]: Writes[CommitInfo[T, M]] = new Writes[CommitInfo[T, M]]{
-    def writes(info: CommitInfo[T, M]) = Json.obj("seq" -> info.seq.value, "version" -> info.version.version, "committedAt" -> DateTimeJsonFormat.writes(info.committedAt))
-  }
-
-  def format[T, M <: StatModel]: Format[CommitInfo[T, M]] = Format(infoReads[T, M], infoWrites[T, M])
-}
-
-case class CommitInfoKey[T, M <: StatModel](version: ModelVersion[M]){
-  override def toString(): String = "commitInfo_version_" + version.version
-}
-
-case class FeatureStoreSequenceNumber[T, M <: StatModel](value: Long) extends Ordered[FeatureStoreSequenceNumber[T, M]] {
-  def compare(that: FeatureStoreSequenceNumber[T, M]) = value compare that.value
-  override def toString = value.toString
-}
-
-trait FeatureUpdatePlugin[T, M <: StatModel]{
+trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin{
   def update(): Unit
   def recomputeAll(): Unit
   def commitInfo(): Option[CommitInfo[T, M]]
 }
 
+object FeaturePluginMessages{
+  case object Update
+}
+
+abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
+  actor: ActorInstance[FeatureUpdateActor[K, T, M]],
+  serviceDiscovery: ServiceDiscovery
+) extends FeatureUpdatePlugin[T, M]{
+
+  import FeaturePluginMessages._
+
+  override def enabled: Boolean = true
+
+  val name: String = getClass.toString
+
+  override def onStart() {
+    log.info(s"starting $name")
+    scheduleTaskOnLeader(actor.system, 30 seconds, 1 minutes, actor.ref, Update)
+  }
+
+  override def onStop() {
+    log.info(s"stopping $name")
+  }
+
+  def update(): Unit = {
+    actor.ref ! Update
+  }
+
+}
+
 class FeatureUpdateActor[K, T, M <: StatModel](
+  airbrake: AirbrakeNotifier,
   updater: FeatureUpdater[K, T, M]
-)
+) extends FortyTwoActor(airbrake) {
+  import FeaturePluginMessages._
+
+  def receive() = {
+    case Update => updater.update()
+  }
+}
 
 trait DataPuller[T] {
   def getSince(lowSeq: SequenceNumber[T], limit: Int): Seq[T]
