@@ -8,6 +8,16 @@ import com.keepit.cortex.core.FeatureRepresenter
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.core.FeatureRepresentation
 import com.keepit.common.db.Id
+import com.google.inject.{Singleton, Inject}
+import com.keepit.shoebox.ShoeboxServiceClient
+
+@Singleton
+class URIPuller @Inject()(
+  shoebox: ShoeboxServiceClient
+) extends DataPuller[NormalizedURI]{
+  def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = ???
+  def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = ???
+}
 
 abstract class URIFeatureUpdater[M <: StatModel](
   representer: FeatureRepresenter[NormalizedURI, M],
