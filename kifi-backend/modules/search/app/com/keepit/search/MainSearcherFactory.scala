@@ -6,7 +6,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -27,14 +26,15 @@ import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.collection.CollectionSearcher
-import com.keepit.search.graph.user.UserGraphsCommander
+import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
+import com.keepit.search.query.HotDocSetFilter
 
 @Singleton
 class MainSearcherFactory @Inject() (
     shardedArticleIndexer: ShardedArticleIndexer,
     userIndexer: UserIndexer,
-    userGraphsCommander: UserGraphsCommander,
+    userGraphsSearcherFactory: UserGraphsSearcherFactory,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
     shardedCollectionIndexer: ShardedCollectionIndexer,
     parserFactory: MainQueryParserFactory,
@@ -42,7 +42,6 @@ class MainSearcherFactory @Inject() (
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
     shoeboxClient: ShoeboxServiceClient,
-    spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier,
     implicit private val clock: Clock,
@@ -56,6 +55,52 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
 
   def apply(
+    shards: Seq[Shard[NormalizedURI]],
+    userId: Id[User],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig
+  ): Seq[MainSearcher] = {
+    val clickHistoryFuture = getClickHistoryFuture(userId)
+    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
+
+    val parser = parserFactory(lang1, lang2, config)
+
+    val searchers = shards.map{ shard =>
+      val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
+      val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+
+      new MainSearcher(
+          userId,
+          lang1,
+          lang2,
+          numHitsToReturn,
+          filter,
+          config,
+          parser,
+          articleSearcher,
+          socialGraphInfo,
+          clickBoostsFuture,
+          browsingHistoryFuture,
+          clickHistoryFuture,
+          monitoredAwait,
+          airbrake
+      )
+    }
+
+    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
+    parser.setPercentMatch(config.asFloat("percentMatch"))
+    parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
+    parser.parse(queryString, searchers.map(_.collectionSearcher))
+
+    searchers
+  }
+
+  def apply(
     shard: Shard[NormalizedURI],
     userId: Id[User],
     queryString: String,
@@ -64,31 +109,9 @@ class MainSearcherFactory @Inject() (
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig
-  ) = {
-    val clickHistoryFuture = getClickHistoryFuture(userId)
-    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
-    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
-    val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-
-    new MainSearcher(
-        userId,
-        queryString,
-        lang1,
-        lang2,
-        numHitsToReturn,
-        filter,
-        config,
-        articleSearcher,
-        parserFactory,
-        socialGraphInfo,
-        clickBoostsFuture,
-        browsingHistoryFuture,
-        clickHistoryFuture,
-        spellCorrector,
-        monitoredAwait,
-        airbrake
-    )
+  ): MainSearcher = {
+    val searchers = apply(Seq(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
+    searchers(0)
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
@@ -101,7 +124,7 @@ class MainSearcherFactory @Inject() (
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
-    userGraphsCommander.clear()
+    userGraphsSearcherFactory.clear()
   }
 
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
@@ -112,7 +135,8 @@ class MainSearcherFactory @Inject() (
 
   private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
     val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsCommander)).future
+    val userGraphsSearcher = userGraphsSearcherFactory(userId)
+    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsSearcher)).future
   }
 
   def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {

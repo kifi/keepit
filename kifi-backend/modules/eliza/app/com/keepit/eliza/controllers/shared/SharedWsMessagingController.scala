@@ -25,7 +25,6 @@ import com.google.inject.Inject
 import scala.concurrent.Future
 import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.logging.Access.{WS_IN, CACHE}
 import com.keepit.common.shutdown.ShutdownCommander
 
 class SharedWsMessagingController @Inject() (
@@ -44,7 +43,7 @@ class SharedWsMessagingController @Inject() (
     protected val userExperimentCommander: RemoteUserExperimentCommander,
     val kifInstallationStore: KifInstallationStore,
     val accessLog: AccessLog,
-    val shutdownCommander: ShutdownCommander
+    val shoutdownListener: WebsocketsShutdownListener
   )
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
@@ -70,18 +69,6 @@ class SharedWsMessagingController @Inject() (
         "server_ip" -> amazonInstanceInfo.publicIp.toString
       )
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
-    },
-    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
-      log.info(s"[get_thread_info] user ${socket.userId} thread $threadId")
-      try {
-        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
-        socket.channel.push(Json.arr(requestId.toLong, info))
-      } catch {
-        case t: Throwable => {
-          socket.channel.push(Json.arr("server_error", requestId.toLong))
-          throw t
-        }
-      }
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} thread $threadId")
@@ -114,21 +101,21 @@ class SharedWsMessagingController @Inject() (
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
       messagingCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map { notices =>
         val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-        socket.channel.push(Json.arr("notifications", notices, numUnreadUnmuted, END_OF_TIME))
+        socket.channel.push(Json.arr("notifications", notices.jsons, numUnreadUnmuted, END_OF_TIME))
       }
     },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
       messagingCommander.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time)).map { notices =>
-        socket.channel.push(Json.arr("missed_notifications", notices, currentDateTime))
+        socket.channel.push(Json.arr("missed_notifications", notices.jsons, currentDateTime))
       }
     },
     "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
       val fut = messagingCommander.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
@@ -136,121 +123,142 @@ class SharedWsMessagingController @Inject() (
       val lastModified = messagingCommander.setAllNotificationsReadBefore(socket.userId, messageId)
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
+    // warning: get_thread_info returns an ElizaThreadInfo, not the typical notification JSON
+    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
+      log.info(s"[get_thread_info] user ${socket.userId} thread $threadId")
+      try {
+        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
+        socket.channel.push(Json.arr(requestId.toLong, info))
+      } catch { case t: Throwable =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
+        throw t
+      }
+    },
+    // warning: get_threads_by_url returns ElizaThreadInfos, not the typical notification JSONs
     "get_threads_by_url" -> { case JsString(url) +: _ =>
       messagingCommander.getThreadInfos(socket.userId, url).map { case (_, threadInfos) =>
         socket.channel.push(Json.arr("thread_infos", threadInfos))
       }
     },
+    // warning: get_threads returns ElizaThreadInfos, not the typical notification JSONs
     "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
       val fut = messagingCommander.getThreadInfos(socket.userId, url)
       fut.foreach { case (nUriStr, threadInfos) =>
         socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
 
     // inbox notification/thread handlers
-
+    "get_one_thread" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
+      val fut = messagingCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId))
+      fut.foreach { json =>
+        socket.channel.push(Json.arr(requestId.toLong, json))
+      }
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
+      }
+    },
     "get_latest_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       val fut = messagingCommander.getLatestSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { notices =>
         val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-        socket.channel.push(Json.arr(requestId.toLong, notices, numUnreadUnmuted, numUnread, currentDateTime))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numUnreadUnmuted, numUnread, currentDateTime))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
       val fut = messagingCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_threads_since" -> { case JsNumber(requestId) +: JsString(time) +: _ => // deprecated (unused since 2.8.38)
       val fut = messagingCommander.getSendableNotificationsSince(socket.userId, parseStandardTime(time))
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices, currentDateTime))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons, currentDateTime))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       val fut = messagingCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { case (notices, numTotal) =>
-        socket.channel.push(Json.arr(requestId.toLong, notices, numTotal))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numTotal))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_unread_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
       val fut = messagingCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_muted_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       val fut = messagingCommander.getLatestMutedSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_muted_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
       val fut = messagingCommander.getMutedSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       val fut = messagingCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_sent_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
       val fut = messagingCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_page_threads" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
       val fut = messagingCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt)
       fut.foreach { case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-        socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices, numTotal, numUnreadUnmuted))
+        socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.jsons, numTotal, numUnreadUnmuted))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     "get_page_threads_before" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
       val fut = messagingCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices))
+        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
-      fut.onFailure {
-        case t: Throwable => socket.channel.push(Json.arr("server_error", requestId.toLong))
+      fut.onFailure { case _ =>
+        socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
     // TODO: contextual marking read (e.g. all Sent threads)

@@ -170,8 +170,8 @@ var tile = tile || function() {  // idempotent for Chrome
 
   function toggleLoginDialog() {
     api.require('scripts/iframe_dialog.js', function() {
-      api.port.emit('web_base_uri', function (uri) {
-        iframeDialog.origin(uri).toggle('login');
+      api.port.emit('auth_info', function (info) {
+        iframeDialog.toggle('login', info.origin, info.data);
       });
     });
   }

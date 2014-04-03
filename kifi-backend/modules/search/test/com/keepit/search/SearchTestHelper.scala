@@ -76,7 +76,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val userGraphsCommander = new UserGraphsCommander(userGraphIndexer, searchFriendIndexer)
+    val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
 
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -84,7 +84,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     val mainSearcherFactory = new MainSearcherFactory(
       shardedArticleIndexer,
       userIndexer,
-      userGraphsCommander,
+      userGraphsSearcherFactory,
       shardedUriGraphIndexer,
       shardedCollectionIndexer,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
@@ -92,12 +92,11 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       inject[BrowsingHistoryTracker],
       inject[ClickHistoryTracker],
       inject[ShoeboxServiceClient],
-      inject[SpellCorrector],
       inject[MonitoredAwait],
       inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
-    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory)
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {

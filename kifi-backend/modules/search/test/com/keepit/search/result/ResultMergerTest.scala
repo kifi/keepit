@@ -58,7 +58,6 @@ class ResultMergerTest extends Specification{
       friendsTotal = 2,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L), scores = Array(2.4f)),
-      collections = Seq(),
       svVariance = 0f,
       show = true
     )
@@ -71,7 +70,6 @@ class ResultMergerTest extends Specification{
       friendsTotal = 1,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L, 3L), scores = Array(2f, 1.8f)),
-      collections = Seq(),
       svVariance = 0.1f,
       show = true
     )
@@ -126,8 +124,8 @@ class ResultMergerTest extends Specification{
 
   "result merger" should {
     "work" in {
-      val conf = new SearchConfig(SearchConfig.defaultParams ++ Map(("usefulPageBoost", "0f"), ("sharingBoostInNetwork", "0f")))
-      val merged = ResultMerger.merge(shardResults, maxHits = 2, enableTailCutting = false , config = SearchConfig.defaultConfig)
+      val resultMerger = new ResultMerger(enableTailCutting = false , config = SearchConfig.defaultConfig)
+      val merged = resultMerger.merge(shardResults, maxHits = 2)
 
       merged.hits === expectedMerge.hits
       merged.myTotal === expectedMerge.myTotal

@@ -209,14 +209,22 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
 
 
-    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='active'".as[String].list().toSet.map{s : String => "'" + s + "'" }
+    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='active'".as[String].list().toSet.map{s : String => "\"" + s + "\"" }
     if (!emailFriendSet.isEmpty) {
       val q = sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count + 1
-        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.map(s => "'" + s + "'").mkString(",")})
+        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
       """
-      q.execute()
+      try {
+        q.execute()
+      } catch {
+        case t: Throwable => {
+          val stmnt : String = q.getStatement
+          log.error(s"Error executing query < ${stmnt} > => ${t.toString}")
+          throw t
+        }
+      }
     }
 
 
@@ -233,12 +241,12 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
 
 
-    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='active'".as[String].list().toSet.map{s : String => "'" + s + "'" }
+    val emailFriendSet = sql"SELECT friend_email_address FROM rich_social_connection WHERE user_id = $kifiFriend AND connection_type = '#${Email}' AND state='active'".as[String].list().toSet.map{s : String => "\"" + s + "\"" }
     if (!emailFriendSet.isEmpty) {
       val q = sqlu"""
         UPDATE rich_social_connection
         SET common_kifi_friends_count = common_kifi_friends_count - 1
-        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.map(s => "'" + s + "'").mkString(",")})
+        WHERE user_id = $userId AND connection_type = '#${Email}' AND state='active' AND friend_email_address IN (#${emailFriendSet.mkString(",")})
       """
       q.execute()
     }

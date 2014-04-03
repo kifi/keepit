@@ -22,7 +22,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
 import play.api.data._
 import play.api.data.Forms._
@@ -224,7 +224,7 @@ class AdminUserController @Inject() (
     }
 
     val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
-      val bookmarks = keepRepo.getByUser(userId, Some(BookmarkStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
@@ -448,17 +448,17 @@ class AdminUserController @Inject() (
   def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit request =>
       val user = userRepo.get(userId)
-      val pics = userPictureRepo.getByUser(userId)
-      val pic = pics.find(_.id.get == pictureId)
-      if (pic.isEmpty) {
-        Forbidden
-      } else {
-        if (pic.get.state != UserPictureStates.ACTIVE) {
-          userPictureRepo.save(pic.get.withState(UserPictureStates.ACTIVE))
+      userPictureRepo.getByUser(userId).find(_.id.get == pictureId) map { pic =>
+        if (pic.state != UserPictureStates.ACTIVE) {
+          userPictureRepo.save(pic.withState(UserPictureStates.ACTIVE))
         }
-        userRepo.save(user.copy(pictureName = Some(pic.get.name), userPictureId = pic.get.id))
+        userRepo.save(user.copy(pictureName = Some(pic.name), userPictureId = pic.id))
       }
+    } map { user =>
+      eliza.sendToUser(userId, Json.arr("new_pic", BasicUser.fromUser(user).pictureName))
       Ok
+    } getOrElse {
+      BadRequest
     }
   }
 

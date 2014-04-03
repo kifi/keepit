@@ -7,6 +7,7 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
+import scala.math.min
 
 class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
@@ -95,6 +96,7 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
         curDoc = i.docID()
         curDoc
       }
+      def cost(): Long = min(i.cost, j.cost)
     }
   }
 

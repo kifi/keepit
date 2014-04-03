@@ -89,8 +89,8 @@ object ApplicationBuild extends Build {
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
-    "org.apache.lucene" % "lucene-core" % "4.2.1", // todo(andrew/yasuhiro): remove from common
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1" // todo(andrew/yasuhiro): remove from common
+    "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0" // todo(andrew/yasuhiro): remove from common
   ) map (_.excludeAll(
     ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),
@@ -104,8 +104,8 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
       from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
-    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.2.1",
-    "org.apache.lucene" % "lucene-suggest" % "4.2.1"
+    "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.7.0",
+    "org.apache.lucene" % "lucene-suggest" % "4.7.0"
   )
 
   lazy val sqldbDependencies = Seq(
@@ -269,15 +269,15 @@ object ApplicationBuild extends Build {
     )
     .dependsOn(
       common % "test->test;compile->compile",
-      search % "test->test;compile->compile",
       shoebox % "test->test;compile->compile",
+      search % "test->test;compile->compile",
       eliza % "test->test;compile->compile",
       heimdal % "test->test;compile->compile",
       abook % "test->test;compile->compile",
       scraper % "test->test;compile->compile",
       cortex % "test->test;compile->compile",
       graph % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
+    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)

@@ -43,7 +43,7 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
           if (!selfError) throw e
           else {
             System.err.println(s"Airbrake Notifier exception: ${e.toString}")
-            e.printStackTrace
+            e.printStackTrace()
             if (!firstErrorReported) {
               firstErrorReported = true
               val he = healthcheck.addError(AirbrakeError(e, message = Some("Fail to send airbrake message")))
@@ -89,7 +89,6 @@ class AirbrakeSender @Inject() (
     withHeaders("Content-type" -> "text/xml").
     postXmlFuture(DirectUrl("http://airbrakeapp.com/notifier_api/v2/notices"), xml, defaultFailureHandler) map { res =>
       try {
-        val x : String = res.body
         val xmlRes = res.xml
         val id = (xmlRes \ "id").head.text
         val url = (xmlRes \ "url").head.text
@@ -125,12 +124,15 @@ class PagerDutySender @Inject() (httpClient: HttpClient) {
 
 }
 
-trait AirbrakeNotifier {
+trait AirbrakeNotifier extends Logging {
   def reportDeployment(): Unit
 
   def verify(condition: => Boolean, message : => String): Boolean = {
     val pass: Boolean = condition
-    if (!pass) notify(message)
+    if (!pass) {
+      log.error(s"[condition fail] $message")
+      notify(message)
+    }
     pass
   }
 

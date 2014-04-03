@@ -12,9 +12,9 @@
       <span class="kf-nav-count" ng-class="{ empty: !counts.friendsNotifCount }">{{counts.friendsNotifCount}}</span>
     </a>
   </li>
-  <li class="kf-nav-item kf-nav-invite">
+  <li class="kf-nav-item kf-nav-invite" ng-class="{ active: isActive('/invite') }">
     <a class="kf-nav-link-btn" href="/invite">
-      <span class="kf-nav-name">Invite Your Friends to Kifi</span>
+      <span class="kf-nav-name">Find Friends</span>
     </a>
   </li>
 

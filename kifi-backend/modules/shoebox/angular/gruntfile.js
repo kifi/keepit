@@ -39,7 +39,8 @@ module.exports = function (grunt) {
         libCss: [
           'lib/normalize-css/normalize.css',
           'managed-lib/bootstrap/bootstrap.css',
-          'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css'
+          'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css',
+          'managed-lib/pace/pace.css'
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
@@ -67,7 +68,8 @@ module.exports = function (grunt) {
           'lib/angular-facebook-api/dist/angular-facebook-api.js',
           'lib/angular-dragdrop/draganddrop.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js',
-          'managed-lib/ui-slider/slider.js'
+          'managed-lib/ui-slider/slider.js',
+          'lib/angulartics/dist/angulartics.min.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
@@ -91,7 +93,8 @@ module.exports = function (grunt) {
           'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
           'lib/angular-dragdrop/draganddrop.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
-          'managed-lib/ui-slider/slider.js'
+          'managed-lib/ui-slider/slider.js',
+          'lib/angulartics/dist/angulartics.min.js'
         ],
         src: 'src',
         common: 'src/common/build-css',

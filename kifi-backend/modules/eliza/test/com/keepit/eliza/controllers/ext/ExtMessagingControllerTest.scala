@@ -23,7 +23,7 @@ import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABo
 
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.commanders.{MessagingCommander, MessagingIndexCommander}
+import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 

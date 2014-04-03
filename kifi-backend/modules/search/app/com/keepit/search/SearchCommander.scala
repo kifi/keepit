@@ -1,12 +1,9 @@
 package com.keepit.search
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsValue}
 import play.modules.statsd.api.Statsd
-import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.util.Try
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.akka.MonitoredAwait
@@ -17,15 +14,15 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
-import com.keepit.search._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.result.ShardSearchResult
 import com.keepit.search.result.ResultDecorator
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.result.ResultMerger
 import com.keepit.search.result.ResultUtil
+import com.keepit.search.spellcheck.SpellCorrector
+import org.apache.lucene.search.{Explanation, Query}
+import com.keepit.search.index.DefaultAnalyzer
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -45,6 +42,15 @@ trait SearchCommander {
     coll: Option[String] = None,
     debug: Option[String] = None) : DecoratedResult
 
+  def explain(
+    userId: Id[User],
+    uriId: Id[NormalizedURI],
+    lang: Option[String],
+    experiments: Set[ExperimentType],
+    query: String): Option[(Query, Explanation)]
+
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
+
   def warmUp(userId: Id[User]): Unit
 }
 
@@ -53,6 +59,7 @@ class SearchCommanderImpl @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
+  spellCorrector: SpellCorrector,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait,
@@ -100,10 +107,12 @@ class SearchCommanderImpl @Inject() (
     }
 
     val mergedResult = {
+      val resultMerger = new ResultMerger(enableTailCutting, config)
+
       timing.factory
-      val future = Future.traverse(shards.shards){ shard =>
+      val searchers = mainSearcherFactory(shards.shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+      val future = Future.traverse(searchers){ searcher =>
         SafeFuture{
-          val searcher = mainSearcherFactory(shard, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
           debug.foreach{ searcher.debug(_) }
           searcher.search()
         }
@@ -111,7 +120,7 @@ class SearchCommanderImpl @Inject() (
 
       timing.search
       val results = monitoredAwait.result(future, 10 seconds, "slow search")
-      ResultMerger.merge(results, maxHits, enableTailCutting, config)
+      resultMerger.merge(results, maxHits)
     }
 
     timing.decoration
@@ -191,7 +200,7 @@ class SearchCommanderImpl @Inject() (
       }
       if (langs.isEmpty) {
         log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-        Set(Lang("en"))
+        Set(DefaultAnalyzer.defaultLang)
       } else {
         langs
       }
@@ -247,6 +256,31 @@ class SearchCommanderImpl @Inject() (
       case None =>
         if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
         else SearchFilter.default(context)
+    }
+  }
+
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = {
+    val (config, _) = searchConfigManager.getConfig(userId, experiments)
+    val langs = lang match {
+      case Some(str) => str.split(",").toSeq.map(Lang(_))
+      case None => Seq(DefaultAnalyzer.defaultLang)
+    }
+
+    shards.find(uriId).flatMap{ shard =>
+      val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
+      searcher.explain(uriId)
+    }
+  }
+
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
+    uriIds.map{ uriId =>
+      shards.find(uriId) match {
+        case Some(shard) =>
+          val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
+          searcher.getSharingUserInfo(uriId)
+        case None =>
+          throw new Exception("shard not found")
+      }
     }
   }
 

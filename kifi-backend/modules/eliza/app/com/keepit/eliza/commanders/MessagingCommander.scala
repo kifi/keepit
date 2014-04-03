@@ -1,50 +1,39 @@
 package com.keepit.eliza.commanders
 
-import com.keepit.eliza.controllers.WebSocketRouter
+import com.google.inject.Inject
+
+import com.keepit.abook.ABookServiceClient
 import com.keepit.eliza._
+import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
-import com.keepit.model._
+import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
-import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.ElizaServiceController
-import com.keepit.heimdal._
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.common.healthcheck.AirbrakeNotifier
-
-import scala.concurrent.{Promise, Await, Future}
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import com.google.inject.Inject
+import com.keepit.common.time._
+import com.keepit.heimdal.HeimdalContext
+import com.keepit.model._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.realtime.{PushNotification, UrbanAirship}
 
 import org.joda.time.DateTime
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.modules.statsd.api.Statsd
+
+import scala.Some
+import scala.concurrent.{Promise, Await, Future}
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.UrbanAirship
-import com.keepit.eliza.model.NonUserParticipant
-import com.keepit.abook.ABookServiceClient
-import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.eliza.model.NonUserThread
-import play.api.libs.json.JsArray
-import com.keepit.eliza.model.NonUserEmailParticipant
-import play.api.libs.json.JsObject
-import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
-import com.keepit.heimdal.HeimdalContext
-import scala.util.{Failure, Success, Try}
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -64,7 +53,8 @@ class MessagingCommander @Inject() (
   notificationRouter: WebSocketRouter,
   urbanAirship: UrbanAirship,
   shoebox: ShoeboxServiceClient,
-  airbrake: AirbrakeNotifier) extends Logging {
+  airbrake: AirbrakeNotifier,
+  notificationUpdater: NotificationUpdater) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -736,7 +726,7 @@ class MessagingCommander @Inject() (
         messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
         true
       }
-    })
+    }, Some("Adding Participants to Thread"))
   }
 
   def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
@@ -842,49 +832,56 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getSendableNotification(userId: Id[User], threadExtId: ExternalId[MessageThread]): Future[JsObject] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
+      val thread = threadRepo.get(threadExtId)
+      userThreadRepo.getSendableNotification(userId, thread.id.get)
+    })
+  }
+
+  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotificationsNotJustFromMe(userId, howMany)
-    }
+    })
   }
 
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsNotJustFromMeBefore(userId, time, howMany)
-    }
+    })
   }
 
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsNotJustFromMeSince(userId, time)
-    }
+    })
   }
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotifications(userId, howMany)
-    }
+    })
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsBefore(userId, time, howMany)
-    }
+    })
   }
 
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getSendableNotificationsSince(userId: Id[User], time: DateTime): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsSince(userId, time)
-    }
+    })
   }
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Future[(Seq[JsObject], Int)] = {
-    val noticesFuture = db.readOnly { implicit session =>
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Future[(Notifications, Int)] = {
+    val noticesFuture = notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getLatestUnreadSendableNotifications(userId, howMany)
-    }
+    })
     new SafeFuture(noticesFuture map { notices =>
-      val numTotal = if (notices.length < howMany) {
-        notices.length
+      val numTotal = if (notices.jsons.length < howMany) {
+        notices.jsons.length
       } else {
         db.readOnly { implicit session =>
           userThreadRepo.getUnreadThreadCount(userId)
@@ -894,34 +891,34 @@ class MessagingCommander @Inject() (
     })
   }
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getUnreadSendableNotificationsBefore(userId, time, howMany)
-    }
+    })
   }
 
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getLatestMutedSendableNotifications(userId, howMany)
-    }
+    })
   }
 
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getMutedSendableNotificationsBefore(userId, time, howMany)
-    }
+    })
   }
 
-  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotificationsForStartedThreads(userId, howMany)
-    }
+    })
   }
 
-  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
-    db.readOnly { implicit session =>
+  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsForStartedThreadsBefore(userId, time, howMany)
-    }
+    })
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
@@ -936,15 +933,15 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[JsObject], Int, Int)] = {
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Notifications, Int, Int)] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
       case Left(nUri) =>
-        val noticesFuture = db.readOnly { implicit session =>
+        val noticesFuture = notificationUpdater.update(db.readOnly { implicit session =>
           userThreadRepo.getLatestSendableNotificationsForUri(userId, nUri.id.get, howMany)
-        }
+        })
         new SafeFuture(noticesFuture map { notices =>
-          val (numTotal, numUnreadUnmuted): (Int, Int) = if (notices.length < howMany) {
-            (notices.length, notices.count { n =>
+          val (numTotal, numUnreadUnmuted): (Int, Int) = if (notices.jsons.length < howMany) {
+            (notices.jsons.length, notices.jsons.count { n =>
               (n \ "unread").asOpt[Boolean].getOrElse(false) &&
               !(n \ "muted").asOpt[Boolean].getOrElse(false)
             })
@@ -956,17 +953,17 @@ class MessagingCommander @Inject() (
           (nUri.url, notices, numTotal, numUnreadUnmuted)
         })
       case Right(prenormalizedUrl) =>
-        Promise.successful(prenormalizedUrl, Seq.empty, 0, 0).future
+        Promise.successful(prenormalizedUrl, Notifications(Seq.empty), 0, 0).future
     })
   }
 
-  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[Seq[JsObject]] = {
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[Notifications] = {
     new SafeFuture(shoebox.getNormalizedURIByURL(url) flatMap {
       case Some(nUri) =>
-        db.readOnly { implicit session =>
+        notificationUpdater.update(db.readOnly { implicit session =>
           userThreadRepo.getSendableNotificationsForUriBefore(userId, nUri.id.get, time, howMany)
-        }
-      case _ => Promise.successful(Seq.empty).future
+        })
+      case _ => Promise.successful(Notifications(Seq.empty)).future
     })
   }
 

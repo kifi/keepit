@@ -1,14 +1,19 @@
 <div ng-controller="InviteCtrl">
   <div class="invite-wrapper" antiscroll="{ autoHide: false }">
     <div class="invite">
-      <h2>Invite your friends</h2>
-      <p>Getting invites to work may benefit from directives that trigger invites without WTI being finished below. So:</p>
-      <div ng-repeat="friend in friends">
-        <div ng-click="invite(friend)">Invite {{friend.label}}!</div>
-      </div>
+      <h2>Find people to invite to Kifi</h2>
+      <p>Search by name or email address</p>
+      <div kf-social-invite-well></div>
+
+      <h3>People you may want to add to Kifi</h3>
+
       <div class="kf-connection-card-container" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
-        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend"></div>
+        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" refresh-scroll="refreshScroll"></div>
         <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
+      </div>
+
+      <div ng-if="whoToInvite.length < 6" class="social-connect-friends">
+        <div kf-social-connect-networks></div>
       </div>
 
     </div>

@@ -26,6 +26,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   'use strict';
   log('[google_inject]')();
 
+  var origin = location.origin;
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
   var $status = $bar.find('.kifi-res-bar-status');
@@ -75,7 +76,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     api.port.emit("log_search_event", [
       "searched",
       {
-        "origin": window.location.origin,
+        "origin": origin,
         "uuid": response.uuid,
         "experimentId": response.experimentId,
         "query": response.query,
@@ -126,7 +127,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       }
       $bar.addClass('kifi-loading');
     }
-    $status.removeAttr('href data-n');
+    $status.removeAttr('href data-n data-of');
     $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
 
@@ -149,6 +150,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
       }
+      removeResults();
 
       response = resp;
       // if (isFirst && resp.filter && resp.filter.who) {  // restoring previous filter (user navigated back) // TODO: make this work again
@@ -306,7 +308,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       api.port.emit("log_search_event", [
         "resultClicked",
         {
-          "origin": window.location.origin,
+          "origin": origin,
           "uuid": isKifi ? hit.uuid : response.uuid,
           "filter": filter,
           "maxResults": response.prefs.maxResults,
@@ -584,10 +586,13 @@ if (searchUrlRe.test(document.URL)) !function () {
     });
   }
 
-  function attachResults() {
+  function removeResults() {
     $res.find('#kifi-res-list,.kifi-res-end').remove();
+    $res.find('.kifi-res-box').finish().removeAttr('style');
+  }
+
+  function attachResults() {
     $res.find('.kifi-res-box')
-      .finish().removeAttr('style')
       .append(render('html/search/google_hits', {
           results: response.hits,
           self: response.me,

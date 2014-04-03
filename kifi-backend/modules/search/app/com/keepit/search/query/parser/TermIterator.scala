@@ -6,7 +6,6 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.index.Term
 import java.io.StringReader
-import scala.collection.mutable.ArrayBuffer
 
 class TermIterator(field: String, text: String, analyzer: Analyzer) extends Iterator[Term] {
   protected val ts = {
@@ -16,14 +15,35 @@ class TermIterator(field: String, text: String, analyzer: Analyzer) extends Iter
   }
   private[this] val termAttr = ts.getAttribute(classOf[CharTermAttribute])
   private[this] var nextTerm: Term = readAhead
+  private[this] var closed = false
 
   private def readAhead: Term = {
-    if (ts.incrementToken()) {
-      new Term(field, new String(termAttr.buffer(), 0, termAttr.length()))
-    } else {
-      null
+    try {
+      if (ts.incrementToken()) {
+        new Term(field, new String(termAttr.buffer(), 0, termAttr.length()))
+      } else {
+        closeTokenStream()
+        null
+      }
+    } catch {
+      case e: Throwable =>
+        try { closeTokenStream() } catch { case e: Throwable => }
+        throw e
     }
   }
+
+  private def closeTokenStream(): Unit = {
+    if (!closed) {
+      try {
+        ts.end()
+      } finally {
+        closed = true
+        ts.close()
+      }
+    }
+  }
+
+  def close(): Unit = closeTokenStream()
 
   def hasNext() = (nextTerm != null)
 

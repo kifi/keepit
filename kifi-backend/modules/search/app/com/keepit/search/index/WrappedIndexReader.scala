@@ -24,7 +24,7 @@ object WrappedIndexReader {
     val oldInner = oldReader.inner
     val newInner = DirectoryReader.openIfChanged(oldInner)
     if (newInner != null) {
-      var oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
+      val oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
       doOpen(newInner, oldIdMappers)
     } else {
       oldReader
@@ -120,5 +120,6 @@ class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMa
   override def numDocs() = inner.numDocs()
   override def fields() = inner.fields()
   override def getLiveDocs() = inner.getLiveDocs()
+  override def getDocsWithField(field: String) = inner.getDocsWithField(field)
   protected def doClose() = {}
 }

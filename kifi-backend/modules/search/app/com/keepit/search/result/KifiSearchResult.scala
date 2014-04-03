@@ -102,7 +102,6 @@ class ShardSearchResult(val json: JsValue) extends AnyVal {
   def friendsTotal: Int = (json \ "friendsTotal").as[Int]
   def othersTotal: Int = (json \ "othersTotal").as[Int]
   def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
-  def collections: Seq[ExternalId[Collection]] = (json \ "tags").as[JsArray].value.map(id => ExternalId[Collection](id.as[String]))
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
   def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
@@ -114,7 +113,6 @@ object ShardSearchResult extends Logging {
     friendsTotal: Int,
     othersTotal: Int,
     friendStats: FriendStats,
-    collections: Seq[ExternalId[Collection]],
     svVariance: Float, // TODO: remove
     show: Boolean // TODO: remove
   ): ShardSearchResult = {
@@ -125,7 +123,6 @@ object ShardSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "tags" -> JsArray(collections.map{ id => JsString(id.id) }),
         "svVariance" -> JsNumber(svVariance), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))

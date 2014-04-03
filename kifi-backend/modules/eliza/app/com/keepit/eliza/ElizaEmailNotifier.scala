@@ -61,11 +61,11 @@ class ElizaEmailNotifierActor @Inject() (
   private def sendEmailViaShoebox(userThread: UserThread): Unit = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
-    airbrake.verify(userThread.replyable, s"$userThread not replyable")
-    airbrake.verify(userThread.unread, s"$userThread not unread")
-    airbrake.verify(!userThread.notificationEmailed, s"$userThread notification already emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"$userThread notificationUpdatedAt ${userThread.notificationUpdatedAt} more then 30min ago")
-    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"$userThread notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
+    airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
+    airbrake.verify(userThread.unread, s"${userThread.summary} not unread")
+    airbrake.verify(!userThread.notificationEmailed, s"${userThread.summary} notification already emailed")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
+    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
 
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
 

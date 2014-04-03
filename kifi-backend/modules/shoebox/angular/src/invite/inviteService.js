@@ -1,18 +1,20 @@
 'use strict';
 
-angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
+angular.module('kifi.inviteService', [
+  'util',
+  'kifi.clutch',
+  'angulartics'
+])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch',
-  function ($http, env, $q, routeService, util, Clutch) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
-    var whoToInviteList = [],
-        inviteList = [], // used for typeahead dropdown for invite search
+    var inviteList = [], // used for typeahead dropdown for invite search
         selected,
-        platformFilter,
         lastSearch;
 
     var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn'};
@@ -23,6 +25,9 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
       return $http.get(routeService.socialSearch(name)).then(function (res) {
         var results = res.data;
         _.forEach(results, augmentSocialResult);
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'searchContacts'
+        });
         return results;
       });
     });
@@ -30,8 +35,8 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
     var customEmail = {
       custom: 'email',
       iconStyle: 'kf-email-icon-micro',
-      networkType: "email",
-      status: '',
+      networkType: 'email',
+      status: ''
     };
 
     function augmentSocialResult(result) {
@@ -100,19 +105,21 @@ angular.module('kifi.inviteService', ['util', 'kifi.clutch'])
 
         socialSearchService.expireAll();
 
-        return null; // todo!
-      },
-
-      getWhoToInvite: function () {
-        // use $http if request is needed
-        return $q.when(whoToInviteList); // todo!
-      },
-
-      find: function (query, platform) {
-        if (platform === undefined) {
-          // handle no platform, which means search everywhere
-        }
-        return null; // todo!
+        return $http.post(routeService.invite, {
+          id: platform + '/' + identifier,
+          source: 'site'
+        }).then(function (res) {
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'inviteFriend',
+            'platform': platform
+          });
+          if (res.data.url) {
+            $window.open(res.data.url, '_blank');
+          }
+        }, function (err) {
+          $log.log(err);
+          throw err;
+        });
       }
 
     };

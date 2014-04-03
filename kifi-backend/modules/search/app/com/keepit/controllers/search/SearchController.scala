@@ -27,7 +27,6 @@ import com.keepit.typeahead.PrefixFilter
 
 class SearchController @Inject()(
     shards: ActiveShards,
-    searchConfigManager: SearchConfigManager,
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
     shoeboxClient: ShoeboxServiceClient,
@@ -107,18 +106,18 @@ class SearchController @Inject()(
     Ok(Json.toJson(res))
   }
 
+  def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
+    SafeFuture{
+      val uriIds = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
+      val info = searchCommander.sharingUserInfo(userId, uriIds)
+      Ok(Json.toJson(info))
+    }
+  }
+
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
-    val (config, _) = searchConfigManager.getConfig(userId, userExperiments)
-    val langs = lang match {
-      case Some(str) => str.split(",").toSeq.map(Lang(_))
-      case None => Seq(Lang("en"))
-    }
-
-    shards.find(uriId) match {
-      case Some(shard) =>
-        val searcher = searcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
-        val explanation = searcher.explain(uriId)
+    searchCommander.explain(userId, uriId, lang, userExperiments, query) match {
+      case explanation if explanation.isDefined =>
         Ok(html.admin.explainResult(query, userId, uriId, explanation))
       case None =>
         Ok("shard not found")

@@ -1,18 +1,21 @@
 
 .social-invite-search
+  display: inline-block
+
   input
     padding: 10px
     font-size: 14px
-    width: 345px
+    width: 285px
     border: 1px solid #c5d0da
 
   .social-invite-dropdown
     position: absolute
     box-sizing: border-box
+    z-index: 2
 
     .social-invite-element
       background: #fff
-      width: 349px
+      width: 289px
       border: 1px solid #c5d0da
       border-bottom: 0
       padding: 4px
@@ -39,6 +42,15 @@
   float: left
   margin-right: 15px
 
+.social-invite-image.cant-find
+  width: 42px
+  height: initial
+  display: inline-block
+  float: left
+  margin-top: 13px
+  margin-right: 19px
+  margin-left: 10px
+
 .social-invite-summary
   float: left
 
@@ -48,7 +60,7 @@
   color: #000
   text-overflow: ellipsis
   overflow: hidden
-  width: 210px
+  width: 150px
   white-space: nowrap
 
 .social-invite-network
@@ -57,7 +69,7 @@
   vertical-align: bottom
   text-overflow: ellipsis
   overflow: hidden
-  width: 265px
+  width: 190px
   white-space: nowrap
 
 
@@ -86,6 +98,23 @@
 
 .social-invite-custom-email
   padding-top: 18px
+
+.friend-not-found-modal
+  h1, h2
+    text-align: center
+
+  h3
+    color: #42C380
+    padding: 10px 0px
+
+  li:before
+    content: "• "
+    color: #42C380
+
+  li
+    text-indent: -12px;
+    padding-left: 12px;
+
 
 
 

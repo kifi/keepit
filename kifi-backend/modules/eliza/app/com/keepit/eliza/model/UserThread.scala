@@ -37,4 +37,8 @@ case class UserThread(
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
+
+  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $thread, " +
+    s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
+    s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
 }

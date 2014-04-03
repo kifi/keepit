@@ -30,13 +30,13 @@ class SpellCheckerTest extends Specification {
       val articleIndexDir = new VolatileIndexDirectoryImpl()
 
       val spellIndexDir = new VolatileIndexDirectoryImpl()
-      val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+      val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
       val spellIndexer: SpellIndexer = new SpellIndexerImpl(spellIndexDir, config, SpellCheckerConfig(0f, "lev")) {
         protected def getIndexReader() = DirectoryReader.open(articleIndexDir)
       }
       var corrector = new SpellCorrectorImpl(spellIndexer, "slow", enableAdjScore = false)
 
-      val indexWriter = new IndexWriter(articleIndexDir, new IndexWriterConfig(Version.LUCENE_41, analyzer))
+      val indexWriter = new IndexWriter(articleIndexDir, new IndexWriterConfig(Version.LUCENE_47, analyzer))
       articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 

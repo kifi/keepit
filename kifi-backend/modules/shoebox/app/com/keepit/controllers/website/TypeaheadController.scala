@@ -29,8 +29,8 @@ class TypeaheadController @Inject() (
   actionAuthenticator: ActionAuthenticator
  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
-  def searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean, filterJoinedUsers:Boolean) = JsonAction.authenticatedAsync { request =>
-    commander.searchWithInviteStatus(request.userId, query.getOrElse(""), limit, pictureUrl, filterJoinedUsers) map { res =>
+  def searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean, dedupEmail:Boolean) = JsonAction.authenticatedAsync { request =>
+    commander.searchWithInviteStatus(request.userId, query.getOrElse(""), limit, pictureUrl, dedupEmail) map { res =>
       Ok(Json.toJson(res))
     }
   }

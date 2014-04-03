@@ -13,13 +13,12 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.similarities.Similarity
-import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.Bits.MatchNoBits
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
-import java.util.{ArrayList, List => JList}
+import java.util.{List => JList}
 import com.keepit.common.logging.Logging
 
 trait PercentMatchQuery extends Query {
@@ -270,7 +269,8 @@ object BooleanScorer {
             prohibited: Seq[Scorer],
             hotDocSet: Bits) = {
     def conjunction() = {
-      new BooleanAndScorer(weight, coordFactorForRequired, required.toArray, requiredValue)
+      val sorted = required.sortBy(_.cost())
+      new BooleanAndScorer(weight, coordFactorForRequired, sorted.toArray, requiredValue)
     }
     def disjunction() = {
       new BooleanOrScorerImpl(weight, optional, coordFactorForOptional, threshold, thresholdForHotDocs, optionalValue, hotDocSet)
@@ -328,6 +328,8 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = required.cost()
 }
 
 class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Scorer], val value: Float) extends Scorer(weight) {
@@ -375,6 +377,8 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = scorers(0).cost()
 }
 
 trait BooleanOrScorer extends Scorer
@@ -450,6 +454,8 @@ extends Scorer(weight) with BooleanOrScorer with Logging {
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = scorers.map(_.cost()).sum
 }
 
 class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]) extends Scorer(weight) {
@@ -479,6 +485,8 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]
   }
 
   override def freq(): Int = 1
+
+  override def cost(): Long = scorer.cost()
 
   private def isProhibited = {
     prohibited.exists{ n =>

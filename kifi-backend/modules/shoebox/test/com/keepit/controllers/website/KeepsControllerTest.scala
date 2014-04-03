@@ -44,7 +44,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
 
-class BookmarksControllerTest extends Specification with ApplicationInjector {
+class KeepsControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -65,9 +65,9 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
 
   def forTitle(title: String): Keep = {
     inject[Database].readWrite { implicit session =>
-      val bookmarks = inject[KeepRepo].getByTitle(title)
-      bookmarks.size === 1
-      bookmarks.head
+      val keeps = inject[KeepRepo].getByTitle(title)
+      keeps.size === 1
+      keeps.head
     }
   }
 
@@ -79,7 +79,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
     }
   }
 
-  "BookmarksController" should {
+  "KeepsController" should {
     "allKeeps" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -104,12 +104,12 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
-          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
-          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
+          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
+          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE))
 
           (user1, user2, bookmark1, bookmark2, bookmark3)
         }
@@ -119,13 +119,13 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         }
         keeps.size === 2
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.allKeeps(before = None, after = None, collection = None).toString
+        val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None).toString
         path === "/site/keeps/all"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
         val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
-        val controller = inject[BookmarksController]
+        val controller = inject[KeepsController]
         inject[FakeActionAuthenticator].setUser(user1)
 
         import play.api.Play.current
@@ -190,12 +190,12 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = BookmarkStates.ACTIVE))
-          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = BookmarkStates.ACTIVE))
-          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
-            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = BookmarkStates.ACTIVE))
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
+          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
+          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE))
 
           (user1, bookmark1, bookmark2, bookmark3)
         }
@@ -247,11 +247,11 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           (user, collections)
         }
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.allCollections().toString
+        val path = com.keepit.controllers.website.routes.KeepsController.allCollections().toString
         path === "/site/collections/all"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val controller = inject[BookmarksController]
+        val controller = inject[KeepsController]
         val request = FakeRequest("GET", path)
         val result = route(request).get
         status(result) must equalTo(OK);
@@ -281,7 +281,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           Nil
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.keepMultiple().toString
+        val path = com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString
         path === "/site/keeps/add"
 
         val json = Json.obj(
@@ -289,7 +289,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           "keeps" -> JsArray(keepsAndCollections.keeps map {k => Json.toJson(k)})
         )
         inject[FakeActionAuthenticator].setUser(user)
-        val controller = inject[BookmarksController]
+        val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
         val result = route(request).get
         status(result) must equalTo(OK);
@@ -321,12 +321,12 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
         path === "/site/collections/create"
 
         val json = Json.obj("name" -> JsString("my tag"))
         inject[FakeActionAuthenticator].setUser(user)
-        val controller = inject[BookmarksController]
+        val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
         val result = route(request).get
         status(result) must equalTo(OK);
@@ -352,11 +352,11 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
 
         val json = Json.obj("name" -> JsString("my tag is very very very very very very very very very very very very very very very very very long"))
         inject[FakeActionAuthenticator].setUser(user)
-        val controller = inject[BookmarksController]
+        val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
         val result = route(request).get
         status(result) must equalTo(400);
@@ -377,12 +377,12 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
 
         inject[FakeActionAuthenticator].setUser(user)
-        val controller = inject[BookmarksController]
+        val controller = inject[KeepsController]
         val keepJson = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map {k => Json.toJson(k)})
         )
-        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.BookmarksController.keepMultiple().toString).withJsonBody(keepJson)
+        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withJsonBody(keepJson)
         val keepRes = route(keepReq).get
         status(keepRes) must equalTo(OK);
         contentType(keepRes) must beSome("application/json");
@@ -391,7 +391,7 @@ class BookmarksControllerTest extends Specification with ApplicationInjector {
         sourceForTitle("title 21") === KeepSource.site
         sourceForTitle("title 31") === KeepSource.site
 
-        val path = com.keepit.controllers.website.routes.BookmarksController.unkeepMultiple().toString
+        val path = com.keepit.controllers.website.routes.KeepsController.unkeepMultiple().toString
         path === "/site/keeps/remove"
 
         val json = JsArray(withCollection.take(2) map {k => Json.toJson(k)})

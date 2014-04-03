@@ -17,12 +17,12 @@ case class Keep(
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
   uriId: Id[NormalizedURI],
-  urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
+  urlId: Id[URL],
   url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
   isPrivate: Boolean = false,
   userId: Id[User],
-  state: State[Keep] = BookmarkStates.ACTIVE,
+  state: State[Keep] = KeepStates.ACTIVE,
   source: KeepSource,
   kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
   seq: SequenceNumber[Keep] = SequenceNumber.ZERO
@@ -37,19 +37,19 @@ case class Keep(
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
-    case true => BookmarkStates.ACTIVE
-    case false => BookmarkStates.INACTIVE
+    case true => KeepStates.ACTIVE
+    case false => KeepStates.INACTIVE
   })
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
-  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
+  def withUrlId(urlId: Id[URL]) = copy(urlId = urlId)
 
   def withUrl(url: String) = copy(url = url)
 
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
-  def isActive: Boolean = state == BookmarkStates.ACTIVE
+  def isActive: Boolean = state == KeepStates.ACTIVE
 }
 
 object Keep {
@@ -60,7 +60,7 @@ object Keep {
     (__ \ 'externalId).format(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'urlId).formatNullable(Id.format[URL]) and
+    (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
     (__ \ 'isPrivate).format[Boolean] and
@@ -101,16 +101,16 @@ case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Ke
 class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-case class LatestBookmarkUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
+case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
   override val version = 1
   val namespace = "latest_bookmark_uri"
   def toKey(): String = uriId.toString
 }
 
 class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LatestBookmarkUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-object BookmarkStates extends States[Keep]
+object KeepStates extends States[Keep]
 
 case class KeepSource(value: String) {
   override def toString = value
@@ -137,6 +137,6 @@ object KeepSource {
 object KeepFactory {
 
   def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep =
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, isPrivate = isPrivate)
 
 }

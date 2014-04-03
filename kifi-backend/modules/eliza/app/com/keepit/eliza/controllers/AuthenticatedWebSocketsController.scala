@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers
 
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.Id
 import com.keepit.model.{KifiExtVersion, User, SocialUserInfo, ExperimentType}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
@@ -16,7 +16,7 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import scala.util.Try
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Future
 import scala.util.Random
 
 import play.api.mvc.{WebSocket,RequestHeader}
@@ -37,7 +37,6 @@ import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
-import com.keepit.common.shutdown.ShutdownCommander
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
@@ -63,8 +62,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val heimdal: HeimdalServiceClient
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   protected val userExperimentCommander: RemoteUserExperimentCommander
-  protected val shutdownCommander: ShutdownCommander
   protected val websocketRouter: WebSocketRouter
+  protected val shoutdownListener: WebsocketsShutdownListener
 
   val kifInstallationStore: KifInstallationStore
   val accessLog: AccessLog
@@ -75,8 +74,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val crypt = new SimpleDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
-
-  shutdownCommander.addListener(new WebsocketsShutdownListener(websocketRouter, accessLog))
 
   private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     val extVersion = extVersionOpt.getOrElse("N/A")
@@ -135,50 +132,44 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }
 
   private def authenticate(implicit request: RequestHeader): Option[Future[StreamSession]] = {
-    //Apologies for the nasty future nesting. Improvement suggestions appreciated.
-    for (
-      auth <- getAuthenticatorFromRequest();
-      secSocialUser <- UserService.find(auth.identityId)
-    ) yield {
-
-      val impersonatedUserIdOpt: Option[ExternalId[User]] =
-        impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
-
-      val socialUserFuture = shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(secSocialUser.identityId.userId), SocialNetworkType(secSocialUser.identityId.providerId)).map(_.get)
-
-      socialUserFuture.flatMap{ socialUser =>
+    for {  // Options
+      auth <- getAuthenticatorFromRequest()
+      identityId <- UserService.find(auth.identityId).map(_.identityId)
+    } yield {
+      (for {  // Futures
+        socialUser <- shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(identityId.userId), SocialNetworkType(identityId.providerId)).map(_.get)
+        experiments <- userExperimentCommander.getExperimentsByUser(socialUser.userId.get)
+      } yield {
         val userId = socialUser.userId.get
-        val experimentsFuture = userExperimentCommander.getExperimentsByUser(userId)
-        experimentsFuture.flatMap{ experiments =>
-          impersonatedUserIdOpt match {
-            case Some(impExtUserId) if experiments.contains(ExperimentType.ADMIN) =>
-              val impUserIdFuture = shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
-              impUserIdFuture.flatMap{ impUserId =>
-                shoebox.getSocialUserInfosByUserId(impUserId).map{ impSocUserInfo =>
-                  StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), request.headers.get("User-Agent").getOrElse("NA"))
-                }
-              }
-            case None if experiments.contains(ExperimentType.ADMIN) =>
-              Promise.successful(StreamSession(userId, socialUser, experiments, Some(userId), request.headers.get("User-Agent").getOrElse("NA"))).future
-            case _ =>
-              Promise.successful(StreamSession(userId, socialUser, experiments, None, request.headers.get("User-Agent").getOrElse("NA"))).future
+        val userAgent = request.headers.get("User-Agent").getOrElse("NA")
+        if (experiments.contains(ExperimentType.ADMIN)) {
+          impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
+            for {
+              impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
+              impSocUserInfo <- shoebox.getSocialUserInfosByUserId(impUserId)
+            } yield {
+              StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), userAgent)
+            }
+          } getOrElse {
+            Future.successful(StreamSession(userId, socialUser, experiments, Some(userId), userAgent))
           }
+        } else {
+          Future.successful(StreamSession(userId, socialUser, experiments, None, userAgent))
         }
-      }
+      }) flatMap identity
     }
   }
 
-
   def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     val connectTimer = accessLog.timer(WS_IN)
-    if (shutdownCommander.shuttingDown) {
+    if (shoutdownListener.shuttingDown) {
       Future.successful {
         accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
         (Iteratee.ignore, Enumerator(Json.arr("bye", "shutdown")) >>> Enumerator.eof)
       }
     } else {
       authenticate(request) match {
-        case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
+        case Some(streamSessionFuture) => streamSessionFuture.map { streamSession =>
           implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
           val ipOpt : Option[String] = eipOpt.flatMap{ eip =>

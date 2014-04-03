@@ -1,10 +1,14 @@
 'use strict';
 
-angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
+angular.module('kifi.keepService', [
+  'kifi.undo',
+  'kifi.clutch',
+  'angulartics'
+])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService) {
 
     var list = [],
       selected = {},
@@ -161,14 +165,18 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
       preview: function (keep) {
         if (keep == null) {
           api.clearState();
-        }
-        else {
+        } else {
           singleKeepBeingPreviewed = true;
           isDetailOpen = true;
         }
         selectedIdx = keepIdx(keep);
         previewed = keep;
         api.getChatter(previewed);
+
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'preview',
+          'selectedIdx': selectedIdx
+        });
 
         return keep;
       },
@@ -463,6 +471,9 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
             keep.unkept = false;
           });
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'keep'
+          });
           return keeps;
         });
       },
@@ -507,6 +518,9 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
             api.keep(keeps);
           });
 
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unkeep'
+          });
           return keeps;
         });
       },
@@ -555,7 +569,7 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
           return $q.when([]);
         }
 
-        var url = env.xhrBaseSearch,
+        var url = routeService.search,
           data = {
             params: {
               q: query || void 0,
@@ -574,6 +588,12 @@ angular.module('kifi.keepService', ['kifi.undo', 'kifi.clutch'])
           if (!data.mayHaveMore) {
             end = true;
           }
+
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'searchKifi',
+            'hits': hits.size,
+            'mayHaveMore': data.mayHaveMore
+          });
 
           _.forEach(hits, processHit);
 

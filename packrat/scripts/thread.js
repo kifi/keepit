@@ -192,9 +192,9 @@ panes.thread = function () {
   }
 
   function renderMessage(m) {
-    m.formatMessage = getTextFormatter;
-    m.formatAuxData = auxDataFormatter;
-    m.formatLocalDate = getLocalDateFormatter;
+    m.formatMessage = formatMessage.full;
+    m.formatAuxData = formatAuxData;
+    m.formatLocalDate = formatLocalDate;
     m.isLoggedInUser = m.user && m.user.id === me.id;
     return $(render('html/keeper/message', m))
       .find('time').timeago().end()[0];
@@ -229,7 +229,7 @@ panes.thread = function () {
         $m.find('.kifi-message-body').css({opacity: ''});
         $m.find('time')  // TODO: patch timeago to update attrs too
           .attr('datetime', o.createdAt)
-          .attr('title', getLocalDateFormatter()(o.createdAt, function render(s) {return s}))
+          .attr('title', formatLocalDate()(o.createdAt, function render(s) {return s}))
           .timeago('update', o.createdAt)
           .css({display:''});
       } else {

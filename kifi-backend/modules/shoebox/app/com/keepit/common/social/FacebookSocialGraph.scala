@@ -1,26 +1,33 @@
 package com.keepit.common.social
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import java.nio.charset.StandardCharsets.US_ASCII
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+
 import scala.concurrent.Future
+import scala.util.Try
 
 import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model._
-import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialGraph}
 import com.keepit.common.performance._
-import com.keepit.common.net._
-
-
-import play.api.libs.json._
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice}
-import com.keepit.common.net.NonOKResponseException
-import play.api.libs.json.JsArray
-import com.keepit.common.net.DirectUrl
-import scala.Some
-import com.keepit.social.SocialId
+import com.keepit.common.mail.LocalPostOffice
+import com.keepit.common.net.{CallTimeouts, DirectUrl, HttpClient, NonOKResponseException, Request}
+import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.social.{SocialId, SocialUserRawInfo, SocialNetworks, SocialGraph}
+
+import oauth.signpost.exception.OAuthExpectationFailedException
+
+import org.apache.commons.codec.binary.Base64
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{Json, JsArray, JsValue}
+
+import securesocial.core.{IdentityId, OAuth2Settings}
+import securesocial.core.providers.FacebookProvider.Facebook
 
 object FacebookSocialGraph {
   val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
@@ -55,6 +62,7 @@ object FacebookSocialGraph {
 class FacebookSocialGraph @Inject() (
     httpClient: HttpClient,
     db: Database,
+    clock: Clock,
     postOffice: LocalPostOffice,
     socialRepo: SocialUserInfoRepo,
     airbrake: AirbrakeNotifier
@@ -162,6 +170,35 @@ class FacebookSocialGraph @Inject() (
   def extractUserValues(json: JsValue): Map[String, String] = Seq(
     (json \ "gender").asOpt[String].map(Gender.key -> Gender(_).toString)
   ).flatten.toMap
+
+  /**
+   * @param settings The Facebook IdentityProvider settings
+   * @param json The Facebook JS API authResponse JSON
+   * @return the user's confirmed Facebook identity
+   */
+  def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = Try {
+    (json \ "accessToken").as[String] // not bothering to persist because it's short-lived
+
+    // verify signature as at developers.facebook.com/docs/facebook-login/using-login-with-games#parsingsr
+    val Array(signature, payload, _*) = (json \ "signedRequest").as[String].split('.')
+    val base64 = new Base64()
+    val mac = Mac.getInstance("HmacSHA256")
+    mac.init(new SecretKeySpec(settings.clientSecret.getBytes(US_ASCII), "HmacSHA256"))
+    val computedSignature = mac.doFinal(payload.getBytes(US_ASCII))
+    if (java.util.Arrays.equals(base64.decode(signature), computedSignature)) {
+      val o = Json.parse(base64.decode(payload))
+      val userId = (o \ "user_id").as[String]
+      val issuedAt = (o \ "issued_at").as[Long]
+      val now = clock.getMillis / 1000
+      if (math.abs(now - issuedAt) < 300) { // less than 5 min old
+        IdentityId(userId = userId, providerId = Facebook)
+      } else {
+        throw new OAuthExpectationFailedException(s"${now - issuedAt}s is too old")
+      }
+    } else {
+      throw new OAuthExpectationFailedException("signature mismatch")
+    }
+  }
 
   private def fetchJsons(url: String, socialUserInfo: SocialUserInfo): Stream[JsValue] = {
     val jsons = get(url, socialUserInfo)

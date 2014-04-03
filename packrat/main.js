@@ -177,7 +177,7 @@ function ajax(service, method, uri, data, done, fail) {  // method and uri are r
 }
 
 function onGetFail(uri, done, failures, req) {
-  if (req.status !== 403) {
+  if ([403,404].indexOf(req.status) < 0) {
     if (failures < 10) {
       var ms = failures * 2000;
       log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
@@ -377,6 +377,33 @@ var socketHandlers = {
     log('[socket:experiments]', exp)();
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
+  },
+  new_pic: function (name) {
+    log('[socket:new_pic]', name)();
+    if (me) {
+      me.pictureName = name;
+      emitAllTabs('me_change', me);
+      for (var thId in messageData) {
+        var arr = messageData[thId];
+        for (var i = 0; i < arr.length; i++) {
+          var m = arr[i];
+          updatePic(m.user);
+          m.participants.forEach(updatePic);
+        }
+      }
+      for (var thId in threadsById) {
+        var th = threadsById[thId];
+        if (th.category === 'message') {
+          updatePic(th.author);
+          th.participants.forEach(updatePic);
+        }
+      }
+    }
+    function updatePic(u) {
+      if (u.id === me.id) {
+        u.pictureName = name;
+      }
+    }
   },
   new_friends: function (fr) {
     log('[socket:new_friends]', fr)();
@@ -775,7 +802,7 @@ api.port.on({
       emitThreadInfoToTab(th, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id], function (th) {
+      socket.send(['get_one_thread', id], function (th) {
         standardizeNotification(th);
         updateIfJustRead(th);
         threadsById[th.thread] = th;
@@ -945,8 +972,14 @@ api.port.on({
   play_alert: function() {
     playNotificationSound();
   },
-  web_base_uri: function(_, respond) {
-    respond(webBaseUri());
+  auth_info: function(_, respond) {
+    var dev = api.mode.isDev();
+    respond({
+      origin: webBaseUri(),
+      data: {
+        facebook: dev ? 530357056981814 : 104629159695560,
+        linkedin: dev ? 'ovlhms1y0fjr' : 'r11loldy9zlg'
+      }});
   },
   search_friends: function(data, respond, tab) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
@@ -962,7 +995,9 @@ api.port.on({
            friends ? [me].concat(friends) : [me, SUPPORT] :
            friends || [SUPPORT]);
       results = sf.filter(data.q, candidates, getName);
-      friendSearchCache.put(data, results);
+      if (friends) {
+        friendSearchCache.put(data, results);
+      }
     }
     if (results.length > data.n) {
       results = results.slice(0, data.n);
@@ -980,6 +1015,9 @@ api.port.on({
         api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
       });
     }
+  },
+  open_tab: function (path) {
+    api.tabs.open(webBaseUri() + path);
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
@@ -1002,28 +1040,6 @@ api.port.on({
       locator: '/messages',
       composeTo: friendsById && friendsById[SUPPORT.id] || SUPPORT
     }, {queue: 1});
-  },
-  open_login_popup: function(o) {
-    var baseUri = webBaseUri();
-    api.popup.open({
-      name: o.id || "kifi-popup",
-      url: o.url,
-      width: 1020,
-      height: 530}, {
-      navigate: function(url) {
-        var popup = this;
-        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-          ajax("GET", "/ext/authed", function (loggedIn) {
-            if (loggedIn !== false) {
-              authenticate(function() {
-                log("[open_login_popup] closing popup")();
-                popup.close();
-              });
-            }
-          });
-        }
-      }
-    });
   },
   logged_in: authenticate.bind(null, api.noop),
   remove_notification: function (threadId) {
@@ -2134,11 +2150,12 @@ function getTags(next) {
 }
 
 function getPrefs(next) {
-  ajax('GET', '/ext/prefs', function gotPrefs(arr) {
-    log('[gotPrefs]', arr)();
+  ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
+    log('[gotPrefs]', o)();
     if (me) {
-      prefs = arr[1];
-      eip = arr[2];
+      me = standardizeUser(o.user);
+      prefs = o.prefs;
+      eip = o.eip;
       socket.send(['eip', eip]);
     }
     if (next) next();
@@ -2264,18 +2281,7 @@ function deauthenticate() {
   log("[deauthenticate]")();
   clearSession();
   store('logout', Date.now());
-  api.popup.open({
-    name: "kifi-deauthenticate",
-    url: webBaseUri() + "/logout#_=_",
-    width: 200,
-    height: 100}, {
-    navigate: function(url) {
-      if (url == webBaseUri() + "/#_=_") {
-        log("[deauthenticate] closing popup")();
-        this.close();
-      }
-    }
-  })
+  ajax('GET', '/logout');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start

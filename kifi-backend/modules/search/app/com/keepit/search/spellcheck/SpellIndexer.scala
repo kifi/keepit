@@ -36,7 +36,7 @@ trait SpellIndexer {
 
 object SpellIndexer {
   def apply(spellIndexDirectory: Directory, shardedArticleIndexer: ShardedArticleIndexer, spellConfig: SpellCheckerConfig = SpellCheckerConfig()) = {
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.defaultAnalyzer)
+    val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
     new SpellIndexerImpl(spellIndexDirectory, config, spellConfig) {
       protected def getIndexReader(): IndexReader = {
         val readers = shardedArticleIndexer.indexShards.values.map(_.getSearcher.indexReader.asInstanceOf[IndexReader]).toArray
