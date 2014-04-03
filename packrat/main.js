@@ -2247,6 +2247,10 @@ function clearSession() {
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'me_change', null);
+      delete tab.nUri;
+      delete tab.count;
+      delete tab.engaged;
+      delete tab.focusCallbacks;
     });
   }
   me = prefs = experiments = eip = null;
