@@ -498,12 +498,6 @@ function emitAllTabs(name, data, options) {
   });
 }
 
-function emitTabsByUrl(url, name, data, options) {
-  return tabsByUrl[url].forEach(function(tab) {
-    api.tabs.emit(tab, name, data, options);
-  });
-}
-
 function emitThreadInfoToTab(th, tab) {
   api.tabs.emit(tab, 'thread_info', th, {queue: 1});
 }
@@ -537,47 +531,49 @@ function emitSettings(tab) {
   }, {queue: 1});
 }
 
-function onAddTagResponse(result) {
+function onAddTagResponse(nUri, result) {
+  log('[onAddTagResponse]', result)();
   if (result.success) {
-    var nUri = this.nUri,
-      d = pageData[nUri],
-      tag = result.response;
+    var tag = result.response;
     if (tags && addTag(tags, tag)) {
       tagsById[tag.id] = tag;
     }
-    addTag(d.tags, tag);
-    log('onAddTagResponse', tag, d.tags)();
-    emitTabsByUrl(nUri, 'add_tag', tag);
-    emitTabsByUrl(nUri, 'tagged', {
-      tagged: true
-    });
+    var d = pageData[nUri];
+    if (d) {
+      addTag(d.tags, tag);
+      tabsByUrl[nUri].forEach(function (tab) {
+        api.tabs.emit(tab, 'add_tag', tag);
+        api.tabs.emit(tab, 'tagged', {tagged: true});
+      });
+    }
   }
 }
 
-function onRemoveTagResponse(tagId, result) {
+function onRemoveTagResponse(nUri, tagId, result) {
+  log('[onRemoveTagResponse]', tagId, result)();
   if (result.success) {
-    var nUri = this.nUri,
-      d = pageData[nUri];
-    removeTag(d.tags, tagId);
-    log('onRemoveTagResponse', tagId, d.tags)();
-    emitTabsByUrl(nUri, 'remove_tag', {
-      id: tagId
-    });
-    emitTabsByUrl(nUri, 'tagged', {
-      tagged: d.tags.length
-    });
+    var d = pageData[nUri];
+    if (d) {
+      removeTag(d.tags, tagId);
+      tabsByUrl[nUri].forEach(function (tab) {
+        api.tabs.emit(tab, 'remove_tag', {id: tagId});
+        api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
+      });
+    }
   }
 }
 
-function onClearTagsResponse(result) {
+function onClearTagsResponse(nUri, result) {
+  log('[onClearTagsResponse]', result)();
   if (result.success) {
-    var nUri = this.nUri;
-    pageData[nUri].tags.length = 0;
-    log('onClearTagsResponse', pageData[nUri].tags)();
-    emitTabsByUrl(nUri, 'clear_tags');
-    emitTabsByUrl(nUri, 'tagged', {
-      tagged: false
-    });
+    var d = pageData[nUri];
+    if (d) {
+      d.tags.length = 0;
+      tabsByUrl[nUri].forEach(function (tab) {
+        api.tabs.emit(tab, 'clear_tags');
+        api.tabs.emit(tab, 'tagged', {tagged: false});
+      });
+    }
   }
 }
 
@@ -1068,25 +1064,16 @@ api.port.on({
     });
   },
   create_and_add_tag: function(name, respond, tab) {
-    makeRequest('create_and_add_tag', 'POST', '/tags/add', {
-      name: name,
-      url: tab.url
-    }, [onAddTagResponse.bind(tab), respond]);
+    makeRequest('create_and_add_tag', 'POST', '/tags/add', {name: name, url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
   },
   add_tag: function(tagId, respond, tab) {
-    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {
-      url: tab.url
-    }, [onAddTagResponse.bind(tab), respond]);
+    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
   },
   remove_tag: function(tagId, respond, tab) {
-    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {
-      url: tab.url
-    }, [onRemoveTagResponse.bind(tab, tagId), respond]);
+    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {url: tab.url}, [onRemoveTagResponse.bind(null, tab.nUri, tagId), respond]);
   },
   clear_tags: function(tagId, respond, tab) {
-    makeRequest('clear_tags', 'POST', '/tags/clear', {
-      url: tab.url
-    }, [onClearTagsResponse.bind(tab), respond]);
+    makeRequest('clear_tags', 'POST', '/tags/clear', {url: tab.url}, [onClearTagsResponse.bind(null, tab.nUri), respond]);
   },
   add_participants: function(data) {
     socket.send(['add_participants_to_thread', data.threadId, data.userIds]);
