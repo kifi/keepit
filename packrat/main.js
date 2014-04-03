@@ -542,7 +542,7 @@ function onAddTagResponse(result) {
     var nUri = this.nUri,
       d = pageData[nUri],
       tag = result.response;
-    if (addTag(tags, tag)) {
+    if (tags && addTag(tags, tag)) {
       tagsById[tag.id] = tag;
     }
     addTag(d.tags, tag);
