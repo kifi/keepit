@@ -7,8 +7,8 @@ angular.module('kifi.keepService', [
 ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService) {
 
     var list = [],
       selected = {},
@@ -569,7 +569,7 @@ angular.module('kifi.keepService', [
           return $q.when([]);
         }
 
-        var url = env.xhrBaseSearch,
+        var url = routeService.search,
           data = {
             params: {
               q: query || void 0,

@@ -37,7 +37,6 @@ import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.{AccessLogTimer, AccessLog}
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
-import com.keepit.common.shutdown.ShutdownCommander
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[ExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
@@ -63,8 +62,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val heimdal: HeimdalServiceClient
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory
   protected val userExperimentCommander: RemoteUserExperimentCommander
-  protected val shutdownCommander: ShutdownCommander
   protected val websocketRouter: WebSocketRouter
+  protected val shoutdownListener: WebsocketsShutdownListener
 
   val kifInstallationStore: KifInstallationStore
   val accessLog: AccessLog
@@ -75,8 +74,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val crypt = new SimpleDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
-
-  shutdownCommander.addListener(new WebsocketsShutdownListener(websocketRouter, accessLog))
 
   private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     val extVersion = extVersionOpt.getOrElse("N/A")
@@ -165,7 +162,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     val connectTimer = accessLog.timer(WS_IN)
-    if (shutdownCommander.shuttingDown) {
+    if (shoutdownListener.shuttingDown) {
       Future.successful {
         accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
         (Iteratee.ignore, Enumerator(Json.arr("bye", "shutdown")) >>> Enumerator.eof)

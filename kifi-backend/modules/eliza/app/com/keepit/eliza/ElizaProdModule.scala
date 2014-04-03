@@ -12,6 +12,7 @@ case class ElizaProdModule() extends ElizaModule(
   urbanAirshipModule = ElizaUrbanAirshipModule(),
   storeModule = ElizaProdStoreModule()
 ) with CommonProdModule {
+
   val discoveryModule = new ProdDiscoveryModule {
     def servicesToListenOn = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: Nil
   }

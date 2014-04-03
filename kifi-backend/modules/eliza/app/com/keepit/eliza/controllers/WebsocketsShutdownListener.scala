@@ -1,18 +1,27 @@
 package com.keepit.eliza.controllers
 
-import com.keepit.common.shutdown.ShutdownListener
+import com.keepit.common.shutdown.{ShutdownCommander, ShutdownListener}
 import java.util.{TimerTask, Timer}
 import com.keepit.common.logging.Access.WS_IN
 import play.api.libs.json.Json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.logging.Logging
+import com.google.inject.{Singleton, Inject}
 
 /**
  * At this point, akka may start shutting down so we can't trust it or any other plugins we have :-(
  */
-class WebsocketsShutdownListener(websocketRouter: WebSocketRouter, accessLog: AccessLog) extends ShutdownListener with Logging {
+@Singleton
+class WebsocketsShutdownListener @Inject() (
+  websocketRouter: WebSocketRouter,
+  accessLog: AccessLog,
+  shutdownCommander: ShutdownCommander) extends ShutdownListener with Logging {
 
   val ShutdownWindowInMilli = 18000
+
+  shutdownCommander.addListener(this)
+
+  def shuttingDown = shutdownCommander.shuttingDown
 
   def shutdown(): Unit = {
     // There may be no connections at all (and we don't want a divide by 0) and some may slip in.

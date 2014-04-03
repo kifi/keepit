@@ -2,24 +2,15 @@ package com.keepit.search.sharding
 
 import org.specs2.mutable._
 import play.api.test.Helpers._
-import play.api.Play.current
-import com.keepit.common.db._
-import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.model.User
-import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.collection._
 import com.keepit.search.SearchTestHelper
 import com.keepit.search.SearchFilter
 import com.keepit.test._
-import scala.math._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import scala.concurrent._
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class IndexShardingTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
@@ -45,7 +36,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
@@ -121,7 +112,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsCommander, mainSearcherFactory) = initIndexes(store)
+        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true

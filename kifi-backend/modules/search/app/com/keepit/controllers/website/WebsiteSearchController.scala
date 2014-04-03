@@ -1,8 +1,8 @@
-package com.keepit.controllers.ext
+package com.keepit.controllers.website
 
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{WebsiteController, SearchServiceController, ActionAuthenticator}
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
@@ -12,10 +12,10 @@ import com.keepit.search.result.ResultUtil
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
 
-class ExtSearchController @Inject() (
+class WebsiteSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   searchCommander: SearchCommander
-) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+  ) extends WebsiteController(actionAuthenticator) with SearchServiceController with Logging {
 
   def search(
     query: String,
@@ -23,7 +23,6 @@ class ExtSearchController @Inject() (
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
@@ -40,7 +39,7 @@ class ExtSearchController @Inject() (
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
-  //external (from the extension)
+  //external (from the website)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
@@ -62,4 +61,3 @@ class ExtSearchController @Inject() (
       decoratedResult.experts).json
   }
 }
-

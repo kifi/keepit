@@ -103,7 +103,7 @@ angular.module('kifi', [
       origin: origin,
       xhrBase: origin + '/site',
       xhrBaseEliza: origin.replace('www', 'eliza') + '/eliza/site',
-      xhrBaseSearch: origin.replace('www', 'search') + '/search',
+      xhrBaseSearch: origin.replace('www', 'search'),
       picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
     };
   }
@@ -137,6 +137,18 @@ angular.module('kifi', [
       state: state,
       pushState: pushState
     };
+  }
+])
+
+.run([
+  'profileService',
+  function (profileService) {
+    // Initial data loading:
+
+    profileService.fetchPrefs().then(function (res) {
+      // handle onboarding / imports
+      return res;
+    });
   }
 ])
 

@@ -16,6 +16,8 @@ angular.module('kifi.invite', [
     $routeProvider.when('/invite', {
       templateUrl: 'invite/invite.tpl.html',
       controller: 'InviteCtrl'
+    }).when('/friends/invite', {
+      redirectTo: '/invite'
     });
   }
 ])

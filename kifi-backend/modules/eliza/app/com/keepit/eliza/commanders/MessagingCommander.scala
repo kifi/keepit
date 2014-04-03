@@ -1,50 +1,39 @@
 package com.keepit.eliza.commanders
 
-import com.keepit.eliza.controllers.WebSocketRouter
+import com.google.inject.Inject
+
+import com.keepit.abook.ABookServiceClient
 import com.keepit.eliza._
+import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
-import com.keepit.model._
+import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
-import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.ElizaServiceController
-import com.keepit.heimdal._
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.common.healthcheck.AirbrakeNotifier
-
-import scala.concurrent.{Promise, Await, Future}
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import com.google.inject.Inject
+import com.keepit.common.time._
+import com.keepit.heimdal.HeimdalContext
+import com.keepit.model._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.realtime.{PushNotification, UrbanAirship}
 
 import org.joda.time.DateTime
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.modules.statsd.api.Statsd
+
+import scala.Some
+import scala.concurrent.{Promise, Await, Future}
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import com.keepit.common.akka.TimeoutFuture
 import java.util.concurrent.TimeoutException
-import com.keepit.realtime.UrbanAirship
-import com.keepit.eliza.model.NonUserParticipant
-import com.keepit.abook.ABookServiceClient
-import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.eliza.model.NonUserThread
-import play.api.libs.json.JsArray
-import com.keepit.eliza.model.NonUserEmailParticipant
-import play.api.libs.json.JsObject
-import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
-import com.keepit.heimdal.HeimdalContext
-import scala.util.{Failure, Success, Try}
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -841,6 +830,13 @@ class MessagingCommander @Inject() (
     db.readOnly { implicit session =>
       userThreadRepo.getUnreadThreadNotifications(userId)
     }
+  }
+
+  def getSendableNotification(userId: Id[User], threadExtId: ExternalId[MessageThread]): Future[JsObject] = {
+    notificationUpdater.update(db.readOnly { implicit session =>
+      val thread = threadRepo.get(threadExtId)
+      userThreadRepo.getSendableNotification(userId, thread.id.get)
+    })
   }
 
   def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Future[Notifications] = {

@@ -57,7 +57,10 @@ exports.onChange = function (callback) {
     onChange(getXpcomWindow(win).gBrowser, callback);
   });
   browserWindows.on('close', function(win) {
-    offChange(getXpcomWindow(win).gBrowser);
+    var xpcomWin = getXpcomWindow(win);
+    if (xpcomWin) {
+      offChange(xpcomWin.gBrowser);
+    }
   });
 };
 
@@ -65,10 +68,13 @@ exports.onFocus = function (callback) {
   for (let win of windows('navigator:browser')) {
     onFocus(win, callback);
   }
-  browserWindows.on('open', function(win) {
+  browserWindows.on('open', function (win) {
     onFocus(getXpcomWindow(win), callback);
   });
-  browserWindows.on('close', function(win) {
-    offFocus(getXpcomWindow(win));
+  browserWindows.on('close', function (win) {
+    var xpcomWin = getXpcomWindow(win);
+    if (xpcomWin) {
+      offFocus(xpcomWin);
+    }
   });
 };
