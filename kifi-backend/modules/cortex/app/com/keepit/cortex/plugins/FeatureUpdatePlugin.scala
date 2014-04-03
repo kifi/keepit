@@ -45,9 +45,6 @@ case class CommitInfoKey[T, M <: StatModel](version: ModelVersion[M]){
 
 case class FeatureStoreSequenceNumber[T, M <: StatModel](value: Long) extends Ordered[FeatureStoreSequenceNumber[T, M]] {
   def compare(that: FeatureStoreSequenceNumber[T, M]) = value compare that.value
-//  def +(offset: Long): FeatureStoreSequenceNumber[T, M] = FeatureStoreSequenceNumber[T, M](this.value + offset)
-//  def -(other: FeatureStoreSequenceNumber[T, M]): Long = this.value - other.value
-//  def max(other: FeatureStoreSequenceNumber[T, M]): FeatureStoreSequenceNumber[T, M] = FeatureStoreSequenceNumber[T, M](this.value max other.value)
   override def toString = value.toString
 }
 
