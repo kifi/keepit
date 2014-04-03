@@ -1,6 +1,8 @@
-package com.keepit.cortex.core
+package com.keepit.cortex.features
 
 import org.specs2.mutable.Specification
+import com.keepit.cortex.core.StatModel
+import com.keepit.cortex.core.ModelVersion
 
 class WordFeatureTest extends Specification with WordFeatureTestHelper {
 
