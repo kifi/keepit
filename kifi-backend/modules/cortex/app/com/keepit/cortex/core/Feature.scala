@@ -1,6 +1,6 @@
 package com.keepit.cortex.core
 
-trait FeatureRepresentation[T, M <: StatModel] {
+trait FeatureRepresentation[T, M <: StatModel] extends Versionable[M] {
   def vectorize: Array[Float]
 }
 
