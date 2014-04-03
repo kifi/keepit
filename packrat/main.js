@@ -7,9 +7,9 @@ var log = log || api.log;
 
 var THREAD_BATCH_SIZE = 8;
 
-//                          | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
-var domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
-var hostRe = /^https?:\/\/([^\/]+)/;
+//                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
+var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
+var hostRe = /^https?:\/\/([^\/?#]+)/;
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
