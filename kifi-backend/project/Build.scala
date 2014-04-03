@@ -269,15 +269,15 @@ object ApplicationBuild extends Build {
     )
     .dependsOn(
       common % "test->test;compile->compile",
-      search % "test->test;compile->compile",
       shoebox % "test->test;compile->compile",
+      search % "test->test;compile->compile",
       eliza % "test->test;compile->compile",
       heimdal % "test->test;compile->compile",
       abook % "test->test;compile->compile",
       scraper % "test->test;compile->compile",
       cortex % "test->test;compile->compile",
       graph % "test->test;compile->compile")
-    .aggregate(common, search, shoebox, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
+    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
