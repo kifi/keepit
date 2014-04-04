@@ -20,3 +20,5 @@ trait LocalEdgeReader extends EdgeReader {
   def moveToNextEdge(): Boolean
   def reset(): Unit
 }
+
+class EdgeReaderException(message: String) extends Throwable(message)

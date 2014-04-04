@@ -1,4 +1,4 @@
-package com.keepit.graph.concurrent
+package com.keepit.graph.simple
 
 import com.keepit.graph.model._
 import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}

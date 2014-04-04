@@ -30,12 +30,12 @@ object EdgeKind {
   def apply(header: Byte): EdgeKind[_ <: EdgeDataReader] = byHeader(header)
 }
 
-trait NoEdgeDataReader extends EdgeDataReader {
-  type E = NoEdgeDataReader
+trait EmptyEdgeDataReader extends EdgeDataReader {
+  type E = EmptyEdgeDataReader
 }
 
-case object NoEdgeDataReader extends EdgeKind[NoEdgeDataReader] with NoEdgeDataReader {
+case object EmptyEdgeDataReader extends EdgeKind[EmptyEdgeDataReader] with EmptyEdgeDataReader {
   val header = 1.toByte
-  def apply(rawDataReader: RawDataReader): NoEdgeDataReader = this
-  def dump(data: NoEdgeDataReader): Array[Byte] = Array.empty
+  def apply(rawDataReader: RawDataReader): EmptyEdgeDataReader = this
+  def dump(data: EmptyEdgeDataReader): Array[Byte] = Array.empty
 }

@@ -2,9 +2,9 @@ package com.keepit.graph.model
 
 import org.specs2.mutable.Specification
 
-class GraphManagerTest extends Specification {
+class GraphTypeSystemTest extends Specification {
 
-  "GraphManager" should {
+  "Graph" should {
     "instantiate consistent VertexDataReaders" in {
       VertexDataReader
       VertexKind.all must not be empty

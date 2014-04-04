@@ -11,3 +11,5 @@ trait GlobalVertexReader extends VertexReader {
   def moveTo(vertex: VertexId): Unit
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit
 }
+
+class VertexReaderException(message: String) extends Throwable(message)

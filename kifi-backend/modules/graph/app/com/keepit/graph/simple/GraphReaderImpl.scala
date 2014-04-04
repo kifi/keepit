@@ -1,4 +1,4 @@
-package com.keepit.graph.concurrent
+package com.keepit.graph.simple
 
 import com.keepit.graph.model._
 import scala.collection.Map
@@ -8,9 +8,6 @@ trait Vertex {
   def edges: Map[VertexId, EdgeDataReader]
 }
 
-class VertexReaderException(message: String) extends Throwable(message)
-class EdgeReaderException(message: String) extends Throwable(message)
-
 class GlobalVertexReaderImpl(vertices: Map[VertexId, Vertex]) extends GlobalVertexReader {
   private var currentVertexId: Option[VertexId] = None
   private def currentVertex: Vertex = vertices(id)
@@ -19,6 +16,7 @@ class GlobalVertexReaderImpl(vertices: Map[VertexId, Vertex]) extends GlobalVert
   def kind: VertexKind[_ <: VertexDataReader] = data.kind
   val edgeReader: LocalEdgeReader = new LocalEdgeReaderImpl(this, currentVertex.edges)
   def moveTo(vertex: VertexId): Unit = {
+    if (!vertices.contains(vertex)) { throw new VertexReaderException(s"$vertex is not a valid vertex") }
     currentVertexId = Some(vertex)
     edgeReader.reset()
   }
@@ -35,6 +33,7 @@ class LocalEdgeReaderImpl(owner: VertexReader, edges: => Map[VertexId, EdgeDataR
   def kind: EdgeKind[_ <: EdgeDataReader] = data.kind
   def degree = edges.size
   def moveToNextEdge(): Boolean = destinations match {
+    case None => throw new EdgeReaderException(s"$this is not initialized over a valid source vertex")
     case Some(iterator) if iterator.hasNext => currentDestination = Some(iterator.next()); true
     case _ => false
   }
@@ -56,6 +55,7 @@ class GlobalEdgeReaderImpl(vertices: Map[VertexId, Vertex]) extends GlobalEdgeRe
   def sourceVertex: VertexReader = globalSourceReader
   def destinationVertex: VertexReader = globalDestinationReader
   def moveTo(source: VertexId, destination: VertexId): Unit = {
+    if (!(vertices.contains(source) && vertices(source).edges.contains(destination))) { throw new EdgeReaderException(s"${(source, destination)} is not a valid edge") }
     globalSourceReader.moveTo(source)
     globalDestinationReader.moveTo(destination)
   }
