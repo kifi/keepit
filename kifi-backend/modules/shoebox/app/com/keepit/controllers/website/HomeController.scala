@@ -135,7 +135,11 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
+      if (request.experiments.contains(ExperimentType.ANGULAR_SITE)) {
+        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+      } else {
+        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
+      }
     }
   }
 
