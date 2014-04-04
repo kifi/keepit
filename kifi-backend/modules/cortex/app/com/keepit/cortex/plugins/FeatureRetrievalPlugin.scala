@@ -27,6 +27,10 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
     }
   }
 
+  def getByKey(key: K): Option[FeatureRepresentation[T, M]] = {
+    featureStore.get(key, representer.version)
+  }
+
   def getBetween(lowSeq: SequenceNumber[T], highSeq: SequenceNumber[T]): Seq[(T, FeatureRepresentation[T, M])] = {
     val featSeq = getFeatureStoreSeq()
     val entities = if (featSeq.value < highSeq.value) dataPuller.getBetween(lowSeq, SequenceNumber[T](featSeq.value)) else dataPuller.getBetween(lowSeq, highSeq)
