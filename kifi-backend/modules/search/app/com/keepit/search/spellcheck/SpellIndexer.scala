@@ -36,8 +36,8 @@ trait SpellIndexer {
 
 object SpellIndexer {
   def apply(spellIndexDirectory: Directory, shardedArticleIndexer: ShardedArticleIndexer, spellConfig: SpellCheckerConfig = SpellCheckerConfig()) = {
-    val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
-    new SpellIndexerImpl(spellIndexDirectory, config, spellConfig) {
+
+    new SpellIndexerImpl(spellIndexDirectory, spellConfig) {
       protected def getIndexReader(): IndexReader = {
         val readers = shardedArticleIndexer.indexShards.values.map(_.getSearcher.indexReader.asInstanceOf[IndexReader]).toArray
         if (readers.length == 1) readers(0) else new MultiReader(readers, false)
@@ -48,7 +48,6 @@ object SpellIndexer {
 
 abstract class SpellIndexerImpl(
   spellIndexDirectory: Directory,
-  config: IndexWriterConfig,
   spellConfig: SpellCheckerConfig
 ) extends SpellIndexer with Logging{
 
@@ -66,6 +65,7 @@ abstract class SpellIndexerImpl(
       log.info("spell-checker is building dictionary ... ")
       val t1 = System.currentTimeMillis
       val dict = new HighFrequencyDictionary(getIndexReader(), "c", spellConfig.wordFreqThreshold)
+      val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
       spellChecker.indexDictionary(dict, config, true) // fullMerge = true
       val t2 = System.currentTimeMillis
       log.info(s"spell-checker has built the dictionary ... Time elapsed: ${(t2 - t1)/1000.0 } seconds")
