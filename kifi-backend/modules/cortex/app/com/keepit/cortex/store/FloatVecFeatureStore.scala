@@ -34,3 +34,6 @@ trait S3BlobFloatVecFeatureStore[K, T, M <: StatModel] extends VersionedS3Store[
     FloatVecFeature[T, M](arr)
   }
 }
+
+class InMemoryFloatVecFeatureStore[K, T, M <: StatModel] extends VersionedInMemoryStore[K, M, FloatVecFeature[T, M]]
+  with FloatVecFeatureStore[K, T, M]
