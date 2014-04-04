@@ -35,16 +35,24 @@ angular.module('kifi.keepWhoText', [])
             text = '1 friend';
           }
           text = len + ' friends';
-          // todo: if is mine, return '+ ' + text. else, text.
+          if (!scope.keep.isMyBookmark) {
+            return text;
+          }
           return '+ ' + text;
         };
 
         scope.getOthersText = function () {
           var others = scope.keep.others || 0;
+          var text;
           if (others === 1) {
-            return '1 other';
+            text = '1 other';
+          } else {
+            text = others + 'others';
           }
-          return others + ' others';
+          if (scope.keep.isMyBookmark || scope.keep.keepers.length > 0) {
+            text = '+ ' + text
+          }
+          return text;
         };
 
         scope.isOnlyMine = function () {
