@@ -3,12 +3,12 @@ package com.keepit.graph.simple
 import org.specs2.mutable.Specification
 import com.keepit.graph.model._
 
-class SimpleGraphTest extends Specification {
+class SimpleGraphTest() extends Specification {
+  val graph: GraphManager = SimpleGraph() // This test can be reused with a different implementation
 
   val alfred = VertexDataId[UserReader](1899)
   val (vertigo, rearWindow) = (VertexDataId[UriReader](1958), VertexDataId[UriReader](1954))
 
-  val graph: GraphManager = SimpleGraph()
   val vertexReader = graph.getNewVertexReader()
   val edgeReader = graph.getNewEdgeReader()
 
