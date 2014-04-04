@@ -546,7 +546,12 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     let page = getPageOrHideOldAndCreatePage(tab);
     let match = googleSearchRe.exec(tab.url);
     if (match) {
-      let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      let query;
+      try {
+        query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      } catch (e) {
+        log('[onLocationChange] non-UTF-8 search query:', match[1], e)();  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+      }
       if (query) {
         let channel = match[2];
         dispatch.call(exports.on.search, query, channel === 'fflb' ? 'a' : channel === 'sb' ? 's' : 'n');

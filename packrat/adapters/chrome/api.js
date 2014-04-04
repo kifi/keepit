@@ -111,8 +111,15 @@ var api = (function createApi() {
   chrome.webNavigation.onBeforeNavigate.addListener(errors.wrap(function (details) {
     var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
-      var query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
-      if (query) dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
+      var query;
+      try {
+        query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      } catch (e) {
+        log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e)();  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+      }
+      if (query) {
+        dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
+      }
     }
   }));
 
