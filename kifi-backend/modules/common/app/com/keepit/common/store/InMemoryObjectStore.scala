@@ -60,3 +60,26 @@ trait InMemoryFileStore[A] extends ObjectStore[A, File] {
   override def toString =  s"[size=${pathMap.size} keys=${pathMap.keySet}"
 
 }
+
+trait InMemoryBlobStore[A, B] extends ObjectStore[A, B] {
+
+  if (Play.maybeApplication.isDefined && Play.isProd) throw new Exception("Can't have in memory object store in production")
+
+  protected val localBlobStore = new HashMap[A, Array[Byte]]
+
+  protected def packValue(obj: B): Array[Byte]
+  protected def unpackValue(bytes: Array[Byte]): B
+
+  def get(key: A): Option[B] = localBlobStore.get(key) map unpackValue
+
+  def += (kv: (A, B)) = {
+    val (k, v) = kv
+    localBlobStore += (k -> packValue(v))
+    this
+  }
+
+  def -=(key: A) = {
+     localBlobStore.remove(key)
+     this
+  }
+}
