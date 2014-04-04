@@ -131,17 +131,21 @@ class KeepsCommander @Inject() (
 
     val deactivatedBookmarks = db.readWrite { implicit s =>
       val bms = keepInfos.map { ki =>
-        val url = ki.url
         uriRepo.getByUri(ki.url).flatMap { uri =>
-          keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
-            keepRepo.save(b withActive false)
+          val ko = keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
+            val saved = keepRepo.save(b withActive false)
+            log.info(s"[unkeepMulti] DEACTIVATE $saved (uri=$uri, ki=$ki)")
+            saved
           }
+          if (ko.isEmpty) { log.warn(s"[unkeepMulti] cannot find keep for ki=$ki") }
+          ko
         }
       }.flatten
       val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForKeep(bm.id.get)).toSet
       collIds.foreach{ cid => collectionRepo.collectionChanged(cid) }
       bms
     }
+    log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
     val deactivatedKeepInfos = deactivatedBookmarks.map(KeepInfo.fromBookmark(_))
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)

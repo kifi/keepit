@@ -169,7 +169,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
           case uri => uri
         }
-      log.debug(s"located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
+      log.info(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
       normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
     }
   }
