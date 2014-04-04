@@ -12,25 +12,11 @@ trait S3BlobFloatVecFeatureStore[K, T, M <: StatModel] extends VersionedS3Store[
   with S3BlobStore[VersionedStoreKey[K, M], FloatVecFeature[T, M]]{
 
   def encodeValue(feature: FloatVecFeature[T, M]): Array[Byte] = {
-    val bs = new ByteArrayOutputStream(feature.value.size * 4)
-    val os = new DataOutputStream(bs)
-    feature.value.foreach{os.writeFloat}
-    os.close()
-    val rv = bs.toByteArray()
-    bs.close()
-    rv
+    StoreUtil.FloatArrayFormmater.toBinary(feature.vectorize)
   }
 
   def decodeValue(data: Array[Byte]): FloatVecFeature[T, M] = {
-    val is = new DataInputStream(new ByteArrayInputStream(data))
-    val N = data.size / 4
-    val arr = new Array[Float](N)
-    var n = 0
-    while ( n < N ){
-      arr(n) = is.readFloat()
-      n += 1
-    }
-    is.close()
+    val arr = StoreUtil.FloatArrayFormmater.fromBinary(data)
     FloatVecFeature[T, M](arr)
   }
 }
