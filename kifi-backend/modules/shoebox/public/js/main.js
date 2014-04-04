@@ -3864,7 +3864,7 @@ $(function () {
 	})
 	.on('click', '.page-keep,.page-priv', function (e) {
 		var $keeps = $main.find('.keep.detailed');
-		var $a = $(this), howKept = $detail.children().attr('data-kept');
+		var $a = $(this), howKept = $detail.find('.detail-inner').attr('data-kept');
 		if (!howKept) {  // keep
 			howKept = $a.hasClass('page-keep') ? 'pub' : 'pri';
 			$.postJson(xhrBase + '/keeps/add', {
