@@ -71,7 +71,9 @@
   transform: translate(-.5px) rotate(-45deg);
 }
 .kifi-unsilenced-x:hover:before,
-.kifi-unsilenced-x:hover:after {
+.kifi-unsilenced-x:hover:after,
+.kifi-unsilenced-x:focus:before,
+.kifi-unsilenced-x:focus:after {
   background: #8e939a;
 }
 .kifi-unsilenced-x:active:before,
@@ -80,9 +82,6 @@
 }
 .kifi-unsilenced-x:active {
   background: #d0d4da;
-}
-.kifi-unsilenced-x:focus {
-  outline-color: #ccc;
 }
 
 .kifi-unsilenced::after,

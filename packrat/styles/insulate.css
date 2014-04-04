@@ -146,7 +146,7 @@
   opacity: initial;
   order: initial;
   orphans: initial;
-  outline: initial;
+  outline: initial !important;
   outline-offset: initial;
   overflow: initial;
   overflow-wrap: initial;
