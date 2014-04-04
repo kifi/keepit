@@ -505,7 +505,12 @@ windows
 }))
 .on('deactivate', errors.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
-  var page = pages[win.tabs.activeTab.id];
+  var page;
+  try {
+    page = pages[win.tabs.activeTab.id];
+  } catch (e) {
+    log('[windows:deactivate]', e);
+  }
   if (page && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);
   }
