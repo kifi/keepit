@@ -3,7 +3,6 @@ package com.keepit.graph.model
 trait GraphReader {
   def getNewVertexReader(): GlobalVertexReader
   def getNewEdgeReader(): GlobalEdgeReader
-  def dump: Array[Byte]
 }
 
 trait GraphWriter extends GraphReader {

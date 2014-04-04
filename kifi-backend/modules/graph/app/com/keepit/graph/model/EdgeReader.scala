@@ -1,8 +1,6 @@
 package com.keepit.graph.model
 
-trait
-EdgeReader {
-  // protected def dataReaders: Map[EdgeKind, EdgeDataReader]
+trait EdgeReader {
   def kind: EdgeKind[_ <: EdgeDataReader]
   def source: VertexId
   def destination: VertexId
@@ -10,10 +8,10 @@ EdgeReader {
 }
 
 trait GlobalEdgeReader extends EdgeReader {
-  protected def moveTo(source: VertexId, destination: VertexId): Unit
-  def moveTo[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Unit
   def sourceVertex: VertexReader
   def destinationVertex: VertexReader
+  def moveTo(source: VertexId, destination: VertexId): Unit
+  def moveTo[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Unit
 }
 
 trait LocalEdgeReader extends EdgeReader {

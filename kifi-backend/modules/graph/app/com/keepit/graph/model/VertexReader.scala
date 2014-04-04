@@ -1,7 +1,6 @@
 package com.keepit.graph.model
 
 trait VertexReader {
-  // protected def dataReaders: Map[VertexKind, VertexDataReader]
   def kind: VertexKind[_ <: VertexDataReader]
   def id: VertexId
   def data: VertexDataReader
@@ -9,6 +8,6 @@ trait VertexReader {
 }
 
 trait GlobalVertexReader extends VertexReader {
-  protected def moveTo(vertex: VertexId): Unit
+  def moveTo(vertex: VertexId): Unit
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit
 }
