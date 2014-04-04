@@ -87,7 +87,7 @@
 }
 .kifi-setting-checkbox:focus+.kifi-setting-name::before,
 .kifi-setting-select:focus {
-  outline: #5b9dd9 auto 4px;
+  outline: #5b9dd9 auto 4px !important;
   outline-offset: 0;
 }
 .kifi-setting-select:focus {
@@ -215,7 +215,9 @@
   transform: translate(-1.5px) rotate(-45deg);
 }
 .kifi-settings-x:hover:before,
-.kifi-settings-x:hover:after {
+.kifi-settings-x:hover:after,
+.kifi-settings-x:focus:before,
+.kifi-settings-x:focus:after {
   background: #8e939a;
 }
 .kifi-settings-x:active:before,
@@ -224,7 +226,4 @@
 }
 .kifi-settings-x:active {
   background: #d0d4da;
-}
-.kifi-settings-x:focus {
-  outline-color: #ccc;
 }

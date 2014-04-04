@@ -159,7 +159,6 @@
 
     // Create a new text input
     var $tokenInput = $('<input type="text" autocomplete="off" autocapitalize="off"/>')
-      .css('outline', 'none')
       .attr('placeholder', settings.placeholder)
       .focus(function () {
         if (settings.disabled) {

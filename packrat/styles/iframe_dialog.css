@@ -75,7 +75,9 @@
   transform: translate(-1px) rotate(-45deg);
 }
 .kifi-dialog-x:hover:before,
-.kifi-dialog-x:hover:after {
+.kifi-dialog-x:hover:after,
+.kifi-dialog-x:focus:before,
+.kifi-dialog-x:focus:after {
   background: #8e939a;
 }
 .kifi-dialog-x:active:before,
@@ -84,9 +86,6 @@
 }
 .kifi-dialog-x:active {
   background: #d0d4da;
-}
-.kifi-dialog-x:focus {
-  outline-color: #ccc;
 }
 
 
