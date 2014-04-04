@@ -22,8 +22,6 @@ angular.module('kifi.detail',
         scope.me = profileService.me;
 
 
-
-
         scope.$watch(scope.getPreviewed, function (keep) {
           scope.keep = keep;
         });
