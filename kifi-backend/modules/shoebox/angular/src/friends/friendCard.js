@@ -27,6 +27,10 @@ angular.module('kifi.friends.friendCard', [])
         scope.searchFriend = friend.searchFriend;
 
         scope.unfriend = function () {
+          scope.showUnfriendConfirm = true;
+        };
+
+        scope.reallyUnfriend = function () {
           friendService.unfriend(friend.id);
         };
 
