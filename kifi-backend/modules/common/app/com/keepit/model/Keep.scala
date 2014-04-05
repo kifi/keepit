@@ -3,7 +3,7 @@ package com.keepit.model
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import com.keepit.common.cache._
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.{Logging, AccessLog}
 import com.keepit.common.db._
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
@@ -134,9 +134,16 @@ object KeepSource {
   }
 }
 
-object KeepFactory {
+object KeepFactory extends Logging {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep =
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, isPrivate = isPrivate)
+  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep = {
+    val kUrl = if (uri.url.nonEmpty) uri.url else {
+      log.warn(s"[KeepFactory] uri.url is empty; use url instead for (uri=$uri, userId=$userId, title=$title, url=$url, source=$source, isPrivate=$isPrivate, kifiInst=$kifiInstallation)") // consider airbrake/mail
+      url.url
+    }
+    if (kUrl.trim.isEmpty)
+      throw new IllegalArgumentException(s"Attempt to create keep with empty url for (uri=$uri, userId=$userId, title=$title, url=$url, source=$source, isPrivate=$isPrivate, kifiInst=$kifiInstallation)")
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = kUrl, source = source, isPrivate = isPrivate)
+  }
 
 }

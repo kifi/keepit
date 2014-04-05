@@ -278,7 +278,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 1
-      bookmarks(0).url === "http://www.google.com/"
+      bookmarks(0).url === "http://www.google.com" // uri.url
     }
   }
 
