@@ -114,7 +114,7 @@ class KeepsCommander @Inject() (
                   (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
-
+    log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
       case Right(name) => Some(getOrCreateTag(userId, name))
@@ -137,7 +137,7 @@ class KeepsCommander @Inject() (
             log.info(s"[unkeepMulti] DEACTIVATE $saved (uri=$uri, ki=$ki)")
             saved
           }
-          if (ko.isEmpty) { log.warn(s"[unkeepMulti] cannot find keep for ki=$ki") }
+          if (ko.isEmpty) { log.warn(s"[unkeepMulti($userId,${uri.id})] cannot find keep for ki=$ki; uri=$uri") }
           ko
         }
       }.flatten
