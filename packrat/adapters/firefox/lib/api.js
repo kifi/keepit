@@ -498,20 +498,25 @@ windows
 }))
 .on('activate', errors.wrap(function onWindowActivate(win) {
   activeWinHasFocus = true;
-  var page = pages[win.tabs.activeTab.id];
-  if (page && httpRe.test(page.url)) {
+  var tab = win.tabs.activeTab, tabId, page;
+  try {
+    tabId = tab.id;
+  } catch (e) {
+    log('[windows:activate]', e);
+  }
+  if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
 }))
 .on('deactivate', errors.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
-  var page;
+  var tab = win.tabs.activeTab, tabId, page;
   try {
-    page = pages[win.tabs.activeTab.id];
+    tabId = tab.id;
   } catch (e) {
     log('[windows:deactivate]', e);
   }
-  if (page && httpRe.test(page.url)) {
+  if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);
   }
 }));
