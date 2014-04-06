@@ -18,8 +18,8 @@ class FloatVecFeatureStoreTest extends Specification {
         val amazonS3Client = null
         val bucketName = null
 
-        def testEncodeValue(feature: FloatVecFeature[Foo, FakeModel]): Array[Byte] = super.encodeValue(feature)
-        def testDecodeValue(data: Array[Byte]): FloatVecFeature[Foo, FakeModel] = super.decodeValue(data)
+        def testEncodeValue(feature: FeatureRepresentation[Foo, FakeModel]): Array[Byte] = super.encodeValue(feature)
+        def testDecodeValue(data: Array[Byte]): FeatureRepresentation[Foo, FakeModel] = super.decodeValue(data)
       }
 
       val store = new TestStore
