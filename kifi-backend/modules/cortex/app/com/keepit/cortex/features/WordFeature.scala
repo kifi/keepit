@@ -8,6 +8,7 @@ import com.keepit.cortex.core.StatModel
 trait WordRepresenter[M <: StatModel] extends FeatureRepresenter[String, M]
 
 abstract class HashMapWordRepresenter[M <: StatModel](
+  val dimension: Int,
   mapper: Map[String, Array[Float]]
 ) extends WordRepresenter[M]{
 
