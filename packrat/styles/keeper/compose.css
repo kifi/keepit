@@ -13,8 +13,7 @@
   min-height: 21px;
   max-height: 114px;
   overflow: auto;
-  outline: none;
-  box-shadow: none;
+  box-shadow: none !important;
   cursor: text; /* ff */
   word-wrap: break-word;
 }
@@ -67,7 +66,6 @@ a.kifi-compose-snapshot[href] {
   background-origin: content-box;
   background-repeat: no-repeat;
   transition: none;
-  outline: none; /* for tooltip */
 }
 a.kifi-compose-snapshot:hover {
   background-position: -20px 0;
@@ -155,8 +153,8 @@ span.kifi-compose-tip-alt {
   border-color: #d2d2d2;
 }
 a.kifi-compose-submit:focus {
-  outline: 1px dashed #aaa;
-  outline: 5px auto -webkit-focus-ring-color;
+  outline: 1px dashed #aaa !important;
+  outline: 5px auto -webkit-focus-ring-color !important;
 }
 a.kifi-compose-submit:hover {
   background-color: #b6bbbf;

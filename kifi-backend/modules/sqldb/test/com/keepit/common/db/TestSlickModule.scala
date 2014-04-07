@@ -44,7 +44,7 @@ case class TestSlickSessionProvider() extends SlickSessionProviderImpl {
 }
 
 object TestDbInfo {
-  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
+  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1;IGNORECASE=TRUE"
   val dbInfo = new DbInfo() {
     //later on we can customize it by the application name
     lazy val masterDatabase = SlickDatabase.forURL(url = url)

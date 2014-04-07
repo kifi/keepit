@@ -535,7 +535,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     },
     moveBackFromBottom: function () {
-      if (tile.style.display !== 'none') {
+      if (tile && tile.style.display !== 'none') {
         $(tile).css('transform', '');
       }
     },

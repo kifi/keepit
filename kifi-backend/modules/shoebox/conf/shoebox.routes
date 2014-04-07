@@ -253,7 +253,7 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
-POST    /site/user/invite           @com.keepit.controllers.ext.ExtInviteController.invite()
+POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 

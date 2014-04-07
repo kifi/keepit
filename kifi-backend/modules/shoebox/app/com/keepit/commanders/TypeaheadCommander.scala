@@ -22,8 +22,9 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.{TreeSet, ArrayBuffer}
+import org.joda.time.DateTime
 
-case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String)
+case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String, email:Option[String] = None, inviteLastSentAt:Option[DateTime] = None)
 
 object ConnectionWithInviteStatus {
   implicit val format = (
@@ -32,7 +33,9 @@ object ConnectionWithInviteStatus {
       (__ \ 'networkType).format[String] and
       (__ \ 'image).formatNullable[String] and
       (__ \ 'value).format[String] and
-      (__ \ 'status).format[String]
+      (__ \ 'status).format[String] and
+      (__ \ 'email).formatNullable[String] and
+      (__ \ 'inviteLastSentAt).formatNullable[DateTime]
     )(ConnectionWithInviteStatus.apply _, unlift(ConnectionWithInviteStatus.unapply))
 }
 
@@ -311,37 +314,26 @@ class TypeaheadCommander @Inject()(
     }
   }
 
+  private def inviteStatus(inv: Invitation): (String, Option[DateTime]) = {
+    inv.state match {
+      case InvitationStates.ACCEPTED | InvitationStates.JOINED => ("joined", None) // check db
+      case InvitationStates.INACTIVE => ("", None)
+      case _ => ("invited", inv.lastSentAt.orElse(Some(inv.updatedAt)))
+    }
+  }
+
   private def joinWithInviteStatus(top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[Id[EContact], Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
     top map {
       case (snType, hit) =>
         snType match {
           case SocialNetworks.EMAIL =>
             val e = hit.info.asInstanceOf[EContact]
-            val status = emailInvitesMap.get(e.id.get) map {
-              inv =>
-                inv.state match {
-                  case InvitationStates.ACCEPTED | InvitationStates.JOINED => "joined" // check db
-                  case InvitationStates.INACTIVE => ""
-                  case _ => "invited"
-                }
-            } getOrElse ""
-            ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status)
+            val (status, lastSentAt) = emailInvitesMap.get(e.id.get) map { inv => inviteStatus(inv) } getOrElse ("", None)
+            ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
           case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN =>
             val sci = hit.info.asInstanceOf[SocialUserBasicInfo]
-            val status = socialInvitesMap.get(sci.id) map {
-              inv =>
-                inv.state match {
-                  case InvitationStates.ACCEPTED | InvitationStates.JOINED => // consider airbrake
-                    val msg = s"Invitation Inconsistency for invite=${inv} info=${sci}"
-                    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY,
-                      to = Seq(EmailAddresses.RAY),
-                      category = NotificationCategory.System.ADMIN, subject = msg, htmlBody = msg))
-                    "joined"
-                  case InvitationStates.INACTIVE => ""
-                  case _ => "invited"
-                }
-            } getOrElse ""
-            ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status)
+            val (status, lastSentAt) = socialInvitesMap.get(sci.id) map { inv => inviteStatus(inv) } getOrElse ("", None)
+            ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt)
           case SocialNetworks.FORTYTWO =>
             val u = hit.info.asInstanceOf[User]
             val picUrl = if (pictureUrl) {

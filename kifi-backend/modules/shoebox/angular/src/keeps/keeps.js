@@ -30,6 +30,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         keeps: '=',
         keepsLoading: '=',
         keepsHasMore: '=',
+        keepClick: '=',
         scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
@@ -130,6 +131,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         scope.onClickKeep = function (keep, $event) {
           if ($event.target.tagName !== 'A') {
+            if (scope.keepClick) {
+              console.log(scope.keepClick);
+              scope.keepClick(keep, $event);
+            }
             if ($event.ctrlKey || $event.metaKey) {
               if (scope.isSelected(keep)) {
                 scope.unselect(keep);

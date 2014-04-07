@@ -7,9 +7,9 @@ var log = log || api.log;
 
 var THREAD_BATCH_SIZE = 8;
 
-//                          | sub |    |------- country domain -------|-- generic domain --|           |-- port? --|
-var domainRe = /^https?:\/\/[^\/]*?((?:[^.\/]+\.[^.\/]{2,3}\.[^.\/]{2}|[^.\/]+\.[^.\/]{2,6}|localhost))(?::\d{2,5})?(?:$|\/)/;
-var hostRe = /^https?:\/\/([^\/]+)/;
+//                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
+var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
+var hostRe = /^https?:\/\/([^\/?#]+)/;
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
@@ -498,12 +498,6 @@ function emitAllTabs(name, data, options) {
   });
 }
 
-function emitTabsByUrl(url, name, data, options) {
-  return tabsByUrl[url].forEach(function(tab) {
-    api.tabs.emit(tab, name, data, options);
-  });
-}
-
 function emitThreadInfoToTab(th, tab) {
   api.tabs.emit(tab, 'thread_info', th, {queue: 1});
 }
@@ -537,47 +531,49 @@ function emitSettings(tab) {
   }, {queue: 1});
 }
 
-function onAddTagResponse(result) {
+function onAddTagResponse(nUri, result) {
+  log('[onAddTagResponse]', result)();
   if (result.success) {
-    var nUri = this.nUri,
-      d = pageData[nUri],
-      tag = result.response;
-    if (addTag(tags, tag)) {
+    var tag = result.response;
+    if (tags && addTag(tags, tag)) {
       tagsById[tag.id] = tag;
     }
-    addTag(d.tags, tag);
-    log('onAddTagResponse', tag, d.tags)();
-    emitTabsByUrl(nUri, 'add_tag', tag);
-    emitTabsByUrl(nUri, 'tagged', {
-      tagged: true
-    });
+    var d = pageData[nUri];
+    if (d) {
+      addTag(d.tags, tag);
+      tabsByUrl[nUri].forEach(function (tab) {
+        api.tabs.emit(tab, 'add_tag', tag);
+        api.tabs.emit(tab, 'tagged', {tagged: true});
+      });
+    }
   }
 }
 
-function onRemoveTagResponse(tagId, result) {
+function onRemoveTagResponse(nUri, tagId, result) {
+  log('[onRemoveTagResponse]', tagId, result)();
   if (result.success) {
-    var nUri = this.nUri,
-      d = pageData[nUri];
-    removeTag(d.tags, tagId);
-    log('onRemoveTagResponse', tagId, d.tags)();
-    emitTabsByUrl(nUri, 'remove_tag', {
-      id: tagId
-    });
-    emitTabsByUrl(nUri, 'tagged', {
-      tagged: d.tags.length
-    });
+    var d = pageData[nUri];
+    if (d) {
+      removeTag(d.tags, tagId);
+      tabsByUrl[nUri].forEach(function (tab) {
+        api.tabs.emit(tab, 'remove_tag', {id: tagId});
+        api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
+      });
+    }
   }
 }
 
-function onClearTagsResponse(result) {
+function onClearTagsResponse(nUri, result) {
+  log('[onClearTagsResponse]', result)();
   if (result.success) {
-    var nUri = this.nUri;
-    pageData[nUri].tags.length = 0;
-    log('onClearTagsResponse', pageData[nUri].tags)();
-    emitTabsByUrl(nUri, 'clear_tags');
-    emitTabsByUrl(nUri, 'tagged', {
-      tagged: false
-    });
+    var d = pageData[nUri];
+    if (d) {
+      d.tags.length = 0;
+      tabsByUrl[nUri].forEach(function (tab) {
+        api.tabs.emit(tab, 'clear_tags');
+        api.tabs.emit(tab, 'tagged', {tagged: false});
+      });
+    }
   }
 }
 
@@ -802,7 +798,7 @@ api.port.on({
       emitThreadInfoToTab(th, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_thread_info', id], function (th) {
+      socket.send(['get_one_thread', id], function (th) {
         standardizeNotification(th);
         updateIfJustRead(th);
         threadsById[th.thread] = th;
@@ -1068,25 +1064,16 @@ api.port.on({
     });
   },
   create_and_add_tag: function(name, respond, tab) {
-    makeRequest('create_and_add_tag', 'POST', '/tags/add', {
-      name: name,
-      url: tab.url
-    }, [onAddTagResponse.bind(tab), respond]);
+    makeRequest('create_and_add_tag', 'POST', '/tags/add', {name: name, url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
   },
   add_tag: function(tagId, respond, tab) {
-    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {
-      url: tab.url
-    }, [onAddTagResponse.bind(tab), respond]);
+    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
   },
   remove_tag: function(tagId, respond, tab) {
-    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {
-      url: tab.url
-    }, [onRemoveTagResponse.bind(tab, tagId), respond]);
+    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {url: tab.url}, [onRemoveTagResponse.bind(null, tab.nUri, tagId), respond]);
   },
   clear_tags: function(tagId, respond, tab) {
-    makeRequest('clear_tags', 'POST', '/tags/clear', {
-      url: tab.url
-    }, [onClearTagsResponse.bind(tab), respond]);
+    makeRequest('clear_tags', 'POST', '/tags/clear', {url: tab.url}, [onClearTagsResponse.bind(null, tab.nUri), respond]);
   },
   add_participants: function(data) {
     socket.send(['add_participants_to_thread', data.threadId, data.userIds]);
@@ -1537,17 +1524,16 @@ function searchOnServer(request, respond) {
     delete searchFilterCache[request.query];
   }
 
-  var maxHits = 5;
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
-    maxHits: maxHits,
+    maxHits: 5,
     lastUUID: request.lastUUID,
     context: request.context,
     kifiVersion: api.version,
     w: request.whence};
 
-  var respHandler = function(resp) {
+  ajax('search', 'GET', '/search', params, function (resp) {
     log('[searchOnServer] response:', resp)();
     resp.filter = request.filter;
     resp.me = me;
@@ -1557,13 +1543,11 @@ function searchOnServer(request, respond) {
     resp.myTotal = resp.myTotal || 0;
     resp.friendsTotal = resp.friendsTotal || 0;
     resp.hits.forEach(processSearchHit);
-    if (resp.hits.length < maxHits && (params.context || params.f)) {
+    if (resp.hits.length < params.maxHits && (params.context || params.f)) {
       resp.mayHaveMore = false;
     }
     respond(resp);
-  };
-
-  ajax("search", "GET", "/search", params, respHandler);
+  });
   return true;
 }
 
@@ -1590,7 +1574,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax("GET", "/ext/authed", function(loggedIn) {
+      ajax("GET", "/ext/authed", function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
@@ -2263,6 +2247,10 @@ function clearSession() {
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'me_change', null);
+      delete tab.nUri;
+      delete tab.count;
+      delete tab.engaged;
+      delete tab.focusCallbacks;
     });
   }
   me = prefs = experiments = eip = null;

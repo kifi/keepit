@@ -13,7 +13,8 @@ angular.module('kifi.socialService', [
         linkedin = {},
         gmail = [],
         addressBooks = [],
-        expiredTokens = {};
+        expiredTokens = {},
+        isRefreshing = false;
 
     var clutchConfig = {
       cacheDuration: 5000
@@ -52,6 +53,14 @@ angular.module('kifi.socialService', [
       facebook: facebook,
       linkedin: linkedin,
       gmail: gmail,
+
+      refreshNetworks: function () {
+        isRefreshing = true;
+        // init refreshing polling
+        return $http.post(routeService.refreshNetworks);
+      },
+
+      isRefreshing: isRefreshing,
 
       connectFacebook: function () {
         $analytics.eventTrack('user_clicked_page', {

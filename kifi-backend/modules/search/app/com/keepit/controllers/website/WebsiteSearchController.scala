@@ -61,4 +61,3 @@ class WebsiteSearchController @Inject() (
       decoratedResult.experts).json
   }
 }
-
