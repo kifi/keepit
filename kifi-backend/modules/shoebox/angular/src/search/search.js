@@ -127,8 +127,8 @@ angular.module('kifi.search', [
     $scope.scrollDisabled = false;
 
     $scope.analyticsTrack = function (keep, $event) {
-      console.log('logged!', keep, $event);
-    }
+      return [keep, $event]; // log analytics for search click here
+    };
 
     $scope.getNextKeeps = function () {
       if ($scope.loading) {

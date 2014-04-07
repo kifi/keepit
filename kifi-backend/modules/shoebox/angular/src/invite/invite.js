@@ -15,7 +15,14 @@ angular.module('kifi.invite', [
   function ($routeProvider) {
     $routeProvider.when('/invite', {
       templateUrl: 'invite/invite.tpl.html',
-      controller: 'InviteCtrl'
+      controller: 'InviteCtrl',
+      resolve: {
+        'wtiList': ['wtiService', function (wtiService) {
+          return wtiService.loadInitial().then(function (res) {
+            return res;
+          });
+        }]
+      }
     }).when('/friends/invite', {
       redirectTo: '/invite'
     });
@@ -27,8 +34,6 @@ angular.module('kifi.invite', [
   function ($scope, $http, profileService, routeService, $window, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
-
-    wtiService.loadInitial();
     $scope.whoToInvite = wtiService.list;
 
     $scope.wtiScrollDistance = '100%';
@@ -120,7 +125,7 @@ angular.module('kifi.invite', [
           var $elem = angular.element($event.target);
           $elem.text('Sending');
           $elem.parent().removeClass('clickable');
-          inviteService.invite(result.networkType, result.socialId).then(function (res) {
+          inviteService.invite(result.networkType, result.socialId).then(function () {
             $elem.text('Sent!');
             $elem.off('click');
             $timeout(function () {

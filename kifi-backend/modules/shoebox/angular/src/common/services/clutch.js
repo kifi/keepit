@@ -76,7 +76,7 @@ angular.module('kifi.clutch', [])
       };
 
       Clutch.prototype.expireAll = function () {
-        this._cache.length = 0;
+        this._cache = {};
         return;
       };
 
