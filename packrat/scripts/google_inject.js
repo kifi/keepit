@@ -57,7 +57,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   checkSearchType();
-  search(parseQuery(location.hash || location.search), null, true);  // Google can be slow to initialize the input field, or it may be missing
+  search(true, null, true);  // Google can be slow to initialize the input field, or it may be missing
   if (document.getElementById('ires')) {
     tGoogleResultsShown = tQuery;
   }
@@ -97,21 +97,24 @@ if (searchUrlRe.test(document.URL)) !function () {
     ]);
   }
 
-  function search(fallbackQuery, newFilter, isFirst) {
+  function search(useLocation, newFilter, isFirst) {
     if (isVertical) return;
 
-    var q = ($qp.val() || $q.val() || fallbackQuery || "").trim().replace(/\s+/g, " ");  // TODO: also detect "Showing results for" and prefer that
+    var q = ($qp.val() || $q.val() || useLocation && (parseQ(location.hash) || parseQ(location.search)) || '').trim().replace(/\s+/g, ' ');  // TODO: also detect "Showing results for" and prefer that
     if (q === query && areSameFilter(newFilter, filter)) {
       log("[search] nothing new, query:", q, "filter:", newFilter)();
+      if (isFirst) {
+        document.addEventListener('DOMContentLoaded', search.bind(null, false, false, true));
+      }
       return;
     }
     if (response) {
       try {
         sendSearchedEvent("refinement");
-      } catch(e) {}
+      } catch (e) {}
     }
     if (!q) {
-      log("[search] empty query")();
+      log('[search] empty query')();
       return;
     }
     query = q;
@@ -223,16 +226,22 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
   }
 
-  function parseQuery(hash) {
-    var m = /[?#&]q=[^&]*/.exec(hash);
-    return m && decodeURIComponent(m[0].substr(3).replace(/\+/g, " ")).trim() || "";
+  function parseQ(qs) {
+    var m = /[?#&]q=([^&]*)/.exec(qs);
+    if (m) {
+      try {
+        return decodeURIComponent(m[1].replace(/\+/g, ' ')).trim();
+      } catch (e) {
+        log('[parseQ] non-UTF-8 query:', m[1], e)();  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+      }
+    }
   }
 
   $(window).on('hashchange', function () {  // e.g. a click on a Google doodle or a switch from shopping to web search
     log("[hashchange]")();
     checkSearchType();
     if (!query && !response.query) {
-      search(parseQuery(location.hash || location.search), null, true);
+      search(true, null, true);
     } else {
       search();
     }
@@ -530,7 +539,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       $v.siblings(':not([href])').attr('href', 'javascript:').filter('.kifi-filter-all').removeAttr('data-n');
       if (!alreadySearched) {
         var val = $v.data('val');
-        search(null, {who: val});
+        search(false, {who: val});
       }
     }).hoverfu('.kifi-face.kifi-friend', function (configureHover) {
       var $a = $(this);

@@ -81,7 +81,7 @@ html[kifi-with-pane] .kifi-knp-box {
   background-color: #5f9cef;
 }
 .kifi-knp-save[href]:focus {
-  outline: 1px dotted #ccc;
+  outline: 1px dotted #ccc !important;
 }
 .kifi-knp-save::after {
   content: ' ';
@@ -193,7 +193,9 @@ html[kifi-with-pane] .kifi-knp-box::after {
   transform: translate(-.5px) rotate(-45deg);
 }
 .kifi-knp-x:hover:before,
-.kifi-knp-x:hover:after {
+.kifi-knp-x:hover:after,
+.kifi-knp-x:focus:before,
+.kifi-knp-x:focus:after {
   background: #8e939a;
 }
 .kifi-knp-x:active:before,
@@ -202,7 +204,4 @@ html[kifi-with-pane] .kifi-knp-box::after {
 }
 .kifi-knp-x:active {
   background: #d0d4da;
-}
-.kifi-knp-x:focus {
-  outline-color: #ccc;
 }

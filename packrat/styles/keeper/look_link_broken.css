@@ -84,7 +84,7 @@
   background-color: #5f9cef;
 }
 .kifi-llb-dialog-btn:focus {
-  outline: 1px dotted #ccc;
+  outline: 1px dotted #ccc !important;
 }
 
 .kifi-llb-dialog-x {
@@ -115,7 +115,9 @@
   transform: translate(-1px) rotate(-45deg);
 }
 .kifi-llb-dialog-x:hover:before,
-.kifi-llb-dialog-x:hover:after {
+.kifi-llb-dialog-x:hover:after,
+.kifi-llb-dialog-x:focus:before,
+.kifi-llb-dialog-x:focus:after {
   background: #8e939a;
 }
 .kifi-llb-dialog-x:active:before,
@@ -124,7 +126,4 @@
 }
 .kifi-llb-dialog-x:active {
   background: #d0d4da;
-}
-.kifi-llb-dialog-x:focus {
-  outline-color: #ccc;
 }

@@ -2,35 +2,19 @@ package com.keepit.search.graph.bookmark
 
 import org.specs2.mutable._
 import com.keepit.common.db.Id
-import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.test.Helpers._
-import com.keepit.inject._
 import com.keepit.test._
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ActiveShardsSpecParser
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.VolatileIndexDirectoryImpl
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.search.sharding.ShardedURIGraphIndexer
-import com.keepit.search.SearchTestHelper
-import com.keepit.search.graph.URIList
+import com.keepit.search.{MainSearcherFactory, SearchTestHelper}
 
 class URIGraphCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
+
   "URIGraphCommander" should {
     "work and check authorization" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(application) {
         implicit val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
-        val uriGraphIndexers = activeShards.shards.map { shard =>
-          val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
-          val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, bookmarkStore, inject[AirbrakeNotifier])
-          (shard -> uriGraphIndexer)
-        }
-        val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])
-        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
 
         val (users, uris) = initData(numUsers = 2, numUris = 10)
         val user0_public = (0 until 10).filter(x => x < 5 && x % 2 == 0).map { i => (uris(i), Seq(users(0))) }.toSeq
@@ -42,10 +26,14 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
         saveBookmarksByURI(user1_public)
         saveBookmarksByURI(user1_private, isPrivate = true)
 
+        val store = mkStore(uris)
+        val (shardedUriGraphIndexer, _, _, userGraphIndexer, _, mainSearcherFactory) = initIndexes(store)
         shardedUriGraphIndexer.update()
+        userGraphIndexer.update()
 
-        val uriGraphCommander = new URIGraphCommanderImpl(RequestingUser(users(0).id.get), shardedUriGraphIndexer)
-        val uriGraphCommander1 = new URIGraphCommanderImpl(RequestingUser(users(1).id.get), shardedUriGraphIndexer)
+        val uriGraphCommanderFactory = new URIGraphCommanderFactory(mainSearcherFactory)
+        val uriGraphCommander = uriGraphCommanderFactory(users(0).id.get)
+        val uriGraphCommander1 = uriGraphCommanderFactory(users(1).id.get)
         val u0list = uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false)
         val u1list = uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false)
         val shards = uriGraphCommander.getIndexShards

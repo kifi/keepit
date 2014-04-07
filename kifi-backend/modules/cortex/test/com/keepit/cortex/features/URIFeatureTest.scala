@@ -1,40 +1,17 @@
 package com.keepit.cortex.features
 
 import org.specs2.mutable.Specification
-import com.keepit.model.NormalizedURI
-import com.keepit.search.InMemoryArticleStoreImpl
+
 import com.keepit.common.db.Id
+import com.keepit.model.NormalizedURI
 import com.keepit.model.UrlHash
 import com.keepit.search.Article
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import com.keepit.model.NormalizedURIStates
+import com.keepit.search.InMemoryArticleStoreImpl
 import com.keepit.search.Lang
 
 
-class URIFeatureTest extends Specification with WordFeatureTestHelper {
+class URIFeatureTest extends Specification with WordFeatureTestHelper with URIFeatureTestHelper {
   "uri feature representer " should {
-
-    val english = Lang("en")
-
-    def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String, contentLang: Lang = english) = {
-      Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        canonicalUrl = None,
-        alternateUrls = Set.empty,
-        keywords = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = NormalizedURIStates.SCRAPED,
-        message = None,
-        titleLang = None,
-        contentLang = Some(contentLang))
-    }
 
     "work" in {
       val articleStore = new InMemoryArticleStoreImpl()

@@ -48,8 +48,7 @@ class NormalizedURIRepoImpl @Inject() (
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo],
   taskQ:NormalizationUpdateJobQueue,
-  airbrake: AirbrakeNotifier,
-  awsConfig: AwsConfig)
+  airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 
   import db.Driver.simple._
@@ -169,7 +168,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
           case uri => uri
         }
-      log.debug(s"located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
+      log.info(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
       normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
     }
   }
@@ -197,17 +196,13 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    *
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
-  val sqsEnable:Boolean = awsConfig.sqsEnabled // todo(ray):removeme
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {
-      getByUriOrPrenormalize(url) match {
+      val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           session.onTransactionSuccess {
-            if (sqsEnable)
-              taskQ.sendTask(NormalizationUpdateTask(uri.id.get, false, candidates))
-            else
-              normalizationServiceProvider.get.update(NormalizationReference(uri, isNew = false), candidates: _*)
+            taskQ.sendTask(NormalizationUpdateTask(uri.id.get, false, candidates))
           }
           uri
         case Success(Right(prenormalizedUrl)) => {
@@ -215,10 +210,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess{
-            if (sqsEnable)
-              taskQ.sendTask(NormalizationUpdateTask(newUri.id.get, true, candidates))
-            else
-              normalizationServiceProvider.get.update(NormalizationReference(newUri, isNew = true), candidates: _*)
+            taskQ.sendTask(NormalizationUpdateTask(newUri.id.get, true, candidates))
           }
           newUri
         }
@@ -229,6 +221,8 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           newUri
         }
       }
+      log.info(s"[internByUri($url)] resUri=$resUri")
+      resUri
     }
   }
 

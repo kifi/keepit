@@ -27,8 +27,6 @@ import com.keepit.cortex.store.CommitInfoKey
 
 trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin{
   def update(): Unit
-  def recomputeAll(): Unit
-  def commitInfo(): Option[CommitInfo[T, M]]
 }
 
 object FeaturePluginMessages{
@@ -55,7 +53,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
     log.info(s"stopping $name")
   }
 
-  def update(): Unit = {
+  override def update(): Unit = {
     actor.ref ! Update
   }
 

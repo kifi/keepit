@@ -5,6 +5,11 @@
 var initFriendSearch = (function () {
   var searchCallbacks = {};
 
+  api.onEnd.push(function () {
+    log('[friendSearch:onEnd]')();
+    $('.kifi-ti-dropdown').remove();
+  });
+
   api.port.on({
     nonusers: function (o) {
       var withResults = searchCallbacks[o.searchId];

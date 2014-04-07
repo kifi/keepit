@@ -498,15 +498,25 @@ windows
 }))
 .on('activate', errors.wrap(function onWindowActivate(win) {
   activeWinHasFocus = true;
-  var page = pages[win.tabs.activeTab.id];
-  if (page && httpRe.test(page.url)) {
+  var tab = win.tabs.activeTab, tabId, page;
+  try {
+    tabId = tab.id;
+  } catch (e) {
+    log('[windows:activate]', e);
+  }
+  if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
 }))
 .on('deactivate', errors.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
-  var page = pages[win.tabs.activeTab.id];
-  if (page && httpRe.test(page.url)) {
+  var tab = win.tabs.activeTab, tabId, page;
+  try {
+    tabId = tab.id;
+  } catch (e) {
+    log('[windows:deactivate]', e);
+  }
+  if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);
   }
 }));
@@ -546,7 +556,12 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     let page = getPageOrHideOldAndCreatePage(tab);
     let match = googleSearchRe.exec(tab.url);
     if (match) {
-      let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      let query;
+      try {
+        query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      } catch (e) {
+        log('[location:change] non-UTF-8 search query:', match[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+      }
       if (query) {
         let channel = match[2];
         dispatch.call(exports.on.search, query, channel === 'fflb' ? 'a' : channel === 'sb' ? 's' : 'n');

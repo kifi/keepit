@@ -31,7 +31,7 @@ class SpellCheckerTest extends Specification {
 
       val spellIndexDir = new VolatileIndexDirectoryImpl()
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
-      val spellIndexer: SpellIndexer = new SpellIndexerImpl(spellIndexDir, config, SpellCheckerConfig(0f, "lev")) {
+      val spellIndexer: SpellIndexer = new SpellIndexerImpl(spellIndexDir, SpellCheckerConfig(0f, "lev")) {
         protected def getIndexReader() = DirectoryReader.open(articleIndexDir)
       }
       var corrector = new SpellCorrectorImpl(spellIndexer, "slow", enableAdjScore = false)

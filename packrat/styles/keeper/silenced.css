@@ -89,7 +89,9 @@
   transform: translate(-.5px) rotate(-45deg);
 }
 .kifi-silenced-x:hover:before,
-.kifi-silenced-x:hover:after {
+.kifi-silenced-x:hover:after,
+.kifi-silenced-x:focus:before,
+.kifi-silenced-x:focus:after {
   background: #8e939a;
 }
 .kifi-silenced-x:active:before,
@@ -98,7 +100,4 @@
 }
 .kifi-silenced-x:active {
   background: #d0d4da;
-}
-.kifi-silenced-x:focus {
-  outline-color: #ccc;
 }
