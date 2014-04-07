@@ -10,6 +10,7 @@ import play.api.Play._
 import com.keepit.common.store.DevStoreModule
 import com.keepit.cortex.core._
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.cortex._
 
 trait StatModelStoreModule extends ScalaModule
 
@@ -34,7 +35,7 @@ case class StatModelDevStoreModule() extends DevStoreModule(StatModelProdStoreMo
       prodStoreModule.ldaModelStore(amazonS3Client, accessLog)
     ) getOrElse {
       val store = new InMemoryLDAModelStore
-      val version = ModelVersion[DenseLDA](1)
+      val version = ModelVersions.denseLDAVersion
       val mapper = Map("scala" -> Array(1f, 0f), "kifi" -> Array(1f, 0f), "food" -> Array(0f, 1f), "recipe" -> Array(0f, 1f))
       val dim = 2
       val lda = DenseLDA(dim, mapper)
