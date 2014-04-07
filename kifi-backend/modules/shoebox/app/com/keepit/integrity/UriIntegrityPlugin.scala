@@ -26,6 +26,7 @@ case class URIMigration(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) ex
 case class URLMigration(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class BatchURIMigration(batchSize: Int)
 case class BatchURLMigration(batchSize: Int)
+case class FixDuplicateKeeps(readOnly: Boolean)
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -67,10 +68,18 @@ class UriIntegrityActor @Inject()(
         }
         case Some(bm) =>
           if (oldBm.state == KeepStates.ACTIVE) {
-            if (bm.state == KeepStates.INACTIVE) keepRepo.save(bm.withActive(true))
+            val newBm = if (bm.state == KeepStates.INACTIVE) {
+              // transfer the privacy setting to bm begin reactivated
+              keepRepo.save(bm.withActive(true).withPrivate(oldBm.isPrivate))
+            } else if (!bm.isPrivate && oldBm.isPrivate) {
+              // oldBm has a stronger privacy setting, transfer it to newBm
+              keepRepo.save(bm.withPrivate(true))
+            } else {
+              bm
+            }
             keepRepo.save(oldBm.withActive(false))
             keepRepo.deleteCache(oldBm)
-            Some(oldBm, Some(bm))
+            Some(oldBm, Some(newBm))
           } else {
             None
           }
@@ -240,12 +249,43 @@ class UriIntegrityActor @Inject()(
     db.readOnly{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
 
+  private def fixDuplicateKeeps(readOnly: Boolean): Unit = {
+    try {
+      log.info("start deduping keeps")
+
+      var dedupedSuccessCount = 0
+      var done: Boolean = false
+      var seq: SequenceNumber[Keep] = SequenceNumber[Keep](-1L)
+      while (!done) {
+        val keeps = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
+        done = keeps.isEmpty
+
+        if (!done) {
+          db.readWriteBatch(keeps, 3){ (session, keep) =>
+            uriRepo.getByUri(keep.url)(session).foreach{ uri =>
+              if (keep.uriId != uri.id.get) {
+                if (!readOnly) handleBookmarks(Map(keep.userId -> Seq(keep)), uri.id.get)(session)
+                dedupedSuccessCount += 1
+              }
+            }
+          }
+          seq = keeps.last.seq
+          log.info(s"deduping keeps in progress [count=$dedupedSuccessCount seq=${seq.value}]")
+        }
+      }
+
+      log.info(s"total $dedupedSuccessCount keeps deduplicated [readOnly=$readOnly]")
+    } catch {
+      case e: Throwable => log.error("deduping keeps failed", e)
+    }
+  }
 
   def receive = {
     case BatchURIMigration(batchSize) => Future.successful(batchURIMigration(batchSize)) pipeTo sender
     case URIMigration(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case URLMigration(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
     case BatchURLMigration(batchSize) => batchURLMigration(batchSize)
+    case FixDuplicateKeeps(readOnly) => fixDuplicateKeeps(readOnly)
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -255,6 +295,7 @@ trait UriIntegrityPlugin extends SchedulerPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
+  def fixDuplicateKeeps(readOnly: Boolean): Unit
 }
 
 @Singleton
@@ -279,4 +320,5 @@ class UriIntegrityPluginImpl @Inject() (
   def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
   def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
 
+  def fixDuplicateKeeps(readOnly: Boolean) = actor.ref ! FixDuplicateKeeps(readOnly)
 }
