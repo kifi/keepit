@@ -67,8 +67,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document', '$log',
-  function (inviteService, $document, $log) {
+  'inviteService', '$document', '$log', '$timeout',
+  function (inviteService, $document, $log, $timeout) {
     return {
       scope: {},
       replace: true,
@@ -119,12 +119,19 @@ angular.module('kifi.invite', [
           $log.log('this person:', result);
           var $elem = angular.element($event.target);
           $elem.text('Sending');
+          $elem.parent().removeClass('clickable');
           inviteService.invite(result.networkType, result.socialId).then(function (res) {
             $elem.text('Sent!');
+            $elem.off('click');
+            $timeout(function () {
+              $elem.parent().fadeOut('fast');
+            }, 2000);
             inviteService.expireSocialSearch();
           }, function (err) {
             $log.log('err:', err, result);
             $elem.text('Error. Retry?');
+            $elem.parent().addClass('clickable');
+            inviteService.expireSocialSearch();
           });
         };
 
