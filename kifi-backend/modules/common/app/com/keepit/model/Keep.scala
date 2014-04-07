@@ -136,14 +136,8 @@ object KeepSource {
 
 object KeepFactory extends Logging {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep = {
-    val kUrl = if (uri.url.nonEmpty) uri.url else {
-      log.warn(s"[KeepFactory] uri.url is empty; use url instead for (uri=$uri, userId=$userId, title=$title, url=$url, source=$source, isPrivate=$isPrivate, kifiInst=$kifiInstallation)") // consider airbrake/mail
-      url.url
-    }
-    if (kUrl.trim.isEmpty)
-      throw new IllegalArgumentException(s"Attempt to create keep with empty url for (uri=$uri, userId=$userId, title=$title, url=$url, source=$source, isPrivate=$isPrivate, kifiInst=$kifiInstallation)")
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = kUrl, source = source, isPrivate = isPrivate)
+  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep = {
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate)
   }
 
 }
