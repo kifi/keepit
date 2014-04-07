@@ -21,7 +21,7 @@ import play.api.libs.json._
 import com.keepit.common.store.{S3ScreenshotStore}
 import play.api.mvc.{SimpleResult, Action}
 import com.keepit.social.BasicUser
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import com.keepit.model.KeepToCollection
 import org.joda.time.Seconds
 import scala.concurrent.{Await, Future}
@@ -189,6 +189,21 @@ class KeepsController @Inject() (
     }
   }
 
+  def unkeepBatch() = JsonAction.authenticatedParseJson { request =>
+    implicit val keepFormat = ExternalId.format[Keep]
+    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
+    idsOpt map { ids =>
+      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId) partition ( _._2.isSuccess )
+      Ok(Json.obj(
+        "removedKeeps" -> deactivatedKeepInfos.map(s => s._2.get),
+        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> e._2.failed.get.getMessage))
+      ))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+    }
+  }
+
   def getKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
     db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
       Ok(Json.toJson(KeepInfo.fromBookmark(b)))
@@ -217,12 +232,10 @@ class KeepsController @Inject() (
   }
 
   def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-      val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
-      Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
-    } getOrElse {
-      NotFound(Json.obj("error" -> "Keep not found"))
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    bookmarksCommander.unkeep(id, request.userId) match {
+      case Failure(t)  => BadRequest(Json.obj("error" -> s"${t.getMessage}"))
+      case Success(ki) => Ok(Json.obj("removedKeep" -> ki))
     }
   }
 

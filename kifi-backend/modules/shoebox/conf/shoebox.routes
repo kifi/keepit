@@ -215,6 +215,7 @@ POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitl
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
 POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple()
 POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
+POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep])

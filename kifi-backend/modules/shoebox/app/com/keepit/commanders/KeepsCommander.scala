@@ -20,6 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.{net, KestrelCombinator}
 import com.keepit.common.net.URISanitizer
+import scala.util.{Failure, Try}
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -151,6 +152,36 @@ class KeepsCommander @Inject() (
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos
+  }
+
+  def unkeepBatch(ids:Seq[ExternalId[Keep]], userId:Id[User])(implicit context: HeimdalContext):Seq[(ExternalId[Keep], Try[KeepInfo])] = {
+    ids map { id =>
+      id -> unkeep(id, userId)
+    } // todo: optimize
+  }
+
+  // a stricter version (extId required)
+  def unkeep(extId:ExternalId[Keep], userId:Id[User])(implicit context: HeimdalContext):Try[KeepInfo] = {
+    db.readWrite { implicit s =>
+      keepRepo.getOpt(extId) match {
+        case None => Failure(new IllegalArgumentException(s"Cannot find keep with extId=$extId"))
+        case Some(keep) =>
+          if (keep.userId != userId) throw new IllegalStateException(s"Keep with extId=$extId is not associated with userId=$userId")
+          else {
+            Try {
+              val saved = keepRepo.save(keep withActive false)
+              log.info(s"[unkeep($userId)] deactivated keep=$saved")
+              keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+              saved
+            }
+          }
+      }
+    } map { saved =>
+      // notify extension?
+      keptAnalytics.unkeptPages(userId, Seq(saved), context)
+      searchClient.updateURIGraph()
+      KeepInfo.fromBookmark(saved)
+    }
   }
 
   def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {
