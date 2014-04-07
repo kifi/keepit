@@ -10,6 +10,12 @@ import com.keepit.cortex.core.FeatureRepresentation
 import com.keepit.common.db.Id
 import com.google.inject.{Singleton, Inject}
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.cortex.models.lda.LDAURIFeatureUpdater
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.common.plugin.SchedulingProperties
 
 @Singleton
 class URIPuller @Inject()(
@@ -30,3 +36,17 @@ abstract class URIFeatureUpdater[M <: StatModel](
   protected def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get
 }
 
+class LDAURIFeatureUpdateActor @Inject()(
+  airbrake: AirbrakeNotifier,
+  updater: LDAURIFeatureUpdater
+) extends FeatureUpdateActor[Id[NormalizedURI], NormalizedURI, DenseLDA](airbrake: AirbrakeNotifier, updater)
+
+trait LDAURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, DenseLDA]
+
+
+@Singleton
+class LDAURIFeatureUpdatePluginImpl @Inject()(
+  actor: ActorInstance[FeatureUpdateActor[Id[NormalizedURI], NormalizedURI, DenseLDA]],
+  discovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties
+) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAURIFeatureUpdatePlugin
