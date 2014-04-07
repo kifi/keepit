@@ -14,7 +14,7 @@ case class CortexProdModelModule() extends CortexModelModule{
   @Singleton
   @Provides
   def ldaWordRepresenter(ldaStore: LDAModelStore): LDAWordRepresenter = {
-    val version = ModelVersion[DenseLDA](1)
+    val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
     new LDAWordRepresenter(version, lda)
   }
@@ -26,7 +26,7 @@ case class CortexDevModelModule() extends CortexModelModule {
   @Singleton
   @Provides
   def ldaWordRepresenter(ldaStore: LDAModelStore): LDAWordRepresenter = {
-    val version = ModelVersion[DenseLDA](1)
+    val version = ModelVersions.denseLDAVersion
     val lda = ldaStore.get(version).get
     new LDAWordRepresenter(version, lda)
   }

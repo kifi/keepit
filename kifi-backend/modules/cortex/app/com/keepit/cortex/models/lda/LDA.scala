@@ -18,6 +18,7 @@ import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.cortex.plugins.URIFeatureUpdater
 import com.keepit.cortex.plugins.DataPuller
+import com.keepit.cortex._
 
 trait LDA extends StatModel
 
@@ -56,8 +57,7 @@ trait LDAModelStore extends StatModelStore[DenseLDA]
 class S3LDAModelStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)
 extends S3StatModelStore[DenseLDA] with LDAModelStore {
   val formatter = DenseLDAFormatter
-  val prefix = "stat_models/dense_lda/"
-  override def keyPrefix() = prefix
+  override val prefix = ModelStorePrefix.denseLDA
 }
 
 class InMemoryLDAModelStore extends InMemoryStatModelStore[DenseLDA] with LDAModelStore{
@@ -68,8 +68,7 @@ trait LDAURIFeatureStore extends FloatVecFeatureStore[Id[NormalizedURI], Normali
 
 class S3BlobLDAURIFeatureStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)
   extends S3BlobFloatVecFeatureStore[Id[NormalizedURI], NormalizedURI, DenseLDA] with LDAURIFeatureStore{
-  val prefix = "uri_features/dense_lda/"
-  override def keyPrefix() = prefix
+  val prefix = FeatureStorePrefix.URIFeature.denseLDA
 }
 
 class InMemoryLDAURIFeatureStore extends InMemoryFloatVecFeatureStore[Id[NormalizedURI], NormalizedURI, DenseLDA] with LDAURIFeatureStore
@@ -79,8 +78,7 @@ trait LDAURIFeatureCommitStore extends CommitInfoStore[NormalizedURI, DenseLDA]
 class S3LDAURIFeatureCommitStore(bucketName: S3Bucket,
   amazonS3Client: AmazonS3,
   accessLog: AccessLog) extends S3CommitInfoStore[NormalizedURI, DenseLDA](bucketName, amazonS3Client, accessLog) with LDAURIFeatureCommitStore{
-  val prefix = "commit_info/dense_lda_uri_features/"
-  override def keyPrefix() = prefix
+  val prefix = CommitInfoStorePrefix.URIFeature.denseLDA
 }
 
 class InMemoryLDAURIFeatureCommitStore extends InMemoryCommitInfoStore[NormalizedURI, DenseLDA] with LDAURIFeatureCommitStore
