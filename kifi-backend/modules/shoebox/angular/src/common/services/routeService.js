@@ -24,7 +24,7 @@ angular.module('kifi.routeService', [])
       linkNetwork: function (network) {
         return env.origin + '/link/' + network;
       },
-      refreshNetworks: '/friends/invite/refresh', // would love to be more ajax-y
+      refreshNetworks: env.origin + '/friends/invite/refresh', // would love to be more ajax-y
       prefs: route('/user/prefs'),
       importGmail: env.origin + '/importContacts', // wtf, why top level route?
       networks: route('/user/networks'),
