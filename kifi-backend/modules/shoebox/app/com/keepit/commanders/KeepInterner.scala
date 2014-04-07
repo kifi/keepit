@@ -160,7 +160,7 @@ class KeepInterner @Inject() (
         (false, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, keepRepo.save(KeepFactory(uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+        (true, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
     }
   }
 
