@@ -13,7 +13,12 @@ angular.module('kifi.friends', [
   function ($routeProvider) {
     $routeProvider.when('/friends', {
       templateUrl: 'friends/friends.tpl.html',
-      controller: 'FriendsCtrl'
+      controller: 'FriendsCtrl',
+      resolve: {
+        'kifiFriends': ['friendService', function (friendService) {
+          return friendService.getKifiFriends();
+        }]
+      }
     });
   }
 ])

@@ -51,6 +51,15 @@ angular.module('kifi.inviteService', [
       if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
         result.image = routeService.formatPicUrl(result.socialId, result.image);
       }
+      if (result.status === 'invited') {
+        var sendText;
+        if (result.inviteSentAgo) {
+          sendText = $window.moment(+new Date() - result.inviteSentAgo).fromNow();
+        } else {
+          sendText = $window.moment(new Date(result.inviteLastSentAt)).fromNow(); // remove last when server is updated
+        }
+        result.inviteText = sendText;
+      }
       return result;
     }
 

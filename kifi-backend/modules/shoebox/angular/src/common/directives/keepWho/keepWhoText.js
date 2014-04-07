@@ -50,7 +50,7 @@ angular.module('kifi.keepWhoText', [])
             text = others + ' others';
           }
           if (scope.keep.isMyBookmark || scope.keep.keepers.length > 0) {
-            text = '+ ' + text
+            text = '+ ' + text;
           }
           return text;
         };
