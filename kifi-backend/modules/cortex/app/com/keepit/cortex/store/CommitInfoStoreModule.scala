@@ -8,9 +8,11 @@ import com.keepit.cortex.models.lda._
 import com.keepit.common.store.S3Bucket
 import play.api.Play._
 import com.keepit.common.store.DevStoreModule
+import net.codingwell.scalaguice.ScalaModule
 
+trait CommitInfoStoreModule extends ScalaModule
 
-case class CommitInfoProdStoreModule() extends ProdStoreModule{
+case class CommitInfoProdStoreModule() extends ProdStoreModule with CommitInfoStoreModule{
   def configure(){}
 
   @Singleton
@@ -22,7 +24,7 @@ case class CommitInfoProdStoreModule() extends ProdStoreModule{
 
 }
 
-case class CommitInfoDevStoreModule() extends DevStoreModule(CommitInfoProdStoreModule()){
+case class CommitInfoDevStoreModule() extends DevStoreModule(CommitInfoProdStoreModule()) with CommitInfoStoreModule{
   def configure(){}
 
   @Singleton

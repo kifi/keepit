@@ -35,14 +35,14 @@ object DenseLDAFormatter extends BinaryFormatter[DenseLDA] {
 
 case class LDAWordRepresenter(val version: ModelVersion[DenseLDA], lda: DenseLDA) extends HashMapWordRepresenter[DenseLDA](lda.dimension, lda.mapper)
 
-case class LDADocRepresenter(wordRep: LDAWordRepresenter) extends NaiveSumDocRepresenter(wordRep){
+case class LDADocRepresenter @Inject()(wordRep: LDAWordRepresenter) extends NaiveSumDocRepresenter(wordRep){
   override def normalize(vec: Array[Float]): Array[Float] = {
     val s = vec.sum
     vec.map{ x => x/s}
   }
 }
 
-case class LDAURIRepresenter(docRep: LDADocRepresenter, articleStore: ArticleStore) extends BaseURIFeatureRepresenter(docRep, articleStore) {
+case class LDAURIRepresenter @Inject()(docRep: LDADocRepresenter, articleStore: ArticleStore) extends BaseURIFeatureRepresenter(docRep, articleStore) {
 
   override def isDefinedAt(article: Article): Boolean = article.contentLang == Some(Lang("en"))
 
