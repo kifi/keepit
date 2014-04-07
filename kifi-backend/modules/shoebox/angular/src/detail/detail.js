@@ -24,6 +24,7 @@ angular.module('kifi.detail',
 
         scope.$watch(scope.getPreviewed, function (keep) {
           scope.keep = keep;
+          scope.refreshScroll();
         });
 
         scope.getSelectedKeeps = function () {
@@ -80,14 +81,15 @@ angular.module('kifi.detail',
           return keepService.togglePrivate(keeps);
         };
 
+        scope.refreshScroll = scope.refreshScroll || angular.noop;
         var scrollRefresh = _.throttle(function () {
           scope.refreshScroll();
         }, 150);
         $window.addEventListener('resize', scrollRefresh);
+
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', scrollRefresh);
         });
-        scope.refreshScroll();
 
       }
     };
