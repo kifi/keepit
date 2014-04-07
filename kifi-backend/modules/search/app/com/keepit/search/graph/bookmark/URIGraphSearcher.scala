@@ -78,6 +78,12 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
 
   if (userGraphsSearcher.userId != myUserId) throw new IllegalArgumentException("user id mismatch")
 
+  override def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSet = {
+    if (publicOnly != true && sourceId != myUserId) throw new NotAuthorizedURIGraphQueryException(s"requesting user ${myUserId} should not have access to user ${sourceId}'s private keeps")
+
+    super.getUserToUriEdgeSet(sourceId, publicOnly)
+  }
+
   private[this] val friendIdsFuture: Future[Set[Long]] = userGraphsSearcher.getConnectedUsersFuture()
   private[this] val unfriendedFuture: Future[Set[Long]] = userGraphsSearcher.getUnfriendedFuture()
 
@@ -169,6 +175,8 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     }
   }
 }
+
+class NotAuthorizedURIGraphQueryException(msg: String) extends Exception(msg)
 
 class UserInfo(val id: Id[User], val publicList: URIList, val privateList: URIList, val bookmarkIdArray: Array[Long]) {
   val uriIdArray: Array[Long] = {

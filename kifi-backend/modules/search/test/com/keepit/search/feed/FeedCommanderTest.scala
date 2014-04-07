@@ -72,13 +72,13 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
         val (users, uris, bms, t0) = setup(client)
 
         val store = mkStore(uris)
-        val (shardedUriGraphIndexer, _, _, userGraphIndexer, userGraphsSearcherFactory, _) = initIndexes(store)
+        val (shardedUriGraphIndexer, _, _, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
         shardedUriGraphIndexer.update()
         userGraphIndexer.update()
 
-        val uriGraphCommander = new URIGraphCommanderImpl(RequestingUser(users(0).id.get), shardedUriGraphIndexer)
+        val uriGraphCommanderFactory = new URIGraphCommanderFactory(mainSearcherFactory)
         val metaProvider = new FeedMetaInfoProvider(client)
-        val feedCommander = new FeedCommanderImpl(userGraphsSearcherFactory, uriGraphCommander, client, metaProvider)
+        val feedCommander = new FeedCommander(userGraphsSearcherFactory, uriGraphCommanderFactory, client, metaProvider)
 
         val feeds = feedCommander.getFeeds(users(0).id.get, 10)
         feeds.size === 2
