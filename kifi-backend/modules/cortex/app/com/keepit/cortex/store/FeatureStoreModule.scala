@@ -9,8 +9,11 @@ import com.keepit.common.store.S3Bucket
 import play.api.Play._
 import com.keepit.common.store.DevStoreModule
 import com.keepit.cortex.models.lda.S3LDAModelStore
+import net.codingwell.scalaguice.ScalaModule
 
-case class FeatureProdStoreModule() extends ProdStoreModule{
+trait FeatureStoreModule extends ScalaModule
+
+case class FeatureProdStoreModule() extends ProdStoreModule with FeatureStoreModule{
   def configure(){}
 
   @Singleton
@@ -21,7 +24,7 @@ case class FeatureProdStoreModule() extends ProdStoreModule{
   }
 }
 
-case class FeatureDevStoreModule() extends DevStoreModule(FeatureProdStoreModule()){
+case class FeatureDevStoreModule() extends DevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule{
   def configure(){}
 
   @Singleton

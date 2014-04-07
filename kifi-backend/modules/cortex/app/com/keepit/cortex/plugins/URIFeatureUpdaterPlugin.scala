@@ -43,7 +43,6 @@ class LDAURIFeatureUpdateActor @Inject()(
 
 trait LDAURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, DenseLDA]
 
-
 @Singleton
 class LDAURIFeatureUpdatePluginImpl @Inject()(
   actor: ActorInstance[FeatureUpdateActor[Id[NormalizedURI], NormalizedURI, DenseLDA]],
