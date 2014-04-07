@@ -100,6 +100,10 @@ angular.module('kifi.inviteService', [
         });
       },
 
+      expireSocialSearch: function () {
+        socialSearchService.expireAll();
+      },
+
       inviteList: inviteList,
 
       socialSelected: selected,
@@ -140,17 +144,20 @@ angular.module('kifi.inviteService', [
         }
 
         //login if needed
-        if ($FB.FB.getAuthResponse()) {
-          doInvite();
+        if (platform === 'facebook') {
+          if ($FB.FB.getAuthResponse()) {
+            doInvite();
+          } else {
+            $FB.FB.login(function (response) {
+              if (response.authResponse) {
+                doInvite();
+              }
+              //else user cancelled login. Do nothing further.
+            });
+          }
         } else {
-          $FB.FB.login(function (response) {
-            if (response.authResponse) {
-              doInvite();
-            }
-            //else user cancelled login. Do nothing further.
-          });
+          doInvite();
         }
-
 
         return deferred.promise;
 

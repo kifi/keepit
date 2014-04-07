@@ -115,8 +115,17 @@ angular.module('kifi.invite', [
           }
         }
 
-        scope.invite = function (result) {
+        scope.invite = function (result, $event) {
           $log.log('this person:', result);
+          var $elem = angular.element($event.target);
+          $elem.text('Sending');
+          inviteService.invite(result.networkType, result.socialId).then(function (res) {
+            $elem.text('Sent!');
+            inviteService.expireSocialSearch();
+          }, function (err) {
+            $log.log('err:', err, result);
+            $elem.text('Error. Retry?');
+          });
         };
 
         scope.$on('$destroy', function () {
