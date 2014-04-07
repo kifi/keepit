@@ -23,9 +23,11 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
           $timeout.cancel(timeout);
         };
 
-        scope.$on('$destroy', function() {
+        scope.$on('$destroy', function () {
           scope.cancelTimeout();
-          if (tooltip) tooltip.remove();
+          if (tooltip) {
+            tooltip.remove();
+          }
         });
 
         scope.showTooltip = function () {
