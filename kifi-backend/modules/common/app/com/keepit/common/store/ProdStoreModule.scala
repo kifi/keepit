@@ -12,6 +12,11 @@ trait StoreModule extends ScalaModule {
 
 }
 
+abstract class ProdOrElseDevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
+  protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
+    current.configuration.getString(parameter).map(_ => expression)
+}
+
 trait ProdStoreModule extends StoreModule {
 
   @Singleton
@@ -49,16 +54,13 @@ trait ProdStoreModule extends StoreModule {
   }
 }
 
-abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
+abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule: T) extends ProdOrElseDevStoreModule(prodStoreModule) {
 
   @Singleton
   @Provides
   def amazonS3Client(awsCredentials: BasicAWSCredentials): AmazonS3 = {
     new AmazonS3Client(awsCredentials)
   }
-
-  protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
-    current.configuration.getString(parameter).map(_ => expression)
 
   @Singleton
   @Provides
