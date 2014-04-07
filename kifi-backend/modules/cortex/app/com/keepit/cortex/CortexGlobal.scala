@@ -9,7 +9,7 @@ object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
   val module = CortexProdModule()
 
   override def onStart(app: Application) {
-    log.info("\n\n============================\n\nstarting cortex")
+    log.info("starting cortex")
     startCortexServices()
     super.onStart(app)
     log.info("cortex started")
