@@ -11,6 +11,7 @@ import com.keepit.common.store.DevStoreModule
 import com.keepit.cortex.models.lda.S3LDAModelStore
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.store.{StoreModule, ProdOrElseDevStoreModule}
+import com.keepit.cortex._
 
 trait FeatureStoreModule extends StoreModule
 
@@ -20,7 +21,7 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
   @Singleton
   @Provides
   def ldaURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAURIFeatureStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.cortex.bucket").get)
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
     new S3BlobLDAURIFeatureStore(bucketName, amazonS3Client, accessLog)
   }
 }
@@ -31,7 +32,7 @@ case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule[FeatureProdS
   @Singleton
   @Provides
   def ldaURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAURIFeatureStore = {
-    whenConfigured("amazon.s3.cortex.bucket")(
+    whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.ldaURIFeatureStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryLDAURIFeatureStore)
   }
