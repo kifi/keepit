@@ -39,12 +39,12 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     };
 
     $scope.importBookmarks = function () {
-      $rootScope.$emit('import.bookmarks');
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
     };
 
     $window.addEventListener('message', function (event) {
       if (event.data && event.data.bookmarkCount > 0) {
-        $rootScope.$emit('import.bookmarks', event.data.bookmarkCount, event);
+        $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
       }
     });
     $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
