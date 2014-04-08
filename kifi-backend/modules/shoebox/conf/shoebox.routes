@@ -73,9 +73,6 @@ POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksCont
 
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
-
-POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
-
 # This should match the output format of S3ImageConfig#keyByExternalId
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
 GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], name: String)
