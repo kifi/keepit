@@ -8,6 +8,7 @@ import com.keepit.cortex.store._
 
 case class CortexProdModule()
 extends CortexModule(
+  commonStoreModule = CortexCommonProdStoreModule(),
   commitInfoModule =  CommitInfoProdStoreModule(),
   featureStoreModuel = FeatureProdStoreModule(),
   statModelStoreModuel = StatModelProdStoreModule(),
