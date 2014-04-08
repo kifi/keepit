@@ -667,12 +667,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         savedKeeps.length === withCollection.size
         savedKeeps.forall(k => k.id.nonEmpty) === true
 
-        sourceForTitle("title 11") === KeepSource.site
-        sourceForTitle("title 21") === KeepSource.site
-        sourceForTitle("title 31") === KeepSource.site
+        sourceForTitle("title 11") === KeepSource.mobile
+        sourceForTitle("title 21") === KeepSource.mobile
+        sourceForTitle("title 31") === KeepSource.mobile
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.unkeepBatch().toString
-        path === "/site/keeps/delete" // remove already taken
+        path === "/m/1/keeps/delete" // remove already taken
 
         implicit val keepFormat = ExternalId.format[Keep]
         val json = Json.obj("ids" -> JsArray(savedKeeps.take(2) map {k => Json.toJson(k.id.get)}))
