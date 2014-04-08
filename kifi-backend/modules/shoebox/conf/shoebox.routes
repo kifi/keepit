@@ -125,6 +125,9 @@ POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.Mobil
 POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.addKeeps()
 
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
+POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepBatch()
+POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileBookmarksController.unkeep(id: ExternalId[Keep])
+
 POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrl()
 POST    /m/1/keeps/imageUrls                @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrls()
 
