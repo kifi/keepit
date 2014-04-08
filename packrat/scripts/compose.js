@@ -68,7 +68,9 @@ var initCompose = (function() {
   }).mousedown(function () {
     $d.removeData('preventNextMouseUp');
   }).mouseup(function (e) {
-    $d.data('sel', getSelRange());
+    if (document.activeElement === this) {
+      $d.data('sel', getSelRange());
+    }
 
     if ($d.data('preventNextMouseUp')) {
       $d.removeData('preventNextMouseUp');
@@ -86,7 +88,9 @@ var initCompose = (function() {
       sel.addRange(r2);
     }
   }).keyup(function () {
-    $d.data('sel', getSelRange());
+    if (document.activeElement === this) {
+      $d.data('sel', getSelRange());
+    }
   }).on('input', function () {
     var empty = this.firstElementChild === this.lastElementChild && !this.textContent;
     if (empty) {
@@ -112,7 +116,7 @@ var initCompose = (function() {
       onAdd: function () {
         if (defaultText && !$d.text()) {
           $f.removeClass('kifi-empty');
-          $d.text(defaultText);
+          $d.text(defaultText).removeData('sel');
         }
         if ($t.tokenInput('get').length === 1) {
           $t.tokenInput('flushCache');
