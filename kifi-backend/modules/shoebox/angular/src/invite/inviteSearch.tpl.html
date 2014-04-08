@@ -13,7 +13,7 @@
               <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.network}}
             </div>
           </div>
-          <div class="social-invite-action">
+          <div class="social-invite-action clickable">
             <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
           </div>
         </div>
@@ -34,19 +34,19 @@
               Kifi user
             </div>
           </div>
-          <div class="social-invite-action">
+          <div class="social-invite-action clickable">
             <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
           </div>
         </div>
 
         <div ng-if="result.status === 'invited'">
           <div class="social-invite-summary">
-            <div class="social-invite-name">{{result.label}}</div>
+            <div class="social-invite-name-long">{{result.label}}</div>
             <div class="social-invite-network">
-              <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>invited 8 days ago
+              <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.inviteText}}
             </div>
           </div>
-          <div class="social-invite-action">
+          <div class="social-invite-action clickable">
             <div class="social-invite-button" ng-click="invite(result, $event)">Resend</div>
           </div>
         </div>
@@ -54,11 +54,11 @@
       </div>
 
       <div ng-if="result.custom === 'email'">
-        <img src="https://graph.facebook.com/619841083/picture?width=75&height=75" class="social-invite-image">
+        <img src="/img/email-icon.png" class="social-invite-image cant-find">
         <div class="social-invite-summary">
           <div class="social-invite-name social-invite-custom-email">Email to {{result.label}}</div>
         </div>
-        <div class="social-invite-action">
+        <div class="social-invite-action clickable">
           <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
         </div>
       </div>

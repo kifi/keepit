@@ -15,7 +15,14 @@ angular.module('kifi.invite', [
   function ($routeProvider) {
     $routeProvider.when('/invite', {
       templateUrl: 'invite/invite.tpl.html',
-      controller: 'InviteCtrl'
+      controller: 'InviteCtrl',
+      resolve: {
+        'wtiList': ['wtiService', function (wtiService) {
+          return wtiService.loadInitial().then(function (res) {
+            return res;
+          });
+        }]
+      }
     }).when('/friends/invite', {
       redirectTo: '/invite'
     });
@@ -27,8 +34,6 @@ angular.module('kifi.invite', [
   function ($scope, $http, profileService, routeService, $window, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
-
-    wtiService.loadInitial();
     $scope.whoToInvite = wtiService.list;
 
     $scope.wtiScrollDistance = '100%';
@@ -71,8 +76,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document', '$log', 'socialService',
-  function (inviteService, $document, $log, $socialService) {
+  'inviteService', '$document', '$log', 'socialService', '$timeout',
+  function (inviteService, $document, $log, $socialService, $timeout) {
     return {
       scope: {},
       replace: true,
@@ -123,12 +128,19 @@ angular.module('kifi.invite', [
           $log.log('this person:', result);
           var $elem = angular.element($event.target);
           $elem.text('Sending');
-          inviteService.invite(result.networkType, result.socialId).then(function (res) {
+          $elem.parent().removeClass('clickable');
+          inviteService.invite(result.networkType, result.socialId).then(function () {
             $elem.text('Sent!');
+            $elem.off('click');
+            $timeout(function () {
+              $elem.parent().fadeOut('fast');
+            }, 2000);
             inviteService.expireSocialSearch();
           }, function (err) {
             $log.log('err:', err, result);
             $elem.text('Error. Retry?');
+            $elem.parent().addClass('clickable');
+            inviteService.expireSocialSearch();
           });
         };
 

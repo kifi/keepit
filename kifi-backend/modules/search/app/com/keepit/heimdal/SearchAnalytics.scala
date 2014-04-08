@@ -248,7 +248,8 @@ class SearchAnalytics @Inject() (
       case Some(googleHost) if googleHost.domain.contains("google") => (googleHost.name, "Google")
       case Some(kifiHost) if kifiHost.domain.contains("kifi") => (kifiHost.name, "Site")
       case Some(otherHost) => (otherHost.name, "Unknown")
-      case None if rawOrigin == "mobile" => ("mobile", "iOS App")
+      case None if rawOrigin.toLowerCase == "mobile" || rawOrigin.toLowerCase() == "ios app" => ("iOS App", "iOS App")
+      case None if rawOrigin.toLowerCase == "android App" => ("Android App", "Android App")
       case None => (rawOrigin, "Unknown")
     }
     contextBuilder += ("origin", origin)

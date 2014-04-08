@@ -51,6 +51,10 @@ angular.module('kifi.inviteService', [
       if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
         result.image = routeService.formatPicUrl(result.socialId, result.image);
       }
+      if (result.status === 'invited') {
+        var sendText = $window.moment(new Date(result.inviteLastSentAt)).fromNow();
+        result.inviteText = sendText;
+      }
       return result;
     }
 
@@ -156,6 +160,9 @@ angular.module('kifi.inviteService', [
             });
           }
         } else {
+          if (platform === 'fortytwoNF') {
+            platform = 'fortytwo';
+          }
           doInvite();
         }
 

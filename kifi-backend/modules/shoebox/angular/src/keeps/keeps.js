@@ -132,7 +132,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.onClickKeep = function (keep, $event) {
           if ($event.target.tagName !== 'A') {
             if (scope.keepClick) {
-              console.log(scope.keepClick);
               scope.keepClick(keep, $event);
             }
             if ($event.ctrlKey || $event.metaKey) {
