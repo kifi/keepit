@@ -52,7 +52,6 @@ class LDAURIFeatureUpdateActor @Inject()(
   updater: LDAURIFeatureUpdater
 ) extends FeatureUpdateActor[Id[NormalizedURI], NormalizedURI, DenseLDA](airbrake: AirbrakeNotifier, updater)
 
-@ImplementedBy(classOf[LDAURIFeatureUpdatePluginImpl])
 trait LDAURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, DenseLDA]
 
 @Singleton
