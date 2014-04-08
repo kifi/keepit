@@ -12,7 +12,7 @@ case class ExternalId[T](id: String) {
 }
 
 object ExternalId {
-  def format[T]: Format[ExternalId[T]] = Format(
+  implicit def format[T]: Format[ExternalId[T]] = Format(
     __.read[String].map(ExternalId(_)),
     new Writes[ExternalId[T]]{ def writes(o: ExternalId[T]) = JsString(o.id)}
   )
