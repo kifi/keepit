@@ -112,12 +112,15 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
   private def commit(): Unit = {
     val commitData = CommitInfo(currentSequence, representer.version, currentDateTime)
     val key = genCommitInfoKey()
+    log.info(s"commiting data $commitData")
     commitInfoStore.+=(key, commitData)
   }
 
   def update(): Unit = {
-    log.info(s"$name: begin a new round of update")
     val ents = dataPuller.getSince(SequenceNumber[T](currentSequence.value), limit = pullSize)
+    log.info(s"begin a new round of update. data size: ${ents.size}")
+    if (ents.isEmpty) return
+
     val maxSeq = ents.map{ent => getSeqNumber(ent)}.max
     val entsAndFeat = ents.map{ ent => (genFeatureKey(ent), representer.apply(ent))}
     entsAndFeat.foreach{ case (k, vOpt) =>
