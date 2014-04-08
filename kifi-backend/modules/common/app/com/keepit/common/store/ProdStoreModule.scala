@@ -12,7 +12,7 @@ trait StoreModule extends ScalaModule {
 
 }
 
-abstract class ProdOrElseDevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) extends StoreModule {
+abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T) extends StoreModule {
   protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
     current.configuration.getString(parameter).map(_ => expression)
 }

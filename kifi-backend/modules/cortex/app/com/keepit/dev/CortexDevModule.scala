@@ -7,6 +7,7 @@ import com.keepit.cortex.CortexDevModelModule
 
 
 case class CortexDevModule() extends CortexModule(
+  commonStoreModule = CortexCommonDevStoreModule(),
   commitInfoModule =  CommitInfoDevStoreModule(),
   featureStoreModuel = FeatureDevStoreModule(),
   statModelStoreModuel = StatModelDevStoreModule(),

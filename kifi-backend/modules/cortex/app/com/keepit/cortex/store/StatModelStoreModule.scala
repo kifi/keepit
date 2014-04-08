@@ -11,10 +11,11 @@ import com.keepit.common.store.DevStoreModule
 import com.keepit.cortex.core._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.cortex._
+import com.keepit.common.store.{StoreModule, ProdOrElseDevStoreModule}
 
-trait StatModelStoreModule extends ScalaModule
+trait StatModelStoreModule extends StoreModule
 
-case class StatModelProdStoreModule() extends ProdStoreModule with StatModelStoreModule{
+case class StatModelProdStoreModule() extends StatModelStoreModule{
   def configure(){}
 
   @Singleton
@@ -25,7 +26,7 @@ case class StatModelProdStoreModule() extends ProdStoreModule with StatModelStor
   }
 }
 
-case class StatModelDevStoreModule() extends DevStoreModule(StatModelProdStoreModule()) with StatModelStoreModule{
+case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule[StatModelProdStoreModule](StatModelProdStoreModule()) with StatModelStoreModule{
   def configure(){}
 
   @Singleton
