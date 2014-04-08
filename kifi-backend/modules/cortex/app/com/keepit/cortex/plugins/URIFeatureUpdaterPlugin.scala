@@ -16,6 +16,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.plugin.SchedulingProperties
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[URIPullerImpl])
 trait URIPuller extends DataPuller[NormalizedURI]
@@ -24,8 +26,14 @@ trait URIPuller extends DataPuller[NormalizedURI]
 class URIPullerImpl @Inject()(
   shoebox: ShoeboxServiceClient
 ) extends URIPuller{
-  def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = Seq()
-  def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = Seq()
+  def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
+    Await.result(shoebox.getScrapedFullURIs(lowSeq, limit), 5 seconds)
+  }
+  def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = {
+    val limit = (highSeq.value - lowSeq.value).toInt
+    val uris = Await.result(shoebox.getScrapedFullURIs(lowSeq, limit), 5 seconds)
+    uris.filter(_.seq <= highSeq)
+  }
 }
 
 abstract class URIFeatureUpdater[M <: StatModel](

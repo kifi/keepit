@@ -68,6 +68,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
+  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
@@ -483,6 +484,13 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
+
+  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]] = {
+    call(Shoebox.internal.getScrapedFullURIs(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      Json.fromJson[Seq[NormalizedURI]](r.json).get
+    }
+  }
+
 
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]] = {
     call(Shoebox.internal.getUserIndexable(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
