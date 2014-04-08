@@ -14,7 +14,7 @@ angular.module('kifi.social.networksNeedAttention', [])
         scope.data = {};
         scope.doShow = function () {
           $rootScope.$emit('showGlobalModal', 'addNetworks');
-        }
+        };
       }
     };
   }
