@@ -25,7 +25,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber[Keep], fetchSize: Int)(implicit session: RSession): Seq[Keep]
-  def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep]
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
@@ -220,12 +219,6 @@ class KeepRepoImpl @Inject() (
   }
 
   def getBookmarksChanged(num: SequenceNumber[Keep], limit: Int)(implicit session: RSession): Seq[Keep] = super.getBySequenceNumber(num, limit)
-
-  def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int =
-    Query((for {
-      b1 <- rows if b1.userId === userId && b1.state === KeepStates.ACTIVE
-      b2 <- rows if b2.userId === otherUserId && b2.state === KeepStates.ACTIVE && b2.uriId === b1.uriId && !b2.isPrivate
-    } yield b2.id).countDistinct).first
 
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep] =
     (for(b <- rows if b.urlId === urlId) yield b).list

@@ -322,12 +322,6 @@ class KeepsController @Inject() (
     ))
   }
 
-  def mutualKeeps(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    Ok(Json.obj(
-      "mutualKeeps" -> db.readOnly { implicit s => keepRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
-    ))
-  }
-
   def importStatus() = JsonAction.authenticated { request =>
     val values = db.readOnly { implicit session =>
       userValueRepo.getValues(request.user.id.get, "bookmark_import_last_start", "bookmark_import_done", "bookmark_import_total")

@@ -59,10 +59,10 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
+# Note: /bookmarks/remove is deprecated. Use /bookmarks/:id/delete instead.
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/:id/delete       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
-POST    /bookmarks/update          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
-GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
+POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
 POST    /tagsByUrl                  @com.keepit.controllers.ext.ExtBookmarksController.tagsByUrl()
@@ -223,7 +223,6 @@ GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsControl
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep])
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
-GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.KeepsController.mutualKeeps(id: ExternalId[User])
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
 POST    /site/keeps/imageUrl        @com.keepit.controllers.website.KeepsController.getImageUrl()
 POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
