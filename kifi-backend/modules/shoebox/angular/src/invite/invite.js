@@ -48,8 +48,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteWell', [
-  'socialService',
-  function (socialService) {
+  'socialService', '$rootScope',
+  function (socialService, $rootScope) {
     return {
       scope: {},
       replace: true,
@@ -60,6 +60,10 @@ angular.module('kifi.invite', [
 
         scope.data = scope.data || {};
 
+        scope.showAddNetworks = function () {
+          $rootScope.$emit('showGlobalModal', 'addNetworks');
+        };
+
         socialService.refresh();
       }
     };
@@ -67,8 +71,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document', '$log',
-  function (inviteService, $document, $log) {
+  'inviteService', '$document', '$log', 'socialService',
+  function (inviteService, $document, $log, $socialService) {
     return {
       scope: {},
       replace: true,
@@ -133,6 +137,11 @@ angular.module('kifi.invite', [
         });
 
         $document.on('click', clickOutside);
+
+        scope.refreshFriends = function () {
+          scope.data.showCantFindModal = false;
+          $socialService.refreshNetworks();
+        }
 
       }
     };

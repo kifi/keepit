@@ -101,6 +101,15 @@ angular.module('kifi.layout.main', [
       initBookmarkImport(count, msgEvent);
     });
 
+    $rootScope.$on('showGlobalModal', function (e, modal) {
+      if (modal === 'addNetworks') {
+        $scope.modal = 'add_networks';
+        $scope.data.showAddNetworks = true;
+      } else if (modal === 'importBookmarks') {
+        initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
+      }
+    });
+
     $scope.importBookmarks = function () {
       $scope.data.showImportModal = false;
 

@@ -122,7 +122,7 @@ angular.module('kifi.inviteService', [
               'action': 'inviteFriend',
               'platform': platform
             });
-            if (res.data.url && platform === 'facebok') {
+            if (res.data.url && platform === 'facebook') {
               $FB.ui({
                 method: 'send',
                 link: 'https://www.kifi.com',

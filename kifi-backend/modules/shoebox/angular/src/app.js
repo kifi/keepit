@@ -22,6 +22,7 @@ angular.module('kifi', [
   'kifi.friends.friendCard',
   'kifi.friends.friendRequestCard',
   'kifi.social',
+  'kifi.social.networksNeedAttention',
   'kifi.socialService',
   'kifi.invite',
   'kifi.invite.connectionCard',
@@ -45,7 +46,8 @@ angular.module('kifi', [
   'ngDragDrop',
   'ui.slider',
   'angulartics',
-  'kifi.mixpanel'
+  'kifi.mixpanel',
+  'kifi.alertBanner'
 ])
 
 // fix for when ng-view is inside of ng-include:
