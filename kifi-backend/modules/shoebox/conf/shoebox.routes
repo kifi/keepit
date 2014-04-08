@@ -73,12 +73,6 @@ POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksCont
 
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
-# This should match the output format of S3ImageConfig#keyByExternalId
-GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
-GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], name: String)
-
-POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
-
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
@@ -204,6 +198,12 @@ GET     /feedback                   @com.keepit.controllers.website.FeedbackCont
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 
 POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
+
+# This should match the output format of S3ImageConfig#keyByExternalId
+GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
+GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], name: String)
+
+POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
 
 ##########################################
 # Web API
