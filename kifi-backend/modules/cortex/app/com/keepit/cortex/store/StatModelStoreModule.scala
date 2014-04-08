@@ -21,7 +21,7 @@ case class StatModelProdStoreModule() extends StatModelStoreModule{
   @Singleton
   @Provides
   def ldaModelStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAModelStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.cortex.bucket").get)
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
     new S3LDAModelStore(bucketName, amazonS3Client, accessLog)
   }
 }
@@ -32,7 +32,7 @@ case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule[StatModelP
   @Singleton
   @Provides
   def ldaModelStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAModelStore = {
-    whenConfigured("amazon.s3.cortex.bucket")(
+    whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.ldaModelStore(amazonS3Client, accessLog)
     ) getOrElse {
       val store = new InMemoryLDAModelStore

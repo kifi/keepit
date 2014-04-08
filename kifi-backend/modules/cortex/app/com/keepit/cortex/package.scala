@@ -6,6 +6,8 @@ import com.keepit.cortex.models.lda.DenseLDA
 
 package object cortex {
 
+  val S3_CORTEX_BUCKET = "amazon.s3.cortex.bucket"
+
   object ModelVersions {
     val denseLDAVersion = ModelVersion[DenseLDA](1)
   }
@@ -17,7 +19,7 @@ package object cortex {
   object FeatureStorePrefix {
 
     object URIFeature {
-      val denseLDA = "uri_features/dense_lda/"
+      val denseLDA = "features/uri/dense_lda/"
     }
 
   }
