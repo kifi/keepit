@@ -3,8 +3,8 @@ package com.keepit.graph.model
 import com.keepit.common.reflection.CompanionTypeSystem
 
 
-sealed trait VertexDataReader {
-  type V <: VertexDataReader
+sealed trait VertexDataReader { self =>
+  type V >: self.type <: VertexDataReader
   def kind: VertexKind[V]
   def id: VertexDataId[V]
 }

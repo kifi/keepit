@@ -2,8 +2,8 @@ package com.keepit.graph.model
 
 import com.keepit.common.reflection.CompanionTypeSystem
 
-sealed trait EdgeDataReader {
-  type E <: EdgeDataReader
+sealed trait EdgeDataReader { self =>
+  type E >: self.type <: EdgeDataReader
   def kind: EdgeKind[E]
 }
 
