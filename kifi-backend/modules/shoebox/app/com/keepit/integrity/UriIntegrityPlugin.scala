@@ -13,12 +13,10 @@ import scala.concurrent.duration._
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.RWSession
 import akka.pattern.{ask, pipe}
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.commanders.KeepInterner
-import com.keepit.scraper.ScrapeSchedulerPlugin
 
 trait UriChangeMessage
 
@@ -34,10 +32,7 @@ class UriIntegrityActor @Inject()(
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   keepRepo: KeepRepo,
-  bookmarkInterner: KeepInterner,
   deepLinkRepo: DeepLinkRepo,
-  scrapeInfoRepo: ScrapeInfoRepo,
-  scraper: ScrapeSchedulerPlugin,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -46,19 +41,22 @@ class UriIntegrityActor @Inject()(
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  private def getUserBookmarksByUrl(urlId: Id[URL])(implicit session: RSession): Map[Id[User], Seq[Keep]] = {
-    keepRepo.getByUrlId(urlId).groupBy(_.userId)
-  }
-
-  private def getUserBookmarksByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Map[Id[User], Seq[Keep]] = {
-    keepRepo.getByUri(uriId, excludeState = None).groupBy(_.userId)
-  }
-
   /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(oldUserBookmarks: Map[Id[User], Seq[Keep]], newUriId: Id[NormalizedURI])(implicit session: RWSession) = {
+  private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession) = {
 
-    val deactivatedBms = oldUserBookmarks.map{ case (userId, bms) =>
-      val oldBm = bms.head
+    var urlToUriIdMap: Map[String, Id[NormalizedURI]] = Map()
+
+    val deactivatedBms = oldBookmarks.map{ case oldBm =>
+
+      val userId = oldBm.userId
+
+      // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
+      val newUriId = urlToUriIdMap.getOrElse(oldBm.url, {
+        val newUri = uriRepo.getByUri(oldBm.url).getOrElse(uriRepo.internByUri(oldBm.url))
+        urlToUriIdMap += (oldBm.url -> newUri.id.get)
+        newUri.id.get
+      })
+
       keepRepo.getByUriAndUserAllStates(newUriId, userId) match {
         case None => {
           log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
@@ -111,16 +109,6 @@ class UriIntegrityActor @Inject()(
     collectionsToUpdate.foreach(collectionRepo.collectionChanged(_))
   }
 
-  private def handleScrapeInfo(oldUri: NormalizedURI, newUri: NormalizedURI)(implicit session: RWSession) = {
-    val (oldInfoOpt, newInfoOpt) = (scrapeInfoRepo.getByUriId(oldUri.id.get), scrapeInfoRepo.getByUriId(newUri.id.get))
-    (oldInfoOpt, newInfoOpt) match {
-      case (Some(oldInfo), None) if (oldInfo.state == ScrapeInfoStates.ACTIVE) => scraper.scheduleScrape(newUri)
-      case (Some(oldInfo), Some(newInfo)) if (oldInfo.state == ScrapeInfoStates.ACTIVE && newInfo.state == ScrapeInfoStates.INACTIVE ) && (newUri.state != NormalizedURIStates.UNSCRAPABLE) => scraper.scheduleScrape(newUri)
-      case _ =>
-    }
-  }
-
-
   /**
    * Any reference to the old uri should be redirected to the new one.
    * NOTE: We have 1-1 mapping from entities to url, the only exception (as of writing) is normalizedUri-url mapping, which is 1 to n.
@@ -148,8 +136,8 @@ class UriIntegrityActor @Inject()(
       uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
 
       // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
-      val bms = getUserBookmarksByUri(oldUriId)
-      handleBookmarks(bms, newUriId)
+      val bms = keepRepo.getByUri(oldUriId, excludeState = None)
+      handleBookmarks(bms)
 
       changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
     }
@@ -160,8 +148,8 @@ class UriIntegrityActor @Inject()(
    */
   private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
     handleURLMigrationNoBookmarks(url, newUriId)
-    val bms = getUserBookmarksByUrl(url.id.get)
-    handleBookmarks(bms, newUriId)
+    val bms = keepRepo.getByUrlId(url.id.get)
+    handleBookmarks(bms)
   }
 
   private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
@@ -171,8 +159,6 @@ class UriIntegrityActor @Inject()(
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
       val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
-
-      handleScrapeInfo(oldUri, newUri)
 
       deepLinkRepo.getByUrl(url.id.get).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUriId))
@@ -262,11 +248,19 @@ class UriIntegrityActor @Inject()(
 
         if (!done) {
           db.readWriteBatch(keeps, 3){ (session, keep) =>
-            uriRepo.getByUri(keep.url)(session).foreach{ uri =>
-              if (keep.uriId != uri.id.get) {
-                if (!readOnly) handleBookmarks(Map(keep.userId -> Seq(keep)), uri.id.get)(session)
+            uriRepo.getByUri(keep.url)(session) match {
+              case Some(uri) =>
+                if (keep.uriId != uri.id.get) {
+                  log.info(s"keep being fixed [keep=$keep, newUriId=${uri.id.get}]")
+
+                  if (!readOnly) handleBookmarks(Seq(keep))(session)
+                  dedupedSuccessCount += 1
+                }
+              case None =>
+                log.info(s"keep being fixed [keep=$keep, newUriId=missing]")
+
+                if (!readOnly) handleBookmarks(Seq(keep))(session)
                 dedupedSuccessCount += 1
-              }
             }
           }
           seq = keeps.last.seq
