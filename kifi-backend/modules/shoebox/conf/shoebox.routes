@@ -239,6 +239,7 @@ GET     /site/user/email            @com.keepit.controllers.website.UserControll
 POST    /site/user/password         @com.keepit.controllers.website.UserController.changePassword()
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
+GET     /site/user/import-status    @com.keepit.controllers.website.UserController.importStatus()
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()

@@ -52,12 +52,7 @@ angular.module('kifi.inviteService', [
         result.image = routeService.formatPicUrl(result.socialId, result.image);
       }
       if (result.status === 'invited') {
-        var sendText;
-        if (result.inviteSentAgo) {
-          sendText = $window.moment(+new Date() - result.inviteSentAgo).fromNow();
-        } else {
-          sendText = $window.moment(new Date(result.inviteLastSentAt)).fromNow(); // remove last when server is updated
-        }
+        var sendText = $window.moment(new Date(result.inviteLastSentAt)).fromNow();
         result.inviteText = sendText;
       }
       return result;
@@ -131,7 +126,7 @@ angular.module('kifi.inviteService', [
               'action': 'inviteFriend',
               'platform': platform
             });
-            if (res.data.url && platform === 'facebok') {
+            if (res.data.url && platform === 'facebook') {
               $FB.ui({
                 method: 'send',
                 link: 'https://www.kifi.com',
@@ -165,6 +160,9 @@ angular.module('kifi.inviteService', [
             });
           }
         } else {
+          if (platform === 'fortytwoNF') {
+            platform = 'fortytwo';
+          }
           doInvite();
         }
 
