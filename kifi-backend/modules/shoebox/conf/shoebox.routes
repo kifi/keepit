@@ -58,10 +58,12 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 # Extension API
 ##########################################
 
+POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
+# Note: /bookmarks/add is now for browser bookmark imports only
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-# Note: /bookmarks/remove is deprecated. Use /bookmarks/:id/delete instead.
+# Note: /bookmarks/remove is deprecated. Use /ext/keeps/:id/unkeep instead.
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /bookmarks/:id/delete       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
+POST    /ext/keeps/:id/unkeep       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
 POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
