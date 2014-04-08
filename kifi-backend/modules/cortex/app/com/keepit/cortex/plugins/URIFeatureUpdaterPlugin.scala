@@ -17,10 +17,13 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.plugin.SchedulingProperties
 
+@ImplementedBy(classOf[URIPullerImpl])
+trait URIPuller extends DataPuller[NormalizedURI]
+
 @Singleton
-class URIPuller @Inject()(
+class URIPullerImpl @Inject()(
   shoebox: ShoeboxServiceClient
-) extends DataPuller[NormalizedURI]{
+) extends URIPuller{
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = Seq()
   def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = Seq()
 }
