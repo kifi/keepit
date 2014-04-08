@@ -23,6 +23,7 @@ import scala.concurrent.duration._
 import com.keepit.cortex.store.FeatureStoreSequenceNumber
 import com.keepit.cortex.store.CommitInfo
 import com.keepit.cortex.store.CommitInfoKey
+import com.keepit.common.logging.Logging
 
 
 trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin{
@@ -82,13 +83,14 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
   featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
-){
+) extends Logging {
 
   // abstract methods
   protected def getSeqNumber(datum: T): SequenceNumber[T]
   protected def genFeatureKey(datum: T): K
 
   protected val pullSize = 500
+  protected val name: String = getClass.toString
 
   private var currentSequence: FeatureStoreSequenceNumber[T, M] = {
     getCommitInfoFromStore() match {
@@ -114,6 +116,7 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
   }
 
   def update(): Unit = {
+    log.info(s"$name: begin a new round of update")
     val ents = dataPuller.getSince(SequenceNumber[T](currentSequence.value), limit = pullSize)
     val maxSeq = ents.map{ent => getSeqNumber(ent)}.max
     val entsAndFeat = ents.map{ ent => (genFeatureKey(ent), representer.apply(ent))}
