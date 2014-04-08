@@ -66,10 +66,9 @@ POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksCont
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
 POST    /tagsByUrl                  @com.keepit.controllers.ext.ExtBookmarksController.tagsByUrl()
-POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksController.addToUrl()
+POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksController.createAndApplyTag()
 POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
-POST    /tags/create                @com.keepit.controllers.ext.ExtBookmarksController.createTag()
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
 
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite

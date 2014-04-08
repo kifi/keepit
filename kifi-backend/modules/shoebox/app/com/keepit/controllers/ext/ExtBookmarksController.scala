@@ -67,13 +67,6 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
-  def createTag() = JsonAction.authenticatedParseJson { request =>
-    val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-    val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    Ok(Json.toJson(SendableTag from tag))
-  }
-
   def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     db.readWrite { implicit s =>
@@ -86,7 +79,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def addToUrl() = JsonAction.authenticatedParseJson { request =>
+  def createAndApplyTag() = JsonAction.authenticatedParseJson { request =>
     val name = (request.body \ "name").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
