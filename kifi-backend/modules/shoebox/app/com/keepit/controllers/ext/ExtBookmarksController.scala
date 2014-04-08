@@ -21,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.Some
 import play.api.libs.json.JsNumber
+import scala.util.{Failure, Success}
 
 private case class SendableBookmark(
   id: ExternalId[Keep],
@@ -128,6 +129,14 @@ class ExtBookmarksController @Inject() (
       }
     } getOrElse {
       NotFound(Json.obj("error" -> "Keep not found"))
+    }
+  }
+
+  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    bookmarksCommander.unkeep(id, request.userId) match {
+      case Failure(t)  => BadRequest(Json.obj("error" -> s"${t.getMessage}"))
+      case Success(ki) => Ok(Json.obj("removedKeep" -> ki))
     }
   }
 
