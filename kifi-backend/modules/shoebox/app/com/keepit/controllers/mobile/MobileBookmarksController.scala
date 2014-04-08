@@ -25,6 +25,7 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.store.S3ScreenshotStore
 import scala.concurrent.Future
+import scala.util.{Success, Failure}
 
 class MobileBookmarksController @Inject() (
   db: Database,
@@ -93,6 +94,29 @@ class MobileBookmarksController @Inject() (
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
       Ok(Json.obj(
         "removedKeeps" -> deactivatedKeepInfos
+      ))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+    }
+  }
+
+  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    bookmarksCommander.unkeep(id, request.userId) match {
+      case Failure(t)  => BadRequest(Json.obj("error" -> s"${t.getMessage}"))
+      case Success(ki) => Ok(Json.obj("removedKeep" -> ki))
+    }
+  }
+
+  def unkeepBatch() = JsonAction.authenticatedParseJson { request =>
+    implicit val keepFormat = ExternalId.format[Keep]
+    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
+    idsOpt map { ids =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId) partition ( _._2.isSuccess )
+      Ok(Json.obj(
+        "removedKeeps" -> deactivatedKeepInfos.map(s => s._2.get),
+        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> e._2.failed.get.getMessage))
       ))
     } getOrElse {
       BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))

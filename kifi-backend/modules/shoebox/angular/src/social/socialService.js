@@ -5,8 +5,8 @@ angular.module('kifi.socialService', [
 ])
 
 .factory('socialService', [
-  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q', '$analytics',
-  function (routeService, $http, util, $rootScope, Clutch, $window, $q, $analytics) {
+  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q', '$analytics', '$timeout',
+  function (routeService, $http, util, $rootScope, Clutch, $window, $q, $analytics, $timeout) {
 
     var networks = [],
         facebook = {},
@@ -14,10 +14,49 @@ angular.module('kifi.socialService', [
         gmail = [],
         addressBooks = [],
         expiredTokens = {},
-        isRefreshing = false;
+        isRefreshing = false,
+        importStarted = false,
+        refreshing = { network: {}, abook: {} };
 
     var clutchConfig = {
       cacheDuration: 5000
+    };
+
+    var updateCheck = function (times) {
+      times = times || 10;
+      if (times < 0) {
+        // We've looped enough times. Clean up, and stop trying.
+        isRefreshing = false;
+        importStarted = false;
+        util.replaceObjectInPlace(refreshing, { network: {}, abook: {} });
+        return;
+      }
+
+      $http.get(routeService.importStatus).then(function (res) {
+        util.replaceObjectInPlace(refreshing, res);
+
+        if (_.size(res.network) > 0 || _.size(res.abook) > 0) {
+          // Did we just start an import?
+          importStarted = true;
+          $timeout(function () {
+            updateCheck(--times);
+          }, 1000);
+        } else {
+          // Empty object returned just now.
+          if (importStarted) {
+            // We previously knew about an import, and since it's empty, we're done.
+            isRefreshing = importStarted = false;
+            return;
+          } else {
+            // No import ongoing, and we've never seen evidence of an import. Check again.
+            isRefreshing = true;
+            $timeout(function () {
+              updateCheck(--times);
+            }, 3000);
+          }
+        }
+
+      });
     };
 
     var networksBackend = new Clutch(function () {
@@ -56,11 +95,14 @@ angular.module('kifi.socialService', [
 
       refreshNetworks: function () {
         isRefreshing = true;
+        updateCheck();
         // init refreshing polling
         return $http.post(routeService.refreshNetworks);
       },
 
       isRefreshing: isRefreshing,
+
+      refreshing: refreshing,
 
       connectFacebook: function () {
         $analytics.eventTrack('user_clicked_page', {
