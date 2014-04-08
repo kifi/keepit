@@ -88,6 +88,6 @@ class LDAURIFeatureUpdater @Inject()(
   representer: LDAURIRepresenter,
   featureStore: LDAURIFeatureStore,
   commitStore: LDAURIFeatureCommitStore,
-  uriPuller: DataPuller[NormalizedURI]
+  uriPuller: URIPuller
 ) extends URIFeatureUpdater[DenseLDA](representer, featureStore, commitStore, uriPuller)
 

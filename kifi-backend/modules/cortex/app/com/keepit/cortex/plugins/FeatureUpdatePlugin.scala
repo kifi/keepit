@@ -59,7 +59,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
 
 }
 
-class FeatureUpdateActor[K, T, M <: StatModel](
+abstract class FeatureUpdateActor[K, T, M <: StatModel](
   airbrake: AirbrakeNotifier,
   updater: FeatureUpdater[K, T, M]
 ) extends FortyTwoActor(airbrake) {
