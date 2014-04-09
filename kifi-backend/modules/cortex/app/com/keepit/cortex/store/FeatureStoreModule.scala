@@ -26,7 +26,7 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
   }
 }
 
-case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule[FeatureProdStoreModule](FeatureProdStoreModule()) with FeatureStoreModule{
+case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule{
   def configure(){}
 
   @Singleton
