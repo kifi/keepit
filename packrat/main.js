@@ -632,7 +632,7 @@ api.port.on({
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
-    reloadKifiAppTabs();
+    updateKifiAppTabs();
   },
   unkeep: function(data, _, tab) {
     log("[unkeep]", data)();
@@ -1415,18 +1415,15 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-var appRe = /^https?:\/\/(?:www\.)?kifi\.com(?:\/(?:|blog|profile|find|tag\/[a-z0-9-]+|friends(?:\/\w+)?))?(?:[?#].*)?$/;
-function reloadKifiAppTabs() {
+var kifiSiteRe = /^https?:\/\/(?:www\.)?kifi\.com/;
+function updateKifiAppTabs() {
+  var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (appRe.test(url)) {
-      var tabs = tabsByUrl[url];
-      if (tabs) {
-        tabs.forEach(reload);
-      }
+    if (url.lastIndexOf(prefix, 0) === 0 || kifiSiteRe.test(url)) {
+      tabsByUrl[url].forEach(function (tab) {
+        api.tabs.emit(tab, 'update_keeps');
+      });
     }
-  }
-  function reload(tab) {
-    api.tabs.reload(tab.id);
   }
 }
 
@@ -2087,25 +2084,25 @@ function devUriOr(uri) {
   return api.mode.isDev() ? 'http://dev.ezkeep.com:9000' : uri;
 }
 function apiUri(service) {
-  return "https://" + (service === "" ? "api" : service) + ".kifi.com";
+  return 'https://' + (service === '' ? 'api' : service) + '.kifi.com';
 }
 function serviceNameToUri(service) {
   switch (service) {
-    case "eliza":
+    case 'eliza':
       return elizaBaseUri();
-    case "search":
+    case 'search':
       return searchBaseUri();
     default:
       return apiBaseUri();
   }
 }
 
-var apiBaseUri = devUriOr.bind(0, apiUri(""));
-var searchBaseUri = devUriOr.bind(0, apiUri("search"));
-var elizaBaseUri = devUriOr.bind(0, apiUri("eliza"));
+var apiBaseUri = devUriOr.bind(null, apiUri(''));
+var searchBaseUri = devUriOr.bind(null, apiUri('search'));
+var elizaBaseUri = devUriOr.bind(null, apiUri('eliza'));
 
-var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
-var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
+var webBaseUri = devUriOr.bind(null, 'https://www.kifi.com');
+var admBaseUri = devUriOr.bind(null, 'https://admin.kifi.com');
 
 function getFriends(next) {
   ajax('GET', '/ext/user/friends', function gotFriends(fr) {
