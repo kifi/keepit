@@ -2,12 +2,9 @@ package com.keepit.cortex
 
 import com.google.inject.Provides
 import com.google.inject.Singleton
-import com.keepit.cortex.models.lda.LDAModelStore
-import com.keepit.cortex.models.lda.LDAWordRepresenter
+import com.keepit.cortex.models.lda._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.cortex.plugins.LDAURIFeatureUpdatePlugin
 import com.keepit.inject.AppScoped
-import com.keepit.cortex.plugins.LDAURIFeatureUpdatePluginImpl
 
 
 

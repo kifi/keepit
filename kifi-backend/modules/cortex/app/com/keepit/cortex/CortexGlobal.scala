@@ -3,7 +3,7 @@ package com.keepit.cortex
 import com.keepit.FortyTwoGlobal
 import play.api.Mode._
 import play.api._
-import com.keepit.cortex.plugins.LDAURIFeatureUpdatePlugin
+import com.keepit.cortex.models.lda.LDAURIFeatureUpdatePlugin
 
 object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
   val module = CortexProdModule()
