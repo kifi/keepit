@@ -6,13 +6,17 @@ angular.module('kifi.profileService', [
 ])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics',
-  function ($http, env, $q, util, routeService, socialService, $analytics) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$window', '$rootScope',
+  function ($http, env, $q, util, routeService, socialService, $analytics, $window, $rootScope) {
 
     var me = {
       seqNum: 0
     };
     var prefs = {};
+
+    $rootScope.$on('social.updated', function () {
+      fetchMe();
+    });
 
     function updateMe(data) {
       angular.forEach(data, function (val, key) {
@@ -180,11 +184,16 @@ angular.module('kifi.profileService', [
       });
     }
 
+    function logout() {
+      $window.location = routeService.logout;
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
+      logout: logout,
       fetchPrefs: fetchPrefs,
       prefs: prefs,
       setNewPrimaryEmail: setNewPrimaryEmail,

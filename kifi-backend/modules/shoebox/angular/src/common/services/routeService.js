@@ -30,6 +30,7 @@ angular.module('kifi.routeService', [])
       importGmail: env.origin + '/importContacts', // wtf, why top level route?
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
+      logout: 'https://www.kifi.com/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),

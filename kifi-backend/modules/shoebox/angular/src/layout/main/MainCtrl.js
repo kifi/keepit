@@ -97,10 +97,6 @@ angular.module('kifi.layout.main', [
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
-    $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
-      initBookmarkImport(count, msgEvent);
-    });
-
     $rootScope.$on('showGlobalModal', function (e, modal) {
       if (modal === 'addNetworks') {
         $scope.modal = 'add_networks';

@@ -59,6 +59,7 @@ angular.module('kifi.socialService', [
             // We previously knew about an import, and since it's empty, we're done.
             isRefreshingSocialGraph = importStarted = false;
             updateLock = false;
+            $rootScope.$emit('social.updated');
             return;
           } else {
             // No import ongoing, and we've never seen evidence of an import. Check again.

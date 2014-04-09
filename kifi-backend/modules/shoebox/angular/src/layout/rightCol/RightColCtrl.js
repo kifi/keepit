@@ -49,6 +49,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     });
     $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
+    $scope.logout = function () {
+      profileService.logout();
+    };
 
 
     var updateHeight = _.throttle(function () {
