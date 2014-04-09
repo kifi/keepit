@@ -38,8 +38,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootElement', '$timeout', 'tagService', 'util',
-  function ($document, $rootElement, $timeout, tagService, util) {
+  '$document', '$rootElement', 'tagService', 'util',
+  function ($document, $rootElement, tagService, util) {
     return {
       restrict: 'A',
       scope: true,
