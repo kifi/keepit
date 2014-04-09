@@ -111,9 +111,9 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepOne(info: KeepInfo, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
-    log.info(s"[keep] $info")
-    val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(Seq(info)), userId, source, true, installationId)
+  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
+    log.info(s"[keep] $keepJson")
+    val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
     SafeFuture{
       searchClient.updateURIGraph()
     }
