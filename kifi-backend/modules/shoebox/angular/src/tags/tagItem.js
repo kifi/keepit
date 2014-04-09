@@ -24,8 +24,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         scope.isHovering = false;
         var input = element.find('input');
 
-        scope.onKeepDrop = function (keep) {
-          tagService.addKeepToTag(scope.tag, keep);
+        scope.onKeepDrop = function (keeps) {
+          tagService.addKeepsToTag(scope.tag, keeps);
           scope.isDragTarget = false;
         };
 

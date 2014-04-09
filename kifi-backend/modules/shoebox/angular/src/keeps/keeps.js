@@ -6,6 +6,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
   '$scope', 'profileService', 'keepService', 'tagService',
   function ($scope, profileService, keepService, tagService) {
     $scope.me = profileService.me;
+    $scope.draggedKeeps = null;
 
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.list.length;
@@ -17,6 +18,19 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         keepService.joinTags($scope.keeps, tagService.list);
       }
     });
+
+    $scope.dragKeeps = function (keep) {
+      var draggedKeeps = keepService.getSelected();
+      if (draggedKeeps.length === 0) {
+        draggedKeeps = [keep];
+      }
+      $scope.draggedKeeps = draggedKeeps;
+      return $scope.getDraggedKeepsElement();
+    }
+
+    $scope.stopDraggingKeeps = function () {
+      $scope.draggedKeeps = null;
+    }
   }
 ])
 
@@ -152,6 +166,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         if (scope.scrollDistance == null) {
           scope.scrollDistance = '100%';
+        }
+
+        scope.getDraggedKeepsElement = function () {
+          return element.find('.kf-shadow-dragged-keeps');
         }
       }
     };

@@ -1,6 +1,6 @@
 <li class="kf-keep"
   ng-hide="keep.unkept"
-  ui-draggable="true" drag="keep" drag-channel="keepDragChannel" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-drag-target"
+  ui-draggable="true" drag-channel="keepDragChannel" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-drag-target"
   ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }">
   <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
   <div class="kf-keep-handle">
