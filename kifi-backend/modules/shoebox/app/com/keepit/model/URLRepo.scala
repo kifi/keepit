@@ -8,7 +8,7 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[URLRepoImpl])
 trait URLRepo extends Repo[URL] {
-  def get(url: String)(implicit session: RSession): Option[URL]
+  def get(url: String, uriId: Id[NormalizedURI])(implicit session: RSession): Option[URL]
   def getByDomain(domain: String)(implicit session: RSession): List[URL]
   def getByDomainRegex(regex: String)(implicit session: RSession): List[URL]
   def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit session: RSession): Seq[URL]
@@ -33,8 +33,10 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extend
   override def deleteCache(model: URL)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: URL)(implicit session: RSession): Unit = {}
 
-  def get(url: String)(implicit session: RSession): Option[URL] =
-    (for(u <- rows if u.url === url && u.state === URLStates.ACTIVE) yield u).firstOption
+  def get(url: String, uriId: Id[NormalizedURI])(implicit session: RSession): Option[URL] = {
+    val list = (for(u <- rows if u.normalizedUriId === uriId && u.url === url && u.state === URLStates.ACTIVE) yield u).list
+    list.find(_.url == url)
+  }
 
   def getByDomain(domain: String)(implicit session: RSession): List[URL] =
     (for(u <- rows if u.domain === domain && u.state === URLStates.ACTIVE) yield u).list
