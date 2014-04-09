@@ -619,16 +619,18 @@ api.port.on({
     respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
   },
   keep: function(data, _, tab) {
-    log('[keep]', data)();
+    log("[keep]", data)();
     (pageData[tab.nUri] || {}).kept = data.how;
-    ajax('POST', '/ext/keeps' {
+    var bm = {
       title: data.title,
       url: data.url,
-      isPrivate: data.how === 'private'
-    });
+      canonical: data.canonical,
+      og: data.og,
+      isPrivate: data.how == "private"};
+    postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
     forEachTabAt(tab.url, tab.nUri, function(tab) {
       setIcon(tab, data.how);
-      api.tabs.emit(tab, 'kept', {kept: data.how});
+      api.tabs.emit(tab, "kept", {kept: data.how});
     });
     reloadKifiAppTabs();
   },
