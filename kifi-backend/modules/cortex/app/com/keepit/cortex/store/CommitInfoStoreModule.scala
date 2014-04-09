@@ -26,7 +26,7 @@ case class CommitInfoProdStoreModule() extends CommitInfoStoreModule{
 
 }
 
-case class CommitInfoDevStoreModule() extends ProdOrElseDevStoreModule[CommitInfoProdStoreModule](CommitInfoProdStoreModule()) with CommitInfoStoreModule{
+case class CommitInfoDevStoreModule() extends ProdOrElseDevStoreModule(CommitInfoProdStoreModule()) with CommitInfoStoreModule{
   def configure(){}
 
   @Singleton

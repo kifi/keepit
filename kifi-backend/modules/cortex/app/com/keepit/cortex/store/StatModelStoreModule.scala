@@ -26,7 +26,7 @@ case class StatModelProdStoreModule() extends StatModelStoreModule{
   }
 }
 
-case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule[StatModelProdStoreModule](StatModelProdStoreModule()) with StatModelStoreModule{
+case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule(StatModelProdStoreModule()) with StatModelStoreModule{
   def configure(){}
 
   @Singleton
