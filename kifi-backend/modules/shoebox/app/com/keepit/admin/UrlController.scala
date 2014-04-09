@@ -259,11 +259,6 @@ class UrlController @Inject() (
     }
     Ok(Json.toJson(problematicUris))
   }
-
-  def fixDuplicateKeeps(readOnly: Boolean = true) = AdminHtmlAction.authenticated { implicit request =>
-    uriIntegrityPlugin.fixDuplicateKeeps(readOnly)
-    Ok(s"started readOnly=$readOnly")
-  }
 }
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
