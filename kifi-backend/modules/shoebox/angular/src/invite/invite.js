@@ -17,9 +17,7 @@ angular.module('kifi.invite', [
       templateUrl: 'invite/invite.tpl.html',
       resolve: {
         'wtiList': ['wtiService', function (wtiService) {
-          return wtiService.loadInitial().then(function (res) {
-            return res;
-          });
+          return wtiService.loadInitial();
         }]
       }
     }).when('/friends/invite', {
