@@ -20,6 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.Future
+import scala.util.Try
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -169,7 +170,7 @@ class KeepsCommander @Inject() (
 
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
     db.readWrite { implicit s =>
-      keepRepo.getOpt(extId) filter (_.userId == userId) map { keep =>
+      keepRepo.getByExtIdAndUser(extId, userId) map { keep =>
         val saved = keepRepo.save(keep withActive false)
         log.info(s"[unkeep($userId)] deactivated keep=$saved")
         keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
