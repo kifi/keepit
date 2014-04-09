@@ -1,30 +1,20 @@
 package com.keepit.controllers.mobile
 
 import com.keepit.commanders._
-import com.keepit.commanders.KeepInfosWithCollection._
-
-import com.keepit.commanders._
 import com.keepit.heimdal._
 import com.keepit.common.controller.{ShoeboxServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
-import com.keepit.common.time._
-import com.keepit.commanders.{UserCommander, BasicSocialUser}
 
-import play.api.Play.current
-import play.api.libs.json.{JsObject, Json, JsValue}
+import play.api.libs.json.{JsObject, Json}
 
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
-import com.keepit.common.net.URI
-import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{Event, EventFamilies, Events}
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.store.S3ScreenshotStore
 import scala.concurrent.Future
+import scala.util.{Success, Failure}
 
 class MobileBookmarksController @Inject() (
   db: Database,
@@ -90,12 +80,33 @@ class MobileBookmarksController @Inject() (
   def unkeepMultiple() = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
-      val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
+      Ok(Json.obj("removedKeeps" -> bookmarksCommander.unkeepMultiple(keepInfos, request.userId)))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "parse_error"))
+    }
+  }
+
+  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+    bookmarksCommander.unkeep(id, request.userId) map { ki =>
+      Ok(Json.toJson(ki))
+    } getOrElse {
+      NotFound(Json.obj("error" -> "not_found"))
+    }
+  }
+
+  def unkeepBatch() = JsonAction.authenticatedParseJson { request =>
+    implicit val keepFormat = ExternalId.format[Keep]
+    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
+    idsOpt map { ids =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId).partition(_._2.isDefined)
       Ok(Json.obj(
-        "removedKeeps" -> deactivatedKeepInfos
+        "removedKeeps" -> deactivatedKeepInfos.map(s => s._2.get),
+        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> "not_found"))
       ))
     } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+      BadRequest(Json.obj("error" -> "parse_error"))
     }
   }
 

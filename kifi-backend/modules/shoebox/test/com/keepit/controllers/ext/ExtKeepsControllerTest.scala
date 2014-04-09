@@ -41,6 +41,73 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
 
 
   "BookmarksController" should {
+
+    "unkeep" in {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        val userRepo = inject[UserRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        val urlRepo = inject[URLRepo]
+        val keepRepo = inject[KeepRepo]
+        val keeper = KeepSource.keeper
+        val keepToCollectionRepo = inject[KeepToCollectionRepo]
+        val db = inject[Database]
+
+        val (user, k1, collections) = db.readWrite {implicit s =>
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+
+          val k1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
+          keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
+
+          val collectionRepo = inject[CollectionRepo]
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
+            Nil
+          keepToCollectionRepo.save(KeepToCollection(keepId = k1.id.get, collectionId = collections(0).id.get))
+          collectionRepo.collectionChanged(collections(0).id.get, true)
+          (user1, k1, collections)
+        }
+
+        val bookmarksWithTags = db.readOnly { implicit s =>
+          keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
+        }
+        bookmarksWithTags.size === 1
+
+        db.readOnly { implicit s =>
+          keepRepo.getByUser(user.id.get, None, None, 100).size === 2
+          val uris = uriRepo.all
+          println(uris mkString "\n")
+          uris.size === 2
+        }
+
+        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.unkeep(k1.externalId).toString
+        path === s"/ext/keeps/${k1.externalId}/unkeep"
+
+        inject[FakeActionAuthenticator].setUser(user)
+        val request = FakeRequest("POST", path)
+        val result = route(request).get
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+
+        val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+
+        val bookmarks = db.readOnly { implicit s =>
+          keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
+        }
+        bookmarks.size === 0
+      }
+    }
+
     "remove tag" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -67,9 +134,9 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
                             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
           collectionRepo.collectionChanged(collections(0).id.get, true)
@@ -134,9 +201,9 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
                             Nil
 
           (user1, bookmark1, bookmark2, collections)
@@ -158,9 +225,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        val expected = Json.parse(s"""
-          {"id":"${collections(0).externalId}","name":"myCollaction1"}
-        """)
+        val expected = Json.obj("id" -> collections(0).externalId, "name" -> "myCollection1")
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         db.readWrite {implicit s =>
@@ -194,9 +259,9 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           uriRepo.count === 0
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
+                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
                             Nil
 
           (user1, collections)
@@ -217,9 +282,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        val expected = Json.parse(s"""
-          {"id":"${collections(0).externalId}","name":"myCollaction1"}
-        """)
+        val expected = Json.obj("id" -> collections(0).externalId, "name" -> "myCollection1")
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         db.readWrite {implicit s =>

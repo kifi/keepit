@@ -22,6 +22,7 @@ trait S3BlobFloatVecFeatureStore[K, T, M <: StatModel] extends VersionedS3Store[
 
   protected val prefix: String
   override def keyPrefix() = prefix
+  override def idToKey(id: VersionedStoreKey[K, M]): String = keyPrefix + id.toKey
 }
 
 class InMemoryFloatVecFeatureStore[K, T, M <: StatModel] extends VersionedInMemoryStore[K, M, FeatureRepresentation[T, M]]

@@ -67,7 +67,7 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper{
   articleStore.+=(uri2.id.get, a2)
   articleStore.+=(uri3.id.get, a3)
 
-  class FakeURIPuller(allURI: Seq[NormalizedURI]) extends DataPuller[NormalizedURI]{
+  class FakeURIPuller(allURI: Seq[NormalizedURI]) extends URIPuller{
     def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = allURI.filter(_.seq > lowSeq).take(limit)
     def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = ???
   }

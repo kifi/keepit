@@ -1,13 +1,16 @@
 package com.keepit.commanders
 
-import com.keepit.model._
-import com.keepit.social._
-import play.api.libs.json._
+import com.keepit.common.db.ExternalId
+import com.keepit.model.{Keep, SendableTag}
+import com.keepit.social.BasicUser
+
+import play.api.libs.json.{__, JsObject}
 import play.api.libs.functional.syntax._
 
 case class KeeperInfo(
   normalized: String,
   kept: Option[String],
+  keepId: Option[ExternalId[Keep]],
   tags: Seq[SendableTag],
   position: Option[JsObject],
   neverOnSite: Boolean,
@@ -20,6 +23,7 @@ object KeeperInfo {
   implicit val writesKeeperInfo = (
     (__ \ 'normalized).write[String] and
     (__ \ 'kept).writeNullable[String] and
+    (__ \ 'keepId).writeNullable[ExternalId[Keep]] and
     (__ \ 'tags).writeNullable[Seq[SendableTag]].contramap[Seq[SendableTag]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'position).writeNullable[JsObject] and
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and

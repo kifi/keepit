@@ -11,27 +11,28 @@ import com.keepit.common.store.DevStoreModule
 import com.keepit.cortex.core._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.cortex._
+import com.keepit.common.store.{StoreModule, ProdOrElseDevStoreModule}
 
-trait StatModelStoreModule extends ScalaModule
+trait StatModelStoreModule extends StoreModule
 
-case class StatModelProdStoreModule() extends ProdStoreModule with StatModelStoreModule{
+case class StatModelProdStoreModule() extends StatModelStoreModule{
   def configure(){}
 
   @Singleton
   @Provides
   def ldaModelStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAModelStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.cortex.bucket").get)
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
     new S3LDAModelStore(bucketName, amazonS3Client, accessLog)
   }
 }
 
-case class StatModelDevStoreModule() extends DevStoreModule(StatModelProdStoreModule()) with StatModelStoreModule{
+case class StatModelDevStoreModule() extends ProdOrElseDevStoreModule[StatModelProdStoreModule](StatModelProdStoreModule()) with StatModelStoreModule{
   def configure(){}
 
   @Singleton
   @Provides
   def ldaModelStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAModelStore = {
-    whenConfigured("amazon.s3.cortex.bucket")(
+    whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.ldaModelStore(amazonS3Client, accessLog)
     ) getOrElse {
       val store = new InMemoryLDAModelStore

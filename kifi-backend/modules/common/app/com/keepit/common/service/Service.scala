@@ -56,6 +56,11 @@ object ServiceType {
     override val warnInstances = 0
   }
 
+  case object CORTEX extends ServiceType("CORTEX", "CT"){
+    override val minInstances  = 0
+    override val warnInstances = 0
+  }
+
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
   lazy val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: Nil
   lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil

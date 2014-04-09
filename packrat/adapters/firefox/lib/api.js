@@ -499,7 +499,7 @@ windows
 .on('activate', errors.wrap(function onWindowActivate(win) {
   activeWinHasFocus = true;
   var tab = win.tabs.activeTab, tabId, page;
-  try {
+  try { // bugzil.la/992509
     tabId = tab.id;
   } catch (e) {
     log('[windows:activate]', e);
@@ -511,7 +511,7 @@ windows
 .on('deactivate', errors.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
   var tab = win.tabs.activeTab, tabId, page;
-  try {
+  try { // bugzil.la/992509
     tabId = tab.id;
   } catch (e) {
     log('[windows:deactivate]', e);
