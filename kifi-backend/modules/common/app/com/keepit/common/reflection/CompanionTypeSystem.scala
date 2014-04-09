@@ -44,7 +44,7 @@ object CompanionTypeSystem {
         Try(checkExistentialTypeMember(owner, fBoundedType, upperBound, isSelfRecursive)) match {
           case Success(_) => None
           case Failure(fBoundedTypeMemberException) =>
-            throw new IllegalArgumentException(s"Could not find a valid F-bounded type $fBoundedType in $owner: \n No valid type parameter (${fBoundedTypeParameterException.getMessage}) \n No valid type member (${fBoundedTypeMemberException.getMessage})")
+            throw new IllegalArgumentException(s"Could not find a valid F-bounded type $fBoundedType in $owner: \n ● No valid type parameter (${fBoundedTypeParameterException.getMessage}) \n ● No valid type member (${fBoundedTypeMemberException.getMessage})")
         }
       }
     }
