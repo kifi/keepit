@@ -125,19 +125,37 @@ angular.module('kifi.invite', [
           var $elem = angular.element($event.target);
           $elem.text('Sending');
           $elem.parent().removeClass('clickable');
-          inviteService.invite(result.networkType, result.socialId).then(function () {
-            $elem.text('Sent!');
-            $elem.off('click');
-            $timeout(function () {
-              $elem.parent().fadeOut('fast');
-            }, 2000);
-            inviteService.expireSocialSearch();
-          }, function (err) {
-            $log.log('err:', err, result);
-            $elem.text('Error. Retry?');
-            $elem.parent().addClass('clickable');
-            inviteService.expireSocialSearch();
-          });
+          if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
+            // Existing user, friend request
+            inviteService.friendRequest(result.socialId).then(function () {
+              $elem.text('Sent!');
+              $elem.off('click');
+              $timeout(function () {
+                $elem.parent().fadeOut('fast');
+              }, 4000);
+              inviteService.expireSocialSearch();
+            }, function (err) {
+              $log.log('err:', err, result);
+              $elem.text('Error. Retry?');
+              $elem.parent().addClass('clickable');
+              inviteService.expireSocialSearch();
+            });
+          } else {
+            // Request to external person
+            inviteService.invite(result.networkType, result.socialId).then(function () {
+              $elem.text('Sent!');
+              $elem.off('click');
+              $timeout(function () {
+                $elem.parent().fadeOut('fast');
+              }, 4000);
+              inviteService.expireSocialSearch();
+            }, function (err) {
+              $log.log('err:', err, result);
+              $elem.text('Error. Retry?');
+              $elem.parent().addClass('clickable');
+              inviteService.expireSocialSearch();
+            });
+          }
         };
 
         scope.$on('$destroy', function () {
