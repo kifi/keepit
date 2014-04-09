@@ -4,6 +4,9 @@
     <ol class="kf-my-keeps">
       <div kf-keep ng-repeat="keep in keeps" ng-click="onClickKeep(keep, $event)"></div>
     </ol>
+    <ol class="kf-shadow-dragged-keeps">
+      <div kf-keep kf-dragged-keep class="kf-dragged-keep" ng-repeat="keep in draggedKeeps"></div>
+    </ol>
     <div class="kf-keep-group-title-fixed"></div>
     <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/wait.gif">
     <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()">Show more</a>

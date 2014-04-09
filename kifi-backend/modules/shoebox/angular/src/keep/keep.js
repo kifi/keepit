@@ -38,8 +38,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootElement', 'tagService', 'util',
-  function ($document, $rootElement, tagService, util) {
+  '$document', '$rootElement', '$timeout', 'tagService', 'util',
+  function ($document, $rootElement, $timeout, tagService, util) {
     return {
       restrict: 'A',
       scope: true,
@@ -210,31 +210,38 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         });
 
         scope.isDragging = false;
-        var clone;
         var mouseX, mouseY;
-        element.bind('mousemove', function (e) {
+        element.on('mousemove', function (e) {
           mouseX = e.pageX - util.offset(element).left;
           mouseY = e.pageY - util.offset(element).top;
         });
-        element.bind('dragstart', function (e) {
+        element.on('dragstart', function (e) {
           element.addClass('kf-dragged');
-          clone = element.clone().css({
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: element.css('width'),
-            height: element.css('height'),
-            zIndex: -1
-          });
-          element.after(clone);
-          e.dataTransfer.setDragImage(clone[0], mouseX, mouseY);
+          var draggedKeepsElement = scope.dragKeeps(scope.keep);
+          var sendData = angular.toJson(scope.draggedKeeps);
+          e.dataTransfer.setData("Text", sendData);
+          e.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
           scope.$apply(function () { scope.isDragging = true; });
         });
-        element.bind('dragend', function () {
-          element.removeClass('kf-dragged');
-          clone.remove();
-          scope.$apply(function () { scope.isDragging = false; });
+        element.on('dragend', function () {
+          scope.$apply(function () {
+            element.removeClass('kf-dragged');
+            scope.stopDraggingKeeps();
+            scope.isDragging = false;
+          });
         });
+      }
+    };
+  }
+])
+
+.directive('kfDraggedKeep', [
+  function () {
+    return {
+      restrict: 'A',
+      scope: true,
+      link: function (scope, element /*, attrs*/) {
+        element.css({top: scope.$index * 37 + 'px', width: element.parent().parent()[0].offsetWidth + 'px'});
       }
     };
   }
