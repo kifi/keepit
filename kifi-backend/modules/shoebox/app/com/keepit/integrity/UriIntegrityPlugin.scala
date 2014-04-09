@@ -24,7 +24,7 @@ case class URIMigration(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) ex
 case class URLMigration(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class BatchURIMigration(batchSize: Int)
 case class BatchURLMigration(batchSize: Int)
-case class FixDuplicateKeeps(readOnly: Boolean)
+case class FixDuplicateKeeps()
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -32,7 +32,6 @@ class UriIntegrityActor @Inject()(
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   keepRepo: KeepRepo,
-  deepLinkRepo: DeepLinkRepo,
   changedUriRepo: ChangedURIRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -44,43 +43,49 @@ class UriIntegrityActor @Inject()(
   /** tricky point: make sure (user, uri) pair is unique.  */
   private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession) = {
 
-    var urlToUriIdMap: Map[String, Id[NormalizedURI]] = Map()
+    var urlToUriMap: Map[String, NormalizedURI] = Map()
 
-    val deactivatedBms = oldBookmarks.map{ case oldBm =>
-
-      val userId = oldBm.userId
+    val deactivatedBms = oldBookmarks.map{ oldBm =>
 
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
-      val newUriId = urlToUriIdMap.getOrElse(oldBm.url, {
+      val newUri = urlToUriMap.getOrElse(oldBm.url, {
         val newUri = uriRepo.getByUri(oldBm.url).getOrElse(uriRepo.internByUri(oldBm.url))
-        urlToUriIdMap += (oldBm.url -> newUri.id.get)
-        newUri.id.get
+        urlToUriMap += (oldBm.url -> newUri)
+        newUri
       })
 
-      keepRepo.getByUriAndUserAllStates(newUriId, userId) match {
-        case None => {
-          log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
-          keepRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
-          keepRepo.save(oldBm.withNormUriId(newUriId))
-          Some(oldBm, None)
-        }
-        case Some(bm) =>
-          if (oldBm.state == KeepStates.ACTIVE) {
-            val newBm = if (bm.state == KeepStates.INACTIVE) {
-              // transfer the privacy setting to bm begin reactivated
-              keepRepo.save(bm.withActive(true).withPrivate(oldBm.isPrivate))
-            } else if (!bm.isPrivate && oldBm.isPrivate) {
-              // oldBm has a stronger privacy setting, transfer it to newBm
-              keepRepo.save(bm.withPrivate(true))
-            } else {
-              bm
-            }
-            keepRepo.save(oldBm.withActive(false))
-            keepRepo.deleteCache(oldBm)
-            Some(oldBm, Some(newBm))
-          } else {
-            None
+      if (newUri.state == NormalizedURIStates.REDIRECTED) {
+        // skipping due to double redirects. this should not happen.
+        log.error(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
+        airbrake.notify(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
+        None
+      } else {
+        val userId = oldBm.userId
+        val newUriId = newUri.id.get
+
+        keepRepo.getByUriAndUserAllStates(newUriId, userId) match {
+          case None => {
+            log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
+            keepRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
+            keepRepo.save(oldBm.withNormUriId(newUriId))
+            Some(oldBm, None)
           }
+          case Some(bm) => {
+            if (oldBm.state == KeepStates.ACTIVE) {
+              val newBm = if (bm.state == KeepStates.INACTIVE || (oldBm.isPrivate && !bm.isPrivate)) {
+                // transfer the privacy setting, title, url and url id to newBm
+                keepRepo.save(bm.withActive(true).withPrivate(oldBm.isPrivate).withTitle(oldBm.title).withUrl(oldBm.url).withUrlId(oldBm.urlId))
+              } else {
+                bm
+              }
+              keepRepo.save(oldBm.withActive(false))
+              keepRepo.deleteCache(oldBm)
+              Some(oldBm, Some(newBm))
+            } else {
+              None
+            }
+          }
+        }
       }
     }
 
@@ -157,12 +162,8 @@ class UriIntegrityActor @Inject()(
 
       val oldUriId = url.normalizedUriId
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-      val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
+      val newUri = uriRepo.get(newUriId)
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
-
-      deepLinkRepo.getByUrl(url.id.get).map{ link =>
-        deepLinkRepo.save(link.withNormUriId(newUriId))
-      }
   }
 
   private def batchURIMigration(batchSize: Int): Int = {
@@ -235,40 +236,34 @@ class UriIntegrityActor @Inject()(
     db.readOnly{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
 
-  private def fixDuplicateKeeps(readOnly: Boolean): Unit = {
+  private def fixDuplicateKeeps(): Unit = {
+    val seq = centralConfig(FixDuplicateKeepsSeqNumKey) getOrElse SequenceNumber.ZERO
+
+    log.info(s"start deduping keeps: fetching tasks from seqNum ${seq}")
     try {
-      log.info("start deduping keeps")
-
       var dedupedSuccessCount = 0
-      var done: Boolean = false
-      var seq: SequenceNumber[Keep] = SequenceNumber[Keep](-1L)
-      while (!done) {
-        val keeps = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
-        done = keeps.isEmpty
+      val keeps = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
+      if (keeps.nonEmpty) {
+        db.readWriteBatch(keeps, 3){ (session, keep) =>
+          uriRepo.getByUri(keep.url)(session) match {
+            case Some(uri) =>
+              if (keep.uriId != uri.id.get) {
+                log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${uri.id.get}]")
 
-        if (!done) {
-          db.readWriteBatch(keeps, 3){ (session, keep) =>
-            uriRepo.getByUri(keep.url)(session) match {
-              case Some(uri) =>
-                if (keep.uriId != uri.id.get) {
-                  log.info(s"keep being fixed [keep=$keep, newUriId=${uri.id.get}]")
-
-                  if (!readOnly) handleBookmarks(Seq(keep))(session)
-                  dedupedSuccessCount += 1
-                }
-              case None =>
-                log.info(s"keep being fixed [keep=$keep, newUriId=missing]")
-
-                if (!readOnly) handleBookmarks(Seq(keep))(session)
+                handleBookmarks(Seq(keep))(session)
                 dedupedSuccessCount += 1
-            }
-          }
-          seq = keeps.last.seq
-          log.info(s"deduping keeps in progress [count=$dedupedSuccessCount seq=${seq.value}]")
-        }
-      }
+              }
+            case None =>
+              log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=missing]")
 
-      log.info(s"total $dedupedSuccessCount keeps deduplicated [readOnly=$readOnly]")
+              handleBookmarks(Seq(keep))(session)
+              dedupedSuccessCount += 1
+          }
+        }
+        centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
+        log.info(s"keeps deduped [count=$dedupedSuccessCount/${keeps.size}]")
+      }
+      log.info(s"total $dedupedSuccessCount keeps deduplicated")
     } catch {
       case e: Throwable => log.error("deduping keeps failed", e)
     }
@@ -279,7 +274,7 @@ class UriIntegrityActor @Inject()(
     case URIMigration(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
     case URLMigration(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
     case BatchURLMigration(batchSize) => batchURLMigration(batchSize)
-    case FixDuplicateKeeps(readOnly) => fixDuplicateKeeps(readOnly)
+    case FixDuplicateKeeps() => fixDuplicateKeeps()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -289,7 +284,6 @@ trait UriIntegrityPlugin extends SchedulerPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
-  def fixDuplicateKeeps(readOnly: Boolean): Unit
 }
 
 @Singleton
@@ -299,12 +293,13 @@ class UriIntegrityPluginImpl @Inject() (
 ) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-     log.info("starting UriIntegrityPluginImpl")
-     scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
-     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
+    log.info("starting UriIntegrityPluginImpl")
+    scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
+    scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
+    scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
   }
   override def onStop() {
-     log.info("stopping UriIntegrityPluginImpl")
+    log.info("stopping UriIntegrityPluginImpl")
   }
 
   def handleChangedUri(change: UriChangeMessage) = {
@@ -313,6 +308,4 @@ class UriIntegrityPluginImpl @Inject() (
 
   def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
   def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
-
-  def fixDuplicateKeeps(readOnly: Boolean) = actor.ref ! FixDuplicateKeeps(readOnly)
 }
