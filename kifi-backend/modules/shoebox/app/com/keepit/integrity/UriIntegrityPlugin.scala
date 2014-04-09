@@ -162,7 +162,7 @@ class UriIntegrityActor @Inject()(
 
       val oldUriId = url.normalizedUriId
       urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-      val (oldUri, newUri) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUriId))
+      val newUri = uriRepo.get(newUriId)
       if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
   }
 
