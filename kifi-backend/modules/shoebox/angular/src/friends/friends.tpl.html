@@ -3,6 +3,11 @@
     <div class="friends">
       <h2>Kifi Friends <span ng-show="friends.length > 0">({{friends.length}})</span></h2>
       <p>Search your friends list by name or email address.</p>
+      <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
+        <div class="bouncy-ball">
+          <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+        </div> Importing your contacts
+      </div>
 
       <div kf-social-invite-well></div>
 

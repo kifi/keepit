@@ -2,7 +2,13 @@
   <div class="invite-wrapper" antiscroll="{ autoHide: false }">
     <div class="invite">
       <h2>Find people to invite to Kifi</h2>
-      <p>Search by name or email address</p>
+      <p>Search by name or email address {{isRefreshingSocialGraph}}</p>
+      <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
+        <div class="bouncy-ball">
+          <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+        </div> Importing your contacts
+      </div>
+
       <div kf-social-invite-well></div>
 
       <h3>People you may want to add to Kifi</h3>

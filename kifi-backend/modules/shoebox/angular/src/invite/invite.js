@@ -15,7 +15,6 @@ angular.module('kifi.invite', [
   function ($routeProvider) {
     $routeProvider.when('/invite', {
       templateUrl: 'invite/invite.tpl.html',
-      controller: 'InviteCtrl',
       resolve: {
         'wtiList': ['wtiService', function (wtiService) {
           return wtiService.loadInitial().then(function (res) {
@@ -30,9 +29,15 @@ angular.module('kifi.invite', [
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService',
-  function ($scope, $http, profileService, routeService, $window, wtiService) {
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
+  function ($scope, $http, profileService, routeService, $window, wtiService, socialService) {
     $window.document.title = 'Kifi • Invite your friends';
+
+    $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
+      $scope.isRefreshingSocialGraph = v;
+    });
+
+    socialService.checkIfUpdatingGraphs(2);
 
     $scope.whoToInvite = wtiService.list;
 
@@ -41,13 +46,6 @@ angular.module('kifi.invite', [
       return !wtiService.hasMore();
     };
     $scope.wtiScrollNext = wtiService.getMore;
-
-
-    $scope.invite = function (friend) {
-      // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?
-      // is 'friend' overloaded naming wise? is socialFriend better?
-      $window.alert('Inviting ' + friend);
-    };
 
   }
 ])

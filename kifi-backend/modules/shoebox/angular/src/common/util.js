@@ -23,9 +23,7 @@ angular.module('util', [])
         // empties oldArray, loads newArray values into it, keeping the same reference.
         oldArray = oldArray || [];
         oldArray.length = 0;
-        _.each(newArray, function (elem) {
-          oldArray.push(elem);
-        });
+        oldArray.push.apply(oldArray, newArray);
       },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
