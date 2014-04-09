@@ -36,10 +36,19 @@ angular.module('kifi.routeService', [])
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
+      removeSingleKeep: function (id) {
+        return env.xhrBase + '/keeps/' + id + '/delete';
+      },
+      removeKeeps: function () {
+        return env.xhrBase + '/keeps/delete';
+      },
       tagOrdering: route('/collections/ordering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
       friends: route('/user/friends'),
+      friendRequest: function (id) {
+        return env.xhrBase + '/user/' + id + '/friend';
+      },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       search: searchRoute('/site/search'),

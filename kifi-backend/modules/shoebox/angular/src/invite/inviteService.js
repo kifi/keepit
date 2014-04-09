@@ -168,6 +168,12 @@ angular.module('kifi.inviteService', [
 
         return deferred.promise;
 
+      },
+
+      friendRequest: function (id) {
+        return $http.post(routeService.friendRequest(id)).then(function (res) {
+          return res.data;
+        });
       }
 
     };

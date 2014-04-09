@@ -410,10 +410,10 @@ angular.module('kifi.keepService', [
           $log.log('keepService.getChatter()', data);
 
           return $http.post(url, data).then(function (res) {
-            var data = res.data;
-            keep.conversationCount = data.threads;
+            var resp = res.data;
+            keep.conversationCount = resp.threads;
             keep.conversationUpdatedAt = new Date();
-            return data;
+            return resp;
           });
         }
         return $q.when({'threads': 0});
@@ -483,26 +483,23 @@ angular.module('kifi.keepService', [
           return $q.when(keeps || []);
         }
 
-        var url = env.xhrBase + '/keeps/remove',
-            data = _.map(keeps, function (keep) {
-              return {
-                url: keep.url
-              };
-            });
+        var url, data;
 
-        $log.log('keepService.unkeep()', data);
+        if (keeps.length === 1) {
+          url = routeService.removeSingleKeep(keeps[0].id);
+          data = {};
+        } else {
+          url = routeService.removeKeeps;
+          data = _.map(keeps, function (keep) {
+            return {
+              url: keep.url
+            };
+          });
+        }
+
+        $log.log('keepService.unkeep()', url, data);
 
         return $http.post(url, data).then(function () {
-          /*
-          var map = _.reduce(keeps, function (map, keep) {
-            map[keep.id] = true;
-            return map;
-          }, {});
-
-          _.remove(list, function (keep) {
-            return map[keep.id];
-          });
-          */
           _.forEach(keeps, function (keep) {
             keep.unkept = true;
             if (previewed === keep) {
