@@ -8,28 +8,21 @@ import com.keepit.commanders._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.SearchServiceClient
 
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.store.{S3ScreenshotStore}
-import play.api.mvc.{SimpleResult, Action}
-import com.keepit.social.BasicUser
-import scala.util.{Failure, Success, Try}
-import com.keepit.model.KeepToCollection
+import com.keepit.common.store.S3ScreenshotStore
+import scala.util.Try
 import org.joda.time.Seconds
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
-import scala.concurrent.duration.Duration
 
 class KeepsController @Inject() (
     db: Database,
@@ -194,13 +187,13 @@ class KeepsController @Inject() (
     val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
     idsOpt map { ids =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId) partition ( _._2.isSuccess )
+      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId).partition(_._2.isDefined)
       Ok(Json.obj(
         "removedKeeps" -> deactivatedKeepInfos.map(s => s._2.get),
-        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> e._2.failed.get.getMessage))
+        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> "not_found"))
       ))
     } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+      BadRequest(Json.obj("error" -> "parse_error"))
     }
   }
 
@@ -208,7 +201,7 @@ class KeepsController @Inject() (
     db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
       Ok(Json.toJson(KeepInfo.fromBookmark(b)))
     } getOrElse {
-      NotFound(Json.obj("error" -> "Keep not found"))
+      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 
@@ -233,9 +226,10 @@ class KeepsController @Inject() (
 
   def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    bookmarksCommander.unkeep(id, request.userId) match {
-      case Failure(t)  => BadRequest(Json.obj("error" -> s"${t.getMessage}"))
-      case Success(ki) => Ok(Json.obj("removedKeep" -> ki))
+    bookmarksCommander.unkeep(id, request.userId) map { ki =>
+      Ok(Json.toJson(ki))
+    } getOrElse {
+      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 

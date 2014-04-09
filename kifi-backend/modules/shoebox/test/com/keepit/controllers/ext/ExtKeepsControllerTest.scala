@@ -90,7 +90,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         }
 
         val path = com.keepit.controllers.ext.routes.ExtBookmarksController.unkeep(k1.externalId).toString
-        path === s"/bookmarks/${k1.externalId}/delete"
+        path === s"/ext/keeps/${k1.externalId}/unkeep"
 
         inject[FakeActionAuthenticator].setUser(user)
         val request = FakeRequest("POST", path)
@@ -98,7 +98,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        val expected = Json.parse(s"""{"removedKeep":{"id":"${k1.externalId}","title":"G1","url":"http://www.google.com","isPrivate":false}}""")
+        val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false)
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         val bookmarks = db.readOnly { implicit s =>
@@ -225,9 +225,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        val expected = Json.parse(s"""
-          {"id":"${collections(0).externalId}","name":"myCollection1"}
-        """)
+        val expected = Json.obj("id" -> collections(0).externalId, "name" -> "myCollection1")
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         db.readWrite {implicit s =>
@@ -284,9 +282,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        val expected = Json.parse(s"""
-          {"id":"${collections(0).externalId}","name":"myCollection1"}
-        """)
+        val expected = Json.obj("id" -> collections(0).externalId, "name" -> "myCollection1")
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         db.readWrite {implicit s =>
