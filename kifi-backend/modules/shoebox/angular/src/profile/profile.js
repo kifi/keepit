@@ -171,8 +171,6 @@ angular.module('kifi.profile', [
           }
         });
 
-        socialService.refresh();
-
         scope.connectLinkedIn = socialService.connectLinkedIn;
         scope.disconnectLinkedIn = socialService.disconnectLinkedIn;
       }
@@ -199,8 +197,6 @@ angular.module('kifi.profile', [
             scope.fbProfileUrl = facebook.profileUrl;
           }
         });
-
-        socialService.refresh();
 
         scope.connectFacebook = socialService.connectFacebook;
         scope.disconnectFacebook = socialService.disconnectFacebook;

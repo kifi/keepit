@@ -33,7 +33,7 @@ angular.module('kifi.clutch', [])
         if (!hit) {
           // Never been refreshed.
           return refresh.call(this, key, arguments);
-        } else if (!hit.value) {
+        } else if (!hit.value || hit.activeRequest) {
           // Previous refresh did not finish.
           return hit.q;
         } else if (isExpired(hit.time, this._config.cacheDuration)) {
@@ -103,12 +103,14 @@ angular.module('kifi.clutch', [])
         // Save the promise so we return the same promise if
         // multiple requests come in before it's resolved.
         obj.q = deferred.promise;
+        obj.activeRequest = true;
 
         this._cache[key] = obj; // todo: needed?
         var that = this;
 
         resultQ.then(function success(result) {
           obj.time = now();
+          obj.activeRequest = false;
 
           if (!obj.value) {
             // It's never been set before.
@@ -125,6 +127,7 @@ angular.module('kifi.clutch', [])
           }
           deferred.resolve(obj.value);
         })['catch'](function (reason) {
+          obj.activeRequest = false;
           if (obj.value && that._config.remoteError === 'ignore') {
             deferred.resolve(obj.value);
           } else {

@@ -13,20 +13,27 @@ angular.module('kifi.friends', [
   function ($routeProvider) {
     $routeProvider.when('/friends', {
       templateUrl: 'friends/friends.tpl.html',
-      controller: 'FriendsCtrl',
       resolve: {
         'kifiFriends': ['friendService', function (friendService) {
           return friendService.getKifiFriends();
         }]
       }
+    }).when('/friends/requests', {
+      redirectTo: '/'
     });
   }
 ])
 
 .controller('FriendsCtrl', [
-  '$scope', '$window', 'friendService',
-  function ($scope, $window, friendService) {
+  '$scope', '$window', 'friendService', 'socialService',
+  function ($scope, $window, friendService, socialService) {
     $window.document.title = 'Kifi • Your Friends on Kifi';
+
+    $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
+      $scope.isRefreshingSocialGraph = v;
+    });
+
+    socialService.checkIfUpdatingGraphs(1);
 
     $scope.requests = friendService.requests;
     var requestsCollapsed = true;

@@ -114,12 +114,11 @@ angular.module('kifi.modal', [])
           wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
         }, 100);
 
-        resizeWindow();
-
         scope.$watch(function () {
           return kfModalCtrl.show;
         }, function (show) {
           if (show) {
+            resizeWindow();
             $window.addEventListener('resize', resizeWindow);
           } else {
             $window.removeEventListener('resize', resizeWindow);
