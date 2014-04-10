@@ -21,6 +21,6 @@ case class LDAURIRepresenter @Inject()(docRep: LDADocRepresenter, articleStore: 
   override def isDefinedAt(article: Article): Boolean = article.contentLang == Some(Lang("en"))
 
   override def toDocument(article: Article): Document = {
-    Document(article.content.split(" "))    // TODO(yingjie): Lucene tokenize
+    Document(article.content.toLowerCase.split(" "))    // TODO(yingjie): Lucene tokenize
   }
 }
