@@ -81,7 +81,7 @@ class AnalyticsController @Inject() (
   """.stripMargin
 
   def createMetric(repo: String, name: String, start: String, window: Int, step: Int, description: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, uniqueField: String) = Action { request =>
-    require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
+    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
     if (request.queryString.get("help").nonEmpty) Ok(createHelp)
     else {
       assert(window>0)
@@ -98,14 +98,14 @@ class AnalyticsController @Inject() (
   }
 
   def getAvailableMetrics(repo: String) = Action.async { request =>
-    require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
+    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
     metricManager.getAvailableMetrics.map { metricDescriptors =>
       Ok(Json.toJson(metricDescriptors))
     }
   }
 
   def getMetric(repo: String, name: String, as: String) = Action { request => //this is going to need some serious refactoring at some point
-    require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
+    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
     val names : Seq[String] = if (name=="all") {
       Await.result(metricManager.getAvailableMetrics.map{ metricDescriptors => metricDescriptors.map(_.name)}, 20 seconds)
     } else {
@@ -141,7 +141,7 @@ class AnalyticsController @Inject() (
   }
 
   def getMetricData(repo: String, name: String) = Action.async { request =>
-    require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
+    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
     metricManager.getMetricInfo(name).flatMap{ infoOption =>
       infoOption.map{ desc =>
         metricManager.getMetric(name).map{ data =>
@@ -167,7 +167,7 @@ class AnalyticsController @Inject() (
   }
 
   def adhocMetric(repo: String, from : String, to: String, events: String, groupBy: String, breakDown: String, mode: String, filters: String, as: String) = Action.async { request =>
-    require(repo != SystemEvent.typeCode.code, s"Metrics are not supported yet for system events")
+    require(repo != SystemEvent.typeCode, s"Metrics are not supported yet for system events")
     if (request.queryString.get("help").nonEmpty) resolve(Ok(adhocHelp))
     else {
       val doBreakDown = if (breakDown!="false" && groupBy.startsWith("context")) true else false

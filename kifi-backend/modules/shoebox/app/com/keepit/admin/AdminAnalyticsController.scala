@@ -19,8 +19,6 @@ import scala.Some
 import play.api.libs.json.JsNumber
 import scala.util.Success
 import play.api.libs.json.JsObject
-import com.keepit.serializer.TypeCode
-
 
 case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true, resolution: Int = 1)
 object MetricAuxInfo {
@@ -179,10 +177,9 @@ class AdminAnalyticsController @Inject() (
   }
 
   def getEventDescriptors() = AdminHtmlAction.authenticatedAsync { request =>
-    val eventCodes: Seq[TypeCode[HeimdalEvent]] = Seq(UserEvent, SystemEvent, AnonymousEvent).map(_.typeCode)
-      Future.sequence(eventCodes.map { code =>
-        heimdal.getEventDescriptors(code).map { descriptors =>
-          code -> descriptors
+      Future.sequence(HeimdalEventCompanion.all.toSeq.map { companion =>
+        heimdal.getEventDescriptors(companion).map { descriptors =>
+          companion.typeCode -> descriptors
         }
       }).map { descriptorsByRepo => Ok(html.admin.eventDescriptors(descriptorsByRepo: _*)) }
   }
@@ -199,14 +196,13 @@ class AdminAnalyticsController @Inject() (
 
     Future.sequence(
       descriptorsWithCode.groupBy(_._1).mapValues(_.map(_._2)).map {
-        case (code, descriptors) => heimdal.updateEventDescriptors(descriptors.toSeq)(HeimdalEvent.getTypeCode(code))
+        case (code, descriptors) => heimdal.updateEventDescriptors(descriptors.toSeq)(HeimdalEventCompanion.byTypeCode(code))
       }
     ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
   }
 
   def getEvents(repo:String, events: Option[String], limit: Int, window: Int) = AdminHtmlAction.authenticatedAsync { request =>
-    val eventTypeCode = HeimdalEvent.getTypeCode(repo)
     val eventNames= events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
-    heimdal.getRawEvents(window, limit, eventNames: _*)(eventTypeCode).map(Ok(_))
+    heimdal.getRawEvents(window, limit, eventNames: _*)(HeimdalEventCompanion.byTypeCode(repo)).map(Ok(_))
   }
 }

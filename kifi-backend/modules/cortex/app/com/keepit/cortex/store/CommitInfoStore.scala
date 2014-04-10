@@ -18,6 +18,9 @@ abstract class S3CommitInfoStore[T, M <: StatModel](
   val amazonS3Client: AmazonS3,
   val accessLog: AccessLog,
   val formatter: Format[CommitInfo[T, M]] = CommitInfo.format[T, M]
-) extends S3JsonStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M]
+) extends S3JsonStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M]{
+  val prefix: String
+  override def keyPrefix() = prefix
+}
 
 class InMemoryCommitInfoStore[T, M <: StatModel] extends InMemoryObjectStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M]
