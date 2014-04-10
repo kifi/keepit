@@ -202,7 +202,8 @@ object ApplicationBuild extends Build {
     /*skip in update := true,
      *skip in update in (Compile, test) := true*/
     aggregate in update := false,
-    emojiLogs
+    emojiLogs,
+    incOptions := incOptions.value.withNameHashing(true)
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
@@ -281,7 +282,7 @@ object ApplicationBuild extends Build {
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, graph)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph)
 
   override def rootProject = Some(kifiBackend)
 }
