@@ -759,12 +759,6 @@ api.port.on({
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
     mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
   },
-  invite_friend: function (data, respond) {
-    ajax('POST', '/ext/invite', data, respond, function () {
-      respond({sent: false});
-    });
-    mixpanel.track('user_clicked_pane', {type: data.source, action: 'choseSocialContact', network: data.id ? data.id.split('/')[0] : 'email'});
-  },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
     if (data.to) {
@@ -1029,19 +1023,7 @@ api.port.on({
     if (results.length > data.n) {
       results = results.slice(0, data.n);
     }
-    var nMoreDesired = data.n - results.length;
-    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
-    respond({
-      searchId: searchId,
-      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
-    });
-    if (nMoreDesired) {
-      ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
-        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers.map(toNonUserSearchResult, {sf: sf, q: data.q})});
-      }, function () {
-        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
-      });
-    }
+    respond(results.map(toFriendSearchResult, {sf: sf, q: data.q}));
   },
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);
