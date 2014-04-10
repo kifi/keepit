@@ -1029,19 +1029,7 @@ api.port.on({
     if (results.length > data.n) {
       results = results.slice(0, data.n);
     }
-    var nMoreDesired = data.n - results.length;
-    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
-    respond({
-      searchId: searchId,
-      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
-    });
-    if (nMoreDesired) {
-      ajax('GET', '/ext/nonusers', {q: data.q, n: nMoreDesired}, function (nonusers) {
-        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: nonusers.map(toNonUserSearchResult, {sf: sf, q: data.q})});
-      }, function () {
-        api.tabs.emit(tab, 'nonusers', {searchId: searchId, nonusers: [], error: true});
-      });
-    }
+    respond(results.map(toFriendSearchResult, {sf: sf, q: data.q}));
   },
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);
