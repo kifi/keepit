@@ -245,10 +245,19 @@ class UserController @Inject() (
     val user = db.readOnly { implicit session => userRepo.get(userId) }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
-    Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
+    val json = toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++
        Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-       Json.obj("experiments" -> experiments.map(_.value)))
+       Json.obj("experiments" -> experiments.map(_.value))
+    if (experiments.contains(ExperimentType.HELP_RANK_ALPHA)) {
+      val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
+      Ok(json ++ Json.obj(
+        "uniqueKeepsClicked" -> uniqueKeepsClicked,
+        "totalKeepsClicked" -> totalClicks
+      ))
+    } else {
+      Ok(json)
+    }
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")

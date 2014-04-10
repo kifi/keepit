@@ -105,7 +105,8 @@ class UserCommander @Inject() (
   s3ImageStore: S3ImageStore,
   emailOptOutCommander: EmailOptOutCommander,
   heimdalClient: HeimdalServiceClient,
-  fortytwoConfig: FortyTwoConfig) extends Logging {
+  fortytwoConfig: FortyTwoConfig,
+  bookmarkClicksRepo: UserBookmarkClicksRepo) extends Logging {
 
 
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
@@ -219,6 +220,11 @@ class UserCommander @Inject() (
       )
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
+  }
+
+  def getHelpCounts(user: Id[User]): (Int, Int) = {
+    //unique keeps, total clicks
+    db.readOnly { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {

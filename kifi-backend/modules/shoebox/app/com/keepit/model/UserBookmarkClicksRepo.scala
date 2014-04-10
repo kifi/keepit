@@ -11,6 +11,7 @@ import com.google.inject.{Singleton, ImplementedBy, Inject}
 trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks]{
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks]
   def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks
+  def getClickCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
 }
 
 @Singleton
@@ -44,5 +45,12 @@ class UserBookmarkClicksRepoImpl @Inject()(
         UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0))
 
     save(if (isSelf) r.copy(selfClicks = r.selfClicks + 1) else r.copy(otherClicks = r.otherClicks + 1))
+  }
+
+  def getClickCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
+    //unique keeps, total clicks
+    val uniqueKeepsClicked = (for (row <- rows if row.userId === userId && row.otherClicks > 0) yield row).length.run
+    val totalClicks = (for (row <- rows if row.userId === userId) yield row.otherClicks).sum.run.getOrElse(0)
+    (uniqueKeepsClicked,totalClicks)
   }
 }
