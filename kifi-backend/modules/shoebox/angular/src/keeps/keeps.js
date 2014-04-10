@@ -26,11 +26,11 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       }
       $scope.draggedKeeps = draggedKeeps;
       return $scope.getDraggedKeepsElement();
-    }
+    };
 
     $scope.stopDraggingKeeps = function () {
       $scope.draggedKeeps = null;
-    }
+    };
   }
 ])
 
@@ -170,7 +170,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         scope.getDraggedKeepsElement = function () {
           return element.find('.kf-shadow-dragged-keeps');
-        }
+        };
       }
     };
   }

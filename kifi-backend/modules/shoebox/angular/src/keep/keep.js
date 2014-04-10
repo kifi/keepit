@@ -219,7 +219,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           element.addClass('kf-dragged');
           var draggedKeepsElement = scope.dragKeeps(scope.keep);
           var sendData = angular.toJson(scope.draggedKeeps);
-          e.dataTransfer.setData("Text", sendData);
+          e.dataTransfer.setData('Text', sendData);
           e.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
           scope.$apply(function () { scope.isDragging = true; });
         });
