@@ -22,7 +22,6 @@ import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.serializer.TypeCode
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 import org.joda.time.DateTime
@@ -32,15 +31,15 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def trackEvent(event: HeimdalEvent): Unit
 
-  def getMetricData[E <: HeimdalEvent: TypeCode](name: String): Future[JsObject]
+  def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject]
 
   def updateMetrics(): Unit
 
-  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray]
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray]
 
-  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]]
+  def getEventDescriptors[E <: HeimdalEvent](implicit companion: HeimdalEventCompanion[E]): Future[Seq[EventDescriptor]]
 
-  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int]
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit companion: HeimdalEventCompanion[E]): Future[Int]
 
   def deleteUser(userId: Id[User]): Unit
 
@@ -100,8 +99,8 @@ class HeimdalServiceClientImpl @Inject() (
     actor.ref ! event
   }
 
-  def getMetricData[E <: HeimdalEvent: TypeCode](name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(implicitly[TypeCode[E]].code, name)).map{ response =>
+  def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject] = {
+    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map{ response =>
       Json.parse(response.body).as[JsObject]
     }
   }
@@ -110,20 +109,20 @@ class HeimdalServiceClientImpl @Inject() (
     broadcast(Heimdal.internal.updateMetrics())
   }
 
-  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit code: TypeCode[E]): Future[JsArray] = {
+  def getRawEvents[E <: HeimdalEvent](window: Int, limit: Int, events: EventType*)(implicit companion: HeimdalEventCompanion[E]): Future[JsArray] = {
     val eventNames = if (events.isEmpty) Seq("all") else events.map(_.name)
-    call(Heimdal.internal.getRawEvents(code.code, eventNames, limit, window)).map { response =>
+    call(Heimdal.internal.getRawEvents(companion.typeCode, eventNames, limit, window)).map { response =>
       Json.parse(response.body).as[JsArray]
     }
   }
 
-  def getEventDescriptors[E <: HeimdalEvent](implicit code: TypeCode[E]): Future[Seq[EventDescriptor]] =
-    call(Heimdal.internal.getEventDescriptors(code.code)).map { response =>
+  def getEventDescriptors[E <: HeimdalEvent](implicit companion: HeimdalEventCompanion[E]): Future[Seq[EventDescriptor]] =
+    call(Heimdal.internal.getEventDescriptors(companion.typeCode)).map { response =>
       Json.parse(response.body).as[JsArray].value.map(EventDescriptor.format.reads(_).get)
     }
 
-  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit code: TypeCode[E]): Future[Int] =
-    call(Heimdal.internal.updateEventDescriptor(code.code), Json.toJson(eventDescriptors)).map { response =>
+  def updateEventDescriptors[E <: HeimdalEvent](eventDescriptors: Seq[EventDescriptor])(implicit companion: HeimdalEventCompanion[E]): Future[Int] =
+    call(Heimdal.internal.updateEventDescriptor(companion.typeCode), Json.toJson(eventDescriptors)).map { response =>
       Json.parse(response.body).as[JsNumber].value.toInt
     }
 
