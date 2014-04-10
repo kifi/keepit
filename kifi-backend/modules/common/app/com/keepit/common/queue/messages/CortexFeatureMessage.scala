@@ -1,6 +1,5 @@
 package com.keepit.common.queue.messages
 
-import com.keepit.serializer.TypeCode
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURI
