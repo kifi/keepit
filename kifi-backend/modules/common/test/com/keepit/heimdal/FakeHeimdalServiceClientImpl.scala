@@ -2,21 +2,15 @@ package com.keepit.heimdal
 
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.common.service.{ServiceClient, ServiceType}
-import com.keepit.common.logging.Logging
-import com.keepit.common.routes.Heimdal
+import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
 import scala.concurrent.{Future, Promise}
 
 import play.api.libs.json.{JsArray, Json, JsObject}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.serializer.TypeCode
 import com.keepit.common.actor.FakeScheduler
 
 
