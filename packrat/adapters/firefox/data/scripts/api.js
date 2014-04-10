@@ -13,10 +13,10 @@ const api = function() {
     }
   });
 
-  self.port.on("api:inject", function(styles, scripts, callbackId) {
+  self.port.on('api:inject', function(styles, scripts, callbackId) {
     styles.forEach(function(css) {
-      var el = document.createElement("style");
-      el.innerHTML = css;
+      var el = document.createElement('style');
+      el.textContent = css;
       (document.head || document.body).appendChild(el);
     });
     scripts.forEach(function(js) {
