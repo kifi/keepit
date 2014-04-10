@@ -58,6 +58,12 @@ angular.module('kifi.invite', [
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
         scope.networks = socialService.networks;
+        scope.$watch(function () {
+          return socialService.networks.length;
+        }, function (networksLength) {
+          scope.networkText = networksLength === 1 ? '1 network connected' : networksLength + ' networks connected';
+        });
+
 
         scope.data = scope.data || {};
 
