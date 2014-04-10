@@ -368,7 +368,7 @@ angular.module('kifi.keepService', [
           var keeps = result.keeps;
           var _before = result.before;
 
-          if (!keeps.length || keeps.length < params.count-1) {
+          if (!keeps.length || keeps.length < params.count - 1) {
             end = true;
           }
 
