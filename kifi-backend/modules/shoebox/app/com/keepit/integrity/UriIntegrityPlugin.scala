@@ -58,7 +58,7 @@ class UriIntegrityActor @Inject()(
         // skipping due to double redirects. this should not happen.
         log.error(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
         airbrake.notify(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
-        None
+        (None, None)
       } else {
         val userId = oldBm.userId
         val newUriId = newUri.id.get
@@ -68,32 +68,45 @@ class UriIntegrityActor @Inject()(
             log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
-            Some(oldBm, None)
+            (Some(oldBm), None)
           }
           case Some(bm) => {
+            def save(oldBm: Keep, newBm: Keep): (Option[Keep], Option[Keep]) = {
+              val liveBm = keepRepo.save(newBm.withActive(true))
+              val deadBm = keepRepo.save(oldBm.withActive(false))
+              keepRepo.deleteCache(deadBm)
+              (Some(deadBm), Some(liveBm))
+            }
+
             if (oldBm.state == KeepStates.ACTIVE) {
-              val newBm = if (bm.state == KeepStates.INACTIVE || (oldBm.isPrivate && !bm.isPrivate)) {
-                // transfer the privacy setting, title, url and url id to newBm
-                keepRepo.save(bm.withActive(true).withPrivate(oldBm.isPrivate).withTitle(oldBm.title).withUrl(oldBm.url).withUrlId(oldBm.urlId))
+              if (bm.state == KeepStates.INACTIVE) {
+                // the target is inactive, transfer the privacy setting, title, url and url id to newBm
+                save(oldBm, bm.withPrivate(oldBm.isPrivate).withTitle(oldBm.title).withUrl(oldBm.url).withUrlId(oldBm.urlId))
               } else {
-                bm
+                // we are merging two active keeps, take the title and the url of the newer one
+                // if the privacy settings don't agree, make it private to true to be safe
+                if (oldBm.createdAt.getMillis <  bm.createdAt.getMillis) {
+                  if (oldBm.isPrivate == bm.isPrivate) save(oldBm, bm) else save(oldBm, keepRepo.save(bm.withPrivate(true)))
+                } else {
+                  // swap titles and urls (to preserve info). note that newBm honors the stronger privacy setting (to be safe).
+                  save(oldBm.withPrivate(bm.isPrivate).withTitle(bm.title).withUrl(bm.url).withUrlId(bm.urlId),
+                       bm.withPrivate(oldBm.isPrivate || bm.isPrivate).withTitle(oldBm.title).withUrl(oldBm.url).withUrlId(oldBm.urlId))
+                }
               }
-              keepRepo.save(oldBm.withActive(false))
-              keepRepo.deleteCache(oldBm)
-              Some(oldBm, Some(newBm))
             } else {
-              None
+              // oldBm is already inactive, do nothing
+              (None, None)
             }
           }
         }
       }
     }
 
-    val collectionsToUpdate = deactivatedBms.flatten.map {
-      case (oldBm, None) => {
+    val collectionsToUpdate = deactivatedBms.map {
+      case (Some(oldBm), None) => {
         keepToCollectionRepo.getCollectionsForKeep(oldBm.id.get).toSet
       }
-      case (oldBm, Some(newBm)) => {
+      case (Some(oldBm), Some(newBm)) => {
         var collections = Set.empty[Id[Collection]]
         keepToCollectionRepo.getByKeep(oldBm.id.get, excludeState = None).foreach { ktc =>
           collections += ktc.collectionId
@@ -108,6 +121,9 @@ class UriIntegrityActor @Inject()(
           }
         }
         collections
+      }
+      case _ => {
+        Set.empty[Id[Collection]]
       }
     }.flatten
 
