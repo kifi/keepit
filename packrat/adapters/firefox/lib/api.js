@@ -644,7 +644,7 @@ var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, i
     log('[api:require]', page.id, o);
     mergeArr(page.injectedCss, o.styles);
     mergeArr(injectedJs, o.scripts);
-    worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+    worker.port.emit('api:inject', o.styles, o.scripts.map(self.data.load), callbackId);
   } else {
     log('[api:require] page hidden', page.id, o);
   }
