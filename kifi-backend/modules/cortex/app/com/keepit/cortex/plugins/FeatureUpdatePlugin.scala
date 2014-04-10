@@ -47,7 +47,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
 
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 5 minutes, actor.ref, Update)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, Update)
   }
 
   override def onStop() {
@@ -92,7 +92,7 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
   protected val pullSize = 500
   protected val name: String = getClass.toString
 
-  private var currentSequence: FeatureStoreSequenceNumber[T, M] = {
+  private def lastComittedSequence(): FeatureStoreSequenceNumber[T, M] = {
     getCommitInfoFromStore() match {
       case Some(info) => {
         assume(info.version == representer.version)
@@ -109,15 +109,16 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
     commitInfoStore.get(key)
   }
 
-  private def commit(): Unit = {
-    val commitData = CommitInfo(currentSequence, representer.version, currentDateTime)
+  private def commit(seq: FeatureStoreSequenceNumber[T, M]): Unit = {
+    val commitData = CommitInfo(seq, representer.version, currentDateTime)
     val key = genCommitInfoKey()
     log.info(s"commiting data $commitData")
     commitInfoStore.+=(key, commitData)
   }
 
   def update(): Unit = {
-    val ents = dataPuller.getSince(SequenceNumber[T](currentSequence.value), limit = pullSize)
+    val lowSeq = lastComittedSequence()
+    val ents = dataPuller.getSince(SequenceNumber[T](lowSeq.value), limit = pullSize)
     log.info(s"begin a new round of update. data size: ${ents.size}")
     if (ents.isEmpty) return
 
@@ -128,8 +129,8 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
         featureStore.+=(k, representer.version, v)
       }
     }
-    currentSequence = FeatureStoreSequenceNumber[T, M](maxSeq.value)
-    commit()
+    val commitSeq = FeatureStoreSequenceNumber[T, M](maxSeq.value)
+    commit(commitSeq)
   }
 
   def commitInfo(): Option[CommitInfo[T, M]] = getCommitInfoFromStore()
