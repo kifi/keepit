@@ -34,9 +34,13 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $http.post(env.xhrBase + '/user/prefs', {
         onboarding_seen: 'true'
       });
+      $scope.importBookmarks();
       $scope.$apply();
-      //initBookmarkImport();
     };
+
+    $rootScope.$on('showGettingStarted', function () {
+      $scope.data.showGettingStarted = true;
+    });
 
     $scope.importBookmarks = function () {
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
@@ -47,7 +51,6 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
         $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
       }
     });
-    $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
     $scope.logout = function () {
       profileService.logout();
