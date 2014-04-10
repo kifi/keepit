@@ -27,13 +27,13 @@ sealed trait HeimdalEventCompanion[E <: HeimdalEvent] {
 object HeimdalEvent {
   implicit val format = new Format[HeimdalEvent] {
     def writes(event: HeimdalEvent) = Json.obj("typeCode" -> event.companion.typeCode.toString, "value" -> event.companion.format.writes(event.instance))
-    def reads(json: JsValue) = Reads.of[String].reads(json \ "typeCode").flatMap { typeCode => HeimdalEventCompanion.byTypecode(typeCode).format.reads(json \ "value") }
+    def reads(json: JsValue) = Reads.of[String].reads(json \ "typeCode").flatMap { typeCode => HeimdalEventCompanion.byTypeCode(typeCode).format.reads(json \ "value") }
   }
 }
 
 object HeimdalEventCompanion {
   val all: Set[HeimdalEventCompanion[_ <: HeimdalEvent]] = CompanionTypeSystem[HeimdalEvent, HeimdalEventCompanion[_<: HeimdalEvent]]("E")
-  val byTypecode: Map[String, HeimdalEventCompanion[_ <: HeimdalEvent]] = {
+  val byTypeCode: Map[String, HeimdalEventCompanion[_ <: HeimdalEvent]] = {
     require(all.size == all.map(_.typeCode).size, "Duplicate HeimdalEvent type codes.")
     all.map { vertexKind => vertexKind.typeCode -> vertexKind }.toMap
   }

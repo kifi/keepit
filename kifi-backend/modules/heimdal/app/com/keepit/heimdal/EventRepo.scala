@@ -71,7 +71,7 @@ abstract class DevEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends Ev
 }
 
 object EventRepo {
-  def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(code: String): Option[EventRepo[_ <: HeimdalEvent]] = availableRepos.find(_.getEventCompanion == HeimdalEventCompanion.byTypecode(code))
+  def findByEventTypeCode(availableRepos: EventRepo[_ <: HeimdalEvent]*)(code: String): Option[EventRepo[_ <: HeimdalEvent]] = availableRepos.find(_.getEventCompanion == HeimdalEventCompanion.byTypeCode(code))
   def eventToBSONFields(event: HeimdalEvent): Seq[(String, BSONValue)] = Seq(
     "context" -> BSONEventContextHandler.write(event.context),
     "eventType" -> BSONEventTypeHandler.write(event.eventType),
