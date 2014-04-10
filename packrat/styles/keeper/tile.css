@@ -96,3 +96,24 @@
   font-size: 10px;
   line-height: 20px;
 }
+
+.kifi-shake {
+  -webkit-animation: kifi-shake .15s 2 linear;
+  -moz-animation: kifi-shake .15s 2 linear;
+  animation: kifi-shake .15s 2 linear;
+}
+@keyframes kifi-shake {
+  0% {transform: translate(3px, 0)}
+  50% {transform: translate(-3px, 0)}
+  100% {transform: none}
+}
+@-moz-keyframes kifi-shake {
+  0% {-moz-transform: translate(3px, 0)}
+  50% {-moz-transform: translate(-3px, 0)}
+  100% {-moz-transform: none}
+}
+@-webkit-keyframes kifi-shake {
+  0% {-webkit-transform: translate(3px, 0)}
+  50% {-webkit-transform: translate(-3px, 0)}
+  100% {-webkit-transform: none}
+}
