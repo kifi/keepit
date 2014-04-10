@@ -137,7 +137,13 @@ angular.module('kifi.inviteService', [
               //something went wrong, could be token, could be rate limit
               //still need to deal with that properly
               $log.log(res.data.error);
-              deferred.reject('');
+              if (res.data.error.code === 'linkedin_error_{401}') {
+                deferred.reject('token_expired'); // technically the token could also just be invalid, but we don't get that info from the backend
+              } else if (res.data.error.code === 'linkedin_error_{403}') {
+                deferred.reject('hit_rate_limit_reached');
+              } else {
+                deferred.reject('generic_error');
+              }
             } else {
               deferred.resolve('');
             }
