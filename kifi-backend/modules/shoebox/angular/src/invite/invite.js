@@ -166,7 +166,7 @@ angular.module('kifi.invite', [
 
         scope.refreshFriends = function () {
           scope.data.showCantFindModal = false;
-          $socialService.refreshNetworks();
+          $socialService.refreshSocialGraph();
         };
 
       }
