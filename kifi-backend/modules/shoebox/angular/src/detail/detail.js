@@ -68,7 +68,7 @@ angular.module('kifi.detail',
         };
 
         scope.isPublic = function () {
-          return scope.howKept === 'public';
+          return scope.howKept === 'public' && scope.keep.isMyBookmark;
         };
 
         scope.toggleKeep = function () {
