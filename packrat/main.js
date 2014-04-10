@@ -614,36 +614,67 @@ api.port.on({
   deauthenticate: deauthenticate,
   get_keeps: searchOnServer,
   get_keepers: function(_, respond, tab) {
-    log("[get_keepers]", tab.id)();
+    log('[get_keepers]', tab.id)();
     var d = pageData[tab.nUri] || {};
     respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
   },
   keep: function(data, _, tab) {
-    log("[keep]", data)();
-    (pageData[tab.nUri] || {}).kept = data.how;
-    var bm = {
-      title: data.title,
-      url: data.url,
-      canonical: data.canonical,
-      og: data.og,
-      isPrivate: data.how == "private"};
-    postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
-    forEachTabAt(tab.url, tab.nUri, function(tab) {
-      setIcon(tab, data.how);
-      api.tabs.emit(tab, "kept", {kept: data.how});
-    });
-    updateKifiAppTabs();
+    log('[keep]', data)();
+    var d = pageData[tab.nUri];
+    if (!d) {
+      api.tabs.emit(tab, 'kept', {fail: true});
+    } else if (!d.state) {
+      d.state = 'keeping';
+      ajax('POST', '/ext/keeps', {
+        title: data.title,
+        url: data.url,
+        canonical: data.canonical,
+        og: data.og,
+        isPrivate: data.how === 'private'
+      }, function done(keep) {
+        log('[unkeep:done]', keep)();
+        delete d.state;
+        d.kept = data.how;
+        d.keepId = keep.id;
+        forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
+          setIcon(tab, data.how);
+        });
+      }, function fail() {
+        log('[keep:fail]', data.url)();
+        delete d.state;
+        forEachTabAt(tab.url, tab.nUri, function (tab) {
+          api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
+        });
+      });
+      forEachTabAt(tab.url, tab.nUri, function (tab) {
+        api.tabs.emit(tab, 'kept', {kept: data.how});
+      });
+      updateKifiAppTabs();
+    }
   },
-  unkeep: function(data, _, tab) {
-    log("[unkeep]", data)();
-    delete (pageData[tab.nUri] || {}).kept;
-    ajax("POST", "/bookmarks/remove", data, function(o) {
-      log("[unkeep] response:", o)();
-    });
-    forEachTabAt(tab.url, tab.nUri, function(tab) {
-      setIcon(tab, false);
-      api.tabs.emit(tab, "kept", {kept: null});
-    });
+  unkeep: function(_, __, tab) {
+    var d = pageData[tab.nUri];
+    log('[unkeep]', d && d.keepId || '', d && d.state || '')();
+    if (!d || !d.keepId) {
+      api.tabs.emit(tab, 'kept', {fail: true});
+    } else if (!d.state) {
+      ajax('POST', '/ext/keeps/' + d.keepId + '/unkeep', function done(o) {
+        log('[unkeep:done]', o)();
+        delete d.state;
+        delete d.kept;
+        delete d.keepId;
+        forEachTabAt(tab.url, tab.nUri, function (tab) {
+          setIcon(tab, false);
+        });
+      }, function fail() {
+        log('[unkeep:fail]', d.keepId)();
+        delete d.state;
+        api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
+      });
+      forEachTabAt(tab.url, tab.nUri, function (tab) {
+        api.tabs.emit(tab, 'kept', {kept: null});
+      });
+    }
   },
   set_private: function(data, _, tab) {
     log("[setPrivate]", data)();
@@ -1675,6 +1706,7 @@ function gotPageDetailsFor(url, tab, resp) {
   var d = pageData[nUri] || new PageData;
 
   d.kept = resp.kept;
+  d.keepId = resp.keepId;
   d.tags = resp.tags || [];
   d.position = resp.position;
   d.neverOnSite = resp.neverOnSite;

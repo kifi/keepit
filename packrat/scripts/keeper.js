@@ -362,7 +362,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how)();
-    updateKeptDom(how);
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
@@ -380,20 +379,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function unkeepPage() {
     log('[unkeepPage]', document.URL)();
-    updateKeptDom('');
     api.port.emit('unkeep', withUrls({}));
   }
 
   function toggleKeep(how) {
     log('[toggleKeep]', how)();
-    updateKeptDom(how);
     api.port.emit('set_private', withUrls({private: how == 'private'}));
-  }
-
-  function updateKeptDom(how) {
-    if ($slider) {
-      $slider.find('.kifi-keep-card').removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (how || 'unkept'));
-    }
   }
 
   function hoverfuFriends($tip, keepers) {
@@ -475,7 +466,16 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   api.port.on({
     kept: function (o) {
-      updateKeptDom(o.kept);
+      if ($slider) {
+        var $card = $slider.find('.kifi-keep-card');
+        if ('kept' in o) {
+          $card.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
+        }
+        if (o.fail && !$card.hasClass('kifi-shake')) {
+          $card.one('animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($card, 'kifi-shake'))
+          .addClass('kifi-shake');
+        }
+      }
     },
     count: function (n) {
       if (!$slider) return;

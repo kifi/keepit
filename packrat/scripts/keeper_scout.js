@@ -34,7 +34,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tileCount = document.createElement("span");
   tileCount.className = "kifi-count";
 
-  document.addEventListener("keydown", onKeyDown, true);
+  document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener(('mozHidden' in document ? 'moz' : 'webkit') + 'fullscreenchange', onFullScreenChange);
 
   api.port.emit('me', onMeChange);
@@ -51,11 +51,11 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.dataset.pos = JSON.stringify(pos);
         positionTile(pos);
       }
-      tileCard.classList.add("kifi-0s");
+      tileCard.classList.add('kifi-0s');
       if (o.kept) {
         tile.dataset.kept = o.kept;
       } else {
-        tile.removeAttribute("data-kept");
+        tile.removeAttribute('data-kept');
       }
       tags = o.tags || [];
       window.addEventListener("resize", onResize);
@@ -76,8 +76,16 @@ var tile = tile || function() {  // idempotent for Chrome
     kept: function(o) {
       if (o.kept) {
         tile.dataset.kept = o.kept;
-      } else {
-        tile.removeAttribute("data-kept");
+      } else if (o.kept === null) {
+        tile.removeAttribute('data-kept');
+      }
+      if (o.fail && !tile.querySelector('.kifi-keeper') && !tile.classList.contains('kifi-shake')) {
+        var eventType = 'animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd';
+        tile.addEventListener(eventType, function end() {
+          tile.removeEventListener(eventType, end);
+          tile.classList.remove('kifi-shake');
+        });
+        tile.classList.add('kifi-shake');
       }
     },
     count: function(n) {
@@ -110,20 +118,22 @@ var tile = tile || function() {  // idempotent for Chrome
     })
   });
 
+  var tLastK = 0;
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
       switch (e.keyCode) {
       case 75: // k
+        var now = Date.now();
+        if (now - tLastK < 400) return;
+        tLastK = now;
         if (me === undefined) {  // not yet initialized
           whenMeKnown.push(onKeyDown.bind(this, e));
         } else if (!me) {
           toggleLoginDialog();
         } else if (tile && tile.dataset.kept) {
           api.port.emit("unkeep", withUrls({}));
-          tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
         } else {
           api.port.emit("keep", withUrls({title: authoredTitle(), how: "public"}));
-          if (tile) tile.dataset.kept = "public";
         }
         e.preventDefault();
         break;
@@ -294,7 +304,7 @@ var tile = tile || function() {  // idempotent for Chrome
   }, 60000);
 
   api.onEnd.push(function() {
-    document.removeEventListener("keydown", onKeyDown, true);
+    document.removeEventListener('keydown', onKeyDown, true);
     cleanUpDom();
     me = tile = tileCard = tileCount = null;
   });
