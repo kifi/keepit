@@ -145,13 +145,13 @@ angular.module('kifi', [
 ])
 
 .run([
-  'profileService', '$rootScope',
-  function (profileService, $rootScope) {
+  'profileService', '$rootScope', '$window',
+  function (profileService, $rootScope, $window) {
     // Initial data loading:
 
     profileService.fetchPrefs().then(function (res) {
       // handle onboarding / imports
-      if (!res['onboarding_seen']) {
+      if (!res.onboarding_seen) {
         $rootScope.$emit('showGettingStarted');
       } else {
         $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
