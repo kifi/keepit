@@ -145,8 +145,8 @@ angular.module('kifi', [
 ])
 
 .run([
-  'profileService', '$rootScope', '$window',
-  function (profileService, $rootScope, $window) {
+  'profileService', '$rootScope', '$window', 'friendService', '$timeout',
+  function (profileService, $rootScope, $window, friendService, $timeout) {
     // Initial data loading:
 
     profileService.fetchPrefs().then(function (res) {
@@ -157,6 +157,10 @@ angular.module('kifi', [
         $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
       }
       return res;
+    });
+
+    $timeout(function () {
+      friendService.getRequests();
     });
   }
 ])

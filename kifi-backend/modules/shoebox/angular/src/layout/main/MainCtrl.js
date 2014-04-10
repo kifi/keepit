@@ -98,11 +98,18 @@ angular.module('kifi.layout.main', [
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
-      if (modal === 'addNetworks') {
-        $scope.modal = 'add_networks';
-        $scope.data.showAddNetworks = true;
-      } else if (modal === 'importBookmarks') {
-        initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
+      switch (modal) {
+        case 'addNetworks':
+          $scope.modal = 'add_networks';
+          $scope.data.showAddNetworks = true;
+          break;
+        case 'importBookmarks':
+          initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
+          break;
+        case 'addKeeps':
+          $scope.modal = 'add_keeps';
+          $scope.data.showAddKeeps = true;
+          break;
       }
     });
 
