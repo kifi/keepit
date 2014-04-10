@@ -39,7 +39,9 @@ var toaster = (function () {
         deferred.resolve();
       } else {
         api.port.emit('prefs', function (prefs) {
-          show($parent, prefs, deferred);
+          if (!$toaster) {
+            show($parent, prefs, deferred);
+          }
         });
       }
       return deferred.promise;
