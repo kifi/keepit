@@ -2,7 +2,6 @@ package com.keepit.heimdal
 
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.serializer.{Companion, TypeCode}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.model.User
