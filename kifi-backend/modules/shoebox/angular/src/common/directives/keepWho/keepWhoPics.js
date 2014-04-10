@@ -82,7 +82,6 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
       link: function (scope) {
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
-        console.log('xxxx', scope.keep)
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
       }
     };

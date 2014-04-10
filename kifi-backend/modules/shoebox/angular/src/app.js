@@ -11,6 +11,7 @@ angular.module('kifi', [
   'util',
   'dom',
   'antiscroll',
+  'nodraginput',
   'jun.smartScroll',
   'angularMoment',
   'kifi.home',
