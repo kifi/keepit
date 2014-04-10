@@ -1,6 +1,5 @@
 package com.keepit.heimdal
 
-import com.keepit.serializer.TypeCode
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.ws.WS
@@ -9,13 +8,11 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.db.{ExternalId, Id}
-import scala.concurrent.Future
 
 class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
 
-  def track[E <: HeimdalEvent: TypeCode](event: E) = {
-    val eventCode = implicitly[TypeCode[E]]
-    val eventName = s"${eventCode}_${event.eventType.name}"
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]) = {
+    val eventName = s"${companion.typeCode}_${event.eventType.name}"
     val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
     if (!properties.data.contains("ip")) { properties.data += ("ip" -> event.context.data.getOrElse("remoteAddress", ContextDoubleData(0))) }
@@ -27,9 +24,9 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
   }
 
   private def getDistinctId(id: Id[User]): String = s"${UserEvent.typeCode}_${id.toString}"
-  private def getDistinctId[E <: HeimdalEvent: TypeCode](event: E): String = event match {
+  private def getDistinctId[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): String = event match {
     case userEvent: UserEvent => getDistinctId(userEvent.userId)
-    case _ => implicitly[TypeCode[E]].code
+    case _ => companion.typeCode
   }
 
   def incrementUserProperties(userId: Id[User], increments: Map[String, Double]) = {
