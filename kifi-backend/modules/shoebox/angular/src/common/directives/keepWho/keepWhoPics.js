@@ -76,11 +76,14 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
       templateUrl: 'common/directives/keepWho/keepWhoPics.tpl.html',
       scope: {
         me: '=',
-        keepers: '='
+        keepers: '=',
+        keep: '='
       },
       link: function (scope) {
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
+        console.log('xxxx', scope.keep)
+        scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
       }
     };
   }
