@@ -115,7 +115,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         var tagDragMask = element.find('.kf-tag-drag-mask');
         var tagDraggedUpon = false;
         var yBoundary = parseInt(element.css('height'), 10) / 2;
-        var isTop;
+        var isTop = null;
 
         function startTagDrag() {
           tagDraggedUpon = true;
@@ -133,10 +133,10 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
             var posY = e.originalEvent.clientY - util.offset(element).top;
             if (posY > yBoundary) {
               isTop = false;
-              tagDragMask.css({borderTopStyle: 'none', borderBottomStyle: 'dotted', marginTop: 0});
+              tagDragMask.css({borderTopStyle: 'none', borderBottomStyle: 'dotted', marginTop: '1px'});
             } else {
               isTop = true;
-              tagDragMask.css({borderTopStyle: 'dotted', borderBottomStyle: 'none', marginTop: '-2px'});
+              tagDragMask.css({borderTopStyle: 'dotted', borderBottomStyle: 'none', marginTop: 0});
             }
           }
         });
