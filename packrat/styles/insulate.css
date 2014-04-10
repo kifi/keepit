@@ -285,7 +285,7 @@
   font: inherit !important;
 }
 .kifi-root.kifi-root ::selection {
-  background: initial;
+  background: #b2d3ff;
   color: initial;
   text-shadow: initial;
 }
