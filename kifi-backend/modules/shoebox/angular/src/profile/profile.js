@@ -168,6 +168,9 @@ angular.module('kifi.profile', [
           if (linkedin && linkedin.profileUrl) {
             scope.isLinkedInConnected = true;
             scope.liProfileUrl = linkedin.profileUrl;
+          } else {
+            scope.isLinkedInConnected = false;
+            scope.liProfileUrl = '';
           }
         });
 
@@ -195,6 +198,9 @@ angular.module('kifi.profile', [
           if (facebook && facebook.profileUrl) {
             scope.isFacebookConnected = true;
             scope.fbProfileUrl = facebook.profileUrl;
+          } else {
+            scope.isFacebookConnected = false;
+            scope.fbProfileUrl = '';
           }
         });
 
