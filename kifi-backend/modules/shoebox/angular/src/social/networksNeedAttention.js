@@ -10,7 +10,9 @@ angular.module('kifi.social.networksNeedAttention', [])
       restrict: 'A',
       templateUrl: 'social/networksNeedAttention.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        scope.networksNeedAttention = Object.keys(socialService.expiredTokens).length > 0;
+        scope.networksNeedAttention = function () {
+          return Object.keys(socialService.expiredTokens).length > 0;
+        };
         scope.data = {};
         scope.doShow = function () {
           $rootScope.$emit('showGlobalModal', 'addNetworks');
