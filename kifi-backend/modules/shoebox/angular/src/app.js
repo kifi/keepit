@@ -96,8 +96,8 @@ angular.module('kifi', [
   function ($location) {
     var host = $location.host(),
       dev = /^dev\.ezkeep\.com|localhost$/.test(host),
-      local = $location.port() === '9000',
-      origin = local ? $location.protocol() + '//' + host : 'https://www.kifi.com';
+      local = $location.port() === 9000,
+      origin = local ? $location.protocol() + '://' + host  + ':' + $location.port() : 'https://www.kifi.com';
 
     return {
       local: local,
