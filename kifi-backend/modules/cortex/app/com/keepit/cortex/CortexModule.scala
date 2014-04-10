@@ -1,9 +1,10 @@
 package com.keepit.cortex
 
+import com.keepit.common.cache.CacheModule
+import com.keepit.cortex.store.{CommitInfoStoreModule, CortexCommonStoreModule, FeatureStoreModule, StatModelStoreModule}
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
-import com.keepit.cortex.store.{CommitInfoStoreModule, FeatureStoreModule, StatModelStoreModule, CortexCommonStoreModule}
-import com.keepit.common.cache.CacheModule
+import com.keepit.social.RemoteSecureSocialModule
 
 
 abstract class CortexModule(
@@ -15,4 +16,5 @@ abstract class CortexModule(
   val modelModuel: CortexModelModule
 ) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val secureSocialModule = RemoteSecureSocialModule()
 }
