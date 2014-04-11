@@ -1,20 +1,23 @@
 'use strict';
 
 angular.module('kifi.friendService', [
-  'angulartics'
+  'angulartics',
+  'util'
 ])
 
 .factory('friendService', [
-  '$http', 'env', '$q', 'routeService', '$analytics', 'Clutch',
-  function ($http, env, $q, routeService, $analytics, Clutch) {
+  '$http', 'env', '$q', 'routeService', '$analytics', 'Clutch', 'util',
+  function ($http, env, $q, routeService, $analytics, Clutch, util) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
     var friends = [];
     var requests = [];
-    var friendsRequested = false;
-    var friendRequestsRequested = false;
+
+    var clutchParams = {
+      cacheDuration: 10000
+    }
 
     var kifiFriendsService = new Clutch(function () {
       return $http.get(routeService.friends).then(function (res) {
@@ -22,19 +25,17 @@ angular.module('kifi.friendService', [
         friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
           return !friend.unfriended;
         }));
-        friendsRequested = false;
         return friends;
       });
-    });
+    }, clutchParams);
 
     var kifiFriendRequestsService = new Clutch(function () {
       return $http.get(routeService.incomingFriendRequests).then(function (res) {
-        requests.length = 0;
-        requests.push.apply(requests, res.data);
-        friendRequestsRequested = false;
+        util.replaceArrayInPlace(requests, res.data);
+
         return requests;
       });
-    });
+    }, clutchParams);
 
     var api = {
       connectWithKifiUser: function (userId) {
@@ -46,7 +47,9 @@ angular.module('kifi.friendService', [
       },
 
       getRequests: function () {
-        return kifiFriendRequestsService.get();
+        return kifiFriendRequestsService.get().then(function (r) {
+          console.log('fin', _.clone(r), _.clone(requests));
+        });
       },
 
       friends: friends,
