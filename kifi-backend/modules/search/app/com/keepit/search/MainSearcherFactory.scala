@@ -29,6 +29,7 @@ import com.keepit.search.graph.collection.CollectionSearcher
 import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
 import com.keepit.search.query.HotDocSetFilter
+import com.keepit.search.spellcheck.SpellCorrector
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -41,6 +42,7 @@ class MainSearcherFactory @Inject() (
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
+    spellCorrector: SpellCorrector,
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier,
@@ -53,6 +55,8 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
   private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
+
+  lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   def apply(
     shards: Seq[Shard[NormalizedURI]],
@@ -189,4 +193,6 @@ class MainSearcherFactory @Inject() (
   }
 
   def getIndexShards(): Seq[Shard[NormalizedURI]] = shardedArticleIndexer.indexShards.keys.toSeq
+
+  def getSpellCorrector(): SpellCorrector = spellCorrector
 }
