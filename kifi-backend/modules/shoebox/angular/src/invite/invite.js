@@ -51,7 +51,7 @@ angular.module('kifi.invite', [
 
     $scope.showAddNetworksModal = function () {
       $rootScope.$emit('showGlobalModal', 'addNetworks');
-    }
+    };
   }
 ])
 
@@ -128,13 +128,21 @@ angular.module('kifi.invite', [
         function clickOutside(e) {
           if (scope.search.showDropdown && !element.find(e.target)[0]) { // click was outside of dropdown
             scope.$apply(function () {
+              scope.search.name = '';
               scope.search.showDropdown = false;
             });
           }
         }
 
+        var ignoreClick = {};
+
         scope.invite = function (result, $event) {
           $log.log('this person:', result);
+          if (ignoreClick[result.socialId]) {
+            return;
+          }
+          ignoreClick[result.socialId] = true;
+
           var $elem = angular.element($event.target);
           $elem.text('Sending');
           $elem.parent().removeClass('clickable');
@@ -142,13 +150,15 @@ angular.module('kifi.invite', [
             // Existing user, friend request
             inviteService.friendRequest(result.socialId).then(function () {
               $elem.text('Sent!');
-              $elem.off('click');
               $timeout(function () {
-                $elem.parent().fadeOut('fast');
+                delete ignoreClick[result.socialId];
+                $elem.text('Resend');
+                $elem.parent().addClass('clickable');
               }, 4000);
               inviteService.expireSocialSearch();
             }, function (err) {
               $log.log('err:', err, result);
+              delete ignoreClick[result.socialId];
               $elem.text('Error. Retry?');
               $elem.parent().addClass('clickable');
               inviteService.expireSocialSearch();
@@ -157,13 +167,15 @@ angular.module('kifi.invite', [
             // Request to external person
             inviteService.invite(result.networkType, result.socialId).then(function () {
               $elem.text('Sent!');
-              $elem.off('click');
               $timeout(function () {
-                $elem.parent().fadeOut('fast');
+                delete ignoreClick[result.socialId];
+                $elem.text('Resend');
+                $elem.parent().addClass('clickable');
               }, 4000);
               inviteService.expireSocialSearch();
             }, function (err) {
               $log.log('err:', err, result);
+              delete ignoreClick[result.socialId];
               $elem.text('Error. Retry?');
               $elem.parent().addClass('clickable');
               inviteService.expireSocialSearch();

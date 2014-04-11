@@ -17,7 +17,7 @@ angular.module('kifi.friendService', [
 
     var clutchParams = {
       cacheDuration: 10000
-    }
+    };
 
     var kifiFriendsService = new Clutch(function () {
       return $http.get(routeService.friends).then(function (res) {
@@ -47,9 +47,7 @@ angular.module('kifi.friendService', [
       },
 
       getRequests: function () {
-        return kifiFriendRequestsService.get().then(function (r) {
-          console.log('fin', _.clone(r), _.clone(requests));
-        });
+        return kifiFriendRequestsService.get();
       },
 
       friends: friends,

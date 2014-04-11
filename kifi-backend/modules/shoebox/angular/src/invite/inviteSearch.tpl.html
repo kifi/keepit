@@ -56,7 +56,10 @@
       <div ng-if="result.custom === 'email'">
         <img src="/img/email-icon.png" class="social-invite-image cant-find">
         <div class="social-invite-summary">
-          <div class="social-invite-name social-invite-custom-email">Email to {{result.label}}</div>
+          <div class="social-invite-name">Email to</div>
+          <div class="social-invite-network">
+            {{result.label}}
+          </div>
         </div>
         <div class="social-invite-action clickable">
           <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
