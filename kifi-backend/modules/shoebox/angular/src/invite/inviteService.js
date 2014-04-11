@@ -129,13 +129,11 @@ angular.module('kifi.inviteService', [
             if (res.data.url && platform === 'facebook') {
               $FB.ui({
                 method: 'send',
-                link: 'https://www.kifi.com',
+                link: res.data.url,
                 to: identifier
               });
               deferred.resolve('');
             } else if (res.data.error) {
-              //something went wrong, could be token, could be rate limit
-              //still need to deal with that properly
               $log.log(res.data.error);
               if (res.data.error.code === 'linkedin_error_{401}') {
                 deferred.reject('token_expired'); // technically the token could also just be invalid, but we don't get that info from the backend
