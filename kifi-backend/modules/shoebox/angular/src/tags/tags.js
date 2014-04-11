@@ -42,6 +42,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
       link: function (scope, element) {
         scope.tags = tagService.list;
         scope.newLocationTagId = null;
+        scope.viewedTagId = null;
 
         scope.clearFilter = function (focus) {
           scope.filter.name = '';
@@ -101,15 +102,16 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           return -1;
         }
 
-        scope.viewTag = function (tag) {
-          if (tag) {
-            return $location.path('/tag/' + tag.id);
+        scope.viewTag = function (tagId) {
+          if (tagId) {
+            scope.viewedTagId = tagId;
+            return $location.path('/tag/' + tagId);
           }
         };
 
         scope.select = function () {
           if (scope.highlight) {
-            return scope.viewTag(scope.highlight);
+            return scope.viewTag(scope.highlight.id);
           }
           return scope.create(getFilterValue());
         };
@@ -302,6 +304,15 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           tagService.reorderTag(isTop, srcTag, dstTag);
           scope.newLocationTagId = srcTag.id;
         };
+
+        scope.removeTag = function (tagId) {
+          return tagService.remove(tagId).then(function () {
+            if (scope.viewedTagId === tagId) {
+              scope.viewedTagId = null;
+              $location.path('/');
+            }
+          });
+        }
       }
     };
   }

@@ -159,7 +159,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         }, function (cur) {
           _.forOwn(cur, function (value, key) {
             if (value && !element.hasClass(key)) {
-              console.log(key);
               element.addClass(key);
             } else if (!value && element.hasClass(key)) {
               element.removeClass(key);
