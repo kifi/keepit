@@ -14,12 +14,7 @@ angular.module('kifi.invite', [
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider.when('/invite', {
-      templateUrl: 'invite/invite.tpl.html',
-      resolve: {
-        'wtiList': ['wtiService', function (wtiService) {
-          return wtiService.loadInitial();
-        }]
-      }
+      templateUrl: 'invite/invite.tpl.html'
     }).when('/friends/invite', {
       redirectTo: '/invite'
     });
@@ -38,6 +33,15 @@ angular.module('kifi.invite', [
     socialService.checkIfUpdatingGraphs(2);
 
     $scope.whoToInvite = wtiService.list;
+
+    $scope.wtiLoaded = false;
+    $scope.$watch(function () {
+      return wtiService.list.length || !wtiService.hasMore();
+    }, function (res) {
+      if (res) {
+        $scope.wtiLoaded = true;
+      }
+    });
 
     $scope.wtiScrollDistance = '100%';
     $scope.isWTIScrollDisabled = function () {
