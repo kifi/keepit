@@ -40,7 +40,7 @@ class SimpleGraphTest() extends Specification {
       edgeReader.moveTo(alfred, vertigo) must throwA[EdgeReaderException]
 
       graph.write { writer =>
-        writer.saveEdge(alfred, vertigo, EmptyEdgeDataReader)
+        writer.saveEdge(alfred, vertigo, EmptyEdgeData)
       }
 
       vertexReader.moveTo(alfred)
@@ -69,8 +69,8 @@ class SimpleGraphTest() extends Specification {
 
     graph.write { writer =>
       writer.saveVertex(UriData(rearWindow))
-      writer.saveEdge(alfred, vertigo, EmptyEdgeDataReader)
-      writer.saveEdge(alfred, rearWindow, EmptyEdgeDataReader)
+      writer.saveEdge(alfred, vertigo, EmptyEdgeData)
+      writer.saveEdge(alfred, rearWindow, EmptyEdgeData)
 
       val dirtyVertexReader = writer.getNewVertexReader()
 
