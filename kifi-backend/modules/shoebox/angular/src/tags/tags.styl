@@ -281,3 +281,17 @@ nav-item()
 .kf-tag-tool-icon
   height: 100%
   width: 100%
+
+.kf-tag-waiting
+  display: inline-block
+  width: 24px
+  height: 8px
+  background-image: url(../img/small-wait.png)
+  animation: play-small-wait .8s steps(12) infinite;
+  margin: 0 9px
+
+@keyframes play-small-wait
+  from
+    background-position: 0px
+  to
+    background-position: -288px
