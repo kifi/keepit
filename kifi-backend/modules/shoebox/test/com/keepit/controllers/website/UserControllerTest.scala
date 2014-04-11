@@ -74,7 +74,10 @@ class UserControllerTest extends Specification with ApplicationInjector {
               "pictureName":"0.jpg",
               "emails":[],
               "notAuthed":[],
-              "experiments":["admin"]}
+              "experiments":["admin"],
+              "uniqueKeepsClicked":0,
+              "totalKeepsClicked":0
+            }
           """)
 
         Json.parse(contentAsString(result)) must equalTo(expected)
