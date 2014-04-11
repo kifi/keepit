@@ -17,6 +17,7 @@ case class Keep(
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
   uriId: Id[NormalizedURI],
+  isPrimary: Boolean = true,
   urlId: Id[URL],
   url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
@@ -60,6 +61,7 @@ object Keep {
     (__ \ 'externalId).format(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'isPrimary).format[Boolean] and
     (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
@@ -93,7 +95,7 @@ class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 4
+  override val version = 5
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -102,7 +104,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 1
+  override val version = 2
   val namespace = "latest_bookmark_uri"
   def toKey(): String = uriId.toString
 }
@@ -110,7 +112,9 @@ case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
 class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-object KeepStates extends States[Keep]
+object KeepStates extends States[Keep] {
+  val DUPLICATE = State[Keep]("duplicate")
+}
 
 case class KeepSource(value: String) {
   override def toString = value

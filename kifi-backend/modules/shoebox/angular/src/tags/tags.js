@@ -312,7 +312,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
               $location.path('/');
             }
           });
-        }
+        };
       }
     };
   }

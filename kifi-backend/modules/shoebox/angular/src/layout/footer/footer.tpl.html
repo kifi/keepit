@@ -13,10 +13,9 @@
     <li class="install-kifi">
       <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
         <span class="kf-footer-item-icon kf-footer-item-icon-install"></span>
-        <span ng-show="!installInProgress() && !installError()">Install the extension</span>
+        <span ng-show="!installInProgress()">Install the extension</span>
         <span ng-show="installInProgress()">Installing...</span>
         <span ng-show="installed()">Installed!</span>
-        <span ng-show="installError()">Please try again later</span>
       </a>
     </li>
     <li class="import-bookmarks">
@@ -32,6 +31,13 @@
       </a>
     </li>
   </ul>
+
+  <div kf-modal show="data.showInstallErrorModal">
+    <div kf-basic-modal-content>
+      <div>Something seems to have gone wrong installing the browser extension.</div>
+      <div>Please try again later, or <a href="http://support.kifi.com/customer/portal/emails/new">contact us</a>.</div>
+    </div>
+  </div>
 
   <h2 class="kf-footer-header">Kifi Support and Updates</h2>
   <ul class="kf-footer-list about-us">
