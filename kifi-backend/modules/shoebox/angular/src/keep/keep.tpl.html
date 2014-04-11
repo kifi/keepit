@@ -1,4 +1,4 @@
-<li class="kf-keep"
+<li class="kf-keep" ng-click="clickAction({keep: keep, event: $event})"
   ng-hide="keep.unkept"
   ui-draggable="true" drag-channel="keepDragChannel" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-drag-target"
   ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }">
