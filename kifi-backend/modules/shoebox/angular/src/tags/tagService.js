@@ -38,7 +38,7 @@ angular.module('kifi.tagService', [
         collectionId: tag.id,
         keeps: keeps
       };
-      $http.post(url, payload).then(function (res) {
+      return $http.post(url, payload).then(function (res) {
         $analytics.eventTrack('user_clicked_page', {
           'action': 'addKeepsToTag'
         });
@@ -196,7 +196,7 @@ angular.module('kifi.tagService', [
       addKeepsToTag: addKeepsToTag,
 
       addKeepToTag: function (tag, keep) {
-        addKeepsToTag(tag, [keep]);
+        return addKeepsToTag(tag, [keep]);
       },
 
       reorderTag: reorderTag

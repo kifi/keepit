@@ -21,14 +21,18 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
       templateUrl: 'tags/tagItem.tpl.html',
       link: function (scope, element) {
         scope.isRenaming = false;
+        scope.isWaiting = false;
         scope.isDropdownOpen = false;
         scope.renameTag = {};
         scope.isHovering = false;
         var input = element.find('input');
 
         scope.onKeepDrop = function (keeps) {
-          tagService.addKeepsToTag(scope.tag, keeps);
+          scope.isWaiting = true;
           scope.isDragTarget = false;
+          tagService.addKeepsToTag(scope.tag, keeps).then(function () {
+            scope.isWaiting = false;
+          });
         };
 
         scope.navigateToTag = function (event) {
