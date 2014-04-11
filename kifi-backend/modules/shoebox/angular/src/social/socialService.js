@@ -75,7 +75,7 @@ angular.module('kifi.socialService', [
 
     var networksBackend = new Clutch(function () {
       return $http.get(routeService.networks).then(function (res) {
-        _.remove(res, function (value) {
+        _.remove(res.data, function (value) {
           return value.network === 'fortytwo';
         });
         util.replaceArrayInPlace(networks, res.data);
