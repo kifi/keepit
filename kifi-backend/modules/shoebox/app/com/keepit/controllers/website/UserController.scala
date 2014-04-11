@@ -249,15 +249,11 @@ class UserController @Inject() (
        toJson(pimpedUser.info).as[JsObject] ++
        Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
        Json.obj("experiments" -> experiments.map(_.value))
-    if (experiments.contains(ExperimentType.HELP_RANK_ALPHA)) {
-      val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
-      Ok(json ++ Json.obj(
-        "uniqueKeepsClicked" -> uniqueKeepsClicked,
-        "totalKeepsClicked" -> totalClicks
-      ))
-    } else {
-      Ok(json)
-    }
+    val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
+    Ok(json ++ Json.obj(
+      "uniqueKeepsClicked" -> uniqueKeepsClicked,
+      "totalKeepsClicked" -> totalClicks
+    ))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")

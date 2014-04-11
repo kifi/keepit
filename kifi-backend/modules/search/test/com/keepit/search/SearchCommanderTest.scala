@@ -42,11 +42,9 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
           searchConfigManager,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
-          inject[SpellCorrector],
           inject[AirbrakeNotifier],
           inject[ShoeboxServiceClient],
-          inject[MonitoredAwait],
-          inject[FortyTwoServices])
+          inject[MonitoredAwait])
 
         val res = searchCommander.search(
             userId = users(0).id.get,

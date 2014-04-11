@@ -26,9 +26,9 @@ class SemanticVarianceTest extends Specification {
       q.setSemanticBoost(1.0f)
       q.addSemanticVectorQuery("sv", "abc")
 
-      val variance0 = SemanticVariance.svVariance(Seq(q), Set(0L, 1L, 2L), Some(indexer.getPersonalizedSearcher(Set(0L))))
-      val variance1 = SemanticVariance.svVariance(Seq(q), Set(0L, 1L, 2L), Some(indexer.getPersonalizedSearcher(Set(1L))))
-      val variance2 = SemanticVariance.svVariance(Seq(q), Set(2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(1L))))
+      val variance0 = SemanticVariance.svVariance(Seq(q), Set(0L, 1L, 2L), indexer.getPersonalizedSearcher(Set(0L)))
+      val variance1 = SemanticVariance.svVariance(Seq(q), Set(0L, 1L, 2L), indexer.getPersonalizedSearcher(Set(1L)))
+      val variance2 = SemanticVariance.svVariance(Seq(q), Set(2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(1L)))
 
       (variance0 == variance1) === true
       (variance1 < variance2) === true
@@ -43,9 +43,9 @@ class SemanticVarianceTest extends Specification {
       q2.setSemanticBoost(1.0f)
       q2.addSemanticVectorQuery("sv", "def")
 
-      val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
-      val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
-      val variance2 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(3L))))
+      val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
+      val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
+      val variance2 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(3L)))
 
       (variance0 == variance1) === true
       (variance1 < variance2) === true
@@ -61,8 +61,8 @@ class SemanticVarianceTest extends Specification {
       q2.addSemanticVectorQuery("sv", "abc")
       q2.addSemanticVectorQuery("sv", "ghi")
 
-      val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
-      val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
+      val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
+      val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
 
       (variance0 < variance1) === true
     }
@@ -74,9 +74,9 @@ class SemanticVarianceTest extends Specification {
       val q3 = new TextQuery
       q3.addPersonalQuery(new TermQuery(new Term("c", "abc")))
 
-      val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
-      val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
-      val variance2 = SemanticVariance.svVariance(Seq(q3), Set(0L, 1L, 2L, 3L, 4L), Some(indexer.getPersonalizedSearcher(Set(0L))))
+      val variance0 = SemanticVariance.svVariance(Seq(q1), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
+      val variance1 = SemanticVariance.svVariance(Seq(q2), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
+      val variance2 = SemanticVariance.svVariance(Seq(q3), Set(0L, 1L, 2L, 3L, 4L), indexer.getPersonalizedSearcher(Set(0L)))
 
       variance0 === 0.0f
       variance1 === 0.0f

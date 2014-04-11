@@ -12,7 +12,6 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.ActiveShards
@@ -20,7 +19,6 @@ import com.keepit.search.result.ResultDecorator
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.result.ResultMerger
 import com.keepit.search.result.ResultUtil
-import com.keepit.search.spellcheck.SpellCorrector
 import org.apache.lucene.search.{Explanation, Query}
 import com.keepit.search.index.DefaultAnalyzer
 
@@ -51,6 +49,8 @@ trait SearchCommander {
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
 
+  def searchKeeps(userId: Id[User], query: String): Set[Long]
+
   def warmUp(userId: Id[User]): Unit
 }
 
@@ -59,11 +59,9 @@ class SearchCommanderImpl @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
-  spellCorrector: SpellCorrector,
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient,
-  monitoredAwait: MonitoredAwait,
-  fortyTwoServices: FortyTwoServices
+  monitoredAwait: MonitoredAwait
 ) extends SearchCommander with Logging {
 
   def search(
@@ -103,7 +101,7 @@ class SearchCommanderImpl @Inject() (
     val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
     val resultDecorator = {
       val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
-      new ResultDecorator(userId, query, firstLang, showExperts, shoeboxClient, monitoredAwait)
+      new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
     }
 
     val mergedResult = {
@@ -112,10 +110,9 @@ class SearchCommanderImpl @Inject() (
       timing.factory
       val searchers = mainSearcherFactory(shards.shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
       val future = Future.traverse(searchers){ searcher =>
-        SafeFuture{
-          debug.foreach{ searcher.debug(_) }
-          searcher.search()
-        }
+        if (debug.isDefined) searcher.debug(debug.get)
+
+        SafeFuture{ searcher.search() }
       }
 
       timing.search
@@ -125,13 +122,7 @@ class SearchCommanderImpl @Inject() (
 
     timing.decoration
 
-    val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
-    val mayHaveMoreHits = filter match {
-      case Some("m") => (mergedResult.hits.size < mergedResult.myTotal)
-      case Some("f") => (mergedResult.hits.size < mergedResult.friendsTotal)
-      case _ => (mergedResult.hits.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
-    }
-    val res = resultDecorator.decorate(mergedResult, mayHaveMoreHits, searchExperimentId, newIdFilter)
+    val res = resultDecorator.decorate(mergedResult, searchFilter)
 
     timing.end
 
@@ -161,7 +152,7 @@ class SearchCommanderImpl @Inject() (
 
       val timeLimit = 1000
       // search is a little slow after service restart. allow some grace period
-      if (timing.getTotalTime > timeLimit && timing.timestamp - fortyTwoServices.started.getMillis() > 1000*60*8) {
+      if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000*60*8) {
         val link = "https://admin.kifi.com/admin/search/results/" + res.uuid.id
         val msg = s"search time exceeds limit! searchUUID = ${res.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
         airbrake.notify(msg)
@@ -281,6 +272,13 @@ class SearchCommanderImpl @Inject() (
         case None =>
           throw new Exception("shard not found")
       }
+    }
+  }
+
+  def searchKeeps(userId: Id[User], query: String): Set[Long] = { // for internal use
+    shards.shards.foldLeft(Set.empty[Long]){ (uris, shard) =>
+      val searcher = mainSearcherFactory.bookmarkSearcher(shard, userId)
+      uris ++ searcher.search(query, Lang("en"))
     }
   }
 

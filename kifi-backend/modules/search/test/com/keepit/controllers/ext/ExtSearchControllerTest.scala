@@ -181,5 +181,6 @@ class FixedResultSearchCommander extends SearchCommander {
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???
+  def searchKeeps(userId: Id[User], query: String): Set[Long] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }
