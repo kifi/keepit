@@ -129,7 +129,7 @@ angular.module('kifi.inviteService', [
             if (res.data.url && platform === 'facebook') {
               $FB.ui({
                 method: 'send',
-                link: res.data.url,
+                link: unescape(res.data.url),
                 to: identifier
               });
               deferred.resolve('');
