@@ -103,7 +103,7 @@ class SearchCommanderImpl @Inject() (
     val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
     val resultDecorator = {
       val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
-      new ResultDecorator(userId, query, firstLang, showExperts, shoeboxClient, monitoredAwait)
+      new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
     }
 
     val mergedResult = {
@@ -125,13 +125,7 @@ class SearchCommanderImpl @Inject() (
 
     timing.decoration
 
-    val newIdFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.uriId.id)
-    val mayHaveMoreHits = filter match {
-      case Some("m") => (mergedResult.hits.size < mergedResult.myTotal)
-      case Some("f") => (mergedResult.hits.size < mergedResult.friendsTotal)
-      case _ => (mergedResult.hits.size < (mergedResult.myTotal + mergedResult.friendsTotal + mergedResult.othersTotal))
-    }
-    val res = resultDecorator.decorate(mergedResult, mayHaveMoreHits, searchExperimentId, newIdFilter)
+    val res = resultDecorator.decorate(mergedResult, searchFilter)
 
     timing.end
 
