@@ -203,6 +203,7 @@ object ApplicationBuild extends Build {
      *skip in update in (Compile, test) := true*/
     aggregate in update := false,
     emojiLogs
+    // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(

@@ -36,10 +36,8 @@
       </div>
 
       <div kf-modal show="data.showLinkedinTokenExpiredModal">
-        <div kf-basic-modal-content with-cancel action-text="Ok" action="data.showAddNetworks = true" title="Your session has expired, you need to reconnect to LinkedIn."></div>
+        <div kf-basic-modal-content with-cancel action-text="Ok" action="showAddNetworksModal()" title="Your session has expired, you need to reconnect to LinkedIn."></div>
       </div>
-
-      <div ng-include="'social/addNetworksModal.tpl.html'"></div>
 
     </div>
   </div>
