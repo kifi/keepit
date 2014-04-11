@@ -31,7 +31,7 @@ object RichConnectionUpdateMessageKind {
 object RichConnectionUpdateMessage {
   implicit val format = new Format[RichConnectionUpdateMessage] {
     def writes(message: RichConnectionUpdateMessage) = Json.obj("typeCode" -> message.kind.typeCode.toString, "value" -> message.kind.format.writes(message.instance))
-    def reads(json: JsValue) = Reads.of[String].reads(json \ "typeCode").flatMap { typeCode => RichConnectionUpdateMessageKind.byTypeCode(typeCode).format.reads(json \ "value") }
+    def reads(json: JsValue) =(json \ "typeCode").validate[String].flatMap { typeCode => RichConnectionUpdateMessageKind.byTypeCode(typeCode).format.reads(json \ "value") }
   }
 }
 
