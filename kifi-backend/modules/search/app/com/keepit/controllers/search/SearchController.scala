@@ -26,28 +26,20 @@ import com.keepit.search.sharding.ActiveShards
 import com.keepit.typeahead.PrefixFilter
 
 class SearchController @Inject()(
-    shards: ActiveShards,
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
-    shoeboxClient: ShoeboxServiceClient,
-    airbrake: AirbrakeNotifier,
     searchCommander: SearchCommander,
     userExperimentCommander: RemoteUserExperimentCommander
   ) extends SearchServiceController {
 
   //internal (from eliza/shoebox)
   def warmUpUser(userId: Id[User]) = Action { request =>
-    SafeFuture {
-      searcherFactory.warmUp(userId)
-    }
+    searchCommander.warmUp(userId)
     Ok
   }
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
-    val uris = shards.shards.foldLeft(Set.empty[Long]){ (uris, shard) =>
-      val searcher = searcherFactory.bookmarkSearcher(shard, userId)
-      uris ++ searcher.search(query, Lang("en"))
-    }
+    val uris = searchCommander.searchKeeps(userId, query)
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 

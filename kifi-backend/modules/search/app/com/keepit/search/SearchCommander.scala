@@ -51,6 +51,8 @@ trait SearchCommander {
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
 
+  def searchKeeps(userId: Id[User], query: String): Set[Long]
+
   def warmUp(userId: Id[User]): Unit
 }
 
@@ -275,6 +277,13 @@ class SearchCommanderImpl @Inject() (
         case None =>
           throw new Exception("shard not found")
       }
+    }
+  }
+
+  def searchKeeps(userId: Id[User], query: String): Set[Long] = { // for internal use
+    shards.shards.foldLeft(Set.empty[Long]){ (uris, shard) =>
+      val searcher = mainSearcherFactory.bookmarkSearcher(shard, userId)
+      uris ++ searcher.search(query, Lang("en"))
     }
   }
 
