@@ -17,6 +17,7 @@ case class Keep(
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
   uriId: Id[NormalizedURI],
+  isPrimary: Boolean = true,
   urlId: Id[URL],
   url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
@@ -60,6 +61,7 @@ object Keep {
     (__ \ 'externalId).format(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'isPrimary).format[Boolean] and
     (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
@@ -110,7 +112,9 @@ case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
 class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-object KeepStates extends States[Keep]
+object KeepStates extends States[Keep] {
+  val DUPLICATE = State[Keep]("duplicate")
+}
 
 case class KeepSource(value: String) {
   override def toString = value
