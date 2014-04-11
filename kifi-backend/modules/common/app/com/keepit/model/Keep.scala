@@ -95,7 +95,7 @@ class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 4
+  override val version = 5
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -104,7 +104,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 1
+  override val version = 2
   val namespace = "latest_bookmark_uri"
   def toKey(): String = uriId.toString
 }
