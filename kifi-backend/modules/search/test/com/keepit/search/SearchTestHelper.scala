@@ -91,6 +91,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       resultClickTracker,
       inject[BrowsingHistoryTracker],
       inject[ClickHistoryTracker],
+      inject[SpellCorrector],
       inject[ShoeboxServiceClient],
       inject[MonitoredAwait],
       inject[AirbrakeNotifier],
