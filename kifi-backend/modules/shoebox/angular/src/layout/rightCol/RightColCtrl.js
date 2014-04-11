@@ -34,7 +34,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $http.post(env.xhrBase + '/user/prefs', {
         onboarding_seen: 'true'
       });
-      $scope.importBookmarks();
+      if (!profileService.prefs.onboarding_seen) {
+        $scope.importBookmarks();
+      }
       $scope.$apply();
     };
 
@@ -43,6 +45,12 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     });
 
     $scope.importBookmarks = function () {
+      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+      if (!kifiVersion) {
+        return;
+      }
+
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
     };
 

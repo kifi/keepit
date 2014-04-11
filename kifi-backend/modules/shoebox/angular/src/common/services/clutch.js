@@ -117,7 +117,7 @@ angular.module('kifi.clutch', [])
             obj.value = result;
             that._cache[key] = obj;
           } else {
-            if (obj.value === value) {
+            if (obj.value === result) {
               // Nothing to do, getter handled it
               return;
             } else if (angular.isArray(result)) {
