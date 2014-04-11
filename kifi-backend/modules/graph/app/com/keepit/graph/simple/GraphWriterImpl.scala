@@ -18,7 +18,7 @@ object MutableVertex {
       data <- VertexDataReader.readsAsVertexData.reads(json \ "data")
       edges <- (json \ "edges").validate[JsArray].map { jsArray =>
         val edges = MutableMap[VertexId, EdgeDataReader]()
-        edges ++ jsArray.value.sliding(2,2).map { case Seq(destinationId, edgeData) =>
+        edges ++= jsArray.value.sliding(2,2).map { case Seq(destinationId, edgeData) =>
           destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
         }
         edges
