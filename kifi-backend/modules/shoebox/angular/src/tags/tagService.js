@@ -1,14 +1,15 @@
 'use strict';
 
 angular.module('kifi.tagService', [
+  'kifi.undo',
   'kifi.keepService',
   'kifi.routeService',
   'angulartics'
 ])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope', 'keepService', 'routeService', '$analytics',
-  function ($http, env, $q, $rootScope, keepService, routeService, $analytics) {
+  '$http', 'env', '$q', '$rootScope', 'undoService', 'keepService', 'routeService', '$analytics',
+  function ($http, env, $q, $rootScope, undoService, keepService, routeService, $analytics) {
     var list = [],
       tagsById = {},
       fetchAllPromise = null;
@@ -136,22 +137,35 @@ angular.module('kifi.tagService', [
         });
       },
 
-      remove: function (tagId) {
-        function removeTag(id) {
-          var index = indexById(id);
+      remove: function (tag) {
+        var url = env.xhrBase + '/collections/' + tag.id + '/delete';
+        return $http.post(url).then(function () {
+          var index = indexById(tag.id);
           if (index !== -1) {
             list.splice(index, 1);
           }
-        }
-
-        var url = env.xhrBase + '/collections/' + tagId + '/delete';
-        return $http.post(url).then(function () {
-          removeTag(tagId);
-          $rootScope.$emit('tags.remove', tagId);
+          $rootScope.$emit('tags.remove', tag.id);
           $analytics.eventTrack('user_clicked_page', {
             'action': 'removeTag'
           });
-          return tagId;
+          undoService.add('Tag deleted.', function () {
+            api.unremove(tag, index)
+          });
+          return tag;
+        });
+      },
+
+      unremove: function (tag, index) {
+        var url = env.xhrBase + '/collections/' + tag.id + '/undelete';
+        return $http.post(url).then(function () {
+          if (index !== -1) {
+            list.splice(index, 0, tag);
+          }
+          $rootScope.$emit('tags.unremove', tag.id);
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unremoveTag'
+          });
+          return tag.id;
         });
       },
 

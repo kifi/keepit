@@ -56,7 +56,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
 
         scope.remove = function () {
           closeDropdown();
-          scope.removeTag({tagId: scope.tag.id});
+          scope.removeTag({tag: scope.tag});
         };
 
         scope.onRenameKeydown = function (e) {

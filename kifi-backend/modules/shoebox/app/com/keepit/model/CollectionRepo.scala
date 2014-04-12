@@ -20,7 +20,8 @@ import com.keepit.common.logging.Logging
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
-  def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
+  def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
+    excludeState: Option[State[Collection]] = Some(CollectionStates.ACTIVE))
     (implicit session: RSession): Option[Collection]
   def getByUserAndName(userId: Id[User], name: String,
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
@@ -74,10 +75,11 @@ class CollectionRepoImpl @Inject() (
       (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
     }).sortBy(_.lastKeptTo).reverse
 
-  def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
-                            (implicit session: RSession): Option[Collection] =
+  def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
+    (implicit session: RSession): Option[Collection] =
     (for {
-      c <- rows if c.userId === userId && c.externalId === externalId && c.state === CollectionStates.ACTIVE
+      c <- rows if c.userId === userId && c.externalId === externalId && c.state =!= excludeState.getOrElse(null)
     } yield c).firstOption
 
   def getByUserAndName(userId: Id[User], name: String,

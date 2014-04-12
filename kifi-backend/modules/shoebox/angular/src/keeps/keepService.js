@@ -27,7 +27,31 @@ angular.module('kifi.keepService', [
       _.forEach(list, function (keep) {
         if (keep.tagList) {
           keep.tagList = keep.tagList.filter(function (tag) {
-            return tag.id !== tagId;
+            if (tag.id === tagId) {
+              if (!keep.removedTagList) {
+                keep.removedTagList = [];
+              }
+              keep.removedTagList.push(tag);
+              return false;
+            }
+            return true;
+          });
+        }
+      });
+    });
+
+    $rootScope.$on('tags.unremove', function (tagId) {
+      _.forEach(list, function (keep) {
+        if (keep.removedTagList) {
+          keep.removedTagList.filter(function (tag) {
+            if (tag.id === tagId) {
+              if (!keep.tagList) {
+                keep.tagList = [];
+              }
+              keep.tagList.push(tag);
+              return false;
+            }
+            return true;
           });
         }
       });
