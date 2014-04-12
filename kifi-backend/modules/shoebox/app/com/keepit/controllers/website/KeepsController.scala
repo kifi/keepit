@@ -277,7 +277,7 @@ class KeepsController @Inject() (
   }
 
   def undeleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
+    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id, Some(CollectionStates.ACTIVE)) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.undeleteCollection(coll)
       Ok(Json.obj("undeleted" -> coll.name))

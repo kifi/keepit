@@ -305,9 +305,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           scope.newLocationTagId = srcTag.id;
         };
 
-        scope.removeTag = function (tagId) {
-          return tagService.remove(tagId).then(function () {
-            if (scope.viewedTagId === tagId) {
+        scope.removeTag = function (tag) {
+          return tagService.remove(tag).then(function () {
+            if (scope.viewedTagId === tag.id) {
               scope.viewedTagId = null;
               $location.path('/');
             }
