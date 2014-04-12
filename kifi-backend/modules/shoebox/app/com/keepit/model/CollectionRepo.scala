@@ -21,7 +21,7 @@ import com.keepit.common.logging.Logging
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
-    excludeState: Option[State[Collection]] = Some(CollectionStates.ACTIVE))
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
     (implicit session: RSession): Option[Collection]
   def getByUserAndName(userId: Id[User], name: String,
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
