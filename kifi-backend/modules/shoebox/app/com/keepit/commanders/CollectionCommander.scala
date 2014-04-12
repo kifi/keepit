@@ -121,9 +121,7 @@ class CollectionCommander @Inject() (
                 Right(CollectionSaveFail(s"Tag with name $id not found"))
               }
             } getOrElse {
-              val newColl = collectionRepo.save(existingCollection
-                  map { _.copy(name = name, state = CollectionStates.ACTIVE) }
-                  getOrElse Collection(userId = userId, name = name))
+              val newColl = collectionRepo.save(Collection(userId = userId, name = name))
               updateCollectionOrdering(userId)
               keptAnalytics.createdTag(newColl, context)
               Left(BasicCollection.fromCollection(newColl))
@@ -147,6 +145,15 @@ class CollectionCommander @Inject() (
       updateCollectionOrdering(collection.userId)
     }
     keptAnalytics.deletedTag(collection, context)
+    searchClient.updateURIGraph()
+  }
+
+  def undeleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
+    db.readWrite { implicit s =>
+      collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE))
+      updateCollectionOrdering(collection.userId)
+    }
+    keptAnalytics.undeletedTag(collection, context)
     searchClient.updateURIGraph()
   }
 }
