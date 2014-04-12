@@ -54,6 +54,12 @@ angular.module('kifi.tagService', [
       });
     }
 
+    function persistOrdering() {
+      $http.post(routeService.tagOrdering, _.pluck(list, 'id')).then(function () {
+      });
+      api.fetchAll();
+    }
+
     function reorderTag(isTop, srcTag, dstTag) {
       // isTop indicates whether dstTag should be placed before or after srcTag
       var index = _.findIndex(list, function (tag) { return tag.id === dstTag.id; });
@@ -70,12 +76,10 @@ angular.module('kifi.tagService', [
           list[i].id = srcTagId;
         }
       }
-      $http.post(routeService.tagOrdering, _.pluck(list, 'id')).then(function () {
-        $analytics.eventTrack('user_clicked_page', {
-          'action': 'reorderTag'
-        });
+      persistOrdering();
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'reorderTag'
       });
-      api.fetchAll();
     }
 
     var api = {
@@ -165,7 +169,8 @@ angular.module('kifi.tagService', [
           $analytics.eventTrack('user_clicked_page', {
             'action': 'unremoveTag'
           });
-          return tag.id;
+          persistOrdering();
+          return tag;
         });
       },
 
