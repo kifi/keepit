@@ -88,8 +88,7 @@ class SearchServiceClientImpl(
   private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
 
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
-    val json = JsArray(uriIds.map(Id.format[NormalizedURI].writes))
-    call(Search.internal.updateBrowsingHistory(userId), json)
+    // decommissioned
   }
 
   def warmUpUser(userId: Id[User]): Unit = {

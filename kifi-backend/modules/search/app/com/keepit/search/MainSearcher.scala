@@ -44,7 +44,6 @@ class MainSearcher(
     articleSearcher: Searcher,
     socialGraphInfo: SocialGraphInfo,
     clickBoostsFuture: Future[ResultClickBoosts],
-    browsingHistoryFuture: Future[MultiHashFilter[BrowsedURI]],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier)
@@ -91,8 +90,6 @@ class MainSearcher(
   // social graph info
   lazy val uriGraphSearcher = socialGraphInfo.uriGraphSearcher
   lazy val collectionSearcher = socialGraphInfo.collectionSearcher
-
-  private[this] lazy val browsingFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond, s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsedURI])
 
   @inline private[this] def findSharingUsers(id: Long, friendEdgeSet: UserToUserEdgeSet ): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -207,7 +204,6 @@ class MainSearcher(
     val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
-    val usefulPages = browsingFilter
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.forall{ case (hit, rank) =>
 
@@ -232,7 +228,7 @@ class MainSearcher(
 
         if (score > (threshold * (1.0f - recencyScoreVal))) {
           h.users = sharingUsers.destIdSet
-          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, false)
           val newScore = scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost)
           hits.insert(newScore, scoring, h)
           true
@@ -265,7 +261,7 @@ class MainSearcher(
         val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, false)
           val newScore = scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
           queue.insert(newScore, scoring, h)
           true
@@ -295,7 +291,7 @@ class MainSearcher(
         if (score > othersThreshold) {
           h.bookmarkCount = getPublicBookmarkCount(h.id)
           if (h.bookmarkCount > 0 || noBookmarkCheck) {
-            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, false)
             val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
             queue.insert(newScore, scoring, h)
             rank += 1

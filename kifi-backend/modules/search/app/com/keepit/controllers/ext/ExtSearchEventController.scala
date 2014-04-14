@@ -60,9 +60,7 @@ class ExtSearchEventController @Inject() (
   }
 
   def updateBrowsingHistory() = JsonAction.authenticatedParseJson { request =>
-    val userId = request.userId
-    val browsedUrls = request.body.as[JsArray].value.map(_.as[String])
-    searchEventCommander.browsedPages(userId, browsedUrls)
+    // decommissioned
     Ok
   }
 }

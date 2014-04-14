@@ -13,12 +13,9 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.article.ArticleIndexer
-import com.keepit.search.article.StandaloneArticleIndexer
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.collection._
 import com.keepit.search.index.VolatileIndexDirectoryImpl
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.phrasedetector.FakePhraseIndexer
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.user.UserIndexer
@@ -27,7 +24,6 @@ import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModul
 import com.keepit.test._
 import akka.actor.ActorSystem
 import scala.concurrent.duration._
-import com.keepit.search.tracker.BrowsingHistoryTracker
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.tracker.ProbablisticLRU
@@ -89,7 +85,6 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       shardedCollectionIndexer,
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,
-      inject[BrowsingHistoryTracker],
       inject[ClickHistoryTracker],
       inject[SpellCorrector],
       inject[ShoeboxServiceClient],
