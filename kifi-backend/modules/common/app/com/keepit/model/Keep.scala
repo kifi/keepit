@@ -29,18 +29,21 @@ case class Keep(
   seq: SequenceNumber[Keep] = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep]{
 
-  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
+  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,isPrimary:$isPrimary,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
+  def withPrimary(isPrimary: Boolean) = copy(isPrimary = isPrimary)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => KeepStates.ACTIVE
     case false => KeepStates.INACTIVE
   })
+
+  def withState(state: State[Keep]) = copy(state = state)
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 

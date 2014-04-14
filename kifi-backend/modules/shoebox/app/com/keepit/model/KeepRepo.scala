@@ -15,7 +15,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
-  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -79,6 +80,9 @@ class KeepRepoImpl @Inject() (
 
 
   override def save(model: Keep)(implicit session: RWSession) = {
+    assert(model.isPrimary && model.state != KeepStates.DUPLICATE || !model.isPrimary && model.state != KeepStates.ACTIVE,
+      s"trying to save a keep in an inconsistent state: primary=${model.isPrimary} state=${model.state}")
+
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel.clean())
   }
@@ -117,8 +121,12 @@ class KeepRepoImpl @Inject() (
     (for(b <- rows if b.externalId === extId && b.userId === userId) yield b).firstOption
   }
 
-  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] ={
-    (for(b <- rows if b.uriId === uriId && b.userId === userId ) yield b).firstOption
+  def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] ={
+    (for(b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true) yield b).firstOption
+  }
+
+  def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] ={
+    (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.DUPLICATE) yield b).list
   }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep] =
