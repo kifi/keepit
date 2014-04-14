@@ -26,11 +26,15 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         scope.renameTag = {};
         scope.isHovering = false;
         var input = element.find('input');
+        var waitingTimeout;
 
         scope.onKeepDrop = function (keeps) {
-          scope.isWaiting = true;
+          waitingTimeout = $timeout(function () {
+            scope.isWaiting = true;
+          }, 500);
           scope.isDragTarget = false;
           tagService.addKeepsToTag(scope.tag, keeps).then(function () {
+            $timeout.cancel(waitingTimeout);
             scope.isWaiting = false;
           });
         };
