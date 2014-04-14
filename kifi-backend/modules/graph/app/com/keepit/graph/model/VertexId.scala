@@ -1,6 +1,7 @@
 package com.keepit.graph.model
 
 import scala.util.Try
+import play.api.libs.json.{JsNumber, Writes, Reads, Format}
 
 case class VertexId(id: Long) extends AnyVal {
   def asId[V <: VertexDataReader](implicit kind: VertexKind[V]): VertexDataId[V] = {
@@ -23,4 +24,6 @@ object VertexId {
     require(id.id <= maxVertexDataId, s"VertexDataId $id is too large to be globalized")
     VertexId((kind.header.toLong << dataIdSpace) | id.id)
   }
+
+  implicit val format: Format[VertexId] = Format(Reads.of[Long].map(VertexId(_)), Writes(id => JsNumber(id.id)))
 }

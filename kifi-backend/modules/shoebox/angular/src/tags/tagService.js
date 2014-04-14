@@ -1,14 +1,15 @@
 'use strict';
 
 angular.module('kifi.tagService', [
+  'kifi.undo',
   'kifi.keepService',
   'kifi.routeService',
   'angulartics'
 ])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope', 'keepService', 'routeService', '$analytics',
-  function ($http, env, $q, $rootScope, keepService, routeService, $analytics) {
+  '$http', 'env', '$q', '$rootScope', 'undoService', 'keepService', 'routeService', '$analytics',
+  function ($http, env, $q, $rootScope, undoService, keepService, routeService, $analytics) {
     var list = [],
       tagsById = {},
       fetchAllPromise = null;
@@ -38,7 +39,7 @@ angular.module('kifi.tagService', [
         collectionId: tag.id,
         keeps: keeps
       };
-      $http.post(url, payload).then(function (res) {
+      return $http.post(url, payload).then(function (res) {
         $analytics.eventTrack('user_clicked_page', {
           'action': 'addKeepsToTag'
         });
@@ -51,6 +52,12 @@ angular.module('kifi.tagService', [
         }
         return res;
       });
+    }
+
+    function persistOrdering() {
+      $http.post(routeService.tagOrdering, _.pluck(list, 'id')).then(function () {
+      });
+      api.fetchAll();
     }
 
     function reorderTag(isTop, srcTag, dstTag) {
@@ -69,12 +76,10 @@ angular.module('kifi.tagService', [
           list[i].id = srcTagId;
         }
       }
-      $http.post(routeService.tagOrdering, _.pluck(list, 'id')).then(function () {
-        $analytics.eventTrack('user_clicked_page', {
-          'action': 'reorderTag'
-        });
+      persistOrdering();
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'reorderTag'
       });
-      api.fetchAll();
     }
 
     var api = {
@@ -136,22 +141,36 @@ angular.module('kifi.tagService', [
         });
       },
 
-      remove: function (tagId) {
-        function removeTag(id) {
-          var index = indexById(id);
+      remove: function (tag) {
+        var url = env.xhrBase + '/collections/' + tag.id + '/delete';
+        return $http.post(url).then(function () {
+          var index = indexById(tag.id);
           if (index !== -1) {
             list.splice(index, 1);
           }
-        }
-
-        var url = env.xhrBase + '/collections/' + tagId + '/delete';
-        return $http.post(url).then(function () {
-          removeTag(tagId);
-          $rootScope.$emit('tags.remove', tagId);
+          $rootScope.$emit('tags.remove', tag.id);
           $analytics.eventTrack('user_clicked_page', {
             'action': 'removeTag'
           });
-          return tagId;
+          undoService.add('Tag deleted.', function () {
+            api.unremove(tag, index);
+          });
+          return tag;
+        });
+      },
+
+      unremove: function (tag, index) {
+        var url = env.xhrBase + '/collections/' + tag.id + '/undelete';
+        return $http.post(url).then(function () {
+          if (index !== -1) {
+            list.splice(index, 0, tag);
+          }
+          $rootScope.$emit('tags.unremove', tag.id);
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'unremoveTag'
+          });
+          persistOrdering();
+          return tag;
         });
       },
 
@@ -196,7 +215,7 @@ angular.module('kifi.tagService', [
       addKeepsToTag: addKeepsToTag,
 
       addKeepToTag: function (tag, keep) {
-        addKeepsToTag(tag, [keep]);
+        return addKeepsToTag(tag, [keep]);
       },
 
       reorderTag: reorderTag

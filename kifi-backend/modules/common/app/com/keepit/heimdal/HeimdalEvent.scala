@@ -26,7 +26,7 @@ sealed trait HeimdalEventCompanion[E <: HeimdalEvent] {
 object HeimdalEvent {
   implicit val format = new Format[HeimdalEvent] {
     def writes(event: HeimdalEvent) = Json.obj("typeCode" -> event.companion.typeCode.toString, "value" -> event.companion.format.writes(event.instance))
-    def reads(json: JsValue) = Reads.of[String].reads(json \ "typeCode").flatMap { typeCode => HeimdalEventCompanion.byTypeCode(typeCode).format.reads(json \ "value") }
+    def reads(json: JsValue) = (json \ "typeCode").validate[String].flatMap { typeCode => HeimdalEventCompanion.byTypeCode(typeCode).format.reads(json \ "value") }
   }
 }
 

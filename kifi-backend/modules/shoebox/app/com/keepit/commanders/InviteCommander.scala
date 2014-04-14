@@ -360,8 +360,7 @@ class InviteCommander @Inject() (
     val (inviteStatus, existingInvitation) = db.readWrite { implicit session =>
       val existingInvitation = invitationRepo.getOpt(id)
       val inviteStatus = existingInvitation match {
-        case Some(invite) if invite.state != InvitationStates.INACTIVE => errorCode.map(InviteStatus.facebookError(_, existingInvitation)) getOrElse InviteStatus.sent(invite)
-        case Some(inactiveInvite) if errorCode.isEmpty => InviteStatus.sent(invitationRepo.save(inactiveInvite.copy(state = InvitationStates.ACTIVE).withLastSentTime(clock.now())))
+        case Some(invite) if errorCode.isEmpty => InviteStatus.sent(invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE).withLastSentTime(clock.now())))
         case _ => errorCode.map(InviteStatus.facebookError(_, existingInvitation)) getOrElse InviteStatus.notFound
       }
       (inviteStatus, existingInvitation)

@@ -21,14 +21,22 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
       templateUrl: 'tags/tagItem.tpl.html',
       link: function (scope, element) {
         scope.isRenaming = false;
+        scope.isWaiting = false;
         scope.isDropdownOpen = false;
         scope.renameTag = {};
         scope.isHovering = false;
         var input = element.find('input');
+        var waitingTimeout;
 
         scope.onKeepDrop = function (keeps) {
-          tagService.addKeepsToTag(scope.tag, keeps);
+          waitingTimeout = $timeout(function () {
+            scope.isWaiting = true;
+          }, 500);
           scope.isDragTarget = false;
+          tagService.addKeepsToTag(scope.tag, keeps).then(function () {
+            $timeout.cancel(waitingTimeout);
+            scope.isWaiting = false;
+          });
         };
 
         scope.navigateToTag = function (event) {
@@ -52,7 +60,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
 
         scope.remove = function () {
           closeDropdown();
-          scope.removeTag({tagId: scope.tag.id});
+          scope.removeTag({tag: scope.tag});
         };
 
         scope.onRenameKeydown = function (e) {

@@ -58,6 +58,18 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
+  def undeletedTag(tag: Collection, context: HeimdalContext): Unit = {
+    val undeletedAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = new HeimdalContextBuilder
+      contextBuilder.data ++= context.data
+      contextBuilder += ("action", "undeletedTag")
+      contextBuilder += ("tagId", tag.id.get.toString)
+      heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, undeletedAt))
+      heimdal.incrementUserProperties(tag.userId, "tags" -> 1)
+    }
+  }
+
   def keptPages(userId: Id[User], keeps: Seq[Keep], existingContext: HeimdalContext): Unit = SafeFuture {
     val keptAt = currentDateTime
 
