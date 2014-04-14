@@ -295,14 +295,6 @@ var tile = tile || function() {  // idempotent for Chrome
     return document[document.compatMode === 'CSS1Compat' ? 'documentElement' : 'body'];
   }
 
-  setTimeout(function checkIfUseful() {
-    if (document.hasFocus() && scrollRoot().scrollTop > 300) {
-      api.port.emit('useful_page');
-    } else {
-      setTimeout(checkIfUseful, 5000);
-    }
-  }, 60000);
-
   api.onEnd.push(function() {
     document.removeEventListener('keydown', onKeyDown, true);
     cleanUpDom();
