@@ -119,7 +119,7 @@ angular.module('kifi.clutch', [])
           } else {
             if (obj.value === result) {
               // Nothing to do, getter handled it
-              return;
+              return deferred.resolve(obj.value);
             } else if (angular.isArray(result)) {
               util.replaceArrayInPlace(obj.value, result);
             } else if (angular.isObject(result)) {
