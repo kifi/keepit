@@ -54,6 +54,14 @@ case class Keep(
 }
 
 object Keep {
+
+  // is_primary: trueOrNull in db
+  def applyWithPrimary(id:Option[Id[Keep]], createdAt:DateTime, updatedAt:DateTime, externalId:ExternalId[Keep], title:Option[String], uriId:Id[NormalizedURI], isPrimary:Option[Boolean], urlId:Id[URL], url:String, bookmarkPath:Option[String], isPrivate:Boolean, userId:Id[User], state:State[Keep], source:KeepSource, kifiInstallation:Option[ExternalId[KifiInstallation]], seq:SequenceNumber[Keep]) =
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq)
+  def unapplyWithPrimary(k:Keep) = {
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq)  
+  }
+
   implicit def bookmarkFormat = (
     (__ \ 'id).formatNullable(Id.format[Keep]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
