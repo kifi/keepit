@@ -217,17 +217,17 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def socialUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserTypeaheadCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+    new SocialUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
   @Singleton
   @Provides
   def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new KifiUserTypeaheadCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+    new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
   @Singleton
   @Provides
   def econtactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new EContactTypeaheadCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
+    new EContactTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
 
   @Singleton
