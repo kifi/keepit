@@ -278,7 +278,17 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
 
         scope.$watch(function () {
           return profileService.me.seqNum;
-        }, positionTagsList);
+        }, function () {
+          // This is a bit hacky, would love to improve.
+          // Normally, we can position the tags list immediately (and doing so
+          // avoids a reflow flash). However, when `me` comes in too slow,
+          // if we run positionTagsList synchronously, it's too soon.
+
+          // I still don't like it because we can still hit the reflow flash.
+
+          positionTagsList();
+          $timeout(positionTagsList); // use $timeout so that `me` is drawn first, before resizing tags
+        });
 
         angular.element($window).resize(_.throttle(function () {
           positionTagsList();
