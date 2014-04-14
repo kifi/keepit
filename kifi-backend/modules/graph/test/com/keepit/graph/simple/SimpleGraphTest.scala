@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.graph.model._
 
 class SimpleGraphTest() extends Specification {
-  val graph: GraphManager = SimpleGraph() // This test can be reused with a different implementation
+  val graph = SimpleGraph()
 
   val alfred = VertexDataId[UserReader](1899)
   val (vertigo, rearWindow) = (VertexDataId[UriReader](1958), VertexDataId[UriReader](1954))
@@ -94,6 +94,25 @@ class SimpleGraphTest() extends Specification {
     vertexReader.moveTo(rearWindow)
     edgeReader.moveTo(alfred, rearWindow)
     edgeReader.moveTo(alfred, vertigo)
+
+    "All good" === "All good"
+  }
+
+  "be properly serialized and deserialized to Json" in {
+    val json = SimpleGraph.format.writes(graph)
+    val newGraph = SimpleGraph.format.reads(json).get
+
+    val newGraphVertexReader = newGraph.getNewVertexReader()
+    newGraphVertexReader.moveTo(rearWindow)
+    newGraphVertexReader.kind === UriReader
+    newGraphVertexReader.data.id === rearWindow
+    newGraphVertexReader.moveTo(alfred)
+    newGraphVertexReader.edgeReader.degree === 2
+
+    val newGraphEdgeReader = newGraph.getNewEdgeReader()
+
+    newGraphEdgeReader.moveTo(alfred, rearWindow)
+    newGraphEdgeReader.moveTo(alfred, vertigo)
 
     "All good" === "All good"
   }
