@@ -96,8 +96,7 @@
     "bookmarks",
     "webNavigation",
     "webRequest",
-    "http://*/",
-    "https://*/"
+    "<all_urls>"
   ],
   "web_accessible_resources": [
     "styles/iframes/login.css",

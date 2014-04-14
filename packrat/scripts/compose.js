@@ -18,7 +18,188 @@ var initCompose = (function() {
     updateKeyTip($composes);
   });
 
-  return function ($container, opts) {
+  api.onEnd.push(function () {
+    window.removeEventListener('mouseup', onWinMouseUp, true);
+  });
+
+  function updateKeyTip ($f) {
+    if (enterToSend != null) {
+      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
+      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
+    }
+  }
+
+  function onWinMouseUp() {
+    if ($composes.length) {
+      tryToCaptureSelectionAsLink($composes.last());
+    }
+  }
+
+  function tryToCaptureSelectionAsLink($f) {
+    var s = window.getSelection();
+    var r = s.rangeCount && s.getRangeAt(0);
+    if (r && !r.collapsed) {
+      var sce = elementSelfOrParent(r.startContainer);
+      var ece = elementSelfOrParent(r.endContainer);
+      var matches = sce.mozMatchesSelector ? 'mozMatchesSelector' : 'webkitMatchesSelector';
+      if (!sce[matches]('.kifi-root,.kifi-root *') &&
+          !ece[matches]('.kifi-root,.kifi-root *') &&
+          !Array.prototype.some.call(document.getElementsByClassName('kifi-root'), r.intersectsNode.bind(r))) {
+        captureSelectionAsLink($f, r);
+        return true;
+      }
+    }
+  }
+
+  function captureSelectionAsLink($f, r) {
+    var winWidth = window.innerWidth;
+    var winHeight = window.innerHeight;
+    var rects = getRangeClientRects(r);
+    console.log('NOW:', Date.now() % 10000);
+    api.port.emit('screen_capture', rects, function (dataUrl) {
+      var $d = $f.find('.kifi-compose-draft');
+      $f.removeClass('kifi-empty');
+      var text = r.toString();
+      var $a = $('<a>', {href: 'x-kifi-sel:' + snapshot.ofRange(r, text), text: 'look\u00A0here', title: text.trim(), className: 'kifi-to-opaque'});
+      insertLookHereLink($d, $a);
+      $a.on('transitionend', function () {
+        $a.removeClass('kifi-to-opaque kifi-opaque');
+      });
+      var aRect = $a[0].getBoundingClientRect();
+      var bRect = r.getBoundingClientRect();
+
+      var img = new Image();
+      img.src = dataUrl;
+      // img.style.cssText = 'position:fixed;top:0;left:0;height:400px;width:600px;border:1px solid green';
+      // document.body.appendChild(img);
+      var hScale = img.naturalWidth / winWidth;
+      var vScale = img.naturalHeight / winHeight;
+
+      var cnv = document.createElement('canvas');
+      cnv.className = 'kifi-root';
+      var prefix = 'transform' in cnv.style ? '' : 'webkit';
+      $(cnv).css({
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        zIndex: 999999999993,
+        transformOrigin: '0 0',
+        transition: (prefix ? '-' + prefix + '-' : '') + 'transform 1s ease-in-out,opacity 1s ease-in'
+      });
+      cnv.width = winWidth;
+      cnv.height = winHeight;
+      var ctx = cnv.getContext('2d');
+      for (var i = 0; i < rects.length; i++) {
+        var rect = rects[i];
+        ctx.drawImage(
+          img,
+          rect.left * hScale,
+          rect.top * vScale,
+          rect.width * hScale,
+          rect.height * vScale,
+          rect.left,
+          rect.top,
+          rect.width,
+          rect.height);
+      }
+      document.body.appendChild(cnv);
+
+      $a.layout().addClass('kifi-opaque');
+
+      var scale = aRect.width / bRect.width;
+      $(cnv).on('transitionend', function () {
+        $(this).remove();
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange($d.data('sel'));
+        $d.focus();
+      }).css({
+        transform: 'translate(' + aRect.left + 'px,' + aRect.top + 'px) scale(' + scale + ',' + scale + ') translate(' + -bRect.left + 'px,' + -bRect.top + 'px)',
+        opacity: 0
+      });
+
+      console.log('NEW:', Date.now() % 10000);
+    });
+  }
+
+  function insertLookHereLink($d, $a) {
+    var r = $d.data('sel'), pad = true;
+    if (r) {
+      var sc = r.startContainer;
+      var ec = r.endContainer;
+      if (sc === ec && !$(sc).is('a,a *')) {
+        var i = r.startOffset;
+        var j = r.endOffset;
+        if (sc.nodeType === 3) {  // text
+          var s = sc.nodeValue;
+          if (i < j) {
+            $a.text(s.substring(i, j));
+            pad = false;
+          }
+          $(sc).replaceWith($a);
+          if (i > 0) {
+            $a.before(s.substr(0, i))
+          }
+          if (j < s.length) {
+            $a.after(s.substr(j));
+          }
+        } else if (i === j || !r.cloneContents().querySelector('a')) {
+          var next = sc.childNodes.item(j);
+          if (i < j && r.toString().trim()) {
+            $a.empty().append(r.extractContents());
+            pad = false;
+          }
+          sc.insertBefore($a[0], next);
+        }
+      }
+    }
+    if (!$a[0].parentNode) {
+      $d.append($a);
+    }
+
+    // position caret immediately after link
+    r = r || document.createRange();
+    r.setStartAfter($a[0]);
+    r.collapse(true);
+    $d.data('sel', r);
+
+    if (pad) {
+      var sib;
+      if ((sib = $a[0].previousSibling) && (sib.nodeType !== 3 || !/\s$/.test(sib.nodeValue))) {
+        $a.before(' ');
+      }
+      if (!(sib = $a[0].nextSibling) || sib.nodeType !== 3 || /^\S/.test(sib.nodeValue)) {
+        $a.after(' ');
+        r.setStart($a[0].nextSibling, 1);
+      }
+    }
+
+  }
+
+  function getRangeClientRects(r) {
+    if (~navigator.appVersion.indexOf('Chrom')) { // crbug.com/324437
+      var crs = [];
+      var indexOf = Function.call.bind(Array.prototype.indexOf);
+      for (var el = r.endContainer; el !== r.commonAncestorContainer;) {
+        var sr = r.cloneRange();
+        sr.setStart(el, 0);
+        var parent = el.parentNode;
+        r.setEnd(parent, indexOf(parent.childNodes, el));
+        crs.push.apply(crs, sr.getClientRects());
+        el = parent;
+      }
+      crs.push.apply(crs, r.getClientRects());
+      return crs;
+    } else {
+      return r.getClientRects();
+    }
+  }
+
+  function elementSelfOrParent(node) {
+    return node.nodeType === 1 ? node : node.parentNode;
+  }
+
+  return function initCompose($container, opts) {
 
   var $f = $container.find('.kifi-compose');
   var $t = $f.find('.kifi-compose-to');
@@ -26,6 +207,7 @@ var initCompose = (function() {
   var defaultText = $d.data('default');  // real text, not placeholder
   $composes = $composes.add($f);
   updateKeyTip($f);
+  window.addEventListener('mouseup', onWinMouseUp, true);
 
   api.port.emit('load_draft', {to: !!$t.length}, function (draft) {
     if (draft) {
@@ -198,58 +380,7 @@ var initCompose = (function() {
     });
   })
   .on('click', '.kifi-compose-snapshot', function (e) {
-    if (e.originalEvent.isTrusted === false) return;
-    snapshot.take(function (selector) {
-      $d.focus();
-      if (!selector) return;
-      $f.removeClass('kifi-empty');
 
-      // insert link
-      var r = $d.data('sel'), $a = $('<a>', {href: 'x-kifi-sel:' + selector, text: 'look\u00A0here'}), pad = true;
-      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest('a').length) {
-        var par = r.endContainer, i = r.startOffset, j = r.endOffset;
-        if (par.nodeType == 3) {  // text
-          var s = par.textContent;
-          if (i < j) {
-            $a.text(s.substring(i, j));
-            pad = false;
-          }
-          $(par).replaceWith($a);
-          $a.before(s.substr(0, i))
-          $a.after(s.substr(j));
-        } else if (i == j || !r.cloneContents().querySelector('a')) {
-          var next = par.childNodes.item(j);
-          if (i < j) {
-            $a.empty().append(r.extractContents());
-            pad = false;
-          }
-          par.insertBefore($a[0], next);
-        }
-      }
-      if (!$a[0].parentNode) {
-        $d.append($a);
-      }
-
-      if (pad) {
-        var sib;
-        if ((sib = $a[0].previousSibling) && (sib.nodeType != 3 || !/\s$/.test(sib.nodeValue))) {
-          $a.before(' ');
-        }
-        if ((sib = $a[0].nextSibling) && (sib.nodeType != 3 || /^\S/.test(sib.nodeValue))) {
-          $a.after(' ');
-        }
-      }
-
-      // position caret immediately after link
-      r = r || document.createRange();
-      r.setStartAfter($a[0]);
-      r.collapse(true);
-      var sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(r);
-
-      saveDraft();
-    });
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
     if (e.originalEvent.isTrusted === false) return;
@@ -303,10 +434,6 @@ var initCompose = (function() {
     return sel.rangeCount ? sel.getRangeAt(0) : null;
   }
 
-  function getId(o) {
-    return o.id;
-  }
-
   // compose API
   return {
     form: function () {
@@ -319,7 +446,10 @@ var initCompose = (function() {
       $t.tokenInput('clear').tokenInput('add', r);
       $d.empty();
     },
-    focus: function () {
+    snapSelection: function () {
+      return tryToCaptureSelectionAsLink($f);
+    },
+    focus: function (snapSelection) {
       log('[compose.focus]')();
       if ($t.length && !$t.tokenInput('get').length) {
         $f.find('.kifi-ti-token-for-input>input').focus();
@@ -336,13 +466,9 @@ var initCompose = (function() {
       if ($t.length) {
         $t.tokenInput('destroy');
       }
+      if (!$composes.length) {
+        window.removeEventListener('mouseup', onWinMouseUp, true);
+      }
     }};
   };
-
-  function updateKeyTip ($f) {
-    if (enterToSend != null) {
-      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
-      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
-    }
-  }
 }());

@@ -13,27 +13,45 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
 function lookMouseDown(e) {
   if (e.which != 1) return;
   e.preventDefault();
-  var el = snapshot.fuzzyFind(unescape(this.href).substr(11));  // spaces need unescaping in Firefox
-  if (el) {
-    // make absolute positioning relative to document instead of viewport
-    document.documentElement.style.position = "relative";
-
-    var aRect = this.getBoundingClientRect();
-    var elRect = el.getBoundingClientRect();
-    var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
-    var ms = scrollTo(elRect);
-    $("<kifi class='kifi-root kifi-snapshot-highlight'>").css({
-      left: aRect.left + sLeft,
-      top: aRect.top + sTop,
-      width: aRect.width,
-      height: aRect.height
-    }).appendTo("body").animate({
-      left: elRect.left + sLeft - 3,
-      top: elRect.top + sTop - 2,
-      width: elRect.width + 6,
-      height: elRect.height + 4
-    }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
+  // spaces need unescaping in Firefox; see url.spec.whatwg.org/#dom-url-href
+  var selector = unescape(this.href).substr(11), el;
+  if (~selector.indexOf('|')) {
+    var r = snapshot.findRange(selector);
+    if (r) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      var ms = scrollTo(r.getBoundingClientRect());
+    } else {
+      showBroken();
+    }
   } else {
+    var el = snapshot.fuzzyFind(selector);
+    if (el) {
+      // make absolute positioning relative to document instead of viewport
+      document.documentElement.style.position = 'relative';
+
+      var aRect = this.getBoundingClientRect();
+      var elRect = el.getBoundingClientRect();
+      var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
+      var ms = scrollTo(elRect);
+      $('<kifi class="kifi-root kifi-snapshot-highlight">').css({
+        left: aRect.left + sLeft,
+        top: aRect.top + sTop,
+        width: aRect.width,
+        height: aRect.height
+      }).appendTo('body').animate({
+        left: elRect.left + sLeft - 3,
+        top: elRect.top + sTop - 2,
+        width: elRect.width + 6,
+        height: elRect.height + 4
+      }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
+    } else {
+      showBroken();
+    }
+  }
+
+  function showBroken() {
     api.require('scripts/look_link_broken.js', function () {
       showBrokenLookLinkDialog();
     });
@@ -71,7 +89,7 @@ function lookMouseDown(e) {
     if (sTop2 == sTop && sLeft2 == sLeft) return 400;
 
     var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
-    $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
+    $('<b>').css({position: 'absolute', opacity: 0, display: 'none'}).appendTo('body').animate({opacity: 1}, {
         duration: ms,
         step: function(a) {
           window.scroll(

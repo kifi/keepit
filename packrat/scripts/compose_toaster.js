@@ -40,7 +40,7 @@ var toaster = (function () {
       } else {
         api.port.emit('prefs', function (prefs) {
           if (!$toaster) {
-            show($parent, prefs, deferred);
+            show($parent, prefs || {}, deferred);
           }
         });
       }

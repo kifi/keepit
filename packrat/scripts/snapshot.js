@@ -1,7 +1,9 @@
 var snapshot = function () {
   'use strict';
 
-  // Characters that must not be considered part of names/tokens.
+  // Characters that must not be considered part of names/tokens when parsing a generated selector.
+  // ' ' is not here because it terminates a unicode escape and because generated selectors
+  // never use the ancestor combinator.
   var delimRe = /[#\.:>\t]/;
 
   // HTML IDs and class names may not contain any space characters.
@@ -36,33 +38,38 @@ var snapshot = function () {
   }
 
   // Generates a detailed CSS selector for an element including, at a minimum, the tag name,
-  // id (if present), and any classes on the element and all ancestors between it and the body.
+  // id (if present), and any classes on the element and all ancestors between it and scopeEl.
   // e.g. "body>section#content>div.wrap>div#content-main.full>article.article>div#wikiArticle.page-content.boxed>table.standard-table>tbody>tr:nth-child(1)>td:nth-child(2)"
-  function generateSelector(el) {
+  function generateSelector(el, scopeEl, scopeName) {
+    scopeEl = scopeEl || document.body;
+    scopeName = scopeName === undefined ? scopeEl.localName.toLowerCase() : scopeName;
     var matchesSelector = el.mozMatchesSelector ? 'mozMatchesSelector' : 'webkitMatchesSelector';
-    for (var parts = []; el; el = el.parentNode) {
+    for (var parts = []; el && el !== scopeEl; el = el.parentNode) {
       var sel = el.localName.toLowerCase();
-      if (sel === 'body') break;
-
       var id = el.id;
       if (id && !spaceRe.test(id)) sel += '#' + escapeToken(id);
 
-      sel += Array.slice(el.classList).map(function(c) {return '.' + escapeToken(c)}).join('');
+      sel += slice(el.classList).map(function (c) {return '.' + escapeToken(c)}).join('');
 
-      var children = Array.slice(el.parentNode.children);
-      if (children.some(function(ch) {return ch !== el && ch[matchesSelector](sel)})) {
+      var children = slice(el.parentNode.children);
+      if (children.some(function (ch) {return ch !== el && ch[matchesSelector](sel)})) {
         sel += ':nth-child(' + (1 + children.indexOf(el)) + ')';
       }
 
       parts.unshift(sel);
     }
-    parts.unshift('body');
+    if (scopeName != null) {
+      parts.unshift(scopeName);
+    }
     return parts.join('>');
   }
 
-  if (!Array.slice) {
-    Array.slice = Function.call.bind(Array.prototype.slice);
+  function elementSelfOrParent(node) {
+    return node.nodeType === 1 ? node : node.parentNode;
   }
+
+  var slice = Array.slice || Function.call.bind(Array.prototype.slice);
+  var indexOf = Array.indexOf || Function.call.bind(Array.prototype.indexOf);
 
   return {
     // Attempts to find an element in a document that corresponds to a selector returned by generateSelector
@@ -204,10 +211,10 @@ var snapshot = function () {
               (dx == 0 || r.width < sel.r.width * 2 * dx) &&
               (dy == 0 || r.height < sel.r.height * 2 * dy) &&
               (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
-            // if (sel.el) api.log(
+            // if (sel.el) log(
             //   r.width + ' < ' + sel.r.width + ' * 2 * ' + dx + ' AND ' +
             //   r.height + ' < ' + sel.r.height + ' * 2 * ' + dy + ' AND ' +
-            //   r.width * r.height + ' < ' + sel.r.width * sel.r.height + ' * ' + Math.sqrt(dx * dx + dy * dy));
+            //   r.width * r.height + ' < ' + sel.r.width * sel.r.height + ' * ' + Math.sqrt(dx * dx + dy * dy))();
             var bod = $('body').offset();
             var yT = scrollTop - bod.top + r.top - 2;
             var yB = scrollTop - bod.top + r.bottom + 2;
@@ -222,6 +229,50 @@ var snapshot = function () {
           }
         }
       }
+    },
+
+    ofRange: function (r, text) {
+      var an = r.commonAncestorContainer;
+      var sc = r.startContainer;
+      var so = r.startOffset;
+      var ec = r.endContainer;
+      var eo = r.endOffset;
+
+      var ane = elementSelfOrParent(an);
+      var sce = elementSelfOrParent(sc);
+      var ece = elementSelfOrParent(ec);
+      return [
+        generateSelector(ane),
+        sce === ane ? '' : generateSelector(sce, ane, null),
+        sc === sce ? so : indexOf(sce.childNodes, sc) + ':' + so,
+        ece === sce ? '' : generateSelector(ece, ane, null),
+        ec === ece ? eo : indexOf(ece.childNodes, ec) + ':' + eo,
+        text  // TODO: proper escaping  // TODO: identify text node boundaries?
+      ].join('|');
+    },
+
+    findRange: function (selector) {
+      var parts = selector.split('|');
+      var ane = snapshot.fuzzyFind(parts[0]);
+      if (ane) {
+        var sce = parts[1] ? ane.querySelector(':scope>' + parts[1]) : ane;
+        var ece = parts[3] ? ane.querySelector(':scope>' + parts[3]) : sce;
+        if (sce && ece) {
+          var sos = parts[2].split(':');
+          var eos = parts[4].split(':');
+          var sc = sos.length > 1 ? sce.childNodes[sos[0]] : sce;
+          var ec = eos.length > 1 ? ece.childNodes[eos[0]] : ece;
+          try {
+            var r = document.createRange();
+            r.setStart(sc, sos.pop());
+            r.setEnd(ec, eos.pop());
+            return r;
+          } catch (e) {
+            log('[snapshot.findRange]', e)();
+          }
+        }
+      }
+      return null;
     }
   }
 }();
