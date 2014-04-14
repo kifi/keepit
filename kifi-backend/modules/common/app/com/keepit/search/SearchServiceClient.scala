@@ -180,6 +180,24 @@ class SearchServiceClientImpl(
     }
   }
 
+  def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[(Id[User], TypeaheadHit[BasicUser])]] = {
+    val payload = Json.toJson(UserSearchRequest(Some(userId), query, maxHits, context, filter))
+    call(Search.internal.userTypeahead(), payload).map{ r =>
+      val userSearchResult = Json.fromJson[UserSearchResult](r.json).get
+      if (userSearchResult.hits.isEmpty) Seq[(Id[User], TypeaheadHit[BasicUser])]()
+      else {
+        val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+        var ordinal = 0
+        userSearchResult.hits.map{ hit =>
+          val name = hit.basicUser.firstName + " " + hit.basicUser.lastName
+          val normalizedName = PrefixFilter.normalize(name)
+          val score = PrefixMatching.distance(normalizedName, queryTerms)
+          ordinal += 1
+          (hit.id, new TypeaheadHit[BasicUser](score, name, ordinal,hit.basicUser))
+        }
+      }
+    }
+  }
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
     call(Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
