@@ -39,9 +39,7 @@ angular.module('kifi.routeService', [])
       removeSingleKeep: function (id) {
         return env.xhrBase + '/keeps/' + id + '/delete';
       },
-      removeKeeps: function () {
-        return env.xhrBase + '/keeps/delete';
-      },
+      removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),

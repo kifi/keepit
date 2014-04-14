@@ -27,6 +27,15 @@
           </div>
         </div>
 
+        <div ng-if="result.status === 'requested' && result.networkType === 'fortytwoNF'">
+          <div class="social-invite-summary">
+            <div class="social-invite-name">{{result.label}}</div>
+            <div class="social-invite-network">
+              Kifi user — request sent
+            </div>
+          </div>
+        </div>
+
         <div ng-if="result.status === 'joined' && result.networkType === 'fortytwoNF'">
           <div class="social-invite-summary">
             <div class="social-invite-name">{{result.label}}</div>
