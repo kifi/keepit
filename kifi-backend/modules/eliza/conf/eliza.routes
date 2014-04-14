@@ -3,7 +3,7 @@
 ##########################################
 
 POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
-POST    /eliza/site/notifications         @com.keepit.eliza.controllers.site.WebsiteMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
+GET     /eliza/site/notifications         @com.keepit.eliza.controllers.site.WebsiteMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
 
 ##########################################
 # Extension API
