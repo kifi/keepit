@@ -81,11 +81,9 @@ class KeepRepoImpl @Inject() (
 
   override def save(model: Keep)(implicit session: RWSession) = {
     assert(model.isPrimary && model.state != KeepStates.DUPLICATE || !model.isPrimary && model.state != KeepStates.ACTIVE,
-      s"trying to save a keep in a inconsistent state: primary=${model.isPrimary} state=${model.state}")
+      s"trying to save a keep in an inconsistent state: primary=${model.isPrimary} state=${model.state}")
 
     val newModel = model.copy(seq = sequence.incrementAndGet())
-    println(s"\n\t newModel = $newModel")
-
     super.save(newModel.clean())
   }
 
