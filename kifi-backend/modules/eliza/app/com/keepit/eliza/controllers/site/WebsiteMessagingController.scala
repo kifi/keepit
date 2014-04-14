@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.site
 
 import com.keepit.eliza.commanders.MessagingCommander
-import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
+import com.keepit.common.controller.{WebsiteController, ElizaServiceController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.heimdal._
 
@@ -11,11 +11,11 @@ import play.api.libs.json._
 import com.google.inject.Inject
 
 
-class SiteMessagingController @Inject() (
+class WebsiteMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory
-  ) extends MobileController(actionAuthenticator) with ElizaServiceController {
+  ) extends WebsiteController(actionAuthenticator) with ElizaServiceController {
 
   def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
     val noticesFuture = before match {
