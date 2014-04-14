@@ -47,6 +47,8 @@ class TypeaheadCommander @Inject()(
   socialUserInfoRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
   emailAddressRepo: EmailAddressRepo,
+  userRepo: UserRepo,
+  friendRequestRepo: FriendRequestRepo,
   abookServiceClient: ABookServiceClient,
   socialUserTypeahead: SocialUserTypeahead,
   kifiUserTypeahead: KifiUserTypeahead,
@@ -322,7 +324,11 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def joinWithInviteStatus(top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[Id[EContact], Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
+  private def joinWithInviteStatus(userId:Id[User], top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[Id[EContact], Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
+    val frMap = if (top.exists(t => t._1 == SocialNetworks.FORTYTWO_NF)) db.readOnly { implicit ro =>
+      friendRequestRepo.getBySender(userId).map{ fr => fr.recipientId -> fr }.toMap
+    } else Map.empty[Id[User], FriendRequest]
+
     top map {
       case (snType, hit) =>
         snType match {
@@ -341,10 +347,14 @@ class TypeaheadCommander @Inject()(
             } else None
             ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
           case SocialNetworks.FORTYTWO_NF =>
-            val bu = hit.info.asInstanceOf[BasicUser]
+            val bu = hit.info.asInstanceOf[BasicUser] // todo: uptake User API from search
             val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
-          val picUrl = if (pictureUrl) Some(bu.pictureName) else None
-            ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", "joined")
+            val picUrl = if (pictureUrl) Some(bu.pictureName) else None
+            val nfUserOpt = db.readOnly { implicit ro => userRepo.getOpt(bu.externalId) }
+            val frOpt = nfUserOpt flatMap { nfUser =>
+              frMap.get(nfUser.id.get)
+            }
+            ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt))
         }
     }
   }
@@ -373,7 +383,7 @@ class TypeaheadCommander @Inject()(
             } yield {
               val socialInvitesMap = socialInvites.map{ inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
               val emailInvitesMap  = emailInvites.map{ inv => inv.recipientEContactId.get -> inv }.toMap
-              val resWithStatus = joinWithInviteStatus(top, emailInvitesMap, socialInvitesMap, pictureUrl)
+              val resWithStatus = joinWithInviteStatus(userId, top, emailInvitesMap, socialInvitesMap, pictureUrl)
               val res = limit.map{ n =>
                 resWithStatus.take(n)
               }.getOrElse(resWithStatus)
