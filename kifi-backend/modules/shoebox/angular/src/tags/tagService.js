@@ -153,7 +153,7 @@ angular.module('kifi.tagService', [
             'action': 'removeTag'
           });
           undoService.add('Tag deleted.', function () {
-            api.unremove(tag, index)
+            api.unremove(tag, index);
           });
           return tag;
         });
