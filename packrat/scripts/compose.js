@@ -239,13 +239,8 @@ var initCompose = (function() {
     sel.addRange(r);
   }).blur(function () {
     if (!convertDraftToText($d.html())) {
-      if (defaultText && $t.tokenInput('get').length) {
-        $f.removeClass('kifi-empty');
-        $d.text(defaultText);
-      } else {
-        $d.empty();
-        $f.addClass('kifi-empty');
-      }
+      $d.empty();
+      $f.addClass('kifi-empty');
     }
   }).mousedown(function () {
     $d.removeData('preventNextMouseUp');
@@ -296,9 +291,9 @@ var initCompose = (function() {
     }, {
       placeholder: 'To',
       onAdd: function () {
-        if (defaultText && !$d.text()) {
+        if (defaultText && !$d.text() && !$d.data('defaultTextUsed')) {
           $f.removeClass('kifi-empty');
-          $d.text(defaultText).removeData('sel');
+          $d.text(defaultText).removeData('sel').data('defaultTextUsed', true);
         }
         if ($t.tokenInput('get').length === 1) {
           $t.tokenInput('flushCache');

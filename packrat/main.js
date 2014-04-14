@@ -746,9 +746,6 @@ api.port.on({
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
     if (prefs) prefs.showSearchIntro = show;
   },
-  useful_page: function(o, _, tab) {
-    ajax('search', 'POST', '/search/events/browsed', [tab.url]);
-  },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
