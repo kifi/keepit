@@ -73,21 +73,15 @@ class UriIntegrityActor @Inject()(
           case Some(currentPrimary) => {
 
             def save(duplicate: Keep, primary: Keep, forcePrivate: Boolean): (Option[Keep], Option[Keep]) = {
-              try {
-                val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
-                val deadBm = keepRepo.save(
-                  duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
-                )
-                val liveBm = keepRepo.save(
-                  (if (forcePrivate) primary.withPrivate(true) else primary).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
-                )
-                keepRepo.deleteCache(deadBm)
-                (Some(deadBm), Some(liveBm))
-              } catch {
-                case e: Throwable =>
-                  e.printStackTrace()
-                  throw e
-              }
+              val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
+              val deadBm = keepRepo.save(
+                duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
+              )
+              val liveBm = keepRepo.save(
+                (if (forcePrivate) primary.withPrivate(true) else primary).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
+              )
+              keepRepo.deleteCache(deadBm)
+              (Some(deadBm), Some(liveBm))
             }
 
             if (oldBm.isActive) {
