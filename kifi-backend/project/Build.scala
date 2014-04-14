@@ -82,7 +82,7 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "fortytwo.franz" % "franz_2.10" % "0.3.1",
+    "com.kifi" % "franz_2.10" % "0.3.1",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -159,7 +159,7 @@ object ApplicationBuild extends Build {
     Resolver.url("sbt-plugin-snapshots",
       new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
       // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-    // "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+    "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     // "kevoree Repository" at "http://maven2.kevoree.org/release/",
     "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
     "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel"
