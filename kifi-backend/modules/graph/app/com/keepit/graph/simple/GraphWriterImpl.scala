@@ -2,8 +2,30 @@ package com.keepit.graph.simple
 
 import com.keepit.graph.model._
 import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
+import play.api.libs.json._
 
 class MutableVertex(var data: VertexDataReader, val edges: MutableMap[VertexId, EdgeDataReader]) extends Vertex
+
+object MutableVertex {
+
+  implicit val format: Format[MutableVertex] = new Format[MutableVertex] {
+
+    def writes(vertex: MutableVertex): JsValue = Json.obj(
+      "data" -> VertexDataReader.writes.writes(vertex.data),
+      "edges" -> JsArray(vertex.edges.flatMap { case (destinationId, edgeDataReader) => Seq(VertexId.format.writes(destinationId), EdgeDataReader.writes.writes(edgeDataReader)) }.toSeq)
+    )
+    def reads(json: JsValue): JsResult[MutableVertex] = for {
+      data <- VertexDataReader.readsAsVertexData.reads(json \ "data")
+      edges <- (json \ "edges").validate[JsArray].map { jsArray =>
+        val edges = MutableMap[VertexId, EdgeDataReader]()
+        edges ++= jsArray.value.sliding(2,2).map { case Seq(destinationId, edgeData) =>
+          destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
+        }
+        edges
+      }
+    } yield new MutableVertex(data.asReader, edges)
+  }
+}
 
 class GraphWriterImpl(bufferedVertices: BufferedMap[VertexId, MutableVertex]) extends GraphReaderImpl(bufferedVertices) with GraphWriter {
 

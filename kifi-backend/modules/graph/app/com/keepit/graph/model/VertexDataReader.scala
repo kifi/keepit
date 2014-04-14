@@ -1,25 +1,45 @@
 package com.keepit.graph.model
 
 import com.keepit.common.reflection.CompanionTypeSystem
+import play.api.libs.json._
 
 
 sealed trait VertexDataReader { self =>
   type V >: self.type <: VertexDataReader
+  def instance: V = self
   def kind: VertexKind[V]
   def id: VertexDataId[V]
 }
 
 object VertexDataReader {
+  // Binary Helpers
   def apply(rawDataReader: RawDataReader): Map[VertexKind[_ <: VertexDataReader], VertexDataReader] = {
     VertexKind.all.map { vertexKind => vertexKind -> vertexKind(rawDataReader) }.toMap
   }
+
+  // Json Helpers
+  implicit val writes: Writes[VertexDataReader] = Writes[VertexDataReader](vertexDataReader => Json.obj(
+    "header" -> vertexDataReader.kind.header.toInt,
+    "data" -> vertexDataReader.kind.writes.writes(vertexDataReader.instance)
+  ))
+  implicit val readsAsVertexData: Reads[VertexData[_ <: VertexDataReader]] = Reads(json =>
+    (json \ "header").validate[Int].flatMap[VertexData[_ <: VertexDataReader]] { header =>
+      VertexKind(header.toByte).readsAsVertexData.reads(json \ "data")
+    }
+  )
 }
 
 sealed trait VertexKind[V <: VertexDataReader] {
   implicit def kind: VertexKind[V] = this
+
+  // Binary Helpers
   def header: Byte
   def apply(rawDataReader: RawDataReader): V
-  def dump(data: V): Array[Byte]
+
+  // Json helpers
+  implicit def idFormat: Format[VertexDataId[V]] = VertexDataId.format[V]
+  def writes: Writes[V]
+  def readsAsVertexData: Reads[VertexData[V]]
 }
 
 object VertexKind {
@@ -39,7 +59,8 @@ trait UserReader extends VertexDataReader {
 case object UserReader extends VertexKind[UserReader] {
   val header = 1.toByte
   def apply(rawDataReader: RawDataReader): UserReader = ???
-  def dump(data: UserReader): Array[Byte] = ???
+  implicit val writes = Writes[UserReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[UserReader]] { json => (json \ "id").validate.map(UserData(_)) }
 }
 
 trait UriReader extends VertexDataReader {
@@ -49,8 +70,8 @@ trait UriReader extends VertexDataReader {
 case object UriReader extends VertexKind[UriReader] {
   val header = 2.toByte
   def apply(rawDataReader: RawDataReader): UriReader = ???
-  def dump(data: UriReader): Array[Byte] = ???
-}
+  implicit val writes = Writes[UriReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[UriReader]] { json => (json \ "id").validate.map(UriData(_)) }}
 
 trait TagReader extends VertexDataReader {
   type V = TagReader
@@ -59,8 +80,8 @@ trait TagReader extends VertexDataReader {
 case object TagReader extends VertexKind[TagReader] {
   val header = 3.toByte
   def apply(rawDataReader: RawDataReader): TagReader = ???
-  def dump(data: TagReader): Array[Byte] = ???
-}
+  implicit val writes = Writes[TagReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[TagReader]] { json => (json \ "id").validate.map(TagData(_)) }}
 
 trait ThreadReader extends VertexDataReader {
   type V = ThreadReader
@@ -69,5 +90,5 @@ trait ThreadReader extends VertexDataReader {
 case object ThreadReader extends VertexKind[ThreadReader] {
   val header = 4.toByte
   def apply(rawDataReader: RawDataReader): ThreadReader = ???
-  def dump(data: ThreadReader): Array[Byte] = ???
-}
+  implicit val writes = Writes[ThreadReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[ThreadReader]] { json => (json \ "id").validate.map(ThreadData(_)) }}
