@@ -111,7 +111,7 @@ angular.module('kifi.tagService', [
         fetchAllPromise = $http.get(url, config).then(function (res) {
           var tags = res.data && res.data.collections || [];
           list.length = 0;
-          list.push.apply(list, tags);
+          list.push.apply(list, tags.slice(0, 40));
 
           list.forEach(function (tag) {
             tagsById[tag.id] = tag;

@@ -198,8 +198,8 @@ angular.module('kifi.keepService', [
           singleKeepBeingPreviewed = true;
           isDetailOpen = true;
         }
-        //console.log('preview', keepIdx(keep), selectedIdx);
-        selectedIdx = keepIdx(keep) || selectedIdx;
+        var detectedIdx = keepIdx(keep);
+        selectedIdx = detectedIdx >= 0 ? detectedIdx : selectedIdx || 0;
         previewed = keep;
         api.getChatter(previewed);
 
@@ -495,7 +495,8 @@ angular.module('kifi.keepService', [
 
         $log.log('keepService.keep()', data);
 
-        return $http.post(url, data).then(function () {
+        return $http.post(url, data).then(function (res) {
+          console.info(res, _.clone(res.data));
           _.forEach(keeps, function (keep) {
             keep.isMyBookmark = true;
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
