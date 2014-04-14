@@ -127,7 +127,7 @@ var initCompose = (function() {
     if (r) {
       var sc = r.startContainer;
       var ec = r.endContainer;
-      if (sc === ec && !$(sc).is('a,a *')) {
+      if (sc === ec && !$(sc).closest('a').length) {
         var i = r.startOffset;
         var j = r.endOffset;
         if (sc.nodeType === 3) {  // text
@@ -169,8 +169,9 @@ var initCompose = (function() {
         $a.before(' ');
       }
       if (!(sib = $a[0].nextSibling) || sib.nodeType !== 3 || /^\S/.test(sib.nodeValue)) {
-        $a.after(' ');
-        r.setStart($a[0].nextSibling, 1);
+        $a.after('\u00A0');
+        r.setEnd($a[0].nextSibling, 1);
+        r.collapse();
       }
     }
 
