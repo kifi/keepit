@@ -85,8 +85,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document', '$log', 'socialService', '$timeout',
-  function (inviteService, $document, $log, $socialService, $timeout) {
+  'inviteService', '$document', '$log', 'socialService', '$timeout', '$rootScope',
+  function (inviteService, $document, $log, $socialService, $timeout, $rootScope) {
     return {
       scope: {},
       replace: true,
@@ -192,6 +192,15 @@ angular.module('kifi.invite', [
         scope.refreshFriends = function () {
           scope.data.showCantFindModal = false;
           $socialService.refreshSocialGraph();
+        };
+
+        scope.connectNetworks = function () {
+          scope.data.showCantFindModal = false;
+          $rootScope.$emit('showGlobalModal', 'addNetworks');
+        };
+
+        scope.hasNetworks = function () {
+          return !!$socialService.networks.length;
         };
 
       }
