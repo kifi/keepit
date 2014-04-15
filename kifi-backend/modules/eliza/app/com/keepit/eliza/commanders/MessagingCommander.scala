@@ -326,17 +326,6 @@ class MessagingCommander @Inject() (
     }
 
 
-  private def getThreadMessages(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[Message] = {
-    val thread = db.readOnly{ implicit session =>
-      threadRepo.get(threadExtId)
-    }
-    getThreadMessages(thread, pageOpt)
-  }
-
-  private def getThreadMessages(threadId: Id[MessageThread], pageOpt: Option[Int]): Seq[Message] = {
-    getThreadMessages(db.readOnly(threadRepo.get(threadId)(_)), pageOpt)
-  }
-
   private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
@@ -362,12 +351,6 @@ class MessagingCommander @Inject() (
   def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val thread = db.readOnly(threadRepo.get(threadExtId)(_))
     getThreadMessagesWithBasicUser(thread, pageOpt)
-  }
-
-  def getThread(threadExtId: ExternalId[MessageThread]) : MessageThread = {
-    db.readOnly { implicit session =>
-      threadRepo.get(threadExtId)
-    }
   }
 
   def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
