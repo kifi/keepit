@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.model._
+import com.keepit.search.{SearchFilter, ArticleSearchResult, Lang, SearchConfigExperiment}
 import com.keepit.search.index.Analyzer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryUtil
@@ -18,9 +19,6 @@ import scala.concurrent.duration._
 import java.io.StringReader
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.ArticleSearchResult
-import com.keepit.search.Lang
-import com.keepit.search.SearchConfigExperiment
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 
@@ -29,6 +27,7 @@ class ResultDecorator(
   query: String,
   lang: Lang,
   showExperts: Boolean,
+  searchExperimentId: Option[Id[SearchConfigExperiment]],
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait
 ) extends Logging {
@@ -36,12 +35,7 @@ class ResultDecorator(
   private[this] val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
   private[this] val terms = Highlighter.getQueryTerms(query, analyzer)
 
-  def decorate(
-    result: MergedSearchResult,
-    mayHaveMoreHits: Boolean,
-    searchExperimentId: Option[Id[SearchConfigExperiment]],
-    idFilter: Set[Long]
-  ): DecoratedResult = {
+  def decorate(result: MergedSearchResult, searchFilter: SearchFilter): DecoratedResult = {
     val hits = result.hits
     val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], JsObject]) else {
@@ -51,11 +45,18 @@ class ResultDecorator(
 
     val highlightedHits = highlight(hits)
 
-    val basicUserMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
-    val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserMap)
+    val mayHaveMoreHits = {
+      val total = (if (searchFilter.includeMine) result.myTotal else 0) + (if (searchFilter.includeFriends) result.friendsTotal else 0) + (if (searchFilter.includeOthers) result.othersTotal else 0)
+      result.hits.size < total
+    }
+
+    val idFilter = result.hits.foldLeft(searchFilter.idFilter){ (s, h) => s + h.uriId.id }
+
+    val basicUserJsonMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
+    val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
 
     val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
-    val experts = expertIds.flatMap{ expert => basicUserMap.get(expert) }
+    val experts = expertIds.flatMap{ expert => basicUserJsonMap.get(expert) }
 
     new DecoratedResult(
       ExternalId[ArticleSearchResult](),

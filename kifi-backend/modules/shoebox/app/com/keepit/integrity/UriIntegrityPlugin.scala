@@ -63,38 +63,43 @@ class UriIntegrityActor @Inject()(
         val userId = oldBm.userId
         val newUriId = newUri.id.get
 
-        keepRepo.getByUriAndUserAllStates(newUriId, userId) match {
+        keepRepo.getPrimaryByUriAndUser(newUriId, userId) match {
           case None => {
             log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm)     // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
           }
-          case Some(bm) => {
-            def save(oldBm: Keep, newBm: Keep): (Option[Keep], Option[Keep]) = {
-              val liveBm = keepRepo.save(newBm.withActive(true))
-              val deadBm = keepRepo.save(oldBm.withActive(false))
+          case Some(currentPrimary) => {
+
+            def save(duplicate: Keep, primary: Keep, forcePrivate: Boolean): (Option[Keep], Option[Keep]) = {
+              val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
+              val deadBm = keepRepo.save(
+                duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
+              )
+              val liveBm = keepRepo.save(
+                (if (forcePrivate) primary.withPrivate(true) else primary).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
+              )
               keepRepo.deleteCache(deadBm)
               (Some(deadBm), Some(liveBm))
             }
 
-            if (oldBm.state == KeepStates.ACTIVE) {
-              if (bm.state == KeepStates.INACTIVE) {
-                // the target is inactive, transfer the privacy setting, title, url and url id to newBm
-                save(oldBm, bm.withPrivate(oldBm.isPrivate).withTitle(oldBm.title).withUrl(oldBm.url).withUrlId(oldBm.urlId))
-              } else {
-                // we are merging two active keeps, take the title and the url of the newer one
-                // if the privacy settings don't agree, make it private to true to be safe
-                if (oldBm.createdAt.getMillis <  bm.createdAt.getMillis) {
-                  if (oldBm.isPrivate == bm.isPrivate) save(oldBm, bm) else save(oldBm, keepRepo.save(bm.withPrivate(true)))
+            if (oldBm.isActive) {
+              if (currentPrimary.isActive) {
+                // we are merging two active keeps, take the newer one
+                // if one of them is private, make the surviving keep private to true to be safe
+                if (oldBm.createdAt.getMillis < currentPrimary.createdAt.getMillis ||
+                    (oldBm.createdAt.getMillis == currentPrimary.createdAt.getMillis && oldBm.id.get.id < currentPrimary.id.get.id)) {
+                  save(duplicate = oldBm, primary = currentPrimary, forcePrivate = oldBm.isPrivate || currentPrimary.isPrivate)
                 } else {
-                  // swap titles and urls (to preserve info). note that newBm honors the stronger privacy setting (to be safe).
-                  save(oldBm.withPrivate(bm.isPrivate).withTitle(bm.title).withUrl(bm.url).withUrlId(bm.urlId),
-                       bm.withPrivate(oldBm.isPrivate || bm.isPrivate).withTitle(oldBm.title).withUrl(oldBm.url).withUrlId(oldBm.urlId))
+                  save(duplicate = currentPrimary, primary = oldBm, forcePrivate = oldBm.isPrivate || currentPrimary.isPrivate)
                 }
+              } else {
+                // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
+                save(duplicate = currentPrimary, primary = oldBm, false)
               }
             } else {
-              // oldBm is already inactive, do nothing
+              // oldBm is already inactive ro duplicate, do nothing
               (None, None)
             }
           }
@@ -276,8 +281,11 @@ class UriIntegrityActor @Inject()(
               dedupedSuccessCount += 1
           }
         }
-        centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
         log.info(s"keeps deduped [count=$dedupedSuccessCount/${keeps.size}]")
+
+        if (seq == centralConfig(FixDuplicateKeepsSeqNumKey).getOrElse(SequenceNumber.ZERO)) {
+          centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
+        }
       }
       log.info(s"total $dedupedSuccessCount keeps deduplicated")
     } catch {
@@ -300,11 +308,13 @@ trait UriIntegrityPlugin extends SchedulerPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
+  def setFixDuplicateKeepsSeq(seq: Long): Unit
 }
 
 @Singleton
 class UriIntegrityPluginImpl @Inject() (
   actor: ActorInstance[UriIntegrityActor],
+  centralConfig: CentralConfig,
   val scheduling: SchedulingProperties
 ) extends UriIntegrityPlugin with Logging {
   override def enabled = true
@@ -312,7 +322,7 @@ class UriIntegrityPluginImpl @Inject() (
     log.info("starting UriIntegrityPluginImpl")
     scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
-//    scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
+    scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
   }
   override def onStop() {
     log.info("stopping UriIntegrityPluginImpl")
@@ -324,4 +334,6 @@ class UriIntegrityPluginImpl @Inject() (
 
   def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
   def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
+
+  def setFixDuplicateKeepsSeq(seq: Long): Unit = { centralConfig.update(FixDuplicateKeepsSeqNumKey.longKey, seq) }
 }

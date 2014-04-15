@@ -40,7 +40,7 @@ angular.module('kifi.clutch', [])
           // Value exists, but is expired.
           if (this._config.returnPreviousOnExpire) {
             // Trigger refresh, and return previous future
-            refresh.apply(this, key, arguments);
+            refresh.call(this, key, arguments);
             return $q.when(hit.value);
           }
           return refresh.call(this, key, arguments);
@@ -117,7 +117,10 @@ angular.module('kifi.clutch', [])
             obj.value = result;
             that._cache[key] = obj;
           } else {
-            if (angular.isArray(result)) {
+            if (obj.value === result) {
+              // Nothing to do, getter handled it
+              return deferred.resolve(obj.value);
+            } else if (angular.isArray(result)) {
               util.replaceArrayInPlace(obj.value, result);
             } else if (angular.isObject(result)) {
               util.replaceObjectInPlace(obj.value, result);

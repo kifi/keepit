@@ -1,6 +1,6 @@
 package com.keepit.search.phrasedetector
 
-import com.keepit.search.index.{ArchivedDirectory, Indexable, Indexer, IndexDirectory}
+import com.keepit.search.index.{Indexable, Indexer, IndexDirectory}
 import com.keepit.model.{Collection, Phrase}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient

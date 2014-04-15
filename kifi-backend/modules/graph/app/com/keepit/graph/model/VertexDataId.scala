@@ -3,10 +3,13 @@ package com.keepit.graph.model
 import com.keepit.model.{Collection, NormalizedURI, User}
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
+import play.api.libs.json.{JsNumber, Writes, Reads, Format}
 
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 
 object VertexDataId {
+  implicit def format[V <: VertexDataReader]: Format[VertexDataId[V]] = Format(Reads.of[Long].map(VertexDataId[V](_)), Writes(id => JsNumber(id.id)))
+
   implicit def fromUserId(userId: Id[User]): VertexDataId[UserReader] = VertexDataId(userId.id)
   implicit def toUserId(userReaderId: VertexDataId[UserReader]): Id[User] = Id(userReaderId.id)
 

@@ -145,6 +145,11 @@ class UrlController @Inject() (
     Ok("Ok. Start migration of upto 500 urls")
   }
 
+  def setFixDuplicateKeepsSeq(seq: Long) = AdminHtmlAction.authenticated { request =>
+    uriIntegrityPlugin.setFixDuplicateKeepsSeq(seq)
+    Ok(s"Ok. The sequence number is set to $seq")
+  }
+
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}

@@ -191,7 +191,7 @@ GET     /iphone                     @com.keepit.controllers.website.HomeControll
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
-GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+GET     /invite                     @com.keepit.controllers.website.HomeController.home
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
@@ -230,6 +230,7 @@ POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsControl
 POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.KeepsController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsController.undeleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
 
@@ -321,6 +322,7 @@ GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
+GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
 GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
 GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration

@@ -64,11 +64,11 @@ angular.module('kifi.detail',
         });
 
         scope.isPrivate = function () {
-          return scope.howKept === 'private';
+          return scope.howKept === 'private' && scope.keep && scope.keep.isMyBookmark;
         };
 
         scope.isPublic = function () {
-          return scope.howKept === 'public' && scope.keep.isMyBookmark;
+          return scope.howKept === 'public' && scope.keep && scope.keep.isMyBookmark;
         };
 
         scope.toggleKeep = function () {

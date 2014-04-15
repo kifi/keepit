@@ -17,8 +17,6 @@ import com.keepit.search.query.parser.MainQueryParserFactory
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.tracker.BrowsingHistoryTracker
-import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
@@ -29,6 +27,7 @@ import com.keepit.search.graph.collection.CollectionSearcher
 import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
 import com.keepit.search.query.HotDocSetFilter
+import com.keepit.search.spellcheck.SpellCorrector
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -39,8 +38,8 @@ class MainSearcherFactory @Inject() (
     shardedCollectionIndexer: ShardedCollectionIndexer,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
+    spellCorrector: SpellCorrector,
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait,
     airbrake: AirbrakeNotifier,
@@ -50,9 +49,10 @@ class MainSearcherFactory @Inject() (
 
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI],Id[User]), URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
-  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[BrowsedURI]](10 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
   private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
+
+  lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   def apply(
     shards: Seq[Shard[NormalizedURI]],
@@ -65,7 +65,6 @@ class MainSearcherFactory @Inject() (
     config: SearchConfig
   ): Seq[MainSearcher] = {
     val clickHistoryFuture = getClickHistoryFuture(userId)
-    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
     val parser = parserFactory(lang1, lang2, config)
@@ -85,14 +84,13 @@ class MainSearcherFactory @Inject() (
           articleSearcher,
           socialGraphInfo,
           clickBoostsFuture,
-          browsingHistoryFuture,
           clickHistoryFuture,
           monitoredAwait,
           airbrake
       )
     }
 
-    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, browsingHistoryFuture, monitoredAwait)
+    val hotDocs = new HotDocSetFilter(userId, clickBoostsFuture, monitoredAwait)
     parser.setPercentMatch(config.asFloat("percentMatch"))
     parser.setPercentMatchForHotDocs(config.asFloat("percentMatchForHotDocs"), hotDocs)
     parser.parse(queryString, searchers.map(_.collectionSearcher))
@@ -115,10 +113,9 @@ class MainSearcherFactory @Inject() (
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
-    val browsingHistoryFuture = getBrowsingHistoryFuture(userId)
     val clickHistoryFuture = getClickHistoryFuture(userId)
 
-    Seq(browsingHistoryFuture, clickHistoryFuture) // returning futures to pin them in the heap
+    Seq(clickHistoryFuture) // returning futures to pin them in the heap
   }
 
   def clear(): Unit = {
@@ -149,10 +146,6 @@ class MainSearcherFactory @Inject() (
 
   def getCollectionSearcher(shard: Shard[NormalizedURI], userId: Id[User]): CollectionSearcherWithUser = {
     Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
-  }
-
-  private[this] def getBrowsingHistoryFuture(userId: Id[User]) = consolidateBrowsingHistoryReq(userId){ userId =>
-    SafeFuture(browsingHistoryTracker.getMultiHashFilter(userId))
   }
 
   private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId){ userId =>
@@ -189,4 +182,6 @@ class MainSearcherFactory @Inject() (
   }
 
   def getIndexShards(): Seq[Shard[NormalizedURI]] = shardedArticleIndexer.indexShards.keys.toSeq
+
+  def getSpellCorrector(): SpellCorrector = spellCorrector
 }

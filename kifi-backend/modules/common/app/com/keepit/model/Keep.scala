@@ -17,6 +17,7 @@ case class Keep(
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
   uriId: Id[NormalizedURI],
+  isPrimary: Boolean = true,
   urlId: Id[URL],
   url: String, // denormalized for efficiency
   bookmarkPath: Option[String] = None,
@@ -28,18 +29,21 @@ case class Keep(
   seq: SequenceNumber[Keep] = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep]{
 
-  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
+  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,isPrimary:$isPrimary,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
+  def withPrimary(isPrimary: Boolean) = copy(isPrimary = isPrimary)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => KeepStates.ACTIVE
     case false => KeepStates.INACTIVE
   })
+
+  def withState(state: State[Keep]) = copy(state = state)
 
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
@@ -53,6 +57,14 @@ case class Keep(
 }
 
 object Keep {
+
+  // is_primary: trueOrNull in db
+  def applyWithPrimary(id:Option[Id[Keep]], createdAt:DateTime, updatedAt:DateTime, externalId:ExternalId[Keep], title:Option[String], uriId:Id[NormalizedURI], isPrimary:Option[Boolean], urlId:Id[URL], url:String, bookmarkPath:Option[String], isPrivate:Boolean, userId:Id[User], state:State[Keep], source:KeepSource, kifiInstallation:Option[ExternalId[KifiInstallation]], seq:SequenceNumber[Keep]) =
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq)
+  def unapplyWithPrimary(k:Keep) = {
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq)  
+  }
+
   implicit def bookmarkFormat = (
     (__ \ 'id).formatNullable(Id.format[Keep]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -60,6 +72,7 @@ object Keep {
     (__ \ 'externalId).format(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'isPrimary).format[Boolean] and
     (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
@@ -93,7 +106,7 @@ class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 4
+  override val version = 5
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -102,7 +115,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 1
+  override val version = 2
   val namespace = "latest_bookmark_uri"
   def toKey(): String = uriId.toString
 }
@@ -110,7 +123,9 @@ case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
 class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-object KeepStates extends States[Keep]
+object KeepStates extends States[Keep] {
+  val DUPLICATE = State[Keep]("duplicate")
+}
 
 case class KeepSource(value: String) {
   override def toString = value

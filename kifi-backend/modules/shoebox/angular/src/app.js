@@ -42,6 +42,7 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
+  'kifi.addKeeps',
   'kifi.installService',
   'jun.facebook',
   'ngDragDrop',
@@ -145,18 +146,24 @@ angular.module('kifi', [
 ])
 
 .run([
-  'profileService', '$rootScope',
-  function (profileService, $rootScope) {
+  'profileService', '$rootScope', '$window', 'friendService', '$timeout', 'env',
+  function (profileService, $rootScope, $window, friendService, $timeout, env) {
     // Initial data loading:
 
     profileService.fetchPrefs().then(function (res) {
       // handle onboarding / imports
-      if (!res['onboarding_seen']) {
-        $rootScope.$emit('showGettingStarted');
-      } else {
-        $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+      if (env.production) {
+        if (!res.onboarding_seen) {
+          $rootScope.$emit('showGettingStarted');
+        } else {
+          $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+        }
       }
       return res;
+    });
+
+    $timeout(function () {
+      friendService.getRequests();
     });
   }
 ])

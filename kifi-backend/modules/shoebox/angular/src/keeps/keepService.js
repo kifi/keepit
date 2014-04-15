@@ -27,7 +27,31 @@ angular.module('kifi.keepService', [
       _.forEach(list, function (keep) {
         if (keep.tagList) {
           keep.tagList = keep.tagList.filter(function (tag) {
-            return tag.id !== tagId;
+            if (tag.id === tagId) {
+              if (!keep.removedTagList) {
+                keep.removedTagList = [];
+              }
+              keep.removedTagList.push(tag);
+              return false;
+            }
+            return true;
+          });
+        }
+      });
+    });
+
+    $rootScope.$on('tags.unremove', function (tagId) {
+      _.forEach(list, function (keep) {
+        if (keep.removedTagList) {
+          keep.removedTagList.filter(function (tag) {
+            if (tag.id === tagId) {
+              if (!keep.tagList) {
+                keep.tagList = [];
+              }
+              keep.tagList.push(tag);
+              return false;
+            }
+            return true;
           });
         }
       });
@@ -49,6 +73,7 @@ angular.module('kifi.keepService', [
       var tag = data.tag,
           keepId = data.keep.id;
       _.forEach(list, function (keep) {
+        keep.isMyBookmark = true;
         if (keep.id === keepId && keep.tagList) {
           var isAlreadyThere = _.find(keep.tagList, function (existingTag) {
             return existingTag.id === tag.id;
@@ -101,8 +126,12 @@ angular.module('kifi.keepService', [
         return -1;
       }
       var givenId = keep.id;
+
       for (var i = 0, l = list.length; i < l; i++) {
-        if (list[i].id === givenId) {
+        if (givenId && list[i].id === givenId) {
+          return i;
+        } else if (!givenId && list[i] === keep) {
+          // No id, do object comparison. todo: have a better way to track keeps when they have no ids.
           return i;
         }
       }
@@ -169,7 +198,8 @@ angular.module('kifi.keepService', [
           singleKeepBeingPreviewed = true;
           isDetailOpen = true;
         }
-        selectedIdx = keepIdx(keep);
+        var detectedIdx = keepIdx(keep);
+        selectedIdx = detectedIdx >= 0 ? detectedIdx : selectedIdx || 0;
         previewed = keep;
         api.getChatter(previewed);
 
@@ -465,7 +495,8 @@ angular.module('kifi.keepService', [
 
         $log.log('keepService.keep()', data);
 
-        return $http.post(url, data).then(function () {
+        return $http.post(url, data).then(function (res) {
+          console.info(res, _.clone(res.data));
           _.forEach(keeps, function (keep) {
             keep.isMyBookmark = true;
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
@@ -485,7 +516,7 @@ angular.module('kifi.keepService', [
 
         var url, data;
 
-        if (keeps.length === 1) {
+        if (keeps.length === 1 && keeps[0].id) {
           url = routeService.removeSingleKeep(keeps[0].id);
           data = {};
         } else {
@@ -502,6 +533,7 @@ angular.module('kifi.keepService', [
         return $http.post(url, data).then(function () {
           _.forEach(keeps, function (keep) {
             keep.unkept = true;
+            keep.isMyBookmark = false;
             if (previewed === keep) {
               api.togglePreview(keep);
             }

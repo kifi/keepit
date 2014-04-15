@@ -1,9 +1,11 @@
 package com.keepit.graph.model
 
 import com.keepit.common.reflection.CompanionTypeSystem
+import play.api.libs.json._
 
 sealed trait EdgeDataReader { self =>
   type E >: self.type <: EdgeDataReader
+  def instance: E = self
   def kind: EdgeKind[E]
 }
 
@@ -11,13 +13,26 @@ object EdgeDataReader {
   def apply(rawDataReader: RawDataReader): Map[EdgeKind[_ <: EdgeDataReader], EdgeDataReader] = {
     EdgeKind.all.map { edgeKind => edgeKind -> edgeKind(rawDataReader) }.toMap
   }
+
+  // Json Helpers
+  implicit val writes: Writes[EdgeDataReader] = Writes[EdgeDataReader](edgeDataReader => Json.obj(
+    "header" -> edgeDataReader.kind.header.toInt,
+    "data" -> edgeDataReader.kind.writes.writes(edgeDataReader.instance)
+  ))
+  implicit val readsAsEdgeData: Reads[EdgeData[_ <: EdgeDataReader]] = Reads(json =>
+    (json \ "header").validate[Int].flatMap[EdgeData[_ <: EdgeDataReader]] { header =>
+      EdgeKind(header.toByte).readsAsEdgeData.reads(json \ "data")
+    }
+  )
 }
 
 sealed trait EdgeKind[E <: EdgeDataReader] {
   implicit def kind: EdgeKind[E] = this
   implicit def header: Byte
   def apply(rawDataReader: RawDataReader): E
-  def dump(data: E): Array[Byte]
+
+  def writes: Writes[E]
+  def readsAsEdgeData: Reads[EdgeData[E]]
 }
 
 object EdgeKind {
@@ -31,11 +46,13 @@ object EdgeKind {
 }
 
 trait EmptyEdgeDataReader extends EdgeDataReader {
+  def kind = EmptyEdgeDataReader
   type E = EmptyEdgeDataReader
 }
 
-case object EmptyEdgeDataReader extends EdgeKind[EmptyEdgeDataReader] with EmptyEdgeDataReader {
+case object EmptyEdgeDataReader extends EdgeKind[EmptyEdgeDataReader] {
   val header = 1.toByte
-  def apply(rawDataReader: RawDataReader): EmptyEdgeDataReader = this
-  def dump(data: EmptyEdgeDataReader): Array[Byte] = Array.empty
+  def apply(rawDataReader: RawDataReader): EmptyEdgeDataReader = ???
+  implicit val writes = Writes[EmptyEdgeDataReader](_ => Json.obj())
+  implicit val readsAsEdgeData: Reads[EdgeData[EmptyEdgeDataReader]] = Reads[EdgeData[EmptyEdgeDataReader]](json => json.validate[JsObject].map(_ => EmptyEdgeData))
 }

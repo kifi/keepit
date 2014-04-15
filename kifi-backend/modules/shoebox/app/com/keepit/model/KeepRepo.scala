@@ -15,7 +15,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
-  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -32,7 +33,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
-  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Boolean
+  def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
   def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
 }
@@ -55,14 +56,15 @@ class KeepRepoImpl @Inject() (
     def title = column[String]("title", O.Nullable)//indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)//indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
+    def isPrimary = column[Boolean]("is_primary", O.Nullable) // trueOrNull
     def url =   column[String]("url", O.NotNull)//indexd
     def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable)//indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull)//indexd
     def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq) <> ((Keep.apply _).tupled, Keep.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
+      userId, state, source, kifiInstallation.?, seq) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -72,12 +74,15 @@ class KeepRepoImpl @Inject() (
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
   private implicit val getBookmarkResult : GetResult[com.keepit.model.Keep] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
-    Keep(id = r.<<[Option[Id[Keep]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Keep]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], urlId = r.<<[Id[URL]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Keep]], source = r.<<[KeepSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Keep]])
+    Keep(id = r.<<[Option[Id[Keep]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Keep]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], isPrimary = (r.<<[Option[Boolean]]).exists(b => b), urlId = r.<<[Id[URL]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Keep]], source = r.<<[KeepSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Keep]])
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
 
   override def save(model: Keep)(implicit session: RWSession) = {
+    assert(model.isPrimary && model.state != KeepStates.DUPLICATE || !model.isPrimary && model.state != KeepStates.ACTIVE,
+      s"trying to save a keep in an inconsistent state: primary=${model.isPrimary} state=${model.state}")
+
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel.clean())
   }
@@ -116,8 +121,12 @@ class KeepRepoImpl @Inject() (
     (for(b <- rows if b.externalId === extId && b.userId === userId) yield b).firstOption
   }
 
-  def getByUriAndUserAllStates(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] ={
-    (for(b <- rows if b.uriId === uriId && b.userId === userId ) yield b).firstOption
+  def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] ={
+    (for(b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true) yield b).firstOption
+  }
+
+  def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] ={
+    (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.DUPLICATE) yield b).list
   }
 
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep] =
@@ -251,8 +260,8 @@ class KeepRepoImpl @Inject() (
     }
   }
 
-  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Boolean = {
-    (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
+  def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
+    (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
   }
 
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]] =

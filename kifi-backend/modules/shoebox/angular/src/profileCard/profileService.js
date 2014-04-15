@@ -49,7 +49,20 @@ angular.module('kifi.profileService', [
     }
 
     function getPrimaryEmail(emails) {
-      return _.find(emails, 'isPrimary') || emails[0] || null;
+      var actualPrimary = _.find(emails, 'isPrimary');
+      if (actualPrimary) {
+        return actualPrimary;
+      } else {
+        var placeholderPrimary = _.find(emails, 'isVerified') || emails[0] || null;
+        if (placeholderPrimary) {
+          _.map(emails, function (email) {
+            if (email === placeholderPrimary) {
+              email.isPlaceholderPrimary = true;
+            }
+          })
+        }
+        return placeholderPrimary;
+      }
     }
 
     function removeEmailInfo(emails, addr) {

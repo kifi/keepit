@@ -34,8 +34,8 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   val discoveryModule = new ProdDiscoveryModule {
     def servicesToListenOn =
       if (DiscoveryModule.isCanary) // canary listens on shoebox
-        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.SHOEBOX :: Nil
+        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.SHOEBOX :: Nil
       else
-        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
+        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: Nil
   }
 }

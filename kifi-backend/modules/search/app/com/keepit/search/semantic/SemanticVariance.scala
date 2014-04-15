@@ -33,33 +33,26 @@ object SemanticVariance {
   /**
    * Given a hitList, find the variance of the semantic vectors.
    */
-  def svVariance(textQueries: Seq[TextQuery], ids: Set[Long], personalizedSearcher: Option[PersonalizedSearcher]): Float = {
+  def svVariance(textQueries: Seq[TextQuery], ids: Set[Long], personalizedSearcher: PersonalizedSearcher): Float = {
     val uriIdFilter = new IdSetFilter(ids)
-    var composer: Option[SemanticVectorComposer] = None
+    var composer = new SemanticVectorComposer
 
-    personalizedSearcher.foreach{ searcher =>
-      composer = Some(new SemanticVectorComposer)
-      textQueries.foreach{ q =>
-        val extractorQuery = q.getSemanticVectorExtractorQuery()
-        searcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
-          if (scorer != null && iterator != null) {
-            val extractor = scorer.asInstanceOf[SemanticVectorExtractorScorer]
-            while (iterator.nextDoc() < NO_MORE_DOCS) {
-              val doc = iterator.docID()
-              if (extractor.docID < doc) extractor.advance(doc)
-              if (extractor.docID == doc) extractor.processSemanticVector{ (term: Term, bytes: Array[Byte], offset: Int, length: Int) =>
-                composer.get.add(bytes, offset, length, 1)
-              }
+    textQueries.foreach{ q =>
+      val extractorQuery = q.getSemanticVectorExtractorQuery()
+      personalizedSearcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
+        if (scorer != null && iterator != null) {
+          val extractor = scorer.asInstanceOf[SemanticVectorExtractorScorer]
+          while (iterator.nextDoc() < NO_MORE_DOCS) {
+            val doc = iterator.docID()
+            if (extractor.docID < doc) extractor.advance(doc)
+            if (extractor.docID == doc) extractor.processSemanticVector{ (term: Term, bytes: Array[Byte], offset: Int, length: Int) =>
+              composer.add(bytes, offset, length, 1)
             }
           }
         }
       }
     }
-
-    composer match {
-      case Some(composer) => avgBitVariance(composer)
-      case _ => -1.0f
-    }
+    avgBitVariance(composer)
   }
 }
 

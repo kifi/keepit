@@ -100,8 +100,7 @@
 .kf-page-priv
   border-left: 1px solid #eff2f7
 
-.public .kf-page-keep:before
-.private .kf-page-keep:before
+.kf-page-keep:before
 .kf-page-priv:before
   content: " "
   display: inline-block
@@ -110,6 +109,15 @@
   background: url(../img/keep-icons.png) 0 0/auto 16px content-box
   vertical-align: -1px
   margin-right: 8px
+
+.kf-page-keep:before
+  background-position: -21px 0
+  width: 13px
+
+.public .kf-page-keep:before
+.private .kf-page-keep:before
+  background-position: 0 0
+  width: 11px
 
 .kf-page-priv:before
   width: 10px

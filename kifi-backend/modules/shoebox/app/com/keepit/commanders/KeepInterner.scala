@@ -151,7 +151,7 @@ class KeepInterner @Inject() (
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    keepRepo.getByUriAndUserAllStates(uri.id.get, userId) match {
+    keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
       case Some(bookmark) =>
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate

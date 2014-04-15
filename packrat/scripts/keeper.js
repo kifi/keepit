@@ -256,7 +256,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
-        i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br/>New ones are highlighted.'],
+        i: ['Message Box (' + CO_KEY + '+Shift+O)', 'Open your Message Box<br/>and see your messages.'],
         c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br/>and start a discussion.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {

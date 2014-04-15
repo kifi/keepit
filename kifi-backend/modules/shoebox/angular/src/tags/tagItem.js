@@ -3,8 +3,8 @@
 angular.module('kifi.tagItem', ['kifi.tagService'])
 
 .directive('kfTagItem', [
-  '$timeout', '$location', '$document', 'tagService', 'keyIndices', 'util',
-  function ($timeout, $location, $document, tagService, keyIndices, util) {
+  '$timeout', '$document', 'tagService', 'keyIndices', 'util',
+  function ($timeout, $document, tagService, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
@@ -13,27 +13,37 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         releaseFocus: '&',
         watchTagReorder: '&',
         reorderTag: '&',
-        hasNewLocation: '&'
+        hasNewLocation: '&',
+        viewTag: '&',
+        removeTag: '&'
       },
       replace: true,
       templateUrl: 'tags/tagItem.tpl.html',
       link: function (scope, element) {
         scope.isRenaming = false;
+        scope.isWaiting = false;
         scope.isDropdownOpen = false;
         scope.renameTag = {};
         scope.isHovering = false;
         var input = element.find('input');
+        var waitingTimeout;
 
         scope.onKeepDrop = function (keeps) {
-          tagService.addKeepsToTag(scope.tag, keeps);
+          waitingTimeout = $timeout(function () {
+            scope.isWaiting = true;
+          }, 500);
           scope.isDragTarget = false;
+          tagService.addKeepsToTag(scope.tag, keeps).then(function () {
+            $timeout.cancel(waitingTimeout);
+            scope.isWaiting = false;
+          });
         };
 
         scope.navigateToTag = function (event) {
           if (scope.isRenaming) {
             event.stopPropagation();
           } else {
-            $location.path('/tag/' + scope.tag.id);
+            scope.viewTag({tagId: scope.tag.id});
           }
         };
 
@@ -50,7 +60,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
 
         scope.remove = function () {
           closeDropdown();
-          return tagService.remove(scope.tag.id);
+          scope.removeTag({tag: scope.tag});
         };
 
         scope.onRenameKeydown = function (e) {

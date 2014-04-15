@@ -276,6 +276,16 @@ class KeepsController @Inject() (
     }
   }
 
+  def undeleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
+    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id, Some(CollectionStates.ACTIVE)) } map { coll =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+      collectionCommander.undeleteCollection(coll)
+      Ok(Json.obj("undeleted" -> coll.name))
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+    }
+  }
+
   def removeKeepsFromCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
     implicit val externalIdFormat = ExternalId.format[Keep]
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>

@@ -20,7 +20,6 @@ class StoreUtilTest extends Specification {
       val dim = 3
 
       val bytes = StoreUtil.DenseWordVecFormatter.toBinary(dim, mapper)
-      println("bytes size: " + bytes.length)
       val (dim2, mapper2) = StoreUtil.DenseWordVecFormatter.fromBinary(bytes)
 
       dim2 === dim

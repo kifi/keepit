@@ -19,7 +19,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       return installService.error;
     };
 
-    $scope.triggerInstall = installService.triggerInstall;
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $scope.data.showInstallErrorModal = true;
+      });
+    };
 
     // onboarding.js is using these functions
     $window.getMe = function () {
@@ -34,7 +38,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $http.post(env.xhrBase + '/user/prefs', {
         onboarding_seen: 'true'
       });
-      $scope.importBookmarks();
+      if (!profileService.prefs.onboarding_seen) {
+        $scope.importBookmarks();
+      }
       $scope.$apply();
     };
 
@@ -43,6 +49,12 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     });
 
     $scope.importBookmarks = function () {
+      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+      if (!kifiVersion) {
+        return;
+      }
+
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
     };
 

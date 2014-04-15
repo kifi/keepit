@@ -1,10 +1,10 @@
-@(descriptorsByRepo: (com.keepit.serializer.TypeCode[com.keepit.heimdal.HeimdalEvent], Seq[com.keepit.heimdal.EventDescriptor])*)
+@(descriptorsByRepo: (String, Seq[com.keepit.heimdal.EventDescriptor])*)
 
 @admin("Heimdal Events", stylesheets = List("admin_analytics")) {
 
 <form class="descriptors" action="@com.keepit.controllers.admin.routes.AdminAnalyticsController.updateEventDescriptors" method="POST">
-    @for((code, descriptors) <- descriptorsByRepo) {
-        <h3>@code.code.capitalize</h3>
+    @for((eventTypeCode, descriptors) <- descriptorsByRepo) {
+        <h3>@eventTypeCode.capitalize</h3>
         <table class="table table-condensed table-striped">
 
     <thead>
@@ -17,11 +17,11 @@
     </thead>
       @for(descriptor <- descriptors) {
         <tr>
-          <td> @code.code
+          <td> @eventTypeCode
           <td> @descriptor.name.name
-          <td><input type="text" name="@code.code:@descriptor.name.name:description" placeholder="Add a description for this event" value="@descriptor.description.getOrElse("")">
-          <td><input type="checkbox" class="checkbox" name="@code.code:@descriptor.name.name:mixpanel" @if(descriptor.mixpanel) {checked}>
-          <td><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.getEvents(code.code, Some(descriptor.name.name))">See Events</a>
+          <td><input type="text" name="@eventTypeCode:@descriptor.name.name:description" placeholder="Add a description for this event" value="@descriptor.description.getOrElse("")">
+          <td><input type="checkbox" class="checkbox" name="@eventTypeCode:@descriptor.name.name:mixpanel" @if(descriptor.mixpanel) {checked}>
+          <td><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.getEvents(eventTypeCode, Some(descriptor.name.name))">See Events</a>
       }
   </table>
     }

@@ -6,7 +6,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
   '$scope', 'profileService', 'keepService', 'tagService',
   function ($scope, profileService, keepService, tagService) {
     $scope.me = profileService.me;
-    $scope.draggedKeeps = null;
+    $scope.data = {draggedKeeps: null};
 
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.list.length;
@@ -19,17 +19,20 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       }
     });
 
-    $scope.dragKeeps = function (keep) {
+    $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
       var draggedKeeps = keepService.getSelected();
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
-      $scope.draggedKeeps = draggedKeeps;
-      return $scope.getDraggedKeepsElement();
+      $scope.data.draggedKeeps = draggedKeeps;
+      var draggedKeepsElement = $scope.getDraggedKeepsElement();
+      var sendData = angular.toJson($scope.data.draggedKeeps);
+      event.dataTransfer.setData('Text', sendData);
+      event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
     };
 
     $scope.stopDraggingKeeps = function () {
-      $scope.draggedKeeps = null;
+      $scope.data.draggedKeeps = null;
     };
   }
 ])
@@ -169,8 +172,28 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         }
 
         scope.getDraggedKeepsElement = function () {
+          var ellipsis = element.find('.kf-shadow-keep-ellipsis');
+          var ellipsisCounter = element.find('.kf-shadow-keep-ellipsis-counter');
+          var ellipsisCounterHidden = element.find('.kf-shadow-keep-ellipsis-counter-hidden');
+          var second = element.find('.kf-shadow-keep-second');
+          var last = element.find('.kf-shadow-keep-last');
+          var keepHeaderHeight = 35;
+          var ellipsisHeight = 28;
+          if (scope.data.draggedKeeps.length === 2) {
+            last.css({top: keepHeaderHeight + 'px'});
+          } else if (scope.data.draggedKeeps.length === 3) {
+            second.css({top: keepHeaderHeight + 'px'});
+            last.css({top: 2 * keepHeaderHeight + 'px'});
+          } else if (scope.data.draggedKeeps.length >= 4) {
+            ellipsis.css({top: keepHeaderHeight + 'px', height: ellipsisHeight + 'px'});
+            ellipsisCounter.css({left: (parseInt(ellipsis.width(), 10) - parseInt(ellipsisCounterHidden.width(), 10)) / 2});
+            last.css({top: keepHeaderHeight + ellipsisHeight + 'px'});
+          }
           return element.find('.kf-shadow-dragged-keeps');
         };
+
+        var shadowDraggedKeeps = element.find('.kf-shadow-dragged-keeps');
+        shadowDraggedKeeps.css({top: 0, width: element.find('.kf-my-keeps')[0].offsetWidth + 'px'});
       }
     };
   }

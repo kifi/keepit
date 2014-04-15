@@ -7,7 +7,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.search._
 import com.keepit.normalizer.NormalizationCandidate
 
 abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends Logging {
@@ -36,26 +35,6 @@ class EventHelperActor @Inject() (
       val events = listeners.filter(_.onEvent.isDefinedAt(event))
       events.map(_.onEvent(event))
     case m => throw new UnsupportedActorMessage(m)
-  }
-}
-
-@Singleton
-class UsefulPageListener @Inject() (
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  db: Database,
-  searchClient: SearchServiceClient)
-  extends EventListener(userRepo, normalizedURIRepo) {
-
-  def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SLIDER, "usefulPage", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, url, normUrl) = db.readOnly { implicit s =>
-        val user = userRepo.get(externalUser)
-        val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = normalizedURIRepo.getByUri(url)
-        (user, url, normUrl)
-      }
-      normUrl.foreach(n => searchClient.updateBrowsingHistory(user.id.get, n.id.get))
   }
 }
 
