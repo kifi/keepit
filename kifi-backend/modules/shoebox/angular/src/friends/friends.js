@@ -20,6 +20,8 @@ angular.module('kifi.friends', [
       }
     }).when('/friends/requests', {
       redirectTo: '/friends'
+    }).when('/friends/requests/:network', {
+      redirectTo: '/friends'
     });
   }
 ])
