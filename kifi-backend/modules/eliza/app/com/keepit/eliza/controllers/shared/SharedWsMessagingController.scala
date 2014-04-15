@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.shared
 
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
+import com.keepit.eliza.commanders.{MessagingUtils, NotificationCommander, MessagingCommander}
 import com.keepit.common.db.{ExternalId, State}
 import com.keepit.model.{NotificationCategory, User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
@@ -30,6 +30,7 @@ import com.keepit.common.shutdown.ShutdownCommander
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     notificationCommander: NotificationCommander,
+    messagingUtils: MessagingUtils,
     actionAuthenticator: ActionAuthenticator,
     protected val websocketRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
@@ -73,7 +74,7 @@ class SharedWsMessagingController @Inject() (
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
-          messagingCommander.modifyMessageWithAuxData(m)
+          messagingUtils.modifyMessageWithAuxData(m)
         }
         SafeFuture(Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
           socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse)))
