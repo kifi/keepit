@@ -245,10 +245,15 @@ class UserController @Inject() (
     val user = db.readOnly { implicit session => userRepo.get(userId) }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
-    Ok(toJson(pimpedUser.basicUser).as[JsObject] ++
+    val json = toJson(pimpedUser.basicUser).as[JsObject] ++
        toJson(pimpedUser.info).as[JsObject] ++
        Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-       Json.obj("experiments" -> experiments.map(_.value)))
+       Json.obj("experiments" -> experiments.map(_.value))
+    val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
+    Ok(json ++ Json.obj(
+      "uniqueKeepsClicked" -> uniqueKeepsClicked,
+      "totalKeepsClicked" -> totalClicks
+    ))
   }
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")
@@ -389,7 +394,49 @@ class UserController @Inject() (
     }
   }
 
-  // todo: Combine this and next (abook import)
+  def importStatus() = JsonAction.authenticatedAsync { implicit request =>
+    val networks = Seq("facebook", "linkedin")
+
+    val networkStatuses = Future {
+      JsObject(db.readOnly { implicit session =>
+        networks.map { network =>
+          userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}").flatMap { r =>
+            if (r == "false") {
+              None
+            } else {
+              Some(network -> JsString(r))
+            }
+          }
+        }
+      }.flatten)
+    }
+
+    val abookStatuses = abookServiceClient.getABookInfos(request.userId).map { abooks =>
+      JsObject(abooks.map { abookInfo =>
+        abookInfo.state match {
+          case ABookInfoStates.PENDING | ABookInfoStates.PROCESSING => // we only care if it's actively working. in all other cases, client knows when it refreshes.
+            val identifier = (abookInfo.ownerEmail orElse abookInfo.ownerId).map(_.toString).getOrElse(abookInfo.id.get.toString)
+            val importantBits = Seq(
+              "state" -> Some(abookInfo.state.value),
+              "numContacts" -> abookInfo.numContacts.map(_.toString),
+              "numProcessed" -> abookInfo.numProcessed.map(_.toString),
+              "lastUpdated" -> Some(abookInfo.updatedAt.toStandardTimeString)
+            ).filter(_._2.isDefined).map(m => m._1 -> JsString(m._2.get))
+            Some(identifier -> JsObject(importantBits))
+          case _ => None
+        }
+      }.flatten)
+    }
+
+    for {
+      n <- networkStatuses
+      a <- abookStatuses
+    } yield {
+      Ok(JsObject(Seq("network" -> n, "abook" -> a)))
+    }
+  }
+
+  // todo(Andrew): Remove when ng is out
   def checkIfImporting(network: String, callback: String) = HtmlAction.authenticated { implicit request =>
     val startTime = clock.now
     val importHasHappened = new AtomicBoolean(false)
@@ -433,6 +480,7 @@ class UserController @Inject() (
     }
   }
 
+  // todo(Andrew): Remove when ng is out
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
   def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = HtmlAction.authenticated { request =>
     import ABookInfoStates._

@@ -156,6 +156,10 @@ angular.module('kifi.search', [
     $scope.scrollDistance = '100%';
     $scope.scrollDisabled = false;
 
+    $scope.analyticsTrack = function (keep, $event) {
+      return [keep, $event]; // log analytics for search click here
+    };
+
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
         return;

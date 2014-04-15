@@ -1,31 +1,29 @@
 'use strict';
 
-angular.module('kifi.invite.wtiService', [])
+angular.module('kifi.invite.wtiService', ['kifi.clutch'])
 
 .factory('wtiService', [
-  '$http', 'routeService',
-  function ($http, routeService) {
+  '$http', 'routeService', 'Clutch', '$q',
+  function ($http, routeService, Clutch, $q) {
     var list = [];
     var more = true;
     var page = 0;
-    var requestInProgress =  false;
-    var lastRequest;
+
+    var wtiRemoteService = new Clutch(function (pageToGet) {
+      return $http.get(routeService.whoToInvite + '?page=' + pageToGet).then(function (res) {
+        if (res.data.length === 0) {
+          more = false;
+        } else {
+          page++;
+          list.push.apply(list, res.data);
+        }
+        return res.data;
+      });
+    });
+
     var api = {
       getMore: function () {
-        if (!requestInProgress) {
-          requestInProgress = true;
-          lastRequest = $http.get(routeService.whoToInvite + '?page=' + page).then(function (res) {
-            requestInProgress = false;
-            list.push.apply(list, res.data);
-            if (res.data.length === 0) {
-              more = false;
-            } else {
-              page = page + 1;
-            }
-            return list;
-          });
-        }
-        return lastRequest;
+        return wtiRemoteService.get(page);
       },
       hasMore: function () {
         return more;
@@ -33,9 +31,18 @@ angular.module('kifi.invite.wtiService', [])
       loadInitial: function () {
         list.length = 0;
         page = 0;
-        api.getMore().then(function () {
-          api.getMore();
+        more = true;
+        wtiRemoteService.expireAll();
+
+        var first = api.getMore();
+        first.then(function () {
+          return api.getMore();
         });
+
+        if (list.length > 0) {
+          return $q.when(list);
+        }
+        return first;
       },
       list: list
     };

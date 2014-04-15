@@ -22,8 +22,9 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.{TreeSet, ArrayBuffer}
+import org.joda.time.DateTime
 
-case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String)
+case class ConnectionWithInviteStatus(label:String, score:Int, networkType:String, image:Option[String], value:String, status:String, email:Option[String] = None, inviteLastSentAt:Option[DateTime] = None)
 
 object ConnectionWithInviteStatus {
   implicit val format = (
@@ -32,7 +33,9 @@ object ConnectionWithInviteStatus {
       (__ \ 'networkType).format[String] and
       (__ \ 'image).formatNullable[String] and
       (__ \ 'value).format[String] and
-      (__ \ 'status).format[String]
+      (__ \ 'status).format[String] and
+      (__ \ 'email).formatNullable[String] and
+      (__ \ 'inviteLastSentAt).formatNullable[DateTime]
     )(ConnectionWithInviteStatus.apply _, unlift(ConnectionWithInviteStatus.unapply))
 }
 
@@ -44,6 +47,8 @@ class TypeaheadCommander @Inject()(
   socialUserInfoRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
   emailAddressRepo: EmailAddressRepo,
+  userRepo: UserRepo,
+  friendRequestRepo: FriendRequestRepo,
   abookServiceClient: ABookServiceClient,
   socialUserTypeahead: SocialUserTypeahead,
   kifiUserTypeahead: KifiUserTypeahead,
@@ -311,37 +316,30 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def joinWithInviteStatus(top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[Id[EContact], Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
+  private def inviteStatus(inv: Invitation): (String, Option[DateTime]) = {
+    inv.state match {
+      case InvitationStates.ACCEPTED | InvitationStates.JOINED => ("joined", None) // check db
+      case InvitationStates.INACTIVE => ("", None)
+      case _ => ("invited", inv.lastSentAt.orElse(Some(inv.updatedAt)))
+    }
+  }
+
+  private def joinWithInviteStatus(userId:Id[User], top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[Id[EContact], Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
+    val frMap = if (top.exists(t => t._1 == SocialNetworks.FORTYTWO_NF)) db.readOnly { implicit ro =>
+      friendRequestRepo.getBySender(userId).map{ fr => fr.recipientId -> fr }.toMap
+    } else Map.empty[Id[User], FriendRequest]
+
     top map {
       case (snType, hit) =>
         snType match {
           case SocialNetworks.EMAIL =>
             val e = hit.info.asInstanceOf[EContact]
-            val status = emailInvitesMap.get(e.id.get) map {
-              inv =>
-                inv.state match {
-                  case InvitationStates.ACCEPTED | InvitationStates.JOINED => "joined" // check db
-                  case InvitationStates.INACTIVE => ""
-                  case _ => "invited"
-                }
-            } getOrElse ""
-            ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status)
+            val (status, lastSentAt) = emailInvitesMap.get(e.id.get) map { inv => inviteStatus(inv) } getOrElse ("", None)
+            ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
           case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN =>
             val sci = hit.info.asInstanceOf[SocialUserBasicInfo]
-            val status = socialInvitesMap.get(sci.id) map {
-              inv =>
-                inv.state match {
-                  case InvitationStates.ACCEPTED | InvitationStates.JOINED => // consider airbrake
-                    val msg = s"Invitation Inconsistency for invite=${inv} info=${sci}"
-                    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY,
-                      to = Seq(EmailAddresses.RAY),
-                      category = NotificationCategory.System.ADMIN, subject = msg, htmlBody = msg))
-                    "joined"
-                  case InvitationStates.INACTIVE => ""
-                  case _ => "invited"
-                }
-            } getOrElse ""
-            ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status)
+            val (status, lastSentAt) = socialInvitesMap.get(sci.id) map { inv => inviteStatus(inv) } getOrElse ("", None)
+            ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt)
           case SocialNetworks.FORTYTWO =>
             val u = hit.info.asInstanceOf[User]
             val picUrl = if (pictureUrl) {
@@ -349,10 +347,14 @@ class TypeaheadCommander @Inject()(
             } else None
             ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
           case SocialNetworks.FORTYTWO_NF =>
-            val bu = hit.info.asInstanceOf[BasicUser]
+            val bu = hit.info.asInstanceOf[BasicUser] // todo: uptake User API from search
             val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
-          val picUrl = if (pictureUrl) Some(bu.pictureName) else None
-            ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", "joined")
+            val picUrl = if (pictureUrl) Some(bu.pictureName) else None
+            val nfUserOpt = db.readOnly { implicit ro => userRepo.getOpt(bu.externalId) }
+            val frOpt = nfUserOpt flatMap { nfUser =>
+              frMap.get(nfUser.id.get)
+            }
+            ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt))
         }
     }
   }
@@ -381,7 +383,7 @@ class TypeaheadCommander @Inject()(
             } yield {
               val socialInvitesMap = socialInvites.map{ inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
               val emailInvitesMap  = emailInvites.map{ inv => inv.recipientEContactId.get -> inv }.toMap
-              val resWithStatus = joinWithInviteStatus(top, emailInvitesMap, socialInvitesMap, pictureUrl)
+              val resWithStatus = joinWithInviteStatus(userId, top, emailInvitesMap, socialInvitesMap, pictureUrl)
               val res = limit.map{ n =>
                 resWithStatus.take(n)
               }.getOrElse(resWithStatus)

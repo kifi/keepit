@@ -13,19 +13,32 @@ const api = function() {
     }
   });
 
-  self.port.on("api:inject", function(styles, scripts, callbackId) {
-    styles.forEach(function(css) {
-      var el = document.createElement("style");
-      el.innerHTML = css;
+  self.port.on('api:inject', function(styles, scripts, callbackId) {
+    styles.forEach(function (path) {
+      var el = document.createElement('link');
+      el.rel = 'stylesheet';
+      el.href = api.url(path);
+      el.addEventListener('load', onLoad);
       (document.head || document.body).appendChild(el);
     });
-    scripts.forEach(function(js) {
+    scripts.forEach(function (js) {
       window.eval(js);
     });
-    var cb = callbacks[callbackId];
-    if (cb) {
-      delete callbacks[callbackId];
-      cb();
+    var loadsLeft = styles.length;
+    if (loadsLeft === 0) {
+      invokeCallback();
+    }
+    function onLoad() {
+      if (--loadsLeft === 0) {
+        invokeCallback();
+      }
+    }
+    function invokeCallback() {
+      var cb = callbacks[callbackId];
+      if (cb) {
+        delete callbacks[callbackId];
+        cb();
+      }
     }
   });
 
@@ -33,7 +46,7 @@ const api = function() {
     dev: self.options.dev,
     mutationsFirePromptly: false,
     noop: function() {},
-    onEnd: [],  // TODO: find an event that will allows us to invoke these
+    onEnd: [],  // TODO: find an event that will allow us to invoke these
     port: {
       emit: function(type, data, callback) {
         if (!callback && typeof data == "function") {

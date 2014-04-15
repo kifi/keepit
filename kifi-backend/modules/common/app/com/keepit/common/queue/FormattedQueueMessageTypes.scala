@@ -1,115 +1,143 @@
 package com.keepit.common.queue
 
 
-import com.keepit.model.{EContact, User, SocialUserInfo, Invitation}
+import com.keepit.model.{User, SocialUserInfo}
 import com.keepit.common.db.Id
-import com.keepit.serializer.{Companion, TypeCode}
 import com.keepit.social.SocialNetworkType
 
-import play.api.libs.json.{Json, Format, JsValue}
+import play.api.libs.json.{Reads, Json, Format, JsValue}
+import com.keepit.common.reflection.CompanionTypeSystem
 
 
-trait RichConnectionUpdateMessage
+sealed trait RichConnectionUpdateMessage { self =>
+  type M >: self.type <: RichConnectionUpdateMessage
+  def kind: RichConnectionUpdateMessageKind[M]
+  def instance: M = self
+}
+
+sealed trait RichConnectionUpdateMessageKind[M <: RichConnectionUpdateMessage] {
+  def typeCode: String
+  def format: Format[M]
+}
+
+object RichConnectionUpdateMessageKind {
+  val all = CompanionTypeSystem[RichConnectionUpdateMessage, RichConnectionUpdateMessageKind[_ <: RichConnectionUpdateMessage]]("M")
+  val byTypeCode: Map[String, RichConnectionUpdateMessageKind[_ <: RichConnectionUpdateMessage]] = {
+    require(all.size == all.map(_.typeCode).size, "Duplicate RichConnectionUpdateMessage type codes.")
+    all.map { vertexKind => vertexKind.typeCode -> vertexKind }.toMap
+  }
+}
 
 object RichConnectionUpdateMessage {
-  private val typeCodeMap = TypeCode.typeCodeMap[RichConnectionUpdateMessage](
-    InternRichConnection.typeCode, RecordKifiConnection.typeCode, RecordInvitation.typeCode, RecordFriendUserId.typeCode, Block.typeCode, RecordVerifiedEmail.typeCode
-  )
-  def getTypeCode(code: String) = typeCodeMap(code.toLowerCase)
-
   implicit val format = new Format[RichConnectionUpdateMessage] {
-    def writes(event: RichConnectionUpdateMessage) = event match {
-      case e: InternRichConnection => Companion.writes(e)
-      case e: RemoveRichConnection => Companion.writes(e)
-      case e: RecordKifiConnection => Companion.writes(e)
-      case e: RemoveKifiConnection => Companion.writes(e)
-      case e: RecordInvitation => Companion.writes(e)
-      case e: CancelInvitation => Companion.writes(e)
-      case e: RecordFriendUserId => Companion.writes(e)
-      case e: Block => Companion.writes(e)
-      case e: RecordVerifiedEmail => Companion.writes(e)
-    }
-    private val readsFunc = Companion.reads(InternRichConnection, RemoveRichConnection, RecordKifiConnection, RemoveKifiConnection, RecordInvitation, CancelInvitation, RecordFriendUserId, Block, RecordVerifiedEmail)
-    def reads(json: JsValue) = readsFunc(json)
+    def writes(message: RichConnectionUpdateMessage) = Json.obj("typeCode" -> message.kind.typeCode.toString, "value" -> message.kind.format.writes(message.instance))
+    def reads(json: JsValue) =(json \ "typeCode").validate[String].flatMap { typeCode => RichConnectionUpdateMessageKind.byTypeCode(typeCode).format.reads(json \ "value") }
   }
 }
 
 //Propages changes to SocialConnectionRepo (needs sequence number). Will usually be a queued call.
-case class InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) extends RichConnectionUpdateMessage
-object InternRichConnection extends Companion[InternRichConnection] {
+case class InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) extends RichConnectionUpdateMessage {
+  type M = InternRichConnection
+  def kind = InternRichConnection
+}
+case object InternRichConnection extends RichConnectionUpdateMessageKind[InternRichConnection] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[InternRichConnection]
-  implicit val typeCode = TypeCode("intern_rich_connection")
+  implicit val typeCode = "intern_rich_connection"
 }
 
-case class RemoveRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) extends RichConnectionUpdateMessage
-object RemoveRichConnection extends Companion[RemoveRichConnection] {
+case class RemoveRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) extends RichConnectionUpdateMessage {
+  type M = RemoveRichConnection
+  def kind = RemoveRichConnection
+}
+case object RemoveRichConnection extends RichConnectionUpdateMessageKind[RemoveRichConnection] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[RemoveRichConnection]
-  implicit val typeCode = TypeCode("remove_rich_connection")
+  implicit val typeCode = "remove_rich_connection"
 }
 
 //Propages changes to UserConnectionRepo. Will usually be a queued call.
-case class RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage
-object RecordKifiConnection extends Companion[RecordKifiConnection] {
+case class RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage {
+  type M = RecordKifiConnection
+  def kind = RecordKifiConnection
+}
+case object RecordKifiConnection extends RichConnectionUpdateMessageKind[RecordKifiConnection] {
   private implicit val userIdFormat = Id.format[User]
   implicit val format = Json.format[RecordKifiConnection]
-  implicit val typeCode = TypeCode("record_kifi_connection")
+  implicit val typeCode = "record_kifi_connection"
 }
 
 
-case class RemoveKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage
-object RemoveKifiConnection extends Companion[RemoveKifiConnection] {
+case class RemoveKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage {
+  type M = RemoveKifiConnection
+  def kind = RemoveKifiConnection
+}
+case object RemoveKifiConnection extends RichConnectionUpdateMessageKind[RemoveKifiConnection] {
   private implicit val userIdFormat = Id.format[User]
   implicit val format = Json.format[RemoveKifiConnection]
-  implicit val typeCode = TypeCode("remove_kifi_connection")
+  implicit val typeCode = "remove_kifi_connection"
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
-case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String], invitationNumber: Int = 1) extends RichConnectionUpdateMessage
-object RecordInvitation extends Companion[RecordInvitation] {
+case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String], invitationNumber: Int = 1) extends RichConnectionUpdateMessage {
+  type M = RecordInvitation
+  def kind = RecordInvitation
+}
+case object RecordInvitation extends RichConnectionUpdateMessageKind[RecordInvitation] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[RecordInvitation]
-  implicit val typeCode = TypeCode("record_inivitation")
+  implicit val typeCode = "record_inivitation"
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
-case class CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String]) extends RichConnectionUpdateMessage
-object CancelInvitation extends Companion[CancelInvitation] {
+case class CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String]) extends RichConnectionUpdateMessage {
+  type M = CancelInvitation
+  def kind = CancelInvitation
+}
+case object CancelInvitation extends RichConnectionUpdateMessageKind[CancelInvitation] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[CancelInvitation]
-  implicit val typeCode = TypeCode("cancel_invitation")
+  implicit val typeCode = "cancel_invitation"
 }
 
 //Propages changes to SocialUserInfoRepo (needs sequence number). Will usually be a direct call.
-case class RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) extends RichConnectionUpdateMessage
-object RecordFriendUserId extends Companion[RecordFriendUserId] {
+case class RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) extends RichConnectionUpdateMessage {
+  type M = RecordFriendUserId
+  def kind = RecordFriendUserId
+}
+case object RecordFriendUserId extends RichConnectionUpdateMessageKind[RecordFriendUserId] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[RecordFriendUserId]
-  implicit val typeCode = TypeCode("record_friend_user_id")
+  implicit val typeCode = "record_friend_user_id"
 }
 
 
 //Caused by direct user action. Will usually be a direcrt call.
-case class Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) extends RichConnectionUpdateMessage
-object Block extends Companion[Block] {
+case class Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) extends RichConnectionUpdateMessage {
+  type M = Block
+  def kind = Block
+}
+case object Block extends RichConnectionUpdateMessageKind[Block] {
   private implicit val userIdFormat = Id.format[User]
   private implicit val socialIdFormat = Id.format[SocialUserInfo]
   implicit val format = Json.format[Block]
-  implicit val typeCode = TypeCode("block")
+  implicit val typeCode = "block"
 }
 
 //Propages changes to EmailAddressRepo (needs sequence number).
-case class RecordVerifiedEmail(userId: Id[User], email: String) extends RichConnectionUpdateMessage
-object RecordVerifiedEmail extends Companion[RecordVerifiedEmail] {
+case class RecordVerifiedEmail(userId: Id[User], email: String) extends RichConnectionUpdateMessage {
+  type M = RecordVerifiedEmail
+  def kind = RecordVerifiedEmail
+}
+case object RecordVerifiedEmail extends RichConnectionUpdateMessageKind[RecordVerifiedEmail] {
   private implicit val userIdFormat = Id.format[User]
   implicit val format = Json.format[RecordVerifiedEmail]
-  implicit val typeCode = TypeCode("record_email_address")
+  implicit val typeCode = "record_email_address"
 }
 
 

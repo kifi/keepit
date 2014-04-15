@@ -33,14 +33,14 @@ angular.module('kifi.clutch', [])
         if (!hit) {
           // Never been refreshed.
           return refresh.call(this, key, arguments);
-        } else if (!hit.value) {
+        } else if (!hit.value || hit.activeRequest) {
           // Previous refresh did not finish.
           return hit.q;
         } else if (isExpired(hit.time, this._config.cacheDuration)) {
           // Value exists, but is expired.
           if (this._config.returnPreviousOnExpire) {
             // Trigger refresh, and return previous future
-            refresh.apply(this, key, arguments);
+            refresh.call(this, key, arguments);
             return $q.when(hit.value);
           }
           return refresh.call(this, key, arguments);
@@ -76,7 +76,7 @@ angular.module('kifi.clutch', [])
       };
 
       Clutch.prototype.expireAll = function () {
-        this._cache.length = 0;
+        this._cache = {};
         return;
       };
 
@@ -103,19 +103,24 @@ angular.module('kifi.clutch', [])
         // Save the promise so we return the same promise if
         // multiple requests come in before it's resolved.
         obj.q = deferred.promise;
+        obj.activeRequest = true;
 
         this._cache[key] = obj; // todo: needed?
         var that = this;
 
         resultQ.then(function success(result) {
           obj.time = now();
+          obj.activeRequest = false;
 
           if (!obj.value) {
             // It's never been set before.
             obj.value = result;
             that._cache[key] = obj;
           } else {
-            if (angular.isArray(result)) {
+            if (obj.value === result) {
+              // Nothing to do, getter handled it
+              return deferred.resolve(obj.value);
+            } else if (angular.isArray(result)) {
               util.replaceArrayInPlace(obj.value, result);
             } else if (angular.isObject(result)) {
               util.replaceObjectInPlace(obj.value, result);
@@ -125,6 +130,7 @@ angular.module('kifi.clutch', [])
           }
           deferred.resolve(obj.value);
         })['catch'](function (reason) {
+          obj.activeRequest = false;
           if (obj.value && that._config.remoteError === 'ignore') {
             deferred.resolve(obj.value);
           } else {

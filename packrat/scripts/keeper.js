@@ -6,6 +6,7 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
+// @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/html/keeper/keeper.js
 
@@ -126,17 +127,20 @@ var keeper = keeper || function () {  // idempotent for Chrome
       delete data.mousedownEvent;
     }).on('mousewheel', function (e) {
       e.preventDefault(); // crbug.com/151734
-    }).on('click', '.kifi-keep-btn', function (e) {
+    })
+    .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         keepPage('public');
         this.classList.add('kifi-hoverless');
       }
-    }).on('click', '.kifi-kept-btn', function (e) {
+    }, 400, true))
+    .on('click', '.kifi-kept-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         unkeepPage();
         this.classList.add('kifi-hoverless');
       }
-    }).on('mouseover', '.kifi-keep-card', function (e) {
+    }, 400, true))
+    .on('mouseover', '.kifi-keep-card', function (e) {
       if ($slider.hasClass('kifi-auto') && e.originalEvent.isTrusted !== false) {
         growSlider('kifi-auto', 'kifi-wide');
       }
@@ -197,15 +201,18 @@ var keeper = keeper || function () {  // idempotent for Chrome
           click: 'hide',
           position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
       });
-    }).on('click', '.kifi-keep-lock', function (e) {
+    })
+    .on('click', '.kifi-keep-lock', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         keepPage('private');
       }
-    }).on('click', '.kifi-kept-lock', function (e) {
+    }, 400, true))
+    .on('click', '.kifi-kept-lock', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
       }
-    }).hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
+    }, 400, true))
+    .hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
       var btn = this;
       var kept = this.classList.contains('kifi-kept-tag');
       render('html/keeper/titled_tip', {
@@ -221,7 +228,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
           position: {my: 'right bottom-13', at: 'right top', of: btn, collision: 'none'}
         });
       });
-    }).on('click', '.kifi-keep-tag,.kifi-kept-tag', function (e) {
+    })
+    .on('click', '.kifi-keep-tag,.kifi-kept-tag', _.debounce(function (e) {
       if (e.originalEvent.closedTagbox || e.originalEvent.isTrusted === false) {
         return;
       }
@@ -233,16 +241,19 @@ var keeper = keeper || function () {  // idempotent for Chrome
         tagbox.onHide.add(endStickyTime);
         tagbox.toggle($slider, 'click:tagIcon');
       });
-    }).hoverfu('.kifi-keeper-x', function (configureHover) {
+    }, 400, true))
+    .hoverfu('.kifi-keeper-x', function (configureHover) {
       configureHover({
         mustHoverFor: 700, hideAfter: 2500, click: 'hide',
         position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
       });
-    }).on('click', '.kifi-keeper-x', function (e) {
+    })
+    .on('click', '.kifi-keeper-x', _.debounce(function (e) {
       if (e.originalEvent.isTrusted !== false) {
         pane.hide(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));
       }
-    }).hoverfu('.kifi-dock-btn', function(configureHover) {
+    }, 400, true))
+    .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
         i: ['Message Box (' + CO_KEY + '+Shift+M)', 'View all of your messages.<br/>New ones are highlighted.'],
@@ -260,7 +271,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       });
     }).on('mousedown', '.kifi-dock-btn', function (e) {
       e.preventDefault();
-    }).on('click', '.kifi-dock-btn', function (e) {
+    })
+    .on('click', '.kifi-dock-btn', _.debounce(function (e) {
       if (e.originalEvent.isTrusted === false) return;
       $slider.data().stickiness |= 2;
       var locator = this.dataset.loc;
@@ -271,7 +283,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
           pane.compose('keeper');
         }
       });
-    });
+    }, 400, true));
   }
 
   function showSlider(trigger) {
@@ -362,7 +374,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how)();
-    updateKeptDom(how);
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
@@ -380,20 +391,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function unkeepPage() {
     log('[unkeepPage]', document.URL)();
-    updateKeptDom('');
     api.port.emit('unkeep', withUrls({}));
   }
 
   function toggleKeep(how) {
     log('[toggleKeep]', how)();
-    updateKeptDom(how);
     api.port.emit('set_private', withUrls({private: how == 'private'}));
-  }
-
-  function updateKeptDom(how) {
-    if ($slider) {
-      $slider.find('.kifi-keep-card').removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (how || 'unkept'));
-    }
   }
 
   function hoverfuFriends($tip, keepers) {
@@ -475,7 +478,16 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   api.port.on({
     kept: function (o) {
-      updateKeptDom(o.kept);
+      if ($slider) {
+        var $card = $slider.find('.kifi-keep-card');
+        if ('kept' in o) {
+          $card.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
+        }
+        if (o.fail && !$card.hasClass('kifi-shake')) {
+          $card.one('animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($card, 'kifi-shake'))
+          .addClass('kifi-shake');
+        }
+      }
     },
     count: function (n) {
       if (!$slider) return;
@@ -535,7 +547,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     },
     moveBackFromBottom: function () {
-      if (tile.style.display !== 'none') {
+      if (tile && tile.style.display !== 'none') {
         $(tile).css('transform', '');
       }
     },

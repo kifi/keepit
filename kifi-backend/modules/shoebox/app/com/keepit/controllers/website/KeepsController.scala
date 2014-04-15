@@ -8,28 +8,21 @@ import com.keepit.commanders._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.SearchServiceClient
 
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.store.{S3ScreenshotStore}
-import play.api.mvc.{SimpleResult, Action}
-import com.keepit.social.BasicUser
+import com.keepit.common.store.S3ScreenshotStore
 import scala.util.Try
-import com.keepit.model.KeepToCollection
 import org.joda.time.Seconds
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
-import scala.concurrent.duration.Duration
 
 class KeepsController @Inject() (
     db: Database,
@@ -189,11 +182,26 @@ class KeepsController @Inject() (
     }
   }
 
+  def unkeepBatch() = JsonAction.authenticatedParseJson { request =>
+    implicit val keepFormat = ExternalId.format[Keep]
+    val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
+    idsOpt map { ids =>
+      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId).partition(_._2.isDefined)
+      Ok(Json.obj(
+        "removedKeeps" -> deactivatedKeepInfos.map(s => s._2.get),
+        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> "not_found"))
+      ))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "parse_error"))
+    }
+  }
+
   def getKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
     db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
       Ok(Json.toJson(KeepInfo.fromBookmark(b)))
     } getOrElse {
-      NotFound(Json.obj("error" -> "Keep not found"))
+      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 
@@ -217,12 +225,11 @@ class KeepsController @Inject() (
   }
 
   def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-      val deactivatedKeepInfo = bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).head
-      Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    bookmarksCommander.unkeep(id, request.userId) map { ki =>
+      Ok(Json.toJson(ki))
     } getOrElse {
-      NotFound(Json.obj("error" -> "Keep not found"))
+      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 
@@ -269,6 +276,16 @@ class KeepsController @Inject() (
     }
   }
 
+  def undeleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
+    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id, Some(CollectionStates.ACTIVE)) } map { coll =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+      collectionCommander.undeleteCollection(coll)
+      Ok(Json.obj("undeleted" -> coll.name))
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+    }
+  }
+
   def removeKeepsFromCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
     implicit val externalIdFormat = ExternalId.format[Keep]
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
@@ -306,12 +323,6 @@ class KeepsController @Inject() (
   def numKeeps() = JsonAction.authenticated { request =>
     Ok(Json.obj(
       "numKeeps" -> db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) }
-    ))
-  }
-
-  def mutualKeeps(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    Ok(Json.obj(
-      "mutualKeeps" -> db.readOnly { implicit s => keepRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
     ))
   }
 

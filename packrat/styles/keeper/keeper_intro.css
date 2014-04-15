@@ -85,7 +85,9 @@
   transform: translate(-.5px) rotate(-45deg);
 }
 .kifi-keeper-intro-x:hover:before,
-.kifi-keeper-intro-x:hover:after {
+.kifi-keeper-intro-x:hover:after,
+.kifi-keeper-intro-x:focus:before,
+.kifi-keeper-intro-x:focus:after {
   background: #8e939a;
 }
 .kifi-keeper-intro-x:active:before,
@@ -94,9 +96,6 @@
 }
 .kifi-keeper-intro-x:active {
   background: #d0d4da;
-}
-.kifi-keeper-intro-x:focus {
-  outline-color: #ccc;
 }
 
 .kifi-keeper-intro::after,

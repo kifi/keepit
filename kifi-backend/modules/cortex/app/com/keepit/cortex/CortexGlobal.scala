@@ -3,6 +3,10 @@ package com.keepit.cortex
 import com.keepit.FortyTwoGlobal
 import play.api.Mode._
 import play.api._
+import com.keepit.cortex.models.lda.LDAURIFeatureUpdatePlugin
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.cache.InMemoryCachePlugin
+import com.keepit.common.cache.FortyTwoCachePlugin
 
 object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
   val module = CortexProdModule()
@@ -16,5 +20,10 @@ object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
 }
 
 trait CortexServices { self: FortyTwoGlobal =>
-  def startCortexServices(){}
+  def startCortexServices(){
+    require(injector.instance[HealthcheckPlugin] != null)
+    require(injector.instance[FortyTwoCachePlugin] != null)
+    require(injector.instance[InMemoryCachePlugin] != null)
+    require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
+  }
 }

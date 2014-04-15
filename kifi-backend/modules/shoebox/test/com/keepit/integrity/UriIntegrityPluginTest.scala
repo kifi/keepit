@@ -28,14 +28,14 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         def setup() = {
           db.readWrite { implicit session =>
-            val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")).withState(NormalizedURIStates.SCRAPED))
-            val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
-            val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
-            val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com/", Some("Bing")))
+            val nuri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com", Some("Google")).withState(NormalizedURIStates.SCRAPED))
+            val nuri1 = uriRepo.save(NormalizedURI.withHash("http://google.com", Some("Google")))
+            val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
+            val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com", Some("Bing")))
 
-            val url0 = urlRepo.save(URLFactory("http://www.google.com/#1", nuri0.id.get))             // to be redirected to nuri1
-            val url1 = urlRepo.save(URLFactory("http://www.bing.com/index", nuri2.id.get))
-            val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/index", nuri2.id.get))        // to be splitted, to be pointing to
+            val url0 = urlRepo.save(URLFactory("http://www.google.com/", nuri0.id.get))             // to be redirected to nuri1
+            val url1 = urlRepo.save(URLFactory("http://www.bing.com/", nuri2.id.get))
+            val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/", nuri2.id.get))        // to be splitted, to be pointing to
 
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
@@ -137,8 +137,8 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
 
-            val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
-            val uri0better = uriRepo.save(NormalizedURI.withHash("http://google.com/", Some("Google")))
+            val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com", Some("Google")))
+            val uri0better = uriRepo.save(NormalizedURI.withHash("http://google.com", Some("Google")))
 
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/drive", Some("Google")))
             val uri1better = uriRepo.save(NormalizedURI.withHash("http://google.com/drive", Some("Google")))

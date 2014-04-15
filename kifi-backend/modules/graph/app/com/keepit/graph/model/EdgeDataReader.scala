@@ -1,30 +1,58 @@
 package com.keepit.graph.model
 
-import com.keepit.model.Reflect
+import com.keepit.common.reflection.CompanionTypeSystem
+import play.api.libs.json._
 
-sealed trait EdgeKind {
-  type E <: EdgeDataReader
-  def header: Byte
-  def apply(rawDataReader: RawDataReader): E
-}
-
-object EdgeKind {
-  val all: Set[EdgeKind] = Reflect.getCompanionTypeSystem[EdgeDataReader, EdgeKind]("E")
-  private val byHeader = {
-    require(all.size == all.map(_.header).size, "Duplicate EdgeKind headers")
-    all.map { edgeKind => edgeKind.header -> edgeKind }.toMap
-  }
-  def apply(header: Byte): EdgeKind = byHeader(header)
-}
-
-sealed trait EdgeDataReader {
-  type E <: EdgeDataReader
-  def dump: Array[Byte]
+sealed trait EdgeDataReader { self =>
+  type E >: self.type <: EdgeDataReader
+  def instance: E = self
+  def kind: EdgeKind[E]
 }
 
 object EdgeDataReader {
-  def apply(rawDataReader: RawDataReader): Map[EdgeKind, EdgeDataReader] = EdgeKind.all.map { edgeKind =>
-    edgeKind -> edgeKind(rawDataReader)
-  }.toMap
+  def apply(rawDataReader: RawDataReader): Map[EdgeKind[_ <: EdgeDataReader], EdgeDataReader] = {
+    EdgeKind.all.map { edgeKind => edgeKind -> edgeKind(rawDataReader) }.toMap
+  }
+
+  // Json Helpers
+  implicit val writes: Writes[EdgeDataReader] = Writes[EdgeDataReader](edgeDataReader => Json.obj(
+    "header" -> edgeDataReader.kind.header.toInt,
+    "data" -> edgeDataReader.kind.writes.writes(edgeDataReader.instance)
+  ))
+  implicit val readsAsEdgeData: Reads[EdgeData[_ <: EdgeDataReader]] = Reads(json =>
+    (json \ "header").validate[Int].flatMap[EdgeData[_ <: EdgeDataReader]] { header =>
+      EdgeKind(header.toByte).readsAsEdgeData.reads(json \ "data")
+    }
+  )
 }
 
+sealed trait EdgeKind[E <: EdgeDataReader] {
+  implicit def kind: EdgeKind[E] = this
+  implicit def header: Byte
+  def apply(rawDataReader: RawDataReader): E
+
+  def writes: Writes[E]
+  def readsAsEdgeData: Reads[EdgeData[E]]
+}
+
+object EdgeKind {
+  val all: Set[EdgeKind[_ <: EdgeDataReader]] = CompanionTypeSystem[EdgeDataReader, EdgeKind[_ <: EdgeDataReader]]("E")
+  private val byHeader: Map[Byte, EdgeKind[_ <: EdgeDataReader]] = {
+    require(all.forall(_.header > 0), "EdgeKind headers must be positive.")
+    require(all.size == all.map(_.header).size, "Duplicate EdgeKind headers")
+    all.map { edgeKind => edgeKind.header -> edgeKind }.toMap
+  }
+  def apply(header: Byte): EdgeKind[_ <: EdgeDataReader] = byHeader(header)
+}
+
+trait EmptyEdgeDataReader extends EdgeDataReader {
+  def kind = EmptyEdgeDataReader
+  type E = EmptyEdgeDataReader
+}
+
+case object EmptyEdgeDataReader extends EdgeKind[EmptyEdgeDataReader] {
+  val header = 1.toByte
+  def apply(rawDataReader: RawDataReader): EmptyEdgeDataReader = ???
+  implicit val writes = Writes[EmptyEdgeDataReader](_ => Json.obj())
+  implicit val readsAsEdgeData: Reads[EdgeData[EmptyEdgeDataReader]] = Reads[EdgeData[EmptyEdgeDataReader]](json => json.validate[JsObject].map(_ => EmptyEdgeData))
+}

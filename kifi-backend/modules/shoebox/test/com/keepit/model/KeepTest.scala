@@ -128,15 +128,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-    "count mutual keeps" in {
-      withDb() { implicit injector =>
-        val (user1, user2, _, _, _, _, _) = setup()
-        db.readOnly {implicit s =>
-          keepRepo.getNumMutual(user1.id.get, user2.id.get) === 1
-          keepRepo.getNumMutual(user2.id.get, user1.id.get) === 1
-        }
-      }
-    }
 
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
@@ -171,7 +162,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
          db.readOnly{ implicit s =>
            keepRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
-           keepRepo.getByUriAndUserAllStates(uri1.id.get, user1.id.get).size === 1
+           keepRepo.getPrimaryByUriAndUser(uri1.id.get, user1.id.get).size === 1
         }
       }
     }

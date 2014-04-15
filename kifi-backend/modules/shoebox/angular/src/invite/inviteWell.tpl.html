@@ -2,13 +2,8 @@
   <span kf-social-invite-search></span>
   <span class="social-network-display-wrapper">
     <span class="social-networks-display">
-      <span class="social-networks-summary">{{networks.length}} network connected</span>
-      <span class="social-networks-add" ng-click="data.showAddNetwork = true">Add new</span>
-      <div kf-modal ng-if="data.showAddNetwork" show="data.showAddNetwork" kf-width="630px">
-        <div kf-basic-modal-content centered="true" action-text="Done!">
-          <div kf-social-connect-networks></div>
-        </div>
-      </div>
+      <span class="social-networks-summary">{{networkText}}</span>
+      <span class="social-networks-add" ng-click="showAddNetworks()">Add new</span>
     </span>
   </span>
   <div class="clearfix"></div>

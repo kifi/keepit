@@ -3,21 +3,16 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.net.URI
 import com.keepit.common.social._
-import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationService
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 
-import play.api.Play.current
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -51,7 +46,7 @@ class PageCommander @Inject() (
   def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
-    val (nUriStr, nUri, keepersFutureOpt, domain, bookmark, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
+    val (nUriStr, nUri, keepersFutureOpt, domain, keep, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
       val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
@@ -60,10 +55,10 @@ class PageCommander @Inject() (
 
       val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }
 
-      val bookmark: Option[Keep] = nUri.flatMap { uri =>
+      val keep: Option[Keep] = nUri.flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, userId)
       }
-      val tags: Seq[Collection] = bookmark.map { bm =>
+      val tags: Seq[Collection] = keep.map { bm =>
         keepToCollectionRepo.getCollectionsForKeep(bm.id.get).map { collId =>
           collectionRepo.get(collId)
         }
@@ -75,7 +70,7 @@ class PageCommander @Inject() (
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }.getOrElse((None, false))
-      (nUriStr, nUri, getKeepersFutureOpt, domain, bookmark, tags, position, neverOnSite, host)
+      (nUriStr, nUri, getKeepersFutureOpt, domain, keep, tags, position, neverOnSite, host)
     }
     val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
@@ -85,7 +80,10 @@ class PageCommander @Inject() (
     val (keepers, keeps) = keepersFutureOpt.map{ future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
 
     KeeperInfo(
-      nUriStr, bookmark.map { b => if (b.isPrivate) "private" else "public" }, tags.map(SendableTag.from),
+      nUriStr,
+      keep.map { k => if (k.isPrivate) "private" else "public" },
+      keep.map(_.externalId),
+      tags.map(SendableTag.from),
       position, neverOnSite, sensitive, shown, keepers, keeps)
   }
 

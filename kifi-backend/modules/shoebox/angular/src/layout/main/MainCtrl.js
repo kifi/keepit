@@ -97,8 +97,20 @@ angular.module('kifi.layout.main', [
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
-    $rootScope.$on('import.bookmarks', function (e, count, msgEvent) {
-      initBookmarkImport(count, msgEvent);
+    $rootScope.$on('showGlobalModal', function (e, modal) {
+      switch (modal) {
+        case 'addNetworks':
+          $scope.modal = 'add_networks';
+          $scope.data.showAddNetworks = true;
+          break;
+        case 'importBookmarks':
+          initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
+          break;
+        case 'addKeeps':
+          $scope.modal = 'add_keeps';
+          $scope.data.showAddKeeps = true;
+          break;
+      }
     });
 
     $scope.importBookmarks = function () {

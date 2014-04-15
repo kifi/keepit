@@ -24,19 +24,29 @@ angular.module('kifi.routeService', [])
       linkNetwork: function (network) {
         return env.origin + '/link/' + network;
       },
+      refreshNetworks: env.origin + '/friends/invite/refresh', // would love to be more ajax-y
+      importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
       importGmail: env.origin + '/importContacts', // wtf, why top level route?
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
+      logout: 'https://www.kifi.com/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
       formatPicUrl: formatPicUrl,
+      removeSingleKeep: function (id) {
+        return env.xhrBase + '/keeps/' + id + '/delete';
+      },
+      removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
       friends: route('/user/friends'),
+      friendRequest: function (id) {
+        return env.xhrBase + '/user/' + id + '/friend';
+      },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       search: searchRoute('/site/search'),

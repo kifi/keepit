@@ -13,8 +13,8 @@
               <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.network}}
             </div>
           </div>
-          <div class="social-invite-action">
-            <div class="social-invite-button" ng-click="invite(result)">Add</div>
+          <div class="social-invite-action clickable">
+            <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
           </div>
         </div>
 
@@ -27,6 +27,15 @@
           </div>
         </div>
 
+        <div ng-if="result.status === 'requested' && result.networkType === 'fortytwoNF'">
+          <div class="social-invite-summary">
+            <div class="social-invite-name">{{result.label}}</div>
+            <div class="social-invite-network">
+              Kifi user — request sent
+            </div>
+          </div>
+        </div>
+
         <div ng-if="result.status === 'joined' && result.networkType === 'fortytwoNF'">
           <div class="social-invite-summary">
             <div class="social-invite-name">{{result.label}}</div>
@@ -34,32 +43,35 @@
               Kifi user
             </div>
           </div>
-          <div class="social-invite-action">
-            <div class="social-invite-button" ng-click="invite(result)">Add</div>
+          <div class="social-invite-action clickable">
+            <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
           </div>
         </div>
 
         <div ng-if="result.status === 'invited'">
           <div class="social-invite-summary">
-            <div class="social-invite-name">{{result.label}}</div>
+            <div class="social-invite-name-long">{{result.label}}</div>
             <div class="social-invite-network">
-              <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>invited 8 days ago
+              <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.inviteText}}
             </div>
           </div>
-          <div class="social-invite-action">
-            <div class="social-invite-button" ng-click="invite(result)">Resend</div>
+          <div class="social-invite-action clickable">
+            <div class="social-invite-button" ng-click="invite(result, $event)">Resend</div>
           </div>
         </div>
 
       </div>
 
       <div ng-if="result.custom === 'email'">
-        <img src="https://graph.facebook.com/619841083/picture?width=75&height=75" class="social-invite-image">
+        <img src="/img/email-icon.png" class="social-invite-image cant-find">
         <div class="social-invite-summary">
-          <div class="social-invite-name social-invite-custom-email">Email to {{result.label}}</div>
+          <div class="social-invite-name">Email to</div>
+          <div class="social-invite-network">
+            {{result.label}}
+          </div>
         </div>
-        <div class="social-invite-action">
-          <div class="social-invite-button" ng-click="invite(result)">Add</div>
+        <div class="social-invite-action clickable">
+          <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
         </div>
       </div>
 
@@ -73,17 +85,23 @@
       <div class="clearfix"></div>
     </li>
   </ul>
-  <div kf-modal show="data.showCantFindModal">
-    <div kf-basic-modal-content class="friend-not-found-modal">
-      <h1> We couldn't find any friends matching </h1>
-      <h2> '{{search.name}}' </h2>
-      <h3> How to fix it </h3>
-      <ul>
-        <li>Your friends list might not be up to date. <a href="javascript:">Try refreshing it.</a></li>
-        <li>Some of your friends may have privacy settings that prevent us from showing them. Tell them to go to kifi.com and sign up.
-        <li>Or just <a href="http://support.kifi.com/customer/portal/emails/new">contact us.</a></li>
-      </ul>
-
+  <div kf-modal show="data.showCantFindModal" kf-width="670px">
+    <div kf-basic-modal-content single-action="false">
+      <div class="friend-not-found-modal">
+        <div class="friend-not-found-heading">We couldn't find any friends matching</div>
+        <div class="friend-not-found-name"> '{{search.name}}' </div>
+        <div class="friend-not-found-sub-heading"> How to fix it </div>
+        <ul>
+          <li ng-if="!hasNetworks()" class="friend-not-found-suggestion">You don't have any networks connected to Kifi yet.
+            <a class="friend-not-found-link" href="javascript:" ng-click="connectNetworks()"> Get started by connecting.</a> </li>
+          <li ng-if="hasNetworks()" class="friend-not-found-suggestion">Your friends list might not be up to date. <a class="friend-not-found-link" href="javascript:" ng-click="refreshFriends()">Try refreshing it.</a></li>
+          <li ng-if="hasNetworks()" class="friend-not-found-suggestion">Some of your friends may have privacy settings that prevent us from showing them. <br>Tell them to go to kifi.com and sign up.
+          <li class="friend-not-found-suggestion">Or just <a class="friend-not-found-link" href="http://support.kifi.com/customer/portal/emails/new">contact us.</a></li>
+        </ul>
+        <div class="dialog-buttons">
+          <button class="friend-not-found-modal-done" ng-click="data.showCantFindModal = false">Done</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

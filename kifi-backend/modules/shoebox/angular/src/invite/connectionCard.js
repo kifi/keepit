@@ -7,7 +7,10 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
   return {
     scope: {
       'friend': '&',
-      'refreshScroll': '='
+      'refreshScroll': '=',
+      'showGenericInviteError': '=',
+      'showLinkedinTokenExpiredModal': '=',
+      'showLinkedinHitRateLimitModal': '='
     },
     replace: true,
     restrict: 'A',
@@ -43,6 +46,14 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
             scope.byline2 = inviteText;
           } else {
             scope.byline = inviteText;
+          }
+        }, function (err) {
+          if (err === 'token_expired') {
+            scope.showLinkedinTokenExpiredModal = true;
+          } else if (err === 'hit_rate_limit_reached') {
+            scope.showLinkedinHitRateLimitModal = true;
+          } else {
+            scope.showGenericInviteError = true;
           }
         });
       };

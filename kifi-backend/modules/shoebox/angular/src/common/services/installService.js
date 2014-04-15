@@ -18,7 +18,7 @@ angular.module('kifi.installService', [])
     }
 
     var api = {
-      triggerInstall: function () {
+      triggerInstall: function (onError) {
         if (isChrome && supported) {
           api.installInProgress = true;
           $window.chrome.webstore.install('https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin', function () {
@@ -31,6 +31,9 @@ angular.module('kifi.installService', [])
             api.installed = false;
             api.installInProgress = false;
             api.error = true;
+            if (onError) {
+              onError();
+            }
             $rootScope.$digest();
             $timeout(function () {
               api.error = false;

@@ -6,13 +6,17 @@ angular.module('kifi.profileService', [
 ])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics',
-  function ($http, env, $q, util, routeService, socialService, $analytics) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$window', '$rootScope',
+  function ($http, env, $q, util, routeService, socialService, $analytics, $window, $rootScope) {
 
     var me = {
       seqNum: 0
     };
     var prefs = {};
+
+    $rootScope.$on('social.updated', function () {
+      fetchMe();
+    });
 
     function updateMe(data) {
       angular.forEach(data, function (val, key) {
@@ -45,7 +49,20 @@ angular.module('kifi.profileService', [
     }
 
     function getPrimaryEmail(emails) {
-      return _.find(emails, 'isPrimary') || emails[0] || null;
+      var actualPrimary = _.find(emails, 'isPrimary');
+      if (actualPrimary) {
+        return actualPrimary;
+      } else {
+        var placeholderPrimary = _.find(emails, 'isVerified') || emails[0] || null;
+        if (placeholderPrimary) {
+          _.map(emails, function (email) {
+            if (email === placeholderPrimary) {
+              email.isPlaceholderPrimary = true;
+            }
+          })
+        }
+        return placeholderPrimary;
+      }
     }
 
     function removeEmailInfo(emails, addr) {
@@ -180,11 +197,16 @@ angular.module('kifi.profileService', [
       });
     }
 
+    function logout() {
+      $window.location = routeService.logout;
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,
       postMe: postMe,
+      logout: logout,
       fetchPrefs: fetchPrefs,
       prefs: prefs,
       setNewPrimaryEmail: setNewPrimaryEmail,

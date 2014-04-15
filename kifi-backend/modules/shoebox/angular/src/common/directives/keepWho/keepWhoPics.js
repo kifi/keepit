@@ -23,7 +23,12 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
           $timeout.cancel(timeout);
         };
 
-        scope.$on('$destroy', scope.cancelTimeout);
+        scope.$on('$destroy', function () {
+          scope.cancelTimeout();
+          if (tooltip) {
+            tooltip.remove();
+          }
+        });
 
         scope.showTooltip = function () {
           if (!tooltip) {
@@ -71,11 +76,13 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
       templateUrl: 'common/directives/keepWho/keepWhoPics.tpl.html',
       scope: {
         me: '=',
-        keepers: '='
+        keepers: '=',
+        keep: '='
       },
       link: function (scope) {
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
+        scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
       }
     };
   }

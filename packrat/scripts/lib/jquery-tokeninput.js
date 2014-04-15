@@ -152,12 +152,13 @@
     // Tokens in the list (for checking dupes)
     var tokens = [];
 
+    var timeLastKeyDown = 0;
+
     // Results cache for speed
     var cache = new Cache();
 
     // Create a new text input
     var $tokenInput = $('<input type="text" autocomplete="off" autocapitalize="off"/>')
-      .css('outline', 'none')
       .attr('placeholder', settings.placeholder)
       .focus(function () {
         if (settings.disabled) {
@@ -172,6 +173,7 @@
       })
       .on('input', handleQueryChange)
       .keydown(function (event) {
+        timeLastKeyDown = Date.now();
         var $prevToken;
         var $nextToken;
 
@@ -609,14 +611,11 @@
       var items = results.map(formatDropdownItem);
       var $ul = $('<ul/>')
         .append(items)
-        .appendTo($dropdown);
-      if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
-        selectDropdownItem(items[0]);
-      }
-      showDropdown();
-      setTimeout(function () {
-        $ul.on('mouseover', 'li', function () {
-          selectDropdownItem(this);
+        .appendTo($dropdown)
+        .on('mouseover', 'li', function () {
+          if (Date.now() - timeLastKeyDown > 200) {
+            selectDropdownItem(this);
+          }
         })
         .on('mousedown', 'li', function (e) {
           if (e.which === 1) {
@@ -624,7 +623,10 @@
             return false;
           }
         });
-      });
+      if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
+        selectDropdownItem(items[0]);
+      }
+      showDropdown();
     }
 
     function formatDropdownItem(result) {

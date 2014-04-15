@@ -5,9 +5,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.tracker._
 import com.keepit.heimdal._
 import com.keepit.common.db.Id
-import com.keepit.model.{NormalizedURI, User}
+import com.keepit.model.User
 import org.joda.time.DateTime
-import com.keepit.common.net.{Host, URI}
+import com.keepit.common.net.URI
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.logging.Logging
 import com.keepit.search.tracker.ClickedURI
@@ -16,7 +16,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 class SearchEventCommander @Inject() (
   shoeboxClient: ShoeboxServiceClient,
   clickHistoryTracker: ClickHistoryTracker,
-  browsingHistoryTracker: BrowsingHistoryTracker,
   resultClickedTracker: ResultClickTracker,
   searchAnalytics: SearchAnalytics) extends Logging {
 
@@ -57,15 +56,4 @@ class SearchEventCommander @Inject() (
       case _ => None
     }
   } tap { urlOpt => if (urlOpt.isEmpty) log.error(s"failed to extract the destination URL from $searchEngine: $searchResultUrl") }
-
-  def browsedPages(userId: Id[User], browsedUrls: Seq[String]): Unit = browsedUrls.foreach { url =>
-    shoeboxClient.getNormalizedURIByURL(url).foreach(_.foreach { uri =>
-      browsingHistoryTracker.add(userId, BrowsedURI(uri.id.get))
-    })
-  }
-
-  def browsedUris(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Unit = {
-    uriIds.foreach { uriId => browsingHistoryTracker.add(userId, BrowsedURI(uriId)) }
-  }
-
 }

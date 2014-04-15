@@ -7,12 +7,15 @@ angular.module('kifi.inviteService', [
 ])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics',
-  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$FB',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics, $FB) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
+
+    $FB.getLoginStatus(); //This causes the Facebook SDK to initialize properly. Don't remove!
+
     var inviteList = [], // used for typeahead dropdown for invite search
         selected,
         lastSearch;
@@ -47,6 +50,10 @@ angular.module('kifi.inviteService', [
       result.iconStyle = 'kf-' + result.networkType + '-icon-micro';
       if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
         result.image = routeService.formatPicUrl(result.socialId, result.image);
+      }
+      if (result.status === 'invited') {
+        var sendText = $window.moment(new Date(result.inviteLastSentAt)).fromNow();
+        result.inviteText = sendText;
       }
       return result;
     }
@@ -97,6 +104,10 @@ angular.module('kifi.inviteService', [
         });
       },
 
+      expireSocialSearch: function () {
+        socialSearchService.expireAll();
+      },
+
       inviteList: inviteList,
 
       socialSelected: selected,
@@ -105,20 +116,67 @@ angular.module('kifi.inviteService', [
 
         socialSearchService.expireAll();
 
-        return $http.post(routeService.invite, {
-          id: platform + '/' + identifier,
-          source: 'site'
-        }).then(function (res) {
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'inviteFriend',
-            'platform': platform
+        var deferred = $q.defer();
+
+        function doInvite() {
+          $http.post(routeService.invite, {
+            id: platform + '/' + identifier
+          }).then(function (res) {
+            $analytics.eventTrack('user_clicked_page', {
+              'action': 'inviteFriend',
+              'platform': platform
+            });
+            if (res.data.url && platform === 'facebook') {
+              $FB.ui({
+                method: 'send',
+                link: $window.unescape(res.data.url),
+                to: identifier
+              });
+              deferred.resolve('');
+            } else if (res.data.error) {
+              $log.log(res.data.error);
+              if (res.data.error.code === 'linkedin_error_{401}') {
+                deferred.reject('token_expired'); // technically the token could also just be invalid, but we don't get that info from the backend
+              } else if (res.data.error.code === 'linkedin_error_{403}') {
+                deferred.reject('hit_rate_limit_reached');
+              } else {
+                deferred.reject('generic_error');
+              }
+            } else {
+              deferred.resolve('');
+            }
+          }, function (err) {
+            $log.log(err);
+            throw err;
           });
-          if (res.data.url) {
-            $window.open(res.data.url, '_blank');
+        }
+
+        //login if needed
+        if (platform === 'facebook') {
+          if ($FB.FB.getAuthResponse()) {
+            doInvite();
+          } else {
+            $FB.FB.login(function (response) {
+              if (response.authResponse) {
+                doInvite();
+              }
+              //else user cancelled login. Do nothing further.
+            });
           }
-        }, function (err) {
-          $log.log(err);
-          throw err;
+        } else {
+          if (platform === 'fortytwoNF') {
+            platform = 'fortytwo';
+          }
+          doInvite();
+        }
+
+        return deferred.promise;
+
+      },
+
+      friendRequest: function (id) {
+        return $http.post(routeService.friendRequest(id)).then(function (res) {
+          return res.data;
         });
       }
 

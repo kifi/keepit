@@ -1,13 +1,14 @@
-<li class="kf-nav-item kf-tag" ng-mouseenter="enableHover()" ng-mouseleave="disableHover()">
+<li class="kf-nav-item kf-tag clickable" ng-mouseenter="enableHover()" ng-mouseleave="disableHover()">
   <div class="kf-nav-link" ng-class="{ renaming: isRenaming, 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget, hover: isHovering }" ng-click="navigateToTag($event)"
     ui-draggable="true" drag="tag" drag-channel="tagDragChannel" ui-on-drop="onKeepDrop($data)" drop-channel="keepDragChannel" drag-enter-class="kf-candidate-drag-target">
     <div class="kf-tag-drag-container" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-tag-drag-target">
       <div class="kf-tag-info">
         <span class="kf-tag-icon"></span>
-      <span ng-show="!isRenaming">
-        <span class="kf-tag-name">{{tag.name}}</span>
-        <span class="kf-tag-count">{{tag.keeps}}</span>
-      </span>
+        <span ng-show="!isRenaming">
+          <span class="kf-tag-name">{{tag.name}}</span>
+          <span class="kf-tag-count" ng-show="!isWaiting">{{tag.keeps}}</span>
+          <div class="kf-tag-waiting" ng-show="isWaiting"></div>
+        </span>
       </div>
       <div class="kf-tag-tools" ng-show="!isRenaming" ng-class="{ open: isDropdownOpen }" ng-click="$event.stopPropagation()">
         <div class="kf-tag-dropdown-toggle" ng-show="!isDragging" ng-click="toggleDropdown()"><div class="kf-tag-tool-icon"></div></div>

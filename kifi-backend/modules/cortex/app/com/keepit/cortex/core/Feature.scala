@@ -4,7 +4,14 @@ trait FeatureRepresentation[T, M <: StatModel] extends Versionable[M] {
   def vectorize: Array[Float]
 }
 
+case class FloatVecFeature[T, M <: StatModel](value: Array[Float]) extends FeatureRepresentation[T, M]{
+  override def vectorize: Array[Float] = value
+}
+
+
 trait FeatureRepresenter[T, M <: StatModel]{
   val version: ModelVersion[M]
+  val dimension: Int
   def apply(datum: T): Option[FeatureRepresentation[T, M]]
+  def getRawVector(datum: T): Option[Array[Float]] = apply(datum).map{_.vectorize}    // subclass may override this to improve performance
 }

@@ -3,11 +3,9 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 
 import com.keepit.commanders._
-import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier, HealthcheckPlugin}
 import com.keepit.common.time._
@@ -16,11 +14,11 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 
-import play.api.http.Status.ACCEPTED
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.Some
 import play.api.libs.json.JsNumber
+import scala.util.{Failure, Success}
 
 private case class SendableBookmark(
   id: ExternalId[Keep],
@@ -66,13 +64,6 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
-  def createTag() = JsonAction.authenticatedParseJson { request =>
-    val name = (request.body \ "name").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-    val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    Ok(Json.toJson(SendableTag from tag))
-  }
-
   def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     db.readWrite { implicit s =>
@@ -85,7 +76,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def addToUrl() = JsonAction.authenticatedParseJson { request =>
+  def createAndApplyTag() = JsonAction.authenticatedParseJson { request =>
     val name = (request.body \ "name").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
@@ -112,6 +103,7 @@ class ExtBookmarksController @Inject() (
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 
+  // deprecated: use unkeep
   def remove() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     db.readOnly { implicit s =>
@@ -127,7 +119,23 @@ class ExtBookmarksController @Inject() (
           Ok(Json.obj("removedKeep" -> JsNull))
       }
     } getOrElse {
-      NotFound(Json.obj("error" -> "Keep not found"))
+      NotFound(Json.obj("error" -> "not_found"))
+    }
+  }
+
+  def keep() = JsonAction.authenticatedParseJson { request =>
+    val info = request.body.as[JsObject]
+    val source = KeepSource.keeper
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+    Ok(Json.toJson(bookmarksCommander.keepOne(info, request.userId, request.kifiInstallationId, source)))
+  }
+
+  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+    bookmarksCommander.unkeep(id, request.userId) map { ki =>
+      Ok(Json.toJson(ki))
+    } getOrElse {
+      NotFound(Json.obj("error" -> "not_found"))
     }
   }
 
@@ -155,6 +163,7 @@ class ExtBookmarksController @Inject() (
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
+  // addBookmarks will soon handle *only* browser bookmark imports
   def addBookmarks() = JsonAction.authenticated(parser = parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId
@@ -185,13 +194,6 @@ class ExtBookmarksController @Inject() (
         }
         Status(ACCEPTED)(JsNumber(0))
     }
-  }
-
-  def getNumMutualKeeps(id: ExternalId[User]) = JsonAction.authenticated { request =>
-    val n: Int = db.readOnly { implicit s =>
-      keepRepo.getNumMutual(request.userId, userRepo.get(id).id.get)
-    }
-    Ok(Json.obj("n" -> n))
   }
 
 }

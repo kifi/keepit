@@ -11,6 +11,10 @@
 var notifier = function () {
   'use strict';
 
+  api.onEnd.push(function () {
+    $('#kifi-notify-notice-wrapper').remove();
+  });
+
   return {
     hide: function (threadId) {
       removeItem($('.kifi-notify-item-wrapper[data-thread-id="' + threadId + '"]'));

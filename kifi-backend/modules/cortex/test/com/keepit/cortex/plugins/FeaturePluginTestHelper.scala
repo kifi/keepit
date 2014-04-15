@@ -21,6 +21,7 @@ trait FeaturePluginTestHelper {
 
   class FooFeatureRepresenter extends FeatureRepresenter[Foo, FakeModel]{
     val version = ModelVersion[FakeModel](1)
+    val dimension: Int = 2
     def apply(foo: Foo): Option[FooRepresentation] = {
       val value = foo.id.id.toFloat
       Some(FooRepresentation(Array(value, value)))

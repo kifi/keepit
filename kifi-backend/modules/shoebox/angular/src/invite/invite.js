@@ -14,8 +14,7 @@ angular.module('kifi.invite', [
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider.when('/invite', {
-      templateUrl: 'invite/invite.tpl.html',
-      controller: 'InviteCtrl'
+      templateUrl: 'invite/invite.tpl.html'
     }).when('/friends/invite', {
       redirectTo: '/invite'
     });
@@ -23,13 +22,26 @@ angular.module('kifi.invite', [
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService',
-  function ($scope, $http, profileService, routeService, $window, wtiService) {
+  '$scope', '$http', '$rootScope', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
+  function ($scope, $http, $rootScope, profileService, routeService, $window, wtiService, socialService) {
     $window.document.title = 'Kifi • Invite your friends';
 
+    $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
+      $scope.isRefreshingSocialGraph = v;
+    });
 
-    wtiService.loadInitial();
+    socialService.checkIfUpdatingGraphs(2);
+
     $scope.whoToInvite = wtiService.list;
+
+    $scope.wtiLoaded = false;
+    $scope.$watch(function () {
+      return wtiService.list.length || !wtiService.hasMore();
+    }, function (res) {
+      if (res) {
+        $scope.wtiLoaded = true;
+      }
+    });
 
     $scope.wtiScrollDistance = '100%';
     $scope.isWTIScrollDisabled = function () {
@@ -37,19 +49,15 @@ angular.module('kifi.invite', [
     };
     $scope.wtiScrollNext = wtiService.getMore;
 
-
-    $scope.invite = function (friend) {
-      // `value` will let you decide what platform the user is coming from. Perhaps better to let inviteService decide?
-      // is 'friend' overloaded naming wise? is socialFriend better?
-      $window.alert('Inviting ' + friend);
+    $scope.showAddNetworksModal = function () {
+      $rootScope.$emit('showGlobalModal', 'addNetworks');
     };
-
   }
 ])
 
 .directive('kfSocialInviteWell', [
-  'socialService',
-  function (socialService) {
+  'socialService', '$rootScope',
+  function (socialService, $rootScope) {
     return {
       scope: {},
       replace: true,
@@ -57,8 +65,18 @@ angular.module('kifi.invite', [
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
         scope.networks = socialService.networks;
+        scope.$watch(function () {
+          return socialService.networks.length;
+        }, function (networksLength) {
+          scope.networkText = networksLength === 1 ? '1 network connected' : networksLength + ' networks connected';
+        });
+
 
         scope.data = scope.data || {};
+
+        scope.showAddNetworks = function () {
+          $rootScope.$emit('showGlobalModal', 'addNetworks');
+        };
 
         socialService.refresh();
       }
@@ -67,8 +85,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document', '$log',
-  function (inviteService, $document, $log) {
+  'inviteService', '$document', '$log', 'socialService', '$timeout', '$rootScope',
+  function (inviteService, $document, $log, $socialService, $timeout, $rootScope) {
     return {
       scope: {},
       replace: true,
@@ -110,13 +128,59 @@ angular.module('kifi.invite', [
         function clickOutside(e) {
           if (scope.search.showDropdown && !element.find(e.target)[0]) { // click was outside of dropdown
             scope.$apply(function () {
+              scope.search.name = '';
               scope.search.showDropdown = false;
             });
           }
         }
 
-        scope.invite = function (result) {
+        var ignoreClick = {};
+
+        scope.invite = function (result, $event) {
           $log.log('this person:', result);
+          if (ignoreClick[result.socialId]) {
+            return;
+          }
+          ignoreClick[result.socialId] = true;
+
+          var $elem = angular.element($event.target);
+          $elem.text('Sending');
+          $elem.parent().removeClass('clickable');
+          if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
+            // Existing user, friend request
+            inviteService.friendRequest(result.socialId).then(function () {
+              $elem.text('Sent!');
+              $timeout(function () {
+                delete ignoreClick[result.socialId];
+                $elem.text('Resend');
+                $elem.parent().addClass('clickable');
+              }, 4000);
+              inviteService.expireSocialSearch();
+            }, function (err) {
+              $log.log('err:', err, result);
+              delete ignoreClick[result.socialId];
+              $elem.text('Error. Retry?');
+              $elem.parent().addClass('clickable');
+              inviteService.expireSocialSearch();
+            });
+          } else {
+            // Request to external person
+            inviteService.invite(result.networkType, result.socialId).then(function () {
+              $elem.text('Sent!');
+              $timeout(function () {
+                delete ignoreClick[result.socialId];
+                $elem.text('Resend');
+                $elem.parent().addClass('clickable');
+              }, 4000);
+              inviteService.expireSocialSearch();
+            }, function (err) {
+              $log.log('err:', err, result);
+              delete ignoreClick[result.socialId];
+              $elem.text('Error. Retry?');
+              $elem.parent().addClass('clickable');
+              inviteService.expireSocialSearch();
+            });
+          }
         };
 
         scope.$on('$destroy', function () {
@@ -124,6 +188,20 @@ angular.module('kifi.invite', [
         });
 
         $document.on('click', clickOutside);
+
+        scope.refreshFriends = function () {
+          scope.data.showCantFindModal = false;
+          $socialService.refreshSocialGraph();
+        };
+
+        scope.connectNetworks = function () {
+          scope.data.showCantFindModal = false;
+          $rootScope.$emit('showGlobalModal', 'addNetworks');
+        };
+
+        scope.hasNetworks = function () {
+          return !!$socialService.networks.length;
+        };
 
       }
     };

@@ -23,12 +23,11 @@ import scala.concurrent.duration._
 import com.keepit.cortex.store.FeatureStoreSequenceNumber
 import com.keepit.cortex.store.CommitInfo
 import com.keepit.cortex.store.CommitInfoKey
+import com.keepit.common.logging.Logging
 
 
 trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin{
   def update(): Unit
-  def recomputeAll(): Unit
-  def commitInfo(): Option[CommitInfo[T, M]]
 }
 
 object FeaturePluginMessages{
@@ -48,20 +47,20 @@ abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
 
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 1 minutes, actor.ref, Update)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, Update)
   }
 
   override def onStop() {
     log.info(s"stopping $name")
   }
 
-  def update(): Unit = {
+  override def update(): Unit = {
     actor.ref ! Update
   }
 
 }
 
-class FeatureUpdateActor[K, T, M <: StatModel](
+abstract class FeatureUpdateActor[K, T, M <: StatModel](
   airbrake: AirbrakeNotifier,
   updater: FeatureUpdater[K, T, M]
 ) extends FortyTwoActor(airbrake) {
@@ -84,15 +83,16 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
   featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
-){
+) extends Logging {
 
   // abstract methods
   protected def getSeqNumber(datum: T): SequenceNumber[T]
   protected def genFeatureKey(datum: T): K
 
   protected val pullSize = 500
+  protected val name: String = getClass.toString
 
-  private var currentSequence: FeatureStoreSequenceNumber[T, M] = {
+  private def lastComittedSequence(): FeatureStoreSequenceNumber[T, M] = {
     getCommitInfoFromStore() match {
       case Some(info) => {
         assume(info.version == representer.version)
@@ -109,14 +109,19 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
     commitInfoStore.get(key)
   }
 
-  private def commit(): Unit = {
-    val commitData = CommitInfo(currentSequence, representer.version, currentDateTime)
+  private def commit(seq: FeatureStoreSequenceNumber[T, M]): Unit = {
+    val commitData = CommitInfo(seq, representer.version, currentDateTime)
     val key = genCommitInfoKey()
+    log.info(s"commiting data $commitData")
     commitInfoStore.+=(key, commitData)
   }
 
   def update(): Unit = {
-    val ents = dataPuller.getSince(SequenceNumber[T](currentSequence.value), limit = pullSize)
+    val lowSeq = lastComittedSequence()
+    val ents = dataPuller.getSince(SequenceNumber[T](lowSeq.value), limit = pullSize)
+    log.info(s"begin a new round of update. data size: ${ents.size}")
+    if (ents.isEmpty) return
+
     val maxSeq = ents.map{ent => getSeqNumber(ent)}.max
     val entsAndFeat = ents.map{ ent => (genFeatureKey(ent), representer.apply(ent))}
     entsAndFeat.foreach{ case (k, vOpt) =>
@@ -124,8 +129,8 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
         featureStore.+=(k, representer.version, v)
       }
     }
-    currentSequence = FeatureStoreSequenceNumber[T, M](maxSeq.value)
-    commit()
+    val commitSeq = FeatureStoreSequenceNumber[T, M](maxSeq.value)
+    commit(commitSeq)
   }
 
   def commitInfo(): Option[CommitInfo[T, M]] = getCommitInfoFromStore()

@@ -135,7 +135,10 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
+      // The old site can be delivered with:
+      // Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
+      // Remove this comment once we're happy with Angular for everyone
+      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
     }
   }
 

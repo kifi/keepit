@@ -73,7 +73,9 @@
   transform: translate(-.5px) rotate(-45deg);
 }
 .kifi-search-intro-x:hover:before,
-.kifi-search-intro-x:hover:after {
+.kifi-search-intro-x:hover:after,
+.kifi-search-intro-x:focus:before,
+.kifi-search-intro-x:focus:after {
   background: #8e939a;
 }
 .kifi-search-intro-x:active:before,
@@ -82,9 +84,6 @@
 }
 .kifi-search-intro-x:active {
   background: #d0d4da;
-}
-.kifi-search-intro-x:focus {
-  outline-color: #ccc;
 }
 
 .kifi-search-intro-tri-shadow::after,

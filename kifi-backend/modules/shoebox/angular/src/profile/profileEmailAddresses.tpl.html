@@ -11,17 +11,17 @@
     </div>
     <ul class="profile-email-address-list">
       <li ng-repeat="email in emailList" class="profile-email-address-item">
-        <span class="profile-email-address-item-email" ng-class="{'profile-email-address-item-email-important': email.isPrimary || email.isPendingPrimary}">{{email.address}}</span>
-        <span class="profile-email-address-item-primary" ng-if="email.isPrimary">(primary)</span>
-        <span class="profile-email-address-item-pending-primary" ng-if="email.isPendingPrimary && !email.isPrimary">(pending primary)</span>
+        <span class="profile-email-address-item-email" ng-class="{'profile-email-address-item-email-important': email.isPrimary || email.isPendingPrimary || email.isPlaceholderPrimary}">{{email.address}}</span>
+        <span class="profile-email-address-item-primary" ng-if="email.isPrimary || email.isPlaceholderPrimary">(primary)</span>
+        <span class="profile-email-address-item-pending-primary" ng-if="email.isPendingPrimary && !email.isPrimary && !email.isPlaceholderPrimary">(pending primary)</span>
         <span class="profile-email-address-item-unverified" ng-if="!email.isVerified">(<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail(email.address)">unverified</a>)</span>
-        <div class="profile-email-address-item-arrow" href="javascript:" ng-if="!(email.isPrimary || email.isPendingPrimary)" ng-click="openDropdownForEmail($event, email.address)">
+        <div class="profile-email-address-item-arrow" href="javascript:" ng-if="!(email.isPrimary || email.isPendingPrimary || email.isPlaceholderPrimary)" ng-click="openDropdownForEmail($event, email.address)">
           <ul class="profile-email-address-item-dropdown" ng-show="emailWithActiveDropdown === email.address">
             <li>
-              <a class="profile-email-address-item-make-primary" href="javascript:" ng-if="email.isVerified && !(email.isPrimary || email.isPendingPrimary)" ng-click="makePrimary(email.address)">Make primary</a>
+              <a class="profile-email-address-item-make-primary" href="javascript:" ng-if="email.isVerified" ng-click="makePrimary(email.address)">Make primary</a>
             </li>
             <li>
-              <a class="profile-email-address-item-delete" href="javascript:" ng-if="!(email.isPrimary || email.isPendingPrimary)" ng-click="deleteEmail(email.address)">Delete</a>
+              <a class="profile-email-address-item-delete" href="javascript:" ng-click="deleteEmail(email.address)">Delete</a>
             </li>
           </ul>
         </div>

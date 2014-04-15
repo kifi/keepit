@@ -111,8 +111,15 @@ var api = (function createApi() {
   chrome.webNavigation.onBeforeNavigate.addListener(errors.wrap(function (details) {
     var match = details.url.match(googleSearchRe);
     if (match && details.frameId === 0) {
-      var query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
-      if (query) dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
+      var query;
+      try {
+        query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      } catch (e) {
+        log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e)();  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+      }
+      if (query) {
+        dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
+      }
     }
   }));
 
@@ -181,7 +188,9 @@ var api = (function createApi() {
     chrome.tabs.get(newTabId, safeCreatePageAndInjectContentScripts);
   }));
   var safeCreatePageAndInjectContentScripts = errors.wrap(function (tab) {
-    createPageAndInjectContentScripts(tab);
+    if (tab) {
+      createPageAndInjectContentScripts(tab);
+    }
   });
 
   chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
@@ -264,18 +273,19 @@ var api = (function createApi() {
       for (var i = 0; i < data.length; i++) {
         port.handling[data[i]] = true;
       }
-      if (page.toEmit) {
-        for (var i = 0; i < page.toEmit.length;) {
-          var m = page.toEmit[i];
+      var toEmit = page.toEmit;
+      if (toEmit) {
+        for (var i = 0; i < toEmit.length;) {
+          var m = toEmit[i];
           if (port.handling[m[0]]) {
             log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "")();
             port.postMessage(m);
-            page.toEmit.splice(i, 1);
+            toEmit.splice(i, 1);
           } else {
             i++;
           }
         }
-        if (!page.toEmit.length) {
+        if (!toEmit.length) {
           delete page.toEmit;
         }
       }
@@ -408,8 +418,8 @@ var api = (function createApi() {
   }
 
   var onXhrLoadEnd = errors.wrap(function onXhrLoadEnd(done, fail) {
-    if (this.status >= 200 && this.status < 300) {
-      if (done) done(/^application\/json/.test(this.getResponseHeader('Content-Type')) ? JSON.parse(this.responseText) : this);
+    if (this.status >= 200 && this.status < 300 && /^application\/json/.test(this.getResponseHeader('Content-Type'))) {
+      if (done) done(JSON.parse(this.responseText));
     } else {
       if (fail) fail(this);
     }
@@ -618,16 +628,18 @@ var api = (function createApi() {
             log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data)();
             port.postMessage([type, data]);
           } else if (opts && opts.queue) {
-            if (page.toEmit) {
+            var toEmit = page.toEmit;
+            if (toEmit) {
               if (opts.queue === 1) {
-                for (var i = 0; i < page.toEmit.length; i++) {
-                  if (page.toEmit[i][0] === type) {
-                    page.toEmit[i][1] = data;
+                for (var i = 0; i < toEmit.length; i++) {
+                  var m = toEmit[i];
+                  if (m[0] === type) {
+                    m[1] = data;
                     return;
                   }
                 }
               }
-              page.toEmit.push([type, data]);
+              toEmit.push([type, data]);
             } else {
               page.toEmit = [[type, data]];
             }

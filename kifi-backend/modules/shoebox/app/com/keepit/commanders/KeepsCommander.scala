@@ -2,24 +2,25 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-
+import com.keepit.common.KestrelCombinator
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.net.URISanitizer
 import com.keepit.common.time._
-import com.keepit.model._
-import com.keepit.social.BasicUser
-import com.keepit.common.logging.Logging
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.SearchServiceClient
-import com.keepit.heimdal._
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.heimdal._
+import com.keepit.model._
+import com.keepit.search.SearchServiceClient
+import com.keepit.social.BasicUser
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.{net, KestrelCombinator}
-import com.keepit.common.net.URISanitizer
+
+import scala.concurrent.Future
+import scala.util.Try
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -110,11 +111,20 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
+    log.info(s"[keep] $keepJson")
+    val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
+    SafeFuture{
+      searchClient.updateURIGraph()
+    }
+    KeepInfo.fromBookmark(keep)
+  }
+
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
-                  (Seq[KeepInfo], Option[Int]) = {
+      (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
-
+    log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
       case Right(name) => Some(getOrCreateTag(userId, name))
@@ -128,25 +138,50 @@ class KeepsCommander @Inject() (
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
-
     val deactivatedBookmarks = db.readWrite { implicit s =>
       val bms = keepInfos.map { ki =>
-        val url = ki.url
         uriRepo.getByUri(ki.url).flatMap { uri =>
-          keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
-            keepRepo.save(b withActive false)
+          val ko = keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
+            val saved = keepRepo.save(b withActive false)
+            log.info(s"[unkeepMulti] DEACTIVATE $saved (uri=$uri, ki=$ki)")
+            saved
           }
+          if (ko.isEmpty) { log.warn(s"[unkeepMulti($userId,${uri.id})] cannot find keep for ki=$ki; uri=$uri") }
+          ko
         }
       }.flatten
       val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForKeep(bm.id.get)).toSet
       collIds.foreach{ cid => collectionRepo.collectionChanged(cid) }
       bms
     }
+    log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
     val deactivatedKeepInfos = deactivatedBookmarks.map(KeepInfo.fromBookmark(_))
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos
+  }
+
+  def unkeepBatch(ids: Seq[ExternalId[Keep]], userId: Id[User])(implicit context: HeimdalContext): Seq[(ExternalId[Keep], Option[KeepInfo])] = {
+    ids map { id =>
+      id -> unkeep(id, userId)
+    } // todo: optimize
+  }
+
+  def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
+    db.readWrite { implicit s =>
+      keepRepo.getByExtIdAndUser(extId, userId) map { keep =>
+        val saved = keepRepo.save(keep withActive false)
+        log.info(s"[unkeep($userId)] deactivated keep=$saved")
+        keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+        saved
+      }
+    } map { saved =>
+      // TODO: broadcast over any open user channels
+      keptAnalytics.unkeptPages(userId, Seq(saved), context)
+      searchClient.updateURIGraph()
+      KeepInfo.fromBookmark(saved)
+    }
   }
 
   def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {

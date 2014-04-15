@@ -168,10 +168,11 @@ angular.module('kifi.profile', [
           if (linkedin && linkedin.profileUrl) {
             scope.isLinkedInConnected = true;
             scope.liProfileUrl = linkedin.profileUrl;
+          } else {
+            scope.isLinkedInConnected = false;
+            scope.liProfileUrl = '';
           }
         });
-
-        socialService.refresh();
 
         scope.connectLinkedIn = socialService.connectLinkedIn;
         scope.disconnectLinkedIn = socialService.disconnectLinkedIn;
@@ -197,10 +198,11 @@ angular.module('kifi.profile', [
           if (facebook && facebook.profileUrl) {
             scope.isFacebookConnected = true;
             scope.fbProfileUrl = facebook.profileUrl;
+          } else {
+            scope.isFacebookConnected = false;
+            scope.fbProfileUrl = '';
           }
         });
-
-        socialService.refresh();
 
         scope.connectFacebook = socialService.connectFacebook;
         scope.disconnectFacebook = socialService.disconnectFacebook;

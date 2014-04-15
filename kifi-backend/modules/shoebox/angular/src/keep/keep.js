@@ -42,8 +42,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
   function ($document, $rootElement, tagService, util) {
     return {
       restrict: 'A',
-      scope: true,
+      scope: {
+        keep: '=',
+        me: '=',
+        toggleSelect: '&',
+        isPreviewed: '&',
+        isSelected: '&',
+        clickAction: '&',
+        dragKeeps: '&',
+        stopDraggingKeeps: '&'
+      },
       controller: 'KeepCtrl',
+      replace: true,
       templateUrl: 'keep/keep.tpl.html',
       link: function (scope, element /*, attrs*/ ) {
         scope.getTags = function () {
@@ -133,8 +143,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         updateTitleHtml();
         updateDescHtml();
 
-        var $k = element.find('li.kf-keep');
-
         // Really weird hack to fix a ng-class bug
         // In certain cases, ng-class is not setting DOM classes correctly.
         // Reproduction: select several keeps, preview one of the keeps,
@@ -145,15 +153,15 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             'mine': scope.isMyBookmark(scope.keep),
             'example': scope.isExample(scope.keep),
             'private': scope.isPrivate(scope.keep),
-            'detailed': scope.isPreviewed(scope.keep),
-            'selected': !!scope.isSelected(scope.keep)
+            'detailed': scope.isPreviewed({keep: scope.keep}),
+            'selected': !!scope.isSelected({keep: scope.keep})
           };
         }, function (cur) {
           _.forOwn(cur, function (value, key) {
-            if (value && !$k.hasClass(key)) {
-              $k.addClass(key);
-            } else if (!value && $k.hasClass(key)) {
-              $k.removeClass(key);
+            if (value && !element.hasClass(key)) {
+              element.addClass(key);
+            } else if (!value && element.hasClass(key)) {
+              element.removeClass(key);
             }
           });
         });
@@ -190,7 +198,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         scope.onCheck = function (e) {
           // needed to prevent previewing
           e.stopPropagation();
-          return scope.toggleSelect(scope.keep);
+          return scope.toggleSelect();
         };
 
         var dragMask = element.find('.kf-drag-mask');
@@ -210,30 +218,24 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         });
 
         scope.isDragging = false;
-        var clone;
         var mouseX, mouseY;
-        element.bind('mousemove', function (e) {
+        element.on('mousemove', function (e) {
           mouseX = e.pageX - util.offset(element).left;
           mouseY = e.pageY - util.offset(element).top;
         });
-        element.bind('dragstart', function (e) {
-          element.addClass('kf-dragged');
-          clone = element.clone().css({
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: element.css('width'),
-            height: element.css('height'),
-            zIndex: -1
+        element.on('dragstart', function (e) {
+          scope.$apply(function () {
+            element.addClass('kf-dragged');
+            scope.dragKeeps({keep: scope.keep, event: e, mouseX: mouseX, mouseY: mouseY});
+            scope.isDragging = true;
           });
-          element.after(clone);
-          e.dataTransfer.setDragImage(clone[0], mouseX, mouseY);
-          scope.$apply(function () { scope.isDragging = true; });
         });
-        element.bind('dragend', function () {
-          element.removeClass('kf-dragged');
-          clone.remove();
-          scope.$apply(function () { scope.isDragging = false; });
+        element.on('dragend', function () {
+          scope.$apply(function () {
+            element.removeClass('kf-dragged');
+            scope.stopDraggingKeeps();
+            scope.isDragging = false;
+          });
         });
       }
     };

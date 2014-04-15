@@ -11,6 +11,7 @@ angular.module('kifi', [
   'util',
   'dom',
   'antiscroll',
+  'nodraginput',
   'jun.smartScroll',
   'angularMoment',
   'kifi.home',
@@ -22,6 +23,7 @@ angular.module('kifi', [
   'kifi.friends.friendCard',
   'kifi.friends.friendRequestCard',
   'kifi.social',
+  'kifi.social.networksNeedAttention',
   'kifi.socialService',
   'kifi.invite',
   'kifi.invite.connectionCard',
@@ -40,12 +42,14 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
+  'kifi.addKeeps',
   'kifi.installService',
   'jun.facebook',
   'ngDragDrop',
   'ui.slider',
   'angulartics',
-  'kifi.mixpanel'
+  'kifi.mixpanel',
+  'kifi.alertBanner'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -84,7 +88,8 @@ angular.module('kifi', [
       .appId(dev ? '530357056981814' : '104629159695560')
       // https://developers.facebook.com/docs/facebook-login/permissions
       .scope('email')
-      .cookie(true);
+      .cookie(true)
+      .logging(false);
   }
 ])
 
@@ -93,8 +98,8 @@ angular.module('kifi', [
   function ($location) {
     var host = $location.host(),
       dev = /^dev\.ezkeep\.com|localhost$/.test(host),
-      local = $location.port() === '9000',
-      origin = local ? $location.protocol() + '//' + host : 'https://www.kifi.com';
+      local = $location.port() === 9000,
+      origin = local ? $location.protocol() + '://' + host  + ':' + $location.port() : 'https://www.kifi.com';
 
     return {
       local: local,
@@ -141,13 +146,24 @@ angular.module('kifi', [
 ])
 
 .run([
-  'profileService',
-  function (profileService) {
+  'profileService', '$rootScope', '$window', 'friendService', '$timeout', 'env',
+  function (profileService, $rootScope, $window, friendService, $timeout, env) {
     // Initial data loading:
 
     profileService.fetchPrefs().then(function (res) {
       // handle onboarding / imports
+      if (env.production) {
+        if (!res.onboarding_seen) {
+          $rootScope.$emit('showGettingStarted');
+        } else {
+          $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+        }
+      }
       return res;
+    });
+
+    $timeout(function () {
+      friendService.getRequests();
     });
   }
 ])

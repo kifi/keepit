@@ -19,7 +19,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       return installService.error;
     };
 
-    $scope.triggerInstall = installService.triggerInstall;
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $scope.data.showInstallErrorModal = true;
+      });
+    };
 
     // onboarding.js is using these functions
     $window.getMe = function () {
@@ -34,21 +38,35 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $http.post(env.xhrBase + '/user/prefs', {
         onboarding_seen: 'true'
       });
+      if (!profileService.prefs.onboarding_seen) {
+        $scope.importBookmarks();
+      }
       $scope.$apply();
-      //initBookmarkImport();
     };
 
+    $rootScope.$on('showGettingStarted', function () {
+      $scope.data.showGettingStarted = true;
+    });
+
     $scope.importBookmarks = function () {
-      $rootScope.$emit('import.bookmarks');
+      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+      if (!kifiVersion) {
+        return;
+      }
+
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
     };
 
     $window.addEventListener('message', function (event) {
       if (event.data && event.data.bookmarkCount > 0) {
-        $rootScope.$emit('import.bookmarks', event.data.bookmarkCount, event);
+        $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
       }
     });
-    $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
 
+    $scope.logout = function () {
+      profileService.logout();
+    };
 
 
     var updateHeight = _.throttle(function () {

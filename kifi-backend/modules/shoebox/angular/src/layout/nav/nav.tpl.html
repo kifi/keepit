@@ -8,8 +8,9 @@
   </li>
   <li class="kf-nav-item kf-nav-friends" ng-class="{ active: isActive('/friends') }">
     <a class="kf-nav-link" href="/friends">
+      <span class="kf-nav-badge" ng-class="{ empty: !counts.friendsNotifCount }">{{counts.friendsNotifCount}}</span>
       <span class="kf-nav-name">Your Kifi Friends</span>
-      <span class="kf-nav-count" ng-class="{ empty: !counts.friendsNotifCount }">{{counts.friendsNotifCount}}</span>
+      <span class="kf-nav-count" ng-class="{ empty: !counts.friendsCount }">{{counts.friendsCount}}</span>
     </a>
   </li>
   <li class="kf-nav-item kf-nav-invite" ng-class="{ active: isActive('/invite') }">

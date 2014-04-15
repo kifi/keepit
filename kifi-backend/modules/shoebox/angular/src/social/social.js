@@ -13,6 +13,7 @@ angular.module('kifi.social', ['kifi.socialService'])
       link: function (scope/*, element, attrs*/) {
         scope.data = scope.data || {};
         scope.data.show = true;
+
         scope.facebook = socialService.facebook;
         scope.linkedin = socialService.linkedin;
         scope.gmail = socialService.gmail;
@@ -21,6 +22,27 @@ angular.module('kifi.social', ['kifi.socialService'])
         scope.connectLinkedIn = socialService.connectLinkedIn;
         scope.importGmail = socialService.importGmail;
 
+        scope.isRefreshingSocialGraph = socialService.isRefreshingSocialGraph;
+        scope.refreshingGraphs = socialService.refreshingGraphs;
+
+
+        scope.facebookStatus = function () {
+          if (scope.refreshingGraphs.network.facebook) {
+            return 'refreshing';
+          } else if (scope.expiredTokens.facebook) {
+            return 'expired';
+          }
+          return 'good';
+        };
+
+        scope.linkedinStatus = function () {
+          if (scope.refreshingGraphs.network.linkedin) {
+            return 'refreshing';
+          } else if (scope.expiredTokens.linkedin) {
+            return 'expired';
+          }
+          return 'good';
+        };
 
         socialService.refresh();
 

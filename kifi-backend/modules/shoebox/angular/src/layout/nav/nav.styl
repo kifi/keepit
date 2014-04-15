@@ -71,14 +71,29 @@ a.kf-nav-link-btn:hover
   &.empty
     display: none
 
-  .kf-nav-friends &
-    background: #b7d07c
-    border-color: transparent
-    color: #fff
-
   .kf-nav-item.active &
     color: #fff
     background: #b8c5d2
+
+.kf-nav-badge
+  position: absolute
+  left: 46px
+  top: 14px
+  background-color: #f58182
+  height: 18px
+  line-height: 18px
+  border-radius: 50px
+  color: #fff
+  width: 13px
+  padding-left: 6px
+  border: 2px solid #EFF2F7
+  font-size: 12px
+
+  .active &
+    border: 2px solid #E3E6EE
+
+  &.empty
+    display: none
 
 .kf-nav-name:before
   content: " "

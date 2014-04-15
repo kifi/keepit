@@ -3,21 +3,26 @@
   margin: 0 auto
   text-align: center
   width: 0px
-  @media screen and (max-width: 1365px)
-    text-align: left
-    margin: 0 auto
-
 
 .social-connect-title
   font-size: 24px
+  font-weight: 300
 
 .social-connect-desc
   font-size: 16px
   margin: 15px auto 35px
   max-width: 350px
-  @media screen and (max-width: 1365px)
-    margin: 15px 0 35px
-    text-align: center
+
+.friends-wrapper, .invite-wrapper
+  .social-connect
+    @media screen and (max-width: 1260px)
+      text-align: left
+      margin: 0 auto
+
+  .social-connect-desc
+    @media screen and (max-width: 1260px)
+      margin: 15px 0 35px
+      text-align: center
 
 .social-connect-button
   padding: 11px

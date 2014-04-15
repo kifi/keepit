@@ -5,7 +5,7 @@ import akka.testkit.TestActorRef
 import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 
 @Singleton
-class ActorInstance[T <: Actor] @Inject() (
+class ActorInstance[+T <: Actor] @Inject() (
     systemProvider: Provider[ActorSystem],
     builder: ActorBuilder,
     provider: Provider[T]) {

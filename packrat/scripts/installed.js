@@ -6,27 +6,41 @@
   document.documentElement.dataset.kifiExt = v;
   document.dispatchEvent(new CustomEvent('kifi:installed', {version: v}));
 
-  function onMessage(event) {
-    if (event.origin !== location.origin) {
-      return;
-    }
-    log('[onMessage]', event.data)();
+  var origin = location.origin;
 
-    if (event.data === 'get_bookmark_count_if_should_import') {
-      api.port.emit('get_bookmark_count_if_should_import', function (count) {
-        event.source.postMessage({bookmarkCount: count}, event.origin);
-      });
-    } else if (event.data === 'import_bookmarks_declined') {
-      api.port.emit('import_bookmarks_declined');
-    } else if (event.data === 'import_bookmarks') {
-      api.port.emit('import_bookmarks');
+  api.port.on({
+    update_keeps: function () {
+      if (document.documentElement.hasAttribute('ng-app')) {
+        window.postMessage('update_keeps', origin);
+      } else {
+        location.href = location.href;  // TODO: remove when old site dies
+      }
+    }
+  });
+
+  window.addEventListener('message', onMessage);
+  api.onEnd.push(function () {
+    window.removeEventListener('message', onMessage);
+  });
+
+  function onMessage(event) {
+    if (event.origin === origin) {
+      log('[onMessage]', event.data)();
+      switch (event.data) {
+      case 'get_bookmark_count_if_should_import':
+        api.port.emit('get_bookmark_count_if_should_import', function (count) {
+          event.source.postMessage({bookmarkCount: count}, event.origin);
+        });
+        break;
+      case 'import_bookmarks_declined':
+        api.port.emit('import_bookmarks_declined');
+        break;
+      case 'import_bookmarks':
+        api.port.emit('import_bookmarks');
+        break;
+      }
     }
   }
-
-  window.addEventListener('message', onMessage, false);
-  api.onEnd.push(function() {
-    window.removeEventListener('message', onMessage, false);
-  });
 }(this.chrome && chrome.runtime && chrome.runtime.getManifest().version ||
   this.self && self.options && self.options.version ||
   true));

@@ -5,8 +5,8 @@ angular.module('kifi.detail',
 )
 
 .directive('kfDetail', [
-  'keepService', '$filter', '$sce', '$document', 'profileService',
-  function (keepService, $filter, $sce, $document, profileService) {
+  'keepService', '$filter', '$sce', '$document', 'profileService', '$window',
+  function (keepService, $filter, $sce, $document, profileService, $window) {
 
     return {
       replace: true,
@@ -22,10 +22,9 @@ angular.module('kifi.detail',
         scope.me = profileService.me;
 
 
-
-
         scope.$watch(scope.getPreviewed, function (keep) {
           scope.keep = keep;
+          scope.refreshScroll();
         });
 
         scope.getSelectedKeeps = function () {
@@ -65,11 +64,11 @@ angular.module('kifi.detail',
         });
 
         scope.isPrivate = function () {
-          return scope.howKept === 'private';
+          return scope.howKept === 'private' && scope.keep && scope.keep.isMyBookmark;
         };
 
         scope.isPublic = function () {
-          return scope.howKept === 'public';
+          return scope.howKept === 'public' && scope.keep && scope.keep.isMyBookmark;
         };
 
         scope.toggleKeep = function () {
@@ -81,6 +80,16 @@ angular.module('kifi.detail',
           var keeps = scope.getSelectedKeeps();
           return keepService.togglePrivate(keeps);
         };
+
+        scope.refreshScroll = scope.refreshScroll || angular.noop;
+        var scrollRefresh = _.throttle(function () {
+          scope.refreshScroll();
+        }, 150);
+        $window.addEventListener('resize', scrollRefresh);
+
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', scrollRefresh);
+        });
 
       }
     };
@@ -404,9 +413,8 @@ angular.module('kifi.detail',
   }
 ])
 
-.directive('kfKeepDetail', [ '$window',
-
-  function ($window) {
+.directive('kfKeepDetail', [
+  function () {
     var YOUTUBE_REGEX = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
 
     function isYoutubeVideo(url) {
@@ -426,15 +434,6 @@ angular.module('kifi.detail',
       restrict: 'A',
       templateUrl: 'detail/keepDetail.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
-
-        var scrollRefresh = _.throttle(function () {
-          scope.refreshScroll();
-        }, 150);
-        $window.addEventListener('resize', scrollRefresh);
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', scrollRefresh);
-        });
-        scope.refreshScroll();
 
         function testEmbed(keep) {
           if (keep) {

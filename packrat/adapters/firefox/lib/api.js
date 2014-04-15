@@ -197,8 +197,8 @@ exports.request = function(method, url, data, done, fail) {
   require('sdk/request').Request(options)[method.toLowerCase()]();
 };
 var onRequestEnd = errors.wrap(function onRequestEnd(done, fail, resp) {
-  if (resp.status >= 200 && resp.status < 300) {
-    if (done) done(resp.json || resp);
+  if (resp.status >= 200 && resp.status < 300 && /^application\/json/.test(resp.headers['Content-Type'])) {
+    if (done) done(resp.json);
   } else {
     if (fail) fail(resp);
   }
@@ -377,16 +377,18 @@ exports.tabs = {
     }
     if (!emitted) {
       if (page && opts && opts.queue) {
-        if (page.toEmit) {
+        var toEmit = page.toEmit;
+        if (toEmit) {
           if (opts.queue === 1) {
-            for (var i = 0; i < page.toEmit.length; i++) {
-              if (page.toEmit[i][0] === type) {
-                page.toEmit[i][1] = data;
+            for (var i = 0; i < toEmit.length; i++) {
+              var m = toEmit[i];
+              if (m[0] === type) {
+                m[1] = data;
                 return;
               }
             }
           }
-          page.toEmit.push([type, data]);
+          toEmit.push([type, data]);
         } else {
           page.toEmit = [[type, data]];
         }
@@ -496,15 +498,25 @@ windows
 }))
 .on('activate', errors.wrap(function onWindowActivate(win) {
   activeWinHasFocus = true;
-  var page = pages[win.tabs.activeTab.id];
-  if (page && httpRe.test(page.url)) {
+  var tab = win.tabs.activeTab, tabId, page;
+  try { // bugzil.la/992509
+    tabId = tab.id;
+  } catch (e) {
+    log('[windows:activate]', e);
+  }
+  if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);
   }
 }))
 .on('deactivate', errors.wrap(function onWindowDeactivate(win) {
   activeWinHasFocus = false;
-  var page = pages[win.tabs.activeTab.id];
-  if (page && httpRe.test(page.url)) {
+  var tab = win.tabs.activeTab, tabId, page;
+  try { // bugzil.la/992509
+    tabId = tab.id;
+  } catch (e) {
+    log('[windows:deactivate]', e);
+  }
+  if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
     dispatch.call(exports.tabs.on.blur, page);
   }
 }));
@@ -544,7 +556,12 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
     let page = getPageOrHideOldAndCreatePage(tab);
     let match = googleSearchRe.exec(tab.url);
     if (match) {
-      let query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      let query;
+      try {
+        query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+      } catch (e) {
+        log('[location:change] non-UTF-8 search query:', match[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+      }
       if (query) {
         let channel = match[2];
         dispatch.call(exports.on.search, query, channel === 'fflb' ? 'a' : channel === 'sb' ? 's' : 'n');
@@ -627,7 +644,7 @@ var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, i
     log('[api:require]', page.id, o);
     mergeArr(page.injectedCss, o.styles);
     mergeArr(injectedJs, o.scripts);
-    worker.port.emit('api:inject', o.styles.map(self.data.load), o.scripts.map(self.data.load), callbackId);
+    worker.port.emit('api:inject', o.styles, o.scripts.map(self.data.load), callbackId);
   } else {
     log('[api:require] page hidden', page.id, o);
   }
@@ -666,18 +683,19 @@ require('./meta').contentScripts.forEach(function (arr) {
 });
 
 function emitQueuedMessages(page, worker) {
-  if (page.toEmit) {
-    for (var i = 0; i < page.toEmit.length;) {
-      var m = page.toEmit[i];
+  var toEmit = page.toEmit;
+  if (toEmit) {
+    for (var i = 0; i < toEmit.length;) {
+      var m = toEmit[i];
       if (worker.handling[m[0]]) {
         log('[emitQueuedMessages]', page.id, m[0], m[1] != null ? m[1] : '');
         worker.port.emit.apply(worker.port, m);
-        page.toEmit.splice(i, 1);
+        toEmit.splice(i, 1);
       } else {
         i++;
       }
     }
-    if (!page.toEmit.length) {
+    if (!toEmit.length) {
       delete page.toEmit;
     }
   }

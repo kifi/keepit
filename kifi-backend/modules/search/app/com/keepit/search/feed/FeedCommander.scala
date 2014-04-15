@@ -3,44 +3,24 @@ package com.keepit.search.feed
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import org.joda.time.DateTime
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import com.keepit.search.graph.URIList
-import com.keepit.search.graph.bookmark.URIGraphCommander
-import com.keepit.search.graph.bookmark.URIGraphSearcher
 import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphCommanderFactory
 
 
-class FeedCommanderFactory @Inject()(
+class FeedCommander @Inject() (
+  userGraphsSearcherFactory: UserGraphsSearcherFactory,
   uriGraphCommanderFactory: URIGraphCommanderFactory,
-  userGraphsSearcherFactory: UserGraphsSearcherFactory,
   shoeboxClient: ShoeboxServiceClient,
   feedMetaInfoProvider: FeedMetaInfoProvider
-){
-  def apply(userId: Id[User]): FeedCommander = {
-    val ugCmdr = uriGraphCommanderFactory(userId)
-    new FeedCommanderImpl(userGraphsSearcherFactory, ugCmdr, shoeboxClient, feedMetaInfoProvider)
-  }
-}
-
-
-trait FeedCommander {
-  def getFeeds(userId: Id[User], limit: Int): Seq[Feed]
-  def getFeeds(userId: Id[User], pageNum: Int, pageSize: Int): Seq[Feed]
-}
-
-class FeedCommanderImpl(
-  userGraphsSearcherFactory: UserGraphsSearcherFactory,
-  uriGraphCommander: URIGraphCommander,
-  shoeboxClient: ShoeboxServiceClient,
-  feedMetaInfoProvider: FeedMetaInfoProvider
-) extends FeedCommander {
+) {
   val feedFilter = new CompositeFeedFilter(new BasicFeedFilter())
 
   private def aggregateAndSort(uriLists: Seq[URIList]): Seq[(Long, Long)] = {
@@ -55,6 +35,8 @@ class FeedCommanderImpl(
   }
 
   def getFeeds(userId: Id[User], limit: Int): Seq[Feed] = {
+    val uriGraphCommander = uriGraphCommanderFactory(userId)
+
     val mykeeps = uriGraphCommander.getUserUriList(userId, publicOnly = false).values.map{ uriList =>
       uriList.publicList.getOrElse(URIList.empty).ids ++ uriList.privateList.getOrElse(URIList.empty).ids
     }.flatten.toSet
@@ -62,7 +44,6 @@ class FeedCommanderImpl(
     val userGraphsSearcher = userGraphsSearcherFactory(userId)
     val friends = userGraphsSearcher.getSearchFriends()
     val shards = uriGraphCommander.getIndexShards
-    val uriGraphSearchers = shards.map{ shard => (shard, URIGraphSearcher(userId, uriGraphCommander.getIndexer(shard), userGraphsSearcher))}.toMap
     val uriLists = shards.map{ shard =>
       val uriLists = friends.map{ id =>
         uriGraphCommander.getUserUriList(Id[User](id), publicOnly = true, shard)
@@ -81,7 +62,7 @@ class FeedCommanderImpl(
       val meta = feedMetaInfoProvider.getFeedMetaInfo(uid)
       if (feedFilter.accept(meta) && !mykeeps.contains(id)){
         val sharingUserInfo = shards.find(_.contains(uid)).map{ shard =>
-          uriGraphSearchers(shard).getSharingUserInfo(uid)
+          uriGraphCommander.getSharingUserInfo(uid, shard)
         }
         feeds(cnt) = buildFeed(meta.uri, time, sharingUserInfo.get.sharingUserIds, sharingUserInfo.get.keepersEdgeSetSize)
         cnt += 1
