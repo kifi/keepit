@@ -11,6 +11,8 @@ angular.module('kifi.keepService', [
   function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService) {
 
     var list = [],
+      lastSearchContext = { },
+      refinements = -1,
       selected = {},
       before = null,
       end = false,
@@ -342,6 +344,8 @@ angular.module('kifi.keepService', [
       reset: function () {
         $log.log('keepService.reset()');
 
+        lastSearchContext = {};
+        refinements = -1;
         before = null;
         end = false;
         list.length = 0;
@@ -570,7 +574,7 @@ angular.module('kifi.keepService', [
         }
 
         var url = routeService.search,
-          data = {
+          reqData = {
             params: {
               q: query || void 0,
               f: filter || 'm',
@@ -579,20 +583,20 @@ angular.module('kifi.keepService', [
             }
           };
 
-        $log.log('keepService.find()', data);
+        $log.log('keepService.find()', reqData);
 
-        return $http.get(url, data).then(function (res) {
-          var data = res.data,
-            hits = data.hits || [];
+        return $http.get(url, reqData).then(function (res) {
+          var resData = res.data,
+            hits = resData.hits || [];
 
-          if (!data.mayHaveMore) {
+          if (!resData.mayHaveMore) {
             end = true;
           }
 
           $analytics.eventTrack('user_clicked_page', {
             'action': 'searchKifi',
             'hits': hits.size,
-            'mayHaveMore': data.mayHaveMore
+            'mayHaveMore': resData.mayHaveMore
           });
 
           _.forEach(hits, processHit);
@@ -601,7 +605,22 @@ angular.module('kifi.keepService', [
 
           fetchScreenshots(hits);
 
-          return data;
+          refinements++;
+          lastSearchContext = {
+            origin: $location.origin,
+            uuid: reqData.,
+            experimentId: null,
+            query: reqData.q,
+            filter: reqData.f,
+            kifiTime: null,
+            kifiShownTime: null,
+            kifiResultsClicked: null,
+            refinements: null,
+            pageSession: null,
+            endedWith: null
+          };
+
+          return resData;
         });
       },
 

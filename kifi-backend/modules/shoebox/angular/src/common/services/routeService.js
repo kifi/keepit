@@ -40,7 +40,8 @@ angular.module('kifi.routeService', [])
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       search: searchRoute('/site/search'),
-      searchAnalytics: searchRoute('/site/...'),
+      searchedAnalytics: searchRoute('/site/search/events/searched'),
+      searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');

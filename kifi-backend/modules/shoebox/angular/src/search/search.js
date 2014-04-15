@@ -17,13 +17,43 @@ angular.module('kifi.search', [
 ])
 
 .controller('SearchCtrl', [
-  '$scope', 'keepService', '$routeParams', '$location', '$window',
-  function ($scope, keepService, $routeParams, $location, $window) {
+  '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService',
+  function ($http, $scope, keepService, $routeParams, $location, $window, routeService) {
     keepService.reset();
 
     if ($scope.search) {
       $scope.search.text = $routeParams.q;
     }
+
+    var reportSearchAnalytics = function () {
+      var url = routeService.searchedAnalytics;
+      var lastSearchContext = keepService.lastSearchContext;
+      if (lastSearchContext) {
+        var data = {
+          origin: $location.origin,
+          uuid: lastSearchContext.uuid,
+          experimentId: lastSearchContext.experimentId,
+          query: lastSearchContext.query,
+          filter: lastSearchContext.filter,
+          maxResults: keepService.limit,
+          kifiResults: keepService.list.length,
+          kifiTime: lastSearchContext.kifiTime,
+          kifiShownTime: lastSearchContext.kifiShownTime,
+          kifiResultsClicked: lastSearchContext.clicks,
+          refinements: keepService.refinements,
+          pageSession: lastSearchContext.pageSession,
+          endedWith: lastSearchContext.endedWith
+        }
+        $http.post(url, data);
+      }
+    };
+
+    $scope.$on('$destroy', function () {
+      reportSearchAnalytics();
+      $window.removeEventListener('beforeunload', reportSearchAnalytics);
+    });
+
+    $window.addEventListener('beforeunload', reportSearchAnalytics)
 
     if (!$routeParams.q) {
       // No or blank query
