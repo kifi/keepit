@@ -191,7 +191,7 @@ GET     /iphone                     @com.keepit.controllers.website.HomeControll
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
-GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+GET     /invite                     @com.keepit.controllers.website.HomeController.home
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
