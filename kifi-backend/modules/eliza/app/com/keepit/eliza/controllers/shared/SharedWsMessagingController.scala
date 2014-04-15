@@ -56,14 +56,11 @@ class SharedWsMessagingController @Inject() (
     websocketRouter.unregisterUserSocket(socket)
   }
 
-  //TEMPORARY STOP GAP
-  val sideEffectingEvents = Set[String]("usefulPage", "sliderShown")
-
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
       socket.channel.push(Json.arr("pong"))
     },
-    "stats" -> { _ =>
+    "stats" -> { _ => //??
       val stats = Json.obj(
         "connected_for_seconds" -> clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0,
         "connected_sockets" -> websocketRouter.connectedSockets,
@@ -95,64 +92,6 @@ class SharedWsMessagingController @Inject() (
       socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmuted))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
-
-    // pre-inbox notification/thread handlers (soon will be obsolete)
-    // mustn't forget about mobile
-
-    "get_notifications" -> { case JsNumber(howMany) +: _ =>
-      notificationCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map { notices =>
-        val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-        socket.channel.push(Json.arr("notifications", notices.jsons, numUnreadUnmuted, END_OF_TIME))
-      }
-    },
-    "get_missed_notifications" -> { case JsString(time) +: _ =>
-      notificationCommander.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time)).map { notices =>
-        socket.channel.push(Json.arr("missed_notifications", notices.jsons, currentDateTime))
-      }
-    },
-    "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
-      val fut = notificationCommander.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt)
-      fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
-      }
-      fut.onFailure { case _ =>
-        socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
-    "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
-      val messageId = ExternalId[Message](notifId)
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-      val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmuted)
-      socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
-    },
-    // warning: get_thread_info returns an ElizaThreadInfo, not the typical notification JSON
-    "get_thread_info" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
-      log.info(s"[get_thread_info] user ${socket.userId} thread $threadId")
-      try {
-        val info = messagingCommander.getThreadInfo(socket.userId, ExternalId[MessageThread](threadId))
-        socket.channel.push(Json.arr(requestId.toLong, info))
-      } catch { case t: Throwable =>
-        socket.channel.push(Json.arr("server_error", requestId.toLong))
-        throw t
-      }
-    },
-    // warning: get_threads_by_url returns ElizaThreadInfos, not the typical notification JSONs
-    "get_threads_by_url" -> { case JsString(url) +: _ =>
-      messagingCommander.getThreadInfos(socket.userId, url).map { case (_, threadInfos) =>
-        socket.channel.push(Json.arr("thread_infos", threadInfos))
-      }
-    },
-    // warning: get_threads returns ElizaThreadInfos, not the typical notification JSONs
-    "get_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-      val fut = messagingCommander.getThreadInfos(socket.userId, url)
-      fut.foreach { case (nUriStr, threadInfos) =>
-        socket.channel.push(Json.arr(requestId.toLong, threadInfos, nUriStr))
-      }
-      fut.onFailure { case _ =>
-        socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
-
     // inbox notification/thread handlers
     "get_one_thread" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
       val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId))
@@ -182,15 +121,6 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
-    "get_threads_since" -> { case JsNumber(requestId) +: JsString(time) +: _ => // deprecated (unused since 2.8.38)
-      val fut = notificationCommander.getSendableNotificationsSince(socket.userId, parseStandardTime(time))
-      fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices.jsons, currentDateTime))
-      }
-      fut.onFailure { case _ =>
-        socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
     "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
       val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { case (notices, numTotal) =>
@@ -202,24 +132,6 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
       val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
-      fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
-      }
-      fut.onFailure { case _ =>
-        socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
-    "get_muted_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      val fut = notificationCommander.getLatestMutedSendableNotifications(socket.userId, howMany.toInt)
-      fut.foreach { notices =>
-        socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
-      }
-      fut.onFailure { case _ =>
-        socket.channel.push(Json.arr("server_error", requestId.toLong))
-      }
-    },
-    "get_muted_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      val fut = notificationCommander.getMutedSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -263,12 +175,7 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
-    // TODO: contextual marking read (e.g. all Sent threads)
-    // "set_threads_read" -> { case JsString(messageId) +: _ =>
-    //   val messageId = ExternalId[Message](messageId)
-    //   val messageTime = messagingCommander.setAllNotificationsReadBefore(socket.userId, messageId)
-    //   socket.channel.push(Json.arr("threads_read", messageId, messageTime))
-    // },
+
     // end of inbox notification/thread handlers
 
     "set_message_unread" -> { case JsString(messageId) +: _ =>
@@ -279,15 +186,6 @@ class SharedWsMessagingController @Inject() (
       val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
       contextBuilder += ("global", false)
       contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
-      implicit val context = contextBuilder.build
-      messagingCommander.setRead(socket.userId, msgExtId)
-      messagingCommander.setLastSeen(socket.userId, msgExtId)
-    },
-    "set_global_read" -> { case JsString(messageId) +: _ =>  // TODO: deprecate this handler in favor of "set_message_read" (identical code)
-      val msgExtId = ExternalId[Message](messageId)
-      val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
-      contextBuilder += ("global", true)
-      contextBuilder += ("category", NotificationCategory.User.ANNOUNCEMENT.category) // TODO: Get category from json
       implicit val context = contextBuilder.build
       messagingCommander.setRead(socket.userId, msgExtId)
       messagingCommander.setLastSeen(socket.userId, msgExtId)
@@ -310,7 +208,7 @@ class SharedWsMessagingController @Inject() (
       )
       //TEMPORARY STOP GAP
       val eventName = (eventJson \ "eventName").as[String]
-      if (sideEffectingEvents.contains(eventName)) shoebox.logEvent(socket.userId, eventJson)
+      if (eventName == "sliderShown") shoebox.logEvent(socket.userId, eventJson)
       //else discard!
     }
   )
