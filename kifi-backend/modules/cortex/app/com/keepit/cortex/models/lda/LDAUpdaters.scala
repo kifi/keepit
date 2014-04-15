@@ -30,3 +30,12 @@ class LDAURIFeatureUpdatePluginImpl @Inject()(
   discovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
 ) extends BaseFeatureUpdatePlugin[Id[NormalizedURI], NormalizedURI, DenseLDA](actor, discovery) with LDAURIFeatureUpdatePlugin
+
+@Singleton
+class LDAURIFeatureRetriever @Inject()(
+  featureStore: LDAURIFeatureStore,
+  commitStore: LDAURIFeatureCommitStore,
+  uriPuller: URIPuller
+) extends FeatureRetrieval(featureStore, commitStore, uriPuller) {
+  override def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get
+}
