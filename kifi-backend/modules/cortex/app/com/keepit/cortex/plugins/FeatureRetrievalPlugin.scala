@@ -1,45 +1,53 @@
 package com.keepit.cortex.plugins
 
-import com.keepit.cortex.core.FeatureRepresentation
-import com.keepit.cortex.core.StatModel
-import com.keepit.cortex.store.CommitInfoStore
-import com.keepit.cortex.store.VersionedStore
 import com.keepit.common.db.SequenceNumber
-import com.keepit.cortex.core.FeatureRepresenter
-import com.keepit.cortex.store.FeatureStoreSequenceNumber
-import com.keepit.cortex.store.CommitInfoKey
+import com.keepit.cortex.core.{FeatureRepresentation, ModelVersion, StatModel}
+import com.keepit.cortex.store.{CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore}
 
 trait FeatureRetrievalPlugin
 
 abstract class FeatureRetrieval[K, T, M <: StatModel](
-  representer: FeatureRepresenter[T, M],
   featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
 ){
   protected def genFeatureKey(datum: T): K
 
-  private def getFeatureStoreSeq(): FeatureStoreSequenceNumber[T, M] = {
-    val commitKey = CommitInfoKey[T, M](representer.version)
+  private def getFeatureStoreSeq(version: ModelVersion[M]): FeatureStoreSequenceNumber[T, M] = {
+    val commitKey = CommitInfoKey[T, M](version)
     commitInfoStore.get(commitKey) match {
       case Some(info) => info.seq
       case None => FeatureStoreSequenceNumber[T, M](-1L)
     }
   }
 
-  def getByKey(key: K): Option[FeatureRepresentation[T, M]] = {
-    featureStore.get(key, representer.version)
+  def getByKey(key: K, version: ModelVersion[M]): Option[FeatureRepresentation[T, M]] = {
+    featureStore.get(key, version)
   }
 
-  def getBetween(lowSeq: SequenceNumber[T], highSeq: SequenceNumber[T]): Seq[(T, FeatureRepresentation[T, M])] = {
-    val featSeq = getFeatureStoreSeq()
-    val entities = if (featSeq.value < highSeq.value) dataPuller.getBetween(lowSeq, SequenceNumber[T](featSeq.value)) else dataPuller.getBetween(lowSeq, highSeq)
+  private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
     entities.flatMap{ ent =>
       val key = genFeatureKey(ent)
-      featureStore.get(key, representer.version) match {
+      featureStore.get(key, version) match {
         case Some(rep) => Some(ent, rep)
         case None => None
       }
     }
+  }
+
+  def getSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+    val featSeq = getFeatureStoreSeq(version)
+    if (lowSeq.value >= featSeq.value) Seq()
+    else {
+      val entities = dataPuller.getSince(lowSeq, fetchSize)
+      getFeatureForEntities(entities, version)
+    }
+  }
+
+  def getBetween(lowSeq: SequenceNumber[T], highSeq: SequenceNumber[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+    val featSeq = getFeatureStoreSeq(version)
+    val highSeqCap = SequenceNumber[T](highSeq.value min featSeq.value)
+    val entities = dataPuller.getBetween(lowSeq, highSeqCap)
+    getFeatureForEntities(entities, version)
   }
 }
