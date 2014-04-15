@@ -99,3 +99,26 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 
 class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+
+case class BasicUserWithUserId(
+  id: Id[User],
+  firstName: String,
+  lastName: String,
+  pictureName: String
+) extends BasicUserLikeEntity
+
+object BasicUserWithUserId {
+  implicit val userIdFormat = Id.format[User]
+
+  implicit val basicUserWithUserIdFormat = (
+      (__ \ 'id).format[Id[User]] and
+      (__ \ 'firstName).format[String] and
+      (__ \ 'lastName).format[String] and
+      (__ \ 'pictureName).format[String]
+  )(BasicUserWithUserId.apply, unlift(BasicUserWithUserId.unapply))
+
+  def fromBasicUserAndId(user: BasicUser, id: Id[User]): BasicUserWithUserId = {
+    BasicUserWithUserId(id, user.firstName, user.lastName, user.pictureName)
+  }
+}
