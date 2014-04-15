@@ -425,41 +425,6 @@ class MessagingCommander @Inject() (
     }, Some("Adding Participants to Thread"))
   }
 
-  def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
-    if (m.user.isEmpty) {
-      val modifiedMessage = m.auxData match {
-        case Some(auxData) =>
-          val auxModifiedFuture = auxData.value match {
-            case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ =>
-              val addedUsers = jsAddedUsers.map(id => Id[User](id.as[Long]))
-              val adderUserId = Id[User](jsAdderUserId.toLong)
-              new SafeFuture(shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
-                val adderUser = basicUsers(adderUserId)
-                val addedBasicUsers = addedUsers.map(u => basicUsers(u))
-                val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
-                  case first :: Nil => first
-                  case first :: second :: Nil => first + " and " + second
-                  case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
-                }
-
-                val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
-                (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
-              })
-            case s =>
-              Promise.successful(("", Json.arr())).future
-          }
-          auxModifiedFuture.map { case (text, aux) =>
-            m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
-          }
-        case None =>
-          Promise.successful(m).future
-      }
-      modifiedMessage
-    } else {
-      Promise.successful(m).future
-    }
-  }
-
   def setRead(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
     val (message: Message, thread: MessageThread) = db.readOnly { implicit session =>
       val message = messageRepo.get(msgExtId)
@@ -574,7 +539,7 @@ class MessagingCommander @Inject() (
       }
     }
     res.flatMap{ fut => fut.flatMap { case (message, threadInfoOpt, messages) =>
-        Future.sequence(messages.map(modifyMessageWithAuxData)).map( (message, threadInfoOpt, _) )
+        Future.sequence(messages.map(messagingUtils.modifyMessageWithAuxData)).map( (message, threadInfoOpt, _) )
       }
     }
   }
