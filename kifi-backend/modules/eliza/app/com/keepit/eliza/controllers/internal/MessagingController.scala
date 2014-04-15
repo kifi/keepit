@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.internal
 
 import com.keepit.eliza._
 import com.keepit.eliza.model._
-import com.keepit.eliza.commanders.MessagingCommander
+import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
 import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
@@ -64,7 +64,8 @@ class MessagingController @Inject() (
     db: Database,
     uriNormalizationUpdater: UriNormalizationUpdater,
     messagingCommander: MessagingCommander,
-    messagingIndexCommander: MessagingIndexCommander)
+    messagingIndexCommander: MessagingIndexCommander,
+    notificationCommander: NotificationCommander)
   extends ElizaServiceController with Logging {
 
   //for indexing data requests
@@ -86,7 +87,7 @@ class MessagingController @Inject() (
     val sticky   : Boolean        =  (data \ "sticky").as[Boolean]
     val category : NotificationCategory =  (data \ "category").as[NotificationCategory]
 
-    Ok(messagingCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category).id.toString)
+    Ok(notificationCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category).id.toString)
 
   }
 

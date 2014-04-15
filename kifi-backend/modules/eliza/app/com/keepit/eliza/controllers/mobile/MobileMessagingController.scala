@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.mobile
 
 import com.keepit.social.BasicUserLikeEntity._
-import com.keepit.eliza.commanders.MessagingCommander
+import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
 import com.keepit.eliza.model.MessageThread
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
@@ -22,6 +22,7 @@ import com.keepit.social.{BasicUserLikeEntity, BasicUser}
 
 class MobileMessagingController @Inject() (
   messagingCommander: MessagingCommander,
+  notificationCommander: NotificationCommander,
   actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory
   ) extends MobileController(actionAuthenticator) with ElizaServiceController {
@@ -29,9 +30,9 @@ class MobileMessagingController @Inject() (
   def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        messagingCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt)
+        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt)
       case None =>
-        messagingCommander.getLatestSendableNotifications(request.userId, howMany.toInt)
+        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt)
     }
     noticesFuture.map {notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)

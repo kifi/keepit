@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.shared
 
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.MessagingCommander
+import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
 import com.keepit.common.db.{ExternalId, State}
 import com.keepit.model.{NotificationCategory, User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
@@ -29,6 +29,7 @@ import com.keepit.common.shutdown.ShutdownCommander
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
+    notificationCommander: NotificationCommander,
     actionAuthenticator: ActionAuthenticator,
     protected val websocketRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
@@ -99,18 +100,18 @@ class SharedWsMessagingController @Inject() (
     // mustn't forget about mobile
 
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
-      messagingCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map { notices =>
+      notificationCommander.getLatestSendableNotificationsNotJustFromMe(socket.userId, howMany.toInt).map { notices =>
         val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
         socket.channel.push(Json.arr("notifications", notices.jsons, numUnreadUnmuted, END_OF_TIME))
       }
     },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
-      messagingCommander.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time)).map { notices =>
+      notificationCommander.getSendableNotificationsNotJustFromMeSince(socket.userId, parseStandardTime(time)).map { notices =>
         socket.channel.push(Json.arr("missed_notifications", notices.jsons, currentDateTime))
       }
     },
     "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
-      val fut = messagingCommander.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      val fut = notificationCommander.getSendableNotificationsNotJustFromMeBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -120,7 +121,8 @@ class SharedWsMessagingController @Inject() (
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)
-      val lastModified = messagingCommander.setAllNotificationsReadBefore(socket.userId, messageId)
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
+      val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmuted)
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
     // warning: get_thread_info returns an ElizaThreadInfo, not the typical notification JSON
@@ -153,7 +155,7 @@ class SharedWsMessagingController @Inject() (
 
     // inbox notification/thread handlers
     "get_one_thread" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>
-      val fut = messagingCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId))
+      val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId))
       fut.foreach { json =>
         socket.channel.push(Json.arr(requestId.toLong, json))
       }
@@ -162,7 +164,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_latest_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      val fut = messagingCommander.getLatestSendableNotifications(socket.userId, howMany.toInt)
+      val fut = notificationCommander.getLatestSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { notices =>
         val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numUnreadUnmuted, numUnread, currentDateTime))
@@ -172,7 +174,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      val fut = messagingCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      val fut = notificationCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -181,7 +183,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_threads_since" -> { case JsNumber(requestId) +: JsString(time) +: _ => // deprecated (unused since 2.8.38)
-      val fut = messagingCommander.getSendableNotificationsSince(socket.userId, parseStandardTime(time))
+      val fut = notificationCommander.getSendableNotificationsSince(socket.userId, parseStandardTime(time))
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons, currentDateTime))
       }
@@ -190,7 +192,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_unread_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      val fut = messagingCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
+      val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { case (notices, numTotal) =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numTotal))
       }
@@ -199,7 +201,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_unread_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      val fut = messagingCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -208,7 +210,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_muted_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      val fut = messagingCommander.getLatestMutedSendableNotifications(socket.userId, howMany.toInt)
+      val fut = notificationCommander.getLatestMutedSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -217,7 +219,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_muted_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      val fut = messagingCommander.getMutedSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      val fut = notificationCommander.getMutedSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -226,7 +228,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_sent_threads" -> { case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-      val fut = messagingCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt)
+      val fut = notificationCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -235,7 +237,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_sent_threads_before" -> { case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      val fut = messagingCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      val fut = notificationCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
@@ -244,7 +246,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_page_threads" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-      val fut = messagingCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt)
+      val fut = notificationCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt)
       fut.foreach { case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
         socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.jsons, numTotal, numUnreadUnmuted))
       }
@@ -253,7 +255,7 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "get_page_threads_before" -> { case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-      val fut = messagingCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt)
+      val fut = notificationCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt)
       fut.foreach { notices =>
         socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
       }
