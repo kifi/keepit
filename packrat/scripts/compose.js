@@ -52,80 +52,56 @@ var initCompose = (function() {
   }
 
   function captureSelectionAsLink($f, r) {
-    log('================ [captureSelectionAsLink]')();
-
-    var winWidth = window.innerWidth;
-    var winHeight = window.innerHeight;
-    var rects = getRangeClientRects(r);
-    console.log('NOW:', Date.now() % 10000);
-    api.port.emit('screen_capture', rects, function (dataUrl) {
-      var $d = $f.find('.kifi-compose-draft');
-      $f.removeClass('kifi-empty');
-      var text = r.toString();
-      var $a = $('<a>', {href: 'x-kifi-sel:' + snapshot.ofRange(r, text), text: 'look\u00A0here', title: text.trim(), class: 'kifi-to-opaque'});
-      insertLookHereLink($d, $a);
-      $a.on('transitionend', function () {
-        $a.removeClass('kifi-to-opaque kifi-opaque');
-      });
-      var aRect = $a[0].getClientRects()[0];
-      var bRect = r.getBoundingClientRect();
-
+    var info = setRangeRects(r, {
+      win: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      }
+    });
+    api.port.emit('screen_capture', info, function (resp) {
       var img = new Image();
-      $(img).on('load', function () {
-        var hScale = img.naturalWidth / winWidth;
-        var vScale = img.naturalHeight / winHeight;
-
-        var $cnv = $('<canvas>').addClass('kifi-root').prop({
-          width: winWidth,
-          height: winHeight
-        });
-        var ctx = $cnv[0].getContext('2d');
-        // ctx.fillStyle = 'rgb(200,0,0)';
-        // ctx.fillRect(0, 0, winWidth, winHeight);
-        for (var i = 0; i < rects.length; i++) {
-          var rect = rects[i];
-          ctx.drawImage(
-            img,
-            rect.left * hScale,
-            rect.top * vScale,
-            rect.width * hScale,
-            rect.height * vScale,
-            rect.left,
-            rect.top,
-            rect.width,
-            rect.height);
-        }
-        img.remove();
-        $cnv.css({
+      var $img = $(img).on('load', function () {
+        $img.addClass('kifi-root').css({
           position: 'fixed',
-          left: 0,
-          top: 0,
           zIndex: 999999999993,
+          top: info.bounds.top,
+          left: info.bounds.left,
+          width: info.bounds.width,
+          height: info.bounds.height,
           transformOrigin: '0 0',
           transition: 'all .5s ease-in-out,opacity .5s ease-in'
         })
         .appendTo($('body')[0] || 'html')
         .on('transitionend', function () {
-          $(this).remove();
+          $img.remove();
           var sel = window.getSelection();
           sel.removeAllRanges();
           sel.addRange($d.data('sel'));
           $d.focus();
-        }).layout();
-        $a.layout();
+        });
         window.getSelection().removeAllRanges();
 
-        var scale = aRect.width / bRect.width;
-        $cnv.css({
-          transform: 'translate(' + aRect.left + 'px,' + aRect.top + 'px) scale(' + scale + ',' + scale + ') translate(' + -bRect.left + 'px,' + -bRect.top + 'px)',
+        $f.removeClass('kifi-empty');
+        var $d = $f.find('.kifi-compose-draft');
+        var $a = $('<a>', {href: href, text: 'look\u00A0here', title: text.trim(), class: 'kifi-to-opaque'});
+        insertLookHereLink($d, $a);
+        $a.on('transitionend', function () {
+          $a.removeClass('kifi-to-opaque kifi-opaque');
+        });
+
+        var aRect = $a[0].getClientRects()[0];
+        var bRect = info.bounds;
+        var scale = Math.min(1, aRect.width / bRect.width);
+        $img.css({
+          transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
           opacity: 0
         });
         $a.addClass('kifi-opaque');
-
-        log('================ [captureSelectionAsLink] done')();
       });
-      img.src = dataUrl;
+      img.src = resp.dataUrl;
     });
+    var text = r.toString();
+    var href = 'x-kifi-sel:' + snapshot.ofRange(r, text);
   }
 
   function insertLookHereLink($d, $a) {
@@ -183,23 +159,39 @@ var initCompose = (function() {
 
   }
 
-  function getRangeClientRects(r) {
+  function setRangeRects(r, o) {
     if (~navigator.appVersion.indexOf('Chrom')) { // crbug.com/324437
-      var crs = [];
+      var rects = [];
       var indexOf = Function.call.bind(Array.prototype.indexOf);
       for (var el = r.endContainer; el !== r.commonAncestorContainer;) {
         var sr = r.cloneRange();
         sr.setStart(el, 0);
         var parent = el.parentNode;
         r.setEnd(parent, indexOf(parent.childNodes, el));
-        crs.push.apply(crs, sr.getClientRects());
+        rects.push.apply(rects, sr.getClientRects());
         el = parent;
       }
-      crs.push.apply(crs, r.getClientRects());
-      return crs;
+      rects.push.apply(rects, r.getClientRects());
+      var bounds = rects.reduce(function (b, rect) {
+        b.top = Math.min(b.top, rect.top);
+        b.left = Math.min(b.left, rect.left);
+        b.right = Math.max(b.right, rect.right);
+        b.bottom = Math.max(b.bottom, rect.bottom);
+        return b;
+      }, {top: Infinity, left: Infinity, right: -Infinity, bottom: -Infinity});
+      bounds.width = bounds.right - bounds.left;
+      bounds.height = bounds.bottom - bounds.top;
+      o.rects = rects;
+      o.bounds = bounds;
     } else {
-      return r.getClientRects();
+      o.rects = $.map(r.getClientRects(), rectToJson);
+      o.bounds = rectToJson(r.getBoundingClientRect());
     }
+    return o;
+  }
+
+  function rectToJson(rect) {
+    return $.extend({}, rect);
   }
 
   function elementSelfOrParent(node) {

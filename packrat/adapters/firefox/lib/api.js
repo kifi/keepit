@@ -247,6 +247,10 @@ exports.requestUpdateCheck = function () {
   }
 };
 
+exports.screenshot = function (callback) {
+  callback(screenshot.takeToCanvas(), screenshot.createBlankCanvas());
+};
+
 const {SocketCommander} = require('./socket_commander');
 var socketPage, socketCommanders = {}, nextSocketId = 1;
 exports.socket = {
@@ -428,10 +432,8 @@ exports.tabs = {
     if (tab) {
       tab.reload();
     }
-  },
-  screenshot: function (callback) {
-    callback(screenshot.take());
-  }};
+  }
+};
 
 exports.timers = {
   setTimeout: function (f, ms) {

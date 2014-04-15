@@ -561,6 +561,13 @@ var api = (function createApi() {
         }));
       }
     },
+    screenshot: function (callback) {
+      chrome.tabs.captureVisibleTab(null, function (dataUri) {
+        var img = document.createElement('img');
+        img.src = dataUri;
+        callback(img, document.createElement('canvas'));
+      });
+    },
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
         log('[api.socket.open]', url)();
@@ -671,9 +678,6 @@ var api = (function createApi() {
       },
       reload: function (tabId) {
         chrome.tabs.reload(tabId, {bypassCache: false});
-      },
-      screenshot: function (callback) {
-        chrome.tabs.captureVisibleTab(null, callback);
       }
     },
     toggleLogging: function (bool) {

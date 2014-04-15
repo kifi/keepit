@@ -756,8 +756,31 @@ api.port.on({
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
     mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
   },
-  screen_capture: function (rects, respond) {
-    api.tabs.screenshot(respond);
+  screen_capture: function (data, respond) {
+    api.screenshot(function (drawableEl, canvas) {
+      var bounds = data.bounds;
+      var hScale = drawableEl.width / data.win.width;
+      var vScale = drawableEl.height / data.win.height;
+      canvas.width = bounds.width;
+      canvas.height = bounds.height;
+      var ctx = canvas.getContext('2d');
+      // ctx.fillStyle = 'rgb(200,0,0)';
+      // ctx.fillRect(0, 0, winWidth, winHeight);
+      for (var i = 0; i < data.rects.length; i++) {
+        var rect = data.rects[i];
+        ctx.drawImage(
+          drawableEl,
+          rect.left * hScale,
+          rect.top * vScale,
+          rect.width * hScale,
+          rect.height * vScale,
+          rect.left - bounds.left,
+          rect.top - bounds.top,
+          rect.width,
+          rect.height);
+      }
+      respond({dataUrl: canvas.toDataURL('image/png')});
+    });
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
