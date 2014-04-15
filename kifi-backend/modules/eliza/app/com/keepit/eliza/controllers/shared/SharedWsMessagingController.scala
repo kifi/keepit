@@ -176,6 +176,12 @@ class SharedWsMessagingController @Inject() (
         socket.channel.push(Json.arr("server_error", requestId.toLong))
       }
     },
+    "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
+       val messageId = ExternalId[Message](notifId)
+       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
+       val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmuted)
+       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
+    },
 
     // end of inbox notification/thread handlers
 

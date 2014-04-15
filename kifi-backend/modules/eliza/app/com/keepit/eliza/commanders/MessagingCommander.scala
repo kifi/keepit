@@ -90,13 +90,6 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def getThreadInfo(userId: Id[User], threadExtId: ExternalId[MessageThread]): ElizaThreadInfo = {
-    val thread = db.readOnly { implicit session =>
-      threadRepo.get(threadExtId)
-    }
-    buildThreadInfos(userId, Seq(thread), None).head
-  }
-
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map {
       case Left(nUri) =>
