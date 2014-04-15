@@ -388,24 +388,6 @@ class NotificationCommander @Inject() (
     })
   }
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int): Future[Notifications] = {
-    notificationUpdater.update(db.readOnly { implicit session =>
-      userThreadRepo.getLatestSendableNotificationsNotJustFromMe(userId, howMany)
-    })
-  }
-
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
-    notificationUpdater.update(db.readOnly { implicit session =>
-      userThreadRepo.getSendableNotificationsNotJustFromMeBefore(userId, time, howMany)
-    })
-  }
-
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime): Future[Notifications] = {
-    notificationUpdater.update(db.readOnly { implicit session =>
-      userThreadRepo.getSendableNotificationsNotJustFromMeSince(userId, time)
-    })
-  }
-
   def getLatestSendableNotifications(userId: Id[User], howMany: Int): Future[Notifications] = {
     notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getLatestSendableNotifications(userId, howMany)
@@ -415,12 +397,6 @@ class NotificationCommander @Inject() (
   def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
     notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getSendableNotificationsBefore(userId, time, howMany)
-    })
-  }
-
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime): Future[Notifications] = {
-    notificationUpdater.update(db.readOnly { implicit session =>
-      userThreadRepo.getSendableNotificationsSince(userId, time)
     })
   }
 
@@ -443,18 +419,6 @@ class NotificationCommander @Inject() (
   def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
     notificationUpdater.update(db.readOnly { implicit session =>
       userThreadRepo.getUnreadSendableNotificationsBefore(userId, time, howMany)
-    })
-  }
-
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int): Future[Notifications] = {
-    notificationUpdater.update(db.readOnly { implicit session =>
-      userThreadRepo.getLatestMutedSendableNotifications(userId, howMany)
-    })
-  }
-
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Notifications] = {
-    notificationUpdater.update(db.readOnly { implicit session =>
-      userThreadRepo.getMutedSendableNotificationsBefore(userId, time, howMany)
     })
   }
 
