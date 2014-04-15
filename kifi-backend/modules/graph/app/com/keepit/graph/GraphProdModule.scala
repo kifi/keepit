@@ -19,8 +19,7 @@ case class GraphProdModule() extends GraphModule with CommonProdModule {
     def servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.ABOOK :: Nil
   }
 
-  @Singleton
-  @Provides
+  @Provides @Singleton
   def graphInboxQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo): SQSQueue[GraphUpdate] = {
     val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
     client.formatted[GraphUpdate](QueueName("graph-inbox-prod-b-" + amazonInstanceInfo.instanceId.id), true)
