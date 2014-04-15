@@ -102,7 +102,8 @@ class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermo
 
 
 case class BasicUserWithUserId(
-  id: Id[User],
+  userid: Id[User],
+  externalId: ExternalId[User],
   firstName: String,
   lastName: String,
   pictureName: String
@@ -110,15 +111,17 @@ case class BasicUserWithUserId(
 
 object BasicUserWithUserId {
   implicit val userIdFormat = Id.format[User]
+  implicit val userExternalIdFormat = ExternalId.format[User]
 
   implicit val basicUserWithUserIdFormat = (
-      (__ \ 'id).format[Id[User]] and
+      (__ \ 'userid).format[Id[User]] and
+      (__ \'externalId).format[ExternalId[User]] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
       (__ \ 'pictureName).format[String]
   )(BasicUserWithUserId.apply, unlift(BasicUserWithUserId.unapply))
 
   def fromBasicUserAndId(user: BasicUser, id: Id[User]): BasicUserWithUserId = {
-    BasicUserWithUserId(id, user.firstName, user.lastName, user.pictureName)
+    BasicUserWithUserId(id, user.externalId, user.firstName, user.lastName, user.pictureName)
   }
 }
