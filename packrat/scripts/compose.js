@@ -52,6 +52,8 @@ var initCompose = (function() {
   }
 
   function captureSelectionAsLink($f, r) {
+    log('================ [captureSelectionAsLink]')();
+
     var winWidth = window.innerWidth;
     var winHeight = window.innerHeight;
     var rects = getRangeClientRects(r);
@@ -60,65 +62,69 @@ var initCompose = (function() {
       var $d = $f.find('.kifi-compose-draft');
       $f.removeClass('kifi-empty');
       var text = r.toString();
-      var $a = $('<a>', {href: 'x-kifi-sel:' + snapshot.ofRange(r, text), text: 'look\u00A0here', title: text.trim(), className: 'kifi-to-opaque'});
+      var $a = $('<a>', {href: 'x-kifi-sel:' + snapshot.ofRange(r, text), text: 'look\u00A0here', title: text.trim(), class: 'kifi-to-opaque'});
       insertLookHereLink($d, $a);
       $a.on('transitionend', function () {
         $a.removeClass('kifi-to-opaque kifi-opaque');
       });
-      var aRect = $a[0].getBoundingClientRect();
+      var aRect = $a[0].getClientRects()[0];
       var bRect = r.getBoundingClientRect();
 
       var img = new Image();
+      $(img).on('load', function () {
+        var hScale = img.naturalWidth / winWidth;
+        var vScale = img.naturalHeight / winHeight;
+
+        var $cnv = $('<canvas>').addClass('kifi-root').prop({
+          width: winWidth,
+          height: winHeight
+        });
+        var ctx = $cnv[0].getContext('2d');
+        // ctx.fillStyle = 'rgb(200,0,0)';
+        // ctx.fillRect(0, 0, winWidth, winHeight);
+        for (var i = 0; i < rects.length; i++) {
+          var rect = rects[i];
+          ctx.drawImage(
+            img,
+            rect.left * hScale,
+            rect.top * vScale,
+            rect.width * hScale,
+            rect.height * vScale,
+            rect.left,
+            rect.top,
+            rect.width,
+            rect.height);
+        }
+        img.remove();
+        $cnv.css({
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          zIndex: 999999999993,
+          transformOrigin: '0 0',
+          transition: 'all .5s ease-in-out,opacity .5s ease-in'
+        })
+        .appendTo($('body')[0] || 'html')
+        .on('transitionend', function () {
+          $(this).remove();
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange($d.data('sel'));
+          $d.focus();
+        }).layout();
+        $a.layout();
+        window.getSelection().removeAllRanges();
+
+        var scale = aRect.width / bRect.width;
+        $cnv.css({
+          transform: 'translate(' + aRect.left + 'px,' + aRect.top + 'px) scale(' + scale + ',' + scale + ') translate(' + -bRect.left + 'px,' + -bRect.top + 'px)',
+          opacity: 0
+        });
+        $a.addClass('kifi-opaque');
+
+        log('================ [captureSelectionAsLink] done')();
+      });
       img.src = dataUrl;
-      // img.style.cssText = 'position:fixed;top:0;left:0;height:400px;width:600px;border:1px solid green';
-      // document.body.appendChild(img);
-      var hScale = img.naturalWidth / winWidth;
-      var vScale = img.naturalHeight / winHeight;
-
-      var cnv = document.createElement('canvas');
-      cnv.className = 'kifi-root';
-      var prefix = 'transform' in cnv.style ? '' : 'webkit';
-      $(cnv).css({
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        zIndex: 999999999993,
-        transformOrigin: '0 0',
-        transition: (prefix ? '-' + prefix + '-' : '') + 'transform 1s ease-in-out,opacity 1s ease-in'
-      });
-      cnv.width = winWidth;
-      cnv.height = winHeight;
-      var ctx = cnv.getContext('2d');
-      for (var i = 0; i < rects.length; i++) {
-        var rect = rects[i];
-        ctx.drawImage(
-          img,
-          rect.left * hScale,
-          rect.top * vScale,
-          rect.width * hScale,
-          rect.height * vScale,
-          rect.left,
-          rect.top,
-          rect.width,
-          rect.height);
-      }
-      document.body.appendChild(cnv);
-
-      $a.layout().addClass('kifi-opaque');
-
-      var scale = aRect.width / bRect.width;
-      $(cnv).on('transitionend', function () {
-        $(this).remove();
-        var sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange($d.data('sel'));
-        $d.focus();
-      }).css({
-        transform: 'translate(' + aRect.left + 'px,' + aRect.top + 'px) scale(' + scale + ',' + scale + ') translate(' + -bRect.left + 'px,' + -bRect.top + 'px)',
-        opacity: 0
-      });
-
-      console.log('NEW:', Date.now() % 10000);
     });
   }
 

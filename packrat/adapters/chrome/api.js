@@ -669,9 +669,13 @@ var api = (function createApi() {
         loading: new Listeners,
         unload: new Listeners
       },
-      reload: function(tabId) {
+      reload: function (tabId) {
         chrome.tabs.reload(tabId, {bypassCache: false});
-      }},
+      },
+      screenshot: function (callback) {
+        chrome.tabs.captureVisibleTab(null, callback);
+      }
+    },
     toggleLogging: function (bool) {
       doLogging = bool;
     },

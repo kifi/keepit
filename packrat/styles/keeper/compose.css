@@ -48,7 +48,7 @@
   text-decoration: underline;
 }
 .kifi-compose-draft>.kifi-to-opaque {
-  transition: opacity .3s linear .7s;
+  transition: opacity .2s linear .3s;
   opacity: 0;
 }
 .kifi-compose-draft>.kifi-to-opaque.kifi-opaque {

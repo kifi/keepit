@@ -42,6 +42,7 @@ const icon = require('./icon');
 const windows = require('sdk/windows').browserWindows;
 const tabs = require('sdk/tabs');
 const workerNs = require('sdk/core/namespace').ns();
+const screenshot = require('./screenshot');
 
 const httpRe = /^https?:/;
 
@@ -427,6 +428,9 @@ exports.tabs = {
     if (tab) {
       tab.reload();
     }
+  },
+  screenshot: function (callback) {
+    callback(screenshot.take());
   }};
 
 exports.timers = {

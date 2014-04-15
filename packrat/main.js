@@ -756,10 +756,8 @@ api.port.on({
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
     mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
   },
-  screen_capture: function (rects, respond, tab) {
-    chrome.tabs.captureVisibleTab(null, function (dataUrl) {
-      respond(dataUrl);
-    });
+  screen_capture: function (rects, respond) {
+    api.tabs.screenshot(respond);
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
