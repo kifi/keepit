@@ -33,7 +33,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
-  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Boolean
+  def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
   def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
 }
@@ -260,8 +260,8 @@ class KeepRepoImpl @Inject() (
     }
   }
 
-  def exists(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Boolean = {
-    (for(b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).firstOption.isDefined
+  def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
+    (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
   }
 
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]] =

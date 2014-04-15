@@ -164,6 +164,7 @@ class OrphanCleaner @Inject() (
           val (turnedActive, fixedScrapeInfo) = bookmark.state match {
             case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
             case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
+            case KeepStates.DUPLICATE => checkIntegrity(bookmark.uriId, readOnly)
           }
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1
