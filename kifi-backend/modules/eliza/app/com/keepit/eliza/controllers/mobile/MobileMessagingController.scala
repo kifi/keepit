@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.mobile
 
 import com.keepit.social.BasicUserLikeEntity._
-import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
+import com.keepit.eliza.commanders.{MessagingUtils, NotificationCommander, MessagingCommander}
 import com.keepit.eliza.model.MessageThread
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
@@ -23,6 +23,7 @@ import com.keepit.social.{BasicUserLikeEntity, BasicUser}
 class MobileMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   notificationCommander: NotificationCommander,
+  messagingUtils: MessagingUtils,
   actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory
   ) extends MobileController(actionAuthenticator) with ElizaServiceController {
@@ -83,7 +84,7 @@ class MobileMessagingController @Inject() (
       messagingCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) flatMap { case (thread, msgs) =>
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         val msgsWithModifiedAuxData = msgs.map { m =>
-          messagingCommander.modifyMessageWithAuxData(m)
+          messagingUtils.modifyMessageWithAuxData(m)
         }
         Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
           Ok(Json.obj("id" -> threadId, "uri" -> url, "messages" -> completeMsgs.reverse))
@@ -96,7 +97,7 @@ class MobileMessagingController @Inject() (
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
       val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
       val msgsWithModifiedAuxData = msgs.map { m =>
-        messagingCommander.modifyMessageWithAuxData(m)
+        messagingUtils.modifyMessageWithAuxData(m)
       }
       Future.sequence(msgsWithModifiedAuxData).map { completeMsgs =>
         val participants: Set[BasicUserLikeEntity] = completeMsgs.map(_.participants).flatten.toSet

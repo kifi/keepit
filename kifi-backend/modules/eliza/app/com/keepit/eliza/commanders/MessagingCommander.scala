@@ -14,7 +14,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.social.BasicUser
 
 import org.joda.time.DateTime
 
@@ -45,7 +45,8 @@ class MessagingCommander @Inject() (
   shoebox: ShoeboxServiceClient,
   airbrake: AirbrakeNotifier,
   notificationCommander: NotificationCommander,
-  notificationUpdater: NotificationUpdater) extends Logging {
+  notificationUpdater: NotificationUpdater,
+  messagingUtils: MessagingUtils) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -132,7 +133,7 @@ class MessagingCommander @Inject() (
         db.readWrite { implicit session =>
           userThreadRepo.delete(userThread)
         }
-        notificationCommander.sendToUser(userThread.user, Json.arr("remove_thread", threadExtId.id))
+        notificationCommander.notifyRemoveThread(userThread.user, threadExtId)
       }
     }
   }
@@ -276,7 +277,7 @@ class MessagingCommander @Inject() (
     )
 
     thread.participants.map(_.allUsers.par.foreach { user =>
-      notificationCommander.sendToUser(user, Json.arr("message", message.threadExtId.id, messageWithBasicUser))
+      notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
     })
 
     setLastSeen(from, thread.id.get, Some(message.createdAt))
@@ -300,24 +301,7 @@ class MessagingCommander @Inject() (
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-
-    val notifJson = notificationCommander.buildMessageNotificationJson(
-      message = message,
-      thread = thread,
-      messageWithBasicUser = orderedMessageWithBasicUser,
-      locator = "/messages/" + thread.externalId,
-      unread = false,
-      originalAuthorIdx = originalAuthor,
-      unseenAuthors = 0,
-      numAuthors = numAuthors,
-      numMessages = numMessages,
-      numUnread = numUnread,
-      muted = false)
-    db.readWrite(attempts=2) { implicit session =>
-      userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
-    }
-    notificationCommander.sendToUser(from, Json.arr("notification", notifJson))
-
+    notificationCommander.notifySendMessage(from, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
@@ -433,58 +417,7 @@ class MessagingCommander @Inject() (
           }
         }
 
-        new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
-          val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
-          val theTitle: String = thread.pageTitle.getOrElse("New conversation")
-          val participants: Seq[BasicUserLikeEntity] = basicUsers.values.toSeq ++ thread.participants.get.allNonUsers.map(NonUserParticipant.toBasicNonUser).toSeq
-          val notificationJson = Json.obj(
-            "id"           -> message.externalId.id,
-            "time"         -> message.createdAt,
-            "thread"       -> thread.externalId.id,
-            "text"         -> s"$adderUserName added you to a conversation.",
-            "url"          -> thread.nUrl,
-            "title"        -> theTitle,
-            "author"       -> basicUsers(adderUserId),
-            "participants" -> participants,
-            "locator"      -> ("/messages/" + thread.externalId),
-            "unread"       -> true,
-            "category"     -> NotificationCategory.User.MESSAGE.category
-          )
-          db.readWrite { implicit session =>
-            // todo: Add adding non-users
-            newParticipants.map { pUserId =>
-              userThreadRepo.save(UserThread(
-                id = None,
-                user = pUserId,
-                thread = thread.id.get,
-                uriId = thread.uriId,
-                lastSeen = None,
-                unread = true,
-                lastMsgFromOther = None,
-                lastNotification = JsNull
-              ))
-            }
-          }
-
-          Future.sequence(newParticipants.map { userId =>
-            notificationCommander.recreateNotificationForAddedParticipant(userId, thread)
-          }) map { permanentNotifications =>
-            newParticipants.zip(permanentNotifications) map { case (userId, permanentNotification) =>
-              notificationCommander.sendToUser(
-                userId, Json.arr("notification", notificationJson, permanentNotification)
-              )
-            }
-            val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
-            modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
-              thread.participants.map(_.allUsers.par.foreach { userId =>
-                notificationCommander.sendToUser(
-                  userId, Json.arr("message", thread.externalId.id, augmentedMessage)
-                )
-                notificationCommander.sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
-              })
-            }
-          }
-        })
+        notificationCommander.notifyAddParticipants(newParticipants, thread, message, adderUserId)
 
         messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
         true
