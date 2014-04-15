@@ -141,11 +141,6 @@ var tile = tile || function() {  // idempotent for Chrome
         api.port.emit('toggle_mode');
         // not claiming this key binding for all users, so no e.preventDefault()
         break;
-      case 77: // m
-        api.port.emit('unsilence');
-        loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages'});
-        e.preventDefault();
-        break;
       case 79: // o
         api.port.emit('unsilence');
         loadAndDo('pane', 'show', {trigger: 'key', locator: '/messages:all'});
