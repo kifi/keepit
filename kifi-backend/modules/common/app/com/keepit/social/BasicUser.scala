@@ -102,7 +102,7 @@ class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermo
 
 
 case class BasicUserWithUserId(
-  userid: Id[User],
+  userId: Id[User],
   externalId: ExternalId[User],
   firstName: String,
   lastName: String,
@@ -114,7 +114,7 @@ object BasicUserWithUserId {
   implicit val userExternalIdFormat = ExternalId.format[User]
 
   implicit val basicUserWithUserIdFormat = (
-      (__ \ 'userid).format[Id[User]] and
+      (__ \ 'userId).format[Id[User]] and
       (__ \'externalId).format[ExternalId[User]] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
