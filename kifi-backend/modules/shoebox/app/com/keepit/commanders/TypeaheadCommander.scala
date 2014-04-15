@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.social.{BasicUser, SocialNetworkType, SocialNetworks}
+import com.keepit.social.{BasicUserWithUserId, BasicUser, SocialNetworkType, SocialNetworks}
 import scala.concurrent.Future
 import play.api.libs.json._
 import com.keepit.typeahead.TypeaheadHit
@@ -203,7 +203,7 @@ class TypeaheadCommander @Inject()(
   private def fetchAll(socialF: Future[Option[Seq[TypeaheadHit[SocialUserBasicInfo]]]],
                        kifiF: Future[Option[Seq[TypeaheadHit[User]]]],
                        abookF: Future[Option[Seq[TypeaheadHit[EContact]]]],
-                       nfUsersF: Future[Seq[TypeaheadHit[BasicUser]]]) = {
+                       nfUsersF: Future[Seq[TypeaheadHit[BasicUserWithUserId]]]) = {
     for {
       socialHitsOpt <- socialF
       kifiHitsOpt <- kifiF
@@ -249,7 +249,7 @@ class TypeaheadCommander @Inject()(
     }
     val kifiF = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
     val abookF = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
-    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeahead(userId, q, limit.getOrElse(100), filter = "nf")
+    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limit.getOrElse(100), filter = "nf")
 
     limit match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
@@ -347,13 +347,10 @@ class TypeaheadCommander @Inject()(
             } else None
             ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
           case SocialNetworks.FORTYTWO_NF =>
-            val bu = hit.info.asInstanceOf[BasicUser] // todo: uptake User API from search
+            val bu = hit.info.asInstanceOf[BasicUserWithUserId] // todo: uptake User API from search
             val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
             val picUrl = if (pictureUrl) Some(bu.pictureName) else None
-            val nfUserOpt = db.readOnly { implicit ro => userRepo.getOpt(bu.externalId) }
-            val frOpt = nfUserOpt flatMap { nfUser =>
-              frMap.get(nfUser.id.get)
-            }
+            val frOpt = frMap.get(bu.userId)
             ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt))
         }
     }
