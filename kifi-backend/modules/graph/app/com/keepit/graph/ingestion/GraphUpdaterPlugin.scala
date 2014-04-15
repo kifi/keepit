@@ -21,7 +21,7 @@ trait GraphUpdater[G <: GraphManager] {
   def process(updates: Seq[SQSMessage[GraphUpdate]]): Unit = {
     val relevantUpdates = updates.collect { case SQSMessage(update, _, _) if update.seq > state.getCurrentSequenceNumber(update.kind) => update }
     graph.write { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(processUpdate(_)) }
-    state.updateWith(relevantUpdates) // todo(Léo): add transaction callback capabilities to GraphWriter (cf SessionWrapper)
+    state.commit(relevantUpdates) // todo(Léo): add transaction callback capabilities to GraphWriter (cf SessionWrapper)
     updates.foreach(_.consume)
   }
 
