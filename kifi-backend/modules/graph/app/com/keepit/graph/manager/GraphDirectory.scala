@@ -1,4 +1,4 @@
-package com.keepit.graph.ingestion
+package com.keepit.graph.manager
 
 import java.io.File
 import com.keepit.common.store._

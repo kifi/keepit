@@ -1,4 +1,4 @@
-package com.keepit.graph.ingestion
+package com.keepit.graph.manager
 
 import com.kifi.franz.{SQSMessage, SQSQueue}
 import scala.concurrent.Future

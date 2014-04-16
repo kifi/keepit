@@ -1,6 +1,6 @@
-package com.keepit.graph
+package com.keepit.graph.manager
 
-import com.keepit.graph.ingestion.{GraphUpdaterState, GraphUpdate}
+import com.keepit.graph.manager.{GraphUpdaterState, GraphUpdate}
 import com.keepit.graph.model.GraphReader
 
 trait GraphManager {

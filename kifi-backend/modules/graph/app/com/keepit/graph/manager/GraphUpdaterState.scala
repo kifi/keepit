@@ -1,4 +1,4 @@
-package com.keepit.graph.ingestion
+package com.keepit.graph.manager
 
 import com.keepit.common.db.SequenceNumber
 import play.api.libs.json._

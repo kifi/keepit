@@ -10,7 +10,7 @@ import com.kifi.franz.{SimpleSQSClient, QueueName, SQSQueue}
 
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions._
-import com.keepit.graph.ingestion.GraphUpdate
+import com.keepit.graph.manager.GraphUpdate
 
 case class GraphDevModule() extends GraphModule with CommonDevModule {
 
