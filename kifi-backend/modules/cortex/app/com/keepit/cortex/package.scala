@@ -2,6 +2,7 @@ package com.keepit
 
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.word2vec.Word2Vec
 
 
 package object cortex {
@@ -10,10 +11,12 @@ package object cortex {
 
   object ModelVersions {
     val denseLDAVersion = ModelVersion[DenseLDA](1)
+    val word2vecVersion = ModelVersion[Word2Vec](1)
   }
 
   object ModelStorePrefix {
     val denseLDA = "stat_models/dense_lda/"
+    val word2vec = "stat_models/word2vec/"
   }
 
   object FeatureStorePrefix {
