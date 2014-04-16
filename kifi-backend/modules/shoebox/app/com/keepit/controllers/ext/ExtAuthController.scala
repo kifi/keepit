@@ -7,7 +7,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
@@ -42,7 +42,7 @@ class ExtAuthController @Inject() (
   linkedIn: LinkedInSocialGraph)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  private val crypt = new SimpleDESCrypt
+  private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def start = JsonAction.authenticatedParseJson { implicit request =>

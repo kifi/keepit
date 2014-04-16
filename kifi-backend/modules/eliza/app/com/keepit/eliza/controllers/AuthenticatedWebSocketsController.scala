@@ -11,7 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.commanders.RemoteUserExperimentCommander
 import scala.util.Try
 
@@ -72,7 +72,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected def onDisconnect(socket: SocketInfo) : Unit
   protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
 
-  protected val crypt = new SimpleDESCrypt
+  protected val crypt = new RatherInsecureDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {

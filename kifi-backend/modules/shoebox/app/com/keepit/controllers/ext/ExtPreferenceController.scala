@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 import com.keepit.classify.{DomainRepo, Domain, DomainStates}
 import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator}
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.ElectronicMailCategory
@@ -49,7 +49,7 @@ class ExtPreferenceController @Inject() (
       (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
     )(unlift(UserPrefs.unapply))
 
-  private val crypt = new SimpleDESCrypt
+  private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = JsonAction.authenticated { request =>
