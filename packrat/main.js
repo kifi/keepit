@@ -779,7 +779,7 @@ api.port.on({
           rect.width,
           rect.height);
       }
-      respond({dataUrl: canvas.toDataURL('image/png')});
+      respond(canvas.toDataURL('image/png'));
     });
   },
   load_draft: function (data, respond, tab) {

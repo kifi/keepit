@@ -245,7 +245,7 @@ var snapshot = function () {
         generateSelector(ane),
         sce === ane ? '' : generateSelector(sce, ane, null),
         sc === sce ? so : indexOf(sce.childNodes, sc) + ':' + so,
-        ece === sce ? '' : generateSelector(ece, ane, null),
+        ece === ane ? '' : generateSelector(ece, ane, null),
         ec === ece ? eo : indexOf(ece.childNodes, ec) + ':' + eo,
         text  // TODO: proper escaping  // TODO: identify text node boundaries?
       ].join('|');
@@ -256,7 +256,7 @@ var snapshot = function () {
       var ane = snapshot.fuzzyFind(parts[0]);
       if (ane) {
         var sce = parts[1] ? ane.querySelector(':scope>' + parts[1]) : ane;
-        var ece = parts[3] ? ane.querySelector(':scope>' + parts[3]) : sce;
+        var ece = parts[3] ? ane.querySelector(':scope>' + parts[3]) : ane;
         if (sce && ece) {
           var sos = parts[2].split(':');
           var eos = parts[4].split(':');

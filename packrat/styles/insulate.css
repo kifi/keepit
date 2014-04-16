@@ -285,13 +285,13 @@
   font: inherit !important;
 }
 .kifi-root.kifi-root ::selection {
-  background: #b2d3ff;
+  background: rgba(128,184,255,.59);
   color: initial;
   text-shadow: initial;
 }
 .kifi-root.kifi-root ::-moz-selection {
-  background-color: -moz-html-CellHighlight;
-  color: -moz-html-CellHighlightText;
+  background: rgba(128,184,255,.59);
+  color: initial;
   text-shadow: initial;
 }
 @media print {

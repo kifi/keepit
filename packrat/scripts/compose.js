@@ -5,107 +5,202 @@
 // @require scripts/friend_search.js
 // @request scripts/look.js
 // @require scripts/snapshot.js
+// @require scripts/selectionchange.js
 // @require scripts/prevent_ancestor_scroll.js
 
 var initCompose = (function() {
   'use strict';
 
-  var $composes = $();
-  var prefix = CO_KEY + '-';
+  var KEY_PREFIX = CO_KEY + '-';
+  var LOOK_LINK_TEXT = 'look\u00A0here';
+  var RAPID_CLICK_GRACE_PERIOD_MS = 1000;
+
+  var $composes = $(), $aLook;
   var enterToSend;
+
   api.port.emit('prefs', function (o) {
     enterToSend = o.enterToSend;
     updateKeyTip($composes);
   });
 
-  api.onEnd.push(function () {
+  api.onEnd.push(stopMonitoringSelection);
+
+  function startMonitoringSelection() {
+    selectionchange.start();
+    window.addEventListener('mousedown', onWinMouseDown, true);
+    window.addEventListener('selectionchange', onSelectionChange, true);
+    window.addEventListener('mouseup', onWinMouseUp, true);
+  }
+
+  function stopMonitoringSelection() {
+    selectionchange.stop();
+    window.removeEventListener('mousedown', onWinMouseDown, true);
+    window.removeEventListener('selectionchange', onSelectionChange, true);
     window.removeEventListener('mouseup', onWinMouseUp, true);
-  });
+  }
 
-  function updateKeyTip ($f) {
+  function updateKeyTip($f) {
     if (enterToSend != null) {
-      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
-      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
+      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : KEY_PREFIX);
+      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? KEY_PREFIX : '');
     }
   }
 
-  function onWinMouseUp() {
-    if ($composes.length) {
-      tryToCaptureSelectionAsLink($composes.last());
+  var mouseDown;
+  var mouseDownSeriesLen;
+  var mouseDownSeriesStartTime;
+  var mouseDownSeriesSelChanges;
+  function onWinMouseDown() {
+    log('[onWinMouseDown]')();
+    mouseDown = true;
+    var now = Date.now();
+    if (!mouseDownSeriesStartTime || now - mouseDownSeriesStartTime > RAPID_CLICK_GRACE_PERIOD_MS) {
+      mouseDownSeriesStartTime = now;
+      mouseDownSeriesLen = 1;
+      mouseDownSeriesSelChanges = 0;
+    } else {
+      mouseDownSeriesLen++;
     }
   }
 
-  function tryToCaptureSelectionAsLink($f) {
-    var s = window.getSelection();
-    var r = s.rangeCount && s.getRangeAt(0);
-    if (r && !r.collapsed) {
-      var sce = elementSelfOrParent(r.startContainer);
-      var ece = elementSelfOrParent(r.endContainer);
-      var matches = sce.mozMatchesSelector ? 'mozMatchesSelector' : 'webkitMatchesSelector';
-      if (!sce[matches]('.kifi-root,.kifi-root *') &&
-          !ece[matches]('.kifi-root,.kifi-root *') &&
-          !Array.prototype.some.call(document.getElementsByClassName('kifi-root'), r.intersectsNode.bind(r))) {
-        captureSelectionAsLink($f, r);
-        return true;
+  function onSelectionChange() {
+    log('[onSelectionChange]')();
+    if (mouseDown) {
+      mouseDownSeriesSelChanges++;
+      var sel = window.getSelection();
+      var r = sel.rangeCount && sel.getRangeAt(0);
+      if (!r || r.collapsed) {
+        // hide provisional look-here link
+        if ($aLook) {
+          var data = $aLook.data();
+          if (!data.custom) {
+            if ('before' in data) {
+              var prev = $aLook[0].previousSibling, prevVal = prev.nodeValue;
+              prev.nodeValue = prevVal.substr(0, prevVal.length - 1) + data.before;
+            }
+            if (data.after) {
+              var next = $aLook[0].nextSibling;
+              next.nodeValue = next.nodeValue.substr(1);
+            }
+            var $d = $aLook.closest('.kifi-compose-draft');
+            $aLook.remove();
+            $aLook = null;
+            $d.triggerHandler('input');
+          } else {
+            $aLook.removeAttr('href');
+          }
+        }
+      } else if (!$aLook) {
+        if ($composes.length && !intersectsKifiDom(r)) {
+          // create provisional look-here link
+          $aLook = insertLookHereLink($composes.last().find('.kifi-compose-draft'));
+        }
+      } else if (!$aLook.prop('href')) {
+        $aLook.prop('href', 'javascript:');
       }
     }
   }
 
-  function captureSelectionAsLink($f, r) {
+  function onWinMouseUp(e) {
+    var seriesMs = mouseDownSeriesStartTime ? Date.now() - mouseDownSeriesStartTime : null;
+    log('[onWinMouseUp]', mouseDownSeriesLen, mouseDownSeriesSelChanges, seriesMs)();
+    mouseDown = false;
+    if ($aLook) {
+      if (!$(e.target).is('.kifi-root,.kifi-root *')) {
+        if (mouseDownSeriesLen > 2 || // triple-click is 3
+            mouseDownSeriesSelChanges > 4 || // a drag
+            seriesMs > RAPID_CLICK_GRACE_PERIOD_MS) {
+          tryToCaptureSelectionAsLink();
+        } else {
+          clearTimeout(tryToCaptureSelectionTimer);
+          tryToCaptureSelectionTimer = setTimeout(tryToCaptureSelectionAsLink, RAPID_CLICK_GRACE_PERIOD_MS - seriesMs);
+        }
+      } else {
+        $aLook.remove();
+        $aLook = null;
+      }
+    }
+  }
+
+  var tryToCaptureSelectionTimer;
+  function tryToCaptureSelectionAsLink() {
+    clearTimeout(tryToCaptureSelectionTimer);
+    var r = getCurrentSelectionRangeIfItQualifies();
+    log('[tryToCaptureSelectionAsLink]', r ? 'yep' : 'nope')();
+    if (r) {
+      captureSelectionAsLink(r);
+    }
+  }
+
+  function getCurrentSelectionRangeIfItQualifies() {
+    var s = window.getSelection();
+    var r = s.rangeCount && s.getRangeAt(0);
+    return r && !r.collapsed && !intersectsKifiDom(r) ? r : null;
+  }
+
+  function intersectsKifiDom(r) {
+    var matches = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
+    return elementSelfOrParent(r.startContainer)[matches]('.kifi-root,.kifi-root *') ||
+           elementSelfOrParent(r.endContainer)[matches]('.kifi-root,.kifi-root *') ||
+           Array.prototype.some.call(document.getElementsByClassName('kifi-root'), r.intersectsNode.bind(r));
+  }
+
+  function captureSelectionAsLink(r) {
     var info = setRangeRects(r, {
       win: {
         width: window.innerWidth,
         height: window.innerHeight
       }
     });
-    api.port.emit('screen_capture', info, function (resp) {
+    api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
-      var $img = $(img).on('load', function () {
-        $img.addClass('kifi-root').css({
-          position: 'fixed',
-          zIndex: 999999999993,
-          top: info.bounds.top,
-          left: info.bounds.left,
-          width: info.bounds.width,
-          height: info.bounds.height,
-          transformOrigin: '0 0',
-          transition: 'all .5s ease-in-out,opacity .5s ease-in'
-        })
-        .appendTo($('body')[0] || 'html')
-        .on('transitionend', function () {
-          $img.remove();
-          var sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange($d.data('sel'));
-          $d.focus();
-        });
-        window.getSelection().removeAllRanges();
-
-        $f.removeClass('kifi-empty');
-        var $d = $f.find('.kifi-compose-draft');
-        var $a = $('<a>', {href: href, text: 'look\u00A0here', title: text.trim(), class: 'kifi-to-opaque'});
-        insertLookHereLink($d, $a);
-        $a.on('transitionend', function () {
-          $a.removeClass('kifi-to-opaque kifi-opaque');
-        });
-
-        var aRect = $a[0].getClientRects()[0];
-        var bRect = info.bounds;
-        var scale = Math.min(1, aRect.width / bRect.width);
-        $img.css({
-          transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
-          opacity: 0
-        });
-        $a.addClass('kifi-opaque');
-      });
-      img.src = resp.dataUrl;
+      $(img).on('load', finishCaptureSelection.bind(img, info, text, href));
+      img.src = dataUrl;
     });
     var text = r.toString();
     var href = 'x-kifi-sel:' + snapshot.ofRange(r, text);
   }
 
-  function insertLookHereLink($d, $a) {
-    var r = $d.data('sel'), pad = true;
+  function finishCaptureSelection(info, text, href) {
+    var $a = $aLook;
+    var $d = $a.closest('.kifi-compose-draft');
+    var $img = $(this).addClass('kifi-root').css({
+      position: 'fixed',
+      zIndex: 999999999993,
+      top: info.bounds.top,
+      left: info.bounds.left,
+      width: info.bounds.width,
+      height: info.bounds.height,
+      transformOrigin: '0 0',
+      transition: 'all .5s ease-in-out,opacity .5s ease-in'
+    }).appendTo($('body')[0] || 'html');
+    window.getSelection().removeAllRanges();
+    $aLook = null;
+
+    $a.prop('title', text.trim());
+    positionCursorAfterLookHereLink($d, $a);
+
+    // var fadeInLink = !customLinkText && !emptyDraft;
+    // $a.toggleClass('kifi-to-opaque', fadeInLink);
+
+    var aRect = $a[0].getClientRects()[0];
+    var bRect = info.bounds;
+    var scale = Math.min(1, aRect.width / bRect.width);
+    $img.on('transitionend', function () {
+      $img.remove();
+      $a.prop('href', href);
+      // $a.removeAttr('class');
+      $d.focus();  // save draft
+    }).layout().css({
+      transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
+      opacity: 0
+    });
+    // $a.toggleClass('kifi-opaque', fadeInLink);
+  }
+
+  function insertLookHereLink($d) {
+    var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:'});
+    var r = $d.data('sel');
     if (r) {
       var sc = r.startContainer;
       var ec = r.endContainer;
@@ -115,8 +210,7 @@ var initCompose = (function() {
         if (sc.nodeType === 3) {  // text
           var s = sc.nodeValue;
           if (i < j) {
-            $a.text(s.substring(i, j));
-            pad = false;
+            $a.text(s.substring(i, j)).data('custom', true);
           }
           $(sc).replaceWith($a);
           if (i > 0) {
@@ -126,10 +220,9 @@ var initCompose = (function() {
             $a.after(s.substr(j));
           }
         } else if (i === j || !r.cloneContents().querySelector('a')) {
-          var next = sc.childNodes.item(j);
+          var next = sc.childNodes[j];
           if (i < j && r.toString().trim()) {
-            $a.empty().append(r.extractContents());
-            pad = false;
+            $a.empty().append(r.extractContents()).data('custom', true);
           }
           sc.insertBefore($a[0], next);
         }
@@ -139,24 +232,39 @@ var initCompose = (function() {
       $d.append($a);
     }
 
-    // position caret immediately after link
-    r = r || document.createRange();
-    r.setStartAfter($a[0]);
-    r.collapse(true);
-    $d.data('sel', r);
-
-    if (pad) {
-      var sib;
-      if ((sib = $a[0].previousSibling) && (sib.nodeType !== 3 || !/\s$/.test(sib.nodeValue))) {
-        $a.before(' ');
+    if (!$a.data('custom')) {
+      var sib = $a[0].previousSibling;
+      var val = sib && sib.nodeType === 3 ? sib.nodeValue : '';
+      if (sib && (sib.nodeType !== 3 || !/\s$/.test(val))) {
+        $a.before(' ').data('before', '');
+      } else if (val && val[val.length - 1] === '\u00A0') {
+        sib.nodeValue = val.substr(0, val.length - 1) + ' ';
+        $a.data('before', '\u00A0');
       }
-      if (!(sib = $a[0].nextSibling) || sib.nodeType !== 3 || /^\S/.test(sib.nodeValue)) {
-        $a.after('\u00A0');
-        r.setEnd($a[0].nextSibling, 1);
-        r.collapse();
+
+      sib = $a[0].nextSibling;
+      var sp = !sib ? '\u00A0' : (sib.nodeType !== 3 || /^\S/.test(sib.nodeValue) ? ' ' : '');
+      if (sp) {
+        $a.after(sp).data('after', sp);
       }
     }
 
+    log('[insertLookHereLink] $a.data():', $a.data())();
+
+    $d.triggerHandler('input');
+    return $a;
+  }
+
+  function positionCursorAfterLookHereLink($d, $a) {
+    var r = document.createRange();
+    if ($a.data('after')) {
+      r.setEnd($a[0].nextSibling, 1);
+      r.collapse();
+    } else {
+      r.setStartAfter($a[0]);
+      r.collapse(true);
+    }
+    $d.data('sel', r).prop('scrollTop', 999);
   }
 
   function setRangeRects(r, o) {
@@ -206,7 +314,7 @@ var initCompose = (function() {
   var defaultText = $d.data('default');  // real text, not placeholder
   $composes = $composes.add($f);
   updateKeyTip($f);
-  window.addEventListener('mouseup', onWinMouseUp, true);
+  startMonitoringSelection();
 
   api.port.emit('load_draft', {to: !!$t.length}, function (draft) {
     if (draft) {
@@ -244,8 +352,9 @@ var initCompose = (function() {
   }).mousedown(function () {
     $d.removeData('preventNextMouseUp');
   }).mouseup(function (e) {
-    if (document.activeElement === this) {
-      $d.data('sel', getSelRange());
+    var r = getSelRange();
+    if ($d[0].contains(r.commonAncestorContainer)) {
+      $d.data('sel', r);
     }
 
     if ($d.data('preventNextMouseUp')) {
@@ -264,8 +373,9 @@ var initCompose = (function() {
       sel.addRange(r2);
     }
   }).keyup(function () {
-    if (document.activeElement === this) {
-      $d.data('sel', getSelRange());
+    var r = getSelRange();
+    if ($d[0].contains(r.commonAncestorContainer)) {
+      $d.data('sel', r);
     }
   }).on('input', function () {
     var empty = this.firstElementChild === this.lastElementChild && !this.textContent;
@@ -380,7 +490,7 @@ var initCompose = (function() {
     if (e.originalEvent.isTrusted === false) return;
     e.preventDefault();
     var $tip = $(this);
-    var $alt = $('<span class="kifi-compose-tip-alt" data-prefix="' + (enterToSend ? prefix : '') + '">' + $tip[0].firstChild.textContent + '</span>')
+    var $alt = $('<span class="kifi-compose-tip-alt" data-prefix="' + (enterToSend ? KEY_PREFIX : '') + '">' + $tip[0].firstChild.textContent + '</span>')
       .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
       .hover(function () {
         this.classList.add('kifi-hover');
@@ -441,7 +551,13 @@ var initCompose = (function() {
       $d.empty();
     },
     snapSelection: function () {
-      return tryToCaptureSelectionAsLink($f);
+      var r = getCurrentSelectionRangeIfItQualifies();
+      if (r) {
+        // TODO: scroll to range if necessary
+        captureSelectionAsLink(r);
+      } else {
+        return false;
+      }
     },
     focus: function (snapSelection) {
       log('[compose.focus]')();
@@ -456,12 +572,13 @@ var initCompose = (function() {
     },
     save: saveDraft,
     destroy: function() {
+      $aLook = null;
       $composes = $composes.not($f);
       if ($t.length) {
         $t.tokenInput('destroy');
       }
       if (!$composes.length) {
-        window.removeEventListener('mouseup', onWinMouseUp, true);
+        stopMonitoringSelection();
       }
     }};
   };
