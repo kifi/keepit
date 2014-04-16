@@ -31,7 +31,7 @@ class SimpleGraphManager(
   def update(updates: GraphUpdate*): GraphUpdaterState = {
     val relevantUpdates = updates.filter { update => update.seq > state.getCurrentSequenceNumber(update.kind) }
     simpleGraph.readWrite { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(processUpdate(_)) }
-    state = state.withUpdates(relevantUpdates) // todo(Léo): add transaction callback capabilities to GraphWriter (cf SessionWrapper)
+    state = state.withUpdates(relevantUpdates) // todo(Léo): not threadsafe, should add transaction callback capabilities to GraphWriter (cf SessionWrapper)
     state
   }
 
@@ -49,9 +49,9 @@ class SimpleGraphManager(
 object SimpleGraphManager {
   def getStateFile(graphDirectory: GraphDirectory): File = new File(graphDirectory.getDirectory(), "state")
   def getSimpleGraphFile(graphDirectory: GraphDirectory): File = new File(graphDirectory.getDirectory(), "graph")
-  def load(graphDirectory: GraphDirectory): (SimpleGraph, GraphUpdaterState) = (loadVertices(graphDirectory), loadState(graphDirectory))
+  def load(graphDirectory: GraphDirectory): (SimpleGraph, GraphUpdaterState) = (loadGraph(graphDirectory), loadState(graphDirectory))
 
-  private def loadVertices(graphDirectory: GraphDirectory): SimpleGraph = {
+  private def loadGraph(graphDirectory: GraphDirectory): SimpleGraph = {
     val json = Json.parse(FileUtils.readFileToString(getSimpleGraphFile(graphDirectory)))
     SimpleGraph.format.reads(json).get
   }
