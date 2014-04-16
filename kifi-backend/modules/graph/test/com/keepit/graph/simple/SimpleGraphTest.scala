@@ -9,8 +9,9 @@ class SimpleGraphTest() extends Specification {
   val alfred = VertexDataId[UserReader](1899)
   val (vertigo, rearWindow) = (VertexDataId[UriReader](1958), VertexDataId[UriReader](1954))
 
-  val vertexReader = graph.getNewVertexReader()
-  val edgeReader = graph.getNewEdgeReader()
+  val graphReader = graph.getNewReader()
+  val vertexReader = graphReader.getNewVertexReader()
+  val edgeReader = graphReader.getNewEdgeReader()
 
   "SimpleGraph" should {
     "save and retrieve vertices" in {
@@ -18,7 +19,7 @@ class SimpleGraphTest() extends Specification {
       vertexReader.moveTo(alfred) must throwA[VertexReaderException]
       vertexReader.moveTo(vertigo) must throwA[VertexReaderException]
 
-      graph.write { writer =>
+      graph.readWrite { writer =>
         writer.saveVertex(UserData(alfred))
         writer.saveVertex(UriData(vertigo))
       }
@@ -39,7 +40,7 @@ class SimpleGraphTest() extends Specification {
       vertexReader.edgeReader.degree === 0
       edgeReader.moveTo(alfred, vertigo) must throwA[EdgeReaderException]
 
-      graph.write { writer =>
+      graph.readWrite { writer =>
         writer.saveEdge(alfred, vertigo, EmptyEdgeData)
       }
 
@@ -52,7 +53,7 @@ class SimpleGraphTest() extends Specification {
       vertexReader.moveTo(vertigo)
       vertexReader.edgeReader.degree === 0
 
-      graph.write { writer =>
+      graph.readWrite { writer =>
         writer.removeEdge(alfred, vertigo)
       }
 
@@ -67,7 +68,7 @@ class SimpleGraphTest() extends Specification {
     vertexReader.moveTo(rearWindow) must throwA[VertexReaderException]
     edgeReader.moveTo(alfred, rearWindow) must throwA[EdgeReaderException]
 
-    graph.write { writer =>
+    graph.readWrite { writer =>
       writer.saveVertex(UriData(rearWindow))
       writer.saveEdge(alfred, vertigo, EmptyEdgeData)
       writer.saveEdge(alfred, rearWindow, EmptyEdgeData)
@@ -101,15 +102,15 @@ class SimpleGraphTest() extends Specification {
   "be properly serialized and deserialized to Json" in {
     val json = SimpleGraph.format.writes(graph)
     val newGraph = SimpleGraph.format.reads(json).get
-
-    val newGraphVertexReader = newGraph.getNewVertexReader()
+    val newGraphReader = newGraph.getNewReader()
+    val newGraphVertexReader = newGraphReader.getNewVertexReader()
     newGraphVertexReader.moveTo(rearWindow)
     newGraphVertexReader.kind === UriReader
     newGraphVertexReader.data.id === rearWindow
     newGraphVertexReader.moveTo(alfred)
     newGraphVertexReader.edgeReader.degree === 2
 
-    val newGraphEdgeReader = newGraph.getNewEdgeReader()
+    val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
 
     newGraphEdgeReader.moveTo(alfred, rearWindow)
     newGraphEdgeReader.moveTo(alfred, vertigo)

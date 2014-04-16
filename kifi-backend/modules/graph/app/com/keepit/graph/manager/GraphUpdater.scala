@@ -1,13 +1,13 @@
-package com.keepit.graph.ingestion
+package com.keepit.graph.manager
 
-import com.keepit.graph.model.GraphWriter
+import com.keepit.graph.model.{GraphWriter}
 import com.google.inject.Inject
 
-trait GraphUpdateProcessor {
+trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
 }
 
-class GraphUpdateProcessorImpl @Inject() () extends GraphUpdateProcessor {
+class GraphUpdaterImpl @Inject() () extends GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit = update match {
     case _ => ???
   }
