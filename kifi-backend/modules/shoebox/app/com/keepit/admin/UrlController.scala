@@ -5,7 +5,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
-import com.keepit.common.mail._
+import com.keepit.common.net.URI
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -153,6 +153,17 @@ class UrlController @Inject() (
   def clearRedirects(toUriId: Id[NormalizedURI]) = AdminHtmlAction.authenticated { request =>
     uriIntegrityPlugin.clearRedirects(toUriId)
     Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
+  }
+
+  def fixURLDomain() = AdminHtmlAction.authenticated { request =>
+    // fix bad data in DB
+    db.readWrite{ implicit s =>
+      val urls = (urlRepo.getByDomainRegex("Some(%)") ++ urlRepo.getByDomainRegex("None"))
+      urls.foreach{ url =>
+        urlRepo.save(url.copy(domain = URI.parse(url.url).toOption.flatMap(_.host).map(_.name)))
+      }
+      Ok(s"Ok. Fixed domain in URL table [count=${urls.size}]")
+    }
   }
 
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>

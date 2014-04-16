@@ -323,6 +323,7 @@ GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
 GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
+GET     /admin/data/fixURLDomain    @com.keepit.controllers.admin.UrlController.fixURLDomain()
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
