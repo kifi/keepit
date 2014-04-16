@@ -1,7 +1,6 @@
 package com.keepit.graph.ingestion
 
-import com.keepit.graph.model._
-import com.keepit.common.plugin.SchedulerPlugin
+import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
 import com.kifi.franz.SQSMessage
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
@@ -12,44 +11,20 @@ import scala.concurrent.duration._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-trait GraphUpdater[G <: GraphManager] {
-  val state: GraphUpdaterState
-  val graphDirectory: GraphDirectory[G]
-  val graph: G
-  val processUpdate: GraphUpdateProcessor
-
-  def process(updates: Seq[SQSMessage[GraphUpdate]]): Unit = {
-    val relevantUpdates = updates.collect { case SQSMessage(update, _, _) if update.seq > state.getCurrentSequenceNumber(update.kind) => update }
-    graph.write { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(processUpdate(_)) }
-    state.commit(relevantUpdates) // todo(Léo): add transaction callback capabilities to GraphWriter (cf SessionWrapper)
-    updates.foreach(_.consume)
-  }
-
-  def backup(): Unit = {
-    graph.synchronized {
-      graphDirectory.persistGraph(graph)
-      graphDirectory.persistState(state)
-    }
-    graphDirectory.synchronized {
-      graphDirectory.doBackup()
-    }
-  }
+sealed trait GraphUpdaterActorMessage
+object GraphUpdaterActorMessage {
+  case class UpdateGraph(maxBatchSize: Int) extends GraphUpdaterActorMessage
+  case class ProcessGraphUpdates(updates: Seq[SQSMessage[GraphUpdate]], maxBatchSize: Int) extends GraphUpdaterActorMessage
+  case object BackupGraph extends GraphUpdaterActorMessage
 }
 
-sealed trait GraphUpdaterMessage
-object GraphUpdaterMessage {
-  case class UpdateGraph(maxBatchSize: Int) extends GraphUpdaterMessage
-  case class ProcessGraphUpdates(updates: Seq[SQSMessage[GraphUpdate]], maxBatchSize: Int) extends GraphUpdaterMessage
-  case object BackupGraph extends GraphUpdaterMessage
-}
-
-class GraphUpdaterActor[G <: GraphManager](
-  airbrake: AirbrakeNotifier,
-  graphUpdater: GraphUpdater[G],
-  graphUpdateFetcher: GraphUpdateFetcher
+class GraphUpdaterActor(
+  graphUpdater: GraphUpdater,
+  graphUpdateFetcher: GraphUpdateFetcher,
+  airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
   private var updating = false
-  import GraphUpdaterMessage._
+  import GraphUpdaterActorMessage._
   def receive = {
     case UpdateGraph(maxBatchSize) => if (!updating) {
       graphUpdateFetcher.nextBatch(maxBatchSize).map { updates =>
@@ -59,19 +34,21 @@ class GraphUpdaterActor[G <: GraphManager](
     }
     case ProcessGraphUpdates(updates, maxBatchSize) => {
       graphUpdater.process(updates)
-      if (updates.length < maxBatchSize) { graphUpdateFetcher.fetch(graphUpdater.state) }
       updating = false
+      if (updates.length < maxBatchSize) { graphUpdateFetcher.fetch(graphUpdater.state) }
+      else { self ! UpdateGraph(maxBatchSize) }
     }
     case BackupGraph => graphUpdater.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
 
-abstract class GraphUpdaterPlugin[G <: GraphManager](
-  actor: ActorInstance[GraphUpdaterActor[G]],
-  serviceDiscovery: ServiceDiscovery
+class GraphUpdaterPlugin(
+  actor: ActorInstance[GraphUpdaterActor],
+  serviceDiscovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties
 ) extends SchedulerPlugin {
-  import GraphUpdaterMessage._
+  import GraphUpdaterActorMessage._
 
   override def onStart() {
     log.info(s"starting $this")
