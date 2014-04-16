@@ -167,67 +167,6 @@ a.kifi-compose-submit.kifi-active {
   background-color: #a2a7ab;
 }
 
-body.kifi-snapshot-root {
-  position: relative; /* replace viewport as absolute positioning root */
-  overflow: visible;
-}
-.kifi-snapshot-glass {
-  position: absolute;
-  z-index: 999999999991;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  box-shadow: 0 0 5px 1px #fff;
-  cursor: crosshair;
-}
-.kifi-snapshot-shade {
-  background-color: rgba(0,0,0,.4);
-  position: absolute;
-  z-index: 999999999991;
-  cursor: crosshair;
-}
-.kifi-snapshot-shade-t { left: 0; right: 0; top: 0; bottom: 0; }
-.kifi-snapshot-shade-b { left: 0; right: 0; bottom: 0; }
-.kifi-snapshot-shade-l { left: 0; }
-.kifi-snapshot-shade-r { right: 0; }
-
-.kifi-snapshot-bar-wrap {
-  position: fixed;
-  z-index: 999999999991;
-  left: 0;
-  right: 0;
-  bottom: 80px;
-  height: 0;
-  overflow: visible;
-  text-align: center;
-}
-.kifi-snapshot-bar {
-  display: inline-block;
-  background-color: black;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 15px !important;
-  font-size: 14px;
-  cursor: move;
-}
-.kifi-snapshot-cancel {
-  display: inline-block;
-  padding: 2px 6px 3px;
-  border: none;
-  border-image: initial;
-  border-radius: 3px;
-  background-color: buttonface;
-  color: buttontext;
-  -webkit-box-align: center;
-  text-align: center;
-  font-size: 13px;
-  line-height: 13px;
-  cursor: pointer;
-}
-.kifi-snapshot-cancel:active {
-  border-image: initial;
-}
 .kifi-snapshot-highlight {
   position: absolute;
   z-index: 999999999993;
