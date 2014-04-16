@@ -3,6 +3,7 @@ package com.keepit.cortex.models.word2vec
 import scala.util.Random
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.cortex.utils.MatrixUtils
+import com.keepit.cortex.nlp.POSTagger
 
 class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
 
@@ -89,7 +90,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
     (clusterSums, cw)
   }
 
-  def getPOS(token: String): String = "NN"    // wire with NLP later
+  def getPOS(token: String): String = POSTagger.tagOneWord(token).value()
 
   def partOfSpeechCounts(words: Words): (Int, Int) = {
     var i = 0
