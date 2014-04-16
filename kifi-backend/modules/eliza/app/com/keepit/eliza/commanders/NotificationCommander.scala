@@ -41,7 +41,7 @@ class NotificationCommander @Inject() (
   messagingAnalytics: MessagingAnalytics,
   urbanAirship: UrbanAirship,
   notificationUpdater: NotificationUpdater,
-  messagingUtils: MessagingUtils) extends Logging  {
+  basicMessageCommander: MessageFetchingCommander) extends Logging  {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = buildMessageNotificationJson(
@@ -102,8 +102,8 @@ class NotificationCommander @Inject() (
         newParticipants.zip(permanentNotifications) map { case (userId, permanentNotification) =>
           sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
         }
-        val mwbu = MessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
-        messagingUtils.modifyMessageWithAuxData(mwbu).map { augmentedMessage =>
+        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
+        messageWithBasicUser.map { augmentedMessage =>
           thread.participants.map(_.allUsers.par.foreach { userId =>
             sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))

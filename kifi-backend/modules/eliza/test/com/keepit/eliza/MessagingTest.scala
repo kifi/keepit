@@ -20,7 +20,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
 
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
+import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 
@@ -84,6 +84,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
+        var messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
 
@@ -91,8 +92,8 @@ class MessagingTest extends Specification with DbTestInjector {
 
         Await.result(notificationCommander.getLatestSendableNotifications(user1, 20), Duration(4, "seconds")).jsons.length === 1
 
-        val messageIds : Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messagingCommander.getThreadMessages(_, None)).map(_.id)
-        val messageContents : Seq[String] = messagingCommander.getThreads(user2).flatMap(messagingCommander.getThreadMessages(_, None)).map(_.messageText)
+        val messageIds : Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_, None)).map(_.id)
+        val messageContents : Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_, None)).map(_.messageText)
 
         messageIds.contains(msg1.id) === true
         messageIds.contains(msg2.id) === true

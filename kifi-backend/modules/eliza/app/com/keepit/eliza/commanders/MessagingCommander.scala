@@ -15,6 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
+import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
 
@@ -44,9 +45,9 @@ class MessagingCommander @Inject() (
   messagingAnalytics: MessagingAnalytics,
   shoebox: ShoeboxServiceClient,
   airbrake: AirbrakeNotifier,
+  basicMessageCommander: MessageFetchingCommander,
   notificationCommander: NotificationCommander,
-  notificationUpdater: NotificationUpdater,
-  messagingUtils: MessagingUtils) extends Logging {
+  notificationUpdater: NotificationUpdater) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -55,7 +56,7 @@ class MessagingCommander @Inject() (
     val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
     //get all messages
     val messagesByThread : Map[Id[MessageThread], Seq[Message]] = threads.map{ thread =>
-      (thread.id.get, getThreadMessages(thread, None))
+      (thread.id.get, basicMessageCommander.getThreadMessages(thread, None))
     }.toMap
     //get user_threads
     val userThreads : Map[Id[MessageThread], UserThread] = db.readOnly{ implicit session => threads.map{ thread =>
@@ -311,48 +312,6 @@ class MessagingCommander @Inject() (
     (thread, message)
   }
 
-  def getThreadMessages(thread: MessageThread, pageOpt: Option[Int]) : Seq[Message] =
-    db.readOnly { implicit session =>
-      log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}. pageOpt is $pageOpt")
-      pageOpt.map { page =>
-        val lower = MessagingCommander.THREAD_PAGE_SIZE * page
-        val upper = MessagingCommander.THREAD_PAGE_SIZE * (page + 1) - 1
-        log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. lu: $lower, $upper")
-        messageRepo.get(thread.id.get,lower,Some(upper))
-      } getOrElse {
-        log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. no l/u")
-        messageRepo.get(thread.id.get, 0, None)
-      }
-    }
-
-
-  private def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
-    log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
-    new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
-      val messages = getThreadMessages(thread, pageOpt)
-      log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
-      (thread, messages.map { message =>
-        val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
-        MessageWithBasicUser(
-          id           = message.externalId,
-          createdAt    = message.createdAt,
-          text         = message.messageText,
-          auxData      = message.auxData,
-          url          = message.sentOnUrl.getOrElse(""),
-          nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-          user         = message.from.map(id2BasicUser(_)),
-          participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
-        )
-      })
-    })
-  }
-
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val thread = db.readOnly(threadRepo.get(threadExtId)(_))
-    getThreadMessagesWithBasicUser(thread, pageOpt)
-  }
-
   def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
     db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreadIds(user)
@@ -497,12 +456,12 @@ class MessagingCommander @Inject() (
       context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
-    val res = for {
+    val resFut = for {
       userRecipients <- constructUserRecipients(userExtRecipients)
       nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
     } yield {
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
-      val messageThreadFut = getThreadMessagesWithBasicUser(thread, None)
+      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread, None)
 
       val threadInfoOpt = url.map { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
@@ -514,10 +473,7 @@ class MessagingCommander @Inject() (
         (message, threadInfoOpt, messages)
       }
     }
-    res.flatMap{ fut => fut.flatMap { case (message, threadInfoOpt, messages) =>
-        Future.sequence(messages.map(messagingUtils.modifyMessageWithAuxData)).map( (message, threadInfoOpt, _) )
-      }
-    }
+    resFut.flatten
   }
 
   def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {
