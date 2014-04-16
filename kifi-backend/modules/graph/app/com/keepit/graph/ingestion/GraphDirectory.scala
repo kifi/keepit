@@ -1,41 +1,32 @@
 package com.keepit.graph.ingestion
 
-import com.keepit.graph.model.GraphManager
 import java.io.File
-import org.apache.commons.io.FileUtils
-import play.api.libs.json.Json
-import com.keepit.graph.simple.SimpleGraph
-import com.keepit.common.BackedUpDirectory
+import com.keepit.common.store._
+import com.keepit.common.{ArchivedDirectory, BackedUpDirectory}
+import com.amazonaws.services.s3.AmazonS3
+import com.keepit.common.store.S3Bucket
+import com.keepit.common.logging.Logging
+import com.keepit.common.logging.AccessLog
 
-trait GraphDirectory[G <: GraphManager] extends BackedUpDirectory {
+trait GraphDirectory extends BackedUpDirectory
+trait GraphStore extends ObjectStore[GraphDirectory, File]
 
-  def persistGraph(graph: G): Unit
-  def loadGraph(): G
-
-  protected def getStateFile(): File = new File(getDirectory(), "state")
-
-  def persistState(state: GraphUpdaterState): Unit = {
-    val json = GraphUpdaterState.format.writes(state)
-    FileUtils.writeStringToFile(getStateFile(), Json.stringify(json))
-  }
-
-  def loadState(): GraphUpdaterState = {
-    val json = Json.parse(FileUtils.readFileToString(getStateFile()))
-    GraphUpdaterState.format.reads(json).get
-  }
+class GraphDirectoryImpl(dir: File, store: GraphStore) extends ArchivedDirectory with GraphDirectory {
+  def getDirectory(): File = dir
+  protected def getArchive() = store.get(this).get
+  protected def saveArchive(tarFile: File) = store += (this, tarFile)
 }
 
-trait SimpleGraphDirectory extends GraphDirectory[SimpleGraph] {
-
-  protected def getSimpleGraphFile(): File = new File(getDirectory(), "simpleGraph")
-
-  def persistGraph(graph: SimpleGraph): Unit = {
-    val json = SimpleGraph.format.writes(graph)
-    FileUtils.writeStringToFile(getStateFile(), Json.stringify(json))
-  }
-
-  def loadGraph(): SimpleGraph = {
-    val json = Json.parse(FileUtils.readFileToString(getSimpleGraphFile()))
-    SimpleGraph.format.reads(json).get
-  }
+class VolatileGraphDirectoryImpl extends GraphDirectory with Logging {
+  def getDirectory(): File = throw new UnsupportedOperationException(s"Cannot get file for volatile graph directory ${this}.")
+  def scheduleBackup(): Unit = log.warn(s"Cannot schedule backup of volatile graph directory ${this}")
+  def cancelBackup(): Unit = log.warn(s"Cannot cancel backup of volatile graph directory ${this}")
+  def doBackup(): Boolean = false
+  def restoreFromBackup(): Unit = log.warn(s"Cannot restore volatile graph directory ${this}")
 }
+
+class S3GraphStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3FileStore[GraphDirectory] with GraphStore {
+  def idToKey(graphDirectory: GraphDirectory): String = graphDirectory.getDirectory().getName + ".tar.gz"
+}
+
+class InMemoryGraphStoreImpl extends InMemoryFileStore[GraphDirectory] with GraphStore
