@@ -2,6 +2,7 @@ package com.keepit.common.net
 
 import com.keepit.common.strings.UTF8
 import java.net.{URLEncoder, URLDecoder}
+import scala.collection.mutable.ArrayBuffer
 
 object URIParserUtil {
   private[this] val controls = "\001\002\003\005\006\007\010\011\012\013\015\016\017\020\021\022\023\025\026\027\030\031\032\033\035\036\037\177"
@@ -33,6 +34,16 @@ object URIParserUtil {
     symbols.foldLeft(tmp){ (s, c) =>
       if (c == '%') s else replaceChar(s, c)
     }
+  }
+
+  def encodeNonASCII(string: String, symbols: Set[Char]): String = {
+    val builder = new StringBuilder()
+    string.foreach{ c =>
+      if (symbols.contains(c)) builder ++= encodingMap(c)
+      else if (c <= 255) builder += c // ASCII
+      else builder ++= encodeChar(c)  // non-ASCII
+    }
+    builder.toString
   }
 
   def decodePercentEncode(string: String) = {
