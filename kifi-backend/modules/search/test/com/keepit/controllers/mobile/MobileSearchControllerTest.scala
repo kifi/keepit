@@ -56,7 +56,7 @@ class MobileSearchControllerTest extends Specification with SearchApplicationInj
                   "bookmark":
                     {
                       "title":"this is a test",
-                      "url":"http://kifi.com/%5B%5D",
+                      "url":"http://kifi.com/%5B%E3%83%86%E3%82%B9%E3%83%88%5D",
                       "id":"604754fb-182d-4c39-a314-2d1994b24159",
                       "matches":
                         {
@@ -125,7 +125,7 @@ class FixedResultSearchCommander extends SearchCommander {
           2, // bookmarkCount
           BasicSearchHit(
             Some("this is a test"),  // title
-            "http://kifi.com/[]",  // url, '[' and ']' should be percent-encoded and the result json
+            "http://kifi.com/[テスト]",  // url, '[' and ']' should be percent-encoded and the result json
             Some(Seq(  // collections
               ExternalId[Collection]("c17da7ce-64bb-4c91-8832-1f1a6a88b7be"),
               ExternalId[Collection]("19ccb3db-4e18-4ade-91bd-1a98ef33aa63")
