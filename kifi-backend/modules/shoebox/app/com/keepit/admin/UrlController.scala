@@ -150,6 +150,11 @@ class UrlController @Inject() (
     Ok(s"Ok. The sequence number is set to $seq")
   }
 
+  def clearRedirects(toUriId: Id[NormalizedURI]) = AdminHtmlAction.authenticated { request =>
+    uriIntegrityPlugin.clearRedirects(toUriId)
+    Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
+  }
+
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
