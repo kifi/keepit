@@ -309,11 +309,14 @@ trait UriIntegrityPlugin extends SchedulerPlugin  {
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
   def setFixDuplicateKeepsSeq(seq: Long): Unit
+  def clearRedirects(toUriId: Id[NormalizedURI]): Unit
 }
 
 @Singleton
 class UriIntegrityPluginImpl @Inject() (
   actor: ActorInstance[UriIntegrityActor],
+  db: Database,
+  uriRepo: NormalizedURIRepo,
   centralConfig: CentralConfig,
   val scheduling: SchedulingProperties
 ) extends UriIntegrityPlugin with Logging {
@@ -336,4 +339,15 @@ class UriIntegrityPluginImpl @Inject() (
   def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
 
   def setFixDuplicateKeepsSeq(seq: Long): Unit = { centralConfig.update(FixDuplicateKeepsSeqNumKey.longKey, seq) }
+
+  def clearRedirects(toUriId: Id[NormalizedURI]): Unit = {
+    db.readWrite{ implicit s =>
+      val uris = uriRepo.getByRedirection(toUriId)
+      uris.foreach{ uri =>
+        log.info(s"clearing redirect [id=${uri.id.get} url=${uri.url}]")
+        uriRepo.save(uri.copy(redirect = None, redirectTime = None, normalization = None, state = NormalizedURIStates.ACTIVE))
+      }
+      log.info(s"redirect cleared [count=${uris.size}]")
+    }
+  }
 }
