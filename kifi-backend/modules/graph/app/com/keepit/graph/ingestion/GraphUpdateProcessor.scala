@@ -1,6 +1,6 @@
 package com.keepit.graph.ingestion
 
-import com.keepit.graph.model.GraphWriter
+import com.keepit.graph.model.{GraphWriter}
 import com.google.inject.Inject
 
 trait GraphUpdateProcessor {

@@ -10,6 +10,7 @@ import com.keepit.common.service.ServiceStatus
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.graph.model.GraphManager
 
 sealed trait GraphUpdaterActorMessage
 object GraphUpdaterActorMessage {
@@ -19,7 +20,7 @@ object GraphUpdaterActorMessage {
 }
 
 class GraphUpdaterActor(
-  graphUpdater: GraphUpdater,
+  graph: GraphManager,
   graphUpdateFetcher: GraphUpdateFetcher,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
@@ -33,12 +34,13 @@ class GraphUpdaterActor(
       updating = true
     }
     case ProcessGraphUpdates(updates, maxBatchSize) => {
-      graphUpdater.process(updates)
+      val state = graph.update(updates.map(_.body): _*)
+      updates.foreach(_.consume)
       updating = false
-      if (updates.length < maxBatchSize) { graphUpdateFetcher.fetch(graphUpdater.state) }
+      if (updates.length < maxBatchSize) { graphUpdateFetcher.fetch(state) }
       else { self ! UpdateGraph(maxBatchSize) }
     }
-    case BackupGraph => graphUpdater.backup()
+    case BackupGraph => graph.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
