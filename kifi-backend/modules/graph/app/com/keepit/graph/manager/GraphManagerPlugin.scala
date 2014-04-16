@@ -6,11 +6,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.service.ServiceStatus
 import scala.concurrent.duration._
-import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.graph.manager.GraphManager
 
 sealed trait GraphManagerActorMessage
 object GraphManagerActorMessage {
