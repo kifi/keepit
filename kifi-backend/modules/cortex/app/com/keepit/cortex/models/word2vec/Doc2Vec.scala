@@ -13,11 +13,12 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
   type Words = Array[String]
   type SetOfWords = Set[String]
 
-  val SIZE_TAIL_CUT = 0.15f
-  val POS_THRESHOLD = 0.2f
-  val DEFAULT_RECOVER_THRESHOLD = 0.9f
+  private val SIZE_TAIL_CUT = 0.2f
+  private val POS_THRESHOLD = 0.2f
+  private val DEFAULT_RECOVER_THRESHOLD = 0.9f
+  private val SCORE_TAIL_CUT = 4f
 
-  def genVecs(words: Words): (Words, Vectors) = {
+  private def genVecs(words: Words): (Words, Vectors) = {
     val ws = new ArrayBuffer[String]()
     val vecs = new ArrayBuffer[Array[Float]]()
     words.foreach{ w =>
@@ -31,7 +32,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
     (ws.toArray, vecs.toArray)
   }
 
-  def indexToWords(words: Words, clusterIndexes: ArrayOfIndexes): ArrayOfWords = {
+  private def indexToWords(words: Words, clusterIndexes: ArrayOfIndexes): ArrayOfWords = {
     clusterIndexes.map{ indexes =>
       indexes.map{ i => words(i)}
     }
@@ -90,9 +91,9 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
     (clusterSums, cw)
   }
 
-  def getPOS(token: String): String = POSTagger.tagOneWord(token).value()
+  private def getPOS(token: String): String = POSTagger.tagOneWord(token).value()
 
-  def partOfSpeechCounts(words: Words): (Int, Int) = {
+  private def partOfSpeechCounts(words: Words): (Int, Int) = {
     var i = 0
     words.foreach{ w =>
       val tag = getPOS(w)
@@ -101,7 +102,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
     (i, words.size)
   }
 
-  def filterAndRankClusters(clusterSums: Vectors, clusterWords: ArrayOfWords): (Vectors, ArrayOfWords) = {
+  private def filterAndRankClusters(clusterSums: Vectors, clusterWords: ArrayOfWords): (Vectors, ArrayOfWords) = {
     val clusterUniqueWords = clusterWords.map{_.toSet}
     val maxSz = clusterUniqueWords.map{_.size}.foldLeft(0)(_ max _)
     val indexAndScore = new ArrayBuffer[(Int, Float)]()
@@ -121,11 +122,14 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
 
     if (indexAndScore.isEmpty) return (Array(), Array())
     val sorted = indexAndScore.toArray.sortBy(_._2)
+    val bestScore = sorted(0)._2
     val c = new ArrayBuffer[Array[Float]]()
     val cw = new ArrayBuffer[Array[String]]()
-    sorted.foreach{ case (idx, _) =>
-      c.append(clusterSums(idx))
-      cw.append(clusterWords(idx))
+    sorted.foreach{ case (idx, score) =>
+      if (score < bestScore * SCORE_TAIL_CUT){
+        c.append(clusterSums(idx))
+        cw.append(clusterWords(idx))
+      }
     }
     (c.toArray, cw.toArray)
   }
@@ -136,11 +140,12 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
     (c2, cw2)
   }
 
-  def getDocVecAndKeyWords(text: String): Option[(Array[Float], Words)] = {
+  def getDocVecAndKeyWords(text: String): Option[(Array[Float], Words, Words)] = {
     val (c, cw) = getRepresentatives(text)
     if (c.isEmpty) None
     else {
       val docVec = new Array[Float](dim)
+
       for (vec <- c){
         var i = 0
         while (i < dim){
@@ -149,8 +154,14 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
         }
       }
 
-      val keywords = cw.flatten.toArray     // not using idf info for now
-      Some((docVec, keywords))
+      val keywords = (0 until c.size).map{ i =>
+        val target = c(i)
+        val (rword, _, _) = recover(target, cw(i).toSet)
+        rword
+      }.flatten.toSet.toArray
+
+      val bagOfWords = cw.flatten.toArray     // not using idf info for now
+      Some((docVec, keywords, bagOfWords))
     }
   }
 
