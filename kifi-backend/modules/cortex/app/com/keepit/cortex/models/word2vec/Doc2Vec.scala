@@ -5,6 +5,8 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.cortex.utils.MatrixUtils
 import com.keepit.cortex.nlp.POSTagger
 
+case class Doc2VecResult(vec: Array[Float], keywords: Array[String], bagOfWords: Array[String])
+
 class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
 
   type ArrayOfIndexes = Array[Array[Int]]
@@ -140,7 +142,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
     (c2, cw2)
   }
 
-  def getDocVecAndKeyWords(text: String): Option[(Array[Float], Words, Words)] = {
+  def getDocVecAndKeyWords(text: String): Option[Doc2VecResult] = {
     val (c, cw) = getRepresentatives(text)
     if (c.isEmpty) None
     else {
@@ -161,7 +163,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int){
       }.flatten.toSet.toArray
 
       val bagOfWords = cw.flatten.toArray     // not using idf info for now
-      Some((docVec, keywords, bagOfWords))
+      Some(Doc2VecResult(docVec, keywords, bagOfWords))
     }
   }
 
