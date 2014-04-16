@@ -50,16 +50,18 @@ var initCompose = (function() {
   var mouseDownSeriesLen;
   var mouseDownSeriesStartTime;
   var mouseDownSeriesSelChanges;
-  function onWinMouseDown() {
+  function onWinMouseDown(e) {
     log('[onWinMouseDown]')();
-    mouseDown = true;
-    var now = Date.now();
-    if (!mouseDownSeriesStartTime || now - mouseDownSeriesStartTime > RAPID_CLICK_GRACE_PERIOD_MS) {
-      mouseDownSeriesStartTime = now;
-      mouseDownSeriesLen = 1;
-      mouseDownSeriesSelChanges = 0;
-    } else {
-      mouseDownSeriesLen++;
+    if (!$(e.target).is('.kifi-root,.kifi-root *')) {
+      mouseDown = true;
+      var now = Date.now();
+      if (!mouseDownSeriesStartTime || now - mouseDownSeriesStartTime > RAPID_CLICK_GRACE_PERIOD_MS) {
+        mouseDownSeriesStartTime = now;
+        mouseDownSeriesLen = 1;
+        mouseDownSeriesSelChanges = 0;
+      } else {
+        mouseDownSeriesLen++;
+      }
     }
   }
 
@@ -163,6 +165,7 @@ var initCompose = (function() {
 
   function finishCaptureSelection(info, text, href) {
     var $a = $aLook;
+    $aLook = null;
     var $d = $a.closest('.kifi-compose-draft');
     var $img = $(this).addClass('kifi-root').css({
       position: 'fixed',
@@ -175,13 +178,9 @@ var initCompose = (function() {
       transition: 'all .5s ease-in-out,opacity .5s ease-in'
     }).appendTo($('body')[0] || 'html');
     window.getSelection().removeAllRanges();
-    $aLook = null;
 
     $a.prop('title', text.trim());
     positionCursorAfterLookHereLink($d, $a);
-
-    // var fadeInLink = !customLinkText && !emptyDraft;
-    // $a.toggleClass('kifi-to-opaque', fadeInLink);
 
     var aRect = $a[0].getClientRects()[0];
     var bRect = info.bounds;
@@ -189,13 +188,11 @@ var initCompose = (function() {
     $img.on('transitionend', function () {
       $img.remove();
       $a.prop('href', href);
-      // $a.removeAttr('class');
       $d.focus();  // save draft
     }).layout().css({
       transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
       opacity: 0
     });
-    // $a.toggleClass('kifi-opaque', fadeInLink);
   }
 
   function insertLookHereLink($d) {
