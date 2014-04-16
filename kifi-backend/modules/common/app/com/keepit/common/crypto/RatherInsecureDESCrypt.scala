@@ -4,7 +4,7 @@ import javax.crypto.{SecretKey, Cipher, SecretKeyFactory}
 import javax.crypto.spec.{IvParameterSpec, DESKeySpec}
 import scala.util.Try
 
-class SimpleDESCrypt extends CryptoSupport {
+class RatherInsecureDESCrypt extends CryptoSupport {
   private val ivBytes = Array[Byte](0x68, 0x65, 0x6c, 0x70, 0x20, 0x73, 0x74, 0x75)
   private val ivSpec = new IvParameterSpec(ivBytes)
 

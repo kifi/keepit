@@ -1,13 +1,13 @@
 package com.keepit.commanders
 
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.google.inject.Inject
 import com.keepit.common.mail.{OptoutSecret, GenericEmailAddress, EmailAddressHolder}
 import scala.util.Try
 
 class EmailOptOutCommander @Inject() (optoutSecret: OptoutSecret) {
 
-  private val crypt = new SimpleDESCrypt
+  private val crypt = new RatherInsecureDESCrypt
   private val key = crypt.stringToKey(optoutSecret.value)
 
   def generateOptOutToken(emailAddress: EmailAddressHolder) = {

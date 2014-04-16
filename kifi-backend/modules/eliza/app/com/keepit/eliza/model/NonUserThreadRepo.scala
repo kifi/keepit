@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.common.db.{State, Id}
 import com.keepit.model.{EContact, NormalizedURI}
 import com.keepit.common.mail.EmailAddressHolder
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.social.{NonUserKind, NonUserKinds}
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
@@ -106,7 +106,7 @@ class NonUserThreadRepoImpl @Inject() (
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean =
     (for (row <- rows if row.id === nonUserThreadId) yield row.muted).update(muted) > 0
 
-  val crypt = new SimpleDESCrypt()
+  val crypt = new RatherInsecureDESCrypt()
   val muteKey = crypt.stringToKey("non user thread id to muteKey key, word.")
   def nonUserThreadIdToMuteToken(id: Id[NonUserThread]) = {
     val encText = { // DES is a block cypher, so we'd prefer all blocks to be different for similar IDs
