@@ -140,7 +140,12 @@ object ApplicationBuild extends Build {
     "org.apache.tika" % "tika-parsers" % "1.3"
   )
 
-  lazy val cortexDependencies = Seq()
+  lazy val cortexDependencies = Seq(
+    // got this from http://grepcode.com/
+    "edu.stanford.nlp.models" % "stanford-corenlp-models" % "3.2.0" from
+    "http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.2.0/stanford-corenlp-3.2.0-models.jar",
+    "edu.stanford.nlp" % "stanford-corenlp" % "3.2.0"
+  )
 
   lazy val graphDependencies = Seq()
 

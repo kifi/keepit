@@ -39,25 +39,13 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getSendableNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
-
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
-
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): List[RawNotification]
-
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
   def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): List[RawNotification]
-
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
   def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
-
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
-
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
   def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
@@ -205,38 +193,6 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.thread === threadId) yield (row.lastNotification, row.unread)).first
   }
 
-  def getLatestSendableNotificationsNotJustFromMe(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-      (for (row <- rows if row.user === userId &&
-                            row.lastMsgFromOther.isNotNull &&
-                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            row.lastNotification.isNotNull) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
-      .list
-  }
-
-  def getSendableNotificationsNotJustFromMeBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-      (for (row <- rows if row.user === userId &&
-                            row.notificationUpdatedAt < time &&
-                            row.lastMsgFromOther.isNotNull &&
-                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            row.lastNotification.isNotNull) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
-      .list
-  }
-
-  def getSendableNotificationsNotJustFromMeSince(userId: Id[User], time: DateTime)(implicit session: RSession): List[RawNotification] = {
-      (for (row <- rows if row.user === userId &&
-                            row.notificationUpdatedAt > time &&
-                            row.lastMsgFromOther.isNotNull &&
-                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            row.lastNotification.isNotNull) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .map(row => (row.lastNotification, row.unread))
-      .list
-  }
-
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
       (for (row <- rows if row.user === userId &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
@@ -256,16 +212,6 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getSendableNotificationsSince(userId: Id[User], time: DateTime)(implicit session: RSession): List[RawNotification] = {
-      (for (row <- rows if row.user === userId &&
-                            row.notificationUpdatedAt > time &&
-                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            row.lastNotification.isNotNull) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .map(row => (row.lastNotification, row.unread))
-      .list
-  }
-
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
       (for (row <- rows if row.user === userId &&
                             row.unread &&
@@ -279,27 +225,6 @@ class UserThreadRepoImpl @Inject() (
   def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
       (for (row <- rows if row.user === userId &&
                             row.unread &&
-                            row.notificationUpdatedAt < time &&
-                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            row.lastNotification.isNotNull) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
-      .list
-  }
-
-  def getLatestMutedSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-      (for (row <- rows if row.user === userId &&
-                            row.muted &&
-                            row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-                            row.lastNotification.isNotNull) yield row)
-      .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
-      .list
-  }
-
-  def getMutedSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-      (for (row <- rows if row.user === userId &&
-                            row.muted &&
                             row.notificationUpdatedAt < time &&
                             row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
                             row.lastNotification.isNotNull) yield row)
