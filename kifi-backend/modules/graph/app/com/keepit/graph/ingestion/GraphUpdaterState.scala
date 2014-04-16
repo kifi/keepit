@@ -5,8 +5,8 @@ import play.api.libs.json._
 import play.api.libs.json.JsObject
 
 
-class GraphUpdaterState(var state: Map[GraphUpdateKind[_ <: GraphUpdate], Long]) {
-  def commit(updates: Seq[GraphUpdate]): Unit = { state ++= updates.groupBy(_.kind).mapValues(_.map(_.seq.value).max) }
+case class GraphUpdaterState(state: Map[GraphUpdateKind[_ <: GraphUpdate], Long]) {
+  def withUpdates(updates: Seq[GraphUpdate]): GraphUpdaterState = GraphUpdaterState(state ++ updates.groupBy(_.kind).mapValues(_.map(_.seq.value).max))
   def getCurrentSequenceNumber[U <: GraphUpdate](implicit kind: GraphUpdateKind[U]): SequenceNumber[U] = SequenceNumber[U](state.getOrElse(kind, 0))
 }
 

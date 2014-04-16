@@ -10,7 +10,7 @@ import com.keepit.common.service.ServiceStatus
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.graph.model.GraphManager
+import com.keepit.graph.GraphManager
 
 sealed trait GraphUpdaterActorMessage
 object GraphUpdaterActorMessage {

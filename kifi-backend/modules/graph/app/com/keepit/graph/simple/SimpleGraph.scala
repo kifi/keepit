@@ -7,29 +7,22 @@ import java.io.File
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.JsArray
 import com.keepit.graph.ingestion.{GraphUpdateProcessor, GraphUpdate, GraphDirectory, GraphUpdaterState}
+import com.keepit.graph.GraphManager
 
-class SimpleGraph(
-  val vertices: Vertices,
-  val state: GraphUpdaterState,
+class SimpleGraphManager(
+  val simpleGraph: SimpleGraph,
+  var state: GraphUpdaterState,
   graphDirectory: GraphDirectory,
   processUpdate: GraphUpdateProcessor
 ) extends GraphManager {
 
-  private val graphReader = new GraphReaderImpl(vertices.vertices)
+  private val reusableGraphReader = simpleGraph.getNewReader()
 
-  def readOnly[T](f: GraphReader => T): T = f(graphReader)
-
-  def readWrite[T](f: GraphWriter => T): T = {
-    val bufferedVertices = new BufferedMap(vertices.vertices)
-    val graphWriter = new GraphWriterImpl(bufferedVertices)
-    val result = f(graphWriter)
-    this.synchronized { graphWriter.commit() }
-    result
-  }
+  def readOnly[T](f: GraphReader => T): T = f(reusableGraphReader)
 
   def backup(): Unit = {
-    this.synchronized {
-      persistVertices(vertices)
+    simpleGraph.synchronized {
+      persistSimpleGraph(simpleGraph)
       persistState(state)
     }
     graphDirectory.synchronized { graphDirectory.doBackup() }
@@ -37,30 +30,30 @@ class SimpleGraph(
 
   def update(updates: GraphUpdate*): GraphUpdaterState = {
     val relevantUpdates = updates.filter { update => update.seq > state.getCurrentSequenceNumber(update.kind) }
-    readWrite { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(processUpdate(_)) }
-    state.commit(relevantUpdates) // todo(Léo): add transaction callback capabilities to GraphWriter (cf SessionWrapper)
+    simpleGraph.readWrite { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(processUpdate(_)) }
+    state = state.withUpdates(relevantUpdates) // todo(Léo): add transaction callback capabilities to GraphWriter (cf SessionWrapper)
     state
   }
 
-  protected def persistVertices(vertices: Vertices): Unit = {
-    val json = Vertices.format.writes(vertices)
-    FileUtils.writeStringToFile(SimpleGraph.getVerticesFile(graphDirectory), Json.stringify(json))
+  protected def persistSimpleGraph(simpleGraph: SimpleGraph): Unit = {
+    val json = SimpleGraph.format.writes(simpleGraph)
+    FileUtils.writeStringToFile(SimpleGraphManager.getSimpleGraphFile(graphDirectory), Json.stringify(json))
   }
 
   protected def persistState(state: GraphUpdaterState): Unit = {
     val json = GraphUpdaterState.format.writes(state)
-    FileUtils.writeStringToFile(SimpleGraph.getStateFile(graphDirectory), Json.stringify(json))
+    FileUtils.writeStringToFile(SimpleGraphManager.getStateFile(graphDirectory), Json.stringify(json))
   }
 }
 
-object SimpleGraph {
+object SimpleGraphManager {
   def getStateFile(graphDirectory: GraphDirectory): File = new File(graphDirectory.getDirectory(), "state")
-  def getVerticesFile(graphDirectory: GraphDirectory): File = new File(graphDirectory.getDirectory(), "vertices")
-  def load(graphDirectory: GraphDirectory): (Vertices, GraphUpdaterState) = (loadVertices(graphDirectory), loadState(graphDirectory))
+  def getSimpleGraphFile(graphDirectory: GraphDirectory): File = new File(graphDirectory.getDirectory(), "graph")
+  def load(graphDirectory: GraphDirectory): (SimpleGraph, GraphUpdaterState) = (loadVertices(graphDirectory), loadState(graphDirectory))
 
-  private def loadVertices(graphDirectory: GraphDirectory): Vertices = {
-    val json = Json.parse(FileUtils.readFileToString(getVerticesFile(graphDirectory)))
-    Vertices.format.reads(json).get
+  private def loadVertices(graphDirectory: GraphDirectory): SimpleGraph = {
+    val json = Json.parse(FileUtils.readFileToString(getSimpleGraphFile(graphDirectory)))
+    SimpleGraph.format.reads(json).get
   }
 
   private def loadState(graphDirectory: GraphDirectory): GraphUpdaterState = {
@@ -69,21 +62,33 @@ object SimpleGraph {
   }
 }
 
-case class Vertices(vertices: ConcurrentMap[VertexId, MutableVertex])
+case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
+  def getNewReader(): GraphReader = new GraphReaderImpl(vertices)
 
-object Vertices {
-  def empty() = Vertices(TrieMap())
+  private def getNewWriter(): GraphWriter = {
+    val bufferedVertices = new BufferedMap(vertices)
+    new GraphWriterImpl(bufferedVertices)
+  }
 
-  implicit val format: Format[Vertices] = new Format[Vertices] {
-    def writes(vertices: Vertices): JsValue = JsArray(vertices.vertices.values.map(MutableVertex.format.writes).toSeq)
-    def reads(json: JsValue): JsResult[Vertices] = json.validate[JsArray].map { jsArray =>
+  def readWrite[T](f: GraphWriter => T): T = {
+    val graphWriter = getNewWriter()
+    val result = f(graphWriter)
+    this.synchronized { graphWriter.commit() }
+    result
+  }
+}
+
+object SimpleGraph {
+  implicit val format: Format[SimpleGraph] = new Format[SimpleGraph] {
+    def writes(simpleGraph: SimpleGraph): JsValue = JsArray(simpleGraph.vertices.values.map(MutableVertex.format.writes).toSeq)
+    def reads(json: JsValue): JsResult[SimpleGraph] = json.validate[JsArray].map { jsArray =>
       val mutableVertices = jsArray.value.map(_.as[MutableVertex])
       val vertices = TrieMap[VertexId, MutableVertex]()
       vertices ++= mutableVertices.map { mutableVertex =>
         val vertexData = mutableVertex.data
         (VertexId(vertexData.id)(vertexData.kind) -> mutableVertex)
       }
-      Vertices(vertices)
+      SimpleGraph(vertices)
     }
   }
 }
