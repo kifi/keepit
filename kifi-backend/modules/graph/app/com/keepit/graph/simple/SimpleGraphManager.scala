@@ -5,19 +5,25 @@ import com.keepit.graph.manager._
 import play.api.libs.json.{JsNumber, Json}
 import java.io.File
 import org.apache.commons.io.FileUtils
+import com.google.inject.Inject
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.service.ServiceStatus
 
-class SimpleGraphManager(
+class SimpleGraphManager @Inject() (
   val simpleGraph: SimpleGraph,
   var state: GraphUpdaterState,
   graphDirectory: GraphDirectory,
-  graphUpdater: GraphUpdater
+  graphUpdater: GraphUpdater,
+  serviceDiscovery: ServiceDiscovery
 ) extends GraphManager {
 
   def readOnly[T](f: GraphReader => T): T = simpleGraph.readOnly(f)
 
   def backup(): Unit = {
     simpleGraph.synchronized { SimpleGraphManager.persist(simpleGraph, state, graphDirectory) }
-    graphDirectory.synchronized { graphDirectory.doBackup() }
+    if (serviceDiscovery.thisInstance.exists(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP)) {
+      graphDirectory.synchronized { graphDirectory.doBackup() }
+    }
   }
 
   def update(updates: GraphUpdate*): GraphUpdaterState = {
