@@ -7,9 +7,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.common.akka.SafeFuture
 
 trait GraphUpdateFetcher {
-  def nextBatch(maxBatchSize: Int): Future[Seq[SQSMessage[GraphUpdate]]]
+  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
   def fetch(currentState: GraphUpdaterState): Unit
 }
 
@@ -18,8 +19,7 @@ class GraphUpdateFetcherImpl @Inject() (
   shoebox: ShoeboxServiceClient,
   eliza: ElizaServiceClient
 ) extends GraphUpdateFetcher {
-  val lockTimeout: FiniteDuration = ???
-  def nextBatch(maxBatchSize: Int): Future[Seq[SQSMessage[GraphUpdate]]] = queue.nextBatchWithLock(maxBatchSize, lockTimeout)
+  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
     case _ => ???
   }
