@@ -29,11 +29,13 @@ describe('kifi.tagService', function () {
       var tags = [
         {
           id: 'TAG_ID_1',
-          name: 'TAG_NAME_1'
+          name: 'TAG_NAME_1',
+          lowerName: 'tag_name_1'
         },
         {
           id: 'TAG_ID_2',
-          name: 'TAG_NAME_2'
+          name: 'TAG_NAME_2',
+          lowerName: 'tag_name_2'
         }
       ];
 
@@ -55,7 +57,7 @@ describe('kifi.tagService', function () {
 
       expect(data).toEqual(tags);
       expect(data).not.toBe(tags);
-      expect(tagService.allTags).toBe(data);
+      expect(tagService.list).toBe(data);
 
       expect(tagService.getById('TAG_ID_1')).toEqual(tags[0]);
       expect(tagService.getById('TAG_ID_2')).toEqual(tags[1]);

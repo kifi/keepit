@@ -44,12 +44,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         scope.newLocationTagId = null;
         scope.viewedTagId = null;
 
-        scope.tagScrollDistance = '100%';
-        scope.tagIsScrollDisabled = false;
-        scope.tagScrollNext = function () {
-          console.log('scroll');
-        };
-
         scope.clearFilter = function (focus) {
           scope.filter.name = '';
           if (focus) {

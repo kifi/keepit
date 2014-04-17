@@ -145,11 +145,9 @@ angular.module('kifi', [
   }
 ])
 
-.run([
+.controller('AppCtrl', [
   'profileService', '$rootScope', '$window', 'friendService', '$timeout', 'env',
   function (profileService, $rootScope, $window, friendService, $timeout, env) {
-    // Initial data loading:
-
     $timeout(function () {
       profileService.fetchPrefs().then(function (res) {
         // handle onboarding / imports
@@ -165,9 +163,4 @@ angular.module('kifi', [
       friendService.getRequests();
     });
   }
-])
-
-.controller('AppCtrl', [
-
-  function () {}
 ]);
