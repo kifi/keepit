@@ -14,6 +14,14 @@
   <p id = "word_sim_result"></p>
 
 
+  <div>Put English text here. Will try to identify keywords and important bag of words</div>
+  <form id = "keywords_detect">
+    <textarea id = "text"></textarea>
+    <button type = "submit">submit</button>
+  </form>
+
+  <p id = "keywords"></p>
+
   <script type="text/javascript">
 
     $(document).ready(function(){
@@ -32,8 +40,18 @@
     })
 
 
+    $("#keywords_detect").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.keywords',
+        {text: $('#text').val()}
+      ).done(done).fail(fail);
 
+      function done(data) {
+        $("#keywords").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
 
+    })
 
 
     });
