@@ -26,7 +26,9 @@ class VolatileIndexDirectoryImpl extends RAMDirectory with IndexDirectory with L
   def restoreFromBackup(): Unit = log.warn(s"Cannot restore volatile index directory ${this.getLockID}")
 }
 
-class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3FileStore[IndexDirectory] with IndexStore {
+case class IndexStoreInbox(dir: File) extends S3InboxDirectory
+
+class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val inbox: IndexStoreInbox) extends S3FileStore[IndexDirectory] with IndexStore {
   def idToKey(indexDirectory: IndexDirectory): String = indexDirectory.getDirectory().getName + ".tar.gz"
 }
 
