@@ -110,7 +110,8 @@ class MobileMessagingController @Inject() (
             "id" -> m.id.toString,
             "time" -> m.createdAt.getMillis,
             "text" -> m.text,
-            "userId" -> m.user.map(_.externalId.toString)
+            "userId" -> m.user.map(_.asBasicUser.map(_.externalId.toString)),
+            "email" -> m.user.map(_.asBasicNonUser.map(_.toString)) //not great
           )
           adderAndAddedOpt.map { adderAndAdded =>
             msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))

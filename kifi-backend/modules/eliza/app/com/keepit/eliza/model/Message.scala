@@ -19,12 +19,38 @@ import play.api.libs.functional.syntax._
 import scala.slick.lifted.Query
 import scala.slick.jdbc.StaticQuery
 
+
+sealed trait MessageSender {
+  def isDefined: Boolean = true //ZZZ
+  def asUser: Option[Id[User]] = None
+  def asNonUser: Option[NonUserParticipant] = None
+}
+
+object MessageSender {
+  implicit val format : Format[MessageSender] = null //ZZZ
+
+  case class User(id: Id[com.keepit.model.User]) extends MessageSender {
+    override def asUser = Some(id)
+  }
+
+  case class NonUser(npu: NonUserParticipant) extends MessageSender {
+    override def asNonUser = Some(npu)
+  }
+
+  case object System extends MessageSender {
+    override def isDefined: Boolean = false //ZZZ
+  }
+}
+
+
+
+
 case class Message(
     id: Option[Id[Message]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     externalId: ExternalId[Message] = ExternalId(),
-    from: Option[Id[User]],
+    from: MessageSender,
     thread: Id[MessageThread],
     threadExtId: ExternalId[MessageThread],
     messageText: String,
@@ -44,7 +70,7 @@ object Message {
       (__ \ 'createdAt).format[DateTime] and
       (__ \ 'updatedAt).format[DateTime] and
       (__ \ 'externalId).format(ExternalId.format[Message]) and
-      (__ \ 'from).formatNullable(Id.format[User]) and
+      (__ \ 'from).format[MessageSender] and
       (__ \ 'thread).format(Id.format[MessageThread]) and
       (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
       (__ \ 'messageText).format[String] and
@@ -52,6 +78,38 @@ object Message {
       (__ \ 'sentOnUrl).formatNullable[String] and
       (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
     )(Message.apply, unlift(Message.unapply))
+
+  def fromDbTuple(
+    id: Option[Id[Message]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    externalId: ExternalId[Message],
+    userSender: Option[Id[User]],
+    thread: Id[MessageThread],
+    threadExtId: ExternalId[MessageThread],
+    messageText: String,
+    auxData: Option[JsArray],
+    sentOnUrl: Option[String],
+    sentOnUriId: Option[Id[NormalizedURI]]
+  ): Message = {
+    Message(
+      id,
+      createdAt,
+      updatedAt,
+      externalId,
+      userSender.map(MessageSender.User(_)).getOrElse(MessageSender.System),
+      thread,
+      threadExtId,
+      messageText,
+      auxData,
+      sentOnUrl,
+      sentOnUriId
+    )
+  }
+
+  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[JsArray],Option[String], Option[Id[NormalizedURI]])] = {
+    null //ZZZ
+  }
 }
 
 case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
@@ -79,7 +137,7 @@ object MessagesForThread {
 }
 
 case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
-  override val version = 3
+  override val version = 4
   val namespace = "messages_for_thread_id"
   def toKey():String = threadId.id.toString
 }

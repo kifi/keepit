@@ -65,7 +65,7 @@ class MessagingCommander @Inject() (
 
     threads.map{ thread =>
 
-      val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.isDefined => m }
+      val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
       if (lastMessageOpt.isEmpty) log.error(s"EMPTY THREAD! thread_id: ${thread.id.get} request_url: $requestUrl user: $userId")
       val lastMessage = lastMessageOpt.get
 
@@ -79,7 +79,7 @@ class MessagingCommander @Inject() (
         externalId = thread.externalId,
         participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
         digest = lastMessage.messageText,
-        lastAuthor = userId2BasicUser(lastMessage.from.get).externalId,
+        lastAuthor = userId2BasicUser(lastMessage.from.asUser.get).externalId,
         messageCount = messagesByThread(thread.id.get).length,
         messageTimes = messageTimes,
         createdAt = thread.createdAt,
@@ -244,7 +244,7 @@ class MessagingCommander @Inject() (
     val message = db.readWrite{ implicit session =>
       messageRepo.save(Message(
         id = None,
-        from = Some(from),
+        from = MessageSender.User(from),
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = messageText,
@@ -256,7 +256,7 @@ class MessagingCommander @Inject() (
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
-    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set()) //ZZZ all non users as well
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
 
     val messageWithBasicUser = MessageWithBasicUser(
@@ -266,7 +266,11 @@ class MessagingCommander @Inject() (
       None,
       message.sentOnUrl.getOrElse(""),
       thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-      message.from.map(id2BasicUser(_)),
+      message.from match {
+        case MessageSender.User(id) => Some(id2BasicUser(id))
+        case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+        case _ => None
+      },
       participantSet.toSeq.map(id2BasicUser(_))
     )
 
@@ -333,7 +337,7 @@ class MessagingCommander @Inject() (
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds))
 
           val message = messageRepo.save(Message(
-            from = None,
+            from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,
             messageText = "",

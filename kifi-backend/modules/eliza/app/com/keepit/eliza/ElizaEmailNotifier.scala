@@ -77,7 +77,7 @@ class ElizaEmailNotifierActor @Inject() (
     } getOrElse {
       messageRepo.get(thread.id.get, 0, None).filter(_.from.isDefined)
     }}.map { message =>
-      ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
+      ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageLookHereRemover(message.messageText))
     } reverse
 
     log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +

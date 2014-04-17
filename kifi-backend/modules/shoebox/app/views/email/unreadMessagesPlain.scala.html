@@ -6,6 +6,6 @@ conversation between @authors.mkString(", ") and you on "@title".
 
 Here's what you missed:
 @for(message <- unreadMessages) {
-@{allUsers(message.userId).firstName + " " + allUsers(message.userId).lastName}
+@{message.userId.map(uid => allUsers(uid).firstName + " " + allUsers(uid).lastName).getOrElse(message.nonUser.getOrElse("Kifi User"))}: @message.message
 }
 Visit the page at: @url

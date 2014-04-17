@@ -22,6 +22,7 @@ class EmailNotificationsCommander @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier) extends Logging {
 
+  //ZZZ needs to support non user participants
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipantIds: Seq[Id[User]],
                          recipientUserId: Id[User], title: String, deepLocator: DeepLocator,
                          notificationUpdatedAt: Option[DateTime]): Unit = db.readWrite { implicit session =>

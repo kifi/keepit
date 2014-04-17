@@ -55,7 +55,7 @@ class MessageRepoImpl @Inject() (
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, auxData.?, sentOnUrl.?, sentOnUriId.?) <> ((Message.apply _).tupled, Message.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, auxData.?, sentOnUrl.?, sentOnUriId.?) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
   }
   def table(tag: Tag) = new MessageTable(tag)
 
