@@ -144,10 +144,6 @@ trait Indexable[T, S] extends Logging{
     new Field(fieldName, new IteratorTokenStream(iterator, toToken), fieldType)
   }
 
-  def buildDocSemanticVectorField(fieldName: String, svBuilder: SemanticVectorBuilder) = {
-    new BinaryDocValuesField(fieldName, new BytesRef(svBuilder.aggregatedVector.bytes))
-  }
-
   def buildSemanticVectorField(fieldName: String, svBuilder: SemanticVectorBuilder) = {
     new Field(fieldName, svBuilder.tokenStream, semanticVectorFieldType)
   }
