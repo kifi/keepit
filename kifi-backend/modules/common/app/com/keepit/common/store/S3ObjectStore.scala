@@ -13,7 +13,6 @@ import play.api.libs.json._
 import play.api.Play.current
 import play.api.Play
 import java.io._
-import net.codingwell.scalaguice.ScalaModule
 import com.keepit.serializer.BinaryFormat
 import org.apache.commons.io.{IOUtils, FileUtils}
 import com.keepit.common.time._
@@ -187,9 +186,13 @@ trait BlobFormat[B] {
   protected def decodeValue(data: Array[Byte]) : B = format.reads(data).get
 }
 
-trait S3FileStore[A] extends S3ObjectStore[A, File] {
+trait S3InboxDirectory {
+  val dir: File
+}
 
-  protected val inbox = FileUtils.getTempDirectory
+trait S3FileStore[A] extends S3ObjectStore[A, File] { self =>
+
+  protected val inbox: S3InboxDirectory
 
   protected def packValue(value: File) = {
     require(value.isFile, s"$value is not a file.")
@@ -202,7 +205,7 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
   protected def unpackValue(s3obj: S3Object) = {
     val metadata = s3obj.getObjectMetadata
     val name = metadata.getUserMetadata.get("name")
-    val file = new File(inbox, name)
+    val file = new File(inbox.dir, name)
     file.deleteOnExit()
     val contentStream = s3obj.getObjectContent
     try { FileUtils.copyInputStreamToFile(contentStream, file) }
@@ -210,6 +213,3 @@ trait S3FileStore[A] extends S3ObjectStore[A, File] {
     file
   }
 }
-
-trait S3Module extends ScalaModule
-

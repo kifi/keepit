@@ -5,6 +5,7 @@ import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
+import com.keepit.eliza.mail.{MailMessageReceiverPlugin, ElizaEmailNotifierPlugin}
 
 object ElizaGlobal extends FortyTwoGlobal(Prod) with ElizaServices {
   val module = ElizaProdModule()
@@ -24,6 +25,7 @@ trait ElizaServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ElizaEmailNotifierPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[MailMessageReceiverPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
   }
 }

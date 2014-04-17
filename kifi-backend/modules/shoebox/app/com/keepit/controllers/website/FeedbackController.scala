@@ -11,7 +11,6 @@ import play.api._
 import play.api.libs.json._
 import com.keepit.model._
 import com.keepit.common.db.slick._
-import com.keepit.common.crypto.UserVoiceTokenGenerator
 import com.keepit.common.store.S3ImageStore
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject

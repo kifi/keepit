@@ -12,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.realtime.UrbanAirship
 import org.joda.time.DateTime
-import com.keepit.eliza.MessageLookHereRemover
+import com.keepit.eliza.mail.MessageLookHereRemover
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
