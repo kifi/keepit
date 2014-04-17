@@ -14,9 +14,10 @@ angular.module('kifi.friendService', [
      */
     var friends = [];
     var requests = [];
+    var friendsHasRequested = false;
 
     var clutchParams = {
-      cacheDuration: 10000
+      cacheDuration: 20000
     };
 
     var kifiFriendsService = new Clutch(function () {
@@ -25,6 +26,7 @@ angular.module('kifi.friendService', [
         friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
           return !friend.unfriended;
         }));
+        friendsHasRequested = true;
         return friends;
       });
     }, clutchParams);
@@ -51,6 +53,8 @@ angular.module('kifi.friendService', [
       },
 
       friends: friends,
+
+      friendsHasRequested: friendsHasRequested,
 
       requests: requests,
 

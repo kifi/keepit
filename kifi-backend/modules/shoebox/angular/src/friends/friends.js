@@ -12,12 +12,7 @@ angular.module('kifi.friends', [
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider.when('/friends', {
-      templateUrl: 'friends/friends.tpl.html',
-      resolve: {
-        'kifiFriends': ['friendService', function (friendService) {
-          return friendService.getKifiFriends();
-        }]
-      }
+      templateUrl: 'friends/friends.tpl.html'
     }).when('/friends/requests', {
       redirectTo: '/friends'
     }).when('/friends/requests/:network', {
@@ -53,6 +48,8 @@ angular.module('kifi.friends', [
     };
 
     $scope.friends = friendService.friends;
+    $scope.friendsHasRequested = friendService.friendsHasRequested;
+
     friendService.getKifiFriends();
     friendService.getRequests();
   }
