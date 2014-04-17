@@ -150,19 +150,18 @@ angular.module('kifi', [
   function (profileService, $rootScope, $window, friendService, $timeout, env) {
     // Initial data loading:
 
-    profileService.fetchPrefs().then(function (res) {
-      // handle onboarding / imports
-      if (env.production) {
-        if (!res.onboarding_seen) {
-          $rootScope.$emit('showGettingStarted');
-        } else {
-          $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
-        }
-      }
-      return res;
-    });
-
     $timeout(function () {
+      profileService.fetchPrefs().then(function (res) {
+        // handle onboarding / imports
+        if (env.production) {
+          if (!res.onboarding_seen) {
+            $rootScope.$emit('showGettingStarted');
+          } else {
+            $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
+          }
+        }
+        return res;
+      });
       friendService.getRequests();
     });
   }

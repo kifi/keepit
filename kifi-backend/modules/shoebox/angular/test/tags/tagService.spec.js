@@ -18,9 +18,9 @@ describe('kifi.tagService', function () {
   });
 
   describe('tagService', function () {
-    it('should have an array named "list"', function () {
-      expect(Array.isArray(tagService.list)).toBe(true);
-      expect(tagService.list.length).toBe(0);
+    it('should have an array named "allTags"', function () {
+      expect(Array.isArray(tagService.allTags)).toBe(true);
+      expect(tagService.allTags.length).toBe(0);
     });
   });
 
@@ -55,7 +55,7 @@ describe('kifi.tagService', function () {
 
       expect(data).toEqual(tags);
       expect(data).not.toBe(tags);
-      expect(tagService.list).toBe(data);
+      expect(tagService.allTags).toBe(data);
 
       expect(tagService.getById('TAG_ID_1')).toEqual(tags[0]);
       expect(tagService.getById('TAG_ID_2')).toEqual(tags[1]);
