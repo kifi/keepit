@@ -23,6 +23,18 @@ var initCompose = (function() {
     updateKeyTip($composes);
   });
 
+  function updateKeyTip($f) {
+    if (enterToSend != null) {
+      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : KEY_PREFIX);
+      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? KEY_PREFIX : '');
+    }
+  }
+
+  function getSelRange() {
+    var s = window.getSelection();
+    return s.rangeCount ? s.getRangeAt(0) : null;
+  }
+
   api.onEnd.push(stopMonitoringSelection);
 
   function startMonitoringSelection() {
@@ -37,13 +49,6 @@ var initCompose = (function() {
     window.removeEventListener('mousedown', onWinMouseDown, true);
     window.removeEventListener('selectionchange', onSelectionChange, true);
     window.removeEventListener('mouseup', onWinMouseUp, true);
-  }
-
-  function updateKeyTip($f) {
-    if (enterToSend != null) {
-      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : KEY_PREFIX);
-      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? KEY_PREFIX : '');
-    }
   }
 
   var mouseDown;
@@ -69,34 +74,18 @@ var initCompose = (function() {
     log('[onSelectionChange]')();
     if (mouseDown) {
       mouseDownSeriesSelChanges++;
-      var sel = window.getSelection();
-      var r = sel.rangeCount && sel.getRangeAt(0);
+      var r = getSelRange();
       if (!r || r.collapsed) {
-        // hide provisional look-here link
         if ($aLook) {
           var data = $aLook.data();
           if (!data.custom) {
-            if ('before' in data) {
-              var prev = $aLook[0].previousSibling, prevVal = prev.nodeValue;
-              prev.nodeValue = prevVal.substr(0, prevVal.length - 1) + data.before;
-            }
-            if (data.after) {
-              var next = $aLook[0].nextSibling;
-              next.nodeValue = next.nodeValue.substr(1);
-            }
-            var $d = $aLook.closest('.kifi-compose-draft');
-            $aLook.remove();
-            $aLook = null;
-            $d.triggerHandler('input');
+            discardLookHereLink();
           } else {
             $aLook.removeAttr('href');
           }
         }
       } else if (!$aLook) {
-        if ($composes.length && !intersectsKifiDom(r)) {
-          // create provisional look-here link
-          $aLook = insertLookHereLink($composes.last().find('.kifi-compose-draft'));
-        }
+        tryToCreateLookHereLinkStub(r);
       } else if (!$aLook.prop('href')) {
         $aLook.prop('href', 'javascript:');
       }
@@ -112,10 +101,10 @@ var initCompose = (function() {
         if (mouseDownSeriesLen > 2 || // triple-click is 3
             mouseDownSeriesSelChanges > 4 || // a drag
             seriesMs > RAPID_CLICK_GRACE_PERIOD_MS) {
-          tryToCaptureSelectionAsLink();
+          finalizeOrDiscardLink();
         } else {
-          clearTimeout(tryToCaptureSelectionTimer);
-          tryToCaptureSelectionTimer = setTimeout(tryToCaptureSelectionAsLink, RAPID_CLICK_GRACE_PERIOD_MS - seriesMs);
+          clearTimeout(finalizeOrDiscardTimer);
+          finalizeOrDiscardTimer = setTimeout(finalizeOrDiscardLink, RAPID_CLICK_GRACE_PERIOD_MS - seriesMs);
         }
       } else {
         $aLook.remove();
@@ -124,19 +113,26 @@ var initCompose = (function() {
     }
   }
 
-  var tryToCaptureSelectionTimer;
-  function tryToCaptureSelectionAsLink() {
-    clearTimeout(tryToCaptureSelectionTimer);
+  function tryToCreateLookHereLinkStub(r) {
+    if ($composes.length && r && !r.collapsed && !intersectsKifiDom(r)) {
+      $aLook = insertLookHereLinkStub($composes.last().find('.kifi-compose-draft'));
+    }
+  }
+
+  var finalizeOrDiscardTimer;
+  function finalizeOrDiscardLink() {
+    clearTimeout(finalizeOrDiscardTimer);
     var r = getCurrentSelectionRangeIfItQualifies();
-    log('[tryToCaptureSelectionAsLink]', r ? 'yep' : 'nope')();
+    log('[finalizeOrDiscardLink]', r ? 'yep' : 'nope')();
     if (r) {
-      captureSelectionAsLink(r);
+      finalizeLookHereLink(r);
+    } else if ($aLook) {
+      discardLookHereLink();
     }
   }
 
   function getCurrentSelectionRangeIfItQualifies() {
-    var s = window.getSelection();
-    var r = s.rangeCount && s.getRangeAt(0);
+    var r = getSelRange();
     return r && !r.collapsed && !intersectsKifiDom(r) ? r : null;
   }
 
@@ -147,7 +143,7 @@ var initCompose = (function() {
            Array.prototype.some.call(document.getElementsByClassName('kifi-root'), r.intersectsNode.bind(r));
   }
 
-  function captureSelectionAsLink(r) {
+  function finalizeLookHereLink(r) {
     var info = setRangeRects(r, {
       win: {
         width: window.innerWidth,
@@ -156,14 +152,14 @@ var initCompose = (function() {
     });
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
-      $(img).on('load', finishCaptureSelection.bind(img, info, text, href));
+      $(img).on('load', finishFinalizeLookHereLink.bind(img, info, text, href));
       img.src = dataUrl;
     });
     var text = r.toString();
     var href = 'x-kifi-sel:' + snapshot.ofRange(r, text);
   }
 
-  function finishCaptureSelection(info, text, href) {
+  function finishFinalizeLookHereLink(info, text, href) {
     var $a = $aLook;
     $aLook = null;
     var $d = $a.closest('.kifi-compose-draft');
@@ -195,7 +191,7 @@ var initCompose = (function() {
     });
   }
 
-  function insertLookHereLink($d) {
+  function insertLookHereLinkStub($d) {
     var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:'});
     var r = $d.data('sel');
     if (r) {
@@ -246,10 +242,26 @@ var initCompose = (function() {
       }
     }
 
-    log('[insertLookHereLink] $a.data():', $a.data())();
+    log('[insertLookHereLinkStub] $a.data():', $a.data())();
 
     $d.triggerHandler('input');
     return $a;
+  }
+
+  function discardLookHereLink() {
+    var data = $aLook.data();
+    if ('before' in data) {
+      var prev = $aLook[0].previousSibling, prevVal = prev.nodeValue;
+      prev.nodeValue = prevVal.substr(0, prevVal.length - 1) + data.before;
+    }
+    if (data.after) {
+      var next = $aLook[0].nextSibling;
+      next.nodeValue = next.nodeValue.substr(1);
+    }
+    var $d = $aLook.closest('.kifi-compose-draft');
+    $aLook.remove();
+    $aLook = null;
+    $d.triggerHandler('input');
   }
 
   function positionCursorAfterLookHereLink($d, $a) {
@@ -359,13 +371,14 @@ var initCompose = (function() {
       e.preventDefault();
     }
   }).on('mousedown mouseup click', function () {
-    var sel = window.getSelection(), r = getSelRange(sel);
+    var r = getSelRange();
     if (r && r.startContainer === this.parentNode) {  // related to bugzil.la/904846
       var r2 = document.createRange();
       r2.selectNodeContents(this);
       if (r.collapsed) {
         r2.collapse(true);
       }
+      var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r2);
     }
@@ -482,6 +495,18 @@ var initCompose = (function() {
   })
   .on('click', '.kifi-compose-highlight', function () {
     this.classList.toggle('kifi-disabled');
+    if (this.classList.contains('kifi-disabled')) {
+      stopMonitoringSelection();
+      $aLook = null;
+    } else {
+      startMonitoringSelection();
+      if (!$aLook) {
+        tryToCreateLookHereLinkStub(getSelRange());
+        if ($aLook) {
+          finalizeOrDiscardLink();
+        }
+      }
+    }
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
     if (e.originalEvent.isTrusted === false) return;
@@ -530,11 +555,6 @@ var initCompose = (function() {
     }
   });
 
-  function getSelRange(sel) {
-    sel = sel || window.getSelection();
-    return sel.rangeCount ? sel.getRangeAt(0) : null;
-  }
-
   // compose API
   return {
     form: function () {
@@ -551,7 +571,7 @@ var initCompose = (function() {
       var r = getCurrentSelectionRangeIfItQualifies();
       if (r) {
         // TODO: scroll to range if necessary
-        captureSelectionAsLink(r);
+        finalizeLookHereLink(r);
       } else {
         return false;
       }
