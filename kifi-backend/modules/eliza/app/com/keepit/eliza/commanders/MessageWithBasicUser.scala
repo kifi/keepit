@@ -18,7 +18,7 @@ case class MessageWithBasicUser(
   auxData: Option[JsArray],
   url: String,
   nUrl: String,
-  user: Option[BasicUser],
+  user: Option[BasicUserLikeEntity],
   participants: Seq[BasicUserLikeEntity]
 )
 
@@ -31,7 +31,7 @@ object MessageWithBasicUser {
     (__ \ 'auxData).formatNullable[JsArray] and
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
-    (__ \ 'user).formatNullable[BasicUser] and
+    (__ \ 'user).formatNullable[BasicUserLikeEntity] and
     (__ \ 'participants).format[Seq[BasicUserLikeEntity]]
   )(MessageWithBasicUser.apply, unlift(MessageWithBasicUser.unapply))
 }

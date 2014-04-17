@@ -72,11 +72,11 @@ class ElizaEmailNotifierActor @Inject() (
     val otherParticipants: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set()) - userThread.user
 
     val threadItems: Seq[ThreadItem] =  db.readOnly { implicit session => userThread.lastSeen.map { lastSeen =>
-      messageRepo.getAfter(thread.id.get, lastSeen).filter(_.from.isDefined)
+      messageRepo.getAfter(thread.id.get, lastSeen).filter(!_.from.isSystem)
     } getOrElse {
-      messageRepo.get(thread.id.get, 0, None).filter(_.from.isDefined)
+      messageRepo.get(thread.id.get, 0, None).filter(!_.from.isSystem)
     }}.map { message =>
-      ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
+      ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageLookHereRemover(message.messageText))
     } reverse
 
     log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +

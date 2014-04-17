@@ -23,7 +23,10 @@ object NonUserKinds {
   val email = NonUserKind("email")
 }
 
-case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String]) extends BasicUserLikeEntity
+case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String]) extends BasicUserLikeEntity {
+  override def asBasicNonUser: Option[BasicNonUser] = Some(this)
+}
+
 object BasicNonUser {
   // The following formatter can be replaced with the functional Play formatter once we can break backwards compatibility.
 //  (

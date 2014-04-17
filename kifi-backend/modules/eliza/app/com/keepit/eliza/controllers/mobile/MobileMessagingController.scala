@@ -17,7 +17,7 @@ import play.api.libs.json._
 import scala.concurrent.Future
 
 import com.google.inject.Inject
-import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
 import scala.Some
@@ -106,12 +106,17 @@ class MobileMessagingController @Inject() (
             case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id) )
             case _ => None
           }
-          val msgJson = Json.obj(
+          val baseJson = Json.obj(
             "id" -> m.id.toString,
             "time" -> m.createdAt.getMillis,
-            "text" -> m.text,
-            "userId" -> m.user.map(_.externalId.toString)
+            "text" -> m.text
           )
+          val msgJson = baseJson ++ (m.user match {
+              case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
+              case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("email" -> bnu.toString)
+              case _ => Json.obj()
+          })
+
           adderAndAddedOpt.map { adderAndAdded =>
             msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
           } getOrElse{

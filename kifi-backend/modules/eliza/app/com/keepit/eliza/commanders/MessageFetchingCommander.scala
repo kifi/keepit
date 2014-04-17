@@ -66,7 +66,11 @@ class MessageFetchingCommander @Inject() (
           auxData      = message.auxData,
           url          = message.sentOnUrl.getOrElse(""),
           nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-          user         = message.from.map(id2BasicUser(_)),
+          user         = message.from match {
+            case MessageSender.User(id) => Some(id2BasicUser(id))
+            case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+            case _ => None
+          },
           participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
         )
       }
