@@ -101,7 +101,7 @@ angular.module('kifi.tagService', [
 
       filterList: function (term) {
         var lowerTerm = term.toLowerCase();
-        var searchList = term.indexOf(prevFilter) === 0 && prevFilter.length > 1 ? list : allTags;
+        var searchList = term.indexOf(prevFilter) === 0 && prevFilter.length > 0 ? list : allTags;
 
         var newList = [];
 
