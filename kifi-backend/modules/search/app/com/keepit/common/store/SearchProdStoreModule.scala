@@ -4,12 +4,7 @@ import com.google.inject.{Provides, Singleton}
 import com.amazonaws.services.s3.AmazonS3
 import play.api.Play._
 import com.keepit.common.logging.AccessLog
-import com.keepit.search.tracker.BrowsingHistoryBuilder
 import com.keepit.search.index.{IndexStoreInbox, InMemoryIndexStoreImpl, IndexStore, S3IndexStoreImpl}
-import com.keepit.search.tracker.S3BrowsingHistoryStoreImpl
-import com.keepit.search.tracker.InMemoryBrowsingHistoryStoreImpl
-import com.keepit.search.tracker.BrowsingHistoryUserIdCache
-import com.keepit.search.tracker.BrowsingHistoryStore
 import com.keepit.search.tracker.S3ClickHistoryStoreImpl
 import com.keepit.search.tracker.InMemoryClickHistoryStoreImpl
 import com.keepit.search.tracker.ClickHistoryUserIdCache
@@ -20,12 +15,6 @@ import org.apache.commons.io.FileUtils
 
 case class SearchProdStoreModule() extends ProdStoreModule {
   def configure {
-  }
-
-  @Provides @Singleton
-  def browsingHistoryStore(amazonS3Client: AmazonS3, accessLog: AccessLog, cache: BrowsingHistoryUserIdCache, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.browsingHistory.bucket").get)
-    new S3BrowsingHistoryStoreImpl(bucketName, amazonS3Client, accessLog, cache, builder)
   }
 
   @Provides @Singleton
@@ -47,13 +36,6 @@ case class SearchProdStoreModule() extends ProdStoreModule {
 
 case class SearchDevStoreModule() extends DevStoreModule(SearchProdStoreModule()) {
   def configure() {
-  }
-
-  @Provides @Singleton
-  def browsingHistoryStore(amazonS3Client: AmazonS3, accessLog: AccessLog, cache: BrowsingHistoryUserIdCache, builder: BrowsingHistoryBuilder): BrowsingHistoryStore = {
-    whenConfigured("amazon.s3.browsingHistory.bucket")(
-      prodStoreModule.browsingHistoryStore(amazonS3Client, accessLog, cache, builder)
-    ).getOrElse(new InMemoryBrowsingHistoryStoreImpl())
   }
 
   @Provides @Singleton

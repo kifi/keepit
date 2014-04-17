@@ -3,6 +3,7 @@ package com.keepit.cortex
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.cortex.models.lda._
+import com.keepit.cortex.models.word2vec._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 
@@ -22,6 +23,13 @@ case class CortexProdModelModule() extends CortexModelModule{
     val lda = ldaStore.get(version).get
     new LDAWordRepresenter(version, lda)
   }
+
+  @Singleton
+  @Provides
+  def word2vec(store: Word2VecStore): Word2Vec = {
+    val version = ModelVersions.word2vecVersion
+    store.get(version).get
+  }
 }
 
 case class CortexDevModelModule() extends CortexModelModule {
@@ -36,4 +44,12 @@ case class CortexDevModelModule() extends CortexModelModule {
     val lda = ldaStore.get(version).get
     new LDAWordRepresenter(version, lda)
   }
+
+  @Singleton
+  @Provides
+  def word2vec(store: Word2VecStore): Word2Vec = {
+    val version = ModelVersions.word2vecVersion
+    store.get(version).get
+  }
+
 }

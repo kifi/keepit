@@ -7,14 +7,6 @@ import java.io.File
 
 
 trait TrackingModule extends ScalaModule {
-  @Provides @Singleton
-  def browsingHistoryBuilder: BrowsingHistoryBuilder = {
-    val conf = current.configuration.getConfig("browsing-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-    BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
-  }
 
   @Provides @Singleton
   def clickHistoryBuilder: ClickHistoryBuilder = {

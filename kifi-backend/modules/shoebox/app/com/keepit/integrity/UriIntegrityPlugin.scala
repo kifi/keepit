@@ -99,7 +99,7 @@ class UriIntegrityActor @Inject()(
                 save(duplicate = currentPrimary, primary = oldBm, false)
               }
             } else {
-              // oldBm is already inactive, do nothing
+              // oldBm is already inactive ro duplicate, do nothing
               (None, None)
             }
           }
@@ -281,8 +281,11 @@ class UriIntegrityActor @Inject()(
               dedupedSuccessCount += 1
           }
         }
-        centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
         log.info(s"keeps deduped [count=$dedupedSuccessCount/${keeps.size}]")
+
+        if (seq == centralConfig(FixDuplicateKeepsSeqNumKey).getOrElse(SequenceNumber.ZERO)) {
+          centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
+        }
       }
       log.info(s"total $dedupedSuccessCount keeps deduplicated")
     } catch {
@@ -305,11 +308,16 @@ trait UriIntegrityPlugin extends SchedulerPlugin  {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def batchURLMigration(batchSize: Int = -1): Unit
+  def setFixDuplicateKeepsSeq(seq: Long): Unit
+  def clearRedirects(toUriId: Id[NormalizedURI]): Unit
 }
 
 @Singleton
 class UriIntegrityPluginImpl @Inject() (
   actor: ActorInstance[UriIntegrityActor],
+  db: Database,
+  uriRepo: NormalizedURIRepo,
+  centralConfig: CentralConfig,
   val scheduling: SchedulingProperties
 ) extends UriIntegrityPlugin with Logging {
   override def enabled = true
@@ -317,7 +325,7 @@ class UriIntegrityPluginImpl @Inject() (
     log.info("starting UriIntegrityPluginImpl")
     scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
-//    scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
+    scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
   }
   override def onStop() {
     log.info("stopping UriIntegrityPluginImpl")
@@ -329,4 +337,17 @@ class UriIntegrityPluginImpl @Inject() (
 
   def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
   def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
+
+  def setFixDuplicateKeepsSeq(seq: Long): Unit = { centralConfig.update(FixDuplicateKeepsSeqNumKey.longKey, seq) }
+
+  def clearRedirects(toUriId: Id[NormalizedURI]): Unit = {
+    db.readWrite{ implicit s =>
+      val uris = uriRepo.getByRedirection(toUriId)
+      uris.foreach{ uri =>
+        log.info(s"clearing redirect [id=${uri.id.get} url=${uri.url}]")
+        uriRepo.save(uri.copy(redirect = None, redirectTime = None, normalization = None, state = NormalizedURIStates.ACTIVE))
+      }
+      log.info(s"redirect cleared [count=${uris.size}]")
+    }
+  }
 }

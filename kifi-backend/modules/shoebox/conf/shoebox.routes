@@ -64,6 +64,8 @@ POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksCont
 # Note: /bookmarks/remove is deprecated. Use /ext/keeps/:id/unkeep instead.
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /ext/keeps/:id/unkeep       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
+# Note: /bookmarks/private should be deprecated as soon as we move mobile onto it's own endpoitns for bookmarks entirely
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
@@ -191,7 +193,7 @@ GET     /iphone                     @com.keepit.controllers.website.HomeControll
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
-GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+GET     /invite                     @com.keepit.controllers.website.HomeController.home
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
@@ -320,8 +322,10 @@ GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
 GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
+GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
+GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
 GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
 GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration

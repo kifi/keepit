@@ -22,7 +22,6 @@ class GraphDirectoryImpl(dir: File, store: GraphStore) extends ArchivedDirectory
     val tempDir = new File(dir, "temp").getCanonicalFile
     FileUtils.deleteDirectory(tempDir)
     FileUtils.forceMkdir(tempDir)
-    tempDir.deleteOnExit()
     tempDir
   }
 }

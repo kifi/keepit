@@ -24,7 +24,6 @@ import scala.concurrent.duration._
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
 import com.keepit.search.semantic.SemanticVariance
-import com.keepit.search.tracker.BrowsedURI
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.ShardSearchResult
