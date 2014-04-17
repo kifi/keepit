@@ -9,7 +9,7 @@ import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
-import play.api.libs.json.JsArray
+import play.api.libs.json.{JsArray, JsValue}
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[MessageRepoImpl])
@@ -54,8 +54,9 @@ class MessageRepoImpl @Inject() (
     def auxData = column[JsArray]("aux_data", O.Nullable)
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
+    def nonUserSender = column[JsValue]("non_user_sender", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, auxData.?, sentOnUrl.?, sentOnUriId.?) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
+    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, auxData.?, sentOnUrl.?, sentOnUriId.?, nonUserSender.?) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
   }
   def table(tag: Tag) = new MessageTable(tag)
 

@@ -116,14 +116,15 @@ object Message {
     messageText: String,
     auxData: Option[JsArray],
     sentOnUrl: Option[String],
-    sentOnUriId: Option[Id[NormalizedURI]]
+    sentOnUriId: Option[Id[NormalizedURI]],
+    nonUserSender: Option[JsValue]
   ): Message = {
     Message(
       id,
       createdAt,
       updatedAt,
       externalId,
-      userSender.map(MessageSender.User(_)).getOrElse(MessageSender.System),
+      userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
       thread,
       threadExtId,
       messageText,
@@ -133,7 +134,7 @@ object Message {
     )
   }
 
-  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[JsArray],Option[String], Option[Id[NormalizedURI]])] = {
+  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[JsArray],Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
@@ -145,7 +146,8 @@ object Message {
       message.messageText,
       message.auxData,
       message.sentOnUrl,
-      message.sentOnUriId
+      message.sentOnUriId,
+      message.from.asNonUser.map(Json.toJson(_))
     ))
   }
 }
