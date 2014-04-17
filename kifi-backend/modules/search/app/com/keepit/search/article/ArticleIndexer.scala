@@ -134,7 +134,6 @@ object ArticleIndexer extends Logging {
           val builder = new SemanticVectorBuilder(60)
           builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
           builder.load(contentAnalyzerWithStemmer.tokenStream("c", new MultiStringReader(content)))
-          doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 
           val parsedURI = URI.parse(uri.url)

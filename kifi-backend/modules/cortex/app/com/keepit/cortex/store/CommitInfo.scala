@@ -1,8 +1,5 @@
 package com.keepit.cortex.store
 
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.Reads
-import play.api.libs.json.Writes
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.cortex.core.StatModel
 import com.keepit.cortex.core.ModelVersion

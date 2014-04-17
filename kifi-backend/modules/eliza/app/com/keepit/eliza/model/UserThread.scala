@@ -9,6 +9,7 @@ import play.api.libs.json._
 import org.joda.time.DateTime
 
 import scala.Some
+import com.keepit.common.crypto.ModelWithPublicId
 
 case class Notification(thread: Id[MessageThread], message: Id[Message])
 
@@ -33,7 +34,7 @@ case class UserThread(
     lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
     started: Boolean = false //Whether or not this thread was started by this user
   )
-  extends Model[UserThread] {
+  extends Model[UserThread] with ModelWithPublicId[UserThread] {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
