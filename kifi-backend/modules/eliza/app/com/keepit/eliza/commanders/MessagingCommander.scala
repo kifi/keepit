@@ -256,7 +256,8 @@ class MessagingCommander @Inject() (
       db.readOnly { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
-    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set()) //ZZZ all non users as well
+    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
 
     val messageWithBasicUser = MessageWithBasicUser(
@@ -271,7 +272,7 @@ class MessagingCommander @Inject() (
         case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
         case _ => None
       },
-      participantSet.toSeq.map(id2BasicUser(_))
+      participantSet.toSeq.map(id2BasicUser(_)) ++ nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
     )
 
     thread.participants.map(_.allUsers.par.foreach { user =>

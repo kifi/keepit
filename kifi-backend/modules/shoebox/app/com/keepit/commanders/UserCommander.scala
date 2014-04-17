@@ -115,7 +115,6 @@ class UserCommander @Inject() (
   }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
-    //ZZZ
     db.readWrite { implicit session =>
       val trimmed = description.trim
       if (trimmed != "") {

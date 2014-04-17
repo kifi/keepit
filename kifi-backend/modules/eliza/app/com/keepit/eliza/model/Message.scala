@@ -21,24 +21,50 @@ import scala.slick.jdbc.StaticQuery
 
 
 sealed trait MessageSender {
-  def isDefined: Boolean = true //ZZZ
+  def isSystem: Boolean = false
   def asUser: Option[Id[User]] = None
   def asNonUser: Option[NonUserParticipant] = None
 }
 
 object MessageSender {
-  implicit val format : Format[MessageSender] = null //ZZZ
+  implicit val format : Format[MessageSender] = new Format[MessageSender] {
+
+    def reads(json: JsValue) = {
+      val kind: String = (json \ "kind").as[String]
+      kind match {
+        case "user" => JsSuccess(User(Id[com.keepit.model.User]((json \ "id").as[Long])))
+        case "nonUser" => JsSuccess(NonUser((json \ "nup").as[NonUserParticipant]))
+        case "system" => JsSuccess(System)
+        case _ => JsError(kind)
+      }
+    }
+
+    def writes(obj: MessageSender) = obj match {
+      case User(id) => Json.obj(
+        "kind" -> "user",
+        "id" -> id.id
+      )
+      case NonUser(nup) => Json.obj(
+        "kind" -> "nonUser",
+        "nup" -> Json.toJson(nup)
+      )
+      case System => Json.obj(
+        "kind" -> "system"
+      )
+    }
+
+  }
 
   case class User(id: Id[com.keepit.model.User]) extends MessageSender {
     override def asUser = Some(id)
   }
 
-  case class NonUser(npu: NonUserParticipant) extends MessageSender {
-    override def asNonUser = Some(npu)
+  case class NonUser(nup: NonUserParticipant) extends MessageSender {
+    override def asNonUser = Some(nup)
   }
 
   case object System extends MessageSender {
-    override def isDefined: Boolean = false //ZZZ
+    override def isSystem: Boolean = true
   }
 }
 
@@ -108,7 +134,19 @@ object Message {
   }
 
   def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[JsArray],Option[String], Option[Id[NormalizedURI]])] = {
-    null //ZZZ
+    Some((
+      message.id,
+      message.createdAt,
+      message.updatedAt,
+      message.externalId,
+      message.from.asUser,
+      message.thread,
+      message.threadExtId,
+      message.messageText,
+      message.auxData,
+      message.sentOnUrl,
+      message.sentOnUriId
+    ))
   }
 }
 
