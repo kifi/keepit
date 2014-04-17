@@ -12,6 +12,4 @@ trait GraphWriter extends GraphReader {
   def commit(): Unit
 }
 
-trait GraphManager extends GraphReader {
-  def write(f: GraphWriter => Unit): Unit
-}
+

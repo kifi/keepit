@@ -7,9 +7,17 @@ import java.io._
 // read binary output of word2vec
 class Word2VecReader {
 
-  def fromBinary(fileName: String): Map[String,Array[Float]] = {
-    val dataStream = new DataInputStream(new FileInputStream(new File(fileName)))
+  def fromBinary(bytes: Array[Byte]): (Int, Map[String,Array[Float]]) = {
+     val in = new DataInputStream(new ByteArrayInputStream(bytes))
+     fromDataStream(in)
+  }
 
+  def fromFile(fileName: String): (Int, Map[String,Array[Float]]) = {
+    val dataStream = new DataInputStream(new FileInputStream(new File(fileName)))
+    fromDataStream(dataStream)
+  }
+
+  def fromDataStream(dataStream: DataInputStream): (Int, Map[String,Array[Float]]) = {
     var ch = dataStream.readByte().asInstanceOf[Char]
     var str = ""
     // read header line: vocabulary size & vector dim
@@ -49,6 +57,6 @@ class Word2VecReader {
       // skip end of line
       dataStream.readByte()
     }
-    wordVecMap.toMap
+    (vecDim, wordVecMap.toMap)
   }
 }

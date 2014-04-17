@@ -64,6 +64,8 @@ POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksCont
 # Note: /bookmarks/remove is deprecated. Use /ext/keeps/:id/unkeep instead.
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /ext/keeps/:id/unkeep       @com.keepit.controllers.ext.ExtBookmarksController.unkeep(id: ExternalId[Keep])
+# Note: /bookmarks/private should be deprecated as soon as we move mobile onto it's own endpoitns for bookmarks entirely
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 POST    /bookmarks/update           @com.keepit.controllers.ext.ExtBookmarksController.updateKeepInfo()
 
 GET     /tags                       @com.keepit.controllers.ext.ExtBookmarksController.tags()
@@ -320,6 +322,7 @@ GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
 GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
+GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
@@ -495,6 +498,9 @@ GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.cont
 GET     /admin/learning/pornDetect/bms/:page                    @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= true)
 POST    /admin/learning/pornDetect/removeRestrictions      @com.keepit.controllers.admin.AdminPornDetectorController.removeRestrictions
 POST    /admin/learning/pornDetect/whitelist               @com.keepit.controllers.admin.AdminPornDetectorController.whitelist
+
+GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index 
+POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity
 
 ##########################################
 # Common Healthcheck / service routes

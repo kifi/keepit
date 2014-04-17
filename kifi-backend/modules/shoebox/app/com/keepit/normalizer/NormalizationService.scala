@@ -104,7 +104,7 @@ class NormalizationServiceImpl @Inject() (
     (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
   }
 
-  private case class FindStrongerCandidate(currentReference: NormalizationReference, oracle: NormalizationCandidate => Action) {
+  private case class FindStrongerCandidate(currentReference: NormalizationReference, action: NormalizationCandidate => Action) {
 
     def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
       findCandidate(candidates.sortBy(_.normalization).reverse)
@@ -117,7 +117,7 @@ class NormalizationServiceImpl @Inject() (
           assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, s"Normalization candidate $strongerCandidate has not been filtered properly for $currentReference")
 
           db.readOnly { implicit session =>
-            oracle(strongerCandidate) match {
+            action(strongerCandidate) match {
               case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
               case Reject => findCandidate(weakerCandidates)
               case Check(contentCheck) =>

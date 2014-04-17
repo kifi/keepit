@@ -4,8 +4,6 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.{FeatureRepresentation, ModelVersion, StatModel}
 import com.keepit.cortex.store.{CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore}
 
-trait FeatureRetrievalPlugin
-
 abstract class FeatureRetrieval[K, T, M <: StatModel](
   featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
   commitInfoStore: CommitInfoStore[T, M],

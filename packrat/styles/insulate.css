@@ -92,6 +92,7 @@
   border-image: initial;
   border-radius: initial;
   border-spacing: initial;
+  bottom: initial;
   box-shadow: initial;
   box-sizing: initial;
   buffered-rendering: initial;
@@ -129,6 +130,7 @@
   ime-mode: initial;
   justify-content: initial;
   kerning: initial;
+  left: initial;
   letter-spacing: initial;
   lighting-color: initial;
   list-style: initial;
@@ -160,6 +162,7 @@
   position: initial;
   quotes: initial;
   resize: initial;
+  right: initial;
   shape-rendering: initial;
   speak: initial;
   stop-color: initial;
@@ -183,6 +186,7 @@
   text-rendering: initial;
   text-shadow: initial;
   text-transform: initial;
+  top: initial;
   transform: initial;
   transform-origin: initial;
   transform-style: initial;
