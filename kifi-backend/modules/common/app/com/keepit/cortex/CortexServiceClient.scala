@@ -22,7 +22,6 @@ trait CortexServiceClient extends ServiceClient{
 
 class CortexServiceClientImpl(
   override val serviceCluster: ServiceCluster,
-  override val port: Int,
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier
 ) extends CortexServiceClient {
