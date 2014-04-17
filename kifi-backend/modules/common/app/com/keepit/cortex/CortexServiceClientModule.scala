@@ -22,8 +22,7 @@ case class ProdCortexServiceClientModule() extends CortexServiceClientModule {
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier): CortexServiceClient = {
     new CortexServiceClientImpl(
-      serviceDiscovery.serviceCluster(ServiceType.SEARCH),
-      current.configuration.getInt("service.cortex.port").get,
+      serviceDiscovery.serviceCluster(ServiceType.CORTEX),
       client,
       airbrakeNotifier
     )
