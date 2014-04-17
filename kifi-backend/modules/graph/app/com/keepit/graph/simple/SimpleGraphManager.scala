@@ -49,7 +49,7 @@ object SimpleGraphManager {
   def persist(graph: SimpleGraph, state: GraphUpdaterState, graphDirectory: GraphDirectory): Unit = graphDirectory.synchronized {
     val tempGraphFile = persistGraph(graph, graphDirectory: GraphDirectory)
     val tempStateFile = persistState(state, graphDirectory: GraphDirectory)
-    val tempChecksumFile = persistChecksum(tempGraphFile, tempStateFile)
+    val tempChecksumFile = persistChecksum(tempGraphFile, tempStateFile, graphDirectory)
 
     val graphFile = getGraphFile(graphDirectory)
     val stateFile = getStateFile(graphDirectory)
@@ -66,7 +66,7 @@ object SimpleGraphManager {
 
   private def persistGraph(graph: SimpleGraph, graphDirectory: GraphDirectory): File = {
     val json = SimpleGraph.format.writes(graph)
-    val tempGraphFile = new File(FileUtils.getTempDirectory, "graph_" + graph.hashCode())
+    val tempGraphFile = new File(graphDirectory.temp, "graph_" + graph.hashCode())
     FileUtils.writeStringToFile(tempGraphFile, Json.stringify(json))
     tempGraphFile
   }
@@ -78,7 +78,7 @@ object SimpleGraphManager {
 
   private def persistState(state: GraphUpdaterState, graphDirectory: GraphDirectory): File = {
     val json = GraphUpdaterState.format.writes(state)
-    val tempStateFile = new File(FileUtils.getTempDirectory, "state_" + state.hashCode())
+    val tempStateFile = new File(graphDirectory.temp, "state_" + state.hashCode())
     FileUtils.writeStringToFile(tempStateFile, Json.stringify(json))
     tempStateFile
   }
@@ -94,9 +94,9 @@ object SimpleGraphManager {
     graphChecksum ^ stateChecksum
   }
 
-  private def persistChecksum(graphFile: File, stateFile: File): File = {
+  private def persistChecksum(graphFile: File, stateFile: File, graphDirectory: GraphDirectory): File = {
     val checksum = computeChecksum(graphFile, stateFile)
-    val tempChecksumFile = new File(FileUtils.getTempDirectory, "checksum_" + checksum.hashCode())
+    val tempChecksumFile = new File(graphDirectory.temp, "checksum_" + checksum.hashCode())
     FileUtils.writeStringToFile(tempChecksumFile, Json.stringify(JsNumber(checksum)))
     tempChecksumFile
   }

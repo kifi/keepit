@@ -4,7 +4,7 @@ import javax.crypto.{SecretKey, Cipher, SecretKeyFactory}
 import javax.crypto.spec.{IvParameterSpec, DESKeySpec}
 import scala.util.Try
 
-class RatherInsecureDESCrypt extends CryptoSupport {
+class RatherInsecureDESCrypt {
   private val ivBytes = Array[Byte](0x68, 0x65, 0x6c, 0x70, 0x20, 0x73, 0x74, 0x75)
   private val ivSpec = new IvParameterSpec(ivBytes)
 
@@ -20,7 +20,7 @@ class RatherInsecureDESCrypt extends CryptoSupport {
     var enc_len = cipher.update(input, 0, input.length, encrypted, 0)
     cipher.doFinal(encrypted, enc_len)
 
-    val encoded = toBase64(encrypted)
+    val encoded = CryptoSupport.toBase64(encrypted)
     if (encoded.endsWith("=")) {
       encoded.takeWhile(_ != '=')
     } else {
@@ -28,7 +28,7 @@ class RatherInsecureDESCrypt extends CryptoSupport {
     }
   }
   def decrypt(key: SecretKey, encrypted: String): Try[String] = Try {
-    val input =  fromBase64(encrypted)
+    val input =  CryptoSupport.fromBase64(encrypted)
     val cipher = Cipher.getInstance("DES/CBC/PKCS5Padding")
     cipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
     val decrypted = new Array[Byte](cipher.getOutputSize(input.length))

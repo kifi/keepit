@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
 
-import com.keepit.eliza.MessageLookHereRemover
+import com.keepit.eliza.mail.MessageLookHereRemover
 import com.keepit.search.message.{ThreadContent, FULL}
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.db.slick.Database
