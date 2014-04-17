@@ -1,0 +1,43 @@
+@()
+
+@admin("word2vec"){
+  <div>word similarity</div>
+  <form id = "word_similarity">
+    <div>
+      <input id = "word1" type = "text" value = "">
+      <input id = "word2" type = "text" value = "">
+      <button type = "submit">submit</button>
+    </div>
+
+  </form>
+
+  <p id = "word_sim_result"></p>
+
+
+  <script type="text/javascript">
+
+    $(document).ready(function(){
+
+
+    $("#word_similarity").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.wordSimilarity',
+        {word1: $('#word1').val(), word2: $('#word2').val()}
+
+      ).done(done).fail(fail);
+
+      function done(data) { $("#word_sim_result").empty().prepend(data) }
+      function fail() { alert("bad things happened") }
+
+    })
+
+
+
+
+
+
+    });
+
+  </script>
+
+}
