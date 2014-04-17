@@ -467,11 +467,11 @@ var initCompose = (function() {
     }
   }
 
-  $f.hoverfu('.kifi-compose-snapshot', function (configureHover) {
+  $f.hoverfu('.kifi-compose-highlight', function (configureHover) {
     var $a = $(this);
     render('html/keeper/titled_tip', {
-      title: 'Microfind',
-      html: 'Click to mark something on<br/>the page and reference it in<br/>your message.'
+      title: 'Toggle Highlight Mode',
+      html: 'Highlight mode allows you<br/>to select text on the page to<br/>reference it in your message.'
     }, function (html) {
       configureHover(html, {
         mustHoverFor: 500,
@@ -480,8 +480,8 @@ var initCompose = (function() {
         position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
     });
   })
-  .on('click', '.kifi-compose-snapshot', function (e) {
-
+  .on('click', '.kifi-compose-highlight', function () {
+    this.classList.toggle('kifi-disabled');
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
     if (e.originalEvent.isTrusted === false) return;

@@ -63,8 +63,7 @@ panes.thread = function () {
 
   function renderBlank($paneBox, $tall, $who, threadId) {
     $(render('html/keeper/messages', {
-      draftPlaceholder: 'Type a message…',
-      snapshotUri: api.url('images/snapshot.png')
+      draftPlaceholder: 'Type a message…'
     }, {
       compose: 'compose'
     }))

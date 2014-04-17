@@ -63,8 +63,7 @@ var toaster = (function () {
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
-      draftDefault: 'Check this out.',
-      snapshotUri: api.url('images/snapshot.png')
+      draftDefault: 'Check this out.'
     }, {
       compose: 'compose'
     }))
