@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.cache.InMemoryCachePlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.cortex.nlp.POSTagger
+import com.keepit.cortex.models.word2vec.Word2Vec
 
 object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
   val module = CortexProdModule()
@@ -26,6 +27,7 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)
     require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
+    require(injector.instance[Word2Vec] != null)
     require(POSTagger.enabled)
   }
 }
