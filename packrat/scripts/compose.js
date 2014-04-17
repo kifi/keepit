@@ -4,6 +4,7 @@
 // @require scripts/lib/underscore.js
 // @require scripts/friend_search.js
 // @request scripts/look.js
+// @require scripts/scroll_to.js
 // @require scripts/snapshot.js
 // @require scripts/selectionchange.js
 // @require scripts/prevent_ancestor_scroll.js
@@ -568,12 +569,18 @@ var initCompose = (function() {
       $d.empty();
     },
     snapSelection: function () {
-      var r = getCurrentSelectionRangeIfItQualifies();
-      if (r) {
-        // TODO: scroll to range if necessary
-        finalizeLookHereLink(r);
-      } else {
-        return false;
+      if (!$aLook) {
+        var r = getSelRange();
+        tryToCreateLookHereLinkStub(r);
+        if ($aLook) {
+          var rr = setRangeRects(r, {});
+          var anim = scrollTo(rr.bounds, function computeDuration(dist) {
+            return dist && 200 * Math.log((dist + 80) / 60);
+          });
+          var next = finalizeLookHereLink.bind(null, r);
+          anim.promise.done(anim.ms ? setTimeout.bind(window, next, 20) : next);
+          return true;
+        }
       }
     },
     focus: function (snapSelection) {
