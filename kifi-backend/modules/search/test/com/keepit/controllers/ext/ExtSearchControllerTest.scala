@@ -12,7 +12,7 @@ import play.api.test.Helpers._
 import play.api.libs.json._
 import akka.actor.ActorSystem
 import com.keepit.search._
-import com.keepit.search.index.{IndexStore, VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{IndexStore, VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer}
 import com.keepit.social.BasicUser
 import com.keepit.search.sharding.Shard
 import com.keepit.search.index.IndexModule
@@ -103,7 +103,7 @@ case class FixedResultIndexModule() extends IndexModule {
 
   protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
-      val newdir = new VolatileIndexDirectoryImpl()
+      val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
       newdir
     })

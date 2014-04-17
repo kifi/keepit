@@ -34,7 +34,7 @@ trait IndexModule extends ScalaModule with Logging {
   protected def getPersistentIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): Option[IndexDirectory] = {
     maybeDir.map { d =>
       val dir = new File(d).getCanonicalFile
-      val indexDirectory = new IndexDirectoryImpl(dir, indexStore)
+      val indexDirectory = new ArchivedIndexDirectory(dir, indexStore)
       if (!dir.exists()) {
         try {
           val t1 = currentDateTime.getMillis
@@ -197,7 +197,7 @@ case class DevIndexModule() extends IndexModule {
   protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
     getPersistentIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse{
       volatileDirMap.getOrElse((configName, shard), {
-        val newdir = new VolatileIndexDirectoryImpl()
+        val newdir = new VolatileIndexDirectory()
         volatileDirMap += (configName, shard) -> newdir
         newdir
       })

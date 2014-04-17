@@ -7,7 +7,7 @@ import com.keepit.common.db.{Id,ExternalId, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, VolatileIndexDirectoryImpl}
+import com.keepit.search.index.{DefaultAnalyzer, Indexable, VolatileIndexDirectory}
 import com.keepit.search.Lang
 import com.keepit.eliza.FakeElizaServiceClientImpl
 
@@ -103,7 +103,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     val threadIndexableIterable = Seq[Indexable[ThreadContent, ThreadContent]](threadIndexable1,threadIndexable2,threadIndexable3)
 
     val indexer = new MessageIndexer(
-      indexDirectory =  new VolatileIndexDirectoryImpl(),
+      indexDirectory =  new VolatileIndexDirectory(),
       eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier], new FakeScheduler()),
       airbrake = inject[AirbrakeNotifier]
     )

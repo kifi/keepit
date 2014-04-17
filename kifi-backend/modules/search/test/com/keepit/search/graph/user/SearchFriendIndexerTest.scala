@@ -6,7 +6,7 @@ import com.keepit.model.User
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer}
 import play.api.test.Helpers._
 import com.keepit.inject._
 import com.keepit.test._
@@ -16,7 +16,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 
 class SearchFriendIndexerTest extends Specification with ApplicationInjector {
 
-  def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl) = {
+  def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectory) = {
     new SearchFriendIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 

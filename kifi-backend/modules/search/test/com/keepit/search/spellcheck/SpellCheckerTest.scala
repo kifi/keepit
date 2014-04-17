@@ -10,7 +10,7 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import scala.math.abs
 
 class SpellCheckerTest extends Specification {
@@ -27,9 +27,9 @@ class SpellCheckerTest extends Specification {
 
   "spell correcter" should {
     "work" in {
-      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val articleIndexDir = new VolatileIndexDirectory()
 
-      val spellIndexDir = new VolatileIndexDirectoryImpl()
+      val spellIndexDir = new VolatileIndexDirectory()
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
       val spellIndexer: SpellIndexer = new SpellIndexerImpl(spellIndexDir, SpellCheckerConfig(0f, "lev")) {
         protected def getIndexReader() = DirectoryReader.open(articleIndexDir)
