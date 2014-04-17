@@ -29,7 +29,7 @@ class AdminWord2VecController @Inject()(
 
     val resp = Await.result(cortex.word2vecKeywordsAndBOW(text), 5 seconds)
 
-    val res = s"keywords: ${resp("keywords")}" + "\n\n" +  s"bow: ${resp("bow")}"
+    val res = s"keywords(in the sense of cosine similarity): ${resp("keywords")}" + "\n\n" +  s"bow: ${resp("bow")}"
     Ok(res.replaceAll("\n","\n<br>"))
   }
 
