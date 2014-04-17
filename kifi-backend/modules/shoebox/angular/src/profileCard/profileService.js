@@ -59,7 +59,7 @@ angular.module('kifi.profileService', [
             if (email === placeholderPrimary) {
               email.isPlaceholderPrimary = true;
             }
-          })
+          });
         }
         return placeholderPrimary;
       }
