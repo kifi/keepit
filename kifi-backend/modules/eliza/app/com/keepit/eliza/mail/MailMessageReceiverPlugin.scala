@@ -43,16 +43,25 @@ class MailDiscussionReceiverActor @Inject() (
 
   def receive = {
     case FetchNewDiscussionReplies =>
+      log.info("Checking for new replies")
       val store = mailSession.getStore
       try {
         store.connect(settings.server, settings.username, settings.password)
         val inbox = store.getFolder("Inbox")
         inbox.open(Folder.READ_WRITE)
+        val unrecognized = store.getFolder("Unrecognized")
         val messages = inbox.getMessages()
         for (message <- messages) {
           messageParser.getInfo(message) match {
-            case Some(nonUserThreadId) => // TODO(martin) add this message to SQS
-            case None => // TODO(martin) log?
+            case Some(nonUserThreadId) => {
+              // TODO(martin) add this message to SQS
+              log.info("Received valid message")
+            }
+            case None => {
+              // TODO(martin) log?
+              log.info("Received invalid message")
+              inbox.copyMessages(Array(message), unrecognized)
+            }
           }
           message.setFlags(new Flags(Flags.Flag.DELETED), true)
         }
@@ -83,7 +92,7 @@ class MailDiscussionMessageParser @Inject() (
   }
 
   private def getInfoFromIdentifier(identifier: String): Option[Id[NonUserThread]] = {
-    ModelWithPublicId.decode[NonUserThread](identifier)
+    ModelWithPublicId.decode[NonUserThread](identifier).toOption
   }
 }
 
