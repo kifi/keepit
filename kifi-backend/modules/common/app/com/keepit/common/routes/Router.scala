@@ -263,7 +263,8 @@ object Scraper extends Service {
 
 object Cortex extends Service {
   object internal {
-
+    def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
+    def keywordsAndBow() = ServiceRoute(POST, "/internal/cortex/word2vec/keywordsAndBow")
   }
 }
 
