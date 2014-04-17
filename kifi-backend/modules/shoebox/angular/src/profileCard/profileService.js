@@ -2,12 +2,13 @@
 
 angular.module('kifi.profileService', [
   'kifi.routeService',
-  'angulartics'
+  'angulartics',
+  'kifi.clutch'
 ])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$window', '$rootScope',
-  function ($http, env, $q, util, routeService, socialService, $analytics, $window, $rootScope) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$window', '$rootScope', 'Clutch',
+  function ($http, env, $q, util, routeService, socialService, $analytics, $window, $rootScope, Clutch) {
 
     var me = {
       seqNum: 0
@@ -16,6 +17,14 @@ angular.module('kifi.profileService', [
 
     $rootScope.$on('social.updated', function () {
       fetchMe();
+    });
+
+    var meService = new Clutch(function () {
+      return $http.get(routeService.profileUrl).then(function (res) {
+        return updateMe(res.data);
+      });
+    }, {
+      cacheDuration: 5000
     });
 
     function updateMe(data) {
@@ -30,13 +39,12 @@ angular.module('kifi.profileService', [
     }
 
     function fetchMe() {
-      return $http.get(routeService.profileUrl).then(function (res) {
-        return updateMe(res.data);
-      });
+      meService.expireAll();
+      return meService.get();
     }
 
     function getMe() {
-      return me.seqNum > 0 ? $q.when(me) : fetchMe();
+      return meService.get();
     }
 
     function postMe(data) {

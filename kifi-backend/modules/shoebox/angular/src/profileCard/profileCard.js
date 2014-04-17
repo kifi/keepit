@@ -12,7 +12,7 @@ angular.module('kifi.profileCard', ['kifi.profileService'])
       link: function (scope /*, element, attrs*/ ) {
         scope.me = profileService.me;
 
-        profileService.fetchMe();
+        profileService.getMe();
 
         scope.data = scope.data || {};
         scope.openHelpRankHelp = function () {
