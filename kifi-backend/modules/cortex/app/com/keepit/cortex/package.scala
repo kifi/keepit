@@ -23,6 +23,7 @@ package object cortex {
 
     object URIFeature {
       val denseLDA = "features/uri/dense_lda/"
+      val word2vec = "features/uri/word2vec/"
     }
 
   }
@@ -31,6 +32,7 @@ package object cortex {
 
     object URIFeature {
       val denseLDA = "commit_info/uri_features/dense_lda/"
+      val word2vec = "commit_info/uri_features/word2vec/"
     }
 
   }

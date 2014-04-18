@@ -5,6 +5,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ProdStoreModule
 import com.keepit.cortex.models.lda._
+import com.keepit.cortex.models.word2vec._
 import com.keepit.common.store.S3Bucket
 import play.api.Play._
 import com.keepit.common.store.DevStoreModule
@@ -24,6 +25,14 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
     val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
     new S3BlobLDAURIFeatureStore(bucketName, amazonS3Client, accessLog)
   }
+
+  @Singleton
+  @Provides
+  def word2vecURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecURIFeatureStore = {
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
+    new S3BlobWord2VecURIFeatureStore(bucketName, amazonS3Client, accessLog)
+  }
+
 }
 
 case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule{
@@ -36,4 +45,13 @@ case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdS
       prodStoreModule.ldaURIFeatureStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryLDAURIFeatureStore)
   }
+
+  @Singleton
+  @Provides
+  def word2vecURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecURIFeatureStore = {
+    whenConfigured(S3_CORTEX_BUCKET)(
+      prodStoreModule.word2vecURIFeatureStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryWord2VecURIFeatureStore)
+  }
+
 }
