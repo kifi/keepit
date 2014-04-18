@@ -31,6 +31,13 @@ GET     /m/1/eliza/hasThreadsByUrl        @com.keepit.eliza.controllers.mobile.M
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 ##########################################
+# Email API
+##########################################
+
+GET     /eliza/email/mute/:publicId       @com.keepit.eliza.controllers.email.EmailNonUserMuteController.optOut(publicId: String)
+POST    /eliza/email/mute/:publicId       @com.keepit.eliza.controllers.email.EmailNonUserMuteController.optOutAction(publicId: String)
+
+##########################################
 # INTERNAL ROUTES/Eliza
 ##########################################
 

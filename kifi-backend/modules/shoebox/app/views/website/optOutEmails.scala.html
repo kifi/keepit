@@ -11,9 +11,10 @@
   <h2 class="page-title">Opt-out of Kifi Emails</h2>
 
   <section>
-    <h3>@email@if(msg.isDefined){ — @msg }</h3>
-    <p>Uncheck any email types you do not want to recieve, or opt-out of all Kifi emails.</p>
-    <p>You current may recieve emails about:</p>
+    <h3>@email</h3>
+    @if(msg.isDefined){<p>@msg</p>}
+    <p>Uncheck any email types you do not want to receive, or opt-out of all Kifi emails.</p>
+    <p>You currently may receive emails about:</p>
     <form id="optout" method="POST">
 
       <label>

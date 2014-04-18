@@ -1,0 +1,36 @@
+@(email: String, enabled: Boolean, msg: Option[String])
+
+@content = {
+<main>
+    <h1 class="main-logo">kifi</h1>
+    <h2 class="page-title">Opt-out of Kifi Emails</h2>
+    <section>
+        <h3>@if(msg.isDefined){@msg}else{@email}</h3>
+        <p>You will no longer receive email updates for this discussion.</p>
+        <form id="optout" method="POST">
+            <input type="hidden" name="enabled" id="can-receive-emails">
+            <span class="optout" id="update">@if(enabled){Opt-out}else{Resubscribe}</span>
+        </form>
+    </section>
+</main>
+}
+
+@scripts = {
+  <script>
+    $(function() {
+      $form = $("#optout");
+      $("#update").click(function() {
+        $("#can-receive-emails").val(@if(enabled){"false"}else{"true"});
+        $form.submit();
+      });
+    });
+  </script>
+}
+
+@styles = {
+<link rel="stylesheet" href="/assets/css/auth2.css">
+<link rel="stylesheet" href="/assets/css/auth-footer.css">
+<link rel="stylesheet" href="/assets/css/optout.css">
+}
+
+@views.html.marketing.helper.page(title = "kifi • Opt-out of emails", styles = styles, content = content, scripts = scripts, dataTrack = "optOutEmails", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")

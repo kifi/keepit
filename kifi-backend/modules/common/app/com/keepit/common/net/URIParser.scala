@@ -10,7 +10,7 @@ trait URIParserGrammar extends RegexParsers {
 
   override def skipWhitespace = false
 
-  def uri: Parser[URI] = (hierarchicalUri | opaqueUri)
+  def uri: Parser[URI] = hierarchicalUri | opaqueUri
 
   def hierarchicalUri: Parser[URI] = ((scheme <~ ":").? <~ "//") ~ authority ~ (path?) ~ ("?" ~> query).? ~ ("#" ~> fragment).? ^^ {
     case scheme~authority~path~query~fragment =>
@@ -25,7 +25,7 @@ trait URIParserGrammar extends RegexParsers {
   def scheme: Parser[String] = """[^/?#:]+""".r ^^ (_.toLowerCase)
 
   def authority: Parser[(Option[String], Option[Host], Int)] = (userInfo?)~(host?)~(port?) ^^ {
-    case None~None~None => (None, Some(Host()), -1)
+    case None~None~None => (None, None, -1)
     case userInfo~host~port => (userInfo, host, port.map{ port => if (port.length() > 0) port.toInt else -1 }.getOrElse(-1))
   }
 

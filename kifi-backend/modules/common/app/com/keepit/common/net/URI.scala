@@ -12,7 +12,9 @@ object URI extends Logging {
     val raw = uriString.trim
     if (raw.isEmpty) throw new Exception("empty uri string")
     val uri = URIParser.parseAll(URIParser.uri, raw).get
-
+    if (uri.scheme.isDefined && uri.scheme.get.startsWith("http") && uri.host.isEmpty) {
+      throw new IllegalStateException(s"uri $uriString is an http uri with not domain")
+    }
     apply(Option(raw), uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment)
   }
 
@@ -83,7 +85,11 @@ object URI extends Logging {
 
   def absoluteUrl(baseUrl: String, targetUrl: String): Option[String] =
     if (isAbsolute(targetUrl)) {
-      Some(targetUrl)
+      URI.parse(targetUrl) match {
+        case Success(url) if url.host.isDefined =>
+          Some(targetUrl)
+        case _ => None
+      }
     } else if (isAbsolute(baseUrl)) {
       for {
         baseUri <- safelyParse(baseUrl)
