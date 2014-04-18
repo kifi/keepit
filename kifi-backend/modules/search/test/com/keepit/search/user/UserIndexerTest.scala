@@ -2,7 +2,7 @@ package com.keepit.search.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.search.index.{VolatileIndexDirectoryImpl, IndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject._
 import com.keepit.test._
@@ -41,7 +41,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
 
   def filterFactory = inject[UserSearchFilterFactory]
 
-  def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectoryImpl): UserIndexer = {
+  def mkUserIndexer(dir: IndexDirectory = new VolatileIndexDirectory): UserIndexer = {
     new UserIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 

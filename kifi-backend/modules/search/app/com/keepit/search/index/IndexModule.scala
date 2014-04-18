@@ -31,10 +31,10 @@ import play.api.Play._
 
 trait IndexModule extends ScalaModule with Logging {
 
-  protected def getPersistentIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): Option[IndexDirectory] = {
+  protected def getArchivedIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): Option[ArchivedIndexDirectory] = {
     maybeDir.map { d =>
       val dir = new File(d).getCanonicalFile
-      val indexDirectory = new IndexDirectoryImpl(dir, indexStore)
+      val indexDirectory = new ArchivedIndexDirectory(dir, indexStore)
       if (!dir.exists()) {
         try {
           val t1 = currentDateTime.getMillis
@@ -188,16 +188,16 @@ trait IndexModule extends ScalaModule with Logging {
 case class ProdIndexModule() extends IndexModule {
 
   protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
-    getPersistentIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).get
+    getArchivedIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).get
 }
 
 case class DevIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
   protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
-    getPersistentIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse{
+    getArchivedIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse{
       volatileDirMap.getOrElse((configName, shard), {
-        val newdir = new VolatileIndexDirectoryImpl()
+        val newdir = new VolatileIndexDirectory()
         volatileDirMap += (configName, shard) -> newdir
         newdir
       })

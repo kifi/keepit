@@ -21,5 +21,5 @@ object GraphUpdaterState {
     def writes(state: GraphUpdaterState): JsValue = JsObject(state.state.map { case (kind, seq) => kind.code -> JsNumber(seq) }.toSeq)
   }
 
-  def empty() = new GraphUpdaterState(Map())
+  def empty = GraphUpdaterState(Map.empty)
 }

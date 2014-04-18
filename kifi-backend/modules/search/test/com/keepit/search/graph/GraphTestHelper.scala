@@ -13,7 +13,7 @@ import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
-import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectoryImpl, DefaultAnalyzer}
+import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectory, DefaultAnalyzer}
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.test.Helpers._
 
@@ -124,19 +124,19 @@ trait GraphTestHelper extends ApplicationInjector {
     fakeShoeboxServiceClient.getCollection(collection.id.get)
   }
 
-  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectoryImpl(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectoryImpl()): URIGraphIndexer = {
+  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectory(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectory()): URIGraphIndexer = {
     val bookmarkStore = new BookmarkStore(bookmarkStoreDir, inject[AirbrakeNotifier])
     new StandaloneURIGraphIndexer(uriGraphDir, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
-  def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectoryImpl()): CollectionIndexer = {
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
+  def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectory()): CollectionIndexer = {
+    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
     new StandaloneCollectionIndexer(collectionDir, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkUserGraphsSearcherFactory() = {
-    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
     (userGraphIndexer, searchFriendIndexer, userGraphsSearcherFactory)
   }

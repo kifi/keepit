@@ -22,7 +22,7 @@ import com.keepit.search.SearchConfig
 import com.google.inject.Singleton
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.SearcherHit
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector.FakePhraseIndexer
 import com.keepit.search.sharding.Shard
 import scala.concurrent.Await
@@ -32,7 +32,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
 
   private trait IndexerScope extends Scope {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    val ramDir = new VolatileIndexDirectoryImpl()
+    val ramDir = new VolatileIndexDirectory()
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait])

@@ -11,14 +11,14 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexable
 import com.keepit.search.index.Indexer
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.Tst
 import com.keepit.search.TstIndexer
 
 
 class TextQueryTest extends Specification {
 
-  val indexer = new TstIndexer(new VolatileIndexDirectoryImpl)
+  val indexer = new TstIndexer(new VolatileIndexDirectory)
   Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map{ case ((text, fallbackText), id) =>
     indexer.index(Id[Tst](id), text, fallbackText)
   }

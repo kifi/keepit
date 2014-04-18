@@ -11,14 +11,30 @@ import play.api.Mode._
 import com.keepit.scraper.ScraperServices
 import com.keepit.abook.ABookServices
 import com.keepit.cortex.CortexServices
+import com.keepit.graph.GraphServices
 
 object DevGlobal extends FortyTwoGlobal(Dev)
   with ShoeboxServices
   with SearchServices
   with ScraperServices
   with ABookServices
-  with CortexServices{
-  override val module = Modules.`override`(CortexDevModule()).`with`(Modules.`override`(ScraperDevModule()).`with`(Modules.`override`(ABookDevModule()).`with`(Modules.`override`(HeimdalDevModule()).`with`(Modules.`override`(ElizaDevModule()).`with`(Modules.`override`(SearchDevModule()).`with`(ShoeboxDevModule()))))))
+  with CortexServices
+  with GraphServices {
+  override val module = Modules.`override`(GraphDevModule()).`with`(
+    Modules.`override`(CortexDevModule()).`with`(
+      Modules.`override`(ScraperDevModule()).`with`(
+        Modules.`override`(ABookDevModule()).`with`(
+          Modules.`override`(HeimdalDevModule()).`with`(
+            Modules.`override`(ElizaDevModule()).`with`(
+              Modules.`override`(SearchDevModule()).`with`(
+                ShoeboxDevModule()
+              )
+            )
+          )
+        )
+      )
+    )
+  )
 
   override def onStart(app: Application) {
     require(injector.instance[FortyTwoServices].currentService == ServiceType.DEV_MODE,
