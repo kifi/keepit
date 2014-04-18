@@ -42,6 +42,7 @@ case class UserStatistics(
     user: User,
     connections: Int,
     invitations: Int,
+    invitedBy: Seq[User],
     socialUsers: Seq[SocialUserInfo],
     privateKeeps: Int,
     publicKeeps: Int,
@@ -276,13 +277,22 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
+  private def invitedBy(socialUserInfos: Seq[SocialUserInfo])(implicit s: RSession): Seq[User] = socialUserInfos map { info =>
+    invitationRepo.getByRecipientSocialUserId(info.id.get) map { invitation =>
+      invitation.senderUserId map userRepo.get
+    } flatten
+  } flatten
+
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
+    val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
+
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
-      socialUserInfoRepo.getByUser(user.id.get),
+      invitedBy(socialUserInfos),
+      socialUserInfos,
       privateKeeps,
       publicKeeps,
       userExperimentRepo.getUserExperiments(user.id.get),
