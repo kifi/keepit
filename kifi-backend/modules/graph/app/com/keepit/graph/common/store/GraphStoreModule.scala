@@ -1,4 +1,4 @@
-package com.keepit.common.store
+package com.keepit.graph.common.store
 
 import com.google.inject.{Singleton, Provides}
 import com.amazonaws.services.s3.AmazonS3
@@ -15,6 +15,7 @@ import com.amazonaws.regions.Regions
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.store.{DevStoreModule, S3Bucket, ProdStoreModule, StoreModule}
 
 trait GraphStoreModule extends StoreModule {
 
@@ -56,7 +57,7 @@ case class GraphDevStoreModule() extends DevStoreModule(GraphProdStoreModule()) 
   def configure() {}
 
   @Provides @Singleton
-  def indexStore(amazonS3Client: AmazonS3, accessLog: AccessLog): GraphStore = {
+  def graphStore(amazonS3Client: AmazonS3, accessLog: AccessLog): GraphStore = {
     whenConfigured("amazon.s3.graph.bucket")(
       prodStoreModule.graphStore(amazonS3Client, accessLog)
     ).getOrElse(new InMemoryGraphStoreImpl())

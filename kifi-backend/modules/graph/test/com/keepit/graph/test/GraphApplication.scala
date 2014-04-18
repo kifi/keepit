@@ -10,10 +10,11 @@ import com.keepit.common.healthcheck.{FakeHealthcheckModule, FakeMemoryUsageModu
 import com.keepit.common.time.FakeClockModule
 import com.keepit.inject.{EmptyInjector, ApplicationInjector, TestFortyTwoModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.common.cache.{GraphCacheModule, HashMapMemoryCacheModule}
+import com.keepit.common.cache.{HashMapMemoryCacheModule}
 import play.api.Mode
 import com.google.inject.util.Modules
 import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.graph.common.cache.GraphCacheModule
 
 class GraphApplication(overridingModules: Module*)(implicit path: File = new File("./modules/graph/"))
   extends TestApplicationFromGlobal(path, new TestGlobal(

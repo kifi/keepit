@@ -14,6 +14,8 @@ import net.spy.memcached.MemcachedClient
 import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
 import com.keepit.graph.test.GraphApplication
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.graph.common.store.GraphFakeStoreModule
 
 class GraphModuleTest extends Specification with Logging with ApplicationInjector {
 
@@ -28,13 +30,19 @@ class GraphModuleTest extends Specification with Logging with ApplicationInjecto
   "Module" should {
     "instantiate controllers" in {
       running(new GraphApplication(
+        SimpleGraphDevModule(),
+        GraphFakeStoreModule(),
+        TestActorSystemModule(),
         FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient)
       )) {
         val ClassRoute = "@(.+)@.+".r
-        val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
+        val classes = current.routes.map(_.documentation).toSeq.flatten.collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)
         }.distinct.filter(isGraphController)
-        for (c <- classes) inject(classType[Controller](c), injector)
+        for (c <- classes) {
+          println(s"Instantiating controller: $c")
+          inject(classType[Controller](c), injector)
+        }
         val bindings = injector.getAllBindings()
         val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[akka.actor.Actor], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
