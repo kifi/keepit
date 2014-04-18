@@ -168,25 +168,25 @@ var snapshot = function () {
       var ane = elementSelfOrParent(an);
       var sce = elementSelfOrParent(sc);
       var ece = elementSelfOrParent(ec);
-      return [
+      return ['r',
         generateSelector(ane),
-        sce === ane ? '' : generateSelector(sce, ane, null),
+        sce === ane ? '' : generateSelector(sce, ane, null).replace(/ /g, escape), // most ASCII already \-unicode-escaped
         sc === sce ? so : indexOf(sce.childNodes, sc) + ':' + so,
-        ece === ane ? '' : generateSelector(ece, ane, null),
+        ece === ane ? '' : generateSelector(ece, ane, null).replace(/ /g, escape), // most ASCII already \-unicode-escaped
         ec === ece ? eo : indexOf(ece.childNodes, ec) + ':' + eo,
-        text  // TODO: proper escaping  // TODO: identify text node boundaries?
+        text.replace(/[ \t\r\n\f%|]/g, escape)   // TODO: identify text node boundaries?
       ].join('|');
     },
 
     findRange: function (selector) {
       var parts = selector.split('|');
-      var ane = snapshot.fuzzyFind(parts[0]);
+      var ane = snapshot.fuzzyFind(parts[1]);
       if (ane) {
-        var sce = parts[1] ? ane.querySelector(scopeChild + parts[1]) : ane;
-        var ece = parts[3] ? ane.querySelector(scopeChild + parts[3]) : ane;
+        var sce = parts[2] ? ane.querySelector(scopeChild + parts[2]) : ane;
+        var ece = parts[4] ? ane.querySelector(scopeChild + parts[4]) : ane;
         if (sce && ece) {
-          var sos = parts[2].split(':');
-          var eos = parts[4].split(':');
+          var sos = parts[3].split(':');
+          var eos = parts[5].split(':');
           var sc = sos.length > 1 ? sce.childNodes[sos[0]] : sce;
           var ec = eos.length > 1 ? ece.childNodes[eos[0]] : ece;
           try {

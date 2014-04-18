@@ -16,9 +16,8 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
   function lookMouseDown(e) {
     if (e.which != 1) return;
     e.preventDefault();
-    // spaces need unescaping in Firefox; see url.spec.whatwg.org/#dom-url-href
-    var selector = unescape(this.href).substr(11), el;
-    if (~selector.indexOf('|')) {
+    var selector = unescape(this.href).substr(11);
+    if (selector.lastIndexOf('r|', 0) === 0) {
       var r = snapshot.findRange(selector);
       if (r) {
         var sel = window.getSelection();
