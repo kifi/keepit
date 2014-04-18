@@ -1,7 +1,7 @@
 <div class="kf-tags">
   <div class="kf-nav-group-name">Tags</div>
   <label class="kf-nav-item kf-tag-input-box">
-    <input kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" focus-when="focusFilter" ng-keydown="onFilterChange()" ng-keydown="onKeydown($event)" ng-blur="dehighlight()">
+    <input kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" focus-when="focusFilter" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-blur="dehighlight()">
     <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
   </label>
   <div class="kf-tag-list-hidden"></div>
