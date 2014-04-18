@@ -19,6 +19,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
   private val SIZE_TAIL_CUT = 0.2f
   private val POS_THRESHOLD = 0.2f
   private val DEFAULT_RECOVER_THRESHOLD = 0.9f
+  private val MAX_SCORE_CUT = 15f
   private val SCORE_TAIL_CUT = 4f
 
   private def genVecs(words: Words): (Words, Vectors) = {
@@ -118,7 +119,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
         val r = n * 1f / m
         if ( r >= POS_THRESHOLD){
           val score = rwords.size / (0.01f max r)
-          indexAndScore.append((i, score))
+          if ( score < MAX_SCORE_CUT) indexAndScore.append((i, score))
         }
       }
     }
