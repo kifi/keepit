@@ -15,6 +15,7 @@ trait CortexModelModule extends ScalaModule
 case class CortexProdModelModule() extends CortexModelModule with Logging{
   def configure(){
     bind[LDAURIFeatureUpdatePlugin].to[LDAURIFeatureUpdatePluginImpl].in[AppScoped]
+    bind[Word2VecURIFeatureUpdatePlugin].to[Word2VecURIFeatureUpdatePluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -33,11 +34,19 @@ case class CortexProdModelModule() extends CortexModelModule with Logging{
     val version = ModelVersions.word2vecVersion
     store.get(version).get
   }
+
+  @Singleton
+  @Provides
+  def word2vecWordRepresenter(word2vec: Word2Vec): Word2VecWordRepresenter = {
+     val version = ModelVersions.word2vecVersion
+     Word2VecWordRepresenter(version, word2vec)
+  }
 }
 
 case class CortexDevModelModule() extends CortexModelModule {
   def configure(){
     bind[LDAURIFeatureUpdatePlugin].to[LDAURIFeatureUpdatePluginImpl].in[AppScoped]
+    bind[Word2VecURIFeatureUpdatePlugin].to[Word2VecURIFeatureUpdatePluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -53,6 +62,13 @@ case class CortexDevModelModule() extends CortexModelModule {
   def word2vec(store: Word2VecStore): Word2Vec = {
     val version = ModelVersions.word2vecVersion
     store.get(version).get
+  }
+
+  @Singleton
+  @Provides
+  def word2vecWordRepresenter(word2vec: Word2Vec): Word2VecWordRepresenter = {
+     val version = ModelVersions.word2vecVersion
+     Word2VecWordRepresenter(version, word2vec)
   }
 
 }

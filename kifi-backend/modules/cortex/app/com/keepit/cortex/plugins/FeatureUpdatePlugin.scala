@@ -119,7 +119,10 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
   def update(): Unit = {
     val lowSeq = lastComittedSequence()
     val ents = dataPuller.getSince(SequenceNumber[T](lowSeq.value), limit = pullSize)
+
     log.info(s"begin a new round of update. data size: ${ents.size}")
+    val t1 = System.currentTimeMillis
+
     if (ents.isEmpty) return
 
     val maxSeq = ents.map{ent => getSeqNumber(ent)}.max
@@ -129,6 +132,9 @@ abstract class FeatureUpdater[K, T, M <: StatModel](
         featureStore.+=(k, representer.version, v)
       }
     }
+
+    log.info(s"update time elapse: ${(System.currentTimeMillis - t1)/1000f} seconds")
+
     val commitSeq = FeatureStoreSequenceNumber[T, M](maxSeq.value)
     commit(commitSeq)
   }
