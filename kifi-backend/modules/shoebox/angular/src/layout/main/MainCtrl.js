@@ -141,7 +141,7 @@ angular.module('kifi.layout.main', [
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
       $scope.data.showImportModal = false;
-    }
+    };
 
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
