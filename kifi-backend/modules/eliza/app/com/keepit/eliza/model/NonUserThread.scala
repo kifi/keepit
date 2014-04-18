@@ -62,7 +62,7 @@ case class NonUserThread(
   notifiedCount: Int,
   lastNotifiedAt: Option[DateTime],
   threadUpdatedAt: Option[DateTime],
-  muted: Boolean,
+  muted: Boolean = false,
   state: State[NonUserThread] = NonUserThreadStates.ACTIVE
 ) extends ModelWithState[NonUserThread] with ModelWithPublicId[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))

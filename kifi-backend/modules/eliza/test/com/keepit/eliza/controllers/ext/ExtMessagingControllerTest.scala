@@ -26,6 +26,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
+import com.keepit.common.crypto.TestCryptoModule
 
 import com.google.inject.Injector
 
@@ -52,7 +53,8 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
-      FakeActionAuthenticatorModule()
+      FakeActionAuthenticatorModule(),
+      TestCryptoModule()
     )
   }
 
