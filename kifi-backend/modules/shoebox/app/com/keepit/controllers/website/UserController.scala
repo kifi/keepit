@@ -73,7 +73,7 @@ class UserController @Inject() (
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
-    val connectionsPage = userCommander.getConnectionsPage(userId, page, pageSize)
+    val (connectionsPage, total) = userCommander.getConnectionsPage(userId, page, pageSize)
     val friendsJsons = db.readOnly { implicit s =>
       timing(s"friends($userId) post-processing++") {
         connectionsPage.map { case ConnectionInfo(friendId, unfriended, unsearched) =>
@@ -85,7 +85,10 @@ class UserController @Inject() (
         }
       }
     }
-    Ok(Json.obj("friends" -> friendsJsons))
+    Ok(Json.obj(
+      "friends" -> friendsJsons,
+      "total" -> total
+    ))
   }
 
   def friendCount() = JsonAction.authenticated { request =>
