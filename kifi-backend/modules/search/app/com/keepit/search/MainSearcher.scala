@@ -66,8 +66,6 @@ class MainSearcher(
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
-  private[this] val svWeightClickHistory = config.asInt("svWeightClickHistory")
   private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
@@ -113,7 +111,7 @@ class MainSearcher(
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(userId, indexReader, socialGraphInfo.mySearchUris, collectionSearcher, clickHistoryFuture, svWeightMyBookMarks, svWeightClickHistory, monitoredAwait, nonPersonalizedContextVector, useNonPersonalizedContextVector)
+    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
@@ -203,6 +201,8 @@ class MainSearcher(
     val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
+    val usefulPages = monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
+
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.forall{ case (hit, rank) =>
 
@@ -227,7 +227,7 @@ class MainSearcher(
 
         if (score > (threshold * (1.0f - recencyScoreVal))) {
           h.users = sharingUsers.destIdSet
-          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, false)
+          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
           val newScore = scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost)
           hits.insert(newScore, scoring, h)
           true
@@ -260,7 +260,7 @@ class MainSearcher(
         val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, false)
+          val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
           val newScore = scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
           queue.insert(newScore, scoring, h)
           true
@@ -290,7 +290,7 @@ class MainSearcher(
         if (score > othersThreshold) {
           h.bookmarkCount = getPublicBookmarkCount(h.id)
           if (h.bookmarkCount > 0 || noBookmarkCheck) {
-            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, false)
+            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
             queue.insert(newScore, scoring, h)
             rank += 1
