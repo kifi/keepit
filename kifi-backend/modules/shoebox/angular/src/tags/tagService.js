@@ -16,6 +16,8 @@ angular.module('kifi.tagService', [
       prevFilter = '',
       fetchAllPromise = null;
 
+    var listLength = 70;
+
     function indexById(array, id) {
       for (var i = 0, l = array.length; i < l; i++) {
         if (array[i].id === id) {
@@ -101,11 +103,11 @@ angular.module('kifi.tagService', [
 
       filterList: function (term) {
         var lowerTerm = term.toLowerCase();
-        var searchList = term.indexOf(prevFilter) === 0 && prevFilter.length > 0 ? list : allTags;
+        var searchList = term.indexOf(prevFilter) === 0 && prevFilter.length > 0  && list.length < listLength ? list : allTags;
 
         var newList = [];
 
-        for (var i = 0, ins = 0, sz = searchList.length; i < sz && ins < 40; i++) {
+        for (var i = 0, ins = 0, sz = searchList.length; i < sz && ins < listLength; i++) {
           var tag = searchList[i];
           if (tag.lowerName.indexOf(lowerTerm) !== -1) {
             newList.push(tag);
@@ -138,7 +140,7 @@ angular.module('kifi.tagService', [
           allTags.length = 0;
           allTags.push.apply(allTags, tags);
           list.length = 0;
-          list.push.apply(list, allTags.slice(0, 40));
+          list.push.apply(list, allTags.slice(0, listLength));
 
           allTags.forEach(function (tag) {
             tag.lowerName = tag.name.toLowerCase();
