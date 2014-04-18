@@ -9,7 +9,12 @@ trait Extractor {
   def getMetadata(name: String): Option[String]
   def getKeywords(): Option[String]
   def getLinks(key: String): Set[String]
-  def getCanonicalUrl(): Option[String] = getLinks("canonical").headOption orElse getMetadata("og:url")
+  def getCanonicalUrl(): Option[String] = {
+    getLinks("canonical").headOption orElse getMetadata("og:url") match {
+      case Some(url) if (URI.parse(url).isSuccess) => Some(url)
+      case _ => None
+    }
+  }
   def getAlternateUrls(): Set[String] = getLinks("alternate")
 }
 
