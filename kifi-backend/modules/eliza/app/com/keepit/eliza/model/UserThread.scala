@@ -46,6 +46,7 @@ case class UserThread(
 
 object UserThread {
   implicit object userThread extends ModelWithPublicId[UserThread] {
+    val id = None
     override val prefix = "us"
   }
 }

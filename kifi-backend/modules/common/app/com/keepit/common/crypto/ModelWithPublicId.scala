@@ -2,14 +2,15 @@ package com.keepit.common.crypto
 
 import com.keepit.common.db.Id
 import scala.util.Try
-import com.keepit.eliza.model._
 
 case class PublicIdConfiguration(key: String)
 
 trait ModelWithPublicId[T] {
 
-  def publicId(id: Long)(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[String] = {
-    (new TripleDES(config.key).encryptLongToStr(id, CipherConv.Base32Conv)).map {
+  val id: Option[Id[T]]
+
+  def publicId(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[String] = {
+    (new TripleDES(config.key).encryptLongToStr(id.get.id, CipherConv.Base32Conv)).map {
       obj.prefix + _
     }
   }
