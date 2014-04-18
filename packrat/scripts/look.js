@@ -1,4 +1,5 @@
 // @require scripts/lib/jquery.js
+// @require scripts/ranges.js
 // @require scripts/scroll_to.js
 // @require scripts/snapshot.js
 
@@ -23,7 +24,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
         var sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(r);
-        scrollTo(r.getBoundingClientRect(), computeScrollToDuration);  // TODO: do not trust BCR in Chrome, use workaround
+        scrollTo(ranges.getBoundingClientRect(r), computeScrollToDuration);
       } else {
         showBroken();
       }

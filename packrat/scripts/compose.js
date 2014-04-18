@@ -3,7 +3,8 @@
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/underscore.js
 // @require scripts/friend_search.js
-// @request scripts/look.js
+// @require scripts/look.js
+// @require scripts/ranges.js
 // @require scripts/scroll_to.js
 // @require scripts/snapshot.js
 // @require scripts/selectionchange.js
@@ -144,13 +145,18 @@ var initCompose = (function() {
            Array.prototype.some.call(document.getElementsByClassName('kifi-root'), r.intersectsNode.bind(r));
   }
 
+  function toJson(o) {
+    return $.extend({}, o);
+  }
+
   function finalizeLookHereLink(r) {
-    var info = setRangeRects(r, {
-      win: {
-        width: window.innerWidth,
-        height: window.innerHeight
-      }
-    });
+    var info = {};
+    info.win = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+    info.rects = $.map(ranges.getClientRects(r), toJson);
+    info.bounds = toJson(ranges.getBoundingClientRect(r, info.rects));
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
       $(img).on('load', finishFinalizeLookHereLink.bind(img, info, text, href));
@@ -275,41 +281,6 @@ var initCompose = (function() {
       r.collapse(true);
     }
     $d.data('sel', r).prop('scrollTop', 999);
-  }
-
-  function setRangeRects(r, o) {
-    if (~navigator.appVersion.indexOf('Chrom')) { // crbug.com/324437
-      var rects = [];
-      var indexOf = Function.call.bind(Array.prototype.indexOf);
-      for (var el = r.endContainer; el !== r.commonAncestorContainer;) {
-        var sr = r.cloneRange();
-        sr.setStart(el, 0);
-        var parent = el.parentNode;
-        r.setEnd(parent, indexOf(parent.childNodes, el));
-        rects.push.apply(rects, sr.getClientRects());
-        el = parent;
-      }
-      rects.push.apply(rects, r.getClientRects());
-      var bounds = rects.reduce(function (b, rect) {
-        b.top = Math.min(b.top, rect.top);
-        b.left = Math.min(b.left, rect.left);
-        b.right = Math.max(b.right, rect.right);
-        b.bottom = Math.max(b.bottom, rect.bottom);
-        return b;
-      }, {top: Infinity, left: Infinity, right: -Infinity, bottom: -Infinity});
-      bounds.width = bounds.right - bounds.left;
-      bounds.height = bounds.bottom - bounds.top;
-      o.rects = rects;
-      o.bounds = bounds;
-    } else {
-      o.rects = $.map(r.getClientRects(), rectToJson);
-      o.bounds = rectToJson(r.getBoundingClientRect());
-    }
-    return o;
-  }
-
-  function rectToJson(rect) {
-    return $.extend({}, rect);
   }
 
   function elementSelfOrParent(node) {
@@ -573,8 +544,7 @@ var initCompose = (function() {
         var r = getSelRange();
         tryToCreateLookHereLinkStub(r);
         if ($aLook) {
-          var rr = setRangeRects(r, {});
-          var anim = scrollTo(rr.bounds, function computeDuration(dist) {
+          var anim = scrollTo(ranges.getBoundingClientRect(r), function computeDuration(dist) {
             return dist && 200 * Math.log((dist + 80) / 60);
           });
           var next = finalizeLookHereLink.bind(null, r);
