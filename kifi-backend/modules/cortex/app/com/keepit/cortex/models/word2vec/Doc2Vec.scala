@@ -171,6 +171,8 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
 
   def sampleBest(text: String, numTry: Int = 5, normalize: Boolean = true): Option[Doc2VecResult] = {
     val samples = (0 until numTry).flatMap{ i => getDocVecAndKeyWords(text) }
+    if (samples.isEmpty) return None
+
     val weights = samples.map{ res => 1f / res.bagOfWords.size}.toArray
     val target = if (normalize) MatrixUtils.weightedAverage(samples.map{_.vec}, weights) else MatrixUtils.average(samples.map{_.vec})
 
