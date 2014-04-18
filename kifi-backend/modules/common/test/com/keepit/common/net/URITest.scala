@@ -5,6 +5,12 @@ import java.net.{URI => JavaURI}
 
 class URITest extends Specification {
   "URI" should {
+    "parse empty url" in {
+      URI.parse("http://").isFailure === true
+      URI.parse("https://").isFailure === true
+      URI.parse("javascript://").isFailure === false
+    }
+
     "parse URLs" in {
       URI.parse("http://google.com/").get.host.get.name === "google.com"
       URI.parse("https://sub.domain.com").get.host.get.name === "sub.domain.com"
@@ -104,6 +110,7 @@ class URITest extends Specification {
     }
 
     "absoluteUrl" in {
+      URI.absoluteUrl("http://www.kifi.com", "http://") === None
       URI.absoluteUrl("http://www.kifi.com", "welcome.html").get === "http://www.kifi.com/welcome.html"
       URI.absoluteUrl("http://www.kifi.com", "/welcome.html").get === "http://www.kifi.com/welcome.html"
       URI.absoluteUrl("http://www.kifi.com/home/", "welcome.html").get === "http://www.kifi.com/home/welcome.html"

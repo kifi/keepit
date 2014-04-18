@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 class PrenormalizerTest extends Specification {
 
   def prenormalize(url: String) = Prenormalizer(url).get
+
   "Prenormalizer" should {
 
     "upcase scheme and host" in {
@@ -121,8 +122,6 @@ class PrenormalizerTest extends Specification {
     "handle edge cases" in {
       prenormalize("http://www1.bloomingdales.com/search/results.ognc?sortOption=*&Keyword=juicy%20couture&resultsPerPage=24&Action=sd&attrs=Department%3ADepartment%3ADresses|Color:Color:Black") ===
         "http://www1.bloomingdales.com/search/results.ognc?Action=sd&Keyword=juicy+couture&attrs=Department:Department:Dresses%7CColor:Color:Black&resultsPerPage=24&sortOption=*"
-
-      prenormalize("http:///") === "http://"
 
       // dots after the domain name
       prenormalize("http://www.42go.com./team.html") === "http://www.42go.com./team.html"
