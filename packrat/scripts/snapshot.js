@@ -70,6 +70,12 @@ var snapshot = function () {
 
   var slice = Array.slice || Function.call.bind(Array.prototype.slice);
   var indexOf = Array.indexOf || Function.call.bind(Array.prototype.indexOf);
+  var scopeChild = ':scope>';
+  try {
+    document.querySelector(scopeChild + '*'); // bugzil.la/528456
+  } catch (e) {
+    scopeChild = '';
+  }
 
   return {
     // Attempts to find an element in a document that corresponds to a selector returned by generateSelector
@@ -176,8 +182,8 @@ var snapshot = function () {
       var parts = selector.split('|');
       var ane = snapshot.fuzzyFind(parts[0]);
       if (ane) {
-        var sce = parts[1] ? ane.querySelector(':scope>' + parts[1]) : ane;
-        var ece = parts[3] ? ane.querySelector(':scope>' + parts[3]) : ane;
+        var sce = parts[1] ? ane.querySelector(scopeChild + parts[1]) : ane;
+        var ece = parts[3] ? ane.querySelector(scopeChild + parts[3]) : ane;
         if (sce && ece) {
           var sos = parts[2].split(':');
           var eos = parts[4].split(':');
