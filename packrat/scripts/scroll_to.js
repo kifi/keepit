@@ -56,5 +56,5 @@ function scrollTo(r, computeDuration) {
     }
     deferred.resolve();
   }
-  return {ms: ms, promise: deferred.promise};
+  return {ms: ms, promise: deferred.promise, dx: dx, dy: dy};
 }

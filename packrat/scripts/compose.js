@@ -334,7 +334,7 @@ var initCompose = (function() {
     $d.removeData('preventNextMouseUp');
   }).mouseup(function (e) {
     var r = getSelRange();
-    if ($d[0].contains(r.commonAncestorContainer)) {
+    if (r && $d[0].contains(r.commonAncestorContainer)) {
       $d.data('sel', r);
     }
 

@@ -23,8 +23,46 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
       if (r) {
         var sel = window.getSelection();
         sel.removeAllRanges();
-        sel.addRange(r);
-        scrollTo(ranges.getBoundingClientRect(r), computeScrollToDuration);
+
+        var rects = ranges.getClientRects(r);
+        var bounds = ranges.getBoundingClientRect(r, rects);
+        var anim = scrollTo(bounds, computeScrollToDuration);
+
+        var $cnv = $('<canvas>').prop({width: bounds.width, height: bounds.height});
+        var ctx = $cnv[0].getContext('2d');
+        ctx.fillStyle = 'rgba(128,184,255,.59)';
+        for (var i = 0; i < rects.length; i++) {
+          var rect = rects[i];
+          ctx.fillRect(rect.left - bounds.left, rect.top - bounds.top, rect.width, rect.height);
+        }
+
+        var aRect = this.getClientRects()[0];
+        var bPos = {
+          left: bounds.left - anim.dx,
+          top: bounds.top - anim.dy
+        };
+        var scale = Math.min(1, aRect.width / bounds.width);
+        $cnv.addClass('kifi-root').css({
+          position: 'fixed',
+          zIndex: 999999999993,
+          top: bPos.top,
+          left: bPos.left,
+          opacity: 0,
+          transformOrigin: '0 0',
+          transform: 'translate(' + (aRect.left - bPos.left) + 'px,' + (aRect.top - bPos.top) + 'px) scale(' + scale + ',' + scale + ')',
+          transition: 'all ' + anim.ms + 'ms ease-in-out,opacity ' + anim.ms + 'ms ease-out'
+        })
+        .appendTo($('body')[0] || 'html')
+        .on('transitionend', function () {
+          $(this).remove();
+          sel.removeAllRanges();
+          sel.addRange(r);
+        })
+        .layout()
+        .css({
+          transform: '',
+          opacity: 1
+        });
       } else {
         showBroken();
       }
