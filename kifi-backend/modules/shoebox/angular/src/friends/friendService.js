@@ -15,18 +15,26 @@ angular.module('kifi.friendService', [
     var friends = [];
     var requests = [];
     var friendsHasRequested = false;
+    var hasMoreFriends = true;
+    var friendsPageSize = 20;
+    var currentPage = 0;
+    var totalFriends = 0;
 
     var clutchParams = {
       cacheDuration: 20000
     };
 
-    var kifiFriendsService = new Clutch(function () {
-      return $http.get(routeService.friends).then(function (res) {
-        friends.length = 0;
+    var kifiFriendsService = new Clutch(function (page) {
+      return $http.get(routeService.friends(page, friendsPageSize)).then(function (res) {
+        if (page === 0) {
+          friends.length = 0;
+        }
+        hasMoreFriends = res.data.friends.length >= friendsPageSize;
         friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
           return !friend.unfriended;
         }));
         friendsHasRequested = true;
+        totalFriends = res.data.total;
         return friends;
       });
     }, clutchParams);
@@ -44,8 +52,12 @@ angular.module('kifi.friendService', [
         return userId; // todo!
       },
 
-      getKifiFriends: function () {
-        return kifiFriendsService.get();
+      getMore: function() {
+        return api.getKifiFriends(++currentPage);
+      },
+
+      getKifiFriends: function (page) {
+        return kifiFriendsService.get(page || 0);
       },
 
       getRequests: function () {
@@ -53,6 +65,11 @@ angular.module('kifi.friendService', [
       },
 
       friends: friends,
+      totalFriends: function () {
+        return totalFriends;
+      },
+
+      hasMoreFriends: hasMoreFriends,
 
       friendsHasRequested: friendsHasRequested,
 
