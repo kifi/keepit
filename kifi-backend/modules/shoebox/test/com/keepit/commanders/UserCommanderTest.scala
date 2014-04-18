@@ -154,7 +154,6 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         connections1.size === 3
 
         val connections2 = inject[UserCommander].getConnectionsPage(user2.id.get, 0, 1000)
-        println("===========>" + connections2)
         connections2.size === 2
 
         val connections1p1 = inject[UserCommander].getConnectionsPage(user1.id.get, 1, 2)
