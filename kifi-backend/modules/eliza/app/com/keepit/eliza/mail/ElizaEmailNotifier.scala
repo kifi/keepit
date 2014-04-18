@@ -26,7 +26,11 @@ object MessageLookHereRemover {
   private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
 
   def apply(text: String): String = {
-    lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
+    try {
+      lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
+    } catch {
+      case t: java.lang.IllegalArgumentException => text
+    }
   }
 }
 
