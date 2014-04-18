@@ -19,8 +19,8 @@ object CipherConv {
     override def decode(str: String): Array[Byte]= Base64.decodeBase64(str)
   }
   object Base32Conv extends CipherConv {
-    override def encode(data: Array[Byte]): String = new Base32().encodeAsString(data).takeWhile(_ != '=')
-    override def decode(str: String): Array[Byte]= new Base32().decode(str)
+    override def encode(data: Array[Byte]): String = new Base32().encodeAsString(data).takeWhile(_ != '=').toLowerCase
+    override def decode(str: String): Array[Byte]= new Base32().decode(str.toUpperCase)
   }
 }
 
@@ -52,7 +52,6 @@ class TripleDES(passPhrase: String) {
     val buffer = java.nio.ByteBuffer.allocate(longSize)
     val dec: Array[Byte] = conv.decode(str)
     val out: Array[Byte] = dcipher.doFinal(dec)
-    println(out.length)
     buffer.put(out)
     buffer.flip
     buffer.getLong

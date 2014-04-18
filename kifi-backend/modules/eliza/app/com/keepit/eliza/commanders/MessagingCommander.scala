@@ -27,6 +27,7 @@ import scala.Some
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
+import com.keepit.common.db.slick.DBSession.RSession
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -225,16 +226,8 @@ class MessagingCommander @Inject() (
   }
 
   def sendMessageWithNonUserThread(id: Id[NonUserThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): Option[(MessageThread, Message)] = {
-    db.readOnly { implicit session => {
-        try {
-          Some(nonUserThreadRepo.get(id))
-        } catch {
-          case e: Throwable => {
-            airbrake.notify(s"Could not retrieve non-user thread for id ${id}: ${e.getMessage()}")
-            None
-          }
-        }
-      } map { nonUserThread =>
+    db.readOnly { implicit session =>
+      getNonUserThreadOptWithSession(id) map { nonUserThread =>
         (nonUserThread.participant, threadRepo.get(nonUserThread.threadId))
       }
     } map { case (participant, threadId) =>
@@ -355,6 +348,20 @@ class MessagingCommander @Inject() (
     (thread, message)
   }
 
+  private def getNonUserThreadOptWithSession(id: Id[NonUserThread])(implicit session: RSession): Option[NonUserThread] = {
+    try {
+      Some(nonUserThreadRepo.get(id))
+    } catch {
+      case e: Throwable => {
+        airbrake.notify(s"Could not retrieve non-user thread for id ${id}: ${e.getMessage()}")
+        None
+      }
+    }
+  }
+
+  def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread] =
+    db.readOnly { implicit session => getNonUserThreadOptWithSession(id) }
+
   def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
     db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreadIds(user)
@@ -456,6 +463,10 @@ class MessagingCommander @Inject() (
 
   def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, false)
 
+  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, true)
+
+  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, false)
+
   private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
     val stateChanged = db.readWrite { implicit session =>
       val thread = threadRepo.get(threadId)
@@ -474,6 +485,22 @@ class MessagingCommander @Inject() (
       messagingAnalytics.changedMute(userId, threadId, mute, context)
     }
     stateChanged
+  }
+
+  private def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean = {
+    db.readWrite { implicit session =>
+      getNonUserThreadOptWithSession(id) map { nonUserThread =>
+        if (nonUserThread.muted != mute) {
+          nonUserThreadRepo.setMuteState(nonUserThread.id.get, mute)
+          true
+        } else {
+          false
+        }
+      }
+    } map { stateChanged =>
+    // TODO(martin) analytics for non users
+      stateChanged
+    } getOrElse(false)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {

@@ -31,17 +31,13 @@ class EmailMessageProcessingCommander @Inject() (
         val message = sqsMessage.body
         ModelWithPublicId.decode[NonUserThread](message.publicId) match {
           case Success(id: Id[NonUserThread]) => {
-            try {
-              message.content match {
-                case Some(content: String) => {
-                  val contextBuilder = heimdalContextBuilder()
-                  contextBuilder += ("source", "email")
-                  messagingCommander.sendMessageWithNonUserThread(id, content, None)(contextBuilder.build)
-                }
-                case None => airbrake.notify(s"Could not extract contents of email: publicId = ${id} and timestamp = ${message.timestamp}")
+            message.content match {
+              case Some(content: String) => {
+                val contextBuilder = heimdalContextBuilder()
+                contextBuilder += ("source", "email")
+                messagingCommander.sendMessageWithNonUserThread(id, content, None)(contextBuilder.build)
               }
-            } catch {
-              case e: Throwable => airbrake.notify()
+              case None => airbrake.notify(s"Could not extract contents of email: publicId = ${id} and timestamp = ${message.timestamp}")
             }
           }
           case _ => log.info(s"Email with invalid public id ${message.publicId}")
