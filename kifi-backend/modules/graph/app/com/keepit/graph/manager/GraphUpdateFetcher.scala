@@ -23,6 +23,7 @@ class GraphUpdateFetcherImpl @Inject() (
 ) extends GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
+    case UserGraphUpdate => ???
     case _ => ???
   }
 }
