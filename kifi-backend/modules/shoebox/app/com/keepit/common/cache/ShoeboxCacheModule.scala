@@ -156,13 +156,13 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def userConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionIdCache(stats, accessLog, (outerRepo, 7 days))
+  def userConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def unfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UnfriendedConnectionsCache(stats, accessLog, (outerRepo, 7 days))
+  def unfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UnfriendedConnectionsCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -171,8 +171,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def searchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SearchFriendsCache(stats, accessLog, (outerRepo, 7 days))
+  def searchFriendsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SearchFriendsCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
