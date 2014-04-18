@@ -3,10 +3,7 @@ package com.keepit.graph.manager
 import com.keepit.graph.model.GraphReader
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
-import com.kifi.franz.SQSQueue
-import scala.concurrent.Future
 import com.keepit.inject.AppScoped
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait GraphManager {
   def readOnly[T](f: GraphReader => T): T

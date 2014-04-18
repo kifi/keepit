@@ -14,12 +14,13 @@ import com.keepit.graph.manager.GraphStoreInbox
 import com.amazonaws.regions.Regions
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait GraphStoreModule extends StoreModule {
 
-  protected def getCleanQueue[T](basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)(queuePrefix: String): SQSQueue[T] = {
+  protected def getGraphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)(queuePrefix: String): SQSQueue[GraphUpdate] = {
     val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
-    val queue = client.formatted[T](QueueName(queuePrefix + amazonInstanceInfo.instanceId.id), true)
+    val queue = client.formatted[GraphUpdate](QueueName(queuePrefix + amazonInstanceInfo.instanceId.id), true)
     Await.result(clearQueue(queue), 3 minutes)
     queue
   }
@@ -47,7 +48,7 @@ case class GraphProdStoreModule() extends ProdStoreModule with GraphStoreModule 
 
   @Provides @Singleton
   def graphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo): SQSQueue[GraphUpdate] = {
-    getCleanQueue[GraphUpdate](basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)("graph-update-prod-b-")
+    getGraphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)("graph-update-prod-b-")
   }
 }
 
@@ -63,6 +64,6 @@ case class GraphDevStoreModule() extends DevStoreModule(GraphProdStoreModule()) 
 
   @Provides @Singleton
   def graphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo): SQSQueue[GraphUpdate] = {
-    getCleanQueue[GraphUpdate](basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)("graph-update-dev-")
+    getGraphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)("graph-update-dev-")
   }
 }
