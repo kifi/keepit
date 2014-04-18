@@ -22,8 +22,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def basicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new BasicUserUserIdCache(stats, accessLog, (outerRepo, 7 days))
+  def basicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicUserUserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -166,8 +166,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
-  def userConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionCountCache(stats, accessLog, (outerRepo, 7 days))
+  def userConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
