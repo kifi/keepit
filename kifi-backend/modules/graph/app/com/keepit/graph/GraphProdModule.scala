@@ -12,16 +12,12 @@ import com.kifi.franz.{SimpleSQSClient, QueueName, SQSQueue}
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions._
 import com.keepit.graph.manager.GraphUpdate
+import com.keepit.common.store.GraphProdStoreModule
+import com.keepit.graph.simple.SimpleGraphProdModule
 
 
-case class GraphProdModule() extends GraphModule with CommonProdModule {
+case class GraphProdModule() extends GraphModule(GraphProdStoreModule(), SimpleGraphProdModule()) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
     def servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.ABOOK :: Nil
-  }
-
-  @Provides @Singleton
-  def graphInboxQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo): SQSQueue[GraphUpdate] = {
-    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
-    client.formatted[GraphUpdate](QueueName("graph-inbox-prod-b-" + amazonInstanceInfo.instanceId.id), true)
   }
 }

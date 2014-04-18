@@ -8,6 +8,7 @@ import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.akka.SafeFuture
+import com.keepit.abook.ABookServiceClient
 
 trait GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
@@ -17,7 +18,8 @@ trait GraphUpdateFetcher {
 class GraphUpdateFetcherImpl @Inject() (
   queue: SQSQueue[GraphUpdate],
   shoebox: ShoeboxServiceClient,
-  eliza: ElizaServiceClient
+  eliza: ElizaServiceClient,
+  abook: ABookServiceClient
 ) extends GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
