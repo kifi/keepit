@@ -122,7 +122,48 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
       }
     }
 
+    "page through connections" in {
+      running(new ShoeboxApplication(modules:_*)) {
+        val userRepo = inject[UserRepo]
+        val connectionRepo = inject[UserConnectionRepo]
 
+        val (user1, user2, user3, user4) = db.readWrite {
+          implicit session =>
+            var user1 = userRepo.save(User(
+              firstName = "Homer",
+              lastName = "Simpson"
+            ))
+            var user2 = userRepo.save(User(
+              firstName = "Peter",
+              lastName = "Griffin"
+            ))
+            var user3 = userRepo.save(User(
+              firstName = "Clark",
+              lastName = "Kent"
+            ))
+            var user4 = userRepo.save(User(
+              firstName = "Clark",
+              lastName = "Simpson"
+            ))
+
+            connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get, user4.id.get))
+            connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
+            (user1, user2, user3, user4)
+        }
+        val connections1 = inject[UserCommander].getConnectionsPage(user1.id.get, 0, 1000)
+        connections1.size === 3
+
+        val connections2 = inject[UserCommander].getConnectionsPage(user2.id.get, 0, 1000)
+        println("===========>" + connections2)
+        connections2.size === 2
+
+        val connections1p1 = inject[UserCommander].getConnectionsPage(user1.id.get, 1, 2)
+        connections1p1.size === 1
+        connections1p1.head.userId === user4.id.get
+
+        inject[UserCommander].getConnectionsPage(user1.id.get, 2, 2).size === 0
+      }
+    }
   }
 
 }
