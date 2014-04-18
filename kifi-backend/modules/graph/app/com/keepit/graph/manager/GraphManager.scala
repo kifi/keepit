@@ -17,8 +17,9 @@ trait GraphManager {
 trait GraphManagerModule extends ScalaModule with Logging {
 
   def configure() = {
-    bind[GraphUpdater].to[GraphUpdaterImpl].in[AppScoped]
-    bind[GraphUpdateFetcher].to[GraphUpdateFetcherImpl].in[AppScoped]
+    bind[GraphUpdater].to[GraphUpdaterImpl]
+    bind[GraphUpdateFetcher].to[GraphUpdateFetcherImpl]
+    bind[GraphManagerPlugin].in[AppScoped]
   }
 
   protected def clearQueue[T](queue: SQSQueue[T], batchSize: Int = 1000): Future[Unit] = {

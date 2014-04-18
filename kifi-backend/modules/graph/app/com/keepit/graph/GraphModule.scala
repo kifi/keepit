@@ -4,7 +4,6 @@ import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 import com.keepit.common.store.{GraphStoreModule, StoreModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
-import com.keepit.graph.manager.GraphManagerModule
 import com.keepit.abook.ProdABookServiceClientModule
 
 abstract class GraphModule(
