@@ -224,7 +224,7 @@ class AdminUserController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }
 
-    val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
+    val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
       val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
@@ -235,7 +235,8 @@ class AdminUserController @Inject() (
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
-      ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
+      val invitedByUsers = invitedBy(socialUsers)
+      ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
@@ -269,7 +270,8 @@ class AdminUserController @Inject() (
       econtacts <- econtactsF
     } yield {
       Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, collections, collectionFilter))
+        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount,
+        econtacts, collections, collectionFilter, invitedByUsers))
     }
   }
 
