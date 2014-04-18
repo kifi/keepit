@@ -270,49 +270,53 @@ class UserCommander @Inject() (
     newUser
   }
 
+  def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
+    val guardKey = "friendsNotifiedAboutJoining"
+    if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
+      val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
+        val newUser = userRepo.get(newUserId)
+        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
+        val id2Email = toNotify.map { userId =>
+          (userId, emailRepo.getByUser(userId))
+        }.toMap
+        (newUser, toNotify, id2Email)
+      }
+      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
+      toNotify.foreach { userId =>
+        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
+        db.readWrite{ implicit session =>
+          val user = userRepo.get(userId)
+          postOffice.sendMail(ElectronicMail(
+            senderUserId = None,
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
+            to = List(id2Email(userId)),
+            subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
+            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
+            textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
+            category = NotificationCategory.User.FRIEND_JOINED)
+          )
+        }
+
+      }
+
+      elizaServiceClient.sendGlobalNotification(
+        userIds = toNotify,
+        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly. Invite friends to join Kifi.",
+        linkText = "Invite more friends to Kifi.",
+        linkUrl = "https://www.kifi.com/friends/invite",
+        imageUrl = imageUrl,
+        sticky = false,
+        category = NotificationCategory.User.FRIEND_JOINED
+      )
+    }
+  }
+
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
     delay { synchronized {
-      val guardKey = "friendsNotifiedAboutJoining"
-      if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
-        db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
-        val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
-          val newUser = userRepo.get(newUserId)
-          val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
-          val id2Email = toNotify.map { userId =>
-            (userId, emailRepo.getByUser(userId))
-          }.toMap
-          (newUser, toNotify, id2Email)
-        }
-        val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
-        toNotify.foreach { userId =>
-          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
-          db.readWrite{ implicit session =>
-            val user = userRepo.get(userId)
-            postOffice.sendMail(ElectronicMail(
-              senderUserId = None,
-              from = EmailAddresses.NOTIFICATIONS,
-              fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
-              to = List(id2Email(userId)),
-              subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
-              htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
-              textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-              category = NotificationCategory.User.FRIEND_JOINED)
-            )
-          }
-
-        }
-
-        elizaServiceClient.sendGlobalNotification(
-          userIds = toNotify,
-          title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-          body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly. Invite friends to join Kifi.",
-          linkText = "Invite more friends to Kifi.",
-          linkUrl = "https://www.kifi.com/friends/invite",
-          imageUrl = imageUrl,
-          sticky = false,
-          category = NotificationCategory.User.FRIEND_JOINED
-        )
-      }
+      tellAllFriendsAboutNewUserImmediate(newUserId, additionalRecipients)
     }}
   }
 
