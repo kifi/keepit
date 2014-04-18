@@ -169,8 +169,13 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     }
   }
 
-  def sampleBest(text: String, numTry: Int = 5, normalize: Boolean = true): Option[Doc2VecResult] = {
-    val samples = (0 until numTry).flatMap{ i => getDocVecAndKeyWords(text) }
+  def sampleBest(text: String, numTry: Int = 5, normalize: Boolean = true, parallel: Boolean = true): Option[Doc2VecResult] = {
+    val samples = if (parallel) {
+      (0 until numTry).par.flatMap{ i => getDocVecAndKeyWords(text) }.toArray
+    } else {
+      (0 until numTry).flatMap{ i => getDocVecAndKeyWords(text) }.toArray
+    }
+
     if (samples.isEmpty) return None
 
     val weights = samples.map{ res => 1f / res.bagOfWords.size}.toArray
