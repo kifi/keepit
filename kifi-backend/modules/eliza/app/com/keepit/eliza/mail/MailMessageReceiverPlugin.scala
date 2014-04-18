@@ -12,14 +12,11 @@ import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 
 import javax.mail._
 import play.api.Plugin
-import com.keepit.common.db.Id
 import com.keepit.common.mail.GenericMailParser
-import com.keepit.common.crypto.ModelWithPublicId
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.eliza.model.NonUserThread
 import scala.Some
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -108,17 +105,11 @@ class MailDiscussionMessageParser @Inject() (
     new DateTime(message.getReceivedDate())
   }
 
-  private def getContent(message: Message): Option[String] = {
-    getText(message)
-  }
-
   def getInfo(message: Message): Option[MailNotificationReply] = {
-    getPublicId(message).flatMap(getInfoFromIdentifier)
-    getPublicId(message).map(MailNotificationReply(getTimestamp(message), getContent(message), _))
-  }
+    getPublicId(message) map { publicId =>
+      MailNotificationReply(getTimestamp(message), getText(message), publicId)
+    }
 
-  private def getInfoFromIdentifier(identifier: String): Option[Id[NonUserThread]] = {
-    ModelWithPublicId.decode[NonUserThread](identifier).toOption
   }
 }
 

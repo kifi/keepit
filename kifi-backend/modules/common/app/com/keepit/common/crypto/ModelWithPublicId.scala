@@ -2,23 +2,27 @@ package com.keepit.common.crypto
 
 import com.keepit.common.db.Id
 import scala.util.Try
+import com.keepit.eliza.model._
 
 case class PublicIdConfiguration(key: String)
 
 trait ModelWithPublicId[T] {
 
-  def publicId(id: Long)(implicit config: PublicIdConfiguration): Try[String] = {
+  def publicId(id: Long)(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[String] = {
     (new TripleDES(config.key).encryptLongToStr(id, CipherConv.Base32Conv)).map {
-      prefix._1.toString + prefix._2.toString + _
+      obj.prefix + _
     }
   }
 
-  val prefix: (Char, Char)
+  val prefix: String = ""
 }
 
 object ModelWithPublicId {
 
-  def decode[T](publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    (new TripleDES(config.key).decryptStrToLong(publicId.drop(2), CipherConv.Base32Conv)) map Id[T] _
+  def decode[T](publicId: String)(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[Id[T]] = {
+    val reg = raw"^${obj.prefix}(.*)$$".r
+    Try{reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
+      (new TripleDES(config.key).decryptStrToLong(identifier, CipherConv.Base32Conv)) map Id[T] _ toOption
+    }.flatten.get}
   }
 }

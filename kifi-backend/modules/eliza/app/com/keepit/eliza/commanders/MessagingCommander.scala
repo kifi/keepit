@@ -38,6 +38,7 @@ object MessagingCommander {
 class MessagingCommander @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   db: Database,
   clock: Clock,
@@ -223,6 +224,24 @@ class MessagingCommander @Inject() (
     sendMessage(MessageSender.User(from), thread, messageText, urlOpt, nUriOpt, Some(isNew))
   }
 
+  def sendMessageWithNonUserThread(id: Id[NonUserThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): Option[(MessageThread, Message)] = {
+    db.readOnly { implicit session => {
+        try {
+          Some(nonUserThreadRepo.get(id))
+        } catch {
+          case e: Throwable => {
+            airbrake.notify(s"Could not retrieve non-user thread for id ${id}: ${e.getMessage()}")
+            None
+          }
+        }
+      } map { nonUserThread =>
+        (nonUserThread.participant, threadRepo.get(nonUserThread.threadId))
+      }
+    } map { case (participant, threadId) =>
+      log.info(s"Sending message from non-user with id ${id} to thread ${threadId} with text ${messageText.take(50)}")
+      sendMessage(MessageSender.NonUser(participant), threadId, messageText, urlOpt)
+    }
+  }
 
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
