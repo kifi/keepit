@@ -6,11 +6,12 @@ import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.graph.manager.GraphManagerModule
 import com.keepit.graph.common.store.GraphStoreModule
+import com.keepit.graph.common.cache.GraphCacheModule
 
 abstract class GraphModule(
 
   // Common Functional Modules
-  //val cacheModule: CacheModule,
+  val cacheModule: GraphCacheModule,
   val storeModule: GraphStoreModule,
 
   // Graph Functional Modules
