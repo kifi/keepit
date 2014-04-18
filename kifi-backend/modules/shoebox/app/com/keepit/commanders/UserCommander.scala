@@ -35,6 +35,18 @@ import securesocial.core.{Identity, UserService, Registry}
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.model.SocialConnection
+import play.api.libs.json.JsString
+import com.keepit.model.SocialUserInfoUserKey
+import scala.Some
+import com.keepit.model.EmailAddress
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.social.UserIdentity
+import com.keepit.heimdal.ContextStringData
+import play.api.libs.json.JsSuccess
+import com.keepit.model.SocialUserConnectionsKey
+import com.keepit.common.mail.GenericEmailAddress
+import play.api.libs.json.JsObject
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -42,6 +54,8 @@ object BasicSocialUser {
   def from(sui: SocialUserInfo): BasicSocialUser =
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
+
+case class ConnectionInfo(userId: Id[User], unfriended: Boolean, unsearched: Boolean)
 
 case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
@@ -145,6 +159,19 @@ class UserCommander @Inject() (
     } yield {
       connected ++ unfriended
     }
+  }
+
+  def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): Seq[ConnectionInfo] = {
+    val (searchFriends, connectionIds, unfriendedIds) = db.readOnly { implicit s => (
+      searchFriendRepo.getSearchFriends(userId),
+      userConnectionRepo.getConnectedUsers(userId),
+      userConnectionRepo.getUnfriendedUsers(userId)
+      )}
+    val connections = connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq
+    val infos = connections.map { case (friendId, unfriended) =>
+      ConnectionInfo(friendId, unfriended, searchFriends.contains(friendId))
+    }
+    infos.drop(page * pageSize).take(pageSize)
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
