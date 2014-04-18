@@ -68,7 +68,12 @@ case class NonUserThread(
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
-  val prefix = ('n', 'u')
+}
+
+object NonUserThread {
+  implicit object nonUserThread extends ModelWithPublicId[NonUserThread] {
+    override val prefix = "nu"
+  }
 }
 
 object NonUserThreadStates extends States[NonUserThread]

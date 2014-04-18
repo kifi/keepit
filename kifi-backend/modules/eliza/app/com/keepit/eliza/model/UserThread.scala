@@ -42,6 +42,11 @@ case class UserThread(
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $thread, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
-
-  val prefix = ('u', 's')
 }
+
+object UserThread {
+  implicit object userThread extends ModelWithPublicId[UserThread] {
+    override val prefix = "us"
+  }
+}
+
