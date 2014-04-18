@@ -5,8 +5,6 @@ import com.google.inject.{Singleton, Provides}
 import play.api.Play.current
 import scala.util.Try
 import com.kifi.franz.SQSQueue
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.Failure
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -22,8 +20,7 @@ trait SimpleGraphModule extends GraphManagerModule {
         (graph, state)
       case Failure(ex) =>
         log.error(s"Failed to load SimpleGraph from disk - ${ex}")
-        log.info(s"Clearing SQSQueue in order to rebuild SimpleGraph from scratch")
-        Await.result(clearQueue(graphQueue), 3 minutes)
+        log.info(s"Rebuilding SimpleGraph from scratch")
         (SimpleGraph(), GraphUpdaterState.empty)
     }
 

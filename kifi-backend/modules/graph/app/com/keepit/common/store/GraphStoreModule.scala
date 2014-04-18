@@ -12,8 +12,25 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.kifi.franz.{QueueName, SimpleSQSClient, SQSQueue}
 import com.keepit.graph.manager.GraphStoreInbox
 import com.amazonaws.regions.Regions
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
-trait GraphStoreModule extends StoreModule
+trait GraphStoreModule extends StoreModule {
+
+  protected def getCleanQueue[T](basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)(queuePrefix: String): SQSQueue[T] = {
+    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
+    val queue = client.formatted[T](QueueName(queuePrefix + amazonInstanceInfo.instanceId.id), true)
+    Await.result(clearQueue(queue), 3 minutes)
+    queue
+  }
+
+  private def clearQueue[T](queue: SQSQueue[T], batchSize: Int = 1000): Future[Unit] = {
+    queue.nextBatch(batchSize).flatMap { case messages =>
+      messages.foreach(_.consume)
+      if (messages.length == batchSize) clearQueue(queue, batchSize) else Future.successful(Unit)
+    }
+  }
+}
 
 case class GraphProdStoreModule() extends ProdStoreModule with GraphStoreModule {
   def configure {}
@@ -30,8 +47,7 @@ case class GraphProdStoreModule() extends ProdStoreModule with GraphStoreModule 
 
   @Provides @Singleton
   def graphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo): SQSQueue[GraphUpdate] = {
-    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
-    client.formatted[GraphUpdate](QueueName("graph-update-prod-b-" + amazonInstanceInfo.instanceId.id), true)
+    getCleanQueue[GraphUpdate](basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)("graph-update-prod-b-")
   }
 }
 
@@ -47,7 +63,6 @@ case class GraphDevStoreModule() extends DevStoreModule(GraphProdStoreModule()) 
 
   @Provides @Singleton
   def graphUpdateQueue(basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo): SQSQueue[GraphUpdate] = {
-    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
-    client.formatted[GraphUpdate](QueueName("graph-update-dev-" + amazonInstanceInfo.instanceId.id), true)
+    getCleanQueue[GraphUpdate](basicAWSCreds:BasicAWSCredentials, amazonInstanceInfo: AmazonInstanceInfo)("graph-update-dev-")
   }
 }
