@@ -19,7 +19,7 @@ class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIn
     indexDocuments(Some(buildIndexable(new Tst(id, text, personalText))).iterator, 100)
   }
 
-  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)
+  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher.indexReader, ids, null)
 
   def update(): Int = ???
 }
