@@ -47,6 +47,14 @@ angular.module('kifi.friends', [
       }
     };
 
+    $scope.totalFriends = friendService.totalFriends;
+
+    $scope.friendsScrollDistance = '100%';
+    $scope.isFriendsScrollDisabled = function () {
+      return !friendService.hasMoreFriends;
+    };
+    $scope.friendsScrollNext = _.throttle(friendService.getMore, 1000);
+
     $scope.friends = friendService.friends;
     $scope.friendsHasRequested = friendService.friendsHasRequested;
 

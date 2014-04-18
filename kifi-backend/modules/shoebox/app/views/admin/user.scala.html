@@ -13,7 +13,8 @@
   econtactCount: Int,
   econtacts: Seq[EContact],
   collections: Seq[Collection],
-  collectionFilter: Option[Id[Collection]]
+  collectionFilter: Option[Id[Collection]],
+  invitedBy: Seq[User]
 )
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
@@ -34,6 +35,12 @@
         <th>Social Users</th>
         <td>
           @for(u <- socialUsers) { <div>@adminHelper.socialUserDisplay(u, true)</div> }
+        </td>
+      </tr>
+      <tr>
+        <th>Invited By</th>
+        <td>
+          @for(u <- invitedBy) { <div>@adminHelper.userDisplay(u)</div> }
         </td>
       </tr>
       <tr>

@@ -1,7 +1,7 @@
 <div ng-controller="FriendsCtrl">
   <div class="friends-wrapper" antiscroll="{ autoHide: false }">
     <div class="friends">
-      <h2>Kifi Friends <span ng-show="friends.length > 0">({{friends.length}})</span></h2>
+      <h2>Kifi Friends <span ng-show="totalFriends() > 0">({{totalFriends()}})</span></h2>
       <p>Search your friends list by name or email address.</p>
       <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
         <div class="bouncy-ball">
@@ -21,9 +21,10 @@
         </div>
         <div kf-friend-request-card ng-repeat="request in requests | limitTo: requestsToShow" request="request"></div>
       </div>
-      <div class="friends-list" ng-show="friends.length > 0">
-        <div class="friends-list-header">You have {{friends.length}} Kifi friends | <a href="/invite">Invite more friends</a> </div>
+      <div class="friends-list" ng-show="friends.length > 0" smart-scroll scroll-distance="friendsScrollDistance" scroll-disabled="isFriendsScrollDisabled()" scroll-next="friendsScrollNext()">
+        <div class="friends-list-header">You have {{totalFriends()}} Kifi friends | <a href="/invite">Invite more friends</a> </div>
         <div kf-friend-card ng-repeat="friend in friends" friend="friend"></div>
+        <span ng-click="friendsScrollNext()" ng-hide="isFriendsScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
       <div ng-if="friends.length <= 10 && friendsHasRequested" class="social-connect-friends">

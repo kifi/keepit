@@ -26,7 +26,10 @@ class AdminWord2VecController @Inject()(
   def keywords() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val text = body.get("text").get
-    val res = s"keywords: fake keywords for ${text}" + "\n\n" +  s"bow: fake bow"
+
+    val resp = Await.result(cortex.word2vecKeywordsAndBOW(text), 5 seconds)
+
+    val res = s"keywords(in the sense of cosine similarity): ${resp("keywords")}" + "\n\n" +  s"bow: ${resp("bow")}"
     Ok(res.replaceAll("\n","\n<br>"))
   }
 

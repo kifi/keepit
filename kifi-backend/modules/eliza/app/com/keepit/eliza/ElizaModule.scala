@@ -9,13 +9,13 @@ import com.keepit.realtime.UrbanAirshipModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.store.StoreModule
+import com.keepit.common.queue.SimpleQueueModule
 
 abstract class ElizaModule(
   // Common Functional Modules
   val cacheModule: CacheModule,
   val urbanAirshipModule: UrbanAirshipModule,
   val storeModule: StoreModule
-
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()

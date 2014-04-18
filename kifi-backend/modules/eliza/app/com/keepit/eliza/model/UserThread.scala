@@ -43,3 +43,10 @@ case class UserThread(
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
 }
+
+object UserThread {
+  implicit object userThread extends ModelWithPublicId[UserThread] {
+    override val prefix = "us"
+  }
+}
+

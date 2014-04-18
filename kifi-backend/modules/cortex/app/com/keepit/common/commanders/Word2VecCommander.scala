@@ -34,7 +34,7 @@ class Word2VecCommander @Inject()(
 
   def getDoc2VecResult(text: String): Option[Doc2VecResult] = {
     val normedText = TextNormalizer.LowerCaseNormalizer.normalize(text)
-    doc2vec.getDocVecAndKeyWords(normedText)
+    doc2vec.sampleBest(normedText, numTry = 6, normalize = true)
   }
 
 }

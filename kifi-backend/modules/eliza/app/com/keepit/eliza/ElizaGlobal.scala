@@ -6,6 +6,7 @@ import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
 import com.keepit.eliza.mail.{MailMessageReceiverPlugin, ElizaEmailNotifierPlugin}
+import com.keepit.eliza.commanders.EmailMessageProcessingCommander
 
 object ElizaGlobal extends FortyTwoGlobal(Prod) with ElizaServices {
   val module = ElizaProdModule()
@@ -14,6 +15,7 @@ object ElizaGlobal extends FortyTwoGlobal(Prod) with ElizaServices {
     log.info("starting eliza")
     startElizaServices()
     super.onStart(app)
+    injector.instance[EmailMessageProcessingCommander].readIncomingMessages()
     log.info("eliza started")
   }
 

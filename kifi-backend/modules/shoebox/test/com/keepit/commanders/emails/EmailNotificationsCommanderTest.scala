@@ -34,7 +34,7 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
 
         val commander = inject[EmailNotificationsCommander]
         val title = "foo bar"
-        val threadItems: Seq[ThreadItem] = ThreadItem(william.id.get, "yo man") :: ThreadItem(george.id.get, "what's going on dood?") :: ThreadItem(william.id.get, "we're cool") :: Nil
+        val threadItems: Seq[ThreadItem] = ThreadItem(Some(william.id.get), None, "yo man") :: ThreadItem(Some(george.id.get), None, "what's going on dood?") :: ThreadItem(Some(william.id.get), None, "we're cool") :: Nil
         val otherParticipantIds: Seq[Id[User]] = william.id.get :: george.id.get :: abraham.id.get :: Nil
         val recipientUserId: Id[User] = george.id.get
         val deepLocator: DeepLocator = link.deepLocator

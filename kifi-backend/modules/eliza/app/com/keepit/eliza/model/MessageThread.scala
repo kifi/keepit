@@ -21,6 +21,7 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], val nonUserParticipants: Map[NonUserParticipant, DateTime]) {
 
   def contains(user: Id[User]): Boolean = userParticipants.contains(user)
+  def contains(nonUser: NonUserParticipant): Boolean = nonUserParticipants.contains(nonUser)
   def allUsersExcept(user: Id[User]): Set[Id[User]] = userParticipants.keySet - user
 
   lazy val allUsers = userParticipants.keySet
@@ -136,7 +137,9 @@ case class MessageThread(
   }
 
   def containsUser(user: Id[User]): Boolean = participants.exists(_.contains(user))
-  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]())  // add in nonuser participants
+  def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.exists(_.contains(nonUser))
+  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]())  //Todo: add in nonuser participants?
+  def allParticipants: Set[Id[User]] = participants.map(_.allUsers).getOrElse(Set[Id[User]]())
 }
 
 

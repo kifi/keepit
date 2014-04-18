@@ -70,4 +70,10 @@ case class NonUserThread(
   def withState(state: State[NonUserThread]) = copy(state = state)
 }
 
+object NonUserThread {
+  implicit object nonUserThread extends ModelWithPublicId[NonUserThread] {
+    override val prefix = "nu"
+  }
+}
+
 object NonUserThreadStates extends States[NonUserThread]

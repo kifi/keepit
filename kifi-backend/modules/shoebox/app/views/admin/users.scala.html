@@ -62,6 +62,7 @@
           <th>Id</th>
           <th>User</th>
           <th>kifi Conns</th>
+          <th>Invited By</th>
           <th>Invite Sent</th>
           <th>Messages all/active/started</th>
           <th>Network</th>
@@ -77,6 +78,7 @@
           <td><span class="badge">@userStatistics.user.id.get.id</span></td>
           <td>@adminHelper.userDisplay(userStatistics.user)</td>
           <td>@userStatistics.connections</td>
+          <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
           <td>@userStatistics.invitations</td>
           <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>

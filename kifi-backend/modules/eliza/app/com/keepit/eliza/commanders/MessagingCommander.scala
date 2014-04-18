@@ -38,6 +38,7 @@ object MessagingCommander {
 class MessagingCommander @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   db: Database,
   clock: Clock,
@@ -65,7 +66,7 @@ class MessagingCommander @Inject() (
 
     threads.map{ thread =>
 
-      val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.isDefined => m }
+      val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
       if (lastMessageOpt.isEmpty) log.error(s"EMPTY THREAD! thread_id: ${thread.id.get} request_url: $requestUrl user: $userId")
       val lastMessage = lastMessageOpt.get
 
@@ -79,7 +80,7 @@ class MessagingCommander @Inject() (
         externalId = thread.externalId,
         participants = thread.participants.map(_.allUsers).getOrElse(Set()).map(userId2BasicUser(_)).toSeq ++ nonUsers.toSeq,
         digest = lastMessage.messageText,
-        lastAuthor = userId2BasicUser(lastMessage.from.get).externalId,
+        lastAuthor = userId2BasicUser(lastMessage.from.asUser.get).externalId,
         messageCount = messagesByThread(thread.id.get).length,
         messageTimes = messageTimes,
         createdAt = thread.createdAt,
@@ -220,31 +221,58 @@ class MessagingCommander @Inject() (
       }
       (thread, isNew)
     }
-    sendMessage(from, thread, messageText, urlOpt, nUriOpt, Some(isNew))
+    sendMessage(MessageSender.User(from), thread, messageText, urlOpt, nUriOpt, Some(isNew))
   }
 
+  def sendMessageWithNonUserThread(id: Id[NonUserThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): Option[(MessageThread, Message)] = {
+    db.readOnly { implicit session => {
+        try {
+          Some(nonUserThreadRepo.get(id))
+        } catch {
+          case e: Throwable => {
+            airbrake.notify(s"Could not retrieve non-user thread for id ${id}: ${e.getMessage()}")
+            None
+          }
+        }
+      } map { nonUserThread =>
+        (nonUserThread.participant, threadRepo.get(nonUserThread.threadId))
+      }
+    } map { case (participant, threadId) =>
+      log.info(s"Sending message from non-user with id ${id} to thread ${threadId} with text ${messageText.take(50)}")
+      sendMessage(MessageSender.NonUser(participant), threadId, messageText, urlOpt)
+    }
+  }
 
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
-    sendMessage(from, thread, messageText, urlOpt)
+    sendMessage(MessageSender.User(from), thread, messageText, urlOpt)
   }
 
   def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
-    sendMessage(from, thread, messageText, urlOpt)
+    sendMessage(MessageSender.User(from), thread, messageText, urlOpt)
   }
 
-  private def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
-    if (! thread.containsUser(from) || !thread.replyable) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
+  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
+    from match {
+      case MessageSender.User(id) => {
+        if (! thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
+      }
+      case MessageSender.NonUser(nup) => {
+       if (! thread.containsNonUser(nup) || !thread.replyable) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
+      }
+      case MessageSender.System => throw NotAuthorizedException("Wrong code path for system Messages.")
+    }
+
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite{ implicit session =>
       messageRepo.save(Message(
         id = None,
-        from = Some(from),
+        from = from,
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = messageText,
@@ -257,6 +285,7 @@ class MessagingCommander @Inject() (
     }
 
     val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
 
     val messageWithBasicUser = MessageWithBasicUser(
@@ -266,16 +295,22 @@ class MessagingCommander @Inject() (
       None,
       message.sentOnUrl.getOrElse(""),
       thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-      message.from.map(id2BasicUser(_)),
-      participantSet.toSeq.map(id2BasicUser(_))
+      message.from match {
+        case MessageSender.User(id) => Some(id2BasicUser(id))
+        case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+        case _ => None
+      },
+      participantSet.toSeq.map(id2BasicUser(_)) ++ nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
     )
 
     thread.participants.map(_.allUsers.par.foreach { user =>
       notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
     })
 
-    setLastSeen(from, thread.id.get, Some(message.createdAt))
-    db.readWrite { implicit session => userThreadRepo.setLastActive(from, thread.id.get, message.createdAt) }
+    from.asUser.map{ sender =>
+      setLastSeen(sender, thread.id.get, Some(message.createdAt))
+      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
+    }
 
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
       val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
@@ -291,11 +326,17 @@ class MessagingCommander @Inject() (
     val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
     val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers)
 
-    thread.allParticipantsExcept(from).foreach { userId =>
+    val usersToNotify = from match {
+      case MessageSender.User(id) => thread.allParticipantsExcept(id)
+      case _ => thread.allParticipants
+    }
+    usersToNotify.foreach { userId =>
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-    notificationCommander.notifySendMessage(from, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+    from.asUser.map{ id =>
+      notificationCommander.notifySendMessage(id, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+    }
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
@@ -308,7 +349,9 @@ class MessagingCommander @Inject() (
         }
       }
     }
-    messagingAnalytics.sentMessage(from, message, thread, isNew, context)
+    from.asUser.map{ //Todo: Analytics for non users
+      messagingAnalytics.sentMessage(_, message, thread, isNew, context)
+    }
     (thread, message)
   }
 
@@ -333,7 +376,7 @@ class MessagingCommander @Inject() (
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds))
 
           val message = messageRepo.save(Message(
-            from = None,
+            from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,
             messageText = "",

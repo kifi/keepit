@@ -255,7 +255,7 @@ POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserControll
 POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
-GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
+GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 

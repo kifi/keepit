@@ -12,10 +12,14 @@ import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 
 import javax.mail._
 import play.api.Plugin
-import com.keepit.eliza.model.NonUserThread
-import com.keepit.common.db.Id
 import com.keepit.common.mail.GenericMailParser
-import com.keepit.common.crypto.{ModelWithPublicId, PublicIdConfiguration}
+import org.joda.time.DateTime
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import com.keepit.common.crypto.PublicIdConfiguration
+import scala.Some
+import com.kifi.franz.SQSQueue
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 private case object FetchNewDiscussionReplies
 
@@ -29,10 +33,21 @@ case class MailDiscussionServerSettings(
   val username: String = identifier + "@" + domain
 }
 
+case class MailNotificationReply(timestamp:DateTime, content:Option[String], publicId:String)
+
+object MailNotificationReply {
+  implicit val format = (
+    (__ \ 'timestamp).format[DateTime] and
+    (__ \ 'content).formatNullable[String] and
+    (__ \ 'publicId).format[String]
+  )(MailNotificationReply.apply _, unlift(MailNotificationReply.unapply))
+}
+
 class MailDiscussionReceiverActor @Inject() (
   airbrake: AirbrakeNotifier,
   settings: MailDiscussionServerSettings,
-  messageParser: MailDiscussionMessageParser
+  messageParser: MailDiscussionMessageParser,
+  mailNotificationReplyQueue: SQSQueue[MailNotificationReply]
   ) extends FortyTwoActor(airbrake) with Logging {
 
   private lazy val mailSession: Session = {
@@ -53,12 +68,11 @@ class MailDiscussionReceiverActor @Inject() (
         val messages = inbox.getMessages()
         for (message <- messages) {
           messageParser.getInfo(message) match {
-            case Some(nonUserThreadId) => {
-              // TODO(martin) add this message to SQS
+            case Some(mailNotificationReply) => {
               log.info("Received valid message")
+              mailNotificationReplyQueue.send(mailNotificationReply)
             }
             case None => {
-              // TODO(martin) log?
               log.info("Received invalid message")
               inbox.copyMessages(Array(message), unrecognized)
             }
@@ -71,10 +85,6 @@ class MailDiscussionReceiverActor @Inject() (
       }
     case m => throw new UnsupportedActorMessage(m)
   }
-
-  private def sendReply(message: javax.mail.Message, htmlBody: String): Unit = {
-    // TODO(martin) We may want to send a reply to the sender in some cases ("Congratulations, you sent your first kifi message!")
-  }
 }
 
 class MailDiscussionMessageParser @Inject() (
@@ -85,14 +95,21 @@ class MailDiscussionMessageParser @Inject() (
 
   private val DiscussionEmail = raw"""^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
 
-  def getInfo(message: Message): Option[Id[NonUserThread]] = {
+  private def getPublicId(message: Message): Option[String] = {
     message.getAllRecipients.map(getAddr).map {
       DiscussionEmail.findFirstMatchIn(_).map(_.group(1))
-    }.flatten.headOption.flatMap(getInfoFromIdentifier)
+    }.flatten.headOption
   }
 
-  private def getInfoFromIdentifier(identifier: String): Option[Id[NonUserThread]] = {
-    ModelWithPublicId.decode[NonUserThread](identifier).toOption
+  private def getTimestamp(message: Message): DateTime = {
+    new DateTime(message.getReceivedDate())
+  }
+
+  def getInfo(message: Message): Option[MailNotificationReply] = {
+    getPublicId(message) map { publicId =>
+      MailNotificationReply(getTimestamp(message), getText(message), publicId)
+    }
+
   }
 }
 
