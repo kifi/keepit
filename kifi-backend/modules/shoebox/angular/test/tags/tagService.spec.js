@@ -18,9 +18,9 @@ describe('kifi.tagService', function () {
   });
 
   describe('tagService', function () {
-    it('should have an array named "list"', function () {
-      expect(Array.isArray(tagService.list)).toBe(true);
-      expect(tagService.list.length).toBe(0);
+    it('should have an array named "allTags"', function () {
+      expect(Array.isArray(tagService.allTags)).toBe(true);
+      expect(tagService.allTags.length).toBe(0);
     });
   });
 
@@ -29,11 +29,13 @@ describe('kifi.tagService', function () {
       var tags = [
         {
           id: 'TAG_ID_1',
-          name: 'TAG_NAME_1'
+          name: 'TAG_NAME_1',
+          lowerName: 'tag_name_1'
         },
         {
           id: 'TAG_ID_2',
-          name: 'TAG_NAME_2'
+          name: 'TAG_NAME_2',
+          lowerName: 'tag_name_2'
         }
       ];
 

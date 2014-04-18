@@ -12,12 +12,7 @@ angular.module('kifi.friends', [
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider.when('/friends', {
-      templateUrl: 'friends/friends.tpl.html',
-      resolve: {
-        'kifiFriends': ['friendService', function (friendService) {
-          return friendService.getKifiFriends();
-        }]
-      }
+      templateUrl: 'friends/friends.tpl.html'
     }).when('/friends/requests', {
       redirectTo: '/friends'
     }).when('/friends/requests/:network', {
@@ -52,7 +47,17 @@ angular.module('kifi.friends', [
       }
     };
 
+    $scope.totalFriends = friendService.totalFriends;
+
+    $scope.friendsScrollDistance = '100%';
+    $scope.isFriendsScrollDisabled = function () {
+      return !friendService.hasMoreFriends;
+    };
+    $scope.friendsScrollNext = _.throttle(friendService.getMore, 1000);
+
     $scope.friends = friendService.friends;
+    $scope.friendsHasRequested = friendService.friendsHasRequested;
+
     friendService.getKifiFriends();
     friendService.getRequests();
   }

@@ -11,8 +11,7 @@ class Word2VecCommander @Inject()(
   word2vec: Word2Vec
 ) {
   val (dim, mapper, doc2vec) = {
-    val w2v = word2vec.asInstanceOf[Word2VecImpl]
-    (w2v.dimension, w2v.mapper, new Doc2Vec(w2v.mapper, w2v.dimension))
+    (word2vec.dimension, word2vec.mapper, new Doc2Vec(word2vec.mapper, word2vec.dimension))
   }
 
   def similarity(word1: String, word2: String): Option[Float] = {
@@ -35,7 +34,7 @@ class Word2VecCommander @Inject()(
 
   def getDoc2VecResult(text: String): Option[Doc2VecResult] = {
     val normedText = TextNormalizer.LowerCaseNormalizer.normalize(text)
-    doc2vec.getDocVecAndKeyWords(normedText)
+    doc2vec.sampleBest(normedText, numTry = 6, normalize = true)
   }
 
 }

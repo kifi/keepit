@@ -29,6 +29,7 @@ import com.keepit.scraper.{TestScraperConfigModule, TestScraperServiceClientModu
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -54,6 +55,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestSliderHistoryTrackerModule(),
         TestSearchServiceClientModule(),
         FakeDomainTagImporterModule(),
+        FakeCortexServiceClientModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScrapeSchedulerModule(), // This one should not be required once the Scraper is off Shoebox

@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
 
-import com.keepit.eliza.MessageLookHereRemover
+import com.keepit.eliza.mail.MessageLookHereRemover
 import com.keepit.search.message.{ThreadContent, FULL}
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.db.slick.Database
@@ -23,7 +23,7 @@ class MessagingIndexCommander @Inject() (
 
   private def getMessages(fromId: Id[Message], toId: Id[Message], maxId: Id[Message]) : Seq[Message] = {
     val messages = db.readOnly{ implicit session => messageRepo.getFromIdToId(fromId, toId) }
-    val filteredMessages = messages.filter(_.from.isDefined)
+    val filteredMessages = messages.filter(!_.from.isSystem)
     if (filteredMessages.length > 1 || toId.id >= maxId.id) filteredMessages
     else getMessages(fromId, Id[Message](toId.id+100), maxId)
   }
@@ -38,7 +38,7 @@ class MessagingIndexCommander @Inject() (
     } sortWith { case (m1, m2) =>
       m1.createdAt.isAfter(m2.createdAt)
     } filter { message =>
-      message.from.isDefined
+      !message.from.isSystem
     }
 
     participantBasicUsersFuture.map{ participantBasicUsers =>

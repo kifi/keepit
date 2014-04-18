@@ -12,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.realtime.UrbanAirship
 import org.joda.time.DateTime
-import com.keepit.eliza.MessageLookHereRemover
+import com.keepit.eliza.mail.MessageLookHereRemover
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
@@ -29,7 +29,7 @@ import com.keepit.eliza.model.UserThread
 import com.keepit.eliza.model.Notification
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.social.BasicUserLikeEntity
+import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
@@ -151,7 +151,7 @@ class NotificationCommander @Inject() (
       ))
 
       val message = messageRepo.save(Message(
-        from = None,
+        from = MessageSender.System,
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = s"$title (on $linkText): $body",
@@ -280,13 +280,20 @@ class NotificationCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
-      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, thread.deepLocator)
+      message.from.asUser.map(
+        shoebox.createDeepLink(_, userId, thread.uriId.get, thread.deepLocator)
+      )
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
 
       if (!muted) {
-        val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
+        val sender = messageWithBasicUser.user match {
+          case Some(bu:BasicUser) => bu.firstName + ": "
+          case Some(bnu:BasicNonUser) => bnu.toString + ": "
+          case _ => ""
+        }
+        val notifText = MessageLookHereRemover(sender + message.messageText)
         sendPushNotification(userId, thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)))
       }
     }
@@ -329,7 +336,11 @@ class NotificationCommander @Inject() (
         None,
         message.sentOnUrl.getOrElse(""),
         thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-        message.from.map(id2BasicUser(_)),
+        message.from match {
+          case MessageSender.User(id) => Some(id2BasicUser(id))
+          case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+          case _ => None
+        },
         threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers
       )
 
@@ -352,7 +363,9 @@ class NotificationCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, false)
-      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, thread.deepLocator)
+      message.from.asUser.map(
+        shoebox.createDeepLink(_, userId, thread.uriId.get, thread.deepLocator)
+      )
 
       notifJson
     })
