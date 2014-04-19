@@ -10,9 +10,9 @@ import com.kifi.franz.{FakeSQSQueue, QueueName, SimpleSQSClient, SQSQueue}
 import com.keepit.eliza.mail.MailDiscussionServerSettings
 import com.amazonaws.regions.Regions
 
-abstract class ElizaMailNotificationsModule extends ScalaModule
+abstract class ElizaExternalEmailModule extends ScalaModule
 
-case class ProdElizaMailNotificationsModule() extends ElizaMailNotificationsModule {
+case class ProdElizaExternalEmailModule() extends ElizaExternalEmailModule {
 
   def configure() {
     bind[MailMessageReceiverPlugin].to[MailMessageReceiverPluginImpl].in[AppScoped]
@@ -39,7 +39,7 @@ case class ProdElizaMailNotificationsModule() extends ElizaMailNotificationsModu
   }
 }
 
-case class DevElizaMailNotificationsModule() extends ElizaMailNotificationsModule {
+case class DevElizaExternalEmailModule() extends ElizaExternalEmailModule {
   def configure() {
     bind[MailMessageReceiverPlugin].to[FakeMailMessageReceiverPlugin].in[AppScoped]
   }
