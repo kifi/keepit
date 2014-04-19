@@ -28,7 +28,7 @@ sealed trait GraphUpdateKind[U <: GraphUpdate] {
 }
 
 object GraphUpdateKind {
-  val all: Set[GraphUpdateKind[_ <: GraphUpdate]] = CompanionTypeSystem[GraphUpdate, GraphUpdateKind[_ <: GraphUpdate]]("I")
+  val all: Set[GraphUpdateKind[_ <: GraphUpdate]] = CompanionTypeSystem[GraphUpdate, GraphUpdateKind[_ <: GraphUpdate]]("U")
   private val byCode: Map[String, GraphUpdateKind[_ <: GraphUpdate]] = {
     require(all.size == all.map(_.code).size, "Duplicate GraphUpdateKind names.")
     all.map { ingestableKind => ingestableKind.code -> ingestableKind }.toMap
