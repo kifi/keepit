@@ -11,6 +11,7 @@ import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInf
 import play.api.Play._
 import com.keepit.typeahead.socialusers._
 import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
+import com.keepit.common.embedly.EmbedlyClient
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -36,7 +37,7 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, systemAdminMailSender, config)
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
   }
 
   @Singleton
@@ -83,7 +84,7 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, systemAdminMailSender, config)
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
   }
 
   @Singleton
