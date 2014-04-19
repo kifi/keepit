@@ -16,7 +16,7 @@ class Word2VecURIFeatureUpdater @Inject()(
   commitStore: Word2VecURIFeatureCommitStore,
   uriPuller: URIPuller
 ) extends URIFeatureUpdater[Word2Vec](representer, featureStore, commitStore, uriPuller){
-  override val pullSize = 150
+  override val pullSize = 200
 }
 
 class Word2VecURIFeatureUpdateActor @Inject()(
