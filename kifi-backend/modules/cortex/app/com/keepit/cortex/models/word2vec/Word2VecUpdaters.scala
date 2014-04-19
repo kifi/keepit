@@ -32,3 +32,12 @@ class Word2VecURIFeatureUpdatePluginImpl @Inject()(
   discovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
 ) extends BaseFeatureUpdatePlugin[Id[NormalizedURI], NormalizedURI, Word2Vec](actor, discovery) with Word2VecURIFeatureUpdatePlugin
+
+@Singleton
+class Word2VecURIFeatureRetriever @Inject()(
+  featureStore: Word2VecURIFeatureStore,
+  commitStore: Word2VecURIFeatureCommitStore,
+  uriPuller: URIPuller
+) extends FeatureRetrieval(featureStore, commitStore, uriPuller){
+  override def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get
+}
