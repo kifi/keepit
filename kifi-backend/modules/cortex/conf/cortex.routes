@@ -8,3 +8,4 @@
 
 GET	    /internal/cortex/word2vec/wordSimilarity                                    @com.keepit.controllers.cortex.CortexController.similarity(word1: String, word2: String)
 POST    /internal/cortex/word2vec/keywordsAndBow                                    @com.keepit.controllers.cortex.CortexController.getKeywordsAndBOW()
+GET     /internal/cortex/word2vec/uriSimilarity                                     @com.keepit.controllers.cortex.CortexController.uriSimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI])
