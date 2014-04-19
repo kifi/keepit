@@ -45,6 +45,7 @@ class EmailMessageProcessingCommander @Inject() (
               }
               case _ => log.info(s"Email with invalid public id ${message.publicId}")
             }
+            sqsMessage.consume
           }
         } catch {
           case e:Throwable => log.warn(s"Failed to read messages: ${e.getMessage()}")
