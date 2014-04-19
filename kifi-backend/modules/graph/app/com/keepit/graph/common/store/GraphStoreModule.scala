@@ -26,7 +26,7 @@ trait GraphStoreModule extends StoreModule {
     queue
   }
 
-  private def clearQueue[T](queue: SQSQueue[T], batchSize: Int = 1000): Future[Unit] = {
+  private def clearQueue[T](queue: SQSQueue[T], batchSize: Int = 10): Future[Unit] = {
     queue.nextBatch(batchSize).flatMap { case messages =>
       messages.foreach(_.consume)
       if (messages.length == batchSize) clearQueue(queue, batchSize) else Future.successful(Unit)
