@@ -68,7 +68,7 @@ class NotificationCommander @Inject() (
   }
 
   //temp, needs to be removed before shipping
-  def notifyEmailUsers(thread: MessageThread): Unit = {
+  def notifyEmailUsers(thread: MessageThread, exceptAddress: Option[String] = None): Unit = {
     if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
       val nuts = db.readOnly { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
@@ -76,17 +76,17 @@ class NotificationCommander @Inject() (
       val messages = basicMessageCommander.getThreadMessages(thread, None)
       val body = messages.map(_.messageText).toString
       nuts.foreach{ nut =>
-        //send email for this nut
-        val replyTo = ""
-        shoebox.sendMail(ElectronicMail (
-          from = EmailAddresses.NOTIFICATIONS,
-          fromName = Some("Kifi"),
-          to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-          subject = "Kifi Message on " + thread.url,
-          htmlBody = body,
-          category = ElectronicMailCategory("external_message_test"),
-          extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
-        ))
+        if (exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) {
+          shoebox.sendMail(ElectronicMail (
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("Kifi"),
+            to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
+            subject = "Kifi Message on " + thread.url.getOrElse("a Page"),
+            htmlBody = body,
+            category = ElectronicMailCategory("external_message_test"),
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
+          ))
+        }
       }
     }
 
