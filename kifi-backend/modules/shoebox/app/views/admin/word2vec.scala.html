@@ -37,6 +37,20 @@
   <p id = "uri_sim_result"></p>
 
 
+  <br><br>
+
+  <div>Put two user Ids here. Return similarity based on their keeps. </div>
+  <form id = "user_similarity">
+    <div>
+      <input id = "user1" type = "text" value = "">
+      <input id = "user2" type = "text" value = "">
+      <button type = "submit">submit</button>
+    </div>
+  </form>
+
+  <p id = "user_sim_result"></p>
+
+
   <script type="text/javascript">
 
     $(document).ready(function(){
@@ -77,6 +91,19 @@
 
       function done(data) {
         $("#uri_sim_result").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
+
+    })
+
+    $("#user_similarity").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userSimilarity',
+        {user1: $('#user1').val(), user2: $('#user2').val()}
+      )
+
+      function done(data) {
+        $("#user_sim_result").empty().prepend(data)
       }
       function fail() { alert("bad things happened") }
 

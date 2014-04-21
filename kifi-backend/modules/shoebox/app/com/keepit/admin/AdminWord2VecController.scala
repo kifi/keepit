@@ -10,9 +10,12 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.model.User
 
 class AdminWord2VecController @Inject()(
   cortex: CortexServiceClient,
+  shoebox: ShoeboxServiceClient,
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
 
@@ -46,6 +49,23 @@ class AdminWord2VecController @Inject()(
       case None => s"one of the uri doesn't have a feature vector. Bad content maybe?"
     }
     Ok(res)
+  }
+
+  def userSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val user1 = body.get("user1").get.toLong
+    val user2 = body.get("user2").get.toLong
+    val user1Keeps = shoebox.getBookmarks(Id[User](user1))
+    val user2Keeps = shoebox.getBookmarks(Id[User](user2))
+    val user1uris = Await.result(user1Keeps, 5 seconds).take(100).map{_.uriId}
+    val user2uris = Await.result(user2Keeps, 5 seconds).take(100).map{_.uriId}
+    val sfuture = cortex.word2vecUserSimilarity(user1uris, user2uris)
+    val s = Await.result(sfuture, 5 seconds)
+    val res = s match {
+      case Some(score) => s"similarity score for user ${user1} and user ${user2}: ${score}"
+      case None => s"we seem do not have enough information for one of the user"
+    }
+    Ok
   }
 
   def index() = AdminHtmlAction.authenticated { implicit request =>
