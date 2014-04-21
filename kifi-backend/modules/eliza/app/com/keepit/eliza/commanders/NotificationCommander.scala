@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.{NotificationCategory, User}
 import com.keepit.eliza.model._
+import com.keepit.eliza.model.NonUserThread._
 import com.keepit.common.akka.SafeFuture
 import scala.util.Try
 import play.api.libs.json._
@@ -30,10 +31,13 @@ import com.keepit.eliza.model.Notification
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
+import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddresses, GenericEmailAddress, EmailAddressHolder, PostOffice}
+import com.keepit.common.crypto.PublicIdConfiguration
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   db: Database,
   notificationRouter: WebSocketRouter,
@@ -41,7 +45,8 @@ class NotificationCommander @Inject() (
   messagingAnalytics: MessagingAnalytics,
   urbanAirship: UrbanAirship,
   notificationUpdater: NotificationUpdater,
-  basicMessageCommander: MessageFetchingCommander) extends Logging  {
+  basicMessageCommander: MessageFetchingCommander,
+  implicit val publicIdConfig: PublicIdConfiguration) extends Logging  {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = buildMessageNotificationJson(
@@ -62,7 +67,32 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  def notifyAddParticipants(newParticipants: Seq[Id[User]], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
+  //temp, needs to be removed before shipping
+  def notifyEmailUsers(thread: MessageThread): Unit = {
+    if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+      val nuts = db.readOnly { implicit session =>
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+      }
+      val messages = basicMessageCommander.getThreadMessages(thread, None)
+      val body = messages.map(_.messageText).toString
+      nuts.foreach{ nut =>
+        //send email for this nut
+        val replyTo = ""
+        shoebox.sendMail(ElectronicMail (
+          from = EmailAddresses.NOTIFICATIONS,
+          fromName = Some("Kifi"),
+          to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
+          subject = "Kifi Message on " + thread.url,
+          htmlBody = body,
+          category = ElectronicMailCategory("external_message_test"),
+          extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
+        ))
+      }
+    }
+
+  }
+
+  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
       val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
       val theTitle: String = thread.pageTitle.getOrElse("New conversation")
@@ -81,7 +111,6 @@ class NotificationCommander @Inject() (
         "category"     -> NotificationCategory.User.MESSAGE.category
       )
       db.readWrite { implicit session =>
-      // todo: Add adding non-users
         newParticipants.map { pUserId =>
           userThreadRepo.save(UserThread(
             id = None,
@@ -92,6 +121,18 @@ class NotificationCommander @Inject() (
             unread = true,
             lastMsgFromOther = None,
             lastNotification = JsNull
+          ))
+        }
+
+        newNonUserParticipants.map { nup =>
+          val nut = nonUserThreadRepo.save(NonUserThread(
+            participant = nup,
+            threadId = thread.id.get,
+            uriId = thread.uriId,
+            notifiedCount = 0,
+            lastNotifiedAt = None,
+            threadUpdatedAt = Some(thread.createdAt),
+            muted = false
           ))
         }
       }
@@ -109,6 +150,7 @@ class NotificationCommander @Inject() (
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
           })
         }
+        notifyEmailUsers(thread)
       }
     })
   }

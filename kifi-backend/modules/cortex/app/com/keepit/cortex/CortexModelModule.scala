@@ -29,17 +29,11 @@ case class CortexProdModelModule() extends CortexModelModule with Logging{
 
   @Singleton
   @Provides
-  def word2vec(store: Word2VecStore): Word2Vec = {
+  def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
     log.info("loading word2vec from model store")
     val version = ModelVersions.word2vecVersion
-    store.get(version).get
-  }
-
-  @Singleton
-  @Provides
-  def word2vecWordRepresenter(word2vec: Word2Vec): Word2VecWordRepresenter = {
-     val version = ModelVersions.word2vecVersion
-     Word2VecWordRepresenter(version, word2vec)
+    val word2vec = store.get(version).get
+    Word2VecWordRepresenter(version, word2vec)
   }
 }
 
@@ -59,16 +53,10 @@ case class CortexDevModelModule() extends CortexModelModule {
 
   @Singleton
   @Provides
-  def word2vec(store: Word2VecStore): Word2Vec = {
+  def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
     val version = ModelVersions.word2vecVersion
-    store.get(version).get
-  }
-
-  @Singleton
-  @Provides
-  def word2vecWordRepresenter(word2vec: Word2Vec): Word2VecWordRepresenter = {
-     val version = ModelVersions.word2vecVersion
-     Word2VecWordRepresenter(version, word2vec)
+    val word2vec = store.get(version).get
+    Word2VecWordRepresenter(version, word2vec)
   }
 
 }

@@ -28,7 +28,7 @@ class ServiceInstance(val node: Node, val thisInstance: Boolean) extends Logging
   def reportedSentServiceUnavailable: Boolean = sentServiceUnavailable.get() != 0
   def reportedSentServiceUnavailableCount: Int = sentServiceUnavailable.get()
 
-  override def toString() = s"Service Instance of zk node $node with remote service ${remoteServiceOpt}"
+  override def toString() = s"Service Instance of zk node $node with remote service $remoteServiceOpt"
 
   def remoteService: RemoteService = remoteServiceOpt.get
 

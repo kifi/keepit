@@ -49,3 +49,7 @@ trait ScraperServiceController extends ServiceController {
 trait CortexServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.CORTEX
 }
+
+trait GraphServiceController extends ServiceController {
+  val serviceType: ServiceType = ServiceType.GRAPH
+}

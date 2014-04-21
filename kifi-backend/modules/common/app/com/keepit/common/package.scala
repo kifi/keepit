@@ -119,7 +119,6 @@ package object common {
   }
 
   trait BackedUpDirectory {
-    def getDirectory(): File
     def scheduleBackup(): Unit
     def cancelBackup(): Unit
     def doBackup(): Boolean
@@ -127,6 +126,7 @@ package object common {
   }
 
   trait ArchivedDirectory extends BackedUpDirectory {
+    def getDirectory(): File
     protected def getArchive(): File
     protected def saveArchive(archive: File): Unit
 

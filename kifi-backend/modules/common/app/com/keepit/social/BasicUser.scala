@@ -24,7 +24,7 @@ object BasicUserLikeEntity {
   implicit val basicUserLikeEntityFormat = new Format[BasicUserLikeEntity] {
     def reads(json: JsValue): JsResult[BasicUserLikeEntity] = {
       // Detect if this is a BasicUser or BasicNonUser
-      (json \ "kind").asOpt[NonUserKind] match {
+      (json \ "kind").asOpt[String] match {
         case Some(kind) => BasicNonUser.basicNonUserFormat.reads(json)
         case None => BasicUser.basicUserFormat.reads(json)
       }

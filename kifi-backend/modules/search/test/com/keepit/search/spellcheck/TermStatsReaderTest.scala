@@ -10,7 +10,7 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import scala.math.{log, abs}
 
 class TermStatsReaderTest extends Specification {
@@ -32,7 +32,7 @@ class TermStatsReaderTest extends Specification {
 
   "TermStatsReader" should {
     "read simple stats" in {
-      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val articleIndexDir = new VolatileIndexDirectory()
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
@@ -53,7 +53,7 @@ class TermStatsReaderTest extends Specification {
 
     "retrieve docs and positions for liveDocs" in {
 
-      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val articleIndexDir = new VolatileIndexDirectory()
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
