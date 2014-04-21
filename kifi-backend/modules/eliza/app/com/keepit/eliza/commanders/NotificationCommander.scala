@@ -91,7 +91,7 @@ class NotificationCommander @Inject() (
       val threadItems = messages.filterNot(_.from.isSystem).map{ message =>
         message.from match {
           case MessageSender.User(id) => ThreadItem(Some(id), None, message.messageText)
-          case MessageSender.NonUser(nup) => ThreadItem(None, None, message.messageText)
+          case MessageSender.NonUser(nup) => ThreadItem(None, Some(nup.identifier), message.messageText)
           case _ => throw new Exception("This can't happen")
         }
       }
