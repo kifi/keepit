@@ -60,16 +60,4 @@ class Word2VecCommander @Inject()(
     Some(MatrixUtils.cosineDistance(avg1, avg2))
   }
 
-  def userSimilarity2(uris1: Seq[Id[NormalizedURI]], uris2: Seq[Id[NormalizedURI]]): Option[Float] = {
-    val vecs1 = uris1.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}.map{MatrixUtils.L2Normalize(_)}
-    val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}.map{MatrixUtils.L2Normalize(_)}
-    if (vecs1.isEmpty || vecs2.isEmpty) return None
-
-    val sims = vecs1.map{ v =>
-      vecs2.map{ w => MatrixUtils.dot(v, w)}
-    }.flatten.sum
-
-    Some(sims / (vecs1.size * vecs2.size))
-  }
-
 }
