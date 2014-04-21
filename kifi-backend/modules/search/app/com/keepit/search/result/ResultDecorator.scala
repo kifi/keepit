@@ -32,6 +32,7 @@ class ResultDecorator(
   monitoredAwait: MonitoredAwait
 ) extends Logging {
 
+  private[this] val externalId = ExternalId[ArticleSearchResult]()
   private[this] val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
   private[this] val terms = Highlighter.getQueryTerms(query, analyzer)
 
@@ -52,14 +53,14 @@ class ResultDecorator(
 
     val idFilter = result.hits.foldLeft(searchFilter.idFilter){ (s, h) => s + h.uriId.id }
 
-    val basicUserJsonMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting baisc users")
+    val basicUserJsonMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting basic users")
     val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
 
     val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val experts = expertIds.flatMap{ expert => basicUserJsonMap.get(expert) }
 
     new DecoratedResult(
-      ExternalId[ArticleSearchResult](),
+      externalId,
       decoratedHits,
       result.myTotal,
       result.friendsTotal,

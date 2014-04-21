@@ -2,7 +2,6 @@ package com.keepit.search
 
 import com.keepit.common.akka.{SafeFuture, MonitoredAwait}
 import com.keepit.common.db.Id
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -44,8 +43,7 @@ class MainSearcher(
     socialGraphInfo: SocialGraphInfo,
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
-    monitoredAwait: MonitoredAwait,
-    airbrake: AirbrakeNotifier)
+    monitoredAwait: MonitoredAwait)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
@@ -431,13 +429,6 @@ class MainSearcher(
   def timing(): Unit = {
     SafeFuture {
       timeLogs.send()
-
-      val timeLimit = 1000L
-      // search is a little slow after service restart. allow some grace period
-      if (timeLogs.total > timeLimit && currentTime - fortyTwoServices.started.getMillis() > 1000*60*8) {
-        val msg = s"search time exceeds limit! Limit time = $timeLimit, main-search-details: ${timeLogs.toString}."
-        airbrake.notify(msg)
-      }
     }
   }
 }
