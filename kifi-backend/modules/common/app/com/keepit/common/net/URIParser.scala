@@ -10,7 +10,7 @@ trait URIParserGrammar extends RegexParsers {
 
   override def skipWhitespace = false
 
-  def uri: Parser[URI] = hierarchicalUri | opaqueUri
+  def uri: Parser[URI] = (hierarchicalUri | opaqueUri)
 
   def hierarchicalUri: Parser[URI] = ((scheme <~ ":").? <~ "//") ~ authority ~ (path?) ~ ("?" ~> query).? ~ ("#" ~> fragment).? ^^ {
     case scheme~authority~path~query~fragment =>
@@ -31,7 +31,7 @@ trait URIParserGrammar extends RegexParsers {
 
   def userInfo: Parser[String] = """[^~/?#@]+""".r <~ "@"
 
-  def host: Parser[Host] = addressIPv6 | addressIPv4 | domain
+  def host: Parser[Host] = (addressIPv6 | addressIPv4 | domain)
 
   def addressIPv6: Parser[Host] = """\[[^\]]*\]""".r ^^ (Host(_))
 

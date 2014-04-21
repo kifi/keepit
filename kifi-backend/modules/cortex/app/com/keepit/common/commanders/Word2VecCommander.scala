@@ -6,6 +6,7 @@ import com.keepit.cortex.utils.MatrixUtils.cosineDistance
 import com.keepit.cortex.utils.TextUtils.TextNormalizer
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import com.keepit.cortex.utils.MatrixUtils
 
 
 @Singleton
@@ -47,6 +48,16 @@ class Word2VecCommander @Inject()(
     if (v1.isDefined && v2.isDefined){
       Some(cosineDistance(v1.get.vectorize, v2.get.vectorize))
     } else None
+  }
+
+  def similarity(uris1: Seq[Id[NormalizedURI]], uris2: Seq[Id[NormalizedURI]]): Option[Float] = {
+    val vecs1 = uris1.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}
+    val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}
+    if (vecs1.isEmpty || vecs2.isEmpty) return None
+
+    val avg1 = MatrixUtils.average(vecs1.map{MatrixUtils.L2Normalize(_)})
+    val avg2 = MatrixUtils.average(vecs2.map{MatrixUtils.L2Normalize(_)})
+    Some(MatrixUtils.cosineDistance(avg1, avg2))
   }
 
 }
