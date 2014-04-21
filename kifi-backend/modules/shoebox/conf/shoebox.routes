@@ -503,6 +503,7 @@ GET     /adimin/cortex/word2vec                            @com.keepit.controlle
 POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity
 POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controllers.admin.AdminWord2VecController.uriSimilarity 
 POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
+POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
 
 ##########################################
 # Common Healthcheck / service routes

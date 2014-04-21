@@ -19,6 +19,7 @@ trait CortexServiceClient extends ServiceClient{
   def word2vecWordSimilarity(word1: String, word2: String): Future[Option[Float]]
   def word2vecKeywordsAndBOW(text: String): Future[Map[String, String]]
   def word2vecURISimilairty(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]): Future[Option[Float]]
+  def word2vecUserSimilarity(user1Keeps: Seq[Id[NormalizedURI]], user2Keeps: Seq[Id[NormalizedURI]]): Future[Option[Float]]
 }
 
 class CortexServiceClientImpl(
@@ -46,6 +47,11 @@ class CortexServiceClientImpl(
     }
   }
 
-
+  def word2vecUserSimilarity(user1Keeps: Seq[Id[NormalizedURI]], user2Keeps: Seq[Id[NormalizedURI]]): Future[Option[Float]] = {
+    val payload = Json.obj("uris1" -> user1Keeps.map{_.id}, "uris2" -> user2Keeps.map{_.id})
+    call(Cortex.internal.word2vecUserSimilarity(), payload).map{ r =>
+      Json.fromJson[Option[Float]](r.json).get
+    }
+  }
 
 }
