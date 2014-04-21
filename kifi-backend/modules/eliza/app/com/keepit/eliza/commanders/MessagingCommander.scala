@@ -327,7 +327,7 @@ class MessagingCommander @Inject() (
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-    notificationCommander.notifyEmailUsers(thread)
+    notificationCommander.notifyEmailUsers(thread, from.asNonUser.map(_.identifier))
 
     from.asUser.map{ id =>
       notificationCommander.notifySendMessage(id, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)

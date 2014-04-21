@@ -18,7 +18,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Promise, Future, Await}
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
@@ -33,6 +33,7 @@ import com.keepit.realtime.PushNotification
 import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddresses, GenericEmailAddress, EmailAddressHolder, PostOffice}
 import com.keepit.common.crypto.PublicIdConfiguration
+import scala.concurrent.duration._
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
@@ -67,26 +68,54 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  //temp, needs to be removed before shipping
-  def notifyEmailUsers(thread: MessageThread): Unit = {
+  //temp, needs to be removed before shipping!
+  def notifyEmailUsers(thread: MessageThread, exceptAddress: Option[String] = None): Unit = {
     if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
       val nuts = db.readOnly { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
       val messages = basicMessageCommander.getThreadMessages(thread, None)
-      val body = messages.map(_.messageText).toString
+
+      val allUsersIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+
+      val allUsers : Map[Id[User], User] = Await.result(shoebox.getUsers(allUsersIds.toSeq), 2 minutes).map(u => u.id.get -> u).toMap
+
+      val authors : Seq[String] = messages.filterNot(_.from.isSystem).map( message =>
+        message.from match {
+          case MessageSender.User(id) => allUsers(id).firstName + " " + allUsers(id).lastName
+          case MessageSender.NonUser(nup) => nup.identifier
+          case _ => throw new Exception("This can't happen")
+        }
+      ).toSet.toSeq.sorted
+
+      val threadItems = messages.filterNot(_.from.isSystem).map{ message =>
+        message.from match {
+          case MessageSender.User(id) => ThreadItem(Some(id), None, message.messageText)
+          case MessageSender.NonUser(nup) => ThreadItem(None, None, message.messageText)
+          case _ => throw new Exception("This can't happen")
+        }
+      }
+
+      val url = thread.url.getOrElse("")
+
+      val title = thread.pageTitle.getOrElse(url)
+
       nuts.foreach{ nut =>
-        //send email for this nut
-        val replyTo = ""
-        shoebox.sendMail(ElectronicMail (
-          from = EmailAddresses.NOTIFICATIONS,
-          fromName = Some("Kifi"),
-          to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-          subject = "Kifi Message on " + thread.url,
-          htmlBody = body,
-          category = ElectronicMailCategory("external_message_test"),
-          extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
-        ))
+        if ((exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) && !nut.muted) {
+          val mute = "/eliza/email/mute/" + nut.publicId.get
+
+          val body =  views.html.nonUserMessagesEmail(authors, threadItems, url, title, allUsers, mute).body
+
+          shoebox.sendMail(ElectronicMail (
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("Kifi"),
+            to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
+            subject = "Kifi Message on " + thread.url.getOrElse("a Page"),
+            htmlBody = body,
+            category = ElectronicMailCategory("external_message_test"),
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
+          ))
+        }
       }
     }
 
