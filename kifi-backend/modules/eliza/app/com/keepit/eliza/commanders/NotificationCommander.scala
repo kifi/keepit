@@ -332,7 +332,7 @@ class NotificationCommander @Inject() (
       if (!muted) {
         val sender = messageWithBasicUser.user match {
           case Some(bu:BasicUser) => bu.firstName + ": "
-          case Some(bnu:BasicNonUser) => bnu.toString + ": "
+          case Some(bnu:BasicNonUser) => bnu.firstName.getOrElse(bnu.id) + ": "
           case _ => ""
         }
         val notifText = MessageLookHereRemover(sender + message.messageText)
