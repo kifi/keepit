@@ -106,8 +106,7 @@ GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
 
-GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
-GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.getFriendsDetails()
+GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
