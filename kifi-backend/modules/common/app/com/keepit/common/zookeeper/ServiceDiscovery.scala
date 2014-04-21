@@ -1,5 +1,7 @@
 package com.keepit.common.zookeeper
 
+import play.modules.statsd.api.Statsd
+
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
@@ -88,7 +90,7 @@ class ServiceDiscoveryImpl(
   private val myCluster = clusters(services.currentService)
 
   def serviceCluster(serviceType: ServiceType): ServiceCluster =
-    clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service ${serviceType}."))
+    clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType."))
 
   def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
@@ -98,12 +100,15 @@ class ServiceDiscoveryImpl(
     myCluster.leader match {
       case Some(instance) if instance == myInstance.get =>
         require(myCluster.size > 0)
+        log.info(s"I'm the leader! ${myInstance.get}")
+        Statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
         return true
       case Some(instance)  =>
         require(myCluster.size > 1)
-        log.debug(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
+        log.info(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
         return false
       case None =>
+        log.info(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
         require(myCluster.size == 0)
         return false
     }
