@@ -87,9 +87,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SpellCorrector],
-      inject[ShoeboxServiceClient],
       inject[MonitoredAwait],
-      inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
     (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory)
