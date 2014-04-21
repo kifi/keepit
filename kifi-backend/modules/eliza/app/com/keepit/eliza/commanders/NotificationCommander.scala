@@ -76,7 +76,7 @@ class NotificationCommander @Inject() (
       val messages = basicMessageCommander.getThreadMessages(thread, None)
       val body = messages.map(_.messageText).toString
       nuts.foreach{ nut =>
-        if (exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) {
+        if ((exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) && !nut.muted) {
           shoebox.sendMail(ElectronicMail (
             from = EmailAddresses.NOTIFICATIONS,
             fromName = Some("Kifi"),
