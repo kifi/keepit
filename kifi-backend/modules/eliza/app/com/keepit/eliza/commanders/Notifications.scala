@@ -30,11 +30,19 @@ class NotificationUpdater @Inject() (
   }
 
   private def updateSenderAndParticipants(data: JsObject): Future[JsObject] = {
-    val author: Option[BasicUser] = (data \ "author").asOpt[BasicUser]
+    val author: Option[BasicUserLikeEntity] = (data \ "author").asOpt[BasicUserLikeEntity]
     val participantsOpt: Option[Seq[BasicUserLikeEntity]] = (data \ "participants").asOpt[Seq[BasicUserLikeEntity]]
     participantsOpt.map { participants =>
-      val updatedAuthorFuture : Future[Option[BasicUser]] =
-        author.map(updateBasicUser).map(fut=>fut.map(Some(_))).getOrElse(Future.successful(None.asInstanceOf[Option[BasicUser]]))
+      val updatedAuthorFuture : Future[Option[BasicUserLikeEntity]] =
+        author.map{ bule =>
+          bule match {
+            case bu: BasicUser => updateBasicUser(bu)
+            case x => Future.successful(x)
+          }
+        } match {
+          case None => Future.successful(None)
+          case Some(fut) => fut.map(Some(_))
+        }
       val updatedParticipantsFuture : Future[Seq[BasicUserLikeEntity]]= Future.sequence(participants.map{ participant =>
         val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
           case p: BasicUser => updateBasicUser(p)

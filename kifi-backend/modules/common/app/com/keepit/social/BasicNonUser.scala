@@ -52,7 +52,7 @@ object BasicNonUser {
         "kind" -> entity.kind.name,
         "id" -> entity.id,
         "firstName" -> (entity.firstName.getOrElse(entity.id): String),
-        "lastName" -> entity.lastName,
+        "lastName" -> (entity.lastName.getOrElse(""): String),
         "pictureName" -> "0.jpg" // todo: remove! So it's not undefined for old extensions. The icon will be broken though.
       )
     }

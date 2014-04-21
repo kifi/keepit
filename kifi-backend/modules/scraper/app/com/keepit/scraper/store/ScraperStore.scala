@@ -10,6 +10,7 @@ import com.keepit.common.aws.AwsModule
 import com.keepit.common.logging.AccessLog
 import com.keepit.learning.porndetector._
 import com.google.inject.Provider
+import com.keepit.common.embedly.EmbedlyClient
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -27,7 +28,7 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, systemAdminMailSender, config)
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
   }
 
   @Singleton
@@ -51,7 +52,7 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, systemAdminMailSender, config)
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
   }
 
   @Singleton

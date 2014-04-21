@@ -30,7 +30,7 @@ class EmailOptOutController @Inject() (
         }
 
         Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg"), secureSocialClientIds))
-      case Failure(ex) => BadRequest(ex.toString)
+      case _ => BadRequest // Don't tell the user why the token is wrong
     }
 
   }

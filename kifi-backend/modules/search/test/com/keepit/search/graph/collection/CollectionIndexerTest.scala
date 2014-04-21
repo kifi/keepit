@@ -17,7 +17,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.sharding.Shard
@@ -30,7 +30,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         val (users, uris) = initData
         val numURIs = uris.size
 
-        val collectionDir = new VolatileIndexDirectoryImpl()
+        val collectionDir = new VolatileIndexDirectory()
         val collectionIndexer = mkCollectionIndexer(collectionDir)
 
         val expectedUriToUserEdges = uris.map{ (_, users) } // all users have all uris

@@ -20,6 +20,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import scala.Some
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.util.matching.Regex
 
 private case object FetchNewDiscussionReplies
 
@@ -107,7 +108,7 @@ class MailDiscussionMessageParser @Inject() (
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
     getPublicId(message) map { publicId =>
-      MailNotificationReply(getTimestamp(message), getText(message), publicId)
+      MailNotificationReply(getTimestamp(message), getText(message).map(s => (new Regex("On.*wrote:")).split(s)(0).trim), publicId)
     }
 
   }
