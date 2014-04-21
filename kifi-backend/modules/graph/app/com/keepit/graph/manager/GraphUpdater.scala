@@ -10,6 +10,5 @@ trait GraphUpdater {
 class GraphUpdaterImpl @Inject() () extends GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit = update match {
     case userGraphUpdate: UserGraphUpdate => writer.saveVertex(UserData(userGraphUpdate.userId))
-    case _ => ???
   }
 }

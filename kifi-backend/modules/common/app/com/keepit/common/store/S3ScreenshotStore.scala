@@ -12,7 +12,7 @@ import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.model._
-import play.api.libs.ws.{Response, WS}
+import play.api.libs.ws.WS
 import scala.util.Try
 import play.modules.statsd.api.Statsd
 import javax.imageio.ImageIO
@@ -21,23 +21,16 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.Play
 import play.api.Play.current
 import play.api.http.Status
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import java.io.{ByteArrayOutputStream, InputStream, ByteArrayInputStream}
-import com.keepit.common.akka.SafeFuture
-import collection.JavaConversions._
-import scala.concurrent.duration._
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
-import com.keepit.common.concurrent.{RetryFuture, ExecutionContext}
 import java.awt.image.BufferedImage
-import scala.collection.mutable.ArrayBuffer
 import org.apache.commons.lang3.RandomStringUtils
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
-import java.util.concurrent.atomic.AtomicInteger
+import com.keepit.common.embedly.{EmbedlyImage, EmbedlyClient}
 
 trait S3ScreenshotStore {
   def config: S3ImageConfig
@@ -54,70 +47,14 @@ trait S3ScreenshotStore {
 
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
-case class EmbedlyImage(
-  url:String,
-  caption:Option[String] = None,
-  width:Option[Int]      = None,
-  height:Option[Int]     = None,
-  size:Option[Int]       = None) extends ImageGenericInfo {
-  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = ImageInfo(uriId = nuriId, url = this.url, caption = this.caption, width = this.width, height = this.height, size = this.size)
-}
-
-object EmbedlyImage {
-  implicit val format = (
-    (__ \ 'url).format[String] and
-    (__ \ 'caption).formatNullable[String] and
-    (__ \ 'width).formatNullable[Int] and
-    (__ \ 'height).formatNullable[Int] and
-    (__ \ 'size).formatNullable[Int]
-  )(EmbedlyImage.apply _, unlift(EmbedlyImage.unapply))
-}
-
-case class EmbedlyExtractResponse(
-  originalUrl:String,
-  url:Option[String],
-  title:Option[String],
-  description:Option[String],
-  content:Option[String],
-  safe:Option[Boolean],
-  lang:Option[String],
-  faviconUrl:Option[String],
-  images:Seq[EmbedlyImage]) extends PageGenericInfo with PageSafetyInfo with PageMediaInfo {
-  implicit def toPageInfo(nuriId:Id[NormalizedURI]):PageInfo =
-    PageInfo(
-      id = None,
-      uriId = nuriId,
-      title = this.title,
-      description = this.description,
-      safe = this.safe,
-      lang = this.lang,
-      faviconUrl = (this.faviconUrl.collect{ case f:String if f.startsWith("http") => f }) // embedly bug
-    )
-}
-
-object EmbedlyExtractResponse {
-  val EMPTY = EmbedlyExtractResponse("", None, None, None, None, None, None, None, Seq.empty[EmbedlyImage])
-
-  implicit val format = (
-    (__ \ 'original_url).format[String] and
-    (__ \ 'url).formatNullable[String] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'description).formatNullable[String] and
-    (__ \ 'content).formatNullable[String] and
-    (__ \ 'safe).formatNullable[Boolean] and
-    (__ \ 'language).formatNullable[String] and
-    (__ \ 'favicon_url).formatNullable[String] and
-    (__ \ 'images).format[Seq[EmbedlyImage]]
-  )(EmbedlyExtractResponse.apply _, unlift(EmbedlyExtractResponse.unapply))
-}
-
 class S3ScreenshotStoreImpl(
-    override val s3Client: AmazonS3,
-    shoeboxServiceClient: ShoeboxServiceClient,
-    airbrake: AirbrakeNotifier,
-    clock: Clock,
-    systemAdminMailSender: SystemAdminMailSender,
-    val config: S3ImageConfig
+  override val s3Client: AmazonS3,
+  shoeboxServiceClient: ShoeboxServiceClient,
+  airbrake: AirbrakeNotifier,
+  clock: Clock,
+  embedlyClient: EmbedlyClient,
+  systemAdminMailSender: SystemAdminMailSender,
+  val config: S3ImageConfig
   ) extends S3ScreenshotStore with S3Helper with Logging {
 
   val screenshotConfig = ScreenshotConfig("c", Seq(ImageSize(1000, 560), ImageSize(500, 280), ImageSize(250, 140)))
@@ -130,9 +67,7 @@ class S3ScreenshotStoreImpl(
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
 
   val imageSizes = Seq(ImageSize(500, 280))
-  val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) get
   val embedlyEnabled = (if (Play.maybeApplication.isDefined) Play.configuration.getBoolean("embedly.enabled") else None) get
-  def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
 
   def mkImgBucket(extId: ExternalId[NormalizedURI], providerIdx:Int = 0) = s"images/$extId/$providerIdx"
   def mkImgKey(id: ExternalId[NormalizedURI], size:ImageSize) = s"${mkImgBucket(id)}/${size.width}x${size.height}.jpg"
@@ -153,63 +88,8 @@ class S3ScreenshotStoreImpl(
     }
   }
 
-  private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyExtractResponse]](2 minutes)
-
-  private def mailNotify(subj:String, msg:String, t:Option[Throwable]):Unit = {
-    t match {
-      case None => log.error(msg)
-      case Some(e) => log.error(msg, e)
-    }
-    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
-      subject = subj,
-      htmlBody = s"<pre>$msg\nException:${t.map(_.getStackTrace.mkString("\n"))}</pre>",
-      category = NotificationCategory.System.SCRAPER))
-  }
-  private def mailNotify(msg:String, t:Option[Throwable]):Unit = mailNotify(msg, msg, t)
-
-  private def fetchWithRetry(url:String, timeout:Int):Future[Response] = {
-    val count = new AtomicInteger()
-    val resolver:PartialFunction[Throwable, Boolean] = { case t:Throwable =>
-      count.getAndIncrement
-      // random delay or backoff
-      mailNotify(s"[fetchWithRetry($url)] attempt#(${count.get}) failed with $t", Some(t)) // intermittent embedly/site failures
-      true
-    }
-    RetryFuture(attempts = 2, resolver){
-      WS.url(url).withRequestTimeout(timeout).get()
-    }
-  }
-
-  private def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] = {
-    val url = embedlyUrl(uri.url)
-    fetchPageInfoConsolidator(url) { urlString =>
-      fetchWithRetry(url, 120000) map { resp =>
-        log.info(s"[getExtractResponse(${uri.id},${uri.url})] resp.status=${resp.statusText} body=${resp.body}")
-        resp.status match {
-          case Status.OK =>
-            val js = Json.parse(resp.body) // resp.json has some issues
-            val extractRespOpt = js.validate[EmbedlyExtractResponse].fold(
-              valid = (res => Some(res)),
-              invalid = (e => {
-                mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] Failed to parse JSON: body=${resp.body} errors=${e.toString}", None)
-                None
-              })
-            )
-            log.info(s"[getExtractResponse(${uri.id},${uri.url})] extractRespOpt=$extractRespOpt")
-            extractRespOpt
-          case _ => // todo(ray): need better handling of error codes
-            mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] ERROR while invoking ($url): status=${resp.status} body=${resp.body}", None)
-            None
-        }
-      } recover { case t:Throwable =>
-        mailNotify(s"[getExtractResponse(${uri.id},${uri.url})] Caught exception while invoking ($url): Exception=$t; cause=${t.getCause}", Some(t))
-        None
-      }
-    }
-  }
-
   def getImageInfos(uri: NormalizedURI):Future[Seq[ImageInfo]] = {
-    getExtractResponse(uri) map { resp =>
+    embedlyClient.getExtractResponse(uri) map { resp =>
       val imgInfos = resp map (_.images.map(_.toImageInfo(uri.id.get))) getOrElse Seq.empty[ImageInfo]
       log.info(s"[getImageInfos(${uri.url})] ${imgInfos.mkString(",")}")
       imgInfos
@@ -262,7 +142,7 @@ class S3ScreenshotStoreImpl(
   private def fetchAndUpdatePageInfo(uri:NormalizedURI):Future[(Option[PageInfo],Option[ImageInfo])] = {
     log.info(s"[fetchAndUpdatePageInfo(${uri.id})] url=${uri.url}")
     pageInfoConsolidator(uri) { uri =>
-      getExtractResponse(uri) flatMap { embedlyRespOpt =>
+      embedlyClient.getExtractResponse(uri) flatMap { embedlyRespOpt =>
         embedlyRespOpt match {
           case Some(pageInfo) =>
             if (pageInfo.safe.exists(safe => !safe)) {
@@ -289,7 +169,7 @@ class S3ScreenshotStoreImpl(
               }
             }
           case None => // todo: track failure reason (may airbrake)
-            Future.failed(new InternalError(s"Failed to retrieve pageInfo for (${uri.id},${uri.url}) embedlyUrl=${embedlyUrl(uri.url)}"))
+            Future.failed(new InternalError(s"Failed to retrieve pageInfo for (${uri.id},${uri.url}) embedlyUrl=${embedlyClient.embedlyUrl(uri.url)}"))
         }
       }
     }
@@ -545,4 +425,17 @@ class S3ScreenshotStoreImpl(
       future
     }
   }
+
+  private def mailNotify(subj:String, msg:String, t:Option[Throwable]):Unit = {
+    t match {
+      case None => log.error(msg)
+      case Some(e) => log.error(msg, e)
+    }
+    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
+      subject = subj,
+      htmlBody = s"<pre>$msg\nException:${t.map(_.getStackTrace.mkString("\n"))}</pre>",
+      category = NotificationCategory.System.SCRAPER))
+  }
+
+  private def mailNotify(msg:String, t:Option[Throwable]):Unit = mailNotify(msg, msg, t)
 }
