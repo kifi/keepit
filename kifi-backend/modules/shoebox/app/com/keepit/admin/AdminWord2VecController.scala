@@ -60,8 +60,8 @@ class AdminWord2VecController @Inject()(
 
     val user1Keeps = shoebox.getBookmarks(Id[User](user1))
     val user2Keeps = shoebox.getBookmarks(Id[User](user2))
-    val user1uris = Await.result(user1Keeps, 5 seconds).take(50).map{_.uriId}
-    val user2uris = Await.result(user2Keeps, 5 seconds).take(50).map{_.uriId}
+    val user1uris = Await.result(user1Keeps, 5 seconds).sortBy(-1*_.createdAt.getMillis()).take(100).map{_.uriId}
+    val user2uris = Await.result(user2Keeps, 5 seconds).sortBy(-1*_.createdAt.getMillis()).take(100).map{_.uriId}
     val sfuture = cortex.word2vecUserSimilarity(user1uris, user2uris)
     val s = Await.result(sfuture, 60 seconds)
 
