@@ -113,12 +113,12 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         contentType(result) must beSome("application/json")
         val expected = Json.parse(
           """{"friends":[
-            | {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
-            | {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
-            | {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
-            | {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg","searchFriend":true,"unfriended":false}
-            | ],
-            | "total":4}""")
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg","searchFriend":true,"unfriended":false}
+            ],
+            "total":4}""")
         val resString = contentAsString(result)
         println(resString)
         val res = Json.parse(resString)
