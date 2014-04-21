@@ -55,17 +55,24 @@ class AdminWord2VecController @Inject()(
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val user1 = body.get("user1").get.toLong
     val user2 = body.get("user2").get.toLong
+
+    val t1 = System.currentTimeMillis
+
     val user1Keeps = shoebox.getBookmarks(Id[User](user1))
     val user2Keeps = shoebox.getBookmarks(Id[User](user2))
     val user1uris = Await.result(user1Keeps, 5 seconds).take(50).map{_.uriId}
     val user2uris = Await.result(user2Keeps, 5 seconds).take(50).map{_.uriId}
     val sfuture = cortex.word2vecUserSimilarity(user1uris, user2uris)
     val s = Await.result(sfuture, 60 seconds)
+
+    val elapse = (System.currentTimeMillis() - t1) / 1000f
+
     val res = s match {
-      case Some(score) => s"similarity score for user ${user1} and user ${user2}: ${score}"
+      case Some(score) => s"Time elapsed: ${elapse} seconds. similarity score for user ${user1} and user ${user2}: ${score}"
       case None => s"we seem do not have enough information for one of the user"
     }
-    Ok
+
+    Ok(res)
   }
 
   def index() = AdminHtmlAction.authenticated { implicit request =>

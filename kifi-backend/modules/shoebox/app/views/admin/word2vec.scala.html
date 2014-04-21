@@ -100,7 +100,7 @@
       event.preventDefault();
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userSimilarity',
         {user1: $('#user1').val(), user2: $('#user2').val()}
-      )
+      ).done(done).fail(fail);
 
       function done(data) {
         $("#user_sim_result").empty().prepend(data)
