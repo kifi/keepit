@@ -91,6 +91,7 @@ class MobileMessagingController @Inject() (
     }
   }
 
+  //todo(eishay): paginate
   def getCompactThread(threadId: String) = JsonAction.authenticatedAsync { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads

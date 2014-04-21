@@ -72,17 +72,14 @@ class UserController @Inject() (
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
-    val userId = request.userId
-    val (connectionsPage, total) = userCommander.getConnectionsPage(userId, page, pageSize)
+    val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = db.readOnly { implicit s =>
-      timing(s"friends($userId) post-processing++") {
-        connectionsPage.map { case ConnectionInfo(friendId, unfriended, unsearched) =>
-          Json.toJson(basicUserRepo.load(friendId)).asInstanceOf[JsObject] ++ Json.obj(
-            "searchFriend" -> unsearched,
-            "unfriended" -> unfriended,
-            "friendCount" -> userConnectionRepo.getConnectionCount(friendId)
-          )
-        }
+      connectionsPage.map { case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
+        Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
+          "searchFriend" -> unsearched,
+          "unfriended" -> unfriended,
+          "friendCount" -> userConnectionRepo.getConnectionCount(friendId)
+        )
       }
     }
     Ok(Json.obj(
