@@ -55,8 +55,8 @@ class Word2VecCommander @Inject()(
     val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}
     if (vecs1.isEmpty || vecs2.isEmpty) return None
 
-    val avg1 = MatrixUtils.average(vecs1)
-    val avg2 = MatrixUtils.average(vecs2)
+    val avg1 = MatrixUtils.average(vecs1.map{MatrixUtils.L2Normalize(_)})
+    val avg2 = MatrixUtils.average(vecs2.map{MatrixUtils.L2Normalize(_)})
     Some(MatrixUtils.cosineDistance(avg1, avg2))
   }
 
