@@ -97,7 +97,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
 
   function showBroken() {
     api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog(false);
+      showBrokenLookLinkDialog();
     });
   }
 }());
