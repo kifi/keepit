@@ -1543,18 +1543,12 @@ function tellVisibleTabsNoticeCountIfChanged() {
 }
 
 function searchOnServer(request, respond) {
-  if (request.first && getPrefetched(request, respond)) return;
+  if (request.first && getPrefetchedResults(request.query, respond)) return;
 
   if (!me || !enabled('search')) {
     log('[searchOnServer] noop, me:', me)();
     respond({});
     return;
-  }
-
-  if (request.filter) {
-    searchFilterCache[request.query] = {filter: request.filter, time: Date.now()};  // TODO: purge cache
-  } else {
-    delete searchFilterCache[request.query];
   }
 
   var params = {
@@ -1918,45 +1912,53 @@ api.on.beforeSearch.add(throttle(function (whence) {
 }, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
-var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query, whence) {
   if (!me || !enabled('search')) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
     entry = searchPrefetchCache[query] = {callbacks: [], response: null};
-    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter, whence: whence}, function (response) {
-      entry.response = response;
-      while (entry.callbacks.length) entry.callbacks.shift()(response);
-      api.timers.clearTimeout(entry.expireTimeout);
-      entry.expireTimeout = api.timers.setTimeout(cull, 10000);
-    });
+    searchOnServer({query: query, whence: whence}, gotPrefetchedResults.bind(null, query, entry));
   } else {
     api.timers.clearTimeout(entry.expireTimeout);
   }
-  var cull = cullSearchPrefetchCacheEntry.bind(null, query, entry);
-  entry.expireTimeout = api.timers.setTimeout(cull, 10000);
+  entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
 });
-function cullSearchPrefetchCacheEntry(key, val) {
+
+function gotPrefetchedResults(query, entry, response) {
+  api.timers.clearTimeout(entry.expireTimeout);
+  if (entry.callbacks.length) {
+    while (entry.callbacks.length) {
+      entry.callbacks.shift()(response);
+    }
+    cullPrefetchedResults(query, entry);
+  } else {
+    entry.response = response;
+    entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
+  }
+}
+
+function cullPrefetchedResults(key, val) {
   if (searchPrefetchCache[key] === val) {
     delete searchPrefetchCache[key];
   }
 }
 
-function getPrefetched(request, cb) {
-  var cached = searchPrefetchCache[request.query];
-  if (cached) {
-    var logAndCb = function(r) {
-      log('[getPrefetched] results:', r)();
+function getPrefetchedResults(query, cb) {
+  var entry = searchPrefetchCache[query];
+  if (entry) {
+    var consume = function (r) {
+      log('[getPrefetchedResults]', query, r)();
       cb(r);
     };
-    if (cached.response) {
-      logAndCb(cached.response);
+    if (entry.response) {
+      consume(entry.response);
+      delete searchPrefetchCache[query];
     } else {
-      cached.callbacks.push(logAndCb);
+      entry.callbacks.push(consume);
     }
-    return true;
   }
+  return !!entry;
 }
 
 // ===== Local storage
