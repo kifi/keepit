@@ -33,7 +33,7 @@ import com.google.inject.Injector
 
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsArray, Json, JsObject}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -183,17 +183,21 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
         fakeClient.saveUsers(shachaf)
 
         inject[FakeActionAuthenticator].setUser(shanee)
-        val requestSet = FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""
-          {
-            "title": "Search Experiments",
-            "text": "test me out",
-            "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments",
-            "extVersion": "2.6.65"
-          }
-        """))
-        val resultSet = route(requestSet).get
-        status(resultSet) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #3", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #4", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #5", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
 
         val thread = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all.head }
 
@@ -207,8 +211,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
         contentType(result) must beSome("application/json")
 
         val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
-        messages.size === 1
-        val message = messages.head
+        messages.size === 5
 
         val expected = Json.parse(s"""
           {
@@ -229,17 +232,25 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
               }
             ],
             "messages": [
-              {
-                "id": "${message.externalId.id}",
-                "time": ${message.createdAt.getMillis},
-                "text": "test me out",
-                "userId": "${shanee.externalId.id}"
-              }
+              { "id": "${messages(0).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(1).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(3).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(4).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
             ]
           }
         """)
 
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val res = Json.parse(contentAsString(result))
+        val jsMessages = (res \ "messages").as[JsArray].value
+        (messages map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
+        jsMessages.size === 5
+        (jsMessages(0) \ "id").as[String] === messages(0).externalId.id
+        (jsMessages(1) \ "id").as[String] === messages(1).externalId.id
+        (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
+        (jsMessages(3) \ "id").as[String] === messages(3).externalId.id
+        (jsMessages(4) \ "id").as[String] === messages(4).externalId.id
+//        res must equalTo(expected)
 
       }
     }

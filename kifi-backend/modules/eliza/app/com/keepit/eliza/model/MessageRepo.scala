@@ -94,7 +94,6 @@ class MessageRepoImpl @Inject() (
       case None => {
         val query = (for (row <- rows if row.thread === threadId) yield row).drop(from)
         val got = query.sortBy(row => row.createdAt desc).list
-        log.info(s"[get_thread] got thread messages for thread_id $threadId.")
         val mft = new MessagesForThread(threadId, got)
         try {
           messagesForThreadIdCache.set(key, mft)
