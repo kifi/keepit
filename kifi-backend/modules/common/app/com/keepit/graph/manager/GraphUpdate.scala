@@ -1,9 +1,9 @@
 package com.keepit.graph.manager
 
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.reflection.CompanionTypeSystem
 import play.api.libs.json._
-import com.keepit.model.User
+import com.keepit.model.{UserConnection, NormalizedURI, User}
 import com.keepit.common.time.DateTimeJsonFormat
 import play.api.libs.functional.syntax._
 
@@ -48,4 +48,20 @@ case object UserGraphUpdate extends GraphUpdateKind[UserGraphUpdate] {
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'userSeq).format(SequenceNumber.format[User])
   )(UserGraphUpdate.apply, unlift(UserGraphUpdate.unapply))
+}
+
+case class UserConnectionGraphUpdate(firstUserId: Id[User], secondUserId: Id[User], state: State[UserConnection], userConnectionSeq: SequenceNumber[UserConnection]) extends GraphUpdate {
+  type U = UserConnectionGraphUpdate
+  def kind = UserConnectionGraphUpdate
+  def seq = kind.seq(userConnectionSeq.value)
+}
+
+case object UserConnectionGraphUpdate extends GraphUpdateKind[UserConnectionGraphUpdate] {
+  val code = "user_connection_graph_update"
+  implicit val format: Format[UserConnectionGraphUpdate] = (
+    (__ \ 'firstUserId).format(Id.format[User]) and
+    (__ \ 'secondUserId).format(Id.format[User]) and
+    (__ \ 'state).format(State.format[UserConnection]) and
+    (__ \ 'userConnectionSeq).format(SequenceNumber.format[UserConnection])
+  )(UserConnectionGraphUpdate.apply, unlift(UserConnectionGraphUpdate.unapply))
 }
