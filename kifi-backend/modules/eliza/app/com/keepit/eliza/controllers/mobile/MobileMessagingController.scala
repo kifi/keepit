@@ -104,7 +104,9 @@ class MobileMessagingController @Inject() (
         "participants" -> participants,
         "messages" -> (msgs.reverse map { m =>
           val adderAndAddedOpt: Option[(String,Seq[String])] = m.auxData match {
-            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id) )
+            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+              Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json =>  (json \ "id").as[String]) )
+            }
             case _ => None
           }
           val baseJson = Json.obj(
