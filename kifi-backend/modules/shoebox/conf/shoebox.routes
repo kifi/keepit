@@ -89,6 +89,7 @@ GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 POST    /ext/pref/showKeeperIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowKeeperIntro(show: Boolean)
@@ -503,7 +504,7 @@ POST    /admin/learning/pornDetect/whitelist               @com.keepit.controlle
 
 GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
 POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity
-POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controllers.admin.AdminWord2VecController.uriSimilarity 
+POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controllers.admin.AdminWord2VecController.uriSimilarity
 POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
 POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
 POST    /admin/cortex/word2vec/queryUriSimilarity          @com.keepit.controllers.admin.AdminWord2VecController.queryUriSimilarity 
