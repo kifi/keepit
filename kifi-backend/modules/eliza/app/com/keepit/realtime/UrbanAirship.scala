@@ -118,7 +118,7 @@ class UrbanAirshipImpl @Inject()(
     client.withHeaders("Authorization" -> s"Basic $encodedUserPass")
   }
 
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = {
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = synchronized {
     log.info(s"Registering device: $token (user $userId)")
     val device = db.readWrite { implicit s =>
       deviceRepo.get(token, deviceType).map{ d =>
