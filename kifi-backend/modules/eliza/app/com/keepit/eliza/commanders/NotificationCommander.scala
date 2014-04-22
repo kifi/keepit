@@ -74,7 +74,7 @@ class NotificationCommander @Inject() (
       val nuts = db.readOnly { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
-      val messages = basicMessageCommander.getThreadMessages(thread, None)
+      val messages = basicMessageCommander.getThreadMessages(thread)
 
       val allUsersIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
 

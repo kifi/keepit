@@ -22,10 +22,8 @@ import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-import scala.concurrent.Future
 import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.shutdown.ShutdownCommander
 import scala.collection.mutable
 
 class SharedWsMessagingController @Inject() (
@@ -72,7 +70,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-      basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+      basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
       }
