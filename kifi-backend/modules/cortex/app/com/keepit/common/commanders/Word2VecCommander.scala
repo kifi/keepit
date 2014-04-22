@@ -63,7 +63,7 @@ class Word2VecCommander @Inject()(
   def userSimilarity2(uris1: Seq[Id[NormalizedURI]], uris2: Seq[Id[NormalizedURI]]): Option[Float] = {
     val vecs1 = uris1.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{x => MatrixUtils.L2Normalize(x.vectorize)}
     val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{x => MatrixUtils.L2Normalize(x.vectorize)}
-    if (vecs1.isEmpty || vecs2.isEmpty) return None
+    if (vecs1.size < 20 || vecs2.size < 20) return None
 
     val (shorter, longer) = if (vecs1.size < vecs2.size) (vecs1, vecs2) else (vecs2, vecs1)
     val indexes = (0 until longer.size).toSet
