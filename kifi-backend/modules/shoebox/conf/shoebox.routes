@@ -54,6 +54,9 @@ GET     /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutC
 POST    /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOutAction(token: String)
 GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
 
+GET     /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOut(publicId: String)
+POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOutAction(publicId: String)
+
 ##########################################
 # Extension API
 ##########################################

@@ -536,7 +536,7 @@ class MessagingCommander @Inject() (
     stateChanged
   }
 
-  private def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean = {
+  def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean = {
     db.readWrite { implicit session =>
       getNonUserThreadOptWithSession(id) map { nonUserThread =>
         if (nonUserThread.muted != mute) {

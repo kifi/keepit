@@ -1,4 +1,4 @@
-@(email: String, enabled: Boolean, msg: Option[String])
+@(email: String, muted: Boolean, msg: Option[String])
 
 @content = {
 <main>
@@ -8,8 +8,8 @@
         <h3>@if(msg.isDefined){@msg}else{@email}</h3>
         <p>You will no longer receive email updates for this discussion.</p>
         <form id="optout" method="POST">
-            <input type="hidden" name="enabled" id="can-receive-emails">
-            <span class="optout" id="update">@if(enabled){Opt-out}else{Resubscribe}</span>
+            <input type="hidden" name="should-mute" id="can-receive-emails">
+            <span class="optout" id="update">@if(muted){Resubscribe}else{Opt-out}</span>
         </form>
     </section>
 </main>
@@ -20,7 +20,7 @@
     $(function() {
       $form = $("#optout");
       $("#update").click(function() {
-        $("#can-receive-emails").val(@if(enabled){"false"}else{"true"});
+        $("#can-receive-emails").val(@if(muted){"false"}else{"true"});
         $form.submit();
       });
     });

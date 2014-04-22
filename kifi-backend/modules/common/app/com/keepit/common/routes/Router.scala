@@ -191,6 +191,8 @@ object Eliza extends Service {
     def unsendNotification(messageHandle: Id[MessageHandle]) = ServiceRoute(GET, "/internal/eliza/unsendNotification", Param("id", messageHandle))
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
     def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
+    def getNonUserThreadMuteInfo(publicId: String) = ServiceRoute(GET, "/internal/eliza/getNonUserThreadMuteInfo", Param("publicId", publicId))
+    def setNonUserThreadMuteState(publicId: String, muted: Boolean) = ServiceRoute(POST, "/internal/eliza/setNonUserThreadMuteState", Param("publicId", publicId), Param("muted", muted))
     def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long) = ServiceRoute(GET, "/internal/eliza/getThreadContentForIndexing", Param("sequenceNumber", sequenceNumber), Param("maxBatchSize", maxBatchSize))
     def getRenormalizationSequenceNumber() = ServiceRoute(GET, "/internal/eliza/sequenceNumber/renormalization")
   }
