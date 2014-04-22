@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.google.inject.{Singleton, Inject}
 
 sealed trait GraphManagerActorMessage
 object GraphManagerActorMessage {
@@ -16,7 +17,7 @@ object GraphManagerActorMessage {
   case object BackupGraph extends GraphManagerActorMessage
 }
 
-class GraphManagerActor(
+class GraphManagerActor @Inject() (
   graph: GraphManager,
   graphUpdateFetcher: GraphUpdateFetcher,
   airbrake: AirbrakeNotifier
@@ -42,7 +43,8 @@ class GraphManagerActor(
   }
 }
 
-class GraphManagerPlugin(
+@Singleton
+class GraphManagerPlugin @Inject() (
   actor: ActorInstance[GraphManagerActor],
   val scheduling: SchedulingProperties
 ) extends SchedulerPlugin {
@@ -50,7 +52,7 @@ class GraphManagerPlugin(
 
   override def onStart() {
     log.info(s"starting $this")
-    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateGraph(500, 5 minutes))
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateGraph(10, 1 minute))
     scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }

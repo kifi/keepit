@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.{NotificationCategory, User}
 import com.keepit.eliza.model._
+import com.keepit.eliza.model.NonUserThread._
 import com.keepit.common.akka.SafeFuture
 import scala.util.Try
 import play.api.libs.json._
@@ -12,12 +13,12 @@ import com.keepit.common.db.slick.Database
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.realtime.UrbanAirship
 import org.joda.time.DateTime
-import com.keepit.eliza.MessageLookHereRemover
+import com.keepit.eliza.mail.MessageLookHereRemover
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Promise, Future, Await}
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
@@ -29,11 +30,15 @@ import com.keepit.eliza.model.UserThread
 import com.keepit.eliza.model.Notification
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.social.BasicUserLikeEntity
+import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
+import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddresses, GenericEmailAddress, EmailAddressHolder, PostOffice}
+import com.keepit.common.crypto.PublicIdConfiguration
+import scala.concurrent.duration._
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   db: Database,
   notificationRouter: WebSocketRouter,
@@ -41,7 +46,8 @@ class NotificationCommander @Inject() (
   messagingAnalytics: MessagingAnalytics,
   urbanAirship: UrbanAirship,
   notificationUpdater: NotificationUpdater,
-  basicMessageCommander: MessageFetchingCommander) extends Logging  {
+  basicMessageCommander: MessageFetchingCommander,
+  implicit val publicIdConfig: PublicIdConfiguration) extends Logging  {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = buildMessageNotificationJson(
@@ -62,7 +68,60 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  def notifyAddParticipants(newParticipants: Seq[Id[User]], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
+  //temp, needs to be removed before shipping!
+  def notifyEmailUsers(thread: MessageThread, exceptAddress: Option[String] = None): Unit = {
+    if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+      val nuts = db.readOnly { implicit session =>
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+      }
+      val messages = basicMessageCommander.getThreadMessages(thread, None)
+
+      val allUsersIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+
+      val allUsers : Map[Id[User], User] = Await.result(shoebox.getUsers(allUsersIds.toSeq), 2 minutes).map(u => u.id.get -> u).toMap
+
+      val authors : Seq[String] = messages.filterNot(_.from.isSystem).map( message =>
+        message.from match {
+          case MessageSender.User(id) => allUsers(id).firstName + " " + allUsers(id).lastName
+          case MessageSender.NonUser(nup) => nup.identifier
+          case _ => throw new Exception("This can't happen")
+        }
+      ).toSet.toSeq.sorted
+
+      val threadItems = messages.filterNot(_.from.isSystem).map{ message =>
+        message.from match {
+          case MessageSender.User(id) => ThreadItem(Some(id), None, message.messageText)
+          case MessageSender.NonUser(nup) => ThreadItem(None, Some(nup.identifier), message.messageText)
+          case _ => throw new Exception("This can't happen")
+        }
+      }
+
+      val url = thread.url.getOrElse("")
+
+      val title = thread.pageTitle.getOrElse(url)
+
+      nuts.foreach{ nut =>
+        if ((exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) && !nut.muted) {
+          val mute = "/eliza/email/mute/" + nut.publicId.get
+
+          val body =  views.html.nonUserMessagesEmail(authors, threadItems, url, title, allUsers, mute).body
+
+          shoebox.sendMail(ElectronicMail (
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("Kifi"),
+            to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
+            subject = "Kifi Message on " + thread.url.getOrElse("a Page"),
+            htmlBody = body,
+            category = ElectronicMailCategory("external_message_test"),
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
+          ))
+        }
+      }
+    }
+
+  }
+
+  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
       val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
       val theTitle: String = thread.pageTitle.getOrElse("New conversation")
@@ -81,7 +140,6 @@ class NotificationCommander @Inject() (
         "category"     -> NotificationCategory.User.MESSAGE.category
       )
       db.readWrite { implicit session =>
-      // todo: Add adding non-users
         newParticipants.map { pUserId =>
           userThreadRepo.save(UserThread(
             id = None,
@@ -92,6 +150,18 @@ class NotificationCommander @Inject() (
             unread = true,
             lastMsgFromOther = None,
             lastNotification = JsNull
+          ))
+        }
+
+        newNonUserParticipants.map { nup =>
+          val nut = nonUserThreadRepo.save(NonUserThread(
+            participant = nup,
+            threadId = thread.id.get,
+            uriId = thread.uriId,
+            notifiedCount = 0,
+            lastNotifiedAt = None,
+            threadUpdatedAt = Some(thread.createdAt),
+            muted = false
           ))
         }
       }
@@ -109,6 +179,7 @@ class NotificationCommander @Inject() (
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
           })
         }
+        notifyEmailUsers(thread)
       }
     })
   }
@@ -151,7 +222,7 @@ class NotificationCommander @Inject() (
       ))
 
       val message = messageRepo.save(Message(
-        from = None,
+        from = MessageSender.System,
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = s"$title (on $linkText): $body",
@@ -280,13 +351,20 @@ class NotificationCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
-      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, thread.deepLocator)
+      message.from.asUser.map(
+        shoebox.createDeepLink(_, userId, thread.uriId.get, thread.deepLocator)
+      )
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
 
       if (!muted) {
-        val notifText = MessageLookHereRemover(messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
+        val sender = messageWithBasicUser.user match {
+          case Some(bu:BasicUser) => bu.firstName + ": "
+          case Some(bnu:BasicNonUser) => bnu.firstName.getOrElse(bnu.id) + ": "
+          case _ => ""
+        }
+        val notifText = MessageLookHereRemover(sender + message.messageText)
         sendPushNotification(userId, thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)))
       }
     }
@@ -329,7 +407,11 @@ class NotificationCommander @Inject() (
         None,
         message.sentOnUrl.getOrElse(""),
         thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-        message.from.map(id2BasicUser(_)),
+        message.from match {
+          case MessageSender.User(id) => Some(id2BasicUser(id))
+          case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+          case _ => None
+        },
         threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers
       )
 
@@ -352,7 +434,9 @@ class NotificationCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, false)
-      shoebox.createDeepLink(message.from.get, userId, thread.uriId.get, thread.deepLocator)
+      message.from.asUser.map(
+        shoebox.createDeepLink(_, userId, thread.uriId.get, thread.deepLocator)
+      )
 
       notifJson
     })

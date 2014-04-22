@@ -58,6 +58,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
+import com.keepit.common.crypto.TestCryptoModule
 
 class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -74,7 +75,8 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
-      FakeActionAuthenticatorModule()
+      FakeActionAuthenticatorModule(),
+      TestCryptoModule()
     )
   }
 

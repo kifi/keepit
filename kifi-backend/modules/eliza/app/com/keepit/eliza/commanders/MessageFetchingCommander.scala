@@ -9,9 +9,9 @@ import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.{Json, JsArray, JsString}
+import play.api.libs.json.{Json, JsArray, JsString, JsNumber}
 import com.keepit.model.User
-import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -66,7 +66,11 @@ class MessageFetchingCommander @Inject() (
           auxData      = message.auxData,
           url          = message.sentOnUrl.getOrElse(""),
           nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-          user         = message.from.map(id2BasicUser(_)),
+          user         = message.from match {
+            case MessageSender.User(id) => Some(id2BasicUser(id))
+            case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
+            case _ => None
+          },
           participants = userParticipantSet.toSeq.map(id2BasicUser(_)) ++ nonUsers
         )
       }
@@ -81,26 +85,42 @@ class MessageFetchingCommander @Inject() (
     getThreadMessagesWithBasicUser(thread, pageOpt)
   }
 
+
   private def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
     if (m.user.isEmpty) {
       val modifiedMessage = m.auxData match {
         case Some(auxData) =>
           val auxModifiedFuture = auxData.value match {
-            case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ =>
-              val addedUsers = jsAddedUsers.map(id => Id[User](id.as[Long]))
+            case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ => {
+
+              val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition{ json =>
+                json match {
+                  case JsNumber(_) => true
+                  case _ => false
+                }
+              }
+              val addedUsers = addedUsersJson.map(id => Id[User](id.as[Long]))
+              val addedNonUsers = addedNonUsersJson.map(_.as[NonUserParticipant])
               val adderUserId = Id[User](jsAdderUserId.toLong)
               new SafeFuture(shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
                 val adderUser = basicUsers(adderUserId)
-                val addedBasicUsers = addedUsers.map(u => basicUsers(u))
-                val addedUsersString = addedBasicUsers.map(s => s"${s.firstName} ${s.lastName}") match {
+                val addedBasicUsers = addedUsers.map(u => basicUsers(u)) ++ addedNonUsers.map(NonUserParticipant.toBasicNonUser)
+                val addedUsersString = addedBasicUsers.map{ bule =>
+                  bule match {
+                    case bu: BasicUser => s"${bu.firstName} ${bu.lastName}"
+                    case nup: BasicNonUser => s"${nup.firstName} ${nup.lastName}"
+                    case _ => "Kifi User"
+                  }
+                } match {
                   case first :: Nil => first
                   case first :: second :: Nil => first + " and " + second
                   case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
                 }
-
                 val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
                 (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
               })
+
+            }
             case s =>
               Promise.successful(("", Json.arr())).future
           }

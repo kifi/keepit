@@ -26,7 +26,6 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
         var rects = ranges.getClientRects(r);
         var bounds = ranges.getBoundingClientRect(r, rects);
         var anim = scrollTo(bounds, computeScrollToDuration);
-
         var $cnv = $('<canvas>').prop({width: bounds.width, height: bounds.height});
         var ctx = $cnv[0].getContext('2d');
         ctx.fillStyle = 'rgba(128,184,255,.59)';
@@ -98,7 +97,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
 
   function showBroken() {
     api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog();
+      showBrokenLookLinkDialog(false);
     });
   }
 }());

@@ -25,13 +25,13 @@ trait URIParserGrammar extends RegexParsers {
   def scheme: Parser[String] = """[^/?#:]+""".r ^^ (_.toLowerCase)
 
   def authority: Parser[(Option[String], Option[Host], Int)] = (userInfo?)~(host?)~(port?) ^^ {
-    case None~None~None => (None, Some(Host()), -1)
+    case None~None~None => (None, None, -1)
     case userInfo~host~port => (userInfo, host, port.map{ port => if (port.length() > 0) port.toInt else -1 }.getOrElse(-1))
   }
 
   def userInfo: Parser[String] = """[^~/?#@]+""".r <~ "@"
 
-  def host: Parser[Host] = addressIPv6 | addressIPv4 | domain
+  def host: Parser[Host] = (addressIPv6 | addressIPv4 | domain)
 
   def addressIPv6: Parser[Host] = """\[[^\]]*\]""".r ^^ (Host(_))
 

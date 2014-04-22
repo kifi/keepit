@@ -15,7 +15,7 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.collection._
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.user.UserIndexer
@@ -50,28 +50,28 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
   def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
 
     val articleIndexers = activeShards.shards.map{ shard =>
-      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectoryImpl, store, inject[AirbrakeNotifier])
+      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
     val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[ShoeboxServiceClient])
 
     val uriGraphIndexers = activeShards.shards.map{ shard =>
-      val bookmarkStore = new BookmarkStore(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
-      val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectoryImpl, bookmarkStore, inject[AirbrakeNotifier])
+      val bookmarkStore = new BookmarkStore(new VolatileIndexDirectory, inject[AirbrakeNotifier])
+      val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectory, bookmarkStore, inject[AirbrakeNotifier])
       (shard -> uriGraphIndexer)
     }
     val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])
 
     val collectionIndexers = activeShards.shards.map{ shard =>
-      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier])
-      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectoryImpl, collectionNameIndexer, inject[AirbrakeNotifier])
+      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
+      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, collectionNameIndexer, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)
     }
     val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[ShoeboxServiceClient])
 
-    val userIndexer = new UserIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectoryImpl, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userIndexer = new UserIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
 
     implicit val clock = inject[Clock]
@@ -87,9 +87,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SpellCorrector],
-      inject[ShoeboxServiceClient],
       inject[MonitoredAwait],
-      inject[AirbrakeNotifier],
       clock,
       fortyTwoServices)
     (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory)

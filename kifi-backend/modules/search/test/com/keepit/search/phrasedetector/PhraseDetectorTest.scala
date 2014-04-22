@@ -3,7 +3,7 @@ package com.keepit.search.phrasedetector
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.Lang
-import com.keepit.search.index.{VolatileIndexDirectoryImpl, DefaultAnalyzer}
+import com.keepit.search.index.{VolatileIndexDirectory, DefaultAnalyzer}
 import org.apache.lucene.index.Term
 import org.specs2.mutable._
 import play.api.Play.current
@@ -21,7 +21,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
   "PhraseDetectorTest" should {
     "detects all phrases in input text" in {
         running(new DeprecatedEmptyApplication()) {
-        val indexer = new PhraseIndexerImpl(new VolatileIndexDirectoryImpl(), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+        val indexer = new PhraseIndexerImpl(new VolatileIndexDirectory(), inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
         val lang = Lang("en")
         val phrases = List(
           "classroom project",

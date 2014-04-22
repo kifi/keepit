@@ -42,6 +42,7 @@ case class UserStatistics(
     user: User,
     connections: Int,
     invitations: Int,
+    invitedBy: Seq[User],
     socialUsers: Seq[SocialUserInfo],
     privateKeeps: Int,
     publicKeeps: Int,
@@ -223,7 +224,7 @@ class AdminUserController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }
 
-    val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
+    val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
       val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialUsers = socialUserInfoRepo.getByUser(userId)
@@ -234,7 +235,8 @@ class AdminUserController @Inject() (
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
-      ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
+      val invitedByUsers = invitedBy(socialUsers)
+      ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
@@ -268,7 +270,8 @@ class AdminUserController @Inject() (
       econtacts <- econtactsF
     } yield {
       Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount, econtacts, collections, collectionFilter))
+        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount,
+        econtacts, collections, collectionFilter, invitedByUsers))
     }
   }
 
@@ -276,13 +279,22 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
+  private def invitedBy(socialUserInfos: Seq[SocialUserInfo])(implicit s: RSession): Seq[User] = socialUserInfos map { info =>
+    invitationRepo.getByRecipientSocialUserId(info.id.get) map { invitation =>
+      invitation.senderUserId map userRepo.get
+    } flatten
+  } flatten
+
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
+    val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
+
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
-      socialUserInfoRepo.getByUser(user.id.get),
+      invitedBy(socialUserInfos),
+      socialUserInfos,
       privateKeeps,
       publicKeeps,
       userExperimentRepo.getUserExperiments(user.id.get),

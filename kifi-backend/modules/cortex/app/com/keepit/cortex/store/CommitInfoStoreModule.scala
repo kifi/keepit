@@ -5,6 +5,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ProdStoreModule
 import com.keepit.cortex.models.lda._
+import com.keepit.cortex.models.word2vec._
 import com.keepit.common.store.S3Bucket
 import play.api.Play._
 import com.keepit.common.store.DevStoreModule
@@ -24,6 +25,13 @@ case class CommitInfoProdStoreModule() extends CommitInfoStoreModule{
     new S3LDAURIFeatureCommitStore(bucketName, amazonS3Client, accessLog)
   }
 
+  @Singleton
+  @Provides
+  def word2vecCommitInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecURIFeatureCommitStore = {
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
+    new S3Word2VecURIFeatureCommitStore(bucketName, amazonS3Client, accessLog)
+  }
+
 }
 
 case class CommitInfoDevStoreModule() extends ProdOrElseDevStoreModule(CommitInfoProdStoreModule()) with CommitInfoStoreModule{
@@ -36,4 +44,13 @@ case class CommitInfoDevStoreModule() extends ProdOrElseDevStoreModule(CommitInf
       prodStoreModule.denseLDACommitInfoStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryLDAURIFeatureCommitStore)
   }
+
+  @Singleton
+  @Provides
+  def word2vecCommitInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecURIFeatureCommitStore = {
+    whenConfigured(S3_CORTEX_BUCKET)(
+      prodStoreModule.word2vecCommitInfoStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryWord2VecURIFeatureCommitStore)
+  }
+
 }

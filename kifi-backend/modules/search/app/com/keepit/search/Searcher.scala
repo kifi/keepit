@@ -35,7 +35,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   private[this] var sketchMap = Map.empty[Term, Sketch]
   protected[this] var numPayloadsMap: Map[Term, Int] = Map()
 
-  def numPayloadsUsed: Int = if (numPayloadsMap.size == 0) 0 else numPayloadsMap.values.min
+  def numPayloadsUsed(term: Term): Int = numPayloadsMap.getOrElse(term, 0)
 
   // search: hits are ordered by score
   def search(query: Query): Seq[SearcherHit] = {

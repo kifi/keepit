@@ -14,14 +14,17 @@ import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
 
 import scala.concurrent.duration.Duration
 
-trait BasicUserLikeEntity
+trait BasicUserLikeEntity {
+  def asBasicUser: Option[BasicUser] = None
+  def asBasicNonUser: Option[BasicNonUser] = None
+}
 
 object BasicUserLikeEntity {
   implicit val nonUserTypeFormat = Json.format[NonUserKind]
   implicit val basicUserLikeEntityFormat = new Format[BasicUserLikeEntity] {
     def reads(json: JsValue): JsResult[BasicUserLikeEntity] = {
       // Detect if this is a BasicUser or BasicNonUser
-      (json \ "kind").asOpt[NonUserKind] match {
+      (json \ "kind").asOpt[String] match {
         case Some(kind) => BasicNonUser.basicNonUserFormat.reads(json)
         case None => BasicUser.basicUserFormat.reads(json)
       }
@@ -39,7 +42,10 @@ case class BasicUser(
   externalId: ExternalId[User],
   firstName: String,
   lastName: String,
-  pictureName: String) extends BasicUserLikeEntity
+  pictureName: String) extends BasicUserLikeEntity {
+
+  override def asBasicUser = Some(this)
+}
 
 object BasicUser {
   implicit val userExternalIdFormat = ExternalId.format[User]

@@ -13,6 +13,43 @@
 
   <p id = "word_sim_result"></p>
 
+  <br><br>
+
+  <div>Put English text here. Will try to identify keywords and important bag of words</div>
+  <form id = "keywords_detect">
+    <textarea id = "text"></textarea>
+    <button type = "submit">submit</button>
+  </form>
+
+  <p id = "keywords"></p>
+
+  <br><br>
+
+  <div>Put two uriIds here. Return cosine similarity score.</div>
+  <form id = "uri_similarity">
+    <div>
+      <input id = "uri1" type = "text" value = "">
+      <input id = "uri2" type = "text" value = "">
+      <button type = "submit">submit</button>
+    </div>
+  </form>
+
+  <p id = "uri_sim_result"></p>
+
+
+  <br><br>
+
+  <div>Put two user Ids here. Return similarity based on their keeps. </div>
+  <form id = "user_similarity">
+    <div>
+      <input id = "user1" type = "text" value = "">
+      <input id = "user2" type = "text" value = "">
+      <button type = "submit">submit</button>
+    </div>
+  </form>
+
+  <p id = "user_sim_result"></p>
+
 
   <script type="text/javascript">
 
@@ -32,6 +69,45 @@
     })
 
 
+    $("#keywords_detect").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.keywords',
+        {text: $('#text').val()}
+      ).done(done).fail(fail);
+
+      function done(data) {
+        $("#keywords").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
+
+    })
+
+
+    $("#uri_similarity").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.uriSimilarity',
+        {uri1: $('#uri1').val(), uri2: $('#uri2').val()}
+      ).done(done).fail(fail);
+
+      function done(data) {
+        $("#uri_sim_result").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
+
+    })
+
+    $("#user_similarity").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userSimilarity',
+        {user1: $('#user1').val(), user2: $('#user2').val()}
+      ).done(done).fail(fail);
+
+      function done(data) {
+        $("#user_sim_result").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
+
+    })
 
 
 

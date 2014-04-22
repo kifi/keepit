@@ -5,6 +5,8 @@ import com.keepit.common.commanders.Word2VecCommander
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
+import com.keepit.common.db.Id
+import com.keepit.model.NormalizedURI
 
 
 
@@ -14,6 +16,19 @@ class CortexController @Inject()(
 
   def similarity(word1: String, word2: String) = Action { request =>
     val s = word2vec.similarity(word1, word2)
+    Ok(Json.toJson(s))
+  }
+
+  def uriSimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = Action { request =>
+    val s = word2vec.similarity(uri1, uri2)
+    Ok(Json.toJson(s))
+  }
+
+  def userSimilarity() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val uris1 = (js \ "uris1").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val uris2 = (js \ "uris2").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val s = word2vec.similarity(uris1, uris2)
     Ok(Json.toJson(s))
   }
 

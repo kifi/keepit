@@ -1,4 +1,4 @@
-package com.keepit.eliza
+package com.keepit.eliza.mail
 
 import com.keepit.eliza.model._
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
@@ -13,7 +13,6 @@ import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject.AppScoped
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 
 import com.google.inject.{Inject, ImplementedBy}
@@ -27,7 +26,11 @@ object MessageLookHereRemover {
   private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
 
   def apply(text: String): String = {
-    lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
+    try {
+      lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
+    } catch {
+      case t: java.lang.IllegalArgumentException => text
+    }
   }
 }
 
@@ -73,11 +76,11 @@ class ElizaEmailNotifierActor @Inject() (
     val otherParticipants: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set()) - userThread.user
 
     val threadItems: Seq[ThreadItem] =  db.readOnly { implicit session => userThread.lastSeen.map { lastSeen =>
-      messageRepo.getAfter(thread.id.get, lastSeen).filter(_.from.isDefined)
+      messageRepo.getAfter(thread.id.get, lastSeen).filter(!_.from.isSystem)
     } getOrElse {
-      messageRepo.get(thread.id.get, 0, None).filter(_.from.isDefined)
+      messageRepo.get(thread.id.get, 0, None).filter(!_.from.isSystem)
     }}.map { message =>
-      ThreadItem(message.from.get, MessageLookHereRemover(message.messageText))
+      ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageLookHereRemover(message.messageText))
     } reverse
 
     log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
