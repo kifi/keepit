@@ -1525,12 +1525,6 @@ function searchOnServer(request, respond) {
     return;
   }
 
-  if (request.filter) {
-    searchFilterCache[request.query] = {filter: request.filter, time: Date.now()};  // TODO: purge cache
-  } else {
-    delete searchFilterCache[request.query];
-  }
-
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
@@ -1892,14 +1886,13 @@ api.on.beforeSearch.add(throttle(function (whence) {
 }, 50000));
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
-var searchFilterCache = {};    // for restoring filter if user navigates back to results
 api.on.search.add(function prefetchResults(query, whence) {
   if (!me || !enabled('search')) return;
   log('[prefetchResults] prefetching for query:', query)();
   var entry = searchPrefetchCache[query];
   if (!entry) {
     entry = searchPrefetchCache[query] = {callbacks: [], response: null};
-    searchOnServer({query: query, filter: (searchFilterCache[query] || {}).filter, whence: whence}, gotPrefetchedResults.bind(null, query, entry));
+    searchOnServer({query: query, whence: whence}, gotPrefetchedResults.bind(null, query, entry));
   } else {
     api.timers.clearTimeout(entry.expireTimeout);
   }
