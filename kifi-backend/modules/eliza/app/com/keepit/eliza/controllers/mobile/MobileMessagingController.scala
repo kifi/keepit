@@ -114,7 +114,7 @@ class MobileMessagingController @Inject() (
           )
           val msgJson = baseJson ++ (m.user match {
               case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("email" -> bnu.toString)
+              case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("userId" -> bnu.toString)
               case _ => Json.obj()
           })
 
