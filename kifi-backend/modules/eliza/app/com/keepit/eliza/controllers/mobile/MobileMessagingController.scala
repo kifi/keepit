@@ -85,15 +85,19 @@ class MobileMessagingController @Inject() (
 
 
   def getThread(threadId: String) = JsonAction.authenticatedAsync { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
       Ok(Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))
     }
   }
 
-  //todo(eishay): paginate
+  /*
+   * todo(eishay): paginate
+   * Use syntax like:
+   * https://eliza.kifi.com/m/1/eliza/thread/89914c3c-6149-47bb-9656-66c9c54cdfa7?since=XXX-CCC...&pageSize=5
+   */
   def getCompactThread(threadId: String) = JsonAction.authenticatedAsync { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
       val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
       val participants: Set[BasicUserLikeEntity] = msgs.map(_.participants).flatten.toSet
@@ -104,7 +108,9 @@ class MobileMessagingController @Inject() (
         "participants" -> participants,
         "messages" -> (msgs.reverse map { m =>
           val adderAndAddedOpt: Option[(String,Seq[String])] = m.auxData match {
-            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id) )
+            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+              Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json =>  (json \ "id").as[String]) )
+            }
             case _ => None
           }
           val baseJson = Json.obj(

@@ -34,28 +34,16 @@ class MessageFetchingCommander @Inject() (
     modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, auxData, url, nUrl, user, participants))
   }
 
-  def getThreadMessages(thread: MessageThread, pageOpt: Option[Int]) : Seq[Message] = {
-    db.readOnly {
-      implicit session =>
-        log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}. pageOpt is $pageOpt")
-        pageOpt.map {
-          page =>
-            val lower = MessagingCommander.THREAD_PAGE_SIZE * page
-            val upper = MessagingCommander.THREAD_PAGE_SIZE * (page + 1) - 1
-            log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. lu: $lower, $upper")
-            messageRepo.get(thread.id.get, lower, Some(upper))
-        } getOrElse {
-          log.info(s"[get_thread] getting thread messages for thread extId ${thread.externalId}. no l/u")
-          messageRepo.get(thread.id.get, 0, None)
-        }
-    }
+  def getThreadMessages(thread: MessageThread) : Seq[Message] =  db.readOnly { implicit session =>
+    log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}")
+    messageRepo.get(thread.id.get, 0)
   }
 
-  def getThreadMessagesWithBasicUser(thread: MessageThread, pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getThreadMessagesWithBasicUser(thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
-      val messages = getThreadMessages(thread, pageOpt)
+      val messages = getThreadMessages(thread)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
       messages.map { message =>
         val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
@@ -80,9 +68,9 @@ class MessageFetchingCommander @Inject() (
     } map {(thread, _)}
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val thread = db.readOnly(threadRepo.get(threadExtId)(_))
-    getThreadMessagesWithBasicUser(thread, pageOpt)
+    getThreadMessagesWithBasicUser(thread)
   }
 
 

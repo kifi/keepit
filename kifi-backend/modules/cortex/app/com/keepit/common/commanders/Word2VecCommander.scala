@@ -7,6 +7,7 @@ import com.keepit.cortex.utils.TextUtils.TextNormalizer
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
+import com.keepit.cortex.utils.TextUtils
 
 
 @Singleton
@@ -58,6 +59,39 @@ class Word2VecCommander @Inject()(
     val avg1 = MatrixUtils.average(vecs1.map{MatrixUtils.L2Normalize(_)})
     val avg2 = MatrixUtils.average(vecs2.map{MatrixUtils.L2Normalize(_)})
     Some(MatrixUtils.cosineDistance(avg1, avg2))
+  }
+
+  def userSimilarity2(uris1: Seq[Id[NormalizedURI]], uris2: Seq[Id[NormalizedURI]]): Option[Float] = {
+    val vecs1 = uris1.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{x => MatrixUtils.L2Normalize(x.vectorize)}
+    val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{x => MatrixUtils.L2Normalize(x.vectorize)}
+    if (vecs1.size < 20 || vecs2.size < 20) return None
+
+    val (shorter, longer) = if (vecs1.size < vecs2.size) (vecs1, vecs2) else (vecs2, vecs1)
+    val indexes = (0 until longer.size).toSet
+    var matched = Set[Int]()
+
+    val scores = shorter.map{ vec =>
+      val (idx, score) = (indexes -- matched).map{ idx =>
+        (idx, MatrixUtils.dot(vec, longer(idx)))
+      }.toArray.sortBy(- 1f * _._2).head
+      matched = matched + idx
+      score
+    }
+
+    Some(scores.sum / scores.length)
+  }
+
+  def similarity(query: String, uri: Id[NormalizedURI]): Option[Float] = {
+    val vecs = TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(query).flatMap{word2vec.apply(_)}.map{_.vectorize}
+    if (vecs.isEmpty) return None
+
+    val queryVec = vecs.reduce(MatrixUtils.add)
+    val docVec = uriFeatureRetriever.getByKey(uri, word2vec.version).map{_.vectorize}
+
+    docVec.map{ doc =>
+      MatrixUtils.cosineDistance(doc, queryVec)
+    }
+
   }
 
 }

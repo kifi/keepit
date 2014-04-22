@@ -74,19 +74,15 @@ class NotificationCommander @Inject() (
       val nuts = db.readOnly { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
-      val messages = basicMessageCommander.getThreadMessages(thread, None)
+      val messages = basicMessageCommander.getThreadMessages(thread)
 
       val allUsersIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
 
       val allUsers : Map[Id[User], User] = Await.result(shoebox.getUsers(allUsersIds.toSeq), 2 minutes).map(u => u.id.get -> u).toMap
 
-      val authors : Seq[String] = messages.filterNot(_.from.isSystem).map( message =>
-        message.from match {
-          case MessageSender.User(id) => allUsers(id).firstName + " " + allUsers(id).lastName
-          case MessageSender.NonUser(nup) => nup.identifier
-          case _ => throw new Exception("This can't happen")
-        }
-      ).toSet.toSeq.sorted
+      val authors: Seq[String] = thread.participants.map{ participants =>
+        participants.allUsers.map(id => allUsers(id).firstName + " " + allUsers(id).lastName).toSeq ++ participants.allNonUsers.map(_.identifier).toSeq
+      }.getOrElse(Seq[String]())
 
       val threadItems = messages.filterNot(_.from.isSystem).map{ message =>
         message.from match {
@@ -94,7 +90,7 @@ class NotificationCommander @Inject() (
           case MessageSender.NonUser(nup) => ThreadItem(None, Some(nup.identifier), message.messageText)
           case _ => throw new Exception("This can't happen")
         }
-      }
+      }.reverse
 
       val url = thread.url.getOrElse("")
 

@@ -75,6 +75,19 @@ class AdminWord2VecController @Inject()(
     Ok(res)
   }
 
+  def queryUriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val query = body.get("query").get
+    val uri = Id[NormalizedURI](body.get("uri").get.toLong)
+
+    val s = Await.result(cortex.word2vecQueryUriSimilarity(query, uri), 5 seconds)
+    val res = s match {
+      case Some(score) => s"similarity score for query ${query} and uri ${uri}: ${score}"
+      case None => s"we seem do not have enough information. Likely we don't have a feature vector for that uri in store."
+    }
+    Ok(res)
+  }
+
   def index() = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.word2vec())
   }
