@@ -43,6 +43,7 @@ trait DeviceRepo extends Repo[Device] {
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))
                  (implicit s: RSession): Seq[Device]
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
+  def get(token: String, deviceType: DeviceType)(implicit s: RSession): Seq[Device]
 }
 
 class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DeviceRepo with DbRepo[Device] with MessagingTypeMappers {
@@ -68,6 +69,10 @@ class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
 
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device] = {
     (for (t <- rows if t.userId === userId && t.token === token && t.deviceType === deviceType) yield t).firstOption
+  }
+
+  def get(token: String, deviceType: DeviceType)(implicit s: RSession): Seq[Device] = {
+    (for (t <- rows if t.token === token && t.deviceType === deviceType) yield t).list
   }
 }
 
@@ -116,6 +121,9 @@ class UrbanAirshipImpl @Inject()(
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = {
     log.info(s"Registering device: $token (user $userId)")
     val device = db.readWrite { implicit s =>
+      deviceRepo.get(token, deviceType).map{ d =>
+        if (d.userId != userId) deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+      }
       deviceRepo.get(userId, token, deviceType) match {
         case Some(d) if d.state == DeviceStates.ACTIVE => d
         case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE))
