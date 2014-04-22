@@ -21,6 +21,7 @@ import com.google.inject.util.Providers
 import com.keepit.eliza.model.{MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
 
 import akka.actor.Scheduler
+import com.keepit.common.json.JsonFormatters._
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
@@ -37,6 +38,10 @@ trait ElizaServiceClient extends ServiceClient {
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
+
+  def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]]
+
+  def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -115,6 +120,18 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]] = {
+    call(Eliza.internal.getNonUserThreadMuteInfo(publicId), callTimeouts = longTimeout).map { response =>
+      Json.parse(response.body).asOpt[(String, Boolean)]
+    }
+  }
+
+  def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean] = {
+    call(Eliza.internal.setNonUserThreadMuteState(publicId, muted), callTimeouts = longTimeout).map { response =>
+      Json.parse(response.body).as[Boolean]
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -152,6 +169,14 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     val p = Promise.successful(Seq[ThreadContent]())
     p.future
+  }
+
+  def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]] = {
+    Promise.successful(Some(("test_id", false))).future
+  }
+
+  def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean] = {
+    Promise.successful(true).future
   }
 
   //migration
