@@ -41,6 +41,8 @@ import scala.util.{Failure, Success, Try}
 import play.api.libs.json.JsArray
 import com.keepit.eliza.model.UserThread
 import play.api.libs.json.JsObject
+import com.keepit.common.crypto.{PublicIdConfiguration, ModelWithPublicId}
+import com.keepit.common.json.JsonFormatters._
 
 
 //For migration only
@@ -65,7 +67,8 @@ class MessagingController @Inject() (
     uriNormalizationUpdater: UriNormalizationUpdater,
     messagingCommander: MessagingCommander,
     messagingIndexCommander: MessagingIndexCommander,
-    notificationCommander: NotificationCommander)
+    notificationCommander: NotificationCommander,
+    implicit val publicIdConfig: PublicIdConfiguration)
   extends ElizaServiceController with Logging {
 
   //for indexing data requests
@@ -119,5 +122,25 @@ class MessagingController @Inject() (
     Status(ACCEPTED)
   }
 
+  def getNonUserThreadMuteInfo(publicId: String) = Action { request =>
+    val result = ModelWithPublicId.decode[NonUserThread](publicId) match {
+      case Success(id) => {
+        messagingCommander.getNonUserThreadOpt(id) map { (nonUserThread: NonUserThread) =>
+          Some((nonUserThread.participant.identifier, !nonUserThread.muted))
+        } getOrElse (None)
+      }
+      case _ => None
+    }
+    Ok(Json.toJson(result))
+  }
+
+  def setNonUserThreadMuteState(publicId: String, muted: Boolean) = Action {
+    // returns wether the mute state was modified
+    val result = ModelWithPublicId.decode[NonUserThread](publicId) match {
+      case Success(id) => messagingCommander.setNonUserThreadMuteState(id, muted)
+      case _ => false
+    }
+    Ok(Json.toJson(result))
+  }
 }
 
