@@ -7,6 +7,7 @@ import com.keepit.cortex.utils.TextUtils.TextNormalizer
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
+import com.keepit.cortex.utils.TextUtils
 
 
 @Singleton
@@ -78,6 +79,19 @@ class Word2VecCommander @Inject()(
     }
 
     Some(scores.sum / scores.length)
+  }
+
+  def similarity(query: String, uri: Id[NormalizedURI]): Option[Float] = {
+    val vecs = TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(query).flatMap{word2vec.apply(_)}.map{_.vectorize}
+    if (vecs.isEmpty) return None
+
+    val queryVec = vecs.reduce(MatrixUtils.add)
+    val docVec = uriFeatureRetriever.getByKey(uri, word2vec.version).map{_.vectorize}
+
+    docVec.map{ doc =>
+      MatrixUtils.cosineDistance(doc, queryVec)
+    }
+
   }
 
 }

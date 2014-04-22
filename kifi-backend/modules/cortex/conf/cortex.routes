@@ -10,3 +10,4 @@ GET	    /internal/cortex/word2vec/wordSimilarity                                
 POST    /internal/cortex/word2vec/keywordsAndBow                                    @com.keepit.controllers.cortex.CortexController.getKeywordsAndBOW()
 GET     /internal/cortex/word2vec/uriSimilarity                                     @com.keepit.controllers.cortex.CortexController.uriSimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI])
 POST    /internal/cortex/word2vec/userSimilarity                                    @com.keepit.controllers.cortex.CortexController.userSimilarity
+POST    /internal/cortex/word2vec/queryUriSimilarity                                @com.keepit.controllers.cortex.CortexController.queryUriSimilarity
