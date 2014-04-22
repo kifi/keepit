@@ -16,7 +16,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
   function lookMouseDown(e) {
     if (e.which != 1) return;
     e.preventDefault();
-    var selector = unescape(this.href).substr(11);
+    var selector = this.href.substr(11);
     if (selector.lastIndexOf('r|', 0) === 0) {
       var r = snapshot.findRange(selector);
       if (r) {
@@ -33,33 +33,30 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           var rect = rects[i];
           ctx.fillRect(rect.left - bounds.left, rect.top - bounds.top, rect.width, rect.height);
         }
-
-        var aRect = this.getClientRects()[0];
-        var bPos = {
-          left: bounds.left - anim.dx,
-          top: bounds.top - anim.dy
-        };
-        var scale = Math.min(1, aRect.width / bounds.width);
-        $cnv.addClass('kifi-root').css({
-          position: 'fixed',
-          zIndex: 999999999993,
-          top: bPos.top,
-          left: bPos.left,
-          opacity: 0,
-          transformOrigin: '0 0',
-          transform: 'translate(' + (aRect.left - bPos.left) + 'px,' + (aRect.top - bPos.top) + 'px) scale(' + scale + ',' + scale + ')',
-          transition: 'all ' + anim.ms + 'ms ease-in-out,opacity ' + anim.ms + 'ms ease-out'
-        })
-        .appendTo($('body')[0] || 'html')
-        .on('transitionend', function () {
-          $(this).remove();
+        animateFromTo($cnv, this, bounds, anim, function () {
+          $cnv.remove();
           sel.removeAllRanges();
           sel.addRange(r);
-        })
-        .layout()
-        .css({
-          transform: '',
-          opacity: 1
+        });
+      } else {
+        showBroken();
+      }
+    } else if (selector.lastIndexOf('i|', 0) === 0) {
+      var img = snapshot.findImage(selector);
+      if (img) {
+        var rect = snapshot.getImgContentRect(img);
+        var anim = scrollTo(rect, computeScrollToDuration);
+        var $el = $('<kifi class="kifi-snapshot-highlight-v2">').css({width: rect.width, height: rect.height});
+        animateFromTo($el, this, rect, anim, function () {
+          $el.css({transition: '', transform: '', transformOrigin: '', opacity: ''});
+          setTimeout(function () {
+            $el.on('transitionend', removeThis)
+            .addClass('kifi-snapshot-highlight-v2-bye')
+            .css({
+              transform: 'scale(' + (1 + 16 / rect.width) + ',' + (1 + 16 / rect.height) + ')',
+              borderRadius: '10px'
+            });
+          });
         });
       } else {
         showBroken();
@@ -84,11 +81,41 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           top: elRect.top + sTop - 2,
           width: elRect.width + 6,
           height: elRect.height + 4
-        }, anim.ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
+        }, anim.ms).delay(2000).fadeOut(1000, removeThis);
       } else {
         showBroken();
       }
     }
+  }
+
+  function animateFromTo($el, fromEl, toRect, anim, done) {
+    var fromRect = fromEl.getClientRects()[0];
+    var bPos = {
+      left: toRect.left - anim.dx,
+      top: toRect.top - anim.dy
+    };
+    var scale = Math.min(1, fromRect.width / toRect.width);
+    $el.addClass('kifi-root').css({
+      position: 'fixed',
+      zIndex: 999999999993,
+      top: bPos.top,
+      left: bPos.left,
+      opacity: 0,
+      transformOrigin: '0 0',
+      transform: 'translate(' + (fromRect.left - bPos.left) + 'px,' + (fromRect.top - bPos.top) + 'px) scale(' + scale + ',' + scale + ')',
+      transition: 'all ' + anim.ms + 'ms ease-in-out,opacity ' + anim.ms + 'ms ease-out'
+    })
+    .appendTo($('body')[0] || 'html')
+    .one('transitionend', done)
+    .layout()
+    .css({
+      transform: '',
+      opacity: 1
+    });
+  }
+
+  function removeThis() {
+    $(this).remove();
   }
 
   function computeScrollToDuration(dist) {

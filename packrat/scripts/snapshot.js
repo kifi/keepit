@@ -82,6 +82,7 @@ var snapshot = function () {
     // using some aribitrarily chosen fuzzy match heuristics. It would be fun to measure how each heuristic
     // performs and to collect information about real failures to gain insight into how to improve this.
     fuzzyFind: function (sel, doc) {
+      sel = unescape(sel);
       doc = doc || document; //{querySelectorAll: function(s) { log('TRIED: ' + s); return []}}();
       var els = doc.querySelectorAll(sel);
       switch (els.length) {
@@ -200,6 +201,43 @@ var snapshot = function () {
         }
       }
       return null;
+    },
+
+    ofImage: function (img) {
+      return ['i',
+        generateSelector(img),
+        img.naturalWidth + 'x' + img.naturalHeight,
+        img.width + 'x' + img.height,
+        encodeURIComponent(img.src)
+      ].join('|');
+    },
+
+    findImage: function (selector) {
+      var parts = selector.split('|');
+      var el = snapshot.fuzzyFind(parts[1]);
+      if (el && el.tagName === 'IMG') {
+        return el;
+      }
+      var imgs = document.querySelector('img[src="' + decodeURIComponent(parts[2]).replace(/"/g, '\\22 ') + '"]');
+      if (imgs.length === 1) {
+        return imgs[0];
+      } // TODO: use best match of original dimensions
+      return null;
+    },
+
+    getImgContentRect: function (img) {
+      var cr = img.getBoundingClientRect();
+      var cs = window.getComputedStyle(img);
+      var pxTop = parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+      var pxLeft = parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft);
+      var pxRight = parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight);
+      var pxBottom = parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom);
+      return {
+        top: cr.top + pxTop,
+        left: cr.left + pxLeft,
+        width: cr.width - pxLeft - pxRight,
+        height: cr.height - pxTop - pxBottom
+      };
     }
   }
 }();

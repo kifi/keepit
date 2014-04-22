@@ -191,8 +191,13 @@ a.kifi-compose-submit.kifi-active {
   background: rgba(255,255,0,.15);
   border: 3px solid rgba(255,255,0,.7);
   border-radius: 6px !important;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
+}
+.kifi-snapshot-highlight-v2 {
+  background-color: rgba(128,184,255,.59);
+}
+.kifi-snapshot-highlight-v2-bye {
+  transition: .4s ease-in;
+  opacity: 0;
 }
 .kifi-img-snap {
   z-index: 999999999993;

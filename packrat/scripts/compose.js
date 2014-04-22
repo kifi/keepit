@@ -63,7 +63,7 @@ var initCompose = (function() {
       if (img === el) return;
       onImgMouseOut.call(img, {relatedTarget: el});
     }
-    if (el.tagName === 'IMG') {
+    if (el.tagName === 'IMG' && !$(el).is('.kifi-root,.kifi-root *')) {
       img = el;
       var imgRect = img.getBoundingClientRect();
       if (imgRect.height > 50 && imgRect.width > 50) {
@@ -76,7 +76,7 @@ var initCompose = (function() {
         } else {
           var imgOffsetParent = $(img).offsetParent()[0];
           if (getScrollParent(img).contains(imgOffsetParent)) {
-            aParent = imgOffsetParent;
+            aParent = imgOffsetParent; // TODO: while parent position matches /absolute/relative/ and its dimensions are the same, aParent = parent
             imgOffset = $(img).position();
           }
         }
@@ -97,7 +97,8 @@ var initCompose = (function() {
           img.addEventListener('mouseout', onImgMouseOut);
         }
       }
-    }
+    } // TODO: else if position absolute, check whether any of el.offsetParent.getElementsByClassName('img') (if < 5) qualify
+      // (min size and mouse is over and mouseover el is same or subset of img area – may be multiple screens els)
   }
 
   function onImgMouseOut(e) {
@@ -122,7 +123,8 @@ var initCompose = (function() {
   var mouseDownSeriesSelChanges;
   function onWinMouseDown(e) {
     log('[onWinMouseDown]')();
-    if (!$(e.target).is('.kifi-root,.kifi-root *')) {
+    var $el = $(e.target);
+    if (!$el.is('.kifi-root,.kifi-root *')) {
       mouseDown = true;
       var now = Date.now();
       if (!mouseDownSeriesStartTime || now - mouseDownSeriesStartTime > RAPID_CLICK_GRACE_PERIOD_MS) {
@@ -131,6 +133,21 @@ var initCompose = (function() {
         mouseDownSeriesSelChanges = 0;
       } else {
         mouseDownSeriesLen++;
+      }
+    } else if ($aSnap && $el.is($aSnap)) {
+      e.preventDefault();
+      if (!$aLook) {
+        tryToCreateLookHereLinkStub(true);
+        if ($aLook) {
+          var img = $aSnap.data('img');
+          img.removeEventListener('mouseout', onImgMouseOut);
+          $aSnap.remove();
+          $aSnap = null;
+          var href = 'x-kifi-sel:' + snapshot.ofImage(img);
+          var rect = snapshot.getImgContentRect(img);
+          var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
+          finishFinalizeLookHereLink.call(img2, rect, href);
+        }
       }
     }
   }
@@ -179,7 +196,7 @@ var initCompose = (function() {
   }
 
   function tryToCreateLookHereLinkStub(r) {
-    if ($composes.length && r && !r.collapsed && !intersectsKifiDom(r)) {
+    if ($composes.length && (r === true || r && !r.collapsed && !intersectsKifiDom(r))) {
       $aLook = insertLookHereLinkStub($composes.last().find('.kifi-compose-draft'));
     }
   }
@@ -222,34 +239,35 @@ var initCompose = (function() {
     info.bounds = toJson(ranges.getBoundingClientRect(r, info.rects));
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
-      $(img).on('load', finishFinalizeLookHereLink.bind(img, info, text, href));
+      $(img).on('load', finishFinalizeLookHereLink.bind(img, info.bounds, href, text.trim()));
       img.src = dataUrl;
     });
     var text = r.toString();
     var href = 'x-kifi-sel:' + snapshot.ofRange(r, text);
   }
 
-  function finishFinalizeLookHereLink(info, text, href) {
+  function finishFinalizeLookHereLink(bRect, href, title) {
     var $a = $aLook;
     $aLook = null;
     var $d = $a.closest('.kifi-compose-draft');
     var $img = $(this).addClass('kifi-root').css({
       position: 'fixed',
       zIndex: 999999999993,
-      top: info.bounds.top,
-      left: info.bounds.left,
-      width: info.bounds.width,
-      height: info.bounds.height,
+      top: bRect.top,
+      left: bRect.left,
+      width: bRect.width,
+      height: bRect.height,
       transformOrigin: '0 0',
       transition: 'all .5s ease-in-out,opacity .5s ease-in'
     }).appendTo($('body')[0] || 'html');
     window.getSelection().removeAllRanges();
 
-    $a.prop('title', text.trim());
+    if (title) {
+      $a.prop('title', title);
+    }
     positionCursorAfterLookHereLink($d, $a);
 
     var aRect = $a[0].getClientRects()[0];
-    var bRect = info.bounds;
     var scale = Math.min(1, aRect.width / bRect.width);
     $img.on('transitionend', function () {
       $img.remove();
