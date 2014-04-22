@@ -7,8 +7,13 @@
 var showBrokenLookLinkDialog = (function () {
   var $dialog;
 
-  return function () {
-    $dialog = $(render('html/keeper/look_link_broken'))
+  return function (tooNew) {
+    var ua = navigator.userAgent;
+    $dialog = $(render('html/keeper/look_link_broken', {
+        tooNew: tooNew,
+        chrome: ua.indexOf('Chrom') >= 0,
+        firefox: ua.indexOf('Firefox/') >= 0
+      }))
       .appendTo($('body')[0] || document.documentElement)
       .on('click', '.kifi-llb-dialog-x,.kifi-llb-dialog-btn', hide)
       .mousedown(onMouseDown)
