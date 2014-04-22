@@ -23,6 +23,14 @@ case class ServiceInstanceId(id: Long) {
  */
 class ServiceInstance(val node: Node, val thisInstance: Boolean) extends Logging {
 
+  override def equals(other: Any): Boolean = {
+    other match {
+      case otherService: ServiceInstance => node == otherService.node
+      case _ => false
+    }
+  }
+  override def hashCode: Int = node.hashCode
+
   private var remoteServiceOpt: Option[RemoteService] = None
   private val sentServiceUnavailable = new AtomicInteger(0)
   def reportedSentServiceUnavailable: Boolean = sentServiceUnavailable.get() != 0

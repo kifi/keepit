@@ -43,6 +43,7 @@ class Node(val path: String, val name: String) {
     }
   }
   override def hashCode: Int = path.hashCode
+
   override def toString(): String = path
   def canEqual(other: Any): Boolean = other.isInstanceOf[Node]
 
