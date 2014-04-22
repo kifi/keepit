@@ -232,11 +232,11 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
               }
             ],
             "messages": [
-              { "id": "${messages(0).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(1).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
               { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(3).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(4).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
+              { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
             ]
           }
         """)
@@ -246,12 +246,16 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
         (messages map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
         jsMessages.size === 5
         (jsMessages(0) \ "id").as[String] === messages(0).externalId.id
+        (jsMessages(0) \ "time").as[Long] === messages(0).createdAt.getMillis
         (jsMessages(1) \ "id").as[String] === messages(1).externalId.id
+        (jsMessages(1) \ "time").as[Long] === messages(1).createdAt.getMillis
         (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
+        (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
         (jsMessages(3) \ "id").as[String] === messages(3).externalId.id
+        (jsMessages(3) \ "time").as[Long] === messages(3).createdAt.getMillis
         (jsMessages(4) \ "id").as[String] === messages(4).externalId.id
-//        res must equalTo(expected)
-
+        (jsMessages(4) \ "time").as[Long] === messages(4).createdAt.getMillis
+        res must equalTo(expected)
       }
     }
 
