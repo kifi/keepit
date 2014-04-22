@@ -6,8 +6,8 @@ import play.api.data.validation.ValidationError
 object JsonFormatters {
 
   /* Inspired from https://coderwall.com/p/orci8g */
-  implicit def tuple2Reads[A, B](implicit aReads: Reads[A], bReads: Reads[B]):    Reads[Tuple2[A, B]] = Reads[Tuple2[A, B]] {
-    case JsArray(arr) if arr.size == 3 => for {
+  implicit def tuple2Reads[A, B](implicit aReads: Reads[A], bReads: Reads[B]): Reads[Tuple2[A, B]] = Reads[Tuple2[A, B]] {
+    case JsArray(arr) if arr.size == 2 => for {
       a <- aReads.reads(arr(0))
       b <- bReads.reads(arr(1))
     } yield (a, b)
