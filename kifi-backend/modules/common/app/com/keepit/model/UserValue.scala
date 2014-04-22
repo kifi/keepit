@@ -65,13 +65,14 @@ object UserValues {
     def parse(valOpt: Option[String]): String = valOpt.getOrElse(default)
   }
 
+  val lookHereMode = UserValueBooleanHandler("ext_look_here_mode", true)
   val enterToSend = UserValueBooleanHandler("enter_to_send", true)
   val maxResults = UserValueIntHandler("ext_max_results", 1)
   val showKeeperIntro = UserValueBooleanHandler("ext_show_keeper_intro", false)
   val showSearchIntro = UserValueBooleanHandler("ext_show_search_intro", false)
   val showFindFriends = UserValueBooleanHandler("ext_show_find_friends", false)
 
-  val UserInitPrefs: Seq[String] = Seq(enterToSend, maxResults, showKeeperIntro, showSearchIntro, showFindFriends).map(_.name)
+  val UserInitPrefs: Seq[String] = Seq(lookHereMode, enterToSend, maxResults, showKeeperIntro, showSearchIntro, showFindFriends).map(_.name)
 
   val availableInvites = UserValueIntHandler("availableInvites", 1000)
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
