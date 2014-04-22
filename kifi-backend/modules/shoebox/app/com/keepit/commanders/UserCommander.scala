@@ -579,6 +579,7 @@ class UserCommander @Inject() (
                 kifiUserTypeahead.refresh(id)
               }
             }
+            log.info("just made a friend! updating user graph index now.")
             searchClient.updateUserGraph()
             sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
             (true, "acceptedRequest")
