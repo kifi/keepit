@@ -50,6 +50,18 @@
 
   <p id = "user_sim_result"></p>
 
+  <br><br>
+  <div>Enter a query and a uri Id. Return similarity between them. </div>
+  <form id = "query_uri_similarity">
+    <div>
+      <input id = "query" type = "text" value = "some query">
+      <input id = "uri" type = "text" value = "some uri id">
+      <button type = "submit">submit</button>
+    </div>
+  </form>
+  <p id = "query_uri_sim_result"></p>
+
+
 
   <script type="text/javascript">
 
@@ -108,6 +120,21 @@
       function fail() { alert("bad things happened") }
 
     })
+
+    $("#query_uri_similarity").submit(function(){
+      event.preventDefault();
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.queryUriSimilarity',
+        {query: $('#query').val(), uri: $('#uri').val()}
+      ).done(done).fail(fail);
+
+      function done(data) {
+        $("#query_uri_sim_result").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
+
+    })
+
+
 
 
 
