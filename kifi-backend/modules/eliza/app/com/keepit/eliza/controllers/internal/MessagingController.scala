@@ -126,7 +126,7 @@ class MessagingController @Inject() (
     val result = ModelWithPublicId.decode[NonUserThread](publicId) match {
       case Success(id) => {
         messagingCommander.getNonUserThreadOpt(id) map { (nonUserThread: NonUserThread) =>
-          Some((nonUserThread.participant.identifier, !nonUserThread.muted))
+          Some((nonUserThread.participant.identifier, nonUserThread.muted))
         } getOrElse (None)
       }
       case _ => None
