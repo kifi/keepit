@@ -58,7 +58,7 @@ class MessagingCommander @Inject() (
     val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
     //get all messages
     val messagesByThread : Map[Id[MessageThread], Seq[Message]] = threads.map{ thread =>
-      (thread.id.get, basicMessageCommander.getThreadMessages(thread, None))
+      (thread.id.get, basicMessageCommander.getThreadMessages(thread))
     }.toMap
     //get user_threads
     val userThreads : Map[Id[MessageThread], UserThread] = db.readOnly{ implicit session => threads.map{ thread =>
@@ -231,7 +231,7 @@ class MessagingCommander @Inject() (
         (nonUserThread.participant, threadRepo.get(nonUserThread.threadId))
       }
     } map { case (participant, threadId) =>
-      log.info(s"Sending message from non-user with id ${id} to thread ${threadId} with text ${messageText.take(50)}")
+      log.info(s"Sending message from non-user with id $id to thread $threadId with text ${messageText.take(50)}")
       sendMessage(MessageSender.NonUser(participant), threadId, messageText, urlOpt)
     }
   }
@@ -252,13 +252,12 @@ class MessagingCommander @Inject() (
 
   private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     from match {
-      case MessageSender.User(id) => {
+      case MessageSender.User(id) =>
         if (! thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
-      }
-      case MessageSender.NonUser(nup) => {
-       if (! thread.containsNonUser(nup) || !thread.replyable) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
-      }
-      case MessageSender.System => throw NotAuthorizedException("Wrong code path for system Messages.")
+      case MessageSender.NonUser(nup) =>
+        if (! thread.containsNonUser(nup) || !thread.replyable) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
+      case MessageSender.System =>
+        throw NotAuthorizedException("Wrong code path for system Messages.")
     }
 
     log.info(s"Sending message from $from to ${thread.participants}")
@@ -354,10 +353,9 @@ class MessagingCommander @Inject() (
     try {
       Some(nonUserThreadRepo.get(id))
     } catch {
-      case e: Throwable => {
-        airbrake.notify(s"Could not retrieve non-user thread for id ${id}: ${e.getMessage()}")
+      case e: Throwable =>
+        airbrake.notify(s"Could not retrieve non-user thread for id $id: ${e.getMessage()}")
         None
-      }
     }
   }
 
@@ -367,7 +365,7 @@ class MessagingCommander @Inject() (
   def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
     db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreadIds(user)
-      threadIds.map(threadRepo.get(_))
+      threadIds map threadRepo.get
     }
   }
 
@@ -580,7 +578,7 @@ class MessagingCommander @Inject() (
       nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
     } yield {
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
-      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread, None)
+      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
 
       val threadInfoOpt = url.map { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
