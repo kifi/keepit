@@ -23,7 +23,7 @@ object VertexDataId {
   implicit def toThreadContentId(threadReaderId: VertexDataId[ThreadReader]): Id[ThreadContent] = Id(threadReaderId.id)
 
   implicit def fromSocialUserIdToFacebookAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[FacebookAccountReader] = VertexDataId(socialUserId.id)
-  implicit def fromFacebookAccountIdtoSocialUserId(facebookAccountReaderId: VertexDataId[FacebookAccountReader]): Id[User] = Id(facebookAccountReaderId.id)
+  implicit def fromFacebookAccountIdtoSocialUserId(facebookAccountReaderId: VertexDataId[FacebookAccountReader]): Id[SocialUserInfo] = Id(facebookAccountReaderId.id)
 
   implicit def fromSocialUserIdToLinkedInAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[LinkedInAccountReader] = VertexDataId(socialUserId.id)
   implicit def fromLinkedInAccountIdtoSocialUserId(linkedInAccountReaderId: VertexDataId[LinkedInAccountReader]): Id[SocialUserInfo] = Id(linkedInAccountReaderId.id)
