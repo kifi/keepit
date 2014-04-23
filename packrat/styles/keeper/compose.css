@@ -184,10 +184,23 @@ body.kifi-snapshot-root {
   z-index: 999999999991;
   cursor: crosshair;
 }
-.kifi-snapshot-shade-t { left: 0; right: 0; top: 0; bottom: 0; }
-.kifi-snapshot-shade-b { left: 0; right: 0; bottom: 0; }
-.kifi-snapshot-shade-l { left: 0; }
-.kifi-snapshot-shade-r { right: 0; }
+.kifi-snapshot-shade-t {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+.kifi-snapshot-shade-b {
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.kifi-snapshot-shade-l {
+  left: 0;
+}
+.kifi-snapshot-shade-r {
+  right: 0;
+}
 
 .kifi-snapshot-bar-wrap {
   position: fixed;
