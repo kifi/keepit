@@ -39,7 +39,6 @@ class AdminFeedController @Inject()(
       val userKeeps = db.readOnly{ implicit s =>
         keepRepo.getByUser(userId)
       }
-      println("\n=================\ncalling cortex for smart feeds")
       val filtered = Await.result(cortex.word2vecFeedUserUris(userKeeps.map{_.uriId}.take(100), feeds.map{_.uri.id.get}), 60 seconds)
       val smartFeeds = filtered.map{ x => uriToFeed(x)}
       val elapse2 = (System.currentTimeMillis() - start)/1000f
@@ -51,7 +50,7 @@ class AdminFeedController @Inject()(
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = Id[User](body.get("user").get.toLong)
     val limit = body.get("limit").get.toInt
-    val smart = body.get("smart").get == "Some(smart)"
+    val smart = body.get("smart").isDefined
     Redirect(com.keepit.controllers.admin.routes.AdminFeedController.getFeeds(userId, limit, smart))
   }
 }
