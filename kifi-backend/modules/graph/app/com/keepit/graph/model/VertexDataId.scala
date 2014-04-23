@@ -1,6 +1,6 @@
 package com.keepit.graph.model
 
-import com.keepit.model.{Collection, NormalizedURI, User}
+import com.keepit.model.{SocialUserInfo, Collection, NormalizedURI, User}
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
 import play.api.libs.json.{JsNumber, Writes, Reads, Format}
@@ -21,4 +21,10 @@ object VertexDataId {
 
   implicit def fromThreadContentId(threadContentId: Id[ThreadContent]): VertexDataId[ThreadReader] = VertexDataId(threadContentId.id)
   implicit def toThreadContentId(threadReaderId: VertexDataId[ThreadReader]): Id[ThreadContent] = Id(threadReaderId.id)
+
+  implicit def fromSocialUserIdToFacebookAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[FacebookAccountReader] = VertexDataId(socialUserId.id)
+  implicit def fromFacebookAccountIdtoSocialUserId(facebookAccountReaderId: VertexDataId[FacebookAccountReader]): Id[User] = Id(facebookAccountReaderId.id)
+
+  implicit def fromSocialUserIdToLinkedInAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[LinkedInAccountReader] = VertexDataId(socialUserId.id)
+  implicit def fromLinkedInAccountIdtoSocialUserId(linkedInAccountReaderId: VertexDataId[LinkedInAccountReader]): Id[SocialUserInfo] = Id(linkedInAccountReaderId.id)
 }
