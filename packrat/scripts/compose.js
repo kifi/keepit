@@ -542,8 +542,8 @@ var initCompose = (function() {
   $f.hoverfu('.kifi-compose-highlight', function (configureHover) {
     var $a = $(this);
     render('html/keeper/titled_tip', {
-      title: 'Toggle Highlight Mode',
-      html: 'Highlight mode allows you<br/>to select text on the page to<br/>reference it in your message.'
+      title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Look here” mode',
+      html: '“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.'
     }, function (html) {
       configureHover(html, {
         mustHoverFor: 500,
