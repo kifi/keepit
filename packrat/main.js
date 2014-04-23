@@ -722,6 +722,10 @@ api.port.on({
     }
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
+  set_look_here_mode: function (on) {
+    ajax('POST', '/ext/pref/lookHereMode?on=' + on);
+    if (prefs) prefs.lookHereMode = on;
+  },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
     if (prefs) prefs.enterToSend = data;

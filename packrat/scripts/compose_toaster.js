@@ -75,7 +75,9 @@ var toaster = (function () {
     .on('click', '.kifi-toast-intro-x', onFindFriendsXClick)
     .appendTo($parent);
 
-    $toaster.data('compose', initCompose($toaster, {onSubmit: send}));
+    var compose = initCompose($toaster, {onSubmit: send});
+    compose.reflectPrefs(prefs);
+    $toaster.data('compose', compose);
     $(document).data('esc').add(hide);
     pane.onHide.add(hide);
 
