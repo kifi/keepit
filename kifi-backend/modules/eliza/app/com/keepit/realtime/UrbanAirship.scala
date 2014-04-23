@@ -90,11 +90,13 @@ object DeviceType {
 }
 
 // Add fields to this object and handle them properly for each platform
-case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String])
+case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound])
+
+case class NotificationSound(name: String) extends AnyVal
 
 object UrbanAirship {
-  val FirstMessageNotificationSound = "notification.aiff"
-  val MoreMessagesNotificationSound = "newnotificationoutsidemessage.aiff"
+  val DefaultNotificationSound = NotificationSound("notification.aiff")
+  val MoreMessageNotificationSound = NotificationSound("newnotificationoutsidemessage.aiff")
   val RecheckPeriod = Days.ONE
 }
 
@@ -102,7 +104,7 @@ object UrbanAirship {
 trait UrbanAirship {
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device
   def notifyUser(userId: Id[User], notification: PushNotification): Unit
-  def sendNotification(device: Device, notification: PushNotification): Unit
+  def sendNotification(firstMessage: Boolean, device: Device, notification: PushNotification): Unit
   def updateDeviceState(device: Device): Future[Device]
 }
 
@@ -133,7 +135,7 @@ class UrbanAirshipImpl @Inject()(
     }
     future {
       val devices = db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
-      devices.foreach{ updateDeviceState(_) }
+      devices foreach updateDeviceState
     }
     device
   }
@@ -146,7 +148,7 @@ class UrbanAirshipImpl @Inject()(
       d <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
       device <- updateDeviceState(d) if device.state == DeviceStates.ACTIVE
     } {
-      sendNotification(device, notification)
+      sendNotification(false, device, notification)
     }
   }
 
@@ -172,48 +174,47 @@ class UrbanAirshipImpl @Inject()(
     } else Future.successful(device)
   }
 
-  private def postIOS(device: Device, notification: PushNotification, threadSize: Int, retry: Boolean = false): Unit = authenticatedClient.postFuture(
-    DirectUrl(s"${config.baseUrl}/api/push"),
-    notification.message.map{ message =>
+  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+    val json = notification.message.map { message =>
       Json.obj(
         "device_tokens" -> Seq(device.token),
         "aps" -> Json.obj(
           "badge" -> notification.unvisitedCount,
           "alert" -> message,
-          "sound" -> UrbanAirship.NotificationSound
+          "sound" -> notification.sound.get.name
         ),
         "id" -> notification.id.id
       )
     } getOrElse {
       Json.obj(
         "device_tokens" -> Seq(device.token),
-        "aps" -> Json.obj(
-          "badge" -> notification.unvisitedCount
-        ),
+        "aps" -> Json.obj("badge" -> notification.unvisitedCount),
         "id" -> notification.id.id
       )
-    },
-    { req =>
-      {
-        case e: TimeoutException =>
-          log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
-          if (retry) {
-            authenticatedClient.defaultFailureHandler(req)
-            throw new Exception(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", e)
-          }
-          postIOS(device, notification, threadSize, true)
-        case t: Throwable =>
-            authenticatedClient.defaultFailureHandler(req)
-            throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
-      }
     }
-  )
+    authenticatedClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
+      { req =>
+        {
+          case e: TimeoutException =>
+            log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
+            if (retry) {
+              authenticatedClient.defaultFailureHandler(req)
+              throw new Exception(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", e)
+            }
+            postIOS(firstMessage, device, notification, true)
+          case t: Throwable =>
+              authenticatedClient.defaultFailureHandler(req)
+              throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
+        }
+      }
+    )
+  }
 
-  def sendNotification(device: Device, notification: PushNotification, threadSize: Int): Unit = {
+  def sendNotification(firstMessage: Boolean, device: Device, notification: PushNotification): Unit = {
     log.info(s"Sending notification to device: ${device.token}")
     device.deviceType match {
       case DeviceType.IOS =>
-        postIOS(device, notification, threadSize)
+        postIOS(firstMessage, device, notification)
       case DeviceType.Android =>
         ???
     }
