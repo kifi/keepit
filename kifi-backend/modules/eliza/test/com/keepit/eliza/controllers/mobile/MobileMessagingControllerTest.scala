@@ -259,6 +259,93 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       }
     }
 
+    "getPagedThread" in {
+      running(new ElizaApplication(modules:_*)) {
+        inject[Database].readOnly { implicit s => inject[UserThreadRepo].count } === 0
+        inject[Database].readOnly { implicit s => inject[MessageRepo].count } === 0
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val fakeClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        fakeClient.saveUsers(shanee)
+        fakeClient.saveUsers(shachaf)
+
+        inject[FakeActionAuthenticator].setUser(shanee)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #3", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #4", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #5", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+
+        val thread = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all.head }
+
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 1000, None).toString
+        path === s"/m/2/eliza/thread/${thread.externalId.toString}"   //?pageSize=1000&fromThreadId="
+
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+
+        contentType(result) must beSome("application/json")
+
+        val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
+        messages.size === 5
+
+        val expected = Json.parse(s"""
+          {
+            "id": "${thread.externalId.id}",
+            "uri": "https://admin.kifi.com/admin/searchExperiments",
+            "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+            "participants": [
+              {
+                "id": "${shanee.externalId.id}",
+                "firstName": "Shanee",
+                "lastName": "Smith",
+                "pictureName": "0.jpg"
+              },{
+                "id": "${shachaf.externalId.id}",
+                "firstName": "Shachaf",
+                "lastName": "Smith",
+                "pictureName": "0.jpg"
+              }
+            ],
+            "messages": [
+              { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+              { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+            ]
+          }
+        """)
+
+        val res = Json.parse(contentAsString(result))
+        val jsMessages = (res \ "messages").as[JsArray].value
+        (messages.reverse map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
+        jsMessages.size === 5
+        (jsMessages(0) \ "id").as[String] === messages(4).externalId.id
+        (jsMessages(0) \ "time").as[Long] === messages(4).createdAt.getMillis
+        (jsMessages(1) \ "id").as[String] === messages(3).externalId.id
+        (jsMessages(1) \ "time").as[Long] === messages(3).createdAt.getMillis
+        (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
+        (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
+        (jsMessages(3) \ "id").as[String] === messages(1).externalId.id
+        (jsMessages(3) \ "time").as[Long] === messages(1).createdAt.getMillis
+        (jsMessages(4) \ "id").as[String] === messages(0).externalId.id
+        (jsMessages(4) \ "time").as[Long] === messages(0).createdAt.getMillis
+        res must equalTo(expected)
+      }
+    }
+
     "sendMessageReplyAction" in {
       running(new ElizaApplication(modules:_*)) {
         inject[Database].readOnly { implicit s => inject[UserThreadRepo].count } === 0
