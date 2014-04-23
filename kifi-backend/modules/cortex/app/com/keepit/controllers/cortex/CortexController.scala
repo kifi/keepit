@@ -32,6 +32,30 @@ class CortexController @Inject()(
     Ok(Json.toJson(s))
   }
 
+  def queryUriSimilarity() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val query = (js \ "query").as[String]
+    val uri = Id[NormalizedURI]((js \ "uri").as[Long])
+    val s = word2vec.similarity(query, uri)
+    Ok(Json.toJson(s))
+  }
+
+  def userUriSimilarity() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userUris = (js \ "userUris").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val uri = Id[NormalizedURI]((js \ "uri").as[Long])
+    val m = word2vec.userUriSimilarity(userUris, uri).map{ case (id, score) => (id.toString, score)}
+    Ok(Json.toJson(m))
+  }
+
+  def feedUserUris() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userUris = (js \ "userUris").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val feedUris = (js \ "feedUris").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val filtered = word2vec.feedUserUri(userUris, feedUris)
+    Ok(Json.toJson(filtered))
+  }
+
   def getKeywordsAndBOW() = Action(parse.tolerantJson) { request =>
     val js = request.body
     val text = (js \ "query").as[String]

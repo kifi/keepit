@@ -32,13 +32,6 @@ GET     /m/1/eliza/hasThreadsByUrl        @com.keepit.eliza.controllers.mobile.M
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
 
 ##########################################
-# Email API
-##########################################
-
-GET     /eliza/email/mute/:publicId       @com.keepit.eliza.controllers.email.EmailNonUserMuteController.optOut(publicId: String)
-POST    /eliza/email/mute/:publicId       @com.keepit.eliza.controllers.email.EmailNonUserMuteController.optOutAction(publicId: String)
-
-##########################################
 # INTERNAL ROUTES/Eliza
 ##########################################
 
@@ -54,6 +47,8 @@ GET   /internal/eliza/unsendNotification        @com.keepit.eliza.controllers.in
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
+GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.internal.MessagingController.getNonUserThreadMuteInfo(publicId: String)
+POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)
 
 ##########################################
 # IMPORTS

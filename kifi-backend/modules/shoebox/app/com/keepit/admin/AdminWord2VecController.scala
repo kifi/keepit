@@ -75,6 +75,33 @@ class AdminWord2VecController @Inject()(
     Ok(res)
   }
 
+  def queryUriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val query = body.get("query").get
+    val uri = Id[NormalizedURI](body.get("uri").get.toLong)
+
+    val s = Await.result(cortex.word2vecQueryUriSimilarity(query, uri), 5 seconds)
+    val res = s match {
+      case Some(score) => s"similarity score for query ${query} and uri ${uri}: ${score}"
+      case None => s"we seem do not have enough information. Likely we don't have a feature vector for that uri in store."
+    }
+    Ok(res)
+  }
+
+  def userUriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val user = body.get("user").get.toLong
+    val uri = Id[NormalizedURI](body.get("uri").get.toLong)
+
+    val t1 = System.currentTimeMillis
+    val userUris = Await.result(shoebox.getBookmarks(Id[User](user)), 5 seconds).map{_.uriId}.take(100)
+    val s = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds)
+    val elapse = (System.currentTimeMillis() - t1) / 1000f
+
+    val report = s"time elapsed: ${elapse} millis.\n\n" + s.map{ x => x._1 + " ---> " + x._2}.mkString("\n")
+    Ok(report.replaceAll("\n","\n<br>"))
+  }
+
   def index() = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.word2vec())
   }

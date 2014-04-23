@@ -7,6 +7,7 @@ import com.keepit.cortex.utils.TextUtils.TextNormalizer
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
+import com.keepit.cortex.utils.TextUtils
 
 
 @Singleton
@@ -50,6 +51,38 @@ class Word2VecCommander @Inject()(
     } else None
   }
 
+  def userUriSimilarity(userUris: Seq[Id[NormalizedURI]], uriId: Id[NormalizedURI]): Map[Id[NormalizedURI], Float] = {
+    val uriVec = uriFeatureRetriever.getByKey(uriId, word2vec.version).map{x => MatrixUtils.L2Normalize(x.vectorize)}
+    if (uriVec.isEmpty) return Map()
+
+    val userVecs = userUris.map{ uri =>
+      uriFeatureRetriever.getByKey(uri, word2vec.version).map{ rep =>
+        val vec = MatrixUtils.L2Normalize(rep.vectorize)
+        (uri, MatrixUtils.dot(uriVec.get, vec))
+      }
+    }.flatten
+
+    userVecs.sortBy(-1f * _._2).take(10).toMap
+  }
+
+  def feedUserUri(userUris: Seq[Id[NormalizedURI]], feeds: Seq[Id[NormalizedURI]]): Seq[Id[NormalizedURI]] = {
+
+    def scores(feedVec: Array[Float], userVecs: Seq[Array[Float]]): Seq[Float] = {
+      userVecs.map{vec => MatrixUtils.dot(vec, feedVec)}.filter( _ > 0.7f)
+    }
+
+    val userVecs = userUris.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{ x => MatrixUtils.L2Normalize(x.vectorize)}
+    val scoredUris = feeds.flatMap{ uri =>
+      uriFeatureRetriever.getByKey(uri, word2vec.version).flatMap{ rep =>
+        val vec = MatrixUtils.L2Normalize(rep.vectorize)
+        val scrs = scores(vec, userVecs).sortBy( x => -1f*x )
+        if (scrs.size > 5) Some((uri, scrs.take(5).sum)) else None
+      }
+    }
+
+    scoredUris.sortBy(-1f * _._2).map{_._1}
+  }
+
   def similarity(uris1: Seq[Id[NormalizedURI]], uris2: Seq[Id[NormalizedURI]]): Option[Float] = {
     val vecs1 = uris1.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}
     val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}
@@ -78,6 +111,19 @@ class Word2VecCommander @Inject()(
     }
 
     Some(scores.sum / scores.length)
+  }
+
+  def similarity(query: String, uri: Id[NormalizedURI]): Option[Float] = {
+    val vecs = TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(query).flatMap{word2vec.apply(_)}.map{_.vectorize}
+    if (vecs.isEmpty) return None
+
+    val queryVec = vecs.reduce(MatrixUtils.add)
+    val docVec = uriFeatureRetriever.getByKey(uri, word2vec.version).map{_.vectorize}
+
+    docVec.map{ doc =>
+      MatrixUtils.cosineDistance(doc, queryVec)
+    }
+
   }
 
 }

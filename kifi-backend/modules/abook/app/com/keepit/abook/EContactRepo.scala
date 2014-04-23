@@ -63,9 +63,12 @@ class EContactRepoImpl @Inject() (
   def table(tag: Tag) = new EContactTable(tag)
 
   override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
-    econtactCache.remove(EContactKey(e.id.get))
+    e.id map { id =>
+      econtactCache.remove(EContactKey(id))
+    }
     econtactTypeaheadCache.remove(EContactTypeaheadKey(e.userId))
   }
+
   override def invalidateCache(e: EContact)(implicit session: RSession): Unit = { // eager
     econtactCache.set(EContactKey(e.id.get), e)
     log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
