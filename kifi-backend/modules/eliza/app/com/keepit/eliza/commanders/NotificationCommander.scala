@@ -195,7 +195,8 @@ class NotificationCommander @Inject() (
 
   private def notifyUnreadCount(userId: Id[User], threadExtId: ExternalId[MessageThread], unreadCount: Int): Unit = {
     sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
-    sendPushNotification(userId, threadExtId, unreadCount, None)
+    val notification = PushNotification(threadExtId, unreadCount, None, None)
+    sendPushNotification(userId, notification)
   }
 
   def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =
@@ -309,8 +310,7 @@ class NotificationCommander @Inject() (
     )
   }
 
-  def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:Option[String]) = {
-    val notification = PushNotification(extId, pendingNotificationCount, msg)
+  def sendPushNotification(userId:Id[User], notification: PushNotification) = {
     urbanAirship.notifyUser(userId, notification)
     messagingAnalytics.sentPushNotificationForThread(userId, notification)
   }
@@ -320,7 +320,7 @@ class NotificationCommander @Inject() (
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
       val unseenAuthors: Int = lastSeenOpt match {
-        case Some(lastSeen) => authorActivityInfos.filter(_.lastActive.get.isAfter(lastSeen)).length
+        case Some(lastSeen) => authorActivityInfos.count(_.lastActive.get.isAfter(lastSeen))
         case None => authorActivityInfos.length
       }
       val (numMessages: Int, numUnread: Int, muted: Boolean) = db.readOnly { implicit session =>
@@ -342,7 +342,7 @@ class NotificationCommander @Inject() (
         numUnread = numUnread,
         muted = muted)
 
-      db.readWrite(attempts=2){ implicit session =>
+      db.readWrite(attempts = 2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
       }
 
@@ -361,7 +361,9 @@ class NotificationCommander @Inject() (
           case _ => ""
         }
         val notifText = MessageLookHereRemover(sender + message.messageText)
-        sendPushNotification(userId, thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)))
+        val sound = if (numMessages > 1) UrbanAirship.MoreMessageNotificationSound else UrbanAirship.DefaultNotificationSound
+        val notification = PushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
+        sendPushNotification(userId, notification)
       }
     }
 
@@ -450,7 +452,8 @@ class NotificationCommander @Inject() (
       message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadCount))
-    sendPushNotification(user, message.threadExtId, unreadCount, None)
+    val notification = PushNotification(message.threadExtId, unreadCount, None, None)
+    sendPushNotification(user, notification)
     message.createdAt
   }
 

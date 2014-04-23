@@ -84,13 +84,6 @@ class MobileMessagingController @Inject() (
   }
 
 
-  def getThread(threadId: String) = JsonAction.authenticatedAsync { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
-      val url = thread.url.getOrElse("")  // needs to change when we have detached threads
-      Ok(Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))
-    }
-  }
-
   def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = JsonAction.authenticatedAsync { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, allMsgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
