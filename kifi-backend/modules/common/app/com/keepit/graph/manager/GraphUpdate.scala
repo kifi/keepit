@@ -3,9 +3,10 @@ package com.keepit.graph.manager
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.reflection.CompanionTypeSystem
 import play.api.libs.json._
-import com.keepit.model.{UserConnection, NormalizedURI, User}
+import com.keepit.model.{SocialUserInfo, UserConnection, NormalizedURI, User}
 import com.keepit.common.time.DateTimeJsonFormat
 import play.api.libs.functional.syntax._
+import com.keepit.social.SocialNetworkType
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate
@@ -64,4 +65,19 @@ case object UserConnectionGraphUpdate extends GraphUpdateKind[UserConnectionGrap
     (__ \ 'state).format(State.format[UserConnection]) and
     (__ \ 'userConnectionSeq).format(SequenceNumber.format[UserConnection])
   )(UserConnectionGraphUpdate.apply, unlift(UserConnectionGraphUpdate.unapply))
+}
+
+case class SocialUserInfoGraphUpdate(socialUserId: Id[SocialUserInfo], network: SocialNetworkType, socialUserSeq: SequenceNumber[SocialUserInfo]) extends GraphUpdate {
+  type U = SocialUserInfoGraphUpdate
+  def kind = SocialUserInfoGraphUpdate
+  def seq = kind.seq(socialUserSeq.value)
+}
+
+case object SocialUserInfoGraphUpdate extends GraphUpdateKind[SocialUserInfoGraphUpdate] {
+  val code = "social_user_info_graph_update"
+  implicit val format: Format[SocialUserInfoGraphUpdate] = (
+    (__ \ 'socialUserId).format(Id.format[SocialUserInfo]) and
+    (__ \ 'network).format[SocialNetworkType] and
+    (__ \ 'socialUserSeq).format(SequenceNumber.format[SocialUserInfo])
+  )(SocialUserInfoGraphUpdate.apply, unlift(SocialUserInfoGraphUpdate.unapply))
 }
