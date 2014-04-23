@@ -65,6 +65,24 @@ class Word2VecCommander @Inject()(
     userVecs.sortBy(-1f * _._2).take(10).toMap
   }
 
+  def feedUserUri(userUris: Seq[Id[NormalizedURI]], feeds: Seq[Id[NormalizedURI]]): Seq[Id[NormalizedURI]] = {
+
+    def scores(feedVec: Array[Float], userVecs: Seq[Array[Float]]): Seq[Float] = {
+      userVecs.map{vec => MatrixUtils.dot(vec, feedVec)}.filter( _ > 0.7f)
+    }
+
+    val userVecs = userUris.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{ x => MatrixUtils.L2Normalize(x.vectorize)}
+    val scoredUris = feeds.flatMap{ uri =>
+      uriFeatureRetriever.getByKey(uri, word2vec.version).flatMap{ rep =>
+        val vec = MatrixUtils.L2Normalize(rep.vectorize)
+        val scrs = scores(vec, userVecs)
+        if (scrs.size > 5) Some((uri, scrs.sum)) else None
+      }
+    }
+
+    scoredUris.sortBy(-1f * _._2).map{_._1}
+  }
+
   def similarity(uris1: Seq[Id[NormalizedURI]], uris2: Seq[Id[NormalizedURI]]): Option[Float] = {
     val vecs1 = uris1.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}
     val vecs2 = uris2.map{ uri => uriFeatureRetriever.getByKey(uri, word2vec.version)}.flatten.map{_.vectorize}

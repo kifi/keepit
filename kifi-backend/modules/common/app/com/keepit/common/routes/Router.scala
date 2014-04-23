@@ -271,6 +271,7 @@ object Cortex extends Service {
     def word2vecUserSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userSimilarity")
     def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")
     def word2vecUserUriSimilarity() = ServiceRoute(POST,"/internal/cortex/word2vec/userUriSimilarity")
+    def word2vecFeedUserUris() = ServiceRoute(POST,"/internal/cortex/word2vec/feedUserUris")
   }
 }
 
