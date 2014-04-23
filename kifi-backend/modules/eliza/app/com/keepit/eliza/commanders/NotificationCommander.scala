@@ -421,7 +421,7 @@ class NotificationCommander @Inject() (
         unseenAuthors = numAuthors,
         numAuthors = numAuthors,
         numMessages = numMessages,
-        numUnread = numMessages,
+        numUnread = numUnread,
         muted = false
       )
 
