@@ -94,7 +94,9 @@ class MobileMessagingController @Inject() (
           allMsgs.take(pageSize)
         case Some(idString) =>
           val id = ExternalId[Message](idString)
-          allMsgs.dropWhile(_.id != id).drop(1).take(pageSize)
+          val afterId = allMsgs.dropWhile(_.id != id)
+          if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${allMsgs.size} had no message id $id")
+          afterId.drop(1).take(pageSize)
       }
       Ok(Json.obj(
         "id" -> threadId,

@@ -8,32 +8,19 @@ import com.keepit.common.db.slick._
 import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceClientImpl}
 import com.keepit.common.time._
-import com.keepit.common.db.ExternalId
 import com.keepit.model.User
-import com.keepit.realtime.FakeUrbanAirshipModule
-import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
-import com.keepit.abook.ABookServiceClient
+import com.keepit.heimdal.HeimdalContext
 
 import com.keepit.common.db.{Id, ExternalId}
 
-import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 
 
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.Json
 
-import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import scala.Some
-import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
@@ -279,7 +266,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
 
         {
           val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 1000, None).toString
-          path === s"/m/2/eliza/thread/${thread.externalId.toString}"   //?pageSize=1000&fromThreadId="
+          path === s"/m/2/eliza/thread/${thread.externalId.toString}"
 
           val request = FakeRequest("GET", path)
           val result = route(request).get
