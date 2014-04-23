@@ -40,6 +40,14 @@ class CortexController @Inject()(
     Ok(Json.toJson(s))
   }
 
+  def userUriSimilarity() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userUris = (js \ "userUris").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val uri = Id[NormalizedURI]((js \ "uri").as[Long])
+    val m = word2vec.userUriSimilarity(userUris, uri).map{ case (id, score) => (id.toString, score)}
+    Ok(Json.toJson(m))
+  }
+
   def getKeywordsAndBOW() = Action(parse.tolerantJson) { request =>
     val js = request.body
     val text = (js \ "query").as[String]
