@@ -342,7 +342,7 @@ class NotificationCommander @Inject() (
         numUnread = numUnread,
         muted = muted)
 
-      db.readWrite(attempts=2){ implicit session =>
+      db.readWrite(attempts = 2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
       }
 
@@ -421,7 +421,7 @@ class NotificationCommander @Inject() (
         unseenAuthors = numAuthors,
         numAuthors = numAuthors,
         numMessages = numMessages,
-        numUnread = numMessages,
+        numUnread = numUnread,
         muted = false
       )
 
