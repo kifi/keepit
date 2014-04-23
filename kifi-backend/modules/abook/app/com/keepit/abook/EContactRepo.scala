@@ -64,7 +64,7 @@ class EContactRepoImpl @Inject() (
 
   override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
     e.id map { id =>
-      econtactCache.remove(EContactKey(id.get))
+      econtactCache.remove(EContactKey(id))
     }
     econtactTypeaheadCache.remove(EContactTypeaheadKey(e.userId))
   }
