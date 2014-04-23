@@ -29,7 +29,7 @@ class AdminFeedController @Inject()(
 
   def getFeeds(userId: Id[User], limit: Int, smart: Boolean = false) = AdminHtmlAction.authenticated{ implicit request =>
     val start = System.currentTimeMillis()
-    val feeds = Await.result(searchClient.getFeeds(userId, limit), 5 seconds)
+    val feeds = Await.result(searchClient.getFeeds(userId, limit), 60 seconds)
     val elapsedSeconds = (System.currentTimeMillis() - start)/1000f
 
     if (!smart) {

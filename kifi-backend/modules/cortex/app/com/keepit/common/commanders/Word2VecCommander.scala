@@ -75,8 +75,8 @@ class Word2VecCommander @Inject()(
     val scoredUris = feeds.flatMap{ uri =>
       uriFeatureRetriever.getByKey(uri, word2vec.version).flatMap{ rep =>
         val vec = MatrixUtils.L2Normalize(rep.vectorize)
-        val scrs = scores(vec, userVecs)
-        if (scrs.size > 5) Some((uri, scrs.sum)) else None
+        val scrs = scores(vec, userVecs).sortBy( x => -1f*x )
+        if (scrs.size > 5) Some((uri, scrs.take(5).sum)) else None
       }
     }
 
