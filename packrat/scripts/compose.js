@@ -61,7 +61,7 @@ var initCompose = (function() {
     if (el.tagName === 'IMG' && !$(el).is('.kifi-root,.kifi-root *')) {
       img = el;
       var imgRect = img.getBoundingClientRect();
-      if (imgRect.height > 50 && imgRect.width > 50) {
+      if (imgRect.height >= 35 && imgRect.width >= 35) {
         var cs = window.getComputedStyle(img);
         var fixed = cs.position === 'fixed';
         var aParent, imgOffset;
@@ -69,9 +69,12 @@ var initCompose = (function() {
           aParent = document.body;
           imgOffset = imgRect;
         } else {
-          var imgOffsetParent = $(img).offsetParent()[0];
-          if (getScrollParent(img).contains(imgOffsetParent)) {
-            aParent = imgOffsetParent; // TODO: while parent position matches /absolute/relative/ and its dimensions are the same, aParent = parent
+          var candidateParent = $(img).offsetParent()[0];
+          if (candidateParent === document.documentElement) {
+            candidateParent = document.body;
+          }
+          if (getScrollParent(img).contains(candidateParent)) {
+            aParent = candidateParent; // TODO: while parent position matches /absolute/relative/ and its dimensions are the same, aParent = parent
             imgOffset = $(img).position();
           }
         }
@@ -79,8 +82,8 @@ var initCompose = (function() {
           $aSnap = $('<a href="javascript:" class="kifi-root kifi-img-snap"></a>')
           .css({
             position: fixed ? 'fixed' : 'absolute',
-            top: imgOffset.top + parseFloat(cs.marginTop) + imgRect.height - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom) - 32,
-            left: imgOffset.left + parseFloat(cs.marginLeft) + imgRect.width - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) - 32
+            top: imgOffset.top + parseFloat(cs.marginTop) + imgRect.height - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom) - 30,
+            left: imgOffset.left + parseFloat(cs.marginLeft) + imgRect.width - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) - 30
           })
           .appendTo(aParent)
           .data('img', img)
