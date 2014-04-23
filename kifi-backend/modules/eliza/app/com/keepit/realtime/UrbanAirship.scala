@@ -93,7 +93,8 @@ object DeviceType {
 case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String])
 
 object UrbanAirship {
-  val NotificationSound = "notification.aiff"
+  val FirstMessageNotificationSound = "notification.aiff"
+  val MoreMessagesNotificationSound = "newnotificationoutsidemessage.aiff"
   val RecheckPeriod = Days.ONE
 }
 
