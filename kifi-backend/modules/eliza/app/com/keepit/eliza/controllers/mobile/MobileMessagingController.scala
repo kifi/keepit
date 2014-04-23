@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.mobile
 
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.MessageThread
+import com.keepit.eliza.model.{Message, MessageThread}
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.heimdal._
@@ -91,17 +91,17 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def getPagedThread(threadId: String, pageSize: Int, fromThreadId: Option[String]) = JsonAction.authenticatedAsync { request =>
+  def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = JsonAction.authenticatedAsync { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, allMsgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
       val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
       val participants: Set[BasicUserLikeEntity] = allMsgs.map(_.participants).flatten.toSet
-      val page = fromThreadId match {
+      val page = fromMessageId match {
         case None =>
           allMsgs.take(pageSize)
         case Some(idString) =>
-          val id = ExternalId[MessageThread](idString)
-          allMsgs.dropWhile(_.id != id).take(pageSize)
+          val id = ExternalId[Message](idString)
+          allMsgs.dropWhile(_.id != id).drop(1).take(pageSize)
       }
       Ok(Json.obj(
         "id" -> threadId,

@@ -5,60 +5,47 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
 
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
-import com.keepit.inject._
-import com.keepit.test.{DbTestInjector}
-import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl}
-import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.controller.FakeActionAuthenticator
+import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceClientImpl}
 import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.ExternalId
 import com.keepit.model.User
-import com.keepit.social.BasicUser
-import com.keepit.realtime.{UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule}
+import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
-import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
+import com.keepit.abook.ABookServiceClient
 
 import com.keepit.common.db.{Id, ExternalId}
 
-import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.commanders.MessagingCommander
-import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 
-import com.google.inject.Injector
 
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{Json, JsObject}
 
-import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
+import com.keepit.common.actor.StandaloneTestActorSystemModule
+import scala.Some
+import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
+import play.api.libs.json.JsArray
 import scala.Some
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.realtime.FakeUrbanAirshipModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.controller.FakeActionAuthenticatorModule
-import scala.Some
-import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.realtime.FakeUrbanAirshipModule
 
 class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -287,62 +274,140 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
             "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
 
         val thread = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all.head }
-
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 1000, None).toString
-        path === s"/m/2/eliza/thread/${thread.externalId.toString}"   //?pageSize=1000&fromThreadId="
-
-        val request = FakeRequest("GET", path)
-        val result = route(request).get
-        status(result) must equalTo(OK)
-
-        contentType(result) must beSome("application/json")
-
         val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
         messages.size === 5
 
-        val expected = Json.parse(s"""
-          {
-            "id": "${thread.externalId.id}",
-            "uri": "https://admin.kifi.com/admin/searchExperiments",
-            "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-            "participants": [
-              {
-                "id": "${shanee.externalId.id}",
-                "firstName": "Shanee",
-                "lastName": "Smith",
-                "pictureName": "0.jpg"
-              },{
-                "id": "${shachaf.externalId.id}",
-                "firstName": "Shachaf",
-                "lastName": "Smith",
-                "pictureName": "0.jpg"
-              }
-            ],
-            "messages": [
-              { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
-            ]
-          }
-        """)
+        {
+          val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 1000, None).toString
+          path === s"/m/2/eliza/thread/${thread.externalId.toString}"   //?pageSize=1000&fromThreadId="
 
-        val res = Json.parse(contentAsString(result))
-        val jsMessages = (res \ "messages").as[JsArray].value
-        (messages.reverse map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
-        jsMessages.size === 5
-        (jsMessages(0) \ "id").as[String] === messages(4).externalId.id
-        (jsMessages(0) \ "time").as[Long] === messages(4).createdAt.getMillis
-        (jsMessages(1) \ "id").as[String] === messages(3).externalId.id
-        (jsMessages(1) \ "time").as[Long] === messages(3).createdAt.getMillis
-        (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
-        (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
-        (jsMessages(3) \ "id").as[String] === messages(1).externalId.id
-        (jsMessages(3) \ "time").as[Long] === messages(1).createdAt.getMillis
-        (jsMessages(4) \ "id").as[String] === messages(0).externalId.id
-        (jsMessages(4) \ "time").as[Long] === messages(0).createdAt.getMillis
-        res must equalTo(expected)
+          val request = FakeRequest("GET", path)
+          val result = route(request).get
+          status(result) must equalTo(OK)
+
+          contentType(result) must beSome("application/json")
+
+          val expectedMessages = s"""[
+                { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+              ]"""
+
+          val expected = Json.parse(s"""
+            {
+              "id": "${thread.externalId.id}",
+              "uri": "https://admin.kifi.com/admin/searchExperiments",
+              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+              "participants": [
+                {
+                  "id": "${shanee.externalId.id}",
+                  "firstName": "Shanee",
+                  "lastName": "Smith",
+                  "pictureName": "0.jpg"
+                },{
+                  "id": "${shachaf.externalId.id}",
+                  "firstName": "Shachaf",
+                  "lastName": "Smith",
+                  "pictureName": "0.jpg"
+                }
+              ],
+              "messages": $expectedMessages
+            }
+          """)
+
+          val res = Json.parse(contentAsString(result))
+          val jsMessages = (res \ "messages").as[JsArray].value
+          (messages.reverse map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
+          jsMessages.size === 5
+          (jsMessages(0) \ "id").as[String] === messages(4).externalId.id
+          (jsMessages(0) \ "time").as[Long] === messages(4).createdAt.getMillis
+          (jsMessages(1) \ "id").as[String] === messages(3).externalId.id
+          (jsMessages(1) \ "time").as[Long] === messages(3).createdAt.getMillis
+          (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
+          (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
+          (jsMessages(3) \ "id").as[String] === messages(1).externalId.id
+          (jsMessages(3) \ "time").as[Long] === messages(1).createdAt.getMillis
+          (jsMessages(4) \ "id").as[String] === messages(0).externalId.id
+          (jsMessages(4) \ "time").as[Long] === messages(0).createdAt.getMillis
+          res must equalTo(expected)
+        }
+        {
+          val path2 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 3, None).toString
+          path2 === s"/m/2/eliza/thread/${thread.externalId.toString}?pageSize=3"
+
+          val res2 = Json.parse(contentAsString(route(FakeRequest("GET", path2)).get))
+
+          val expectedMessages2 = s"""[
+                { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" }
+              ]"""
+
+          val expected2 = Json.parse(s"""
+            {
+              "id": "${thread.externalId.id}",
+              "uri": "https://admin.kifi.com/admin/searchExperiments",
+              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+              "participants": [
+                {
+                  "id": "${shanee.externalId.id}",
+                  "firstName": "Shanee",
+                  "lastName": "Smith",
+                  "pictureName": "0.jpg"
+                },{
+                  "id": "${shachaf.externalId.id}",
+                  "firstName": "Shachaf",
+                  "lastName": "Smith",
+                  "pictureName": "0.jpg"
+                }
+              ],
+              "messages": $expectedMessages2
+            }
+          """)
+
+          (res2 \ "messages").as[JsArray].value.size === 3
+          (messages.reverse.take(3) map {m => m.externalId} mkString ",") === ((res2 \ "messages").as[JsArray].value map {m => (m \ "id").as[String]} mkString ",")
+          res2 must equalTo(expected2)
+        }
+        {
+          val path3 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 3, Some(messages(2).externalId.toString)).toString
+          path3 === s"/m/2/eliza/thread/${thread.externalId.toString}?pageSize=3&fromMessageId=${messages(2).externalId.toString}"
+
+          val res3 = Json.parse(contentAsString(route(FakeRequest("GET", path3)).get))
+
+          val expectedMessages3 = s"""[
+                { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+                { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+              ]"""
+
+          val expected3 = Json.parse(s"""
+            {
+              "id": "${thread.externalId.id}",
+              "uri": "https://admin.kifi.com/admin/searchExperiments",
+              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+              "participants": [
+                {
+                  "id": "${shanee.externalId.id}",
+                  "firstName": "Shanee",
+                  "lastName": "Smith",
+                  "pictureName": "0.jpg"
+                },{
+                  "id": "${shachaf.externalId.id}",
+                  "firstName": "Shachaf",
+                  "lastName": "Smith",
+                  "pictureName": "0.jpg"
+                }
+              ],
+              "messages": $expectedMessages3
+            }
+          """)
+
+          (res3 \ "messages").as[JsArray].value.size === 2
+          (messages.reverse.drop(3) map {m => m.externalId} mkString ",") === ((res3 \ "messages").as[JsArray].value map {m => (m \ "id").as[String]} mkString ",")
+          res3 must equalTo(expected3)
+        }
       }
     }
 
