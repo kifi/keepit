@@ -48,6 +48,14 @@ class CortexController @Inject()(
     Ok(Json.toJson(m))
   }
 
+  def feedUserUris() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userUris = (js \ "userUris").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val feedUris = (js \ "feed").as[JsArray].value.map{ x => Id[NormalizedURI](x.as[Long])}
+    val filtered = word2vec.feedUserUri(userUris, feedUris)
+    Ok(Json.toJson(filtered))
+  }
+
   def getKeywordsAndBOW() = Action(parse.tolerantJson) { request =>
     val js = request.body
     val text = (js \ "query").as[String]
