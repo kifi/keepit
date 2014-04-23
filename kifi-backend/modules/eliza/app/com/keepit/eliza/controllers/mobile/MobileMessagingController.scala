@@ -91,11 +91,52 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  /*
-   * todo(eishay): paginate
-   * Use syntax like:
-   * https://eliza.kifi.com/m/1/eliza/thread/89914c3c-6149-47bb-9656-66c9c54cdfa7?since=XXX-CCC...&pageSize=5
-   */
+  def getPagedThread(threadId: String, pageSize: Int, fromThreadId: Option[String]) = JsonAction.authenticatedAsync { request =>
+    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, allMsgs) =>
+      val url = thread.url.getOrElse("")  // needs to change when we have detached threads
+      val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
+      val participants: Set[BasicUserLikeEntity] = allMsgs.map(_.participants).flatten.toSet
+      val page = fromThreadId match {
+        case None =>
+          allMsgs.take(pageSize)
+        case Some(idString) =>
+          val id = ExternalId[MessageThread](idString)
+          allMsgs.dropWhile(_.id != id).take(pageSize)
+      }
+      Ok(Json.obj(
+        "id" -> threadId,
+        "uri" -> url,
+        "nUrl" -> nUrl,
+        "participants" -> participants,
+        "messages" -> (page map { m =>
+          val adderAndAddedOpt: Option[(String,Seq[String])] = m.auxData match {
+            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+              Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json =>  (json \ "id").as[String]) )
+            }
+            case _ => None
+          }
+          val baseJson = Json.obj(
+            "id" -> m.id.toString,
+            "time" -> m.createdAt.getMillis,
+            "text" -> m.text
+          )
+          val msgJson = baseJson ++ (m.user match {
+            case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
+            case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("userId" -> bnu.toString)
+            case _ => Json.obj()
+          })
+
+          adderAndAddedOpt.map { adderAndAdded =>
+            msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
+          } getOrElse{
+            msgJson
+          }
+        })
+      ))
+    }
+  }
+
+  @deprecated(message = "use getPagedThread", since = "April 23, 2014")
   def getCompactThread(threadId: String) = JsonAction.authenticatedAsync { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
