@@ -1,6 +1,7 @@
 package com.keepit.common.embedly
 
 import com.keepit.model._
+import scala.concurrent._
 import scala.concurrent.Future
 import play.api.http.Status
 import play.api.libs.json._
@@ -23,6 +24,13 @@ import play.api.libs.ws.Response
 import scala.Some
 import play.api.Play
 import play.api.Play.current
+import java.io.InputStream
+import scala.util.{Success, Failure, Try}
+import com.keepit.common.store.{ImageSize, ImageUtils}
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+import com.keepit.common.images.ImageFetcher
+import scala.collection.generic.FilterMonadic
 
 case class EmbedlyImage(
   url:String,
@@ -83,9 +91,21 @@ object EmbedlyExtractResponse {
 
 class EmbedlyClient @Inject() extends Logging {
 
-  private val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) get
+  private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
   def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
+
+  def getImageData(url: String, size: ImageSize): Future[Option[BufferedImage]] = {
+    getExtractResponse(url) flatMap { result =>
+      result map { response =>
+        // Select first image in the list that meets the constraints
+        response.images.filter(meetsSizeConstraint(_, size)).headOption map { embedlyImage =>
+          if (meetsSizeConstraint(embedlyImage, size)) ImageFetcher.fetchRawImage(embedlyImage.url)
+          else future { None }
+        } getOrElse future { None }
+      } getOrElse future { None }
+    }
+  }
 
   def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
     getExtractResponse(uri.url, Some(uri))
@@ -120,6 +140,16 @@ class EmbedlyClient @Inject() extends Logging {
         None
       }
     }
+  }
+
+  private def meetsSizeConstraint(image: EmbedlyImage, size: ImageSize): Boolean = {
+    for {
+      width <- image.width
+      height <- image.height
+    } yield {
+      return (width > size.width && height > size.height)
+    }
+    false
   }
 
   private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyExtractResponse]](2 minutes)

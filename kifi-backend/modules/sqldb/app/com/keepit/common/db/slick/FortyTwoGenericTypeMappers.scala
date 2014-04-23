@@ -63,6 +63,8 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
   implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
+  implicit val uriImageFormatTypeMapper = MappedColumnType.base[URIImageFormat, String](_.format, URIImageFormat.apply)
+  implicit val uriImageSourceTypeMapper = MappedColumnType.base[URIImageSource, String](_.source, URIImageSource.apply)
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
     str => Json.parse(str).as(ProbabilityDensity.format[T])

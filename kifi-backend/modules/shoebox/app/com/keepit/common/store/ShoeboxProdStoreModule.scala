@@ -42,6 +42,12 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
+  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig): S3URIImageStore = {
+    new S3URIImageStoreImpl(amazonS3Client, config)
+  }
+
+  @Singleton
+  @Provides
   def socialUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserTypeaheadStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.social.bucket").get)
     new S3SocialUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
@@ -85,6 +91,12 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
       airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
     new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
+  }
+
+  @Singleton
+  @Provides
+  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig): S3URIImageStore = {
+    new S3URIImageStoreImpl(amazonS3Client, config)
   }
 
   @Singleton
