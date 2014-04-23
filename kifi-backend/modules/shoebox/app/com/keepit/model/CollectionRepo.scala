@@ -67,7 +67,9 @@ class CollectionRepoImpl @Inject() (
 
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
-    bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(model.id.get))
+    model.id map { id =>
+      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))
+    }
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
