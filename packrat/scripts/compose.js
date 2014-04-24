@@ -51,6 +51,13 @@ var initCompose = (function() {
     window.removeEventListener('selectionchange', onSelectionChange, true);
     window.removeEventListener('mouseup', onWinMouseUp, true);
     $('html').off('mouseleave', onDocMouseLeave);
+    if ($aLook) {
+      discardLookHereLink();
+    }
+    if ($aSnap) {
+      $aSnap.remove();
+      $aSnap = null;
+    }
   }
 
   function onWinMouseOver(e) {
@@ -664,7 +671,6 @@ var initCompose = (function() {
       }
     } else {
       stopMonitoringPointer();
-      $aLook = null;
     }
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
