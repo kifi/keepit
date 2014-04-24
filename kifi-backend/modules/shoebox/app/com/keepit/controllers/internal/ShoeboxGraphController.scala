@@ -9,24 +9,33 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
 import com.kifi.franz.{QueueName, SimpleSQSClient}
 import com.amazonaws.regions.Regions
-import com.keepit.graph.manager.{UserGraphUpdate, GraphUpdate}
-import scala.concurrent.Await
+import com.keepit.graph.manager._
 import com.amazonaws.auth.BasicAWSCredentials
-import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.{UserRepo, User}
+import com.keepit.model._
+import play.api.libs.concurrent.Execution.Implicits._
+import com.kifi.franz.QueueName
+import com.keepit.model.SocialConnection
+
 
 private sealed trait UpdateMessage
 private case class UserUpdate(seq: SequenceNumber[User], queueRef: QueueName) extends UpdateMessage
+private case class SocialConnectionUpdate(seq: SequenceNumber[SocialConnection], queueRef: QueueName) extends UpdateMessage
+private case class SocialUserInfoUpdate(seq: SequenceNumber[SocialUserInfo], queueRef: QueueName) extends UpdateMessage
+private case class UserConnectionUpdate(seq: SequenceNumber[UserConnection], queueRef: QueueName) extends UpdateMessage
+
 
 private class GraphUpdateActor @Inject() (
   airbrake: AirbrakeNotifier,
-  basicAWSCreds:BasicAWSCredentials,
+  basicAWSCreds: BasicAWSCredentials,
   userRepo: UserRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  userConnectionRepo: UserConnectionRepo,
   db: Database
 )  extends FortyTwoActor(airbrake) with Logging {
-  private val fetchSize = 100
+  private val fetchSize = 1000
   private lazy val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
 
   def createQueue(queueRef: QueueName) = {
@@ -43,16 +52,69 @@ private class GraphUpdateActor @Inject() (
       }
 
       updates.map(queue.send)
+
+    case SocialConnectionUpdate(seq, queueRef) =>
+      val queue = createQueue(queueRef)
+      val updates = db.readOnly { implicit session =>
+        socialConnectionRepo.getBySequenceNumber(seq, fetchSize)
+      }.map { sc =>
+        //SocialConnectionGraphUpdate(sc.socialUser1, sc.socialUser2, sc.)
+      }
+
+      //updates.map(queue.send)
+
+    case SocialUserInfoUpdate(seq, queueRef) =>
+      val queue = createQueue(queueRef)
+      val updates = db.readOnly { implicit session =>
+        socialUserInfoRepo.getBySequenceNumber(seq, fetchSize)
+      }.map { su =>
+        SocialUserInfoGraphUpdate(su.id.get, su.networkType, su.userId, su.seq)
+      }
+
+      updates.map(queue.send)
+
+    case UserConnectionUpdate(seq, queueRef) =>
+      val queue = createQueue(queueRef)
+      val updates = db.readOnly { implicit session =>
+        userConnectionRepo.getBySequenceNumber(seq, fetchSize)
+      }.map { uc =>
+        UserConnectionGraphUpdate(uc.user1, uc.user2, uc.state, uc.seq)
+      }
+
+      updates.map(queue.send)
+
   }
 }
 
 class ShoeboxGraphController @Inject() (
   actor: ActorInstance[GraphUpdateActor]
 ) extends ShoeboxServiceController with Logging {
+
   def sendUserUpdates() = Action(parse.tolerantJson) { request =>
     val seq = SequenceNumber[User]((request.body \ "seq").as[Long])
-    val queueRef = QueueName("") // todo fix!
+    val queueRef = QueueName((request.body \ "queue").as[String])
     actor.ref ! UserUpdate(seq, queueRef)
+    Status(202)("0")
+  }
+
+  def sendSocialConnectionUpdates() = Action(parse.tolerantJson) { request =>
+    val seq = SequenceNumber[SocialConnection]((request.body \ "seq").as[Long])
+    val queueRef = QueueName((request.body \ "queue").as[String])
+    actor.ref ! SocialConnectionUpdate(seq, queueRef)
+    Status(202)("0")
+  }
+
+  def sendSocialUserInfoUpdates() = Action(parse.tolerantJson) { request =>
+    val seq = SequenceNumber[SocialUserInfo]((request.body \ "seq").as[Long])
+    val queueRef = QueueName((request.body \ "queue").as[String])
+    actor.ref ! SocialUserInfoUpdate(seq, queueRef)
+    Status(202)("0")
+  }
+
+  def sendUserConnectionUpdates() = Action(parse.tolerantJson) { request =>
+    val seq = SequenceNumber[UserConnection]((request.body \ "seq").as[Long])
+    val queueRef = QueueName((request.body \ "queue").as[String])
+    actor.ref ! UserConnectionUpdate(seq, queueRef)
     Status(202)("0")
   }
 }

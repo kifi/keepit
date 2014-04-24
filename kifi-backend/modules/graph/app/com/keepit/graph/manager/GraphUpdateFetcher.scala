@@ -27,6 +27,12 @@ class GraphUpdateFetcherImpl @Inject() (
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
     case UserGraphUpdate =>
       val seq = currentState.state(UserGraphUpdate)
-      shoebox.sendUserGraphUpdate(SequenceNumber[User](seq))
+      shoebox.sendUserGraphUpdate(queue.queue, SequenceNumber[User](seq))
+    case SocialConnectionGraphUpdate =>
+
+    case SocialUserInfoGraphUpdate =>
+
+    case UserConnectionGraphUpdate =>
+
   }
 }

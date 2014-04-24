@@ -134,6 +134,9 @@ object Shoebox extends Service {
     def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
     def userGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/user")
+    def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
+    def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
+    def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
   }
 }
 
