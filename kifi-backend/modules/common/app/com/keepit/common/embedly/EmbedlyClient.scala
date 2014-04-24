@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Singleton, Inject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
@@ -79,13 +79,22 @@ object EmbedlyExtractResponse {
     )(EmbedlyExtractResponse.apply _, unlift(EmbedlyExtractResponse.unapply))
 }
 
-class EmbedlyClient @Inject() extends Logging {
+@ImplementedBy(classOf[EmbedlyClientImpl])
+trait EmbedlyClient {
+  def embedlyUrl(url: String): String
+  def getAllImageInfo(uri: NormalizedURI, size: ImageSize): Future[Seq[ImageInfo]]
+  def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]]
+  def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]]
+}
+
+@Singleton
+class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
   private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
-  def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
+  override def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
 
-  def getAllImageInfo(uri: NormalizedURI, size: ImageSize): Future[Seq[ImageInfo]] = {
+  override def getAllImageInfo(uri: NormalizedURI, size: ImageSize): Future[Seq[ImageInfo]] = {
     uri.id map { nUriId =>
       getExtractResponse(uri.url) map { result =>
         result map {response =>
@@ -97,10 +106,10 @@ class EmbedlyClient @Inject() extends Logging {
     } getOrElse future { Seq() }
   }
 
-  def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
+  override def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
     getExtractResponse(uri.url, Some(uri))
 
-  def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]] = {
+  override def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]] = {
     val apiUrl = embedlyUrl(url)
     val loggingHint = uriOpt match {
       case Some(uri) => s"(${uri},${url})"

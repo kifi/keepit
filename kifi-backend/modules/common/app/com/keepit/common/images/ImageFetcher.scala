@@ -10,8 +10,15 @@ import play.api.libs.ws.WS
 import play.api.http.Status
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 
-object ImageFetcher extends Logging {
+@ImplementedBy(classOf[ImageFetcherImpl])
+trait ImageFetcher {
+  def fetchRawImage(url: String): Future[Option[BufferedImage]]
+}
+
+@Singleton
+class ImageFetcherImpl @Inject() extends ImageFetcher with Logging {
 
   private def withInputStream[T, I <: java.io.InputStream](is:I)(f:I => T):T = {
     try {
@@ -23,7 +30,7 @@ object ImageFetcher extends Logging {
 
   private def getBufferedImage(is:InputStream) = Try { ImageUtils.forceRGB(ImageIO.read(is)) }
 
-  def fetchRawImage(url: String): Future[Option[BufferedImage]] = {
+  override def fetchRawImage(url: String): Future[Option[BufferedImage]] = {
     WS.url(url).withRequestTimeout(120000).get map { resp =>
       log.info(s"[fetchRawImage(${url})] resp=${resp.statusText}")
       resp.status match {

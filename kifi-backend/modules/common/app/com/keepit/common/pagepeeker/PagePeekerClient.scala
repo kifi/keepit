@@ -3,12 +3,12 @@ package com.keepit.common.pagepeeker
 import scala.concurrent._
 import play.api.libs.ws.WS
 import com.keepit.common.logging.Logging
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import scala.Some
-import com.keepit.common.store.{S3URIImageStore, ImageUtils, ImageSize}
+import com.keepit.common.store.{ImageUtils, ImageSize}
 import java.awt.image.BufferedImage
 import play.modules.statsd.api.Statsd
 import scala.util.{Failure, Success, Try}
@@ -24,7 +24,13 @@ case class PagePeekerImage(rawImage: BufferedImage, size: ImageSize) {
   implicit def toImageInfo(nUriId: Id[NormalizedURI], url: Option[String] = None): ImageInfo = ImageInfo(uriId = nUriId, url = url, caption = None, width = Some(size.width), height = Some(size.height), provider = Some(ImageProvider.PAGEPEEKER), format = Some(ImageFormat.JPG))
 }
 
-class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {
+@ImplementedBy(classOf[PagePeekerClientImpl])
+trait PagePeekerClient {
+  def getScreenshotData(url: String): Future[Seq[PagePeekerImage]]
+}
+
+@Singleton
+class PagePeekerClientImpl @Inject() (airbrake: AirbrakeNotifier) extends PagePeekerClient with Logging {
 
   val screenshotConfig = ScreenshotConfig("c", Seq(ImageSize(1000, 560), ImageSize(500, 280), ImageSize(250, 140)))
   val linkedSize = ImageSize(500, 280) // which size to link to, by default; todo: user configurable
@@ -36,7 +42,7 @@ class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
 
-  def getScreenshotData(url: String): Future[Seq[PagePeekerImage]] = {
+  override def getScreenshotData(url: String): Future[Seq[PagePeekerImage]] = {
     val trace = new StackTrace()
     WS.url(screenshotUrl(url)).withRequestTimeout(120000).get().map { response =>
       Option(response.ahcResponse.getHeader("X-PP-Error")) match {

@@ -33,15 +33,15 @@ class ImageInfoRepoImpl @Inject() (
   type RepoImpl = ImageInfoTable
   class ImageInfoTable(tag: Tag) extends RepoTable[ImageInfo](db, tag, "image_info") with SeqNumberColumn[ImageInfo] {
     def uriId    = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def url      = column[String]("url")
-    def name     = column[String]("name")
-    def caption  = column[String]("caption")
-    def width    = column[Int]("width")
-    def height   = column[Int]("height")
-    def sz       = column[Int]("sz")
-    def provider = column[ImageProvider]("provider")
-    def format   = column[ImageFormat]("format")
-    def priority = column[Int]("priority")
+    def url      = column[String]("url", O.Nullable)
+    def name     = column[String]("name", O.NotNull)
+    def caption  = column[String]("caption", O.Nullable)
+    def width    = column[Int]("width", O.Nullable)
+    def height   = column[Int]("height", O.Nullable)
+    def sz       = column[Int]("sz", O.Nullable)
+    def provider = column[ImageProvider]("provider", O.Nullable)
+    def format   = column[ImageFormat]("format", O.Nullable)
+    def priority = column[Int]("priority", O.Nullable)
     def * = (id.?,createdAt,updatedAt,state,seq,uriId,url.?,name,caption.?,width.?,height.?,sz.?,provider.?,format.?,priority.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 
@@ -68,6 +68,6 @@ class ImageInfoRepoImpl @Inject() (
 
   def getByUriWithSize(id:Id[NormalizedURI], minSize: ImageSize)(implicit ro:RSession):List[ImageInfo] = {
     (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
-      f.width < minSize.width && f.height < minSize.height) yield f).list()
+      f.width > minSize.width && f.height > minSize.height) yield f).list()
   }
 }

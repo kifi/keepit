@@ -32,6 +32,7 @@ class URIImageCommander @Inject()(
   embedlyClient: EmbedlyClient,
   pagePeekerClient: PagePeekerClient,
   uriImageStore: S3URIImageStore,
+  imageFetcher: ImageFetcher,
   airbrake: AirbrakeNotifier
 ) extends Logging {
 
@@ -62,7 +63,7 @@ class URIImageCommander @Inject()(
 
   private def jsonError(message: String) = Json.obj("error" -> message)
 
-  private def getImageForURLRequest(request: URIImageRequest): Future[Option[ImageInfo]] = {
+  def getImageForURLRequest(request: URIImageRequest): Future[Option[ImageInfo]] = {
     val nUriOpt = if (request.silent)
       db.readOnly { implicit session => normalizedUriRepo.getByUri(request.url) }
     else
@@ -70,7 +71,7 @@ class URIImageCommander @Inject()(
     nUriOpt map { nUri =>
       val imageInfoOpt = getStoredImageForURI(nUri, request.imageType, request.minSize)
       if (imageInfoOpt.isEmpty) {
-        if (request.waiting) fetchImagesForURLRequest(nUri, request.imageType, request.minSize) else future{None}
+        if (request.waiting || !request.silent) fetchImagesForURLRequest(nUri, request.imageType, request.minSize) else future{None}
       } else future{imageInfoOpt}
     } getOrElse (future{None})
   }
@@ -93,7 +94,7 @@ class URIImageCommander @Inject()(
     embedlyResultFut flatMap { imageResult =>
       if (imageResult.isEmpty && (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY)) {
         fetchFromPagePeeker(pageId, minSize)
-      } else future{None}
+      } else future{imageResult}
     }
   }
 
@@ -103,14 +104,14 @@ class URIImageCommander @Inject()(
         // Intern images that have higher priority than the selected image
         images.takeWhile(!meetsSizeConstraint(_, minSize)) map { imageInfo =>
           imageInfo.url map { imageUrl =>
-            ImageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
+            imageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
               rawImageOpt map { rawImage => internImage(imageInfo, rawImage, pageId) }
             }
           }
         }
         // Intern and return selected image
         selectedImageInfo.url map { imageUrl =>
-          ImageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
+          imageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
             rawImageOpt flatMap { rawImage =>
               internImage(selectedImageInfo, rawImage, pageId)
             }
@@ -134,8 +135,9 @@ class URIImageCommander @Inject()(
 
   private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
     uriImageStore.storeImage(info, image, nUri) match {
-      case Success(url) => {
-        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url)) else info
+      case Success(result) => {
+        val (url,size) = result
+        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
         db.readWrite { implicit session => imageInfoRepo.save(imageInfoWithUrl) }
         Some(imageInfoWithUrl)
       }

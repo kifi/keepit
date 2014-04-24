@@ -12,13 +12,13 @@ import com.keepit.common.net.URI
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 trait S3URIImageStore {
-  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[String]
+  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[(String, Int)]
   def mkImgUrl(id: ExternalId[NormalizedURI], providerOpt: Option[ImageProvider], name: String, protocolDefault: Option[String] = None): Option[String]
 }
 
 class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier) extends S3URIImageStore with S3Helper with Logging {
 
-  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[String] = {
+  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[(String, Int)] = {
     val os = new ByteArrayOutputStream()
     ImageIO.write(rawImage, "jpg", os)
     os.flush
@@ -26,7 +26,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     os.close
     streamUpload(config.bucketName, mkImgKey(nUri.externalId, info.provider, info.name), new ByteArrayInputStream(bytes), "public, max-age=1800", bytes.length) flatMap { _ =>
       // Return the url of the image in S3
-      Try{mkImgUrl(nUri.externalId, info.provider, info.name).get}
+      Try{(mkImgUrl(nUri.externalId, info.provider, info.name).get, bytes.length)}
     }
   }
 
@@ -43,9 +43,4 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
         None
     }
   }
-}
-
-case class FakeS3URIImageStore() extends S3URIImageStore {
-  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[String] = Success("http://www.testurl.com")
-  def mkImgUrl(id: ExternalId[NormalizedURI], providerOpt: Option[ImageProvider], name: String, protocolDefault: Option[String] = None): Option[String] = None
 }
