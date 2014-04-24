@@ -18,15 +18,22 @@ class AdminLDAController @Inject()(
   actionAuthenticator: ActionAuthenticator
 ) extends AdminController(actionAuthenticator) {
 
+  val MAX_WIDTH = 15
+
   def index() = AdminHtmlAction.authenticated { implicit request =>
     val n = Await.result(cortex.ldaNumOfTopics, 5 seconds)
     Ok(html.admin.lda(n))
   }
 
+  private def trimLongString(s: String) = {
+    if (s.length <= MAX_WIDTH) s
+    else s.take(MAX_WIDTH - 3) + "..."
+  }
+
   private def getFormatted(words: Map[String, Float]): String = {
-    val width = words.keys.map{_.length}.foldLeft(0)(_ max _) + 1
+    val width = (words.keys.map{_.length}.foldLeft(0)(_ max _) + 1) min MAX_WIDTH
     words.toArray.sortBy(-1f * _._2).grouped(5).map{ gp =>
-      gp.map{ case (w, s) => s"%${width}s".format(w) + "  " +  "%.4f".format(s) }.mkString("  ")
+      gp.map{ case (w, s) => s"%${width}s".format(trimLongString(w)) + "  " +  "%.4f".format(s) }.mkString("  ")
     }.mkString("\n")
   }
 
