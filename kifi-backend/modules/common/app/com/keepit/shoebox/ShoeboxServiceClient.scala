@@ -123,6 +123,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
+  def sendUserGraphUpdate(seq: SequenceNumber[User]): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -815,5 +816,10 @@ class ShoeboxServiceClientImpl @Inject() (
         Json.fromJson[Seq[UrlPatternRule]](r.json).get
       }
     }
+  }
+
+  def sendUserGraphUpdate(seq: SequenceNumber[User]): Future[Unit] = {
+    val userUpdateRequest = Json.obj("seq" -> seq, "queue" -> "")
+    call(Shoebox.internal.userGraphUpdate, body = userUpdateRequest).map { r => assert(r.status == 202); () }
   }
 }

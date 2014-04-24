@@ -9,6 +9,8 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
+import com.keepit.common.db.SequenceNumber
+import com.keepit.model.User
 
 trait GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
@@ -23,6 +25,8 @@ class GraphUpdateFetcherImpl @Inject() (
 ) extends GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
-    case UserGraphUpdate => // to be implemented
+    case UserGraphUpdate =>
+      val seq = currentState.state(UserGraphUpdate)
+      shoebox.sendUserGraphUpdate(SequenceNumber[User](seq))
   }
 }
