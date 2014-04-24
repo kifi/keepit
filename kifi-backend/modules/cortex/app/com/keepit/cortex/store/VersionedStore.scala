@@ -26,7 +26,6 @@ trait VersionedStore[K, M <: StatModel, V <: Versionable[M]] {
 }
 
 trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with S3ObjectStore[VersionedStoreKey[K, M], V]{
-  override def idToKey(k: VersionedStoreKey[K, M]): String = k.toKey()
 
   override def get(key: K, version: ModelVersion[M]): Option[V] = {
     val vkey = toVersionedKey(key, version)
