@@ -11,6 +11,7 @@ import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.crypto.ModelWithPublicId
 
 sealed trait NonUserParticipant {
   val identifier: String
@@ -61,12 +62,19 @@ case class NonUserThread(
   notifiedCount: Int,
   lastNotifiedAt: Option[DateTime],
   threadUpdatedAt: Option[DateTime],
-  muted: Boolean,
+  muted: Boolean = false,
   state: State[NonUserThread] = NonUserThreadStates.ACTIVE
-) extends ModelWithState[NonUserThread] {
+) extends ModelWithState[NonUserThread] with ModelWithPublicId[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
+}
+
+object NonUserThread {
+  implicit object nonUserThread extends ModelWithPublicId[NonUserThread] {
+    val id = None
+    override val prefix = "nu"
+  }
 }
 
 object NonUserThreadStates extends States[NonUserThread]

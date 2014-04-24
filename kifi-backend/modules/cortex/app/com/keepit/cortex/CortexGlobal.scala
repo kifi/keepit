@@ -4,10 +4,13 @@ import com.keepit.FortyTwoGlobal
 import play.api.Mode._
 import play.api._
 import com.keepit.cortex.models.lda.LDAURIFeatureUpdatePlugin
+import com.keepit.cortex.models.word2vec.Word2VecURIFeatureUpdatePlugin
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.cache.InMemoryCachePlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.cortex.nlp.POSTagger
+import com.keepit.cortex.models.lda.DenseLDATopicWords
+import com.keepit.cortex.models.lda.LDATopicWordsStore
 
 object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
   val module = CortexProdModule()
@@ -26,6 +29,8 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)
     require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
+    require(injector.instance[Word2VecURIFeatureUpdatePlugin] != null)
+    require(injector.instance[DenseLDATopicWords] != null)
     require(POSTagger.enabled)
   }
 }

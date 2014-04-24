@@ -19,7 +19,7 @@ class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIn
     indexDocuments(Some(buildIndexable(new Tst(id, text, personalText))).iterator, 100)
   }
 
-  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)
+  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher.indexReader, ids, null)
 
   def update(): Int = ???
 }
@@ -38,11 +38,9 @@ class TstIndexable(override val id: Id[Tst], val text: String, val personalText:
     val builder = new SemanticVectorBuilder(60)
     builder.load( analyzer.tokenStream("c", text) )
     val semanticVector = buildSemanticVectorField("sv", builder)
-    val docSemanticVector = buildDocSemanticVectorField("docSV", builder)
     doc.add(content)
     doc.add(personal)
     doc.add(semanticVector)
-    doc.add(docSemanticVector)
     doc
   }
 }

@@ -133,6 +133,10 @@ object Shoebox extends Service {
     def getVerifiedAddressOwners() = ServiceRoute(POST, "/internal/shoebox/database/getVerifiedAddressOwners")
     def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
+    def userGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/user")
+    def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
+    def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
+    def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
   }
 }
 
@@ -191,6 +195,8 @@ object Eliza extends Service {
     def unsendNotification(messageHandle: Id[MessageHandle]) = ServiceRoute(GET, "/internal/eliza/unsendNotification", Param("id", messageHandle))
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
     def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
+    def getNonUserThreadMuteInfo(publicId: String) = ServiceRoute(GET, "/internal/eliza/getNonUserThreadMuteInfo", Param("publicId", publicId))
+    def setNonUserThreadMuteState(publicId: String, muted: Boolean) = ServiceRoute(POST, "/internal/eliza/setNonUserThreadMuteState", Param("publicId", publicId), Param("muted", muted))
     def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long) = ServiceRoute(GET, "/internal/eliza/getThreadContentForIndexing", Param("sequenceNumber", sequenceNumber), Param("maxBatchSize", maxBatchSize))
     def getRenormalizationSequenceNumber() = ServiceRoute(GET, "/internal/eliza/sequenceNumber/renormalization")
   }
@@ -263,7 +269,13 @@ object Scraper extends Service {
 
 object Cortex extends Service {
   object internal {
-
+    def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
+    def keywordsAndBow() = ServiceRoute(POST, "/internal/cortex/word2vec/keywordsAndBow")
+    def word2vecURISimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = ServiceRoute(GET, s"/internal/cortex/word2vec/uriSimilarity", Param("uri1", uri1), Param("uri2", uri2))
+    def word2vecUserSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userSimilarity")
+    def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")
+    def word2vecUserUriSimilarity() = ServiceRoute(POST,"/internal/cortex/word2vec/userUriSimilarity")
+    def word2vecFeedUserUris() = ServiceRoute(POST,"/internal/cortex/word2vec/feedUserUris")
   }
 }
 

@@ -37,7 +37,11 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageId", message.externalId.id)
       contextBuilder += ("threadId", thread.externalId.id)
-      message.from.foreach { senderId => contextBuilder += ("senderId", senderId.id) }
+      message.from match {
+        case MessageSender.User(senderId) => contextBuilder += ("senderId", senderId.id)
+        case MessageSender.NonUser(nup) => contextBuilder += ("senderId", nup.kind + "::" + nup.identifier)
+        case _ =>
+      }
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
   }

@@ -124,7 +124,7 @@ class InviteCommander @Inject() (
       Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)
     }
     db.readWrite { implicit s =>
-      anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId == Some(userId) =>
+      anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId.isDefined =>
         val user = userRepo.get(userId)
         if (user.state == UserStates.PENDING) {
           userRepo.save(user.withState(UserStates.ACTIVE))
@@ -133,7 +133,7 @@ class InviteCommander @Inject() (
       for ((invite, originalSocialNetwork) <- anyPendingInvites) {
         connectInvitedUsers(userId, invite)
         if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-          val acceptedInvite = invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+          val acceptedInvite = invitationRepo.save(invite.withState(InvitationStates.ACCEPTED))
           reportReceivedInvitation(userId, originalSocialNetwork, acceptedInvite, invId == Some(invite.externalId))
         }
       }
@@ -147,24 +147,24 @@ class InviteCommander @Inject() (
       val userEmailAccounts = emailAddressRepo.getAllByUser(userId)
       val cookieInvite = cookieInviteId.flatMap { inviteExtId =>
         Try(invitationRepo.get(inviteExtId)).toOption.collect {
-          case socialInvite if socialInvite.recipientSocialUserId.isDefined => {
+          case socialInvite if socialInvite.recipientSocialUserId.isDefined =>
             val invitedSocialUserId = socialInvite.recipientSocialUserId.get
             userSocialAccounts.find(_.id.get == invitedSocialUserId) match {
-              case Some(invitedSocialAccount) => socialInvite -> invitedSocialAccount.networkType
-              case None => {
+              case Some(invitedSocialAccount) =>
+                socialInvite -> invitedSocialAccount.networkType
+              case None =>
                 socialInvite.senderUserId.foreach { senderId =>
                   session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(invitedSocialUserId), None)) }
                 }
                 val invitedSocialAccount = socialUserInfoRepo.get(invitedSocialUserId)
-                val fortyTwoInvite = invitationRepo.save(socialInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id))
+                val fortyTwoInvite = invitationRepo.save(socialInvite.withRecipientSocialUserId(fortyTwoSocialAccount.id))
                 fortyTwoInvite -> invitedSocialAccount.networkType
-              }
             }
-          }
-          case emailInvite if emailInvite.recipientEmailAddress.isDefined => {
+          case emailInvite if emailInvite.recipientEmailAddress.isDefined =>
             val invitedEmailAddress = emailInvite.recipientEmailAddress.get
             userEmailAccounts.find(_.address == invitedEmailAddress) match {
-              case Some(invitedEmailAccount) => emailInvite -> SocialNetworks.EMAIL
+              case Some(invitedEmailAccount) =>
+                emailInvite -> SocialNetworks.EMAIL
               case None => {
                 emailInvite.senderUserId.foreach { senderId =>
                   session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(invitedEmailAddress))) }
@@ -173,7 +173,6 @@ class InviteCommander @Inject() (
                 fortyTwoInvite -> SocialNetworks.EMAIL
               }
             }
-          }
         }
       }
 
@@ -218,19 +217,16 @@ class InviteCommander @Inject() (
             socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
         }
       }
-
       notifyClientsOfConnection(userId, senderUserId);
-
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
   }
 
-  private def notifyClientsOfConnection(user1: Id[User], user2: Id[User]) = {
-    delay{
-      db.readOnly { implicit session =>
-        eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
-        eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
-      }
+  private def notifyClientsOfConnection(user1Id: Id[User], user2Id: Id[User]) = {
+    delay {
+      val (user1, user2) = db.readOnly { implicit session => basicUserRepo.load(user1Id) -> basicUserRepo.load(user2Id) }
+      eliza.sendToUser(user1Id, Json.arr("new_friends", Set(user2)))
+      eliza.sendToUser(user2Id, Json.arr("new_friends", Set(user1)))
     }
   }
 

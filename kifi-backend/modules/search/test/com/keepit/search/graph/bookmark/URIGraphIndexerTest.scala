@@ -11,7 +11,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
 
@@ -25,8 +25,8 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
 
-        val bookmarkStoreDir = new VolatileIndexDirectoryImpl()
-        val uriGraphDir = new VolatileIndexDirectoryImpl()
+        val bookmarkStoreDir = new VolatileIndexDirectory()
+        val uriGraphDir = new VolatileIndexDirectory()
         val indexer = mkURIGraphIndexer(uriGraphDir, bookmarkStoreDir)
         indexer.update() === users.size
         indexer.sequenceNumber.value === bookmarks.size

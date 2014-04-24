@@ -33,7 +33,7 @@ trait EContactRepo extends Repo[EContact] {
   def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
   def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int
 
-  //ZZZ to be removed when sync run is complete, i.e. a few ours after going live
+  //used only for full resync
   def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
 }
 
@@ -63,9 +63,12 @@ class EContactRepoImpl @Inject() (
   def table(tag: Tag) = new EContactTable(tag)
 
   override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
-    econtactCache.remove(EContactKey(e.id.get))
+    e.id map { id =>
+      econtactCache.remove(EContactKey(id))
+    }
     econtactTypeaheadCache.remove(EContactTypeaheadKey(e.userId))
   }
+
   override def invalidateCache(e: EContact)(implicit session: RSession): Unit = { // eager
     econtactCache.set(EContactKey(e.id.get), e)
     log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
@@ -184,7 +187,7 @@ class EContactRepoImpl @Inject() (
     (for { row <- rows if row.email === email && row.contactUserId.isNull } yield row.contactUserId).update(contactUserId)
   }
 
-  //ZZZ to be removed after run, i.e. a few ours after going live
+  //used only for full resync
   def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact] = {
     (for (row <- rows if row.id > minId && row.id <= maxId) yield row).sortBy(r => r.id).take(maxBatchSize).list
   }

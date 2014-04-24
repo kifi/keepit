@@ -11,7 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.crypto.SimpleDESCrypt
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.commanders.RemoteUserExperimentCommander
 import scala.util.Try
 
@@ -72,7 +72,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected def onDisconnect(socket: SocketInfo) : Unit
   protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
 
-  protected val crypt = new SimpleDESCrypt
+  protected val crypt = new RatherInsecureDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
@@ -178,9 +178,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
           reportConnect(streamSession, socketInfo, request, connectTimer)
           var startMessages = Seq[JsArray](Json.arr("hi"))
-          if (needsToUpdate(streamSession, versionOpt)) {
-            val details = kifInstallationStore.get()
-            startMessages = startMessages :+ Json.arr("version", details.gold.toString)
+          getGoldIfUpdateNeeded(streamSession, versionOpt) foreach { gold =>
+            startMessages = startMessages :+ Json.arr("version", gold.toString)
           }
           onConnect(socketInfo)
           (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
@@ -230,25 +229,22 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }.map(_ => endSession(streamSession, socketInfo))
   }
 
-  private def needsToUpdate(streamSession: StreamSession, versionOpt: Option[String]) = {
-    // We only support force updates to Chrome. Other platforms (mobile) can hook in here as well.
-    if (UserAgent.fromString(streamSession.userAgent).name == "Chrome") {
-      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption) match {
-        case Some(ver) =>
-          val details = kifInstallationStore.get()
-          val lessThanGold = ver < details.gold
-          val runningKilledVersion = details.killed.contains(ver)
-          if (lessThanGold) {
-            log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
-          }
-          if (runningKilledVersion) {
-            log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
-          }
-          lessThanGold || runningKilledVersion
-        case None => false
+  private def getGoldIfUpdateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Option[KifiExtVersion] = {
+    if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {  // TODO: iPhone, Android
+      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption) flatMap { ver =>
+        val details = kifInstallationStore.get()
+        if (ver < details.gold) {
+          log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
+          Some(details.gold)
+        } else if (details.killed.contains(ver)) {
+          log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
+          Some(details.gold)
+        } else {
+          None
+        }
       }
     } else {
-      false
+      None
     }
   }
 

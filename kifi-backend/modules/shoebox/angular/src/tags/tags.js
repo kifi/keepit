@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
+angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', 'jun.smartScroll'])
 
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
@@ -85,13 +85,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         };
 
         scope.getShownTags = function () {
-          var child = scope.$$childHead;
-          while (child) {
-            if (child.shownTags) {
-              return child.shownTags;
-            }
-            child = child.$$nextSibling;
-          }
           return scope.tags || [];
         };
 
@@ -113,7 +106,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           if (scope.highlight) {
             return scope.viewTag(scope.highlight.id);
           }
-          return scope.create(getFilterValue());
+          return scope.create(getFilterValue()).then(function (tag) {
+            scope.viewTag(tag.id);
+          });
         };
 
         scope.onKeydown = function (e) {
@@ -142,6 +137,10 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
             scope.rename(scope.highlight);
             break;
           }
+        };
+
+        scope.onFilterChange = function () {
+          tagService.filterList(scope.filter.name);
         };
 
         scope.refreshHighlight = function () {

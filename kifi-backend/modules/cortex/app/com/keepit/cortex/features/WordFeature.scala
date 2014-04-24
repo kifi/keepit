@@ -9,7 +9,7 @@ trait WordRepresenter[M <: StatModel] extends FeatureRepresenter[String, M]
 
 abstract class HashMapWordRepresenter[M <: StatModel](
   val dimension: Int,
-  mapper: Map[String, Array[Float]]
+  val mapper: Map[String, Array[Float]]
 ) extends WordRepresenter[M]{
 
   override def apply(word: String): Option[FeatureRepresentation[String, M]] = mapper.get(word).map{ FloatVecFeature[String, M](_) }

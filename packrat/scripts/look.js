@@ -13,8 +13,9 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
 function lookMouseDown(e) {
   if (e.which != 1) return;
   e.preventDefault();
-  var el = snapshot.fuzzyFind(unescape(this.href).substr(11));  // spaces need unescaping in Firefox
-  if (el) {
+  var selector = unescape(this.href).substr(11);  // spaces need unescaping in Firefox
+  var el, tooNew = selector.indexOf('|') >= 0;
+  if (!tooNew && (el = snapshot.fuzzyFind(selector))) {
     // make absolute positioning relative to document instead of viewport
     document.documentElement.style.position = "relative";
 
@@ -35,7 +36,7 @@ function lookMouseDown(e) {
     }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
   } else {
     api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog();
+      showBrokenLookLinkDialog(tooNew);
     });
   }
 

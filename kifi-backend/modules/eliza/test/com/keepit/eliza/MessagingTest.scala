@@ -23,6 +23,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
+import com.keepit.common.crypto.TestCryptoModule
 
 import com.google.inject.Injector
 
@@ -47,7 +48,8 @@ class MessagingTest extends Specification with DbTestInjector {
       FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
-      FakeUrbanAirshipModule()
+      FakeUrbanAirshipModule(),
+      TestCryptoModule()
     )
   }
 
@@ -92,8 +94,8 @@ class MessagingTest extends Specification with DbTestInjector {
 
         Await.result(notificationCommander.getLatestSendableNotifications(user1, 20), Duration(4, "seconds")).jsons.length === 1
 
-        val messageIds : Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_, None)).map(_.id)
-        val messageContents : Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_, None)).map(_.messageText)
+        val messageIds : Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
+        val messageContents : Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.messageText)
 
         messageIds.contains(msg1.id) === true
         messageIds.contains(msg2.id) === true
@@ -166,7 +168,7 @@ class MessagingTest extends Specification with DbTestInjector {
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1), Duration(4, "seconds")).jsons.length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId))
+        messagingCommander.addUsersToThread(user1, thread.externalId, Seq(user3ExtId))
         Thread.sleep(200) //See comment for same above
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1), Duration(4, "seconds")).jsons.length === 1
       }

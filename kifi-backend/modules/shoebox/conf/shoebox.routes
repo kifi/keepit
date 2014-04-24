@@ -54,6 +54,9 @@ GET     /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutC
 POST    /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOutAction(token: String)
 GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
 
+GET     /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOut(publicId: String)
+POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOutAction(publicId: String)
+
 ##########################################
 # Extension API
 ##########################################
@@ -86,6 +89,7 @@ GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 POST    /ext/pref/showKeeperIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowKeeperIntro(show: Boolean)
@@ -106,8 +110,7 @@ GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkContr
 ##########################################
 GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
 
-GET     /m/1/user/friends                   @com.keepit.controllers.mobile.MobileUserController.getFriends()
-GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.getFriendsDetails()
+GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
@@ -255,7 +258,7 @@ POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserControll
 POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
-GET     /site/user/friends      @com.keepit.controllers.website.UserController.friends()
+GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 
@@ -322,6 +325,7 @@ GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
 GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
+GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
@@ -488,7 +492,7 @@ POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExp
 
 GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedController.index
 POST    /adimin/feed/query             @com.keepit.controllers.admin.AdminFeedController.queryFeeds
-GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int)
+GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int, smart: Boolean ?= false)
 
 GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
@@ -497,6 +501,14 @@ GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.cont
 GET     /admin/learning/pornDetect/bms/:page                    @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= true)
 POST    /admin/learning/pornDetect/removeRestrictions      @com.keepit.controllers.admin.AdminPornDetectorController.removeRestrictions
 POST    /admin/learning/pornDetect/whitelist               @com.keepit.controllers.admin.AdminPornDetectorController.whitelist
+
+GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
+POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity
+POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controllers.admin.AdminWord2VecController.uriSimilarity
+POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
+POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
+POST    /admin/cortex/word2vec/queryUriSimilarity          @com.keepit.controllers.admin.AdminWord2VecController.queryUriSimilarity
+POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controllers.admin.AdminWord2VecController.userUriSimilarity
 
 ##########################################
 # Common Healthcheck / service routes
@@ -607,6 +619,11 @@ POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
 POST     /internal/shoebox/database/getVerifiedAddressOwners  @com.keepit.controllers.internal.ShoeboxController.getVerifiedAddressOwners()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxController.getAllURLPatternRules()
+
+POST     /internal/shoebox/graph/user                @com.keepit.controllers.internal.ShoeboxGraphController.sendUserUpdates()
+POST     /internal/shoebox/graph/socialConnection    @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialConnectionUpdates()
+POST     /internal/shoebox/graph/socialUserInfo      @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialUserInfoUpdates()
+POST     /internal/shoebox/graph/userConnection      @com.keepit.controllers.internal.ShoeboxGraphController.sendUserConnectionUpdates()
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

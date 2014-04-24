@@ -82,15 +82,17 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "com.kifi" % "franz_2.10" % "0.3.1",
+    "com.kifi" % "franz_2.10" % "0.3.2",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
+    "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0" // todo(andrew/yasuhiro): remove from common
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0", // todo(andrew/yasuhiro): remove from common
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.50"
   ) map (_.excludeAll(
     ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),
@@ -116,7 +118,6 @@ object ApplicationBuild extends Build {
   lazy val shoeboxDependencies = Seq(
     "javax.mail" % "mail" % "1.4.5",
     "com.typesafe.slick" %% "slick-testkit" % "2.0.0" exclude("play", "*"),
-    "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
     "org.feijoas" %% "mango" % "0.10"
@@ -136,7 +137,6 @@ object ApplicationBuild extends Build {
 
   lazy val scraperDependencies = Seq(
     "org.apache.httpcomponents" % "httpclient" % "4.3.2",
-    "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.tika" % "tika-parsers" % "1.3"
   )
 

@@ -22,10 +22,9 @@ import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-import scala.concurrent.Future
 import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.shutdown.ShutdownCommander
+import scala.collection.mutable
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -71,17 +70,27 @@ class SharedWsMessagingController @Inject() (
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-      basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+      basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
         val url = thread.url.getOrElse("")  // needs to change when we have detached threads
         SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
       }
     },
-    "add_participants_to_thread" -> { case JsString(threadId) +: JsArray(extUserIds) +: _ =>
-      val users = extUserIds.map { case s =>
+    "add_participants_to_thread" -> { case JsString(threadId) +: JsArray(whoDat) +: _ =>
+      val (usersJson, nonUsersJson) = whoDat.partition{ json =>
+        json match {
+          case JsString(_) => true
+          case _ => false
+        }
+      }
+      val users = usersJson.map { s =>
         ExternalId[User](s.asInstanceOf[JsString].value)
       }
+      val emailAddresses = nonUsersJson.map { obj =>
+        (obj \ "email").as[String]
+      }
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users)
+      messagingCommander.addUsersToThread(socket.userId, ExternalId[MessageThread](threadId), users)
+      messagingCommander.addEmailNonUsersToThread(socket.userId, ExternalId[MessageThread](threadId), emailAddresses)
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)

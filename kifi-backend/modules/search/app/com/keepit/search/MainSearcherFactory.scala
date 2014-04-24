@@ -1,14 +1,12 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.user.UserIndexer
@@ -40,9 +38,7 @@ class MainSearcherFactory @Inject() (
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
     spellCorrector: SpellCorrector,
-    shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait,
-    airbrake: AirbrakeNotifier,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
@@ -85,8 +81,7 @@ class MainSearcherFactory @Inject() (
           socialGraphInfo,
           clickBoostsFuture,
           clickHistoryFuture,
-          monitoredAwait,
-          airbrake
+          monitoredAwait
       )
     }
 
@@ -172,7 +167,7 @@ class MainSearcherFactory @Inject() (
       val total = results.map(_.values.sum).sum.toFloat
       if (total > 0) {
         val newProf = results.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
-          m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f).toFloat))
+          m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f)))
         }
         newProf.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(limit).toMap // top N with prob > 0.05
       } else {

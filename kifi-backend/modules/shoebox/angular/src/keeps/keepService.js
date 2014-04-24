@@ -499,8 +499,7 @@ angular.module('kifi.keepService', [
 
         $log.log('keepService.keep()', data);
 
-        return $http.post(url, data).then(function (res) {
-          console.info(res, _.clone(res.data));
+        return $http.post(url, data).then(function () {
           _.forEach(keeps, function (keep) {
             keep.isMyBookmark = true;
             keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;

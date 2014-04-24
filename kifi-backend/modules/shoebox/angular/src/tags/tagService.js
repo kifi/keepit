@@ -8,15 +8,19 @@ angular.module('kifi.tagService', [
 ])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope', 'undoService', 'keepService', 'routeService', '$analytics',
-  function ($http, env, $q, $rootScope, undoService, keepService, routeService, $analytics) {
-    var list = [],
+  '$http', 'env', '$q', '$rootScope', 'undoService', 'keepService', 'routeService', '$analytics', 'util',
+  function ($http, env, $q, $rootScope, undoService, keepService, routeService, $analytics, util) {
+    var allTags = [],
+      list = [],
       tagsById = {},
+      prevFilter = '',
       fetchAllPromise = null;
 
-    function indexById(id) {
-      for (var i = 0, l = list.length; i < l; i++) {
-        if (list[i].id === id) {
+    var listLength = 70;
+
+    function indexById(array, id) {
+      for (var i = 0, l = array.length; i < l; i++) {
+        if (array[i].id === id) {
           return i;
         }
       }
@@ -24,9 +28,9 @@ angular.module('kifi.tagService', [
     }
 
     function updateKeepCount(id, delta) {
-      var index = indexById(id);
+      var index = indexById(allTags, id);
       if (index !== -1) {
-        var tag = list[index];
+        var tag = allTags[index];
         tag.keeps = (tag.keeps || 0) + delta;
         return tag;
       }
@@ -55,25 +59,25 @@ angular.module('kifi.tagService', [
     }
 
     function persistOrdering() {
-      $http.post(routeService.tagOrdering, _.pluck(list, 'id')).then(function () {
+      $http.post(routeService.tagOrdering, _.pluck(allTags, 'id')).then(function () {
       });
       api.fetchAll();
     }
 
     function reorderTag(isTop, srcTag, dstTag) {
       // isTop indicates whether dstTag should be placed before or after srcTag
-      var index = _.findIndex(list, function (tag) { return tag.id === dstTag.id; });
+      var index = _.findIndex(allTags, function (tag) { return tag.id === dstTag.id; });
       var newSrcTag = _.clone(srcTag);
       var srcTagId = srcTag.id;
       newSrcTag.id = -1;
       if (!isTop) {
         index += 1;
       }
-      list.splice(index, 0, newSrcTag);
-      _.remove(list, function (tag) { return tag.id === srcTagId; });
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].id === -1) {
-          list[i].id = srcTagId;
+      allTags.splice(index, 0, newSrcTag);
+      _.remove(allTags, function (tag) { return tag.id === srcTagId; });
+      for (var i = 0; i < allTags.length; i++) {
+        if (allTags[i].id === -1) {
+          allTags[i].id = srcTagId;
         }
       }
       persistOrdering();
@@ -83,6 +87,8 @@ angular.module('kifi.tagService', [
     }
 
     var api = {
+      allTags: allTags,
+
       list: list,
 
       getById: function (tagId) {
@@ -95,9 +101,30 @@ angular.module('kifi.tagService', [
         });
       },
 
+      filterList: function (term) {
+        var lowerTerm = term.toLowerCase();
+        var searchList = term.indexOf(prevFilter) === 0 && prevFilter.length > 0  && list.length < listLength ? list : allTags;
+
+        var newList = [];
+
+        for (var i = 0, ins = 0, sz = searchList.length; i < sz && ins < listLength; i++) {
+          var tag = searchList[i];
+          if (tag.lowerName.indexOf(lowerTerm) !== -1) {
+            newList.push(tag);
+            ins++;
+          }
+        }
+
+        prevFilter = term;
+        util.replaceArrayInPlace(list, newList);
+        return list;
+      },
+
       fetchAll: function (force) {
         if (!force && fetchAllPromise) {
-          return fetchAllPromise;
+          return fetchAllPromise.then(function () {
+            return list;
+          });
         }
 
         var url = env.xhrBase + '/collections/all';
@@ -110,19 +137,24 @@ angular.module('kifi.tagService', [
 
         fetchAllPromise = $http.get(url, config).then(function (res) {
           var tags = res.data && res.data.collections || [];
+          allTags.length = 0;
+          allTags.push.apply(allTags, tags);
           list.length = 0;
-          list.push.apply(list, tags.slice(0, 40));
+          list.push.apply(list, allTags.slice(0, listLength));
 
-          list.forEach(function (tag) {
+          allTags.forEach(function (tag) {
+            tag.lowerName = tag.name.toLowerCase();
             tagsById[tag.id] = tag;
           });
 
           keepService.totalKeepCount = res.data.keeps; // a bit weird...
 
-          return list;
+          return allTags;
         });
 
-        return fetchAllPromise;
+        return fetchAllPromise.then(function () {
+          return list;
+        });
       },
 
       create: function (name) {
@@ -132,8 +164,14 @@ angular.module('kifi.tagService', [
           name: name
         }).then(function (res) {
           var tag = res.data;
+
           tag.keeps = tag.keeps || 0;
-          list.unshift(tag);
+          tag.lowerName = tag.name.toLowerCase();
+          tagsById[tag.id] = tag;
+          allTags.unshift(tag);
+
+          api.filterList('');
+
           $analytics.eventTrack('user_clicked_page', {
             'action': 'createTag'
           });
@@ -144,16 +182,20 @@ angular.module('kifi.tagService', [
       remove: function (tag) {
         var url = env.xhrBase + '/collections/' + tag.id + '/delete';
         return $http.post(url).then(function () {
-          var index = indexById(tag.id);
-          if (index !== -1) {
-            list.splice(index, 1);
+          var allIndex = indexById(allTags, tag.id);
+          if (allIndex !== -1) {
+            allTags.splice(allIndex, 1);
+            var listIndex = indexById(list, tag.id);
+            if (listIndex !== -1) {
+              list.splice(listIndex, 1);
+            }
           }
           $rootScope.$emit('tags.remove', tag.id);
           $analytics.eventTrack('user_clicked_page', {
             'action': 'removeTag'
           });
           undoService.add('Tag deleted.', function () {
-            api.unremove(tag, index);
+            api.unremove(tag, allIndex);
           });
           return tag;
         });
@@ -163,7 +205,7 @@ angular.module('kifi.tagService', [
         var url = env.xhrBase + '/collections/' + tag.id + '/undelete';
         return $http.post(url).then(function () {
           if (index !== -1) {
-            list.splice(index, 0, tag);
+            allTags.splice(index, 0, tag);
           }
           $rootScope.$emit('tags.unremove', tag.id);
           $analytics.eventTrack('user_clicked_page', {
@@ -176,9 +218,9 @@ angular.module('kifi.tagService', [
 
       rename: function (tagId, name) {
         function renameTag(id, name) {
-          var index = indexById(id);
-          if (index !== -1) {
-            var tag = list[index];
+          var allIndex = indexById(allTags, id);
+          if (allIndex !== -1) {
+            var tag = allTags[allIndex];
             tag.name = name;
             return tag;
           }

@@ -20,7 +20,7 @@ class RemoteRichConnectionCommander @Inject() (
     queue: SQSQueue[RichConnectionUpdateMessage]
   ) extends RichConnectionCommander {
 
-  def processUpdate(message: RichConnectionUpdateMessage): Future[Unit] = { //ZZZ safe future
+  def processUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
     SafeFuture{queue.send(message)}.map(_ => ())
   }
 

@@ -38,7 +38,10 @@ class MobileAuthController @Inject() (
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
-  def whatIsMyIp() = Action { request => Ok(request.remoteAddress) }
+  def whatIsMyIp() = Action { request =>
+    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+    Ok(ip)
+  }
 
   def registerIPhoneVersion() = JsonAction.authenticatedParseJson(allowPending = true) { request =>
     val json = request.body

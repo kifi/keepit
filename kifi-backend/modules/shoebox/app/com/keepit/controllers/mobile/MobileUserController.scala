@@ -1,6 +1,5 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.classify.{Domain, DomainRepo, DomainStates}
 import com.keepit.common.controller.{ShoeboxServiceController, MobileController, ActionAuthenticator, AuthenticatedRequest}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -14,15 +13,9 @@ import play.api.libs.json.{JsObject, Json, JsValue}
 import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
-import com.keepit.common.net.URI
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.BasicUser
-import com.keepit.common.analytics.{Event, EventFamilies, Events}
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{Success, Failure}
 import securesocial.core.{SecureSocial, Authenticator}
-import play.api.mvc.AnyContent
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -30,18 +23,18 @@ class MobileUserController @Inject() (
   typeaheadCommander: TypeaheadCommander)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getFriendsDetails = JsonAction.authenticatedAsync { request =>
-    userCommander.getFriendsDetails(request.userId).map { res =>
-      val arr = res.map { case (basicUser, searchFriend, unfriended) =>
-        (Json.toJson(basicUser)).asInstanceOf[JsObject] ++ Json.obj(
-          "searchFriend" -> searchFriend,
-          "unfriended" -> unfriended) }
-      Ok(Json.obj("friends" -> arr))
+  def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
+    val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
+    val friendsJsons = connectionsPage.map { case ConnectionInfo(friend, _, unfriended, unsearched) =>
+      Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
+        "searchFriend" -> unsearched,
+        "unfriended" -> unfriended
+      )
     }
-  }
-
-  def getFriends() = JsonAction.authenticated { request =>
-    Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
+    Ok(Json.obj(
+      "friends" -> friendsJsons,
+      "total" -> total
+    ))
   }
 
   def socialNetworkInfo() = JsonAction.authenticated { request =>

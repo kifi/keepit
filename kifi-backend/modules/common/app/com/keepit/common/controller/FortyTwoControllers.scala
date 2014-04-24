@@ -12,7 +12,7 @@ trait ServiceController extends Controller with Logging {
   def serviceType: ServiceType
 
   def resolve[T](a: T) = Future.successful(a)
-  
+
   def SafeAsyncAction(f: Request[AnyContent] => SimpleResult)(implicit ex: ExecutionContext) = Action.async { request =>
     SafeFuture(f(request))
   }
@@ -44,4 +44,12 @@ trait ABookServiceController extends ServiceController {
 }
 trait ScraperServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.SCRAPER
+}
+
+trait CortexServiceController extends ServiceController {
+  val serviceType: ServiceType = ServiceType.CORTEX
+}
+
+trait GraphServiceController extends ServiceController {
+  val serviceType: ServiceType = ServiceType.GRAPH
 }

@@ -1,6 +1,4 @@
 
+GET     /internal/discover       @com.keepit.graph.controllers.internal.GraphController.discover()
+
 ->  / common.Routes
-
-
-
-

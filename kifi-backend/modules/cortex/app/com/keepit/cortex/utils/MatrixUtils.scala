@@ -33,4 +33,27 @@ object MatrixUtils {
     dot(nv, nw)
   }
 
+  def average(vecs: Seq[Array[Float]]): Array[Float] = {
+    val n = vecs.size
+    assume(n > 0)
+    val s = vecs.reduce(add)
+    s.map{_/n}
+  }
+
+  def weightedAverage(vecs: Seq[Array[Float]], weights: Array[Float]): Array[Float] = {
+    val n = vecs.size
+    assume(n > 0)
+    val dim = vecs(0).size
+    val res = new Array[Float](dim)
+    (0 until n).foreach{ i =>
+      val v = vecs(i)
+      val w = weights(i)
+      (0 until dim).foreach{ j =>
+        res(j) += v(j) * w
+      }
+    }
+
+    res
+  }
+
 }

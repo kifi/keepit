@@ -3,6 +3,7 @@ package com.keepit.controllers.website
 import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.commanders.ConnectionInfo
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
@@ -57,7 +58,6 @@ class UserController @Inject() (
   networkInfoLoader: NetworkInfoLoader,
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
-  searchFriendRepo: SearchFriendRepo,
   postOffice: LocalPostOffice,
   userCommander: UserCommander,
   elizaServiceClient: ElizaServiceClient,
@@ -71,26 +71,20 @@ class UserController @Inject() (
   fortytwoConfig: FortyTwoConfig
 ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  // hotspot -- need optimization; gather timing info for analysis
-  def friends() = JsonAction.authenticated { request =>
-    val userId = request.userId
-    Ok(Json.obj(
-      "friends" -> timing(s"friends($userId) ALL") {
-        db.readOnly { implicit s =>
-          val searchFriends = timing(s"friends($userId) searchFriends") { searchFriendRepo.getSearchFriends(request.userId) }
-          val connectionIds = timing(s"friends($userId) connectionIds") { userConnectionRepo.getConnectedUsers(request.userId) }
-          val unfriendedIds = timing(s"friends($userId) unfriendedIds") { userConnectionRepo.getUnfriendedUsers(request.userId) }
-          timing(s"friends($userId) post-processing++") {
-            (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq).map { case (userId, unfriended) =>
-              Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
-                "searchFriend" -> searchFriends.contains(userId),
-                "unfriended" -> unfriended,
-                "friendCount" -> userConnectionRepo.getConnectionCount(userId)
-              )
-            }
-          }
-        }
+  def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
+    val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
+    val friendsJsons = db.readOnly { implicit s =>
+      connectionsPage.map { case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
+        Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
+          "searchFriend" -> unsearched,
+          "unfriended" -> unfriended,
+          "friendCount" -> userConnectionRepo.getConnectionCount(friendId)
+        )
       }
+    }
+    Ok(Json.obj(
+      "friends" -> friendsJsons,
+      "total" -> total
     ))
   }
 

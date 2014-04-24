@@ -102,23 +102,27 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
 
     "return connected users from the database" in {
       running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
-        val route = com.keepit.controllers.mobile.routes.MobileUserController.getFriends().toString
-        route === "/m/1/user/friends"
+        val route = com.keepit.controllers.mobile.routes.MobileUserController.friends().toString
+        route === "/m/1/user/friendsDetails"
 
         val (user1965, friends) = setupSomeUsers()
         inject[FakeActionAuthenticator].setUser(user1965)
         val mobileController = inject[MobileUserController]
-        val result = mobileController.getFriends()(FakeRequest())
+        val result = mobileController.friends(0, 1000)(FakeRequest())
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        val expected = Json.parse("""[
-            {"id":"aa345838-70fe-45f2-914c-f27c865bdb91","firstName":"Tamila, Kifi Help","lastName":"","pictureName":"tmilz.jpg"},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg"},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg"},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg"},
-            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg"}
-          ]""")
-        Json.parse(contentAsString(result)).as[JsArray].value.toSet must equalTo(expected.as[JsArray].value.toSet)
+        val expected = Json.parse(
+          """{"friends":[
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a673","firstName":"Paul","lastName":"Dirac","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a674","firstName":"James","lastName":"Chadwick","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a675","firstName":"Arthur","lastName":"Compton","pictureName":"0.jpg","searchFriend":true,"unfriended":false},
+            {"id":"e58be33f-51ad-4c7d-a88e-d4e6e3c9a676","firstName":"Albert","lastName":"Einstein","pictureName":"0.jpg","searchFriend":true,"unfriended":false}
+            ],
+            "total":4}""")
+        val resString = contentAsString(result)
+        println(resString)
+        val res = Json.parse(resString)
+        res must equalTo(expected)
       }
     }
 

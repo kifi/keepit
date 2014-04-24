@@ -20,6 +20,7 @@ import com.keepit.common.integration.ReaperModule
 import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.queue.{NormalizationUpdateJobQueueModule}
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
+import com.keepit.cortex.ProdCortexServiceClientModule
 
 abstract class ShoeboxModule(
   //these are modules that inheriting modules need to provide
@@ -45,6 +46,8 @@ abstract class ShoeboxModule(
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
   val scraperServiceClientModule = ProdScraperServiceClientModule()
+  val cortexServiceClientModule = ProdCortexServiceClientModule()
+
 
   val abuseControlModule = AbuseControlModule()
   val slickModule = ShoeboxSlickModule()

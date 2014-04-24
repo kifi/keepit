@@ -213,7 +213,17 @@ class TextWeight(
     val semanticScorer = if (semanticWeight != null) semanticWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
 
     if (personalScorer == null && regularScorer == null) null
-    else new TextScorer(this, personalScorer, regularScorer, semanticScorer, query.getSemanticBoost)
+    else {
+      val adjustedSemanticBoost = {
+        val n = if (semanticScorer != null) {
+          semanticScorer.getChildren().map(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].getNumPayloadsUsed).foldLeft(0)(_ max _)
+        } else 0
+        val adjust = 1.0/(1 + pow(1.5, 5 - n))
+        query.getSemanticBoost * adjust.toFloat
+      }
+
+      new TextScorer(this, personalScorer, regularScorer, semanticScorer, adjustedSemanticBoost)
+    }
   }
 }
 
@@ -223,16 +233,8 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
   private[this] var docR = if (regularScorer == null) NO_MORE_DOCS else -1
   private[this] var scoredDoc = -1
   private[this] var scoreVal = 0.0f
-  private[this] val adjustedSemanticBoost = {
-    val n = if (semanticScorer != null) {
-      semanticScorer.getChildren().map(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].getNumPayloadsUsed).foldLeft(0)(_ max _)
-    } else 0
 
-    val adjust = 1.0/(1 + pow(1.5, 5 - n))
-    semanticBoost * adjust.toFloat
-  }
-
-  private[this] val semanticScoreBase = (1.0f - adjustedSemanticBoost)
+  private[this] val semanticScoreBase = (1.0f - semanticBoost)
 
   override def docID(): Int = doc
 
@@ -266,10 +268,10 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       if (semanticScorer.docID < doc) semanticScorer.advance(doc)
 
       if (semanticScorer.docID == doc) {
-        semanticScorer.score() * adjustedSemanticBoost + semanticScoreBase
+        semanticScorer.score() * semanticBoost + semanticScoreBase
       } else {
         if (docP == doc) {
-          0.9f * adjustedSemanticBoost + semanticScoreBase
+          0.9f * semanticBoost + semanticScoreBase
         } else {
           semanticScoreBase
         }

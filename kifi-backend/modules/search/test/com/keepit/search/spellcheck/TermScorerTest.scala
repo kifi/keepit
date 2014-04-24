@@ -10,7 +10,7 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.VolatileIndexDirectoryImpl
+import com.keepit.search.index.VolatileIndexDirectory
 import scala.math.abs
 import scala.math.log
 
@@ -34,7 +34,7 @@ class TermScorerTest extends Specification {
 
   "TermScorer" should {
     "work" in {
-      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val articleIndexDir = new VolatileIndexDirectory()
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
@@ -53,7 +53,7 @@ class TermScorerTest extends Specification {
     "adjScore and orderdAdj should work" in {
       def log2(x: Double) = log(x)/log(2)
 
-      val articleIndexDir = new VolatileIndexDirectoryImpl()
+      val articleIndexDir = new VolatileIndexDirectory()
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
       val indexWriter = new IndexWriter(articleIndexDir, config)
       val texts = Seq("ab x1 x2 x3 x4 cd", "ab x1 x2 x3 x4 x5 x6 cd", "ab ab y1 y2 ab ab")
