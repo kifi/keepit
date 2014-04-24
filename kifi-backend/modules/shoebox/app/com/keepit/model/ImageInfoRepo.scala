@@ -31,7 +31,7 @@ class ImageInfoRepoImpl @Inject() (
   private val sequence = db.getSequence[ImageInfo]("image_info_sequence")
 
   type RepoImpl = ImageInfoTable
-  class ImageInfoTable(tag: Tag) extends RepoTable[ImageInfo](db, tag, "image_info") with ExternalIdColumn[ImageInfo] with SeqNumberColumn[ImageInfo] {
+  class ImageInfoTable(tag: Tag) extends RepoTable[ImageInfo](db, tag, "image_info") with SeqNumberColumn[ImageInfo] {
     def uriId    = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url      = column[String]("url")
     def name     = column[String]("name")
@@ -42,7 +42,7 @@ class ImageInfoRepoImpl @Inject() (
     def provider = column[ImageProvider]("provider")
     def format   = column[ImageFormat]("format")
     def priority = column[Int]("priority")
-    def * = (id.?,createdAt,updatedAt,state,seq,externalId,uriId,url.?,name,caption.?,width.?,height.?,sz.?,provider.?,format.?,priority.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
+    def * = (id.?,createdAt,updatedAt,state,seq,uriId,url.?,name,caption.?,width.?,height.?,sz.?,provider.?,format.?,priority.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 
   def table(tag:Tag) = new ImageInfoTable(tag)

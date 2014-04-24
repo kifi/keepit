@@ -134,7 +134,6 @@ case class ImageInfo(
   updatedAt: DateTime = currentDateTime,
   state:     State[ImageInfo] = ImageInfoStates.ACTIVE,
   seq:       SequenceNumber[ImageInfo] = SequenceNumber.ZERO,
-  externalId: ExternalId[ImageInfo] = ExternalId(),
   uriId:Id[NormalizedURI],
   url:Option[String],
   name:String            = RandomStringUtils.randomAlphanumeric(5),
@@ -145,7 +144,7 @@ case class ImageInfo(
   provider: Option[ImageProvider] = None,
   format: Option[ImageFormat] = None,
   priority: Option[Int] = None
-) extends ModelWithState[ImageInfo] with ModelWithExternalId[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
+) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   def withId(imageInfoId:Id[ImageInfo]) = copy(id = Some(imageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
@@ -157,7 +156,6 @@ object ImageInfo {
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format(State.format[ImageInfo]) and
     (__ \ 'seq).format(SequenceNumber.format[ImageInfo]) and
-    (__ \ 'externalId).format(ExternalId.format[ImageInfo]) and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'url).formatNullable[String] and
     (__ \ 'name).format[String] and
