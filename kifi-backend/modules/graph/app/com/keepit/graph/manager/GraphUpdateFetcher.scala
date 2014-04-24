@@ -26,16 +26,16 @@ class GraphUpdateFetcherImpl @Inject() (
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
     case UserGraphUpdate =>
-      val seq = currentState.state(UserGraphUpdate)
-      shoebox.sendUserGraphUpdate(queue.queue, SequenceNumber[User](seq))
+      val seq = currentState.getCurrentSequenceNumber(UserGraphUpdate)
+      shoebox.sendUserGraphUpdate(queue.queue, SequenceNumber[User](seq.value))
     case SocialConnectionGraphUpdate =>
-      val seq = currentState.state(SocialConnectionGraphUpdate)
-      shoebox.sendSocialConnectionGraphUpdate(queue.queue, SequenceNumber[SocialConnection](seq))
+      val seq = currentState.getCurrentSequenceNumber(SocialConnectionGraphUpdate)
+      shoebox.sendSocialConnectionGraphUpdate(queue.queue, seq)
     case SocialUserInfoGraphUpdate =>
-      val seq = currentState.state(SocialUserInfoGraphUpdate)
-      shoebox.sendSocialUserInfoGraphUpdate(queue.queue, SequenceNumber[SocialUserInfo](seq))
+      val seq = currentState.getCurrentSequenceNumber(SocialUserInfoGraphUpdate)
+      shoebox.sendSocialUserInfoGraphUpdate(queue.queue, seq)
     case UserConnectionGraphUpdate =>
-      val seq = currentState.state(UserConnectionGraphUpdate)
-      shoebox.sendUserConnectionGraphUpdate(queue.queue, SequenceNumber[UserConnection](seq))
+      val seq = currentState.getCurrentSequenceNumber(UserConnectionGraphUpdate)
+      shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
   }
 }
