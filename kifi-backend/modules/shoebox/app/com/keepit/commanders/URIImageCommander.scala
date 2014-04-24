@@ -16,7 +16,6 @@ import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.amazonaws.services.s3.model.{PutObjectResult}
 
 case class URIImageRequest(
   url: String,
@@ -83,7 +82,7 @@ class URIImageCommander @Inject()(
       case ImageType.IMAGE => Some(ImageProvider.EMBEDLY)
     }
     pageUri.id map { id => db.readOnly { implicit session => imageInfoRepo.getByUriWithSize(id, minSize) } } flatMap { list =>
-      val candidates = list.filter(targetProvider.isEmpty || targetProvider.get == _.provider)
+      val candidates = list.filter(targetProvider.isEmpty || targetProvider == _.provider)
       if (candidates.nonEmpty) Some(candidates.minBy(_.priority.getOrElse(Int.MaxValue))) else None
     }
   }
@@ -101,40 +100,44 @@ class URIImageCommander @Inject()(
   private def fetchFromEmbedly(pageId: NormalizedURI, minSize: ImageSize): Future[Option[ImageInfo]] = {
     embedlyClient.getAllImageInfo(pageId, minSize) flatMap { images =>
       images.find(meetsSizeConstraint(_, minSize)) map { selectedImageInfo =>
+        // Intern images that have higher priority than the selected image
         images.takeWhile(!meetsSizeConstraint(_, minSize)) map { imageInfo =>
-          ImageFetcher.fetchRawImage(imageInfo.url) map { rawImageOpt =>
-            rawImageOpt map { rawImage => internImage(imageInfo, rawImage) }
-          }
-        }
-        ImageFetcher.fetchRawImage(selectedImageInfo.url) map { rawImageOpt =>
-          rawImageOpt flatMap { rawImage =>
-            internImage(selectedImageInfo, rawImage) map { _ =>
-              // Image successfully interned, return it
-              selectedImageInfo
+          imageInfo.url map { imageUrl =>
+            ImageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
+              rawImageOpt map { rawImage => internImage(imageInfo, rawImage, pageId) }
             }
           }
         }
+        // Intern and return selected image
+        selectedImageInfo.url map { imageUrl =>
+          ImageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
+            rawImageOpt flatMap { rawImage =>
+              internImage(selectedImageInfo, rawImage, pageId)
+            }
+          }
+        } getOrElse future{None}
       } getOrElse future{None}
     }
   }
 
-  private def fetchFromPagePeeker(pageId: NormalizedURI, minSize: ImageSize): Future[Option[ImageInfo]] = {
-    pageId.id map { nUriId =>
-      pagePeekerClient.getScreenshotData(pageId.url) map { images =>
+  private def fetchFromPagePeeker(nUri: NormalizedURI, minSize: ImageSize): Future[Option[ImageInfo]] = {
+    nUri.id map { nUriId =>
+      pagePeekerClient.getScreenshotData(nUri.url) map { images =>
         val candidates = images map { image =>
-          val imageInfo = image.toImageInfo(nUriId, pageId.url)
-          internImage(imageInfo, image.rawImage) map { _ => imageInfo }
+          val imageInfo = image.toImageInfo(nUriId)
+          internImage(imageInfo, image.rawImage, nUri)
         }
         candidates collect { case Some(candidate) => candidate } find { meetsSizeConstraint(_, minSize) }
       }
     } getOrElse future{None}
   }
 
-  private def internImage(info: ImageInfo, image: BufferedImage): Option[PutObjectResult] = {
-    uriImageStore.storeImage(info.externalId, image) match {
-      case Success(s3object) => {
-        db.readWrite { implicit session => imageInfoRepo.save(info) }
-        Some(s3object)
+  private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
+    uriImageStore.storeImage(info, image, nUri) match {
+      case Success(url) => {
+        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url)) else info
+        db.readWrite { implicit session => imageInfoRepo.save(imageInfoWithUrl) }
+        Some(imageInfoWithUrl)
       }
       case Failure(ex) => {
         airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage()}")

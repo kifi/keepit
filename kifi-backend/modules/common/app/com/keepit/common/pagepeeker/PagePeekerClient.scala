@@ -8,7 +8,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import scala.Some
-import com.keepit.common.store.{ImageUtils, ImageSize}
+import com.keepit.common.store.{S3URIImageStore, ImageUtils, ImageSize}
 import java.awt.image.BufferedImage
 import play.modules.statsd.api.Statsd
 import scala.util.{Failure, Success, Try}
@@ -21,7 +21,7 @@ import com.keepit.common.db.Id
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
 case class PagePeekerImage(rawImage: BufferedImage, size: ImageSize) {
-  implicit def toImageInfo(nUriId: Id[NormalizedURI], url: String): ImageInfo = ImageInfo(uriId = nUriId, url = url, caption = None, width = Some(size.width), height = Some(size.height), provider = ImageProvider.PAGEPEEKER, format = Some(ImageFormat.JPG))
+  implicit def toImageInfo(nUriId: Id[NormalizedURI], url: Option[String] = None): ImageInfo = ImageInfo(uriId = nUriId, url = url, caption = None, width = Some(size.width), height = Some(size.height), provider = Some(ImageProvider.PAGEPEEKER), format = Some(ImageFormat.JPG))
 }
 
 class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {

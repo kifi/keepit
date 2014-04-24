@@ -42,8 +42,8 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig): S3URIImageStore = {
-    new S3URIImageStoreImpl(amazonS3Client, config)
+  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
+    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
   }
 
   @Singleton
@@ -95,8 +95,8 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
 
   @Singleton
   @Provides
-  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig): S3URIImageStore = {
-    new S3URIImageStoreImpl(amazonS3Client, config)
+  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
+    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
   }
 
   @Singleton

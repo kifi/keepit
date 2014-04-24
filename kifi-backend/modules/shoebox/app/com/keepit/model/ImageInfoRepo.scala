@@ -33,16 +33,16 @@ class ImageInfoRepoImpl @Inject() (
   type RepoImpl = ImageInfoTable
   class ImageInfoTable(tag: Tag) extends RepoTable[ImageInfo](db, tag, "image_info") with ExternalIdColumn[ImageInfo] with SeqNumberColumn[ImageInfo] {
     def uriId    = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def url      = column[String]("url", O.NotNull)
+    def url      = column[String]("url")
     def name     = column[String]("name")
     def caption  = column[String]("caption")
     def width    = column[Int]("width")
     def height   = column[Int]("height")
     def sz       = column[Int]("sz")
-    def provider = column[ImageProvider]("provider", O.NotNull)
-    def format   = column[ImageFormat]("format", O.NotNull)
+    def provider = column[ImageProvider]("provider")
+    def format   = column[ImageFormat]("format")
     def priority = column[Int]("priority")
-    def * = (id.?,createdAt,updatedAt,state,seq,externalId,uriId,url,name.?,caption.?,width.?,height.?,sz.?,provider,format.?,priority.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
+    def * = (id.?,createdAt,updatedAt,state,seq,externalId,uriId,url.?,name,caption.?,width.?,height.?,sz.?,provider.?,format.?,priority.?) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 
   def table(tag:Tag) = new ImageInfoTable(tag)

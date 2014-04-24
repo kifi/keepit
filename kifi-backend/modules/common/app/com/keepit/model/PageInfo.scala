@@ -6,6 +6,7 @@ import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.json.JsonFormatters._
+import org.apache.commons.lang3.RandomStringUtils
 
 trait PageSafetyInfo {
   def safe:Option[Boolean]
@@ -91,6 +92,10 @@ case class ImageProvider(value: String)
 object ImageProvider {
   val EMBEDLY = ImageProvider("embedly")
   val PAGEPEEKER = ImageProvider("pagepeeker")
+  val UNKNOWN = ImageProvider("unknown")
+  def getProviderIndex(providerOpt: Option[ImageProvider]) = providerOpt map { provider =>
+    ImageProvider.providerIndex.get(provider).getOrElse(ImageProvider.providerIndex(ImageProvider.UNKNOWN))
+  } getOrElse(0) // Embedly as default
   implicit val imageProviderFormat = new Format[ImageProvider] {
     def reads(json: JsValue): JsResult[ImageProvider] = {
       json.asOpt[String] match {
@@ -102,6 +107,7 @@ object ImageProvider {
       JsString(kind.value)
     }
   }
+  val providerIndex = Map(EMBEDLY -> 0, PAGEPEEKER -> 1, UNKNOWN -> 100)
 }
 
 case class ImageFormat(value: String)
@@ -130,16 +136,16 @@ case class ImageInfo(
   seq:       SequenceNumber[ImageInfo] = SequenceNumber.ZERO,
   externalId: ExternalId[ImageInfo] = ExternalId(),
   uriId:Id[NormalizedURI],
-  url:String,
-  name:Option[String]    = None,
+  url:Option[String],
+  name:String            = RandomStringUtils.randomAlphanumeric(5),
   caption:Option[String] = None,
   width:Option[Int]      = None,
   height:Option[Int]     = None,
   size:Option[Int]       = None,
-  provider:ImageProvider,
+  provider: Option[ImageProvider] = None,
   format: Option[ImageFormat] = None,
   priority: Option[Int] = None
-) extends ModelWithState[ImageInfo] with ModelWithExternalId[ImageInfo] with ModelWithSeqNumber[ImageInfo] with ImageGenericInfo {
+) extends ModelWithState[ImageInfo] with ModelWithExternalId[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   def withId(imageInfoId:Id[ImageInfo]) = copy(id = Some(imageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
@@ -153,13 +159,13 @@ object ImageInfo {
     (__ \ 'seq).format(SequenceNumber.format[ImageInfo]) and
     (__ \ 'externalId).format(ExternalId.format[ImageInfo]) and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'url).format[String] and
-    (__ \ 'name).formatNullable[String] and
+    (__ \ 'url).formatNullable[String] and
+    (__ \ 'name).format[String] and
     (__ \ 'caption).formatNullable[String] and
     (__ \ 'width).formatNullable[Int] and
     (__ \ 'height).formatNullable[Int] and
     (__ \ 'size).formatNullable[Int] and
-    (__ \ 'provider).format[ImageProvider] and
+    (__ \ 'provider).formatNullable[ImageProvider] and
     (__ \ 'format).formatNullable[ImageFormat] and
     (__ \ 'priority).formatNullable[Int]
   )(ImageInfo.apply _, unlift(ImageInfo.unapply))
