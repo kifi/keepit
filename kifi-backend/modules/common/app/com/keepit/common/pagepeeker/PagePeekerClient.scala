@@ -15,8 +15,14 @@ import scala.util.{Failure, Success, Try}
 import javax.imageio.ImageIO
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
 import java.io.ByteArrayInputStream
+import com.keepit.model.{NormalizedURI, ImageFormat, ImageProvider, ImageInfo}
+import com.keepit.common.db.Id
 
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
+
+case class PagePeekerImage(rawImage: BufferedImage, size: ImageSize) {
+  implicit def toImageInfo(nUriId: Id[NormalizedURI], url: String): ImageInfo = ImageInfo(uriId = nUriId, url = url, caption = None, width = Some(size.width), height = Some(size.height), provider = ImageProvider.PAGEPEEKER, format = Some(ImageFormat.JPG))
+}
 
 class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {
 
@@ -30,7 +36,7 @@ class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
 
-  def getScreenshotData(url: String): Future[Seq[(BufferedImage, ImageSize)]] = {
+  def getScreenshotData(url: String): Future[Seq[PagePeekerImage]] = {
     val trace = new StackTrace()
     WS.url(screenshotUrl(url)).withRequestTimeout(120000).get().map { response =>
       Option(response.ahcResponse.getHeader("X-PP-Error")) match {
@@ -57,7 +63,7 @@ class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {
                 val rawImageOpt = try {
                   Option(ImageIO.read(imageStream))
                 } catch {
-                  case ex => {
+                  case ex: Throwable => {
                     airbrake.notify(AirbrakeError(
                       exception = trace.withCause(ex),
                       message = Some(s"Problem reading resized screenshot from $url")
@@ -65,7 +71,7 @@ class PagePeekerClient @Inject() (airbrake: AirbrakeNotifier) extends Logging {
                     None
                   }
                 }
-                rawImageOpt map { rawImage => (rawImage, size) }
+                rawImageOpt map { rawImage => PagePeekerImage(rawImage, size) }
               case Failure(ex) =>
                 Statsd.increment(s"screenshot.fetch.fails")
                 ex match {

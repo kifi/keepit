@@ -38,7 +38,8 @@ case class EmbedlyImage(
   width:Option[Int]      = None,
   height:Option[Int]     = None,
   size:Option[Int]       = None) extends ImageGenericInfo {
-  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = ImageInfo(uriId = nuriId, url = this.url, caption = this.caption, width = this.width, height = this.height, size = this.size)
+  def toImageInfoWithPriority(nuriId:Id[NormalizedURI], priority: Option[Int]):ImageInfo = ImageInfo(uriId = nuriId, url = this.url, caption = this.caption, width = this.width, height = this.height, size = this.size, provider = ImageProvider.EMBEDLY, priority = priority)
+  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = toImageInfoWithPriority(nuriId, None)
 }
 
 object EmbedlyImage {
@@ -95,16 +96,16 @@ class EmbedlyClient @Inject() extends Logging {
 
   def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
 
-  def getImageData(url: String, size: ImageSize): Future[Option[BufferedImage]] = {
-    getExtractResponse(url) flatMap { result =>
-      result map { response =>
-        // Select first image in the list that meets the constraints
-        response.images.filter(meetsSizeConstraint(_, size)).headOption map { embedlyImage =>
-          if (meetsSizeConstraint(embedlyImage, size)) ImageFetcher.fetchRawImage(embedlyImage.url)
-          else future { None }
-        } getOrElse future { None }
-      } getOrElse future { None }
-    }
+  def getAllImageInfo(uri: NormalizedURI, size: ImageSize): Future[Seq[ImageInfo]] = {
+    uri.id map { nUriId =>
+      getExtractResponse(uri.url) map { result =>
+        result map {response =>
+          response.images.zipWithIndex flatMap { case (embedlyImage, priority) =>
+            Some(embedlyImage.toImageInfoWithPriority(nUriId, Some(priority)))
+          }
+        } getOrElse Seq()
+      }
+    } getOrElse future { Seq() }
   }
 
   def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
@@ -140,16 +141,6 @@ class EmbedlyClient @Inject() extends Logging {
         None
       }
     }
-  }
-
-  private def meetsSizeConstraint(image: EmbedlyImage, size: ImageSize): Boolean = {
-    for {
-      width <- image.width
-      height <- image.height
-    } yield {
-      return (width > size.width && height > size.height)
-    }
-    false
   }
 
   private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyExtractResponse]](2 minutes)

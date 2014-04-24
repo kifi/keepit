@@ -2,7 +2,7 @@ package com.keepit.common.images
 
 import java.io.InputStream
 import scala.util.{Success, Failure, Try}
-import com.keepit.common.store.{ImageSize, ImageUtils}
+import com.keepit.common.store.ImageUtils
 import javax.imageio.ImageIO
 import scala.concurrent.Future
 import java.awt.image.BufferedImage
