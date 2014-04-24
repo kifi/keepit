@@ -44,3 +44,8 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     }
   }
 }
+
+case class FakeS3URIImageStore() extends S3URIImageStore {
+  def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[String] = Success("http://www.testurl.com")
+  def mkImgUrl(id: ExternalId[NormalizedURI], providerOpt: Option[ImageProvider], name: String, protocolDefault: Option[String] = None): Option[String] = None
+}
