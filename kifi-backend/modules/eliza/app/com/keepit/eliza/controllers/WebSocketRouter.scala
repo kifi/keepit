@@ -41,9 +41,9 @@ trait WebSocketRouter {
 
   def connectedSockets : Int
 
-  def lastTracked(userId: Id[User]): Option[DateTime]
+  def socketLastTracked(userId: Id[User]): Option[DateTime]
 
-  def setLastTracked(userId: Id[User]): Unit
+  def setSocketLastTracked(userId: Id[User]): Unit
 }
 
 @Singleton
@@ -56,7 +56,7 @@ class WebSocketRouterImpl @Inject() (
 
   private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]()
-  private val userLastTracked = TrieMap[Id[User], DateTime]()
+  private val userSocketLastTracked = TrieMap[Id[User], DateTime]()
 
   def getArbitrarySocketInfo: Option[SocketInfo] = userSockets.values.map(_.values).flatten.headOption
 
@@ -133,11 +133,11 @@ class WebSocketRouterImpl @Inject() (
 
   def connectedSockets : Int = userSockets.values.map{_.keys.toSeq.length}.sum
 
-  def lastTracked(userId: Id[User]): Option[DateTime] = {
-    userLastTracked.get(userId)
+  def socketLastTracked(userId: Id[User]): Option[DateTime] = {
+    userSocketLastTracked.get(userId)
   }
 
-  def setLastTracked(userId: Id[User]): Unit = {
-    userLastTracked += (userId -> currentDateTime)
+  def setSocketLastTracked(userId: Id[User]): Unit = {
+    userSocketLastTracked += (userId -> currentDateTime)
   }
 }
