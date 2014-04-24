@@ -235,7 +235,7 @@ class AdminUserController @Inject() (
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
-      val invitedByUsers = invitedBy(socialUsers)
+      val invitedByUsers = invitedBy(socialUsers, emails)
       ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
@@ -279,21 +279,29 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  private def invitedBy(socialUserInfos: Seq[SocialUserInfo])(implicit s: RSession): Seq[User] = socialUserInfos map { info =>
-    invitationRepo.getByRecipientSocialUserId(info.id.get) map { invitation =>
-      invitation.senderUserId map userRepo.get
+  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[EmailAddress])(implicit s: RSession): Seq[User] = {
+    val bySocial: Seq[Id[User]] = socialUserInfos map { info =>
+      invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
     } flatten
-  } flatten
+    val byEmail: Seq[Id[User]] = emails map { email =>
+      invitationRepo.getByRecipientEmailAddress(email.address).map(_.senderUserId).flatten
+    } flatten
+    val all: Seq[Id[User]] = (byEmail ++ bySocial).toSet.toSeq
+    all map { userId =>
+      userRepo.get(userId)
+    }
+  }
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
+    val emails = emailRepo.getAllByUser(user.id.get)
 
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
-      invitedBy(socialUserInfos),
+      invitedBy(socialUserInfos, emails),
       socialUserInfos,
       privateKeeps,
       publicKeeps,

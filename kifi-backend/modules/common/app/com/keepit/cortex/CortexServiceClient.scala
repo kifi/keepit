@@ -23,6 +23,9 @@ trait CortexServiceClient extends ServiceClient{
   def word2vecQueryUriSimilarity(query: String, uri: Id[NormalizedURI]): Future[Option[Float]]
   def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]]
   def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]]
+
+  def ldaNumOfTopics(): Future[Int]
+  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]]
 }
 
 class CortexServiceClientImpl(
@@ -75,6 +78,17 @@ class CortexServiceClientImpl(
     val payload = Json.obj("userUris" -> userUris.map{_.id}, "feedUris" -> feedUris.map{_.id})
     call(Cortex.internal.word2vecFeedUserUris(), payload).map{ r =>
       Json.fromJson[Seq[Id[NormalizedURI]]](r.json).get
+    }
+  }
+
+  def ldaNumOfTopics(): Future[Int] = {
+    call(Cortex.internal.ldaNumOfTopics).map{ r =>
+      (r.json).as[Int]
+    }
+  }
+  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = {
+    call(Cortex.internal.ldaShowTopics(fromId, toId, topN)).map{ r =>
+      (r.json).as[Map[String, Map[String, Float]]]
     }
   }
 

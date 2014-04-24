@@ -13,6 +13,7 @@ import com.keepit.search.feed.Feed
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model.KeepRepo
 import com.keepit.common.db.slick.Database
+import scala.util.Random
 
 
 class AdminFeedController @Inject()(
@@ -29,7 +30,7 @@ class AdminFeedController @Inject()(
 
   def getFeeds(userId: Id[User], limit: Int, smart: Boolean = false) = AdminHtmlAction.authenticated{ implicit request =>
     val start = System.currentTimeMillis()
-    val feeds = Await.result(searchClient.getFeeds(userId, limit), 5 seconds)
+    val feeds = Await.result(searchClient.getFeeds(userId, limit), 60 seconds)
     val elapsedSeconds = (System.currentTimeMillis() - start)/1000f
 
     if (!smart) {
@@ -39,7 +40,13 @@ class AdminFeedController @Inject()(
       val userKeeps = db.readOnly{ implicit s =>
         keepRepo.getByUser(userId)
       }
-      val filtered = Await.result(cortex.word2vecFeedUserUris(userKeeps.map{_.uriId}.take(100), feeds.map{_.uri.id.get}), 60 seconds)
+
+      val sampleSize = 100
+      val userUriSamples = if (userKeeps.size <= sampleSize) userKeeps.map{_.uriId} else {
+        Random.shuffle((0 until userKeeps.size).toList).take(sampleSize).map{ i => userKeeps(i).uriId}
+      }
+
+      val filtered = Await.result(cortex.word2vecFeedUserUris(userUriSamples, feeds.map{_.uri.id.get}), 60 seconds)
       val smartFeeds = filtered.map{ x => uriToFeed(x)}
       val elapse2 = (System.currentTimeMillis() - start)/1000f
       Ok(html.admin.feeds(userId, filtered.size, smartFeeds, elapse2))

@@ -94,7 +94,7 @@ class AdminWord2VecController @Inject()(
     val uri = Id[NormalizedURI](body.get("uri").get.toLong)
 
     val t1 = System.currentTimeMillis
-    val userUris = Await.result(shoebox.getBookmarks(Id[User](user)), 5 seconds).map{_.uriId}.take(100)
+    val userUris = Await.result(shoebox.getBookmarks(Id[User](user)), 5 seconds).sortBy(-1 * _.createdAt.getMillis).map{_.uriId}.take(100)
     val s = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds)
     val elapse = (System.currentTimeMillis() - t1) / 1000f
 
