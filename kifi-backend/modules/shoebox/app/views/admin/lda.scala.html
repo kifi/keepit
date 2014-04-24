@@ -1,0 +1,70 @@
+@(numTopics: Int)
+
+@admin("LDA"){
+  <h2>@numTopics topics</h2>
+
+  <div>show topN topic words for topics with id between fromId and toId. Note: fromId >=0. toId < @numTopics. If fromId = toId, return one single topic. </div>
+  <form id = "show_topics">
+    <input id = "fromId" type = "text" value = "fromId">
+    <input id = "toId" type = "text" value = "toId">
+    <input id = "topN" type = "text" value = "topN words">
+    <button type = "submit">submit</button>
+  </form>
+
+
+  <table id = "topic_words_table" class = "table table-bordered">
+    <thead>
+      <tr>
+        <th> id
+        <th> words
+      <tr/>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+
+
+
+  <script type="text/javascript">
+
+    $(document).ready(function(){
+
+      $("#show_topics").submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.showTopics',
+          {fromId: $('#fromId').val(), toId: $('#toId').val(), topN: $('#topN').val()}
+        ).done(done).fail(fail);
+
+        function done(data) {
+          var x = JSON.parse(data)
+          var sz = x.length
+          var fromId = parseInt($('#fromId').val())
+
+          $("#topic_words_table > tbody").empty()
+          for(var i = 0; i < sz; i++){
+            var item  = x[i]
+            $("#topic_words_table > tbody:last").append(
+              "<tr>" +
+              "<td>" + (fromId + i) + "</td>" +
+              "<td><pre>" + item + "</pre></td>" +
+              "</tr>"
+            )
+          }
+        }
+
+        function fail() { alert("bad things happened") }
+
+      })
+
+
+
+
+
+
+    });
+
+  </script>
+
+
+}
