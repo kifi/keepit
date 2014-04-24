@@ -37,7 +37,7 @@ class AdminLDAController @Inject()(
     val topN = body.get("topN").get.toInt
     val res = Await.result(cortex.ldaShowTopics(fromId, toId, topN), 5 seconds)
 
-    val topics = res.map{ case (id, map) =>
+    val topics = res.toArray.sortBy(_._1.toInt).map{ case (id, map) =>
       getFormatted(map)
     }
 
