@@ -124,7 +124,7 @@ class InviteCommander @Inject() (
       Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)
     }
     db.readWrite { implicit s =>
-      anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId == Some(userId) =>
+      anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId.isDefined =>
         val user = userRepo.get(userId)
         if (user.state == UserStates.PENDING) {
           userRepo.save(user.withState(UserStates.ACTIVE))
