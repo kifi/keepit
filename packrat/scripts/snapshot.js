@@ -215,7 +215,7 @@ var snapshot = function () {
     findImage: function (selector) {
       var parts = selector.split('|');
       var el = snapshot.fuzzyFind(parts[1]);
-      if (el && el.tagName === 'IMG') {
+      if (el && el.tagName.toUpperCase() === 'IMG') {
         return el;
       }
       var imgs = document.querySelector('img[src="' + decodeURIComponent(parts[2]).replace(/"/g, '\\22 ') + '"]');

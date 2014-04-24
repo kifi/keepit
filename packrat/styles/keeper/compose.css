@@ -219,6 +219,7 @@ a.kifi-compose-submit.kifi-active {
   background-position: center;
   background-repeat: no-repeat;
   border-radius: 3px;
+  cursor: pointer;
   -webkit-transform: translate(4px, 4px) scale(.8,.8);
   transform: translate(4px, 4px) scale(.8,.8);
   opacity: 0;

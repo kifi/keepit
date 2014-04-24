@@ -16,6 +16,7 @@ var initCompose = (function() {
   var KEY_PREFIX = CO_KEY + '-';
   var LOOK_LINK_TEXT = 'look\u00A0here';
   var RAPID_CLICK_GRACE_PERIOD_MS = 1000;
+  var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
 
   var $composes = $(), $aLook, $aSnap;
   var enterToSend;
@@ -40,6 +41,7 @@ var initCompose = (function() {
     window.addEventListener('mousedown', onWinMouseDown, true);
     window.addEventListener('selectionchange', onSelectionChange, true);
     window.addEventListener('mouseup', onWinMouseUp, true);
+    $('html').on('mouseleave', onDocMouseLeave);
   }
 
   function stopMonitoringPointer() {
@@ -48,71 +50,128 @@ var initCompose = (function() {
     window.removeEventListener('mousedown', onWinMouseDown, true);
     window.removeEventListener('selectionchange', onSelectionChange, true);
     window.removeEventListener('mouseup', onWinMouseUp, true);
+    $('html').off('mouseleave', onDocMouseLeave);
   }
 
   function onWinMouseOver(e) {
+    var snapLinkShown = null;  // null: not yet, true: yes, false: no (and stop trying)
     var el = e.target;
-    var img;
-    if ($aSnap) {
-      img = $aSnap.data('img');
-      if (img === el) return;
-      onImgMouseOut.call(img, {relatedTarget: el});
-    }
-    if (el.tagName === 'IMG' && !$(el).is('.kifi-root,.kifi-root *')) {
-      img = el;
-      var imgRect = img.getBoundingClientRect();
-      if (imgRect.height >= 35 && imgRect.width >= 35) {
-        var cs = window.getComputedStyle(img);
-        var fixed = cs.position === 'fixed';
-        var aParent, imgOffset;
-        if (fixed) {
-          aParent = document.body;
-          imgOffset = imgRect;
-        } else {
-          var candidateParent = $(img).offsetParent()[0];
-          if (candidateParent === document.documentElement) {
-            candidateParent = document.body;
-          }
-          if (getScrollParent(img).contains(candidateParent)) {
-            aParent = candidateParent; // TODO: while parent position matches /absolute/relative/ and its dimensions are the same, aParent = parent
-            imgOffset = $(img).position();
-          }
-        }
-        if (aParent) {
-          $aSnap = $('<a href="javascript:" class="kifi-root kifi-img-snap"></a>')
-          .css({
-            position: fixed ? 'fixed' : 'absolute',
-            top: imgOffset.top + parseFloat(cs.marginTop) + imgRect.height - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom) - 30,
-            left: imgOffset.left + parseFloat(cs.marginLeft) + imgRect.width - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight) - 30
-          })
-          .appendTo(aParent)
-          .data('img', img)
-          .layout()
-          .css({
-            transform: 'none',
-            opacity: 1
-          });
-          img.addEventListener('mouseout', onImgMouseOut);
+    if (el.tagName.toUpperCase() === 'IMG') {
+      if ($aSnap && el === $aSnap.data('img')) {
+        snapLinkShown = true;
+      } else {
+        var imgRect = getBcrIfEligible(el);
+        if (imgRect) {
+          snapLinkShown = showImgSnapLinkIfCan(el, imgRect);
         }
       }
-    } // TODO: else if position absolute, check whether any of el.offsetParent.getElementsByClassName('img') (if < 5) qualify
-      // (min size and mouse is over and mouseover el is same or subset of img area – may be multiple screens els)
+    } else if ($aSnap && el === $aSnap[0]) {
+      snapLinkShown = true;
+    } else {
+      if (/^(?:relative|absolute|fixed)$/.test(window.getComputedStyle(el).position) && el.firstElementChild) {
+        snapLinkShown = showImgSnapLinkOnDesc(el, e);
+      }
+      while (snapLinkShown === null) {
+        el = el.offsetParent;
+        if (el) {
+          snapLinkShown = showImgSnapLinkOnDesc(el, e);
+          if (snapLinkShown !== null || window.getComputedStyle(el).position !== 'absolute') {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    if (!snapLinkShown && $aSnap) {
+      hideImgSnapLink();
+    }
   }
 
-  function onImgMouseOut(e) {
-    if (!$aSnap || e.relatedTarget !== $aSnap[0]) {
-      this.removeEventListener('mouseout', onImgMouseOut);
-      if ($aSnap) {
-        $aSnap.on('transitionend', function () {
-          $(this).remove();
-        })
-        .css({
-          transform: '',
-          opacity: ''
-        });
-        $aSnap = null;
+  function getBcrIfEligible(img) {
+    var r = img.getBoundingClientRect();
+    return r.width >= 35 && r.height >= 35 && !img[MATCHES]('.kifi-root,.kifi-root *') ? r : null;
+  }
+
+  function showImgSnapLinkOnDesc(el, e) {
+    var imgs = el.getElementsByTagName('img');
+    var n = imgs.length;
+    if (n > 4) {
+      return false;
+    }
+    var anyEligible = false;
+    for (var i = 0; i < n; i++) {
+      var img = imgs[i];
+      var imgRect = getBcrIfEligible(img);
+      if (imgRect) {
+        anyEligible = true;
+        if (pointInRect(e.clientX, e.clientY, imgRect) &&
+            rectInRect(e.targetBcr || (e.targetBcr = e.target.getBoundingClientRect()), imgRect, .8)) {
+          return showImgSnapLinkIfCan(img, imgRect);
+        }
       }
     }
+    return anyEligible ? false : null;
+  }
+
+  function showImgSnapLinkIfCan(img, imgRect) {
+    var cs = window.getComputedStyle(img);
+    if (cs.position === 'fixed') {
+      showImgSnapLink(img, cs, imgRect, imgRect, document.body, 'fixed');
+      return true;
+    }
+    var candidateParent = $(img).offsetParent()[0];
+    if (candidateParent === document.documentElement) {
+      candidateParent = document.body;
+    }
+    if (getScrollParent(img).contains(candidateParent)) {
+      // TODO: while candidateParent.parentNode position matches /absolute/relative/
+      // and its dimensions are the same, candidateParent = candidateParent.parentNode
+      showImgSnapLink(img, cs, $(img).position(), imgRect, candidateParent, 'absolute');
+      return true;
+    }
+    return false;
+  }
+
+  function showImgSnapLink(img, imgCs, imgPos, imgDim, parent, position) {
+    if (!$aSnap || img !== $aSnap.data('img')) {
+      if ($aSnap) {
+        hideImgSnapLink();
+      }
+
+      $aSnap = $('<kifi class="kifi-root kifi-img-snap">')
+      .css({
+        position: position,
+        top: imgPos.top + parseFloat(imgCs.marginTop) + imgDim.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
+        left: imgPos.left + parseFloat(imgCs.marginLeft) + imgDim.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
+      })
+      .appendTo(parent)
+      .data('img', img)
+      .layout()
+      .css({
+        transform: 'none',
+        opacity: 1
+      });
+    }
+  }
+
+  function hideImgSnapLink() {
+    $aSnap.on('transitionend', removeThis)
+    .css({
+      transform: '',
+      opacity: ''
+    });
+    $aSnap = null;
+  }
+
+  function onDocMouseLeave() {
+    if ($aSnap) {
+      hideImgSnapLink();
+    }
+  }
+
+  function removeThis() {
+    $(this).remove();
   }
 
   var mouseDown;
@@ -121,8 +180,8 @@ var initCompose = (function() {
   var mouseDownSeriesSelChanges;
   function onWinMouseDown(e) {
     log('[onWinMouseDown]')();
-    var $el = $(e.target);
-    if (!$el.is('.kifi-root,.kifi-root *')) {
+    var el = e.target;
+    if (!el[MATCHES]('.kifi-root,.kifi-root *')) {
       mouseDown = true;
       var now = Date.now();
       if (!mouseDownSeriesStartTime || now - mouseDownSeriesStartTime > RAPID_CLICK_GRACE_PERIOD_MS) {
@@ -132,13 +191,12 @@ var initCompose = (function() {
       } else {
         mouseDownSeriesLen++;
       }
-    } else if ($aSnap && $el.is($aSnap)) {
+    } else if ($aSnap && el === $aSnap[0]) {
       e.preventDefault();
       if (!$aLook) {
         tryToCreateLookHereLinkStub(true);
         if ($aLook) {
           var img = $aSnap.data('img');
-          img.removeEventListener('mouseout', onImgMouseOut);
           $aSnap.remove();
           $aSnap = null;
           var href = 'x-kifi-sel:' + snapshot.ofImage(img);
@@ -217,10 +275,22 @@ var initCompose = (function() {
   }
 
   function intersectsKifiDom(r) {
-    var matches = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
-    return elementSelfOrParent(r.startContainer)[matches]('.kifi-root,.kifi-root *') ||
-           elementSelfOrParent(r.endContainer)[matches]('.kifi-root,.kifi-root *') ||
+    return elementSelfOrParent(r.startContainer)[MATCHES]('.kifi-root,.kifi-root *') ||
+           elementSelfOrParent(r.endContainer)[MATCHES]('.kifi-root,.kifi-root *') ||
            Array.prototype.some.call(document.getElementsByClassName('kifi-root'), r.intersectsNode.bind(r));
+  }
+
+  function pointInRect(x, y, r) {
+    return (
+      x >= r.left && x <= r.right &&
+      y >= r.top && y <= r.bottom);
+  }
+
+  function rectInRect(r1, r2, frac) {
+    var overlap =
+      (Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left)) *
+      (Math.min(r1.bottom, r2.bottom) - Math.max(r1.top, r2.top));
+    return overlap / (r1.width * r1.height || 1) >= frac;
   }
 
   function toJson(o) {
