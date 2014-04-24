@@ -208,7 +208,7 @@ a.kifi-compose-submit.kifi-active {
   opacity: 0;
 }
 .kifi-img-snap {
-  z-index: 999999999993;
+  z-index: 999999999990;
   width: 25px;
   height: 25px;
   -moz-box-sizing: border-box;

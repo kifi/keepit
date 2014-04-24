@@ -115,35 +115,60 @@ var initCompose = (function() {
   }
 
   function showImgSnapLinkIfCan(img, imgRect) {
-    var cs = window.getComputedStyle(img);
-    if (cs.position === 'fixed') {
-      showImgSnapLink(img, cs, imgRect, imgRect, document.body, 'fixed');
+    var body = document.body;
+    var imgCs = window.getComputedStyle(img);
+    if (imgCs.position === 'fixed') {
+      showImgSnapLink(img, imgCs, imgRect, body, 'fixed');
       return true;
     }
-    var candidateParent = $(img).offsetParent()[0];
-    if (candidateParent === document.documentElement) {
-      candidateParent = document.body;
-    }
-    if (getScrollParent(img).contains(candidateParent)) {
-      // TODO: while candidateParent.parentNode position matches /absolute/relative/
-      // and its dimensions are the same, candidateParent = candidateParent.parentNode
-      showImgSnapLink(img, cs, $(img).position(), imgRect, candidateParent, 'absolute');
-      return true;
+    // choose the new link's parent (a nearby positioned ancestor not beyond nearest scroll container)
+    var par;
+    for (var node = img.parentNode; node; node = node.parentNode) {
+      if (node === body) {
+        showImgSnapLink(img, imgCs, imgRect, par || body);
+        return true;
+      }
+      var cs = window.getComputedStyle(node);
+      var pos = cs.position;
+      if (/^(?:absolute|relative|fixed)/.test(pos)) {
+        if (par && node.offsetWidth * node.offsetHeight > 4 * imgRect.width * imgRect.height) {
+          showImgSnapLink(img, imgCs, imgRect, par);
+          return true;
+        }
+        par = node;
+      }
+      if ((/(?:auto|scroll)/).test(cs.overflow + cs.overflowX + cs.overflowY)) {
+        if (par) {
+          showImgSnapLink(img, imgCs, imgRect, par);
+          return true;
+        }
+        break;
+      }
     }
     return false;
   }
 
-  function showImgSnapLink(img, imgCs, imgPos, imgDim, parent, position) {
+  function showImgSnapLink(img, imgCs, imgRect, parent, fixed) {
     if (!$aSnap || img !== $aSnap.data('img')) {
       if ($aSnap) {
         hideImgSnapLink();
       }
 
+      var imgTop, imgLeft;
+      if (fixed) {
+        imgTop = imgRect.top;
+        imgLeft = imgRect.left;
+      } else {
+        var parRect = parent.getBoundingClientRect();
+        imgTop = imgRect.top - parRect.top;
+        imgLeft = imgRect.left - parRect.left;
+      }
+
       $aSnap = $('<kifi class="kifi-root kifi-img-snap">')
       .css({
-        position: position,
-        top: imgPos.top + parseFloat(imgCs.marginTop) + imgDim.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
-        left: imgPos.left + parseFloat(imgCs.marginLeft) + imgDim.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
+        position: fixed || 'absolute',
+        top: imgTop + parseFloat(imgCs.marginTop) + imgRect.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
+        left: imgLeft + parseFloat(imgCs.marginLeft) + imgRect.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
       })
       .appendTo(parent)
       .data('img', img)
@@ -434,19 +459,6 @@ var initCompose = (function() {
 
   function elementSelfOrParent(node) {
     return node.nodeType === 1 ? node : node.parentNode;
-  }
-
-  function getScrollParent(el) {
-    var root = document[document.compatMode === 'CSS1Compat' ? 'documentElement' : 'body'];
-    var par = el.parentNode;
-    while (par !== root) {
-      var cs = window.getComputedStyle(par);
-      if ((/(auto|scroll)/).test(cs.overflow + cs.overflowX + cs.overflowY)) {
-        break;
-      }
-      par = par.parentNode;
-    }
-    return par;
   }
 
   return function initCompose($container, opts) {
