@@ -8,29 +8,18 @@ import play.api.libs.json._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.db.Id
 import play.api.libs.functional.syntax._
-import scala.Some
-import play.api.libs.ws.{WS, Response}
+import play.api.libs.ws.WS
 import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.concurrent.RetryFuture
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
-import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import play.api.libs.ws.Response
 import scala.Some
-import play.api.Play
-import play.api.Play.current
-import java.io.InputStream
-import scala.util.{Success, Failure, Try}
-import com.keepit.common.store.{ImageSize, ImageUtils}
-import javax.imageio.ImageIO
-import java.awt.image.BufferedImage
-import com.keepit.common.images.ImageFetcher
-import scala.collection.generic.FilterMonadic
+import com.keepit.common.store.ImageSize
 
 case class EmbedlyImage(
   url:String,
