@@ -28,6 +28,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.actor.FakeScheduler
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
+import com.kifi.franz.QueueName
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -598,4 +599,20 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
+
+  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[User]): Future[Unit] = {
+    Future.successful(())
+  }
+
+  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnection]): Future[Unit] = {
+    Future.successful(())
+  }
+
+  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfo]): Future[Unit] = {
+    Future.successful(())
+  }
+
+  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnection]): Future[Unit] = {
+    Future.successful(())
+  }
 }
