@@ -118,29 +118,25 @@ var initCompose = (function() {
     var body = document.body;
     var imgCs = window.getComputedStyle(img);
     if (imgCs.position === 'fixed') {
-      showImgSnapLink(img, imgCs, imgRect, body, 'fixed');
-      return true;
+      return showImgSnapLink(img, imgCs, imgRect, body, 'fixed');
     }
     // choose the new link's parent (a nearby positioned ancestor not beyond nearest scroll container)
     var par;
     for (var node = img.parentNode; node; node = node.parentNode) {
       if (node === body) {
-        showImgSnapLink(img, imgCs, imgRect, par || body);
-        return true;
+        return showImgSnapLink(img, imgCs, imgRect, par || body);
       }
       var cs = window.getComputedStyle(node);
       var pos = cs.position;
       if (/^(?:absolute|relative|fixed)/.test(pos)) {
         if (par && node.offsetWidth * node.offsetHeight > 4 * imgRect.width * imgRect.height) {
-          showImgSnapLink(img, imgCs, imgRect, par);
-          return true;
+          return showImgSnapLink(img, imgCs, imgRect, par);
         }
         par = node;
       }
       if ((/(?:auto|scroll)/).test(cs.overflow + cs.overflowX + cs.overflowY)) {
         if (par) {
-          showImgSnapLink(img, imgCs, imgRect, par);
-          return true;
+          return showImgSnapLink(img, imgCs, imgRect, par);
         }
         break;
       }
@@ -148,36 +144,54 @@ var initCompose = (function() {
     return false;
   }
 
+  var IMG_SNAP_BTN_WIDTH = 25;
   function showImgSnapLink(img, imgCs, imgRect, parent, fixed) {
-    if (!$aSnap || img !== $aSnap.data('img')) {
-      if ($aSnap) {
-        hideImgSnapLink();
+    if ($aSnap) {
+      if ($aSnap.data('img') === img) {
+        return true;
       }
-
-      var imgTop, imgLeft;
-      if (fixed) {
-        imgTop = imgRect.top;
-        imgLeft = imgRect.left;
-      } else {
-        var parRect = parent.getBoundingClientRect();
-        imgTop = imgRect.top - parRect.top;
-        imgLeft = imgRect.left - parRect.left;
-      }
-
-      $aSnap = $('<kifi class="kifi-root kifi-img-snap">')
-      .css({
-        position: fixed || 'absolute',
-        top: imgTop + parseFloat(imgCs.marginTop) + imgRect.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
-        left: imgLeft + parseFloat(imgCs.marginLeft) + imgRect.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
-      })
-      .appendTo(parent)
-      .data('img', img)
-      .layout()
-      .css({
-        transform: 'none',
-        opacity: 1
-      });
+      hideImgSnapLink();
     }
+
+    var parRect, imgTop, imgLeft;
+    if (fixed) {
+      parRect = {
+        left: 0
+      };
+      imgTop = imgRect.top;
+      imgLeft = imgRect.left;
+    } else {
+      parRect = parent.getBoundingClientRect();
+      imgTop = imgRect.top - parRect.top;
+      imgLeft = imgRect.left - parRect.left;
+    }
+
+    var styles = {
+      position: fixed || 'absolute',
+      top: imgTop + parseFloat(imgCs.marginTop) + imgRect.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
+      left: imgLeft + parseFloat(imgCs.marginLeft) + imgRect.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
+    };
+
+    var availWidth = window.innerWidth - 322;
+    var pxTooFarRight = parRect.left + styles.left + IMG_SNAP_BTN_WIDTH + 5 - availWidth;
+    if (pxTooFarRight > 0) {
+      if (imgRect.left + IMG_SNAP_BTN_WIDTH + 10 > availWidth) {
+        return false;
+      }
+      styles.left -= pxTooFarRight;
+    }
+    // TODO: pxTooFarDown (out of viewport)
+
+    $aSnap = $('<kifi class="kifi-root kifi-img-snap">')
+    .css(styles)
+    .appendTo(parent)
+    .data('img', img)
+    .layout()
+    .css({
+      transform: 'none',
+      opacity: 1
+    });
+    return true;
   }
 
   function hideImgSnapLink() {
