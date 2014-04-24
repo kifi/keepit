@@ -29,6 +29,7 @@ import com.keepit.common.actor.FakeScheduler
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
 import com.kifi.franz.QueueName
+import com.keepit.graph.manager.{UserConnectionGraphUpdate, SocialUserInfoGraphUpdate, SocialConnectionGraphUpdate, UserGraphUpdate}
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -600,19 +601,19 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
 
-  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[User]): Future[Unit] = {
+  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserGraphUpdate]): Future[Unit] = {
     Future.successful(())
   }
 
-  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnection]): Future[Unit] = {
+  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit] = {
     Future.successful(())
   }
 
-  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfo]): Future[Unit] = {
+  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit] = {
     Future.successful(())
   }
 
-  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnection]): Future[Unit] = {
+  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
     Future.successful(())
   }
 }
