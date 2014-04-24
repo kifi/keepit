@@ -1,0 +1,48 @@
+@(numTopics: Int)
+
+@admin("LDA"){
+  <h2>@numTopics topics</h2>
+
+  <div>show topN topic words for topics with id between fromId and toId. Note: fromId >=0. toId < @numTopics. If fromId = toId, return one single topic. </div>
+  <form id = "show_topics">
+    <input id = "fromId" type = "text" value = "fromId">
+    <input id = "toId" type = "text" value = "toId">
+    <input id = "topN" type = "text" value = "topN words">
+    <button type = "submit">submit</button>
+  </form>
+
+  <p id = "show_topics_result"></p>
+
+
+
+
+  <script type="text/javascript">
+
+    $(document).ready(function(){
+
+      $("#show_topics").submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.showTopics',
+          {fromId: $('#fromId').val(), toId: $('#toId').val(), topN: $('#topN').val()}
+        ).done(done).fail(fail);
+
+        function done(data) {
+          $("#show_topics_result").empty().prepend(data)
+        }
+
+        function fail() { alert("bad things happened") }
+
+      })
+
+
+
+
+
+
+    });
+
+  </script>
+
+
+}

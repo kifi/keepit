@@ -13,3 +13,6 @@ POST    /internal/cortex/word2vec/userSimilarity                                
 POST    /internal/cortex/word2vec/queryUriSimilarity                                @com.keepit.controllers.cortex.CortexController.queryUriSimilarity
 POST    /internal/cortex/word2vec/userUriSimilarity                                 @com.keepit.controllers.cortex.CortexController.userUriSimilarity
 POST    /internal/cortex/word2vec/feedUserUris                                      @com.keepit.controllers.cortex.CortexController.feedUserUris
+
+GET     /internal/cortex/lda/numOfTopics                                            @com.keepit.controllers.cortex.LDAController.numOfTopics
+GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int)
