@@ -16,8 +16,8 @@ class SimpleGraphTest() extends Specification {
   "SimpleGraph" should {
     "save and retrieve vertices" in {
 
-      vertexReader.moveTo(alfred) must throwA[VertexReaderException]
-      vertexReader.moveTo(vertigo) must throwA[VertexReaderException]
+      vertexReader.moveTo(alfred) must throwA[VertexNotFoundException]
+      vertexReader.moveTo(vertigo) must throwA[VertexNotFoundException]
 
       graph.readWrite { writer =>
         writer.saveVertex(UserData(alfred))
@@ -38,7 +38,7 @@ class SimpleGraphTest() extends Specification {
       vertexReader.edgeReader.degree === 0
       vertexReader.moveTo(vertigo)
       vertexReader.edgeReader.degree === 0
-      edgeReader.moveTo(alfred, vertigo) must throwA[EdgeReaderException]
+      edgeReader.moveTo(alfred, vertigo) must throwA[EdgeNotFoundException]
 
       graph.readWrite { writer =>
         writer.saveEdge(alfred, vertigo, EmptyEdgeData)
@@ -59,14 +59,14 @@ class SimpleGraphTest() extends Specification {
 
       vertexReader.moveTo(alfred)
       vertexReader.edgeReader.degree === 0
-      edgeReader.moveTo(alfred, vertigo) must throwA[EdgeReaderException]
+      edgeReader.moveTo(alfred, vertigo) must throwA[EdgeNotFoundException]
     }
   }
 
   "not be modified until a writer commits new data" in {
 
-    vertexReader.moveTo(rearWindow) must throwA[VertexReaderException]
-    edgeReader.moveTo(alfred, rearWindow) must throwA[EdgeReaderException]
+    vertexReader.moveTo(rearWindow) must throwA[VertexNotFoundException]
+    edgeReader.moveTo(alfred, rearWindow) must throwA[VertexNotFoundException]
 
     graph.readWrite { writer =>
       writer.saveVertex(UriData(rearWindow))
@@ -80,7 +80,7 @@ class SimpleGraphTest() extends Specification {
       dirtyVertexReader.data.id === rearWindow
       dirtyVertexReader.moveTo(alfred)
       dirtyVertexReader.edgeReader.degree === 2
-      vertexReader.moveTo(rearWindow) must throwA[VertexReaderException]
+      vertexReader.moveTo(rearWindow) must throwA[VertexNotFoundException]
       vertexReader.moveTo(alfred)
       vertexReader.edgeReader.degree === 0
 
@@ -88,8 +88,8 @@ class SimpleGraphTest() extends Specification {
 
       dirtyEdgeReader.moveTo(alfred, rearWindow)
       dirtyEdgeReader.moveTo(alfred, vertigo)
-      edgeReader.moveTo(alfred, vertigo) must throwA[EdgeReaderException]
-      edgeReader.moveTo(alfred, rearWindow) must throwA[EdgeReaderException]
+      edgeReader.moveTo(alfred, vertigo) must throwA[EdgeNotFoundException]
+      edgeReader.moveTo(alfred, rearWindow) must throwA[VertexNotFoundException]
     }
 
     vertexReader.moveTo(rearWindow)

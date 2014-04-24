@@ -94,6 +94,16 @@ class ServiceClusterTest extends Specification {
       cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false).setRemoteService(remoteService2)) === true
     }
 
+    "equal service instances" in {
+      val basePath = Node("/fortytwo/services/TEST_MODE")
+      val s1 = new ServiceInstance(Node(basePath, "node_00000001"), false)
+      val s2 = new ServiceInstance(Node(basePath, "node_00000001"), false)
+      val s3 = new ServiceInstance(Node(basePath, "node_00000003"), false)
+      s1 === s2
+      s1 !== s3
+      s2 !== s3
+    }
+
     "dedup nodes" in {
       val cluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(new FakeAirbrakeNotifier()), new FakeScheduler(), ()=>{})
       val zk = new FakeZooKeeperClient()

@@ -33,6 +33,7 @@ class ExtPreferenceController @Inject() (
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private case class UserPrefs(
+    lookHereMode: Boolean,
     enterToSend: Boolean,
     maxResults: Int,
     showKeeperIntro: Boolean,
@@ -41,6 +42,7 @@ class ExtPreferenceController @Inject() (
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
+      (__ \ 'lookHereMode).write[Boolean] and
       (__ \ 'enterToSend).write[Boolean] and
       (__ \ 'maxResults).write[Int] and
       (__ \ 'showKeeperIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
@@ -67,6 +69,11 @@ class ExtPreferenceController @Inject() (
         Ok(Json.obj())
       }
     }
+  }
+
+  def setLookHereMode(on: Boolean) = JsonAction.authenticated { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.lookHereMode.name, on))
+    Ok(JsNumber(0))
   }
 
   def setEnterToSend(enterToSend: Boolean) = JsonAction.authenticated { request =>
@@ -143,6 +150,7 @@ class ExtPreferenceController @Inject() (
       messagingEmails <- messagingEmailsFuture
     } yield {
       UserPrefs(
+        lookHereMode = UserValues.lookHereMode.parseFromMap(userVals),
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals),

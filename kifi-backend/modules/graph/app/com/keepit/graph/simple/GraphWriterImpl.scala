@@ -48,20 +48,21 @@ class GraphWriterImpl(bufferedVertices: BufferedMap[VertexId, MutableVertex]) ex
 
   def saveEdge[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind, E <: EdgeDataReader](source: VertexDataId[S], destination: VertexDataId[D], data: E): Boolean = {
     val sourceVertexId = VertexId(source)
-    val bufferedSourceVertex = getBufferedVertex(sourceVertexId).get
+    val bufferedSourceVertex = getBufferedVertex(sourceVertexId) getOrElse { throw new VertexNotFoundException(sourceVertexId) }
     val destinationVertexId = VertexId(destination)
+    if (!bufferedVertices.contains(destinationVertexId)) { throw new VertexNotFoundException(destinationVertexId) }
     val isUpdate = bufferedSourceVertex.edges.contains(destinationVertexId)
     bufferedSourceVertex.edges += (destinationVertexId -> data)
     isUpdate
   }
 
-  def removeEdge[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Boolean = {
+  def removeEdge[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Unit = {
     val sourceVertexId = VertexId(source)
-    val bufferedSourceVertex = getBufferedVertex(sourceVertexId).get
+    val bufferedSourceVertex = getBufferedVertex(sourceVertexId) getOrElse { throw new VertexNotFoundException(sourceVertexId) }
     val destinationVertexId = VertexId(destination)
-    val isUpdate = bufferedSourceVertex.edges.contains(destinationVertexId)
+    if (!bufferedVertices.contains(destinationVertexId)) { throw new VertexNotFoundException(destinationVertexId) }
+    if (!bufferedSourceVertex.edges.contains(destinationVertexId)) { throw new EdgeNotFoundException(sourceVertexId, destinationVertexId) }
     bufferedSourceVertex.edges -= destinationVertexId
-    isUpdate
   }
 
   def commit(): Unit = { bufferedVertices.flush() }
