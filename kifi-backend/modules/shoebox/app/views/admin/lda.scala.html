@@ -11,7 +11,16 @@
     <button type = "submit">submit</button>
   </form>
 
-  <p id = "show_topics_result"></p>
+
+  <table id = "topic_words_table" class = "table table-bordered">
+    <thead>
+      <tr>
+        <th> id
+        <th> words
+      <tr/>
+    </thead>
+    <tbody></tbody>
+  </table>
 
 
 
@@ -28,7 +37,19 @@
         ).done(done).fail(fail);
 
         function done(data) {
-          $("#show_topics_result").empty().prepend(data)
+          var x = JSON.parse(data)
+          var sz = x.length
+
+          $("#topic_words_table > tbody").empty()
+          for(var i = 0; i < sz; i++){
+            var item  = x[i]
+            $("#topic_words_table > tbody:last").append(
+              "<tr>" +
+              "<td>" + i + "</td>" +
+              "<td><pre>" + item + "</pre></td>" +
+              "</tr>"
+            )
+          }
         }
 
         function fail() { alert("bad things happened") }
