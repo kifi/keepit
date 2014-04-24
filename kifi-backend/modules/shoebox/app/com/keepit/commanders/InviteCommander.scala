@@ -217,19 +217,16 @@ class InviteCommander @Inject() (
             socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
         }
       }
-
       notifyClientsOfConnection(userId, senderUserId);
-
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
   }
 
-  private def notifyClientsOfConnection(user1: Id[User], user2: Id[User]) = {
-    delay{
-      db.readOnly { implicit session =>
-        eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
-        eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
-      }
+  private def notifyClientsOfConnection(user1Id: Id[User], user2Id: Id[User]) = {
+    delay {
+      val (user1, user2) = db.readOnly { implicit session => basicUserRepo.load(user1Id) -> basicUserRepo.load(user2Id) }
+      eliza.sendToUser(user1Id, Json.arr("new_friends", Set(user2)))
+      eliza.sendToUser(user2Id, Json.arr("new_friends", Set(user1)))
     }
   }
 
