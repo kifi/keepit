@@ -136,12 +136,18 @@ var initCompose = (function() {
       var cs = window.getComputedStyle(node);
       var pos = cs.position;
       if (/^(?:absolute|relative|fixed)/.test(pos)) {
-        if (par && node.offsetWidth * node.offsetHeight > 4 * imgRect.width * imgRect.height) {
-          return showImgSnapLink(img, imgCs, imgRect, par);
+        if (par) {
+          if (pos === 'fixed' ||
+              Math.abs(Math.log(node.offsetWidth / imgRect.width)) > .3 ||
+              Math.abs(Math.log(node.offsetHeight / imgRect.height)) > .3) {
+            return showImgSnapLink(img, imgCs, imgRect, par);
+          }
+        } else if (pos === 'fixed') {
+          return showImgSnapLink(img, imgCs, imgRect, node);
         }
         par = node;
       }
-      if ((/(?:auto|scroll)/).test(cs.overflow + cs.overflowX + cs.overflowY)) {
+      if (/(?:auto|scroll)/.test(cs.overflow + cs.overflowX + cs.overflowY)) {
         if (par) {
           return showImgSnapLink(img, imgCs, imgRect, par);
         }
@@ -160,23 +166,11 @@ var initCompose = (function() {
       hideImgSnapLink();
     }
 
-    var parRect, imgTop, imgLeft;
-    if (fixed) {
-      parRect = {
-        left: 0
-      };
-      imgTop = imgRect.top;
-      imgLeft = imgRect.left;
-    } else {
-      parRect = parent.getBoundingClientRect();
-      imgTop = imgRect.top - parRect.top;
-      imgLeft = imgRect.left - parRect.left;
-    }
-
+    var parRect = parent.getBoundingClientRect();
     var styles = {
       position: fixed || 'absolute',
-      top: imgTop + parseFloat(imgCs.marginTop) + imgRect.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
-      left: imgLeft + parseFloat(imgCs.marginLeft) + imgRect.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
+      top: (imgRect.top - parRect.top) + imgRect.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
+      left: (imgRect.left - parRect.left) + imgRect.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
     };
 
     var availWidth = window.innerWidth - 322;
