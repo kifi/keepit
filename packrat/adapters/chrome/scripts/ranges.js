@@ -19,15 +19,16 @@ var ranges = ranges || (function () {
   function getClientRects(r) {  // crbug.com/324437
     var rects = [];
     var indexOf = Function.call.bind(Array.prototype.indexOf);
-    for (var el = r.endContainer; el !== r.commonAncestorContainer;) {
-      var sr = r.cloneRange();
+    var er = r.cloneRange();
+    for (var el = er.endContainer; el !== er.commonAncestorContainer;) {
+      var sr = er.cloneRange();
       sr.setStart(el, 0);
       var parent = el.parentNode;
-      r.setEnd(parent, indexOf(parent.childNodes, el));
+      er.setEnd(parent, indexOf(parent.childNodes, el));
       rects.push.apply(rects, sr.getClientRects());
       el = parent;
     }
-    rects.push.apply(rects, r.getClientRects());
+    rects.push.apply(rects, er.getClientRects());
     return rects;
   }
 })();
