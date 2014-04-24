@@ -147,24 +147,24 @@ class InviteCommander @Inject() (
       val userEmailAccounts = emailAddressRepo.getAllByUser(userId)
       val cookieInvite = cookieInviteId.flatMap { inviteExtId =>
         Try(invitationRepo.get(inviteExtId)).toOption.collect {
-          case socialInvite if socialInvite.recipientSocialUserId.isDefined => {
+          case socialInvite if socialInvite.recipientSocialUserId.isDefined =>
             val invitedSocialUserId = socialInvite.recipientSocialUserId.get
             userSocialAccounts.find(_.id.get == invitedSocialUserId) match {
-              case Some(invitedSocialAccount) => socialInvite -> invitedSocialAccount.networkType
-              case None => {
+              case Some(invitedSocialAccount) =>
+                socialInvite -> invitedSocialAccount.networkType
+              case None =>
                 socialInvite.senderUserId.foreach { senderId =>
                   session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, Some(invitedSocialUserId), None)) }
                 }
                 val invitedSocialAccount = socialUserInfoRepo.get(invitedSocialUserId)
-                val fortyTwoInvite = invitationRepo.save(socialInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id))
+                val fortyTwoInvite = invitationRepo.save(socialInvite.withRecipientSocialUserId(fortyTwoSocialAccount.id))
                 fortyTwoInvite -> invitedSocialAccount.networkType
-              }
             }
-          }
-          case emailInvite if emailInvite.recipientEmailAddress.isDefined => {
+          case emailInvite if emailInvite.recipientEmailAddress.isDefined =>
             val invitedEmailAddress = emailInvite.recipientEmailAddress.get
             userEmailAccounts.find(_.address == invitedEmailAddress) match {
-              case Some(invitedEmailAccount) => emailInvite -> SocialNetworks.EMAIL
+              case Some(invitedEmailAccount) =>
+                emailInvite -> SocialNetworks.EMAIL
               case None => {
                 emailInvite.senderUserId.foreach { senderId =>
                   session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(invitedEmailAddress))) }
@@ -173,7 +173,6 @@ class InviteCommander @Inject() (
                 fortyTwoInvite -> SocialNetworks.EMAIL
               }
             }
-          }
         }
       }
 
