@@ -78,7 +78,7 @@ class ElizaEmailNotifierActor @Inject() (
     val threadItems: Seq[ThreadItem] =  db.readOnly { implicit session => userThread.lastSeen.map { lastSeen =>
       messageRepo.getAfter(thread.id.get, lastSeen).filter(!_.from.isSystem)
     } getOrElse {
-      messageRepo.get(thread.id.get, 0, None).filter(!_.from.isSystem)
+      messageRepo.get(thread.id.get, 0).filter(!_.from.isSystem)
     }}.map { message =>
       ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageLookHereRemover(message.messageText))
     } reverse

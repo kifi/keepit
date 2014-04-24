@@ -94,7 +94,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val startTime = System.currentTimeMillis()
     val model = (for(f <- rows if f.id is id) yield f).first
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:$time\tmodel:${model.getClass.getSimpleName}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 
@@ -111,7 +111,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val startTime = System.currentTimeMillis()
     val inserted = (rows returning rows.map(_.id)) += model
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:${time}\tmodel:${inserted.getClass.getSimpleName()}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:$time\tmodel:${inserted.getClass.getSimpleName}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     inserted
   }
 

@@ -87,6 +87,9 @@
   outline: 1px dotted #ccc !important;
 }
 
+.kifi-llb-dialog-p+.kifi-llb-dialog-p {
+  margin-top: 12px;
+}
 .kifi-llb-dialog-x {
   position: absolute;
   top: 9px;

@@ -19,7 +19,7 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
   def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
 
-  def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession)  : Seq[Message]
+  def get(thread: Id[MessageThread], from: Int)(implicit session: RSession)  : Seq[Message]
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[Message]
 
@@ -85,7 +85,7 @@ class MessageRepoImpl @Inject() (
     }
   }
 
-  def get(threadId: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = { //Note: Cache does not honor pagination!! -Stephen
+  def get(threadId: Id[MessageThread], from: Int)(implicit session: RSession) : Seq[Message] = { //Note: Cache does not honor pagination!! -Stephen
     val key = MessagesForThreadIdKey(threadId)
     messagesForThreadIdCache.get(key) match {
       case Some(v) => {
@@ -93,11 +93,7 @@ class MessageRepoImpl @Inject() (
       }
       case None => {
         val query = (for (row <- rows if row.thread === threadId) yield row).drop(from)
-        val got = to match {
-          case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
-          case None => query.sortBy(row => row.createdAt desc).list
-        }
-        log.info(s"[get_thread] got thread messages for thread_id $threadId.")
+        val got = query.sortBy(row => row.createdAt desc).list
         val mft = new MessagesForThread(threadId, got)
         try {
           messagesForThreadIdCache.set(key, mft)
@@ -134,7 +130,6 @@ class MessageRepoImpl @Inject() (
     afterOpt.map{ after =>
       StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
     } getOrElse {
-
       val n = Query(rows.filter(row => row.thread === threadId).length).first
       (n, n)
     }

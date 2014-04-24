@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.mobile
 
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.MessageThread
+import com.keepit.eliza.model.{Message, MessageThread}
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.heimdal._
@@ -84,15 +84,56 @@ class MobileMessagingController @Inject() (
   }
 
 
-  def getThread(threadId: String) = JsonAction.authenticatedAsync { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+  def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = JsonAction.authenticatedAsync { request =>
+    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, allMsgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
-      Ok(Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))
+      val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
+      val participants: Set[BasicUserLikeEntity] = allMsgs.map(_.participants).flatten.toSet
+      val page = fromMessageId match {
+        case None =>
+          allMsgs.take(pageSize)
+        case Some(idString) =>
+          val id = ExternalId[Message](idString)
+          val afterId = allMsgs.dropWhile(_.id != id)
+          if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${allMsgs.size} had no message id $id")
+          afterId.drop(1).take(pageSize)
+      }
+      Ok(Json.obj(
+        "id" -> threadId,
+        "uri" -> url,
+        "nUrl" -> nUrl,
+        "participants" -> participants,
+        "messages" -> (page map { m =>
+          val adderAndAddedOpt: Option[(String,Seq[String])] = m.auxData match {
+            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+              Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json =>  (json \ "id").as[String]) )
+            }
+            case _ => None
+          }
+          val baseJson = Json.obj(
+            "id" -> m.id.toString,
+            "time" -> m.createdAt.getMillis,
+            "text" -> m.text
+          )
+          val msgJson = baseJson ++ (m.user match {
+            case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
+            case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("userId" -> bnu.toString)
+            case _ => Json.obj()
+          })
+
+          adderAndAddedOpt.map { adderAndAdded =>
+            msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
+          } getOrElse{
+            msgJson
+          }
+        })
+      ))
     }
   }
 
+  @deprecated(message = "use getPagedThread", since = "April 23, 2014")
   def getCompactThread(threadId: String) = JsonAction.authenticatedAsync { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { case (thread, msgs) =>
+    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, msgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
       val nUrl = thread.nUrl.getOrElse("")  // needs to change when we have detached threads
       val participants: Set[BasicUserLikeEntity] = msgs.map(_.participants).flatten.toSet
@@ -103,7 +144,9 @@ class MobileMessagingController @Inject() (
         "participants" -> participants,
         "messages" -> (msgs.reverse map { m =>
           val adderAndAddedOpt: Option[(String,Seq[String])] = m.auxData match {
-            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[BasicUser]].map(_.externalId.id) )
+            case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+              Some( adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json =>  (json \ "id").as[String]) )
+            }
             case _ => None
           }
           val baseJson = Json.obj(
@@ -113,7 +156,7 @@ class MobileMessagingController @Inject() (
           )
           val msgJson = baseJson ++ (m.user match {
               case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("email" -> bnu.toString)
+              case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("userId" -> bnu.toString)
               case _ => Json.obj()
           })
 

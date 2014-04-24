@@ -56,10 +56,9 @@ class InviteController @Inject() (db: Database,
         val message = form.get("message").map(_.head)
         val source = "site"
         inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
-          case inviteStatus if inviteStatus.sent => {
+          case inviteStatus if inviteStatus.sent =>
             log.info(s"[inviteConnection] Invite sent: $inviteStatus")
             CloseWindow()
-          }
           case InviteStatus(false, Some(facebookInvite), "client_handle") if fullSocialId.network == SocialNetworks.FACEBOOK =>
             val facebookUrl = inviteCommander.fbInviteUrl(facebookInvite.externalId, fullSocialId.identifier.left.get, source)
             log.info(s"[inviteConnection] Redirecting user ${request.userId} to Facebook: $facebookUrl")
@@ -111,7 +110,7 @@ class InviteController @Inject() (db: Database,
       CloseWindow()
     }
     else {
-      log.error(s"[confirmInvite] Unexpected error while processing Facebook invitation ${id} from ${source}: ${inviteStatus} $errorMsg }")
+      log.error(s"[confirmInvite] Unexpected error while processing Facebook invitation $id from $source: $inviteStatus $errorMsg }")
       airbrake.notify(new FailedInvitationException(inviteStatus, Some(id), None, None))
       Redirect(routes.HomeController.home)
     }

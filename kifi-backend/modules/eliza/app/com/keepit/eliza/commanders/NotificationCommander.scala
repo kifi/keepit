@@ -18,7 +18,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{Promise, Future, Await}
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
@@ -33,6 +33,7 @@ import com.keepit.realtime.PushNotification
 import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddresses, GenericEmailAddress, EmailAddressHolder, PostOffice}
 import com.keepit.common.crypto.PublicIdConfiguration
+import scala.concurrent.duration._
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
@@ -67,26 +68,50 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  //temp, needs to be removed before shipping
-  def notifyEmailUsers(thread: MessageThread): Unit = {
+  //temp, needs to be removed before shipping!
+  def notifyEmailUsers(thread: MessageThread, exceptAddress: Option[String] = None): Unit = {
     if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
       val nuts = db.readOnly { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
-      val messages = basicMessageCommander.getThreadMessages(thread, None)
-      val body = messages.map(_.messageText).toString
+      val messages = basicMessageCommander.getThreadMessages(thread)
+
+      val allUsersIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+
+      val allUsers : Map[Id[User], User] = Await.result(shoebox.getUsers(allUsersIds.toSeq), 2 minutes).map(u => u.id.get -> u).toMap
+
+      val authors: Seq[String] = thread.participants.map{ participants =>
+        participants.allUsers.map(id => allUsers(id).firstName + " " + allUsers(id).lastName).toSeq ++ participants.allNonUsers.map(_.identifier).toSeq
+      }.getOrElse(Seq[String]())
+
+      val threadItems = messages.filterNot(_.from.isSystem).map{ message =>
+        message.from match {
+          case MessageSender.User(id) => ThreadItem(Some(id), None, message.messageText)
+          case MessageSender.NonUser(nup) => ThreadItem(None, Some(nup.identifier), message.messageText)
+          case _ => throw new Exception("This can't happen")
+        }
+      }.reverse
+
+      val url = thread.url.getOrElse("")
+
+      val title = thread.pageTitle.getOrElse(url)
+
       nuts.foreach{ nut =>
-        //send email for this nut
-        val replyTo = ""
-        shoebox.sendMail(ElectronicMail (
-          from = EmailAddresses.NOTIFICATIONS,
-          fromName = Some("Kifi"),
-          to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-          subject = "Kifi Message on " + thread.url,
-          htmlBody = body,
-          category = ElectronicMailCategory("external_message_test"),
-          extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
-        ))
+        if ((exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) && !nut.muted) {
+          val mute = "/eliza/email/mute/" + nut.publicId.get
+
+          val body =  views.html.nonUserMessagesEmail(authors, threadItems, url, title, allUsers, mute).body
+
+          shoebox.sendMail(ElectronicMail (
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("Kifi"),
+            to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
+            subject = "Kifi Message on " + thread.url.getOrElse("a Page"),
+            htmlBody = body,
+            category = ElectronicMailCategory("external_message_test"),
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
+          ))
+        }
       }
     }
 
@@ -170,7 +195,8 @@ class NotificationCommander @Inject() (
 
   private def notifyUnreadCount(userId: Id[User], threadExtId: ExternalId[MessageThread], unreadCount: Int): Unit = {
     sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
-    sendPushNotification(userId, threadExtId, unreadCount, None)
+    val notification = PushNotification(threadExtId, unreadCount, None, None)
+    sendPushNotification(userId, notification)
   }
 
   def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =
@@ -284,8 +310,7 @@ class NotificationCommander @Inject() (
     )
   }
 
-  def sendPushNotification(userId:Id[User], extId:ExternalId[MessageThread], pendingNotificationCount:Int, msg:Option[String]) = {
-    val notification = PushNotification(extId, pendingNotificationCount, msg)
+  def sendPushNotification(userId:Id[User], notification: PushNotification) = {
     urbanAirship.notifyUser(userId, notification)
     messagingAnalytics.sentPushNotificationForThread(userId, notification)
   }
@@ -295,7 +320,7 @@ class NotificationCommander @Inject() (
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId==userId).head.lastSeen
       val unseenAuthors: Int = lastSeenOpt match {
-        case Some(lastSeen) => authorActivityInfos.filter(_.lastActive.get.isAfter(lastSeen)).length
+        case Some(lastSeen) => authorActivityInfos.count(_.lastActive.get.isAfter(lastSeen))
         case None => authorActivityInfos.length
       }
       val (numMessages: Int, numUnread: Int, muted: Boolean) = db.readOnly { implicit session =>
@@ -317,7 +342,7 @@ class NotificationCommander @Inject() (
         numUnread = numUnread,
         muted = muted)
 
-      db.readWrite(attempts=2){ implicit session =>
+      db.readWrite(attempts = 2){ implicit session =>
         userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
       }
 
@@ -332,11 +357,13 @@ class NotificationCommander @Inject() (
       if (!muted) {
         val sender = messageWithBasicUser.user match {
           case Some(bu:BasicUser) => bu.firstName + ": "
-          case Some(bnu:BasicNonUser) => bnu.toString + ": "
+          case Some(bnu:BasicNonUser) => bnu.firstName.getOrElse(bnu.id) + ": "
           case _ => ""
         }
         val notifText = MessageLookHereRemover(sender + message.messageText)
-        sendPushNotification(userId, thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)))
+        val sound = if (numMessages > 1) UrbanAirship.MoreMessageNotificationSound else UrbanAirship.DefaultNotificationSound
+        val notification = PushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
+        sendPushNotification(userId, notification)
       }
     }
 
@@ -396,7 +423,7 @@ class NotificationCommander @Inject() (
         unseenAuthors = numAuthors,
         numAuthors = numAuthors,
         numMessages = numMessages,
-        numUnread = numMessages,
+        numUnread = numUnread,
         muted = false
       )
 
@@ -425,7 +452,8 @@ class NotificationCommander @Inject() (
       message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadCount))
-    sendPushNotification(user, message.threadExtId, unreadCount, None)
+    val notification = PushNotification(message.threadExtId, unreadCount, None, None)
+    sendPushNotification(user, notification)
     message.createdAt
   }
 

@@ -68,9 +68,6 @@ object MessageSender {
   }
 }
 
-
-
-
 case class Message(
     id: Option[Id[Message]] = None,
     createdAt: DateTime = currentDateTime,

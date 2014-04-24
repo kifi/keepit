@@ -55,7 +55,7 @@ object BasicSocialUser {
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
 
-case class ConnectionInfo(userId: Id[User], unfriended: Boolean, unsearched: Boolean)
+case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
 
 case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
@@ -140,36 +140,16 @@ class UserCommander @Inject() (
     }
   }
 
-  def getFriendsDetails(userId:Id[User]):Future[Seq[(BasicUser, Boolean, Boolean)]] = {
-    val (searchFriends, connectionIds, unfriendedIds) = db.readOnly { implicit s =>
-      (searchFriendRepo.getSearchFriends(userId),
-        userConnectionRepo.getConnectedUsers(userId),
-        userConnectionRepo.getUnfriendedUsers(userId))
-    }
-    implicit val fj = ExecutionContext.fj
-    val connectedF = SafeFuture {
-      db.readOnly { implicit ro => basicUserRepo.loadAll(connectionIds).toSeq.map { case (userId, basicUser) => (basicUser, searchFriends.contains(userId), false) } }
-    }
-    val unfriendedF = SafeFuture {
-      db.readOnly { implicit ro => basicUserRepo.loadAll(unfriendedIds).toSeq.map { case (userId, basicUser) => (basicUser, searchFriends.contains(userId), true) } }
-    }
-    for {
-      connected <- connectedF
-      unfriended <- unfriendedF
-    } yield {
-      connected ++ unfriended
-    }
-  }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
-    val (searchFriends, connectionIds, unfriendedIds) = db.readOnly { implicit s => (
-      searchFriendRepo.getSearchFriends(userId),
-      userConnectionRepo.getConnectedUsers(userId),
-      userConnectionRepo.getUnfriendedUsers(userId)
-      )}
-    val connections = connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq
-    val infos = connections.map { case (friendId, unfriended) =>
-      ConnectionInfo(friendId, unfriended, searchFriends.contains(friendId))
+    val infos = db.readOnly { implicit s =>
+      val searchFriends = searchFriendRepo.getSearchFriends(userId)
+      val connectionIds = userConnectionRepo.getConnectedUsers(userId)
+      val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
+      val connections = connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq
+      connections.map { case (friendId, unfriended) =>
+        ConnectionInfo(basicUserRepo.load(friendId), friendId, unfriended, searchFriends.contains(friendId))
+      }
     }
     (infos.drop(page * pageSize).take(pageSize), infos.size)
   }
