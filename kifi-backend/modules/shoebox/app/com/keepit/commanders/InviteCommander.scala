@@ -133,7 +133,7 @@ class InviteCommander @Inject() (
       for ((invite, originalSocialNetwork) <- anyPendingInvites) {
         connectInvitedUsers(userId, invite)
         if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-          val acceptedInvite = invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+          val acceptedInvite = invitationRepo.save(invite.withState(InvitationStates.ACCEPTED))
           reportReceivedInvitation(userId, originalSocialNetwork, acceptedInvite, invId == Some(invite.externalId))
         }
       }
