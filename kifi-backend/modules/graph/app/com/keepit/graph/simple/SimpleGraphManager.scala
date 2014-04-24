@@ -17,7 +17,7 @@ class SimpleGraphManager(
 
   def backup(): Unit = {
     simpleGraph.synchronized { graphDirectory.persist(simpleGraph, state) }
-    if (serviceDiscovery.thisInstance.exists(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP)) {
+    if (serviceDiscovery.myStatus.exists(_ == ServiceStatus.BACKING_UP)) {
       graphDirectory.synchronized { graphDirectory.doBackup() }
     }
   }
