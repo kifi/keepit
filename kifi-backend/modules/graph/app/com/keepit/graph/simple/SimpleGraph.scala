@@ -27,13 +27,11 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 
 object SimpleGraph {
   implicit val format: Format[SimpleGraph] = new Format[SimpleGraph] {
-    def writes(simpleGraph: SimpleGraph): JsValue = JsArray(simpleGraph.vertices.values.map(MutableVertex.format.writes).toSeq)
+    def writes(simpleGraph: SimpleGraph): JsValue = JsArray(simpleGraph.vertices.flatMap { case (vertexId, vertex) => Seq(VertexId.format.writes(vertexId), MutableVertex.format.writes(vertex)) }.toSeq)
     def reads(json: JsValue): JsResult[SimpleGraph] = json.validate[JsArray].map { jsArray =>
-      val mutableVertices = jsArray.value.map(_.as[MutableVertex])
       val vertices = TrieMap[VertexId, MutableVertex]()
-      vertices ++= mutableVertices.map { mutableVertex =>
-        val vertexData = mutableVertex.data
-        (VertexId(vertexData.id)(vertexData.kind) -> mutableVertex)
+      vertices ++= jsArray.value.sliding(2,2).map { case Seq(vertexId, vertex) =>
+        vertexId.as[VertexId] -> vertex.as[MutableVertex]
       }
       SimpleGraph(vertices)
     }
