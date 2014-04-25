@@ -51,16 +51,31 @@ class AdminLDAController @Inject()(
     Ok(Json.toJson(topics))
   }
 
+  private def showTopTopicDistributions(arr: Array[Float]): String = {
+    arr.zipWithIndex.sortBy(-1f * _._1).take(5).map{ case (score, topicId) => topicId + ": " + "%.3f".format(score)}.mkString(", ")
+  }
+
   def wordTopic() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word = body.get("word").get
     val res = Await.result(cortex.ldaWordTopic(word), 5 seconds)
 
     val msg = res match {
-      case Some(arr) => {
-        arr.zipWithIndex.sortBy(-1f * _._1).take(5).map{ case (score, topicId) => topicId + ": " + "%.3f".format(score)}.mkString(", ")
-      }
+      case Some(arr) => showTopTopicDistributions(arr)
       case None => "word not in dictionary"
+    }
+
+    Ok(msg)
+  }
+
+  def docTopic() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val doc = body.get("doc").get
+    val res = Await.result(cortex.ldaDocTopic(doc), 5 seconds)
+
+    val msg = res match {
+      case Some(arr) => showTopTopicDistributions(arr)
+      case None => "not enough information."
     }
 
     Ok(msg)
