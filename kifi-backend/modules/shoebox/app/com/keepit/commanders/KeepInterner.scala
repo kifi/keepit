@@ -102,16 +102,16 @@ class KeepInterner @Inject() (
       db.readWrite { implicit rw =>
         keepClickRepo.getMostRecentClickByClickerAndUriId(userId, keep.uriId) match {
           case None =>
-            log.info(s"[internRawBookmarks($userId)] no click event found for ${keep.uriId}")
+            log.info(s"[keepAttribution($userId)] no click event found for ${keep.uriId}")
           case Some(click) =>
             if (click.createdAt.isAfter(currentDateTime.minusMinutes(15))) { // tweak
               keepClickRepo.getClicksByUUID(click.uuid) map { c =>
                 val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
                 rekeepRepo.save(rekeep)
-                log.info(s"[internRawBookmarks($userId)] rekeep=$rekeep; most recent click: $c")
+                log.info(s"[keepAttribution($userId)] rekeep=$rekeep; most recent click: $c")
               }
             } else {
-              log.info(s"[internRawBookmarks($userId)] most recent click beyond threshold: $click")
+              log.info(s"[keepAttribution($userId)] most recent click beyond threshold: $click")
             }
         }
       }
