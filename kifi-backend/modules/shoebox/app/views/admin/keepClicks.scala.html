@@ -1,0 +1,34 @@
+@(keepInfos:Seq[(com.keepit.model.KeepClick, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])])
+
+@admin("Keep Clicks") {
+
+<table class="table table-striped">
+    <th><tr>
+        <td>Id</td>
+        <td>state</td>
+        <td>uuid</td>
+        <td>numKeepers</td>
+        <td>keeperId</td>
+        <td>keepId</td>
+        <td>clickerId</td>
+        <td>uriId</td>
+        <td>favicon</td>
+        <td>image</td>
+    </tr></th>
+    @for((click, pageOpt, imgOpt) <- keepInfos){
+    <tr>
+        <td>@click.id</td>
+        <td>@click.state</td>
+        <td>@click.uuid</td>
+        <td>@click.numKeepers</td>
+        <td>@click.keeperId</td>
+        <td>@click.keepId</td>
+        <td>@click.clickerId</td>
+        <td>@click.uriId</td>
+        <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
+        <td>@if(imgOpt.isDefined){ <img src="@imgOpt.get.url" width="50" height="50" alt="no image" /> }</td>
+    </tr>
+    }
+</table>
+
+}
