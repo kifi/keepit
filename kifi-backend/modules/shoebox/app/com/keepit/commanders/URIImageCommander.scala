@@ -38,11 +38,16 @@ class URIImageCommander @Inject()(
 
   def getImageForURL(value: JsValue, source: RequestSource): Future[JsValue] = {
     parseRequest(value, source) match {
-      case Left(request) => getImageForURLRequest(request).map { imageInfoOpt =>
-        imageInfoOpt match {
-          case Some(imageInfo) => Json.obj("url" -> imageInfo.url)
-          case None => jsonError("no_image_found")
-        }
+      case Left(request) => {
+        val genericError = jsonError("no_image_found")
+        getNormalizedURIForRequest(request).map { nUri =>
+          getImageForURLRequest(request, nUri) map { imageInfoOpt =>
+            imageInfoOpt match {
+              case Some(imageInfo) => Json.obj("url" -> uriImageStore.mkImgUrl(nUri.externalId, imageInfo.provider, imageInfo.name))
+              case None => genericError
+            }
+          }
+        } getOrElse future{genericError}
       }
       case Right(error) => future {jsonError(error)}
     }
@@ -63,17 +68,24 @@ class URIImageCommander @Inject()(
 
   private def jsonError(message: String) = Json.obj("error" -> message)
 
-  def getImageForURLRequest(request: URIImageRequest): Future[Option[ImageInfo]] = {
-    val nUriOpt = if (request.silent)
+  def getNormalizedURIForRequest(request: URIImageRequest): Option[NormalizedURI] = {
+    if (request.silent)
       db.readOnly { implicit session => normalizedUriRepo.getByUri(request.url) }
     else
       db.readWrite { implicit session => Some(normalizedUriRepo.internByUri(request.url)) }
-    nUriOpt map { nUri =>
-      val imageInfoOpt = getStoredImageForURI(nUri, request.imageType, request.minSize)
-      if (imageInfoOpt.isEmpty) {
-        if (request.waiting || !request.silent) fetchImagesForURLRequest(nUri, request.imageType, request.minSize) else future{None}
-      } else future{imageInfoOpt}
+  }
+
+  def getImageForURLRequest(request: URIImageRequest): Future[Option[ImageInfo]] = {
+    getNormalizedURIForRequest(request) map { nUri =>
+      getImageForURLRequest(request, nUri)
     } getOrElse (future{None})
+  }
+
+  private def getImageForURLRequest(request: URIImageRequest, nUri: NormalizedURI): Future[Option[ImageInfo]] = {
+    val imageInfoOpt = getStoredImageForURI(nUri, request.imageType, request.minSize)
+    if (imageInfoOpt.isEmpty) {
+      if (request.waiting || !request.silent) fetchImagesForURLRequest(nUri, request.imageType, request.minSize) else future{None}
+    } else future{imageInfoOpt}
   }
 
   private def getStoredImageForURI(pageUri: NormalizedURI, imageType: ImageType, minSize: ImageSize): Option[ImageInfo] = {
