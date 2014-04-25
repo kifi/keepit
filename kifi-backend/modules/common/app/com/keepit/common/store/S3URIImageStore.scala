@@ -26,7 +26,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     os.close
     streamUpload(config.bucketName, mkImgKey(nUri.externalId, info.provider, info.name), new ByteArrayInputStream(bytes), "public, max-age=1800", bytes.length) flatMap { _ =>
       // Return the url of the image in S3
-      Try{(mkImgUrl(nUri.externalId, info.provider, info.name).get, bytes.length)}
+      Try{(mkImgUrl(nUri.externalId, info.provider, info.name, Some("http")).get, bytes.length)}
     }
   }
 

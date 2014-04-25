@@ -43,7 +43,7 @@ class URIImageCommander @Inject()(
         getNormalizedURIForRequest(request).map { nUri =>
           getImageForURLRequest(request, nUri) map { imageInfoOpt =>
             imageInfoOpt match {
-              case Some(imageInfo) => Json.obj("url" -> uriImageStore.mkImgUrl(nUri.externalId, imageInfo.provider, imageInfo.name))
+              case Some(imageInfo) => Json.obj("url" -> uriImageStore.mkImgUrl(nUri.externalId, imageInfo.provider, imageInfo.name, Some("http")))
               case None => genericError
             }
           }
@@ -68,7 +68,7 @@ class URIImageCommander @Inject()(
 
   private def jsonError(message: String) = Json.obj("error" -> message)
 
-  def getNormalizedURIForRequest(request: URIImageRequest): Option[NormalizedURI] = {
+  private def getNormalizedURIForRequest(request: URIImageRequest): Option[NormalizedURI] = {
     if (request.silent)
       db.readOnly { implicit session => normalizedUriRepo.getByUri(request.url) }
     else

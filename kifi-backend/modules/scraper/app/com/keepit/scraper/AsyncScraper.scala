@@ -70,7 +70,6 @@ class AsyncScraperActor @Inject() (
   httpFetcher: HttpFetcher,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
-  s3ScreenshotStore: S3ScreenshotStore,
   helper: SyncShoeboxDbCallbacks
 ) extends FortyTwoActor(airbrake) with Logging {
 
