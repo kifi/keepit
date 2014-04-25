@@ -25,8 +25,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
   private def processUserConnectionGraphUpdate(update: UserConnectionGraphUpdate)(implicit writer: GraphWriter) = update.state match {
     case UserConnectionStates.UNFRIENDED | UserConnectionStates.INACTIVE =>
-      writer.removeEdgeIfExists(update.firstUserId, update.secondUserId)
-      writer.removeEdgeIfExists(update.secondUserId, update.firstUserId)
+      writer.removeEdgeIfExists(update.firstUserId, update.secondUserId, EmptyEdgeDataReader)
+      writer.removeEdgeIfExists(update.secondUserId, update.firstUserId, EmptyEdgeDataReader)
     case UserConnectionStates.ACTIVE =>
       writer.saveVertex(UserData(update.firstUserId))
       writer.saveVertex(UserData(update.secondUserId))
@@ -63,8 +63,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       val secondFacebookUserVertexId: VertexDataId[FacebookAccountReader] = update.secondSocialUserId
       update.state match {
         case SocialConnectionStates.INACTIVE =>
-          writer.removeEdgeIfExists(firstFacebookUserVertexId, secondFacebookUserVertexId)
-          writer.removeEdgeIfExists(secondFacebookUserVertexId, firstFacebookUserVertexId)
+          writer.removeEdgeIfExists(firstFacebookUserVertexId, secondFacebookUserVertexId, EmptyEdgeDataReader)
+          writer.removeEdgeIfExists(secondFacebookUserVertexId, firstFacebookUserVertexId, EmptyEdgeDataReader)
         case SocialConnectionStates.ACTIVE =>
           writer.saveVertex(FacebookAccountData(firstFacebookUserVertexId))
           writer.saveVertex(FacebookAccountData(secondFacebookUserVertexId))
@@ -77,8 +77,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       val secondLinkedInUserVertexId: VertexDataId[LinkedInAccountReader] = update.secondSocialUserId
       update.state match {
         case SocialConnectionStates.INACTIVE =>
-          writer.removeEdgeIfExists(firstLinkedInUserVertexId, secondLinkedInUserVertexId)
-          writer.removeEdgeIfExists(secondLinkedInUserVertexId, firstLinkedInUserVertexId)
+          writer.removeEdgeIfExists(firstLinkedInUserVertexId, secondLinkedInUserVertexId, EmptyEdgeDataReader)
+          writer.removeEdgeIfExists(secondLinkedInUserVertexId, firstLinkedInUserVertexId, EmptyEdgeDataReader)
         case SocialConnectionStates.ACTIVE =>
           writer.saveVertex(LinkedInAccountData(firstLinkedInUserVertexId))
           writer.saveVertex(LinkedInAccountData(secondLinkedInUserVertexId))

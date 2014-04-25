@@ -54,7 +54,7 @@ class SimpleGraphTest() extends Specification {
       vertexReader.edgeReader.degree === 0
 
       graph.readWrite { writer =>
-        writer.removeEdge(alfred, vertigo)
+        writer.removeEdge(alfred, vertigo, EmptyEdgeDataReader)
       }
 
       vertexReader.moveTo(alfred)

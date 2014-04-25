@@ -9,8 +9,8 @@ case class VertexId(id: Long) extends AnyVal {
     VertexDataId[V](dataId)
   }
   def asIdOpt[V <: VertexDataReader](implicit kind: VertexKind[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
+  def kind: VertexKind[_ <: VertexDataReader] = VertexKind(code)
   override def toString() =  kind + "|" + dataId
-  private def kind: VertexKind[_ <: VertexDataReader] = VertexKind(code)
   private def code: Byte = (id >> VertexId.dataIdSpace).toByte
   private def dataId: Long = id & VertexId.maxVertexDataId
 }
