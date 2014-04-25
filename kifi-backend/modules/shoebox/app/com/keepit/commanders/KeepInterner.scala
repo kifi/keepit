@@ -31,6 +31,8 @@ class KeepInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
+  keepClickRepo: KeepClickRepo,
+  rekeepRepo: ReKeepRepo,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
   rawBookmarkFactory: RawBookmarkFactory,
@@ -95,6 +97,26 @@ class KeepInterner @Inject() (
     }
   }
 
+  def keepAttribution(userId:Id[User], newKeeps:Seq[Keep]):Unit = {
+    newKeeps.foreach { keep =>
+      db.readWrite { implicit rw =>
+        keepClickRepo.getMostRecentClickByClickerAndUriId(userId, keep.uriId) match {
+          case None =>
+            log.info(s"[internRawBookmarks($userId)] no click event found for ${keep.uriId}")
+          case Some(click) =>
+            if (click.createdAt.isAfter(currentDateTime.minusMinutes(15))) { // tweak
+              keepClickRepo.getClicksByUUID(click.uuid) map { c =>
+                val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
+                rekeepRepo.save(rekeep)
+                log.info(s"[internRawBookmarks($userId)] rekeep=$rekeep; most recent click: $c")
+              }
+            } else {
+              log.info(s"[internRawBookmarks($userId)] most recent click beyond threshold: $click")
+            }
+        }
+      }
+    }
+  }
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
@@ -103,7 +125,7 @@ class KeepInterner @Inject() (
     }
 
     keptAnalytics.keptPages(userId, newKeeps, context)
-
+    keepAttribution(userId, newKeeps)
     (persistedBookmarksWithUris.map(_.bookmark), failures)
   }
 

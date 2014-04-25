@@ -317,9 +317,12 @@ GET     /admin/imagesForUri          @com.keepit.controllers.admin.AdminScreensh
 POST    /admin/imagesCompare         @com.keepit.controllers.admin.AdminScreenshotController.imagesCompare()
 
 GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoController.pageInfo(id:Id[PageInfo])
-GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos
+GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos(page:Int ?= 0, size:Int ?= 50)
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
+
+GET     /admin/keepClicks           @com.keepit.controllers.admin.AdminAttributionController.keepClicks(page:Int ?= 0, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/rekeeps              @com.keepit.controllers.admin.AdminAttributionController.rekeeps(page:Int ?= 0, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
