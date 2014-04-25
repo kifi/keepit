@@ -16,4 +16,5 @@ class FakeCortexServiceClientImpl extends CortexServiceClientImpl(null, null, nu
   override def ldaNumOfTopics(): Future[Int] = ???
   override def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = ???
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
+  override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
 }

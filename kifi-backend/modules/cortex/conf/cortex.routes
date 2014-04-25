@@ -17,3 +17,5 @@ POST    /internal/cortex/word2vec/feedUserUris                                  
 GET     /internal/cortex/lda/numOfTopics                                            @com.keepit.controllers.cortex.LDAController.numOfTopics
 GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int)
 GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word)
+POST    /internal/cortex/lda/docTopic                                               @com.keepit.controllers.cortex.LDAController.docTopic
+

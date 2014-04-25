@@ -32,7 +32,14 @@
   <p id = "word_topic_result"></p>
 
 
+  <br><br>
+  <div>Paste some text here. Identify topics</div>
+  <form id = "doc_topic">
+    <textarea id = "doc"></textarea>
+    <button type = "submit">submit</button>
+  </form>
 
+  <p id = "doc_topic_result"></p>
 
 
 
@@ -83,6 +90,18 @@
 
       })
 
+
+      $('#doc_topic').submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.docTopic',
+          {doc: $('#doc').val()}
+        ).done(done).fail(fail);
+
+        function done(data){ $("#doc_topic_result").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+      })
 
 
 
