@@ -24,11 +24,11 @@ class FeatureSQSQueueCommander(
     SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
   }
 
-  def sendLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], sqsId: String): Unit = {
+  def sendLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], queueName: QueueName): Unit = {
     val feats = featureCommander.getLDAURIFeature(lowSeq, DEFAULT_PUSH_SIZE, version)
 
     val client = createSQSClient
-    val queue = client.formatted[DenseLDAURIFeatureMessage](QueueName(sqsId))
+    val queue = client.formatted[DenseLDAURIFeatureMessage](queueName)
 
     feats.foreach{ case (uri, feat) =>
       val msg = DenseLDAURIFeatureMessage(uri.id.get, uri.seq, "dense_lda", version.version, feat.vectorize)

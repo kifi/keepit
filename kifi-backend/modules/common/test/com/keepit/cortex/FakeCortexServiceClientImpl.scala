@@ -3,6 +3,8 @@ package com.keepit.cortex
 import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import com.kifi.franz.QueueName
+import com.keepit.common.db.SequenceNumber
 
 class FakeCortexServiceClientImpl extends CortexServiceClientImpl(null, null, null){
   override def word2vecWordSimilarity(word1: String, word2: String): Future[Option[Float]] = ???
@@ -17,4 +19,6 @@ class FakeCortexServiceClientImpl extends CortexServiceClientImpl(null, null, nu
   override def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = ???
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
+
+  override def sqsDenseLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: Int, queue: QueueName): Future[Unit] = ???
 }
