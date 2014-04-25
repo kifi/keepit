@@ -10,7 +10,7 @@ case class ReKeep(
   id: Option[Id[ReKeep]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  state: State[ReKeep] = ReKeepsStates.ACTIVE,
+  state: State[ReKeep] = ReKeepState.ACTIVE,
 
   keeperId: Id[User],
   keepId: Id[Keep],
@@ -26,6 +26,6 @@ case class ReKeep(
   def withUpdateTime(now: DateTime): ReKeep = this.copy(updatedAt = now)
 }
 
-object ReKeepsStates extends States[ReKeep]
+object ReKeepState extends States[ReKeep]
 
 
