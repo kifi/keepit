@@ -623,7 +623,8 @@ class ShoeboxController @Inject() (
                 log.warn(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] keep not found for keeperId=${keeperId}")
                 // moving on
               case Some(keep) =>
-                val keepClicks = KeepClick(searchUUID = uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, clickerId = clicker)
+                val randomUUID = ExternalId[ArticleSearchResult]()
+                val keepClicks = KeepClick(searchUUID = randomUUID, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, clickerId = clicker)
                 log.info(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] saving $keepClicks")
                 keepClicksRepo.save(keepClicks)
             }
