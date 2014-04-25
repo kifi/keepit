@@ -8,6 +8,7 @@ var snap = snap || (function () {
   'use strict';
 
   var LOOK_LINK_TEXT = 'look\u00A0here';
+  var MIN_IMG_DIM = 35;
   var RAPID_CLICK_GRACE_PERIOD_MS = 1000;
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
 
@@ -66,7 +67,8 @@ var snap = snap || (function () {
       }
     } else if ($aSnap && el === $aSnap[0]) {
       snapLinkShown = true;
-    } else {
+    }
+    if (snapLinkShown === null) {
       if (/^(?:relative|absolute|fixed)$/.test(window.getComputedStyle(el).position) && el.firstElementChild) {
         snapLinkShown = showImgSnapLinkOnDesc(el, e);
       }
@@ -88,8 +90,16 @@ var snap = snap || (function () {
   }
 
   function getBcrIfEligible(img) {
-    var r = img.getBoundingClientRect();
-    return r.width >= 35 && r.height >= 35 && !img[MATCHES]('.kifi-root,.kifi-root *') ? r : null;
+    if (img.naturalWidth >= MIN_IMG_DIM &&
+        img.naturalHeight >= MIN_IMG_DIM) {
+      var r = img.getBoundingClientRect();
+      if (r.width >= MIN_IMG_DIM &&
+          r.height >= MIN_IMG_DIM &&
+          !img[MATCHES]('.kifi-root,.kifi-root *')) {
+        return r;
+      }
+    }
+    return null;
   }
 
   function showImgSnapLinkOnDesc(el, e) {
