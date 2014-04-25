@@ -28,13 +28,13 @@ class KeepClickRepoImpl @Inject() (
 
   type RepoImpl = KeepClicksTable
   class KeepClicksTable(tag: Tag) extends RepoTable[KeepClick](db, tag, "keep_click") {
-    def uuid = column[ExternalId[ArticleSearchResult]]("uuid", O.NotNull)
+    def searchUUID = column[ExternalId[ArticleSearchResult]]("search_uuid", O.NotNull)
     def numKeepers = column[Int]("num_keepers", O.NotNull)
     def keeperId = column[Id[User]]("keeper_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def uriId  = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def clickerId = column[Id[User]]("clicker_id", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, uuid, numKeepers, keeperId, keepId, uriId, clickerId) <> ((KeepClick.apply _).tupled, KeepClick.unapply)
+    def * = (id.?, createdAt, updatedAt, state, searchUUID, numKeepers, keeperId, keepId, uriId, clickerId) <> ((KeepClick.apply _).tupled, KeepClick.unapply)
   }
 
   def table(tag:Tag) = new KeepClicksTable(tag)
@@ -60,7 +60,7 @@ class KeepClickRepoImpl @Inject() (
   }
 
   def getClicksByUUID(uuid: ExternalId[ArticleSearchResult])(implicit r: RSession): Seq[KeepClick] = {
-    (for (r <- rows if (r.uuid === uuid && r.state === KeepClicksStates.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.searchUUID === uuid && r.state === KeepClicksStates.ACTIVE)) yield r).list()
   }
 
   def getByKeepId(keepId: Id[Keep])(implicit r: RSession): Seq[KeepClick] = {

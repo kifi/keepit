@@ -107,7 +107,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw, u1.id.get, KeepSource.email, true)
 
         val kc = db.readWrite { implicit rw =>
-          keepClickRepo.save(KeepClick(uuid = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
+          keepClickRepo.save(KeepClick(searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
         }
 
         val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw, u2.id.get, KeepSource.default, true)
@@ -120,7 +120,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val clicks = keepClickRepo.all()
           clicks.size === 1
           val click = clicks(0)
-          click.uuid === kc.uuid
+          click.searchUUID === kc.searchUUID
           click.keeperId === u1.id.get
           click.keepId === keeps1(1).id.get
           click.clickerId === u2.id.get

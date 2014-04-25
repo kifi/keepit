@@ -12,7 +12,7 @@ case class KeepClick(
   updatedAt: DateTime = currentDateTime,
   state: State[KeepClick] = KeepClicksStates.ACTIVE,
 
-  uuid: ExternalId[ArticleSearchResult],
+  searchUUID: ExternalId[ArticleSearchResult],
   numKeepers: Int,
 
   keeperId: Id[User],
