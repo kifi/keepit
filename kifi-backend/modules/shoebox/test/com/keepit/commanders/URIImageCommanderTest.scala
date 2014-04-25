@@ -175,31 +175,27 @@ class URIImageCommanderTest extends Specification with ShoeboxTestInjector {
 
         // fetch image from embedly
         val result7Fut = uriImageCommander.getImageForURLRequest(embedlyRequest)
-        result7Fut must beLike({
-          case Some(result: ImageInfo) =>
-            result.url must beSome(URIImageCommanderTestDummyValues.dummyEmbedlyImageUrl)
+        result7Fut must beLike({ case Some(result: ImageInfo) =>
+          result.url must beSome(URIImageCommanderTestDummyValues.dummyEmbedlyImageUrl)
         }: Partial).await
 
         // fetch image from pagepeeker
         val result8Fut = uriImageCommander.getImageForURLRequest(pagePeekerRequest)
-        result8Fut must beLike({
-          case Some(result: ImageInfo) =>
-            result.url must beSome(FakeS3URIImageStore.placeholderImageURL)
+        result8Fut must beLike({ case Some(result: ImageInfo) =>
+          result.url must beSome(FakeS3URIImageStore.placeholderImageURL)
         }: Partial).await
 
         // find any kind of image
         val embedlyRequestWithAny = embedlyRequest.copy(imageType = ImageType.ANY)
         val embedlyImageFut = uriImageCommander.getImageForURLRequest(embedlyRequestWithAny)
-        embedlyImageFut must beLike({
-          case Some(embedlyImage: ImageInfo) =>
-            embedlyImage.url must beSome(URIImageCommanderTestDummyValues.dummyEmbedlyImageUrl)
+        embedlyImageFut must beLike({ case Some(embedlyImage: ImageInfo) =>
+          embedlyImage.url must beSome(URIImageCommanderTestDummyValues.dummyEmbedlyImageUrl)
         }: Partial).await
 
         val pagePeekerRequestWithAny = pagePeekerRequest.copy(imageType = ImageType.ANY)
         val pagePeekerResultFut = uriImageCommander.getImageForURLRequest(pagePeekerRequestWithAny)
-        pagePeekerResultFut must beLike({
-          case Some(pagePeekerImage: ImageInfo) =>
-            pagePeekerImage.url must beSome(FakeS3URIImageStore.placeholderImageURL)
+        pagePeekerResultFut must beLike({ case Some(pagePeekerImage: ImageInfo) =>
+          pagePeekerImage.url must beSome(FakeS3URIImageStore.placeholderImageURL)
         }: Partial).await
       }
     }
