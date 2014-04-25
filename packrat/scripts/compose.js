@@ -37,6 +37,7 @@ var initCompose = (function() {
 
   function startMonitoringPointer() {
     selectionchange.start();
+    window.addEventListener('mousemove', onWinMouseMove, true);  // only fires once
     window.addEventListener('mouseover', onWinMouseOver, true);
     window.addEventListener('mousedown', onWinMouseDown, true);
     window.addEventListener('selectionchange', onSelectionChange, true);
@@ -46,6 +47,7 @@ var initCompose = (function() {
 
   function stopMonitoringPointer() {
     selectionchange.stop();
+    window.removeEventListener('mousemove', onWinMouseMove, true);
     window.removeEventListener('mouseover', onWinMouseOver, true);
     window.removeEventListener('mousedown', onWinMouseDown, true);
     window.removeEventListener('selectionchange', onSelectionChange, true);
@@ -58,6 +60,11 @@ var initCompose = (function() {
       $aSnap.remove();
       $aSnap = null;
     }
+  }
+
+  function onWinMouseMove(e) {
+    window.removeEventListener('mousemove', onWinMouseMove, true);
+    onWinMouseOver(e);
   }
 
   function onWinMouseOver(e) {
