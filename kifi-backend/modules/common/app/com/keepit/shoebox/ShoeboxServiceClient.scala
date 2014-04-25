@@ -13,9 +13,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.zookeeper._
 import com.keepit.model._
-import com.keepit.search.ActiveExperimentsCache
-import com.keepit.search.ActiveExperimentsKey
-import com.keepit.search.SearchConfigExperiment
+import com.keepit.search.{ArticleSearchResult, ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment}
 import com.keepit.social._
 import com.keepit.model.ExperimentType
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -91,7 +89,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
-  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
+  def clickAttribution(uuid:ExternalId[ArticleSearchResult], clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
@@ -558,10 +556,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def clickAttribution(clicker: Id[User], uri: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {
+  def clickAttribution(uuid:ExternalId[ArticleSearchResult], clicker: Id[User], uri: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {
     implicit val userFormatter = Id.format[User]
     implicit val uriFormatter = Id.format[NormalizedURI]
     val payload = Json.obj(
+      "uuid" -> uuid,
       "clicker" -> JsNumber(clicker.id),
       "uriId" -> JsNumber(uri.id),
       "keepers" -> JsArray(keepers.map(id => JsString(id.id)))

@@ -23,9 +23,9 @@ class AdminPageInfoController @Inject()
     Ok(html.admin.pageInfo(pageInfo))
   }
 
-  def pageInfos() = AdminHtmlAction.authenticated { request =>
+  def pageInfos(page:Int, size:Int) = AdminHtmlAction.authenticated { request =>
     val pageInfos = db.readOnly { implicit ro =>
-      pageInfoRepo.page(page = 0, size = 50).sortBy(_.id.get.id)
+      pageInfoRepo.page(page, size).sortBy(_.id.get.id)
     }
     // add pagination
     Ok(html.admin.pageInfos(pageInfos))

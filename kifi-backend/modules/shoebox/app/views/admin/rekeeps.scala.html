@@ -1,0 +1,34 @@
+@(rekeeps:Seq[(com.keepit.model.ReKeep, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])])
+
+@admin("Re-Keeps") {
+
+<table class="table table-striped">
+    <th><tr>
+        <td>Id</td>
+        <td>state</td>
+        <td>keeperId</td>
+        <td>keepId</td>
+        <td>srcUserId</td>
+        <td>srcKeepId</td>
+        <td>attribution factor (1/n)</td>
+        <td>uriId</td>
+        <td>favicon</td>
+        <td>image</td>
+    </tr></th>
+    @for((rekeep, pageOpt, imgOpt) <- rekeeps){
+    <tr>
+        <td>@rekeep.id</td>
+        <td>@rekeep.state</td>
+        <td>@rekeep.keeperId</td>
+        <td>@rekeep.keepId</td>
+        <td>@rekeep.srcUserId</td>
+        <td>@rekeep.srcKeepId</td>
+        <td>@rekeep.attributionFactor</td>
+        <td>@rekeep.uriId</td>
+        <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
+        <td>@if(imgOpt.isDefined){ <img src="@imgOpt.get.url" width="50" height="50" alt="no image" /> }</td>
+    </tr>
+    }
+</table>
+
+}

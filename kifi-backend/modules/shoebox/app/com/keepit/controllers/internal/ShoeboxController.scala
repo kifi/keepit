@@ -14,8 +14,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
-import com.keepit.search.SearchConfigExperiment
-import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.search.{ArticleSearchResult, SearchConfigExperiment, SearchConfigExperimentRepo}
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -58,6 +57,7 @@ class ShoeboxController @Inject() (
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
+  keepClicksRepo: KeepClickRepo,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
   pageInfoRepo:PageInfoRepo,
@@ -607,12 +607,29 @@ class ShoeboxController @Inject() (
 
   def clickAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
+    val uuidOpt = ExternalId.format[ArticleSearchResult].reads(json \ "uuid").asOpt // todo: remove opt after search updated
     val clicker = Id.format[User].reads(json \ "clicker").get
     val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
     val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
     db.readWrite { implicit session =>
       if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
-      else keepers.foreach { extId => userBookmarkClicksRepo.increaseCounts(userRepo.get(extId).id.get, uriId, false) }
+      else {
+        keepers.foreach { extId =>
+          val keeperId: Id[User] = userRepo.get(extId).id.get
+          userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
+          uuidOpt map { uuid =>
+            keepRepo.getByUriAndUser(uriId, keeperId) match {
+              case None =>
+                log.warn(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] keep not found for keeperId=${keeperId}")
+                // moving on
+              case Some(keep) =>
+                val keepClicks = KeepClick(searchUUID = uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, clickerId = clicker)
+                log.info(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] saving $keepClicks")
+                keepClicksRepo.save(keepClicks)
+            }
+          }
+        }
+      }
     }
     Ok
   }
