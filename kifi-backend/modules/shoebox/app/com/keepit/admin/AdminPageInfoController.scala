@@ -15,7 +15,6 @@ class AdminPageInfoController @Inject()
  db: Database,
  keepRepo: KeepRepo,
  pageInfoRepo: PageInfoRepo,
- imageInfoRepo: ImageInfoRepo,
  uriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
