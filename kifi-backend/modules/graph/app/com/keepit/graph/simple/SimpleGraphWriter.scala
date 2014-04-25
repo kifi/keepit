@@ -6,6 +6,7 @@ import play.api.libs.json._
 import java.util.concurrent.atomic.AtomicLong
 import com.keepit.graph.manager.GraphStatistics.{EdgeType, VertexType}
 import com.keepit.graph.manager.GraphStatistics
+import com.keepit.common.logging.Logging
 
 class MutableVertex(var data: VertexDataReader, val edges: MutableMap[VertexId, EdgeDataReader]) extends Vertex
 
@@ -30,7 +31,7 @@ object MutableVertex {
   }
 }
 
-class SimpleGraphWriter(bufferedVertices: BufferedMap[VertexId, MutableVertex], vertexStatistics: Map[VertexType, AtomicLong], edgeStatistics: Map[EdgeType, AtomicLong]) extends SimpleGraphReader(bufferedVertices) with GraphWriter {
+class SimpleGraphWriter(bufferedVertices: BufferedMap[VertexId, MutableVertex], vertexStatistics: Map[VertexType, AtomicLong], edgeStatistics: Map[EdgeType, AtomicLong]) extends SimpleGraphReader(bufferedVertices) with GraphWriter with Logging {
 
   private val vertexDeltas = GraphStatistics.newVertexCounter()
   private val edgeDeltas: Map[EdgeType, AtomicLong] = GraphStatistics.newEdgeCounter()
@@ -79,9 +80,11 @@ class SimpleGraphWriter(bufferedVertices: BufferedMap[VertexId, MutableVertex], 
   }
 
   def commit(): Unit = {
+    val commitStatistics = GraphStatistics.filter(vertexDeltas, edgeDeltas)
     bufferedVertices.flush()
     vertexDeltas.foreach { case (vertexKind, counter) => vertexStatistics(vertexKind).addAndGet(counter.getAndSet(0)) }
     edgeDeltas.foreach { case (edgeKinds, counter) => edgeStatistics(edgeKinds).addAndGet(counter.getAndSet(0)) }
+    log.info(s"Graph commit: $commitStatistics")
   }
 }
 
