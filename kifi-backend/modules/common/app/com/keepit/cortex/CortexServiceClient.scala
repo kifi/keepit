@@ -26,6 +26,7 @@ trait CortexServiceClient extends ServiceClient{
 
   def ldaNumOfTopics(): Future[Int]
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]]
+  def ldaWordTopic(word: String): Future[Option[Array[Float]]]
 }
 
 class CortexServiceClientImpl(
@@ -86,9 +87,16 @@ class CortexServiceClientImpl(
       (r.json).as[Int]
     }
   }
+
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = {
     call(Cortex.internal.ldaShowTopics(fromId, toId, topN)).map{ r =>
       (r.json).as[Map[String, Map[String, Float]]]
+    }
+  }
+
+  def ldaWordTopic(word: String): Future[Option[Array[Float]]] = {
+    call(Cortex.internal.ldaWordTopic(word)).map{ r =>
+      Json.fromJson[Option[Array[Float]]](r.json).get
     }
   }
 
