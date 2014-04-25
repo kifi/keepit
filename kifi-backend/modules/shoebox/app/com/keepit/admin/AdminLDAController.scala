@@ -50,4 +50,19 @@ class AdminLDAController @Inject()(
 
     Ok(Json.toJson(topics))
   }
+
+  def wordTopic() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val word = body.get("word").get
+    val res = Await.result(cortex.ldaWordTopic(word), 5 seconds)
+
+    val msg = res match {
+      case Some(arr) => {
+        arr.zipWithIndex.sortBy(-1f * _._1).take(5).map{ case (score, topicId) => topicId + ": " + "%.3f".format(score)}.mkString(", ")
+      }
+      case None => "word not in dictionary"
+    }
+
+    Ok(msg)
+  }
 }

@@ -279,6 +279,7 @@ object Cortex extends Service {
 
     def ldaNumOfTopics = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics")
     def ldaShowTopics(fromId: Int, toId: Int, topN: Int) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN))
+    def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
   }
 }
 

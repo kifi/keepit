@@ -21,4 +21,9 @@ extends CortexServiceController {
     Ok(Json.toJson(res))
   }
 
+  def wordTopic(word: String) = Action { request =>
+    val res = lda.wordTopic(word)
+    Ok(Json.toJson(res))
+  }
+
 }
