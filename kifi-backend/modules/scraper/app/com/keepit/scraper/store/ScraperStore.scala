@@ -27,8 +27,8 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
   @Singleton
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
+      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig, embedlyClient: EmbedlyClient): S3ScreenshotStore = {
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, embedlyClient, systemAdminMailSender, config)
   }
 
   @Singleton
@@ -51,8 +51,8 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
   @Singleton
   @Provides
   def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
+      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig, embedlyClient: EmbedlyClient): S3ScreenshotStore = {
+    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, embedlyClient, systemAdminMailSender, config)
   }
 
   @Singleton

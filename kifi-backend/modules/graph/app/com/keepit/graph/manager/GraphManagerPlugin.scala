@@ -33,7 +33,7 @@ class GraphManagerActor @Inject() (
     }
     case ProcessGraphUpdates(updates, maxBatchSize, lockTimeout) => {
       val state = graph.update(updates.map(_.body): _*)
-      updates.foreach(_.consume)
+      updates.foreach(_.consume())
       updating = false
       if (updates.length < maxBatchSize) { graphUpdateFetcher.fetch(state) }
       else { self ! UpdateGraph(maxBatchSize, lockTimeout) }

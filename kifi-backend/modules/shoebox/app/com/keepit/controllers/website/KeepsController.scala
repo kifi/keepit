@@ -31,7 +31,6 @@ class KeepsController @Inject() (
     collectionRepo: CollectionRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo,
     actionAuthenticator: ActionAuthenticator,
     s3ScreenshotStore: S3ScreenshotStore,
     collectionCommander: CollectionCommander,
