@@ -14,7 +14,7 @@ CREATE TABLE rekeep(
     uri_id bigint(20)   NOT NULL,
 
     src_user_id bigint(20) NOT NULL,
-    src_keep_id bigint(20),
+    src_keep_id bigint(20) NOT NULL,
 
     attr_factor int NOT NULL DEFAULT 1,
 
@@ -27,6 +27,6 @@ CREATE TABLE rekeep(
     CONSTRAINT rekeep_src_keep_id   FOREIGN KEY (src_keep_id)   REFERENCES bookmark(id)
 );
 
-insert into evolutions (name, description) values('159.sql', 'adding rekeeps table');
+insert into evolutions (name, description) values('159.sql', 'adding rekeep table');
 
 # --- !Downs
