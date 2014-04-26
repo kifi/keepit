@@ -22,10 +22,11 @@ class SimpleGraphManager(
     }
   }
 
-  def update(updates: GraphUpdate*): GraphUpdaterState = {
+  def update(updates: GraphUpdate*): Unit = {
     val relevantUpdates = updates.filter { graphUpdate => graphUpdate.seq > state.getCurrentSequenceNumber(graphUpdate.kind) }
     simpleGraph.readWrite { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(graphUpdater(_)) }
-    state = state.withUpdates(relevantUpdates) // todo(Léo): not threadsafe, should add transaction callback capabilities to GraphWriter (cf SessionWrapper)
-    state
+    state = state.withUpdates(relevantUpdates) // todo(Léo): not threadsafe
   }
+
+  def statistics: GraphStatistics = simpleGraph.statistics
 }

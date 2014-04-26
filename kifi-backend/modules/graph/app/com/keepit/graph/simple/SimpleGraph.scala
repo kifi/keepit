@@ -1,17 +1,33 @@
 package com.keepit.graph.simple
 
 import scala.collection.concurrent.{Map => ConcurrentMap, TrieMap}
-import com.keepit.graph.model.{GraphWriter, GraphReader, VertexId}
-import play.api.libs.json.{JsResult, JsArray, JsValue, Format}
+import com.keepit.graph.model._
+import play.api.libs.json.{JsResult, JsValue, Format}
+import play.api.libs.json.JsArray
+import com.keepit.graph.manager.GraphStatistics
 
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
-  def getNewReader(): GraphReader = new GraphReaderImpl(vertices)
+  private val vertexStatistics = GraphStatistics.newVertexCounter()
+  private val edgeStatistics = GraphStatistics.newEdgeCounter()
+
+  vertices.values.foreach { mutableVertex =>
+    val sourceKind = mutableVertex.data.kind
+    vertexStatistics(sourceKind).incrementAndGet()
+    mutableVertex.edges.foreach { case (destinationId, edgeData) =>
+      val edgeKinds = (sourceKind, destinationId.kind, edgeData.kind)
+      edgeStatistics(edgeKinds).incrementAndGet()
+    }
+  }
+
+  def statistics = GraphStatistics.filter(vertexStatistics, edgeStatistics)
+
+  def getNewReader(): GraphReader = new SimpleGraphReader(vertices)
 
   def getNewWriter(): GraphWriter = {
     val bufferedVertices = new BufferedMap(vertices)
-    new GraphWriterImpl(bufferedVertices)
+    new SimpleGraphWriter(bufferedVertices, vertexStatistics, edgeStatistics)
   }
 
   def readWrite[T](f: GraphWriter => T): T = {
