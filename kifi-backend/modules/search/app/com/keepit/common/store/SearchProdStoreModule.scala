@@ -26,7 +26,7 @@ case class SearchProdStoreModule() extends ProdStoreModule {
   @Provides @Singleton
   def indexStore(amazonS3Client: AmazonS3, accessLog: AccessLog): IndexStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.index.bucket").get)
-    val inboxDir = new File(current.configuration.getString("graph.temporary.directory").get, "s3").getCanonicalFile
+    val inboxDir = new File(current.configuration.getString("search.temporary.directory").get, "s3").getCanonicalFile
     FileUtils.deleteDirectory(inboxDir)
     FileUtils.forceMkdir(inboxDir)
     inboxDir.deleteOnExit()
