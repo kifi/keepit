@@ -33,12 +33,6 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
       scraperConfig.httpConfig
     )
   }
-
-  @Singleton
-  @Provides
-  def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor], scraperConfig: ScraperConfig):SyncScrapeProcessor = {
-    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors * 128)
-  }
 }
 
 
