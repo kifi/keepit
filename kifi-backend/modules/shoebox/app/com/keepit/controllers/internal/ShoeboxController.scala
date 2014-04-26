@@ -607,7 +607,6 @@ class ShoeboxController @Inject() (
 
   def clickAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
-    val uuidOpt = ExternalId.format[ArticleSearchResult].reads(json \ "uuid").asOpt // todo: remove opt after search updated
     val clicker = Id.format[User].reads(json \ "clicker").get
     val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
     val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
@@ -617,17 +616,15 @@ class ShoeboxController @Inject() (
         keepers.foreach { extId =>
           val keeperId: Id[User] = userRepo.get(extId).id.get
           userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
-          uuidOpt map { uuid =>
-            keepRepo.getByUriAndUser(uriId, keeperId) match {
-              case None =>
-                log.warn(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] keep not found for keeperId=${keeperId}")
-                // moving on
-              case Some(keep) =>
-                val randomUUID = ExternalId[ArticleSearchResult]()
-                val keepClicks = KeepClick(searchUUID = randomUUID, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, clickerId = clicker)
-                log.info(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] saving $keepClicks")
-                keepClicksRepo.save(keepClicks)
-            }
+          val randomUUID = ExternalId[ArticleSearchResult]()
+          keepRepo.getByUriAndUser(uriId, keeperId) match {
+            case None =>
+              log.warn(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] keep not found for keeperId=${keeperId}")
+              // moving on
+            case Some(keep) =>
+              val keepClicks = KeepClick(searchUUID = randomUUID, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, clickerId = clicker)
+              log.info(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] saving $keepClicks")
+              keepClicksRepo.save(keepClicks)
           }
         }
       }
