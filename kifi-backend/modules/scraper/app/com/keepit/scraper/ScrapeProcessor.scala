@@ -19,11 +19,10 @@ trait ScrapeProcessor {
 class ScrapeProcessorProvider @Inject() (
   scraperConfig: ScraperConfig,
   queuedScrapeProcessor:QueuedScrapeProcessor,
-  asyncScrapeProcessor:AsyncScrapeProcessor,
   syncScrapeProcessor:SyncScrapeProcessor
 ) extends Provider[ScrapeProcessor] with Logging {
 
-  lazy val processor = if (scraperConfig.queued) queuedScrapeProcessor else if (scraperConfig.async) asyncScrapeProcessor else syncScrapeProcessor // config-based toggle
+  lazy val processor = if (scraperConfig.queued) queuedScrapeProcessor else syncScrapeProcessor // config-based toggle
   log.info(s"[ScrapeProcessorProvider] created with config:$scraperConfig proc:$processor")
 
   def get = processor
