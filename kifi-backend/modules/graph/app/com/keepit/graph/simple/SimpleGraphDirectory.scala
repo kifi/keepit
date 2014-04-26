@@ -11,13 +11,10 @@ import play.modules.statsd.api.Statsd
 trait SimpleGraphDirectory extends GraphDirectory with BackedUpDirectory {
   def load(): (SimpleGraph, GraphUpdaterState)
   def persist(graph: SimpleGraph, state: GraphUpdaterState): Unit
-  def size: Long
 }
 
 class ArchivedSimpleGraphDirectory(dir: File, protected val tempDir: File, protected val store: GraphStore) extends SimpleGraphDirectory with ArchivedGraphDirectory {
   def getDirectory() = dir
-
-  def size: Long = FileUtils.sizeOfDirectory(dir)
 
   def load(): (SimpleGraph, GraphUpdaterState) = this.synchronized {
     val graphFile = getGraphFile()
@@ -102,5 +99,5 @@ class RatherUselessSimpleGraphDirectory extends SimpleGraphDirectory with Loggin
   def cancelBackup(): Unit = log.warn("Cannot cancel backup of RatherUselessSimpleGraphDirectory")
   def doBackup(): Boolean = false
   def restoreFromBackup(): Unit = log.warn("Cannot restore RatherUselessSimpleGraphDirectory")
-  def size = throw new UnsupportedOperationException("Cannot get size of RatherUselessSimpleGraphDirectory.")
+  def asFile() = None
 }
