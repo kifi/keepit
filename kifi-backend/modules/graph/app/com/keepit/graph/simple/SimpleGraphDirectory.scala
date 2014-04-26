@@ -6,21 +6,18 @@ import java.io.File
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{JsNumber, Json}
 import com.keepit.common.logging.Logging
+import play.modules.statsd.api.Statsd
 
 trait SimpleGraphDirectory extends GraphDirectory with BackedUpDirectory {
   def load(): (SimpleGraph, GraphUpdaterState)
   def persist(graph: SimpleGraph, state: GraphUpdaterState): Unit
+  def size: Long
 }
 
-class ArchivedSimpleGraphDirectory(dir: File, protected val store: GraphStore) extends SimpleGraphDirectory with ArchivedGraphDirectory {
+class ArchivedSimpleGraphDirectory(dir: File, protected val tempDir: File, protected val store: GraphStore) extends SimpleGraphDirectory with ArchivedGraphDirectory {
   def getDirectory() = dir
 
-  private val temp: File = {
-    val tempDir = new File(getDirectory(), "temp").getCanonicalFile
-    FileUtils.deleteDirectory(tempDir)
-    FileUtils.forceMkdir(tempDir)
-    tempDir
-  }
+  def size: Long = FileUtils.sizeOfDirectory(dir)
 
   def load(): (SimpleGraph, GraphUpdaterState) = this.synchronized {
     val graphFile = getGraphFile()
@@ -52,7 +49,7 @@ class ArchivedSimpleGraphDirectory(dir: File, protected val store: GraphStore) e
 
   private def persistGraph(graph: SimpleGraph): File = {
     val json = SimpleGraph.format.writes(graph)
-    val tempGraphFile = new File(temp, "graph_" + graph.hashCode())
+    val tempGraphFile = new File(tempDir, "graph_" + graph.hashCode())
     FileUtils.writeStringToFile(tempGraphFile, Json.stringify(json))
     tempGraphFile
   }
@@ -64,7 +61,7 @@ class ArchivedSimpleGraphDirectory(dir: File, protected val store: GraphStore) e
 
   private def persistState(state: GraphUpdaterState): File = {
     val json = GraphUpdaterState.format.writes(state)
-    val tempStateFile = new File(temp, "state_" + state.hashCode())
+    val tempStateFile = new File(tempDir, "state_" + state.hashCode())
     FileUtils.writeStringToFile(tempStateFile, Json.stringify(json))
     tempStateFile
   }
@@ -82,7 +79,7 @@ class ArchivedSimpleGraphDirectory(dir: File, protected val store: GraphStore) e
 
   private def persistChecksum(graphFile: File, stateFile: File): File = {
     val checksum = computeChecksum(graphFile, stateFile)
-    val tempChecksumFile = new File(temp, "checksum_" + checksum.hashCode())
+    val tempChecksumFile = new File(tempDir, "checksum_" + checksum.hashCode())
     FileUtils.writeStringToFile(tempChecksumFile, Json.stringify(JsNumber(checksum)))
     tempChecksumFile
   }
@@ -105,4 +102,5 @@ class RatherUselessSimpleGraphDirectory extends SimpleGraphDirectory with Loggin
   def cancelBackup(): Unit = log.warn("Cannot cancel backup of RatherUselessSimpleGraphDirectory")
   def doBackup(): Boolean = false
   def restoreFromBackup(): Unit = log.warn("Cannot restore RatherUselessSimpleGraphDirectory")
+  def size = throw new UnsupportedOperationException("Cannot get size of RatherUselessSimpleGraphDirectory.")
 }
