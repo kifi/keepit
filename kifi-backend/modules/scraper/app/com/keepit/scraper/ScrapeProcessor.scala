@@ -18,14 +18,11 @@ trait ScrapeProcessor {
 @Singleton
 class ScrapeProcessorProvider @Inject() (
   scraperConfig: ScraperConfig,
-  queuedScrapeProcessor:QueuedScrapeProcessor,
-  syncScrapeProcessor:SyncScrapeProcessor
+  val queuedScrapeProcessor:QueuedScrapeProcessor
 ) extends Provider[ScrapeProcessor] with Logging {
 
-  lazy val processor = if (scraperConfig.queued) queuedScrapeProcessor else syncScrapeProcessor // config-based toggle
-  log.info(s"[ScrapeProcessorProvider] created with config:$scraperConfig proc:$processor")
-
-  def get = processor
+  log.info(s"[ScrapeProcessorProvider] created with config:$scraperConfig")
+  def get = queuedScrapeProcessor
 }
 
 
