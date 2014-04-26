@@ -95,6 +95,8 @@
 
     $("#keywords_detect").submit(function(){
       event.preventDefault();
+      $("#keywords").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.keywords',
         {text: $('#text').val()}
       ).done(done).fail(fail);
@@ -122,6 +124,8 @@
 
     $("#user_similarity").submit(function(){
       event.preventDefault();
+      $("#user_sim_result").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userSimilarity',
         {user1: $('#user1').val(), user2: $('#user2').val()}
       ).done(done).fail(fail);
@@ -135,6 +139,8 @@
 
     $("#query_uri_similarity").submit(function(){
       event.preventDefault();
+      $("#query_uri_sim_result").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.queryUriSimilarity',
         {query: $('#query').val(), uri: $('#uri').val()}
       ).done(done).fail(fail);
@@ -148,6 +154,8 @@
 
     $("#user_uri_similarity").submit(function(){
       event.preventDefault();
+      $("#user_uri_sim_result").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userUriSimilarity',
         {user: $('#userId').val(), uri: $('#uriId').val()}
       ).done(done).fail(fail);
