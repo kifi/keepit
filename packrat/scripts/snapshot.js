@@ -77,12 +77,111 @@ var snapshot = function () {
     scopeChild = '';
   }
 
+  var RANGE_TEXT_NODE_SEPARATOR_V = '\u001e';
+  var RANGE_TEXT_NODE_SEPARATOR_H = '\u001f';
+  var SPACES_RE = /^\s+$/;
+
+  // same as Range.toString except this function:
+  // 1. inserts separators to preserve text node boundaries
+  // 2. substitutes one space (' ') for text from non-pre-formatted text nodes that contribute only spaces (/\s+/)
+  // 3. skips some inconsequential non-pre-formatted text nodes that contribute only spaces (/\s+/)
+  // 4. omits text from descendants of invisible elements (display:none or visibility:hidden)
+  function getRangeText(sce, sc, so, ece, ec, eo) {
+    var arr;
+    if (sce !== sc) {
+      var s = sc.nodeValue;
+      if (sc === ec) {
+        return eo < s.length ? s.substring(so, eo) : (so ? s.substr(so) : s);
+      }
+      if (s && so < s.length) {
+        s = so ? s.substr(so) : s;
+        arr = [SPACES_RE.test(s) && window.getComputedStyle(sce).whiteSpace.lastIndexOf('pre', 0) !== 0 ? ' ' : s, RANGE_TEXT_NODE_SEPARATOR_H];
+      } else {
+        arr = [];
+      }
+      so = indexOf(sce.childNodes, sc) + 1;
+      sc = sce;
+    } else {
+      arr = [];
+    }
+
+    var suffix;
+    if (ece !== ec) {
+      var s = ec.nodeValue;
+      s = eo < s.length ? s.substr(0, eo) : s;
+      suffix = SPACES_RE.test(s) && window.getComputedStyle(ece).whiteSpace.lastIndexOf('pre', 0) !== 0 ? ' ' : s;
+      eo = indexOf(ece.childNodes, ec);
+      ec = ece;
+    }
+
+    (function visit(c, o, recurseDownOnly) {
+      if (c === ec && o === eo) {
+        return true;
+      }
+      var node = c.childNodes[o];
+      if (!node) {
+        if (window.getComputedStyle(c).display.lastIndexOf('inline', 0) !== 0 && arr.length) {
+          arr[arr.length - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+        }
+        var p = c.parentNode;
+        return visit(p, indexOf(p.childNodes, c) + 1);
+      } else if (node.nodeType === 3) {
+        var s = node.nodeValue;
+        if (s) {
+          if (SPACES_RE.test(s) && window.getComputedStyle(c).whiteSpace.lastIndexOf('pre', 0) !== 0) {
+            if (arr[arr.length - 2] !== ' ' && arr[arr.length - 1] !== RANGE_TEXT_NODE_SEPARATOR_V) {
+              arr.push(' ', RANGE_TEXT_NODE_SEPARATOR_H);
+            }
+          } else {
+            arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
+          }
+        }
+        if (!recurseDownOnly) {
+          return visit(c, o + 1);
+        }
+      } else if (node.nodeType === 1) {
+        var cs = window.getComputedStyle(node);
+        var display = cs.display;
+        if (display !== 'none' && cs.visibility !== 'hidden') {
+          var inline = display.lastIndexOf('inline', 0) === 0;
+          if (!inline && arr.length) {
+            arr[arr.length - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+          }
+          for (var i = 0, n = node.childNodes.length; i < n; i++) {
+            if (visit(node, i, true)) {
+              return true;
+            }
+          }
+        }
+        if (node === ec && n === eo) {
+          return true;
+        }
+        if (!recurseDownOnly) {
+          if (!inline && arr.length) {
+            arr[arr.length - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+          }
+          return visit(c, o + 1);
+        }
+      } else if (!recurseDownOnly) {
+        return visit(c, o + 1);
+      }
+    }(sc, so));
+
+    if (suffix && (suffix !== ' ' || arr[arr.length - 2] !== ' ')) {
+      arr.push(suffix);
+    } else if (arr.length) {
+      arr.length -= 1;
+    }
+    return arr.join('');
+  }
+
+
   return {
     // Attempts to find an element in a document that corresponds to a selector returned by generateSelector
     // using some aribitrarily chosen fuzzy match heuristics. It would be fun to measure how each heuristic
     // performs and to collect information about real failures to gain insight into how to improve this.
     fuzzyFind: function (sel, doc) {
-      sel = unescape(sel);
+      sel = decodeURIComponent(sel);
       doc = doc || document; //{querySelectorAll: function(s) { log('TRIED: ' + s); return []}}();
       var els = doc.querySelectorAll(sel);
       switch (els.length) {
@@ -159,7 +258,7 @@ var snapshot = function () {
       return null;
     },
 
-    ofRange: function (r, text) {
+    ofRange: function (r) {
       var an = r.commonAncestorContainer;
       var sc = r.startContainer;
       var so = r.startOffset;
@@ -169,13 +268,14 @@ var snapshot = function () {
       var ane = elementSelfOrParent(an);
       var sce = elementSelfOrParent(sc);
       var ece = elementSelfOrParent(ec);
+
       return ['r',
-        generateSelector(ane),
-        sce === ane ? '' : generateSelector(sce, ane, null).replace(/ /g, escape), // most ASCII already \-unicode-escaped
+        encodeURIComponent(generateSelector(ane)),
+        sce === ane ? '' : encodeURIComponent(generateSelector(sce, ane, null)),
         sc === sce ? so : indexOf(sce.childNodes, sc) + ':' + so,
-        ece === ane ? '' : generateSelector(ece, ane, null).replace(/ /g, escape), // most ASCII already \-unicode-escaped
+        ece === ane ? '' : encodeURIComponent(generateSelector(ece, ane, null)),
         ec === ece ? eo : indexOf(ece.childNodes, ec) + ':' + eo,
-        text.replace(/[ \t\r\n\f%|]/g, escape)   // TODO: identify text node boundaries?
+        encodeURIComponent(getRangeText(sce, sc, so, ece, ec, eo))
       ].join('|');
     },
 
@@ -183,8 +283,8 @@ var snapshot = function () {
       var parts = selector.split('|');
       var ane = snapshot.fuzzyFind(parts[1]);
       if (ane) {
-        var sce = parts[2] ? ane.querySelector(scopeChild + parts[2]) : ane;
-        var ece = parts[4] ? ane.querySelector(scopeChild + parts[4]) : ane;
+        var sce = parts[2] ? ane.querySelector(scopeChild + decodeURIComponent(parts[2])) : ane;
+        var ece = parts[4] ? ane.querySelector(scopeChild + decodeURIComponent(parts[4])) : ane;
         if (sce && ece) {
           var sos = parts[3].split(':');
           var eos = parts[5].split(':');
@@ -205,7 +305,7 @@ var snapshot = function () {
 
     ofImage: function (img) {
       return ['i',
-        generateSelector(img),
+        encodeURIComponent(generateSelector(img)),
         img.naturalWidth + 'x' + img.naturalHeight,
         img.width + 'x' + img.height,
         encodeURIComponent(img.src)
@@ -218,7 +318,7 @@ var snapshot = function () {
       if (el && el.tagName.toUpperCase() === 'IMG') {
         return el;
       }
-      var imgs = document.querySelector('img[src="' + decodeURIComponent(parts[2]).replace(/"/g, '\\22 ') + '"]');
+      var imgs = document.querySelector('img[src="' + decodeURIComponent(parts[4]).replace(/"/g, '\\22 ') + '"]');
       if (imgs.length === 1) {
         return imgs[0];
       } // TODO: use best match of original dimensions

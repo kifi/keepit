@@ -354,11 +354,11 @@ var snap = snap || (function () {
     info.bounds = toJson(ranges.getBoundingClientRect(r, info.rects));
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
-      $(img).on('load', finishFinalizeLookHereLink.bind(img, info.bounds, href, text.trim()));
+      $(img).on('load', finishFinalizeLookHereLink.bind(img, info.bounds, href, title));
       img.src = dataUrl;
     });
-    var text = r.toString();
-    var href = 'x-kifi-sel:' + snapshot.ofRange(r, text);
+    var href = 'x-kifi-sel:' + snapshot.ofRange(r);
+    var title = formatKifiSelRangeText(href);
   }
 
   function finishFinalizeLookHereLink(bRect, href, title) {

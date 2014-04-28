@@ -55,7 +55,7 @@ var formatMessage = (function () {
       var selector = parts[i+1].replace(escapedRightParenRe, ')');
       var titleAttr = '';
       if (selector.lastIndexOf('r|', 0) === 0) {
-        titleAttr = ' title="' + Mustache.escape(unescape(selector.split('|')[6])) + '"';
+        titleAttr = ' title="' + Mustache.escape(formatKifiSelRangeText(selector)) + '"';
       }
       parts[i] = '<a href="x-kifi-sel:' + Mustache.escape(selector) + '"' + titleAttr + '>' +
         processInside(parts[i].replace(escapedRightBracketRe, ']'));
@@ -119,6 +119,19 @@ var formatMessage = (function () {
     snippet: function () {
       return renderAndFormatSnippet;
     }
+  };
+}());
+
+var formatKifiSelRangeText = (function () {
+  'use strict';
+  var replaceRe = /(\u001e[ \t\n\r]*|\u001f)/g;
+  var replacements = {'\u001e': '\n\n', '\u001f': ''};
+  function replace(s) {
+    var r = replacements[s[0]];
+    return r !== undefined ? r : ' ';
+  }
+  return function (selector) {
+    return decodeURIComponent(selector.split('|')[6]).replace(replaceRe, replace);
   };
 }());
 
