@@ -10,6 +10,8 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import com.kifi.franz.QueueName
+import com.keepit.common.db.SequenceNumber
 
 
 
@@ -21,6 +23,15 @@ trait CortexServiceClient extends ServiceClient{
   def word2vecURISimilairty(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]): Future[Option[Float]]
   def word2vecUserSimilarity(user1Keeps: Seq[Id[NormalizedURI]], user2Keeps: Seq[Id[NormalizedURI]]): Future[Option[Float]]
   def word2vecQueryUriSimilarity(query: String, uri: Id[NormalizedURI]): Future[Option[Float]]
+  def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]]
+  def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]]
+
+  def ldaNumOfTopics(): Future[Int]
+  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]]
+  def ldaWordTopic(word: String): Future[Option[Array[Float]]]
+  def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
+
+  def sqsDenseLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: Int, queue: QueueName): Future[Unit]
 }
 
 class CortexServiceClientImpl(
@@ -62,4 +73,49 @@ class CortexServiceClientImpl(
     }
   }
 
+  def word2vecUserUriSimilarity(userUris: Seq[Id[NormalizedURI]], uri: Id[NormalizedURI]): Future[Map[String, Float]] = {
+    val payload = Json.obj("userUris" -> userUris.map{_.id}, "uri" -> uri.id)
+    call(Cortex.internal.word2vecUserUriSimilarity(), payload).map{ r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]] = {
+    val payload = Json.obj("userUris" -> userUris.map{_.id}, "feedUris" -> feedUris.map{_.id})
+    call(Cortex.internal.word2vecFeedUserUris(), payload).map{ r =>
+      Json.fromJson[Seq[Id[NormalizedURI]]](r.json).get
+    }
+  }
+
+  def ldaNumOfTopics(): Future[Int] = {
+    call(Cortex.internal.ldaNumOfTopics).map{ r =>
+      (r.json).as[Int]
+    }
+  }
+
+  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = {
+    call(Cortex.internal.ldaShowTopics(fromId, toId, topN)).map{ r =>
+      (r.json).as[Map[String, Map[String, Float]]]
+    }
+  }
+
+  def ldaWordTopic(word: String): Future[Option[Array[Float]]] = {
+    call(Cortex.internal.ldaWordTopic(word)).map{ r =>
+      Json.fromJson[Option[Array[Float]]](r.json).get
+    }
+  }
+
+  def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = {
+    val payload = Json.obj("doc" -> doc)
+    call(Cortex.internal.ldaDocTopic(), payload).map{ r =>
+      Json.fromJson[Option[Array[Float]]](r.json).get
+    }
+  }
+
+  def sqsDenseLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: Int, queue: QueueName): Future[Unit] = {
+    val payload = Json.obj("lowSeq" -> lowSeq.value, "version" -> version, "queue" -> queue.name)
+    call(Cortex.internal.sqsDenseLDAURIFeature(), payload).map{ r =>
+      assert(r.status == 202); ()
+    }
+  }
 }

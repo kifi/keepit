@@ -1,17 +1,33 @@
 package com.keepit.graph.simple
 
 import scala.collection.concurrent.{Map => ConcurrentMap, TrieMap}
-import com.keepit.graph.model.{GraphWriter, GraphReader, VertexId}
-import play.api.libs.json.{JsResult, JsArray, JsValue, Format}
+import com.keepit.graph.model._
+import play.api.libs.json.{JsResult, JsValue, Format}
+import play.api.libs.json.JsArray
+import com.keepit.graph.manager.GraphStatistics
 
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
-  def getNewReader(): GraphReader = new GraphReaderImpl(vertices)
+  private val vertexStatistics = GraphStatistics.newVertexCounter()
+  private val edgeStatistics = GraphStatistics.newEdgeCounter()
+
+  vertices.values.foreach { mutableVertex =>
+    val sourceKind = mutableVertex.data.kind
+    vertexStatistics(sourceKind).incrementAndGet()
+    mutableVertex.edges.foreach { case (destinationId, edgeData) =>
+      val edgeKinds = (sourceKind, destinationId.kind, edgeData.kind)
+      edgeStatistics(edgeKinds).incrementAndGet()
+    }
+  }
+
+  def statistics = GraphStatistics.filter(vertexStatistics, edgeStatistics)
+
+  def getNewReader(): GraphReader = new SimpleGraphReader(vertices)
 
   def getNewWriter(): GraphWriter = {
     val bufferedVertices = new BufferedMap(vertices)
-    new GraphWriterImpl(bufferedVertices)
+    new SimpleGraphWriter(bufferedVertices, vertexStatistics, edgeStatistics)
   }
 
   def readWrite[T](f: GraphWriter => T): T = {
@@ -27,13 +43,11 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 
 object SimpleGraph {
   implicit val format: Format[SimpleGraph] = new Format[SimpleGraph] {
-    def writes(simpleGraph: SimpleGraph): JsValue = JsArray(simpleGraph.vertices.values.map(MutableVertex.format.writes).toSeq)
+    def writes(simpleGraph: SimpleGraph): JsValue = JsArray(simpleGraph.vertices.flatMap { case (vertexId, vertex) => Seq(VertexId.format.writes(vertexId), MutableVertex.format.writes(vertex)) }.toSeq)
     def reads(json: JsValue): JsResult[SimpleGraph] = json.validate[JsArray].map { jsArray =>
-      val mutableVertices = jsArray.value.map(_.as[MutableVertex])
       val vertices = TrieMap[VertexId, MutableVertex]()
-      vertices ++= mutableVertices.map { mutableVertex =>
-        val vertexData = mutableVertex.data
-        (VertexId(vertexData.id)(vertexData.kind) -> mutableVertex)
+      vertices ++= jsArray.value.sliding(2,2).map { case Seq(vertexId, vertex) =>
+        vertexId.as[VertexId] -> vertex.as[MutableVertex]
       }
       SimpleGraph(vertices)
     }

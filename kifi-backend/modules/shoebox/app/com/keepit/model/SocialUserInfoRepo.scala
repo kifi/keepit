@@ -76,7 +76,9 @@ class SocialUserInfoRepoImpl @Inject() (
       socialUserCache.remove(SocialUserKey(userId))
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
-    basicInfoCache.remove(SocialUserBasicInfoKey(socialUser.id.get))
+    socialUser.id map { id =>
+      basicInfoCache.remove(SocialUserBasicInfoKey(id))
+    }
     socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
     countCache.remove(SocialUserInfoCountKey())
   }

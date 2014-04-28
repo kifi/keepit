@@ -1,28 +1,25 @@
 package com.keepit.common.embedly
 
 import com.keepit.model._
+import scala.concurrent._
 import scala.concurrent.Future
 import play.api.http.Status
 import play.api.libs.json._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.db.Id
 import play.api.libs.functional.syntax._
-import scala.Some
-import play.api.libs.ws.{WS, Response}
+import play.api.libs.ws.WS
 import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.concurrent.RetryFuture
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
-import com.keepit.common.healthcheck.SystemAdminMailSender
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Singleton, Inject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import play.api.libs.ws.Response
 import scala.Some
-import play.api.Play
-import play.api.Play.current
+import com.keepit.common.store.ImageSize
 
 case class EmbedlyImage(
   url:String,
@@ -30,7 +27,8 @@ case class EmbedlyImage(
   width:Option[Int]      = None,
   height:Option[Int]     = None,
   size:Option[Int]       = None) extends ImageGenericInfo {
-  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = ImageInfo(uriId = nuriId, url = this.url, caption = this.caption, width = this.width, height = this.height, size = this.size)
+  def toImageInfoWithPriority(nuriId:Id[NormalizedURI], priority: Option[Int]):ImageInfo = ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height, size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority)
+  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = toImageInfoWithPriority(nuriId, None)
 }
 
 object EmbedlyImage {
@@ -81,16 +79,37 @@ object EmbedlyExtractResponse {
     )(EmbedlyExtractResponse.apply _, unlift(EmbedlyExtractResponse.unapply))
 }
 
-class EmbedlyClient @Inject() extends Logging {
+@ImplementedBy(classOf[EmbedlyClientImpl])
+trait EmbedlyClient {
+  def embedlyUrl(url: String): String
+  def getAllImageInfo(uri: NormalizedURI, size: ImageSize): Future[Seq[ImageInfo]]
+  def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]]
+  def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]]
+}
 
-  private val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) get
+@Singleton
+class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
-  def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
+  private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
-  def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
+  override def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
+
+  override def getAllImageInfo(uri: NormalizedURI, size: ImageSize): Future[Seq[ImageInfo]] = {
+    uri.id map { nUriId =>
+      getExtractResponse(uri.url) map { result =>
+        result map {response =>
+          response.images.zipWithIndex flatMap { case (embedlyImage, priority) =>
+            Some(embedlyImage.toImageInfoWithPriority(nUriId, Some(priority)))
+          }
+        } getOrElse Seq()
+      }
+    } getOrElse future { Seq() }
+  }
+
+  override def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
     getExtractResponse(uri.url, Some(uri))
 
-  def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]] = {
+  override def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]] = {
     val apiUrl = embedlyUrl(url)
     val loggingHint = uriOpt match {
       case Some(uri) => s"(${uri},${url})"

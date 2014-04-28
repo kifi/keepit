@@ -10,7 +10,7 @@ class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def findNonUsersToInvite(q: String, n: Int) = JsonAction.authenticated { request =>
+  def findPeopleToInvite(q: String, n: Int) = JsonAction.authenticated { request =>
     Ok(JsArray())
   }
 

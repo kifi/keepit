@@ -11,6 +11,8 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.shoebox.{FakeKeepImportsModule, KeepImportsModule}
 import com.keepit.common.actor.{StandaloneTestActorSystemModule, TestActorSystemModule}
 import akka.actor.ActorSystem
+import com.keepit.search.ArticleSearchResult
+import com.keepit.common.db.ExternalId
 
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
@@ -80,6 +82,55 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
           keepRepo.all.size === 2
+        }
+      }
+    }
+
+    "tracking clicks & rekeeps" in {
+      withDb(modules: _*) { implicit injector =>
+        val (u1, u2) = db.readWrite { implicit session =>
+          val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          val u2 = userRepo.save(User(firstName = "Clicker", lastName = "Foo"))
+          (u1, u2)
+        }
+        val bookmarkInterner = inject[KeepInterner]
+        val raw = inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+          "url" -> "http://42go.com",
+          "isPrivate" -> false
+        ), Json.obj(
+          "url" -> "http://kifi.com",
+          "isPrivate" -> false
+        )))
+        val deduped = bookmarkInterner.deDuplicate(raw)
+        deduped === raw
+        deduped.size === 2
+        val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw, u1.id.get, KeepSource.email, true)
+
+        val kc = db.readWrite { implicit rw =>
+          keepClickRepo.save(KeepClick(searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
+        }
+
+        val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw, u2.id.get, KeepSource.default, true)
+
+        db.readWrite { implicit session =>
+          userRepo.get(u1.id.get) === u1
+          keeps1.size === 2
+          keepRepo.all.size === 4
+          keeps2.size === 2
+          val clicks = keepClickRepo.all()
+          clicks.size === 1
+          val click = clicks(0)
+          click.searchUUID === kc.searchUUID
+          click.keeperId === u1.id.get
+          click.keepId === keeps1(1).id.get
+          click.clickerId === u2.id.get
+          val rekeeps = rekeepRepo.all
+          rekeeps.size === 1
+          val rekeep = rekeeps(0)
+          rekeep.keeperId === u1.id.get
+          rekeep.keepId === keeps1(1).id.get
+          rekeep.srcUserId === u2.id.get
+          rekeep.srcKeepId === keeps2(1).id.get
         }
       }
     }

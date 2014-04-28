@@ -1,7 +1,8 @@
 package com.keepit.cortex.models.lda
 
-import com.keepit.cortex.core.{BinaryFormatter, StatModel}
+import com.keepit.cortex.core.{BinaryFormatter, StatModel, Versionable}
 import com.keepit.cortex.store.StoreUtil
+import play.api.libs.json._
 
 trait LDA extends StatModel
 
@@ -15,4 +16,16 @@ object DenseLDAFormatter extends BinaryFormatter[DenseLDA] {
     val (dim, mapper) = StoreUtil.DenseWordVecFormatter.fromBinary(bytes)
     DenseLDA(dim, mapper)
   }
+}
+
+case class DenseLDATopicWords(topicWords: Array[Map[String, Float]]) extends Versionable[DenseLDA]
+
+object DenseLDATopicWordsFormmater extends Format[DenseLDATopicWords] {
+
+  def reads(json: JsValue): JsResult[DenseLDATopicWords] = {
+    val x = json.as[Array[Map[String, Float]]]
+    JsSuccess(DenseLDATopicWords(x))
+  }
+
+  def writes(topicWords: DenseLDATopicWords) = Json.toJson(topicWords.topicWords)
 }

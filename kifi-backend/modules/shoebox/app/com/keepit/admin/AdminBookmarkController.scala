@@ -33,7 +33,6 @@ class AdminBookmarksController @Inject() (
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
   pageInfoRepo: PageInfoRepo,
-  imageInfoRepo: ImageInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   s3ScreenshotStore: S3ScreenshotStore,
   clock: Clock)

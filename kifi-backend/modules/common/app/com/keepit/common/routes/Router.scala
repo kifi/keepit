@@ -133,6 +133,10 @@ object Shoebox extends Service {
     def getVerifiedAddressOwners() = ServiceRoute(POST, "/internal/shoebox/database/getVerifiedAddressOwners")
     def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
+    def userGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/user")
+    def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
+    def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
+    def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
   }
 }
 
@@ -270,6 +274,15 @@ object Cortex extends Service {
     def word2vecURISimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = ServiceRoute(GET, s"/internal/cortex/word2vec/uriSimilarity", Param("uri1", uri1), Param("uri2", uri2))
     def word2vecUserSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userSimilarity")
     def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")
+    def word2vecUserUriSimilarity() = ServiceRoute(POST,"/internal/cortex/word2vec/userUriSimilarity")
+    def word2vecFeedUserUris() = ServiceRoute(POST,"/internal/cortex/word2vec/feedUserUris")
+
+    def ldaNumOfTopics = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics")
+    def ldaShowTopics(fromId: Int, toId: Int, topN: Int) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN))
+    def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
+    def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
+
+    def sqsDenseLDAURIFeature() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/uriFeature")
   }
 }
 
