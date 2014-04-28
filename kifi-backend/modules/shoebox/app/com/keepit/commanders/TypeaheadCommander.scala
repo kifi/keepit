@@ -63,13 +63,12 @@ class TypeaheadCommander @Inject()(
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
   def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[EContact]] = {
-    abookServiceClient.prefixQuery(userId, limit, search, None) map { contacts =>
-      contacts.take(limit)
-    }
+    abookServiceClient.prefixQuery(userId, limit, search, None)
   }
 
   def queryContacts(userId: Id[User], search: Option[String], limit: Int, filter: (EContact) => Boolean): Future[Seq[EContact]] = {
-    abookServiceClient.prefixQuery(userId, limit, search, None) map { contacts =>
+    // TODO(jared,ray): filter in the abook service instead for efficiency and correctness
+    abookServiceClient.prefixQuery(userId, 2 * limit, search, None) map { contacts =>
       contacts.filter(filter).take(limit)
     }
   }
