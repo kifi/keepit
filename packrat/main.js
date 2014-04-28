@@ -752,9 +752,9 @@ api.port.on({
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
-  invite_friends: function (source) {
-    api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
-    mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
+  import_contacts: function (source) {
+    api.tabs.selectOrOpen(webBaseUri() + '/invite');
+    mixpanel.track('user_clicked_pane', {type: source, action: 'clickImportContacts'});
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
@@ -1020,7 +1020,19 @@ api.port.on({
     if (results.length > data.n) {
       results = results.slice(0, data.n);
     }
-    respond(results.map(toFriendSearchResult, {sf: sf, q: data.q}));
+    var nMoreDesired = data.n - results.length;
+    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
+    respond({
+      searchId: searchId,
+      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
+    });
+    if (nMoreDesired) {
+      ajax('GET', '/ext/contacts', {q: data.q, n: nMoreDesired}, function (contacts) {
+        api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: contacts.map(toContactResult, {sf: sf, q: data.q})});
+      }, function () {
+        api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: [], error: true});
+      });
+    }
   },
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);
@@ -2054,7 +2066,7 @@ function toFriendSearchResult(f) {
   };
 }
 
-function toNonUserSearchResult(f) {
+function toContactResult(f) {
   if (f.name) {
     f.nameParts = this.sf.splitOnMatches(this.q, f.name);
   }
