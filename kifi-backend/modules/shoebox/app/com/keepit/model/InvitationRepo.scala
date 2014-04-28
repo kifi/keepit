@@ -26,7 +26,6 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
   def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: String)(implicit session: RSession): Option[Invitation]
   def getLastInvitedAtBySenderIdAndRecipientSocialUserIds(senderId: Id[User], socialUserInfoIds: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], DateTime]
-  def getLastInvitedAtBySenderIdAndRecipientEContactIds(senderId: Id[User], eContactIds: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], DateTime]
   def getLastInvitedAtBySenderIdAndRecipientEmailAddresses(senderId: Id[User], emailAddresses: Seq[String])(implicit session: RSession): Map[String, DateTime]
   def getBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
   def getBySenderIdIter(senderId:Id[User], max:Int)(implicit session: RSession):CloseableIterator[Invitation]
@@ -150,16 +149,6 @@ class InvitationRepoImpl @Inject() (
     } else {
       var query = for (i <- rows if i.senderUserId === senderId && i.recipientEmailAddress.inSet(emailAddresses) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isNotNull)
         yield (i.recipientEmailAddress, i.lastSentAt)  // using createdAt for now (user cannot currently re-invite same e-contact)
-      Map(query.list: _*)
-    }
-  }
-
-  def getLastInvitedAtBySenderIdAndRecipientEContactIds(senderId: Id[User], eContactIds: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], DateTime] = {
-    if (eContactIds.isEmpty) {
-      Map.empty
-    } else {
-      var query = for (i <- rows if i.senderUserId === senderId && i.recipientEContactId.inSet(eContactIds) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isNotNull)
-      yield (i.recipientEContactId, i.lastSentAt)  // using createdAt for now (user cannot currently re-invite same e-contact)
       Map(query.list: _*)
     }
   }
