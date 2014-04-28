@@ -117,3 +117,15 @@ case object LinkedInAccountReader extends VertexKind[LinkedInAccountReader] {
   implicit val writes = Writes[LinkedInAccountReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[LinkedInAccountReader]] { json => (json \ "id").validate.map(LinkedInAccountData(_)) }
 }
+
+trait LDATopicIdReader extends VertexDataReader {
+  type V = LDATopicIdReader
+  def kind = LDATopicIdReader
+}
+
+case object LDATopicIdReader extends VertexKind[LDATopicIdReader]{
+  val header = 7.toByte
+  def apply(rawDataReader: RawDataReader): LDATopicIdReader = ???
+  implicit val writes = Writes[LDATopicIdReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[LDATopicIdReader]] { json => (json \ "id").validate.map(LDATopicIdData(_)) }
+}

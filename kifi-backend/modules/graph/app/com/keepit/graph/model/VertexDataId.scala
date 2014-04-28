@@ -4,6 +4,7 @@ import com.keepit.model.{SocialUserInfo, Collection, NormalizedURI, User}
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
 import play.api.libs.json.{JsNumber, Writes, Reads, Format}
+import com.keepit.cortex.lda.LDATopicId
 
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 
@@ -27,4 +28,7 @@ object VertexDataId {
 
   implicit def fromSocialUserIdToLinkedInAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[LinkedInAccountReader] = VertexDataId(socialUserId.id)
   implicit def fromLinkedInAccountIdtoSocialUserId(linkedInAccountReaderId: VertexDataId[LinkedInAccountReader]): Id[SocialUserInfo] = Id(linkedInAccountReaderId.id)
+
+  implicit def fromLDATopicId(id: LDATopicId): VertexDataId[LDATopicIdReader] = VertexDataId(LDATopicId.toLong(id))
+  implicit def toLDATopicId(id: VertexDataId[LDATopicIdReader]): LDATopicId = LDATopicId.fromLong(id.id)
 }

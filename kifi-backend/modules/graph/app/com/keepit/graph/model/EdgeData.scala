@@ -6,3 +6,6 @@ sealed trait EdgeData[E <: EdgeDataReader] { self: E =>
 }
 
 case object EmptyEdgeData extends EmptyEdgeDataReader with EdgeData[EmptyEdgeDataReader]
+case class WeightedEdgeData(weight: Float) extends WeightedEdgeDataReader with EdgeData[WeightedEdgeDataReader] {
+  def getWeight: Float = weight
+}

@@ -10,7 +10,9 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.{UserConnection, SocialUserInfo, SocialConnection, User}
+import com.keepit.model.{UserConnection, SocialUserInfo, SocialConnection, User, NormalizedURI}
+import com.keepit.cortex.VersionedSequenceNumber
+import com.keepit.cortex.CortexServiceClient
 
 trait GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
@@ -21,7 +23,8 @@ class GraphUpdateFetcherImpl @Inject() (
   queue: SQSQueue[GraphUpdate],
   shoebox: ShoeboxServiceClient,
   eliza: ElizaServiceClient,
-  abook: ABookServiceClient
+  abook: ABookServiceClient,
+  cortex: CortexServiceClient
 ) extends GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
@@ -37,5 +40,12 @@ class GraphUpdateFetcherImpl @Inject() (
     case UserConnectionGraphUpdate =>
       val seq = currentState.getCurrentSequenceNumber(UserConnectionGraphUpdate)
       shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
+    case LDAURITopicGraphUpdate => {
+      val seq = currentState.getCurrentSequenceNumber(LDAURITopicGraphUpdate)
+      val versionedSeq = VersionedSequenceNumber.fromLong(seq.value)
+      val desiredLDAVersion = 1  // change this when version up
+      val lowSeq = if (versionedSeq.version < desiredLDAVersion) SequenceNumber[NormalizedURI](0L) else SequenceNumber[NormalizedURI](versionedSeq.seq)
+      // cortex.sqsDenseLDAURIFeature(lowSeq, desiredLDAVersion, queue.queue)
+    }
   }
 }

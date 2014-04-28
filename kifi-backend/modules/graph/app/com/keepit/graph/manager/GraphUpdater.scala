@@ -6,6 +6,7 @@ import com.keepit.model.{SocialConnectionStates, UserConnectionStates}
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
+import com.keepit.cortex.lda.LDATopicId
 
 trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
@@ -17,6 +18,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case userConnectionGraphUpdate: UserConnectionGraphUpdate => processUserConnectionGraphUpdate(userConnectionGraphUpdate)
     case socialUserInfoGraphUpdate: SocialUserInfoGraphUpdate => processSocialUserInfoGraphUpdate(socialUserInfoGraphUpdate)
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
+    case ldaUpdate: LDAURITopicGraphUpdate => {/*processLDAUpdate(ldaUpdate)*/}
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
@@ -87,5 +89,30 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       }
 
     case _ => // ignore
+  }
+
+  private def processLDAUpdate(update: LDAURITopicGraphUpdate)(implicit writer: GraphWriter) = {
+
+    def removeOldTopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
+      (0 until numTopics).foreach{ i =>
+        val versionedTopicId = LDATopicId(update.modelVersion, i)
+        writer.removeEdgeIfExists(uriVertexId, versionedTopicId, EmptyEdgeDataReader)
+        writer.removeEdgeIfExists(versionedTopicId, uriVertexId, EmptyEdgeDataReader)
+      }
+    }
+
+    val uriVertexId: VertexDataId[UriReader] = update.uriId
+    removeOldTopicsIfExists(uriVertexId, update.topics.length)
+
+    val uriData = UriData(uriVertexId)
+
+    update.topics.zipWithIndex.sortBy(-1f * _._1).take(5).foreach{ case (score, topicId) =>
+      val versionedTopicId = LDATopicId(update.modelVersion, topicId)
+      val topicVertexId: VertexDataId[LDATopicIdReader] = versionedTopicId
+      writer.saveVertex(LDATopicIdData(topicVertexId))
+      writer.saveVertex(uriData)
+      writer.saveEdge(uriVertexId, topicVertexId, EmptyEdgeData)    // replace by weighted
+      writer.saveEdge(topicVertexId, uriVertexId, EmptyEdgeData)
+    }
   }
 }
