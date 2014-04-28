@@ -318,7 +318,7 @@ class KeepsCommander @Inject() (
 
   def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {
     db.readWrite { implicit session =>
-      val origin = keepRepo.oldestBookmark(userId).map(_.createdAt) getOrElse currentDateTime
+      val origin = keepRepo.oldestKeep(userId).map(_.createdAt) getOrElse currentDateTime
       keeps.zipWithIndex.foreach { case (keep, i) =>
         keepRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
       }

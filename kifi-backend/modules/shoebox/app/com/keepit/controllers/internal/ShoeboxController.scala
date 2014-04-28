@@ -451,7 +451,7 @@ class ShoeboxController @Inject() (
 
   def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
     val bookmarkOpt = db.readOnly(2) { implicit session => //using cache
-      keepRepo.latestBookmark(uriId)
+      keepRepo.latestKeep(uriId)
     }
     log.info(s"[getLatestBookmark($uriId)] $bookmarkOpt")
     Ok(Json.toJson(bookmarkOpt))
