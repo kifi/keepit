@@ -97,7 +97,7 @@ POST    /ext/pref/showSearchIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showFindFriends   @com.keepit.controllers.ext.ExtPreferenceController.setShowFindFriends(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
-GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findNonUsers(q: String, n: Int ?= 4)
+GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 POST    /ext/imageForUrl            @com.keepit.controllers.ext.ExtURIImageController.getImageForURL()
@@ -512,12 +512,6 @@ POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controlle
 POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
 POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
 POST    /admin/cortex/word2vec/queryUriSimilarity          @com.keepit.controllers.admin.AdminWord2VecController.queryUriSimilarity
-POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controllers.admin.AdminWord2VecController.userUriSimilarity
-
-GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
-POST    /admin/cortex/lda/showTopics                       @com.keepit.controllers.admin.AdminLDAController.showTopics
-POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic 
-POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic 
 
 ##########################################
 # Common Healthcheck / service routes
