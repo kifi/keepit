@@ -302,6 +302,7 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
+GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
@@ -322,8 +323,8 @@ GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoC
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
 
-GET     /admin/keepClicks           @com.keepit.controllers.admin.AdminAttributionController.keepClicks(page:Int ?= 0, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeeps              @com.keepit.controllers.admin.AdminAttributionController.rekeeps(page:Int ?= 0, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepClicksView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection

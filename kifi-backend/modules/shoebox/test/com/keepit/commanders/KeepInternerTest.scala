@@ -13,6 +13,8 @@ import com.keepit.common.actor.{StandaloneTestActorSystemModule, TestActorSystem
 import akka.actor.ActorSystem
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.db.ExternalId
+import org.joda.time.DateTime
+import com.keepit.common.time._
 
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
@@ -106,8 +108,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         deduped.size === 2
         val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw, u1.id.get, KeepSource.email, true)
 
-        val kc = db.readWrite { implicit rw =>
-          keepClickRepo.save(KeepClick(searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
+        val (old, kc) = db.readWrite { implicit rw =>
+          val old = keepClickRepo.save(KeepClick(createdAt = currentDateTime.minusMinutes(10), searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
+          val kc = keepClickRepo.save(KeepClick(createdAt = currentDateTime, searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
+          (old, kc)
         }
 
         val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw, u2.id.get, KeepSource.default, true)
@@ -117,9 +121,14 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           keeps1.size === 2
           keepRepo.all.size === 4
           keeps2.size === 2
+
           val clicks = keepClickRepo.all()
-          clicks.size === 1
-          val click = clicks(0)
+          clicks.size === 2
+
+          val mostRecentOpt = keepClickRepo.getMostRecentClickByClickerAndKeepId(u2.id.get, kc.keepId)
+          val click = mostRecentOpt.get
+          click.createdAt !== old.createdAt
+          click.createdAt === kc.createdAt
           click.searchUUID === kc.searchUUID
           click.keeperId === u1.id.get
           click.keepId === keeps1(1).id.get

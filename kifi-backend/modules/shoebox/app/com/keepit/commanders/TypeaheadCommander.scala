@@ -62,25 +62,35 @@ class TypeaheadCommander @Inject()(
   private def emailId(email:String) = s"email/$email"
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
-  def queryContacts(userId:Id[User], search: Option[String], limit: Int):Future[Seq[(EContact, String)]] = {
-    abookServiceClient.prefixQuery(userId, limit, search, None) map { paged =>
+  def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[EContact]] = {
+    abookServiceClient.prefixQuery(userId, limit, search, None)
+  }
+
+  def queryContacts(userId: Id[User], search: Option[String], limit: Int, filter: (EContact) => Boolean): Future[Seq[EContact]] = {
+    // TODO(jared,ray): filter in the abook service instead for efficiency and correctness
+    abookServiceClient.prefixQuery(userId, 2 * limit, search, None) map { contacts =>
+      contacts.filter(filter).take(limit)
+    }
+  }
+
+  def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(EContact, Boolean)]] = {
+    queryContacts(userId, search, limit) map { contacts =>
       val allEmailInvites = db.readOnly { implicit ro =>
         invitationRepo.getEmailInvitesBySenderId(userId)
       }
       val invitesMap = allEmailInvites.map{ inv => inv.recipientEContactId.get -> inv }.toMap // overhead
-      val withStatus = paged map { e =>
-        val status = invitesMap.get(e.id.get) map { inv =>
-          if (inv.state != InvitationStates.INACTIVE) "invited" else ""
-        } getOrElse ""
-        (e, status)
+      contacts map { c =>
+        val invited = invitesMap.get(c.id.get) map { _.state != InvitationStates.INACTIVE } getOrElse false
+        (c, invited)
       }
-      withStatus.take(limit)
     }
   }
 
-  def queryContactsInviteStatus(userId:Id[User], search: Option[String], limit: Int):Future[Seq[ConnectionWithInviteStatus]] = {
-    queryContacts(userId, search, limit) map { res =>
-      res map { case (e, s) => ConnectionWithInviteStatus(e.name.getOrElse(""), -1, SocialNetworks.EMAIL.name, None, emailId(e.email), s) }
+  def queryContactsInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[ConnectionWithInviteStatus]] = {
+    queryContactsWithInviteStatus(userId, search, limit) map { contacts =>
+      contacts.map { case (c, invited) =>
+        ConnectionWithInviteStatus(c.name.getOrElse(""), -1, SocialNetworks.EMAIL.name, None, emailId(c.email), if (invited) "invited" else "")
+      }
     }
   }
 

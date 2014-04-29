@@ -1,6 +1,7 @@
 package com.keepit.graph.simple
 
 import scala.collection.concurrent.{Map => ConcurrentMap, TrieMap}
+import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.graph.model._
 import play.api.libs.json.{JsResult, JsValue, Format}
 import play.api.libs.json.JsArray
@@ -11,13 +12,16 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 
   private val vertexStatistics = GraphStatistics.newVertexCounter()
   private val edgeStatistics = GraphStatistics.newEdgeCounter()
+  private val incomingEdges = TrieMap[VertexId, MutableMap[VertexId, EdgeKind[_ <: EdgeDataReader]]]()
 
-  vertices.values.foreach { mutableVertex =>
+  vertices.foreach { case (sourceId, mutableVertex) =>
     val sourceKind = mutableVertex.data.kind
     vertexStatistics(sourceKind).incrementAndGet()
     mutableVertex.edges.foreach { case (destinationId, edgeData) =>
       val edgeKinds = (sourceKind, destinationId.kind, edgeData.kind)
       edgeStatistics(edgeKinds).incrementAndGet()
+      if (!incomingEdges.contains(destinationId)) { incomingEdges += (destinationId -> MutableMap()) }
+      incomingEdges(destinationId) += (sourceId -> edgeData.kind)
     }
   }
 
@@ -27,7 +31,8 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 
   def getNewWriter(): GraphWriter = {
     val bufferedVertices = new BufferedMap(vertices)
-    new SimpleGraphWriter(bufferedVertices, vertexStatistics, edgeStatistics)
+    val bufferedIncomingEdges = new BufferedMap(incomingEdges)
+    new SimpleGraphWriter(bufferedVertices, bufferedIncomingEdges, vertexStatistics, edgeStatistics)
   }
 
   def readWrite[T](f: GraphWriter => T): T = {
