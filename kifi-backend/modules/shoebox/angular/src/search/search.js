@@ -17,8 +17,8 @@ angular.module('kifi.search', [
 ])
 
 .controller('SearchCtrl', [
-  '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService',
-  function ($http, $scope, keepService, $routeParams, $location, $window, routeService) {
+  '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService', '$log',
+  function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log) {
     keepService.reset();
 
     if ($scope.search) {
@@ -29,8 +29,12 @@ angular.module('kifi.search', [
       var url = routeService.searchedAnalytics;
       var lastSearchContext = keepService.lastSearchContext;
       if (lastSearchContext) {
+        var origin = $location.$$protocol + '://' + $location.$$host;
+        if ($location.$$port) {
+          origin = origin + ':' + $location.$$port;
+        }
         var data = {
-          origin: $location.origin,
+          origin: origin,
           uuid: lastSearchContext.uuid,
           experimentId: lastSearchContext.experimentId,
           query: lastSearchContext.query,
@@ -43,8 +47,14 @@ angular.module('kifi.search', [
           refinements: keepService.refinements,
           pageSession: lastSearchContext.pageSession,
           endedWith: lastSearchContext.endedWith
-        }
-        $http.post(url, data);
+        };
+        $log.log('dumping logging to ' + url, data);
+        debugger;
+        $http.post(url, data)['catch'](function (res) {
+          $log.log('res: ', res);
+        });
+      } else {
+        $log.log('no search context to log');
       }
     };
 
@@ -53,7 +63,7 @@ angular.module('kifi.search', [
       $window.removeEventListener('beforeunload', reportSearchAnalytics);
     });
 
-    $window.addEventListener('beforeunload', reportSearchAnalytics)
+    $window.addEventListener('beforeunload', reportSearchAnalytics);
 
     if (!$routeParams.q) {
       // No or blank query
@@ -164,6 +174,9 @@ angular.module('kifi.search', [
       if ($scope.loading) {
         return;
       }
+      //just for debugging...
+      $log.log('executing reportSearchAnalytics...');
+      reportSearchAnalytics();
 
       $scope.loading = true;
       keepService.find(query, filter, lastResult && lastResult.context).then(function (data) {

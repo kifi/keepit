@@ -7,8 +7,8 @@ angular.module('kifi.keepService', [
 ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location) {
 
     var list = [],
       lastSearchContext = { },
@@ -172,6 +172,10 @@ angular.module('kifi.keepService', [
       list: list,
 
       totalKeepCount: 0,
+
+      lastSearchContext: function () {
+        return lastSearchContext;
+      },
 
       isDetailOpen: function () {
         return isDetailOpen;
@@ -373,7 +377,6 @@ angular.module('kifi.keepService', [
 
       reset: function () {
         $log.log('keepService.reset()');
-
         lastSearchContext = {};
         refinements = -1;
         before = null;
@@ -611,12 +614,13 @@ angular.module('kifi.keepService', [
             }
           };
 
-        $log.log('keepService.find()', reqData);
+        $log.log('keepService.find() req', reqData);
 
         return $http.get(url, reqData).then(function (res) {
           var resData = res.data,
             hits = resData.hits || [];
 
+          $log.log('keepService.find() res', resData);
           if (!resData.mayHaveMore) {
             end = true;
           }
@@ -636,8 +640,8 @@ angular.module('kifi.keepService', [
           refinements++;
           lastSearchContext = {
             origin: $location.origin,
-            uuid: reqData.,
-            experimentId: null,
+            uuid: res.uuid,
+            experimentId: res.experimentId,
             query: reqData.q,
             filter: reqData.f,
             kifiTime: null,
@@ -647,7 +651,6 @@ angular.module('kifi.keepService', [
             pageSession: null,
             endedWith: null
           };
-
           return resData;
         });
       },
