@@ -127,6 +127,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit]
   def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit]
   def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit]
+  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit]
+  def getURIImage(nUri: NormalizedURI): Future[Option[String]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -839,5 +841,17 @@ class ShoeboxServiceClientImpl @Inject() (
   def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
     val userConnectionUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
     call(Shoebox.internal.userConnectionGraphUpdate(), body = userConnectionUpdateRequest).map { r => assert(r.status == 202); () }
+  }
+
+  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
+    val updateScreenshotsForUriRequest = Json.toJson[NormalizedURI](nUri)
+    call(Shoebox.internal.updateScreenshotsForUri(), body = updateScreenshotsForUriRequest).map { r => assert(r.status == 202); () }
+  }
+
+  def getURIImage(nUri: NormalizedURI): Future[Option[String]] = {
+    val getURIImageRequest = Json.toJson[NormalizedURI](nUri)
+    call(Shoebox.internal.getURIImage(), body = getURIImageRequest).map { r =>
+      Json.fromJson[Option[String]](r.json).get
+    }
   }
 }

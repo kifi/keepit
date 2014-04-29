@@ -12,13 +12,12 @@ import play.api.libs.json.{JsObject, Json}
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.store.S3ScreenshotStore
 import scala.concurrent.Future
 import scala.util.{Success, Failure}
 
 class MobileBookmarksController @Inject() (
   db: Database,
-  s3ScreenshotStore: S3ScreenshotStore,
+  uriSummaryCommander: URISummaryCommander,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
@@ -136,8 +135,8 @@ class MobileBookmarksController @Inject() (
   }
 
   private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
-    val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
-    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, false) map { imgUrlOpt =>
+    val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
+    uriSummaryCommander.getURIImage(uri) map { imgUrlOpt =>
       (screenshotUrlOpt, imgUrlOpt) match {
         case (None, None) =>
           Json.obj("url" -> url, "uriId" -> uri.id.get)

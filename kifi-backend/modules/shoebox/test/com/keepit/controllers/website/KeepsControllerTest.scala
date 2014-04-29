@@ -39,7 +39,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{FakeExternalServiceModule, TestActorSystemModule}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
@@ -53,7 +53,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    FakeExternalServiceModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id

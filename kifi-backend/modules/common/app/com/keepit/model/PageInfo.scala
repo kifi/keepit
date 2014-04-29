@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.json.JsonFormatters._
 import org.apache.commons.lang3.RandomStringUtils
+import com.keepit.common.store.ImageSize
 
 trait PageSafetyInfo {
   def safe:Option[Boolean]
@@ -147,6 +148,10 @@ case class ImageInfo(
 ) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   def withId(imageInfoId:Id[ImageInfo]) = copy(id = Some(imageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
+  def getImageSize: Option[ImageSize] = for {
+    w <- width
+    h <- height
+  } yield ImageSize(w,h)
 }
 
 object ImageInfo {
