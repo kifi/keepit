@@ -94,9 +94,8 @@ class URISummaryCommander @Inject()(
           for {
             nUriId <- nUri.id
             pageInfo <- db.readOnly { implicit session => pageInfoRepo.getByUri(nUriId) }
-            description <- pageInfo.description
           } yield {
-            URISummary(getS3URL(imageInfo, nUri), Some(description))
+            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description)
           }
         }
         else {
@@ -117,11 +116,12 @@ class URISummaryCommander @Inject()(
       val shouldFetchFromPagePeeker =
         (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) &&  // Request accepts screenshots
         (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty)   // Couldn't find appropriate Embedly image
-      val description = embedlyResultOpt flatMap { _.description }
       if (shouldFetchFromPagePeeker) {
         fetchFromPagePeeker(nUri, minSize) map { imageInfoOpt =>
           val imageUrlOpt = imageInfoOpt flatMap { getS3URL(_, nUri) }
-          URISummary(imageUrlOpt, description)
+          val title = embedlyResultOpt flatMap { _.title }
+          val description = embedlyResultOpt flatMap { _.description }
+          URISummary(imageUrlOpt, title, description)
         }
       } else future{embedlyResultOpt getOrElse URISummary()}
     }
@@ -153,7 +153,7 @@ class URISummaryCommander @Inject()(
           // Persist page info to the database
           updatePageInfo(embedlyInfo.toPageInfo(nUriId))
           if (descriptionOnly) {
-            future{Some(URISummary(None, embedlyInfo.description))}
+            future{Some(URISummary(None, embedlyInfo.title, embedlyInfo.description))}
           } else {
             val images = embedlyInfo.buildImageInfo(nUriId)
             images.find(meetsSizeConstraint(_, minSize)) flatMap { selectedImageInfo =>
@@ -171,10 +171,10 @@ class URISummaryCommander @Inject()(
                   val imageInfoOpt = rawImageOpt flatMap { rawImage =>
                     internImage(selectedImageInfo, rawImage, nUri)
                   }
-                  Some(URISummary(imageInfoOpt flatMap { getS3URL(_,nUri) }, embedlyInfo.description))
+                  Some(URISummary(imageInfoOpt flatMap { getS3URL(_,nUri) }, embedlyInfo.title, embedlyInfo.description))
                 }
               }
-            } getOrElse future{Some(URISummary(None, embedlyInfo.description))}
+            } getOrElse future{Some(URISummary(None, embedlyInfo.title, embedlyInfo.description))}
           }
         } getOrElse future{None}
       } getOrElse future{None}
