@@ -11,11 +11,12 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import play.api.{Play, Plugin}
 import com.keepit.model.{NormalizedURIRepo}
-import play.api.libs.json._
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.queue.{NormalizationUpdateTask, NormalizationUpdateJobQueue}
+import com.keepit.queue.{NormalizationUpdateTask}
 import com.keepit.common.aws.AwsConfig
+import com.kifi.franz.SQSQueue
+import scala.util.{Failure, Success}
 
 case object Consume
 
@@ -24,7 +25,7 @@ class NormalizationWorker @Inject()(
   nuriRepo:NormalizedURIRepo,
   airbrake:AirbrakeNotifier,
   sqs:SimpleQueueService,
-  q:NormalizationUpdateJobQueue,
+  updateQ:SQSQueue[NormalizationUpdateTask],
   normalizationService:NormalizationService,
   val scheduling: SchedulingProperties,
   awsConfig: AwsConfig
@@ -35,38 +36,24 @@ class NormalizationWorker @Inject()(
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  val sqsEnable:Boolean = awsConfig.sqsEnabled // todo(ray):removeme
   def consume() = {
-    if (sqsEnable) {
-      try {
-        val messages = q.receive()
+    updateQ.nextBatchWithLock(10, 2 minutes) onComplete {
+      case Failure(t) =>
+        airbrake.notify(s"Caught exception $t while consuming messages from $updateQ",t)
+      case Success(messages) =>
         log.info(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
-        val receiveTS = System.currentTimeMillis()
         for (m <- messages) {
-          try {
-            log.info(s"[consume] received msg $m")
-            val taskOpt = Json.fromJson[NormalizationUpdateTask](Json.parse(m.body)).asOpt
-
-            taskOpt map { task =>
-              val nuri = db.readOnly { implicit ro =>
-                nuriRepo.get(task.uriId)
-              }
-              val ref = NormalizationReference(nuri, task.isNew)
-              log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
-              for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-                log.info(s"[consume] normalizationService.update result: $nuriOpt")
-              }
-            }
-          } catch {
-            case t:Throwable => airbrake.notify(s"Caught exception $t while consuming message $m - DELETE")
-          } finally {
-            log.info(s"[consume] done with $m - DELETE") // trial phase
-            q.delete(m.receiptHandle) // todo(ray): add err/retry count
+          log.info(s"[consume] received msg $m")
+          val task = m.body
+          val nuri = db.readOnly { implicit ro =>
+            nuriRepo.get(task.uriId)
+          }
+          val ref = NormalizationReference(nuri, task.isNew)
+          log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
+          for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
+            log.info(s"[consume] normalizationService.update result: $nuriOpt")
           }
         }
-      } catch {
-        case t:Throwable => airbrake.notify(s"Caught exception $t while consuming messages from $q",t)
-      }
     }
   }
 
