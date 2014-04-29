@@ -634,6 +634,8 @@ POST     /internal/shoebox/graph/user                @com.keepit.controllers.int
 POST     /internal/shoebox/graph/socialConnection    @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialConnectionUpdates()
 POST     /internal/shoebox/graph/socialUserInfo      @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialUserInfoUpdates()
 POST     /internal/shoebox/graph/userConnection      @com.keepit.controllers.internal.ShoeboxGraphController.sendUserConnectionUpdates()
+POST     /internal/shoebox/graph/keep                @com.keepit.controllers.internal.ShoeboxGraphController.sendKeepUpdates()
+
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

@@ -37,5 +37,8 @@ class GraphUpdateFetcherImpl @Inject() (
     case UserConnectionGraphUpdate =>
       val seq = currentState.getCurrentSequenceNumber(UserConnectionGraphUpdate)
       shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
+    case KeepGraphUpdate =>
+      val seq = currentState.getCurrentSequenceNumber(KeepGraphUpdate)
+      shoebox.sendKeepGraphUpdate(queue.queue, seq)
   }
 }

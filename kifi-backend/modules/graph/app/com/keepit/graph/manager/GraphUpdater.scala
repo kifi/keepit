@@ -2,7 +2,7 @@ package com.keepit.graph.manager
 
 import com.keepit.graph.model._
 import com.google.inject.Inject
-import com.keepit.model.{SocialConnectionStates, UserConnectionStates}
+import com.keepit.model.{KeepStates, SocialConnectionStates, UserConnectionStates}
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
@@ -17,6 +17,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case userConnectionGraphUpdate: UserConnectionGraphUpdate => processUserConnectionGraphUpdate(userConnectionGraphUpdate)
     case socialUserInfoGraphUpdate: SocialUserInfoGraphUpdate => processSocialUserInfoGraphUpdate(socialUserInfoGraphUpdate)
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
+    case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
@@ -87,5 +88,27 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       }
 
     case _ => // ignore
+  }
+
+  private def processKeepGraphUpdate(update: KeepGraphUpdate)(implicit writer: GraphWriter) = {
+    val keepVertexId: VertexDataId[KeepReader] =  update.id
+    val uriVertexId: VertexDataId[UriReader] = update.uriId
+    val userVertexId: VertexDataId[UserReader] = update.userId
+
+    update.state match {
+      case KeepStates.INACTIVE | KeepStates.DUPLICATE =>
+        writer.removeEdgeIfExists(userVertexId, keepVertexId, EmptyEdgeDataReader)
+        writer.removeEdgeIfExists(keepVertexId, uriVertexId, EmptyEdgeDataReader)
+        // delete keep vertex
+
+      case KeepStates.ACTIVE =>
+        writer.saveVertex(KeepData(keepVertexId))
+        writer.saveVertex(UriData(uriVertexId))
+        writer.saveVertex(UserData(userVertexId))
+
+        writer.saveEdge(userVertexId, keepVertexId, EmptyEdgeData)
+        writer.saveEdge(keepVertexId, uriVertexId, EmptyEdgeData)
+
+    }
   }
 }

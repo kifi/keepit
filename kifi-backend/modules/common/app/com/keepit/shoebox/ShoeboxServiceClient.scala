@@ -36,7 +36,37 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.eliza.model.ThreadItem
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.kifi.franz.QueueName
-import com.keepit.graph.manager.{UserConnectionGraphUpdate, SocialUserInfoGraphUpdate, UserGraphUpdate, SocialConnectionGraphUpdate}
+import com.keepit.graph.manager._
+import com.keepit.model.UserExperimentUserIdKey
+import com.keepit.model.UserValueKey
+import com.keepit.model.UrlPatternRuleAllKey
+import com.keepit.model.UserIdKey
+import com.keepit.model.KifiInstallation
+import com.keepit.model.ExternalUserIdKey
+import com.keepit.model.SocialUserInfoUserKey
+import play.api.libs.json.JsString
+import scala.Some
+import com.keepit.model.ChangedURI
+import com.keepit.social.BasicUserUserIdKey
+import com.keepit.model.SearchFriendsKey
+import com.keepit.model.UserConnectionCountKey
+import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.model.ExtensionVersionInstallationIdKey
+import com.keepit.model.UserExternalIdKey
+import com.keepit.model.DeepLocator
+import com.kifi.franz.QueueName
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsNumber
+import com.keepit.model.KeepUriUserKey
+import com.keepit.model.KeepCountKey
+import com.keepit.social.SocialId
+import com.keepit.model.UrlHash
+import com.keepit.model.UserConnectionIdKey
+import com.keepit.model.NormalizedURIKey
+import com.keepit.common.usersegment.UserSegmentKey
+import play.api.libs.json.JsObject
+import com.keepit.model.SocialUserInfoNetworkKey
+import com.keepit.model.UserSessionExternalIdKey
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -127,6 +157,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit]
   def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit]
   def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit]
+  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]
+
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -839,5 +871,10 @@ class ShoeboxServiceClientImpl @Inject() (
   def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
     val userConnectionUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
     call(Shoebox.internal.userConnectionGraphUpdate(), body = userConnectionUpdateRequest).map { r => assert(r.status == 202); () }
+  }
+
+  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]  = {
+    val keepGraphUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
+    call(Shoebox.internal.keepGraphUpdate(), body = keepGraphUpdateRequest).map { r => assert(r.status == 202); () }
   }
 }
