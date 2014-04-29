@@ -17,8 +17,3 @@ object NormalizationUpdateTask {
     )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
 }
 
-trait NormalizationUpdateJobQueue extends SimpleQueue {
-  def sendTask(task:NormalizationUpdateTask) = {
-    send(Json.stringify(Json.toJson(task)))
-  }
-}
