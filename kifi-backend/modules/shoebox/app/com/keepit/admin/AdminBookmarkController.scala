@@ -55,14 +55,16 @@ class AdminBookmarksController @Inject() (
   }
 
   def whoKeptMyKeeps = AdminHtmlAction.authenticated { implicit request =>
-    db.readOnly { implicit session =>
-      val whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, clock.now.minusDays(7))
-      val richWhoKeptMyKeeps = whoKeptMyKeeps map { whoKeptMyKeep =>
-        RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep.toLocalDate,
+    val since = clock.now.minusDays(7)
+    val richWhoKeptMyKeeps = db.readOnly { implicit session =>
+      val whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since)
+      whoKeptMyKeeps map { whoKeptMyKeep =>
+        RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep,
           uriRepo.get(whoKeptMyKeep.uri), whoKeptMyKeep.users map userRepo.get)
       }
-      Ok(richWhoKeptMyKeeps mkString "\n")
     }
+    val users: Set[User] = richWhoKeptMyKeeps.map(_.users).flatten.toSet
+    Ok(html.admin.whoKeptMyKeeps(richWhoKeptMyKeeps, since, users.size))
   }
 
 

@@ -1,0 +1,26 @@
+@(richWhoKeptMyKeeps: Seq[com.keepit.commanders.RichWhoKeptMyKeeps], since: org.joda.time.DateTime, userCount: Int)
+
+@admin(userCount + " people kept your keeps on KiFi") {
+  <h2>Showing @richWhoKeptMyKeeps.size keeps since @adminHelper.dateTimeDisplay(since)</h2>
+
+  <table class="table table-bordered" style = "clear: both">
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>Last kept on</th>
+      <th>By</th>
+      <th>Others who kept it</th>
+    </tr>
+    @for((keep, i) <- richWhoKeptMyKeeps.zipWithIndex) {
+    <tr>
+      <td>@{i+1}</td>
+      <td><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getScraped(keep.uri.id.get)">@keep.uri.title.getOrElse("No Title")</td>
+      <td>@adminHelper.dateDisplay(keep.latestKeep)</td>
+      <td>@adminHelper.userDisplay(keep.users.head)</td>
+      <td>@for(user <- keep.users.tail) {
+        adminHelper.userDisplay(user)
+      }</td>
+    </tr>
+  }
+  </table>
+}
