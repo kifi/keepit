@@ -55,14 +55,16 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
   }
 
   private def getImageKey(imageInfo: ImageInfo, nUri: NormalizedURI): String = {
-    imageInfo.provider match {
-      case ImageProvider.EMBEDLY => s"images/${nUri.externalId}/${ImageProvider.getProviderIndex(imageInfo.provider)}/${imageInfo.name}"
-      case ImageProvider.PAGEPEEKER => getScreenshotKey(nUri, imageInfo.getImageSize)
-      case _ => {
-        airbrake.notify(s"Unsupported image provider: ${imageInfo.provider}")
-        ""
+    imageInfo.provider map { provider =>
+      provider match {
+        case ImageProvider.EMBEDLY => s"images/${nUri.externalId}/${ImageProvider.getProviderIndex(imageInfo.provider)}/${imageInfo.name}"
+        case ImageProvider.PAGEPEEKER => getScreenshotKey(nUri, imageInfo.getImageSize)
+        case _ => {
+          airbrake.notify(s"Unsupported image provider: ${imageInfo.provider}")
+          ""
+        }
       }
-    }
+    } getOrElse("")
   }
 
   private val defaultSize = ImageSize(500, 280)
