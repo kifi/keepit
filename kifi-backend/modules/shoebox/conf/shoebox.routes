@@ -101,7 +101,6 @@ GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearch
 GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
-POST    /ext/imageForUrl            @com.keepit.controllers.ext.ExtURIImageController.getImageForURL()
 
 GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
 GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
@@ -635,6 +634,10 @@ POST     /internal/shoebox/graph/user                @com.keepit.controllers.int
 POST     /internal/shoebox/graph/socialConnection    @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialConnectionUpdates()
 POST     /internal/shoebox/graph/socialUserInfo      @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialUserInfoUpdates()
 POST     /internal/shoebox/graph/userConnection      @com.keepit.controllers.internal.ShoeboxGraphController.sendUserConnectionUpdates()
+
+GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateURIScreenshots()
+GET      /internal/shoebox/image/getURIImage         @com.keepit.controllers.internal.URISummaryController.getURIImage()
+GET      /internal/shoebox/image/getURISummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

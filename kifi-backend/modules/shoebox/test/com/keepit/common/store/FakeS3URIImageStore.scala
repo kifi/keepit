@@ -7,10 +7,12 @@ import com.keepit.common.db.ExternalId
 
 case class FakeS3URIImageStore() extends S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
-  def mkImgUrl(id: ExternalId[NormalizedURI], providerOpt: Option[ImageProvider], name: String, protocolDefault: Option[String] = None): Option[String] = None
+  def getDefaultScreenshotURL(nUri: NormalizedURI): Option[String] = None
+  def getImageURL(imageInfo: ImageInfo, nUri: NormalizedURI): Option[String] = None
 }
 
 object FakeS3URIImageStore {
   val placeholderImageURL = "http://www.testurl.com/testimage.jpg"
+  val placeholderScreenshotURL = "http://www.theplaceholderscreenshot.com/screenshot.jpg"
   val placeholderSize = 15000
 }
