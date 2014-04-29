@@ -8,7 +8,6 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.kifi.franz.{FakeSQSQueue, QueueName, SimpleSQSClient, SQSQueue}
 import com.amazonaws.regions.{Region, Regions}
 import com.kifi.franz.QueueName
-import com.keepit.common.queue.SimpleQueueMessage
 import com.amazonaws.services.sqs.AmazonSQSClient
 
 trait NormalizationUpdateJobQueueModule extends ScalaModule {
