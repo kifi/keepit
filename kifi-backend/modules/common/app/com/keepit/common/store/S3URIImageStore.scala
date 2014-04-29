@@ -42,8 +42,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
   private def urlFromKey(key: String): Option[String] = {
     URI.parse(s"${config.cdnBase}/${key}") match {
       case Success(uri) =>
-        // returned urls have no scheme
-        Some(URI(None, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString)
+        Some(URI(uri.scheme orElse None, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString)
       case Failure(t) =>
         airbrake.notify(s"Failed to parse $key; Exception: $t; Cause: ${t.getCause}", t)
         None
