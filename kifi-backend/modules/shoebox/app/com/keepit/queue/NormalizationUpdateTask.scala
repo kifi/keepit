@@ -1,6 +1,5 @@
 package com.keepit.queue
 
-import com.keepit.common.queue.SimpleQueue
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.normalizer.NormalizationCandidate
