@@ -56,7 +56,6 @@ trait SearchCommander {
 
 class SearchCommanderImpl @Inject() (
   shards: ActiveShards,
-  searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
   airbrake: AirbrakeNotifier,
@@ -87,18 +86,15 @@ class SearchCommanderImpl @Inject() (
     // fetch user data in background
     val prefetcher = fetchUserDataInBackground(userId)
 
-    val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
-    val (config, searchExperimentId) = predefinedConfig match {
-      case None => searchConfigManager.getConfig(userId, experiments)
-      case Some(conf) =>
-        val default = searchConfigManager.defaultConfig
-        (new SearchConfig(default.params ++ conf.params), None)      // almost complete overwrite. But when search config parameter list changes, this prevents exception
-    }
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
+    val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // TODO: use user profile info as a bias
     val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
+    val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
     val resultDecorator = {
       val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
       new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
@@ -251,7 +247,9 @@ class SearchCommanderImpl @Inject() (
   }
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = {
-    val (config, _) = searchConfigManager.getConfig(userId, experiments)
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments)
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
       case None => Seq(DefaultAnalyzer.defaultLang)

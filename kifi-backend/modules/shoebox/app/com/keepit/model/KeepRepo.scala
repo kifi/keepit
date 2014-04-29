@@ -8,6 +8,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
 import com.keepit.common.logging.Logging
+import com.keepit.commanders.WhoKeptMyKeeps
 
 
 @ImplementedBy(classOf[KeepRepoImpl])
@@ -31,11 +32,12 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
-  def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
+  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
-  def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
+  def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
+  def whoKeptMyKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Seq[WhoKeptMyKeeps]
 }
 
 @Singleton
@@ -44,7 +46,7 @@ class KeepRepoImpl @Inject() (
   val clock: Clock,
   val countCache: KeepCountCache,
   bookmarkUriUserCache: KeepUriUserCache,
-  latestBookmarkUriCache: LatestKeepUriCache
+  latestKeepUriCache: LatestKeepUriCache
 ) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
 
   import db.Driver.simple._
@@ -97,7 +99,7 @@ class KeepRepoImpl @Inject() (
   override def deleteCache(bookmark: Keep)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(KeepCountKey(Some(bookmark.userId)))
-    latestBookmarkUriCache.remove(LatestKeepUriKey(bookmark.uriId))
+    latestKeepUriCache.remove(LatestKeepUriKey(bookmark.uriId))
   }
 
   override def invalidateCache(bookmark: Keep)(implicit session: RSession): Unit = {
@@ -106,7 +108,7 @@ class KeepRepoImpl @Inject() (
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
       countCache.remove(KeepCountKey(Some(bookmark.userId)))
-      latestBookmarkUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
+      latestKeepUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
     }
   }
 
@@ -165,6 +167,24 @@ class KeepRepoImpl @Inject() (
                order by bm.created_at desc, bm.id desc limit $count;"""
     }
     interpolated.as[Keep].list
+  }
+
+  def whoKeptMyKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Seq[WhoKeptMyKeeps] = {
+    import StaticQuery.interpolation
+    val interpolated = sql"""
+          SELECT b.c user_count, b.t last_keep_time, b.uri_id, b.users FROM (
+            SELECT count(ab.id) c, max(ab.created_at) t, ab.uri_id, group_concat(ab.user_id ORDER BY ab.created_at DESC) users FROM (
+              SELECT uri_id FROM bookmark
+              WHERE user_id = ${userId}
+            ) ub, bookmark ab
+            WHERE ub.uri_id = ab.uri_id AND ab.is_private = FALSE AND ab.user_id != ${userId}
+            GROUP BY ab.uri_id
+          ) b
+          WHERE b.t > '${since}' AND b.c BETWEEN 1 AND 50
+          ORDER BY b.t DESC;"""
+    interpolated.as[(Int, DateTime, Id[NormalizedURI], String)].list map { row =>
+      WhoKeptMyKeeps(row._1, row._2, row._3, row._4.split(',').map(_.toInt).map(Id[User](_)) )
+    }
   }
 
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
@@ -251,12 +271,12 @@ class KeepRepoImpl @Inject() (
     q.list.distinct
   }
 
-  def latestBookmark(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep] = {
-    latestBookmarkUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
+  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep] = {
+    latestKeepUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
       val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId } yield bookmark
-      val max = bookmarks.map(_.updatedAt).max
-      val latest = for { bookmark <- bookmarks if bookmark.updatedAt >= max } yield bookmark
-      latest.sortBy(_.updatedAt desc).firstOption
+      val max = bookmarks.map(_.createdAt).max
+      val latest = for { bookmark <- bookmarks if bookmark.createdAt >= max } yield bookmark
+      latest.sortBy(_.createdAt desc).firstOption
     }
   }
 
@@ -269,7 +289,7 @@ class KeepRepoImpl @Inject() (
       case (id, source) => (Id[User](id), KeepSource.get(source))
     }.groupBy(_._1).mapValues(_.map(_._2))
 
-  def oldestBookmark(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+  def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
     val bookmarks = for { bookmark <- rows if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
     val min = bookmarks.map(_.createdAt).min
     val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark

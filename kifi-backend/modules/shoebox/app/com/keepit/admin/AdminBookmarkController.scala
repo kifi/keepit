@@ -22,6 +22,7 @@ import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import play.api.mvc.{AnyContent, Action}
+import com.keepit.commanders.RichWhoKeptMyKeeps
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -52,6 +53,20 @@ class AdminBookmarksController @Inject() (
       }
     }
   }
+
+  def whoKeptMyKeeps = AdminHtmlAction.authenticated { implicit request =>
+    val since = clock.now.minusDays(7)
+    val richWhoKeptMyKeeps = db.readOnly { implicit session =>
+      val whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since)
+      whoKeptMyKeeps map { whoKeptMyKeep =>
+        RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep,
+          uriRepo.get(whoKeptMyKeep.uri), whoKeptMyKeep.users map userRepo.get)
+      }
+    }
+    val users: Set[User] = richWhoKeptMyKeeps.map(_.users).flatten.toSet
+    Ok(html.admin.whoKeptMyKeeps(richWhoKeptMyKeeps, since, users.size))
+  }
+
 
   def edit(id: Id[Keep]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val bookmark = db.readOnly { implicit session =>
