@@ -14,7 +14,7 @@ class URISummaryController @Inject() (
 
   def updateURIScreenshots() = Action.async(parse.tolerantJson) { request =>
     val normalizedUri = Json.fromJson[NormalizedURI](request.body).get
-    uriSummaryCommander.updateScreenshots(normalizedUri) map { result => Ok(Json.toJson(result)) }
+    uriSummaryCommander.updateScreenshots(normalizedUri) map { result => Status(202)("0") }
   }
 
   def getURIImage() = Action.async(parse.tolerantJson) { request =>
