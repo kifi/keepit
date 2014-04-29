@@ -56,7 +56,7 @@ class URISummaryCommanderTestImageFetcher extends ImageFetcher {
 
 case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
-  def getDefaultScreenshotURL(nUri: NormalizedURI): Option[String] = None
+  def getDefaultScreenshotURL(nUri: NormalizedURI): Option[String] = Some(FakeS3URIImageStore.placeholderScreenshotURL)
   def getImageURL(imageInfo: ImageInfo, nUri: NormalizedURI): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
 }
 
@@ -205,5 +205,24 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         }: Partial).await
       }
     }
+    // This test doesn't work yet (race condition)
+    /*"lazily provide screenshots" in {
+      withDb(modules: _*) {
+        implicit injector =>
+          val URISummaryCommander = inject[URISummaryCommander]
+          val nUri = db.readWrite { implicit session =>
+            uriRepo.internByUri("http://www.adomain3.com")
+          }
+
+          // no screenshot yet
+          val result1Fut = URISummaryCommander.getScreenshotURL(nUri)
+          result1Fut must beNone
+
+          // now there is one
+          val result2Fut = URISummaryCommander.getScreenshotURL(nUri)
+          result2Fut must beSome(FakeS3URIImageStore.placeholderScreenshotURL)
+      }
+    }
+    */
   }
 }

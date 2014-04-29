@@ -81,10 +81,10 @@ class URISummaryCommander @Inject()(
 
   /**
    * Gets an image for the given URI. It can be an image on the page or a screenshot, and there are no size restrictions
-   * Fetching occurs if no image exists in the database
+   * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
   def getURIImage(nUri: NormalizedURI, requestSource: RequestSource = RequestSource.UNKNOWN): Future[Option[String]] = {
-    val request = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0,0), requestSource, false, true, false)
+    val request = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0,0), requestSource, false, false, false)
     getURISummaryForRequest(request, nUri) map { _.imageUrl }
   }
 

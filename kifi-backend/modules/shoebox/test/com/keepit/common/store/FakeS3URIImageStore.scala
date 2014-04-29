@@ -13,5 +13,6 @@ case class FakeS3URIImageStore() extends S3URIImageStore {
 
 object FakeS3URIImageStore {
   val placeholderImageURL = "http://www.testurl.com/testimage.jpg"
+  val placeholderScreenshotURL = "http://www.theplaceholderscreenshot.com/screenshot.jpg"
   val placeholderSize = 15000
 }
