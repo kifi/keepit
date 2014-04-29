@@ -635,6 +635,7 @@ POST     /internal/shoebox/graph/userConnection      @com.keepit.controllers.int
 
 GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateURIScreenshots()
 GET      /internal/shoebox/image/getURIImage         @com.keepit.controllers.internal.URISummaryController.getURIImage()
+GET      /internal/shoebox/image/getURISummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

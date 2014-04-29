@@ -39,12 +39,12 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     urlFromKey(getScreenshotKey(nUri))
   }
 
-  private def urlFromKey(partialUrl: String): Option[String] = {
-    URI.parse(partialUrl) match {
+  private def urlFromKey(key: String): Option[String] = {
+    URI.parse(s"${config.cdnBase}/${key}") match {
       case Success(uri) =>
         Some(URI(uri.scheme orElse Some("http"), uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString)
       case Failure(t) =>
-        airbrake.notify(s"Failed to parse $partialUrl; Exception: $t; Cause: ${t.getCause}", t)
+        airbrake.notify(s"Failed to parse $key; Exception: $t; Cause: ${t.getCause}", t)
         None
     }
   }
@@ -68,6 +68,6 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
   private val defaultSize = ImageSize(500, 280)
   private def getScreenshotKey(nUri: NormalizedURI, imageSize: Option[ImageSize] = None) = {
     val size = imageSize getOrElse defaultSize
-    s"${config.cdnBase}/screenshot/${nUri.externalId}/${size.width}x${size.height}.jpg"
+    s"screenshot/${nUri.externalId}/${size.width}x${size.height}.jpg"
   }
 }
