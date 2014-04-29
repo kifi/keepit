@@ -63,7 +63,10 @@ class AdminBookmarksController @Inject() (
       while (whoKeptMyKeeps.size > 15) {
         //trimming the last article and removing most popular articles
         maxUsers = maxUsers - 2
-        whoKeptMyKeeps = whoKeptMyKeeps.take(whoKeptMyKeeps.size - 1).filterNot(_.users.size < maxUsers)
+        whoKeptMyKeeps = whoKeptMyKeeps.filterNot(_.users.size > maxUsers)
+        if (whoKeptMyKeeps.size > 15) {
+          whoKeptMyKeeps = whoKeptMyKeeps.take(whoKeptMyKeeps.size - 2)
+        }
       }
       whoKeptMyKeeps map { whoKeptMyKeep =>
         RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep,
