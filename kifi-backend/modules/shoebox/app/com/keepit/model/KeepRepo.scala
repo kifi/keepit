@@ -180,7 +180,7 @@ class KeepRepoImpl @Inject() (
             WHERE ub.uri_id = ab.uri_id AND ab.is_private = FALSE AND ab.user_id != ${userId}
             GROUP BY ab.uri_id
           ) b
-          WHERE b.t > '${since}' AND b.c BETWEEN 1 AND 50
+          WHERE b.t > ${since} AND b.c BETWEEN 1 AND 50
           ORDER BY b.t DESC;"""
     interpolated.as[(Int, DateTime, Id[NormalizedURI], String)].list map { row =>
       WhoKeptMyKeeps(row._1, row._2, row._3, row._4.split(',').map(_.toInt).map(Id[User](_)) )
