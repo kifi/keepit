@@ -147,6 +147,8 @@ class SimpleGraphTest() extends Specification {
       newGraphVertexReader.data.id === rearWindow
       newGraphVertexReader.moveTo(alfred)
       newGraphVertexReader.edgeReader.degree === 2
+      newGraphVertexReader.moveTo(leo)
+      newGraphVertexReader.edgeReader.degree === 0
 
       val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
 
