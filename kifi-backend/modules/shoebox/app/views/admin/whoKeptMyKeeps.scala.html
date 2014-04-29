@@ -1,7 +1,11 @@
 @(richWhoKeptMyKeeps: Seq[com.keepit.commanders.RichWhoKeptMyKeeps], since: org.joda.time.DateTime, userCount: Int)
 
 @admin(userCount + " people kept your keeps on KiFi") {
-  <h2>Showing @richWhoKeptMyKeeps.size keeps since @adminHelper.dateTimeDisplay(since)</h2>
+  <h2>Showing @richWhoKeptMyKeeps.size keeps since @adminHelper.dateDisplay(since)</h2>
+  The following list shows who publicly kept any of your keeps since @adminHelper.dateDisplay(since).
+  The others who kept it may have kept that keep any time (even before the @adminHelper.dateDisplay(since)).
+  The person who kept may or may not be connected to you directly and may or may not have kept that keep because of you.
+  We do not show keeps kept privatly by others though the list may show things that you kept privatly and others kept publicly.
 
   <table class="table table-bordered" style = "clear: both">
     <tr>
@@ -18,7 +22,7 @@
       <td>@adminHelper.dateDisplay(keep.latestKeep)</td>
       <td>@adminHelper.userDisplay(keep.users.head)</td>
       <td>@for(user <- keep.users.tail) {
-        adminHelper.userDisplay(user)
+        @adminHelper.userDisplay(user)
       }</td>
     </tr>
   }
