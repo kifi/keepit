@@ -79,13 +79,20 @@ var snapshot = function () {
 
   var RANGE_TEXT_NODE_SEPARATOR_V = '\u001e';
   var RANGE_TEXT_NODE_SEPARATOR_H = '\u001f';
-  var SPACES_RE = /^\s+$/;
+  var ALL_SPACES_RE = /^\s+$/;
+
+  // these same as \s+ except they omit non-breaking kinds of spaces and some rare semantics-carrying spaces
+  var COLLAPSIBLE_SPACES_GLOBAL_RE = /[ \f\n\r\t\v\u2000-\u200a\u205f\u3000]+/g;
+  var COLLAPSIBLE_LEADING_SPACES_RE = /^[ \f\n\r\t\v\u2000-\u200a\u205f\u3000]+/;
+  var COLLAPSIBLE_TRAILING_SPACES_RE = /[ \f\n\r\t\v\u2000-\u200a\u205f\u3000]+$/;
+  var TRAILING_SPACE_RE = /\s$/;
 
   // same as Range.toString except this function:
   // 1. inserts separators to preserve text node boundaries
   // 2. substitutes one space (' ') for text from non-pre-formatted text nodes that contribute only spaces (/\s+/)
   // 3. skips some inconsequential non-pre-formatted text nodes that contribute only spaces (/\s+/)
   // 4. omits text from descendants of invisible elements (display:none or visibility:hidden)
+  // TODO: adhere more closely to dev.w3.org/csswg/css-text/#white-space-processing
   function getRangeText(sce, sc, so, ece, ec, eo) {
     var arr;
     if (sce !== sc) {
@@ -93,11 +100,12 @@ var snapshot = function () {
       if (sc === ec) {
         return eo < s.length ? s.substring(so, eo) : (so ? s.substr(so) : s);
       }
+      arr = [];
       if (s && so < s.length) {
         s = so ? s.substr(so) : s;
-        arr = [SPACES_RE.test(s) && window.getComputedStyle(sce).whiteSpace.lastIndexOf('pre', 0) !== 0 ? ' ' : s, RANGE_TEXT_NODE_SEPARATOR_H];
-      } else {
-        arr = [];
+        if (s && (s = collapseSpaces(s, sce))) {
+          arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
+        }
       }
       so = indexOf(sce.childNodes, sc) + 1;
       sc = sce;
@@ -108,8 +116,7 @@ var snapshot = function () {
     var suffix;
     if (ece !== ec) {
       var s = ec.nodeValue;
-      s = eo < s.length ? s.substr(0, eo) : s;
-      suffix = SPACES_RE.test(s) && window.getComputedStyle(ece).whiteSpace.lastIndexOf('pre', 0) !== 0 ? ' ' : s;
+      suffix = eo < s.length ? s.substr(0, eo) : s;
       eo = indexOf(ece.childNodes, ec);
       ec = ece;
     }
@@ -120,21 +127,15 @@ var snapshot = function () {
       }
       var node = c.childNodes[o];
       if (!node) {
-        if (window.getComputedStyle(c).display.lastIndexOf('inline', 0) !== 0 && arr.length) {
-          arr[arr.length - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+        if (window.getComputedStyle(c).display.lastIndexOf('inline', 0) !== 0) {
+          makeLastSeparatorVertical();
         }
         var p = c.parentNode;
         return visit(p, indexOf(p.childNodes, c) + 1);
       } else if (node.nodeType === 3) {
         var s = node.nodeValue;
-        if (s) {
-          if (SPACES_RE.test(s) && window.getComputedStyle(c).whiteSpace.lastIndexOf('pre', 0) !== 0) {
-            if (arr[arr.length - 2] !== ' ' && arr[arr.length - 1] !== RANGE_TEXT_NODE_SEPARATOR_V) {
-              arr.push(' ', RANGE_TEXT_NODE_SEPARATOR_H);
-            }
-          } else {
-            arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
-          }
+        if (s && (s = collapseSpaces(s, c))) {
+          arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
         }
         if (!recurseDownOnly) {
           return visit(c, o + 1);
@@ -144,8 +145,8 @@ var snapshot = function () {
         var display = cs.display;
         if (display !== 'none' && cs.visibility !== 'hidden') {
           var inline = display.lastIndexOf('inline', 0) === 0;
-          if (!inline && arr.length) {
-            arr[arr.length - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+          if (!inline) {
+            makeLastSeparatorVertical();
           }
           for (var i = 0, n = node.childNodes.length; i < n; i++) {
             if (visit(node, i, true)) {
@@ -157,8 +158,8 @@ var snapshot = function () {
           return true;
         }
         if (!recurseDownOnly) {
-          if (!inline && arr.length) {
-            arr[arr.length - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+          if (!inline) {
+            makeLastSeparatorVertical();
           }
           return visit(c, o + 1);
         }
@@ -167,12 +168,41 @@ var snapshot = function () {
       }
     }(sc, so));
 
-    if (suffix && (suffix !== ' ' || arr[arr.length - 2] !== ' ')) {
+    if (suffix && (suffix = collapseSpaces(suffix, ece).trimRight())) {
       arr.push(suffix);
     } else if (arr.length) {
-      arr.length -= 1;
+      arr.pop();
+      if ((arr[arr.length - 1] = arr[arr.length - 1].trimRight()) === '') {
+        arr.length -= 2;
+      }
     }
     return arr.join('');
+
+    function collapseSpaces(s, el) {
+      if (window.getComputedStyle(el).whiteSpace.lastIndexOf('pre', 0) === 0) {
+        return s.replace(/^\s*(?:\r\n|[\r\n])/, arr[arr.length - 1] === RANGE_TEXT_NODE_SEPARATOR_V ? '' : '\n');
+      }
+      if (arr[arr.length - 1] === RANGE_TEXT_NODE_SEPARATOR_H && TRAILING_SPACE_RE.test(arr[arr.length - 2])) {
+        s = s.replace(COLLAPSIBLE_LEADING_SPACES_RE, '');
+      }
+      return s.replace(COLLAPSIBLE_SPACES_GLOBAL_RE, ' ');
+    }
+
+    function makeLastSeparatorVertical() {
+      var n = arr.length;
+      if (n && arr[n - 1] === RANGE_TEXT_NODE_SEPARATOR_H) {
+        var s = arr[n - 2].replace(COLLAPSIBLE_TRAILING_SPACES_RE, '');
+        if (s) {
+          arr[n - 2] = s;
+          arr[n - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+        } else {
+          arr.length = n - 2;
+          if (n > 2) {
+            arr[n - 3] = RANGE_TEXT_NODE_SEPARATOR_V;
+          }
+        }
+      }
+    }
   }
 
 
