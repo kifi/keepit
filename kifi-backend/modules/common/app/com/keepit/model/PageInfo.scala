@@ -146,12 +146,17 @@ case class ImageInfo(
   format: Option[ImageFormat] = None,
   priority: Option[Int] = None
 ) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
+  val defaultImageFormat = ImageFormat.JPG
   def withId(imageInfoId:Id[ImageInfo]) = copy(id = Some(imageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def getImageSize: Option[ImageSize] = for {
     w <- width
     h <- height
   } yield ImageSize(w,h)
+  def getFormatSuffix: String = format match {
+    case Some(f) => f.value
+    case None => defaultImageFormat.value
+  }
 }
 
 object ImageInfo {
@@ -194,7 +199,7 @@ object URISummaryRequest {
 
 case class URISummary(imageUrl: Option[String] = None, description: Option[String] = None)
 object URISummary {
-  implicit val format = (
+  implicit val format: Format[URISummary] = (
     (__ \ 'imageUrl).formatNullable[String] and
     (__ \ 'description).formatNullable[String]
     )(URISummary.apply _, unlift(URISummary.unapply))
