@@ -26,7 +26,7 @@ case class ProdNormalizationUpdateJobQueueModule() extends NormalizationUpdateJo
   @Singleton
   @Provides
   def normalizationUpdateQueue(basicAWSCreds:BasicAWSCredentials):SQSQueue[NormalizationUpdateTask] = {
-    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1)
+    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
     client.formatted[NormalizationUpdateTask](QueueName(queueName))
   }
 
