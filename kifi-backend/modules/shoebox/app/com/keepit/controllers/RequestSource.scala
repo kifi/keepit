@@ -7,4 +7,5 @@ object RequestSource {
   object WEBSITE extends RequestSource("website")
   object MOBILE extends RequestSource("mobile")
   object INTERNAL extends RequestSource("internal")
+  object UNKNOWN extends RequestSource("unknown")
 }

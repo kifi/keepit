@@ -17,10 +17,6 @@ case class ScraperTestStoreModule() extends StoreModule() {
 
   @Singleton
   @Provides
-  def screenshotStore(): S3ScreenshotStore = new FakeS3ScreenshotStore()
-
-  @Singleton
-  @Provides
   def bayesPornDetectorStore(): PornWordLikelihoodStore = new FakePornWordLikelihoodStore()
 
 }

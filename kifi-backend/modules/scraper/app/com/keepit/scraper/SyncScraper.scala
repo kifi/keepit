@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
-import com.keepit.common.store.S3ScreenshotStore
 import java.io.File
 import scala.concurrent.duration._
 import org.joda.time.Days
@@ -32,7 +31,6 @@ class SyncScraper @Inject() (
   httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
-  s3ScreenshotStore: S3ScreenshotStore,
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient
@@ -60,7 +58,7 @@ class SyncScraper @Inject() (
     }
   }
 
-  def shouldUpdateImage(uri:NormalizedURI, s3ScreenshotStore:S3ScreenshotStore, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
+  def shouldUpdateImage(uri:NormalizedURI, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
     if (NormalizedURIStates.DO_NOT_SCRAPE.contains(scrapedURI.state)) {
       log.warn(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] DO_NOT_SCRAPE; skipped.")
       false
@@ -127,11 +125,11 @@ class SyncScraper @Inject() (
             } getOrElse true
           }
           if(shouldUpdateScreenshot(scrapedURI)) {
-            s3ScreenshotStore.updatePicture(scrapedURI)
+            shoeboxClient.updateScreenshotsForUri(scrapedURI)
           }
 
-          if (shouldUpdateImage(uri, s3ScreenshotStore, scrapedURI, pageInfoOpt)) {
-            s3ScreenshotStore.asyncGetImageUrl(scrapedURI, pageInfoOpt, true) map { res => // todo: updateImage
+          if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
+            shoeboxClient.getURIImage(uri) map { res => // todo: updateImage
               log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
               res
             }

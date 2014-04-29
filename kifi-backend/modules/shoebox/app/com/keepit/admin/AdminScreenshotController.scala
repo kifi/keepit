@@ -7,7 +7,6 @@ import com.keepit.model._
 import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
-import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Await}
@@ -17,10 +16,14 @@ import play.api.data._
 import play.api.data.Forms._
 import views.html
 import scala.util.{Failure, Success, Try}
+import com.keepit.common.embedly.EmbedlyClient
+import com.keepit.commanders.URISummaryCommander
 
 class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  s3ScreenshotStore: S3ScreenshotStore,
+  uriSummaryCommander: URISummaryCommander,
+  uriImageCommander: URISummaryCommander,
+  embedlyClient: EmbedlyClient,
   db: Database,
   keepRepo: KeepRepo,
   pageInfoRepo: PageInfoRepo,
@@ -32,10 +35,10 @@ class AdminScreenshotController @Inject() (
     val normUri = db.readOnly { implicit session =>
       uriRepo.get(uriId)
     }
-    val req = s3ScreenshotStore.updatePicture(normUri)
-    req.map { result =>
-      val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(normUri).getOrElse("")
-      Ok("Done: " + result + s"\n<br><br>\n<a href='$screenshotUrl'>link</a>")
+    uriSummaryCommander.updateScreenshots(normUri).map { imageInfoOpt =>
+      val screenshotUrl = imageInfoOpt map (_.url) getOrElse ""
+      val success = imageInfoOpt.nonEmpty
+      Ok("Done: " + success + s"\n<br><br>\n<a href='$screenshotUrl'>link</a>")
     }
 }
 
@@ -47,7 +50,7 @@ class AdminScreenshotController @Inject() (
       db.readOnly { implicit session =>
         uriGroup.map { uriId =>
           val normUri = uriRepo.get(uriId)
-          s3ScreenshotStore.updatePicture(normUri)
+          uriSummaryCommander.updateScreenshots(normUri)
         }
       }
     }
@@ -74,8 +77,8 @@ class AdminScreenshotController @Inject() (
       }
     } match {
       case Success(uri) =>
-        s3ScreenshotStore.getImageInfos(uri) map { infos =>
-          Ok(html.admin.imagesForUri(uri, s3ScreenshotStore.getScreenshotUrl(uri), infos))
+        embedlyClient.getImageInfos(uri) map { infos =>
+          Ok(html.admin.imagesForUri(uri, uriSummaryCommander.getScreenshotURL(uri), infos))
         }
       case Failure(t) =>
         Future.successful(BadRequest(s"uriId($uriId) not found"))
@@ -92,9 +95,9 @@ class AdminScreenshotController @Inject() (
           val pageInfoOpt = pageInfoRepo.getByUri(uriId)
           (uri, pageInfoOpt)
         }
-        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri)
-        s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrl =>
-          (uri, screenshotUrl, imgUrl)
+        val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri)
+        uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+          (uri, screenshotUrl, imageUrlOpt)
         }
       }
       Future.sequence(tuplesF) map { tuples =>
@@ -113,7 +116,7 @@ class AdminScreenshotController @Inject() (
     val resOpt = urlOpt map { url =>
       val images = db.readOnly { implicit ro => uriRepo.getByUri(url) } match {
         case Some(uri) =>
-          s3ScreenshotStore.getImageInfos(uri).map { infos =>
+          embedlyClient.getImageInfos(uri) map { infos =>
             infos.map { Json.toJson(_) }
           }
         case None => Future.successful(Seq.empty[JsValue])
@@ -134,7 +137,7 @@ class AdminScreenshotController @Inject() (
         val imgRes = uris map { case (url, uriOpt) =>
           uriOpt match {
             case Some(uri) =>
-            val jsF = s3ScreenshotStore.getImageInfos(uri) map { infos =>
+            val jsF = embedlyClient.getImageInfos(uri) map { infos =>
               Json.obj("url" -> url, "images" -> Json.toJson(infos))
             }
             jsF

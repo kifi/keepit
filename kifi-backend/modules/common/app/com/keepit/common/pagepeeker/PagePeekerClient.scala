@@ -17,6 +17,8 @@ import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeErro
 import java.io.ByteArrayInputStream
 import com.keepit.model.{NormalizedURI, ImageFormat, ImageProvider, ImageInfo}
 import com.keepit.common.db.Id
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.time.Clock
 
 case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ImageSize])
 
@@ -24,14 +26,15 @@ case class PagePeekerImage(rawImage: BufferedImage, size: ImageSize) {
   implicit def toImageInfo(nUriId: Id[NormalizedURI], url: Option[String] = None): ImageInfo = ImageInfo(uriId = nUriId, url = url, caption = None, width = Some(size.width), height = Some(size.height), provider = Some(ImageProvider.PAGEPEEKER), format = Some(ImageFormat.JPG))
 }
 
-@ImplementedBy(classOf[PagePeekerClientImpl])
 trait PagePeekerClient {
-  def getScreenshotData(url: String): Future[Seq[PagePeekerImage]]
+  def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]]
 }
 
 @Singleton
-class PagePeekerClientImpl @Inject() (airbrake: AirbrakeNotifier) extends PagePeekerClient with Logging {
+class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient, clock: Clock, airbrake: AirbrakeNotifier) extends PagePeekerClient with Logging {
 
+  // The image below matches the blank image sometimes returned by PagePeeker
+  // val blankImage: Array[Byte] = Array(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, -128, -1, 0, -1, -1, -1, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59).map(_.asInstanceOf[Byte])
   val screenshotConfig = ScreenshotConfig("c", Seq(ImageSize(1000, 560), ImageSize(500, 280), ImageSize(250, 140)))
   val linkedSize = ImageSize(500, 280) // which size to link to, by default; todo: user configurable
 
@@ -42,14 +45,15 @@ class PagePeekerClientImpl @Inject() (airbrake: AirbrakeNotifier) extends PagePe
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
 
-  override def getScreenshotData(url: String): Future[Seq[PagePeekerImage]] = {
+  override def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] = {
     val trace = new StackTrace()
+    val url = normalizedUri.url
     WS.url(screenshotUrl(url)).withRequestTimeout(120000).get().map { response =>
       Option(response.ahcResponse.getHeader("X-PP-Error")) match {
         case Some("True") =>
           log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
           Statsd.increment(s"screenshot.fetch.fails")
-          Seq()
+          None
         case _ =>
 
           val originalStream = response.getAHCResponse.getResponseBodyAsStream
@@ -76,6 +80,8 @@ class PagePeekerClientImpl @Inject() (airbrake: AirbrakeNotifier) extends PagePe
                     ))
                     None
                   }
+                } finally {
+                  imageStream.close()
                 }
                 rawImageOpt map { rawImage => PagePeekerImage(rawImage, size) }
               case Failure(ex) =>
@@ -100,10 +106,13 @@ class PagePeekerClientImpl @Inject() (airbrake: AirbrakeNotifier) extends PagePe
           }
 
           originalStream.close()
-
-          screenshots
+          // Return screenshots only if everything went well
+          if (screenshots.length == screenshotConfig.targetSizes.length) Some(screenshots) else None
       }
     }
   }
+}
 
+class DevPagePeekerClient @Inject() extends PagePeekerClient {
+  def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] = future{None}
 }

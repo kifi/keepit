@@ -26,13 +26,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig, embedlyClient: EmbedlyClient): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, embedlyClient, systemAdminMailSender, config)
-  }
-
-  @Singleton
-  @Provides
   def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog): PornWordLikelihoodStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
     new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
@@ -47,13 +40,6 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
   @Provides
   def s3ImageConfig: S3ImageConfig =
     whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
-
-  @Singleton
-  @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig, embedlyClient: EmbedlyClient): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, embedlyClient, systemAdminMailSender, config)
-  }
 
   @Singleton
   @Provides

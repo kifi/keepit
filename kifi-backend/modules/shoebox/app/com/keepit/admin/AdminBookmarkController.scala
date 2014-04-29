@@ -18,10 +18,10 @@ import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
-import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import play.api.mvc.{AnyContent, Action}
+import com.keepit.commanders.URISummaryCommander
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -34,7 +34,7 @@ class AdminBookmarksController @Inject() (
   scrapeRepo: ScrapeInfoRepo,
   pageInfoRepo: PageInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  s3ScreenshotStore: S3ScreenshotStore,
+  uriSummaryCommander: URISummaryCommander,
   clock: Clock)
     extends AdminController(actionAuthenticator) {
 
@@ -45,10 +45,9 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val pageInfoOpt = pageInfoRepo.getByUri(bookmark.uriId)
-      s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrl =>
-        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imgUrl.getOrElse(""), screenshotUrl))
+      uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+        val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl))
       }
     }
   }
