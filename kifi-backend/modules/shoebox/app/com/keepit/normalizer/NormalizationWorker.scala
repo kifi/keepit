@@ -53,6 +53,7 @@ class NormalizationWorker @Inject()(
           for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
             log.info(s"[consume] normalizationService.update result: $nuriOpt")
           }
+          m.consume()
         }
     }
   }
