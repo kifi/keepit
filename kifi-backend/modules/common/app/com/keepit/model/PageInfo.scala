@@ -174,3 +174,28 @@ object ImageInfo {
   )(ImageInfo.apply _, unlift(ImageInfo.unapply))
 }
 
+case class URISummaryRequest(
+  url: String,
+  imageType: ImageType,
+  minSize: ImageSize,
+  withDescription: Boolean,
+  waiting: Boolean,
+  silent: Boolean)
+object URISummaryRequest {
+  implicit val format =  (
+    (__ \ 'url).format[String] and
+    (__ \ 'imageType).format[ImageType] and
+    (__ \ 'width).format[ImageSize] and
+    (__ \ 'withDescription).format[Boolean] and
+    (__ \ 'waiting).format[Boolean] and
+    (__ \ 'silent).format[Boolean]
+    )(URISummaryRequest.apply _, unlift(URISummaryRequest.unapply))
+}
+
+case class URISummary(imageUrl: Option[String] = None, description: Option[String] = None)
+object URISummary {
+  implicit val format = (
+    (__ \ 'imageUrl).formatNullable[String] and
+    (__ \ 'description).formatNullable[String]
+    )(URISummary.apply _, unlift(URISummary.unapply))
+}

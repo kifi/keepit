@@ -1,9 +1,8 @@
-package com.keepit.common.actor
+package com.keepit.common.external
 
 import com.keepit.common.embedly.{DevEmbedlyClient, EmbedlyClient}
 import com.keepit.common.pagepeeker.{DevPagePeekerClient, PagePeekerClient}
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.ExternalServiceModule
 
 case class FakeExternalServiceModule() extends ExternalServiceModule {
 

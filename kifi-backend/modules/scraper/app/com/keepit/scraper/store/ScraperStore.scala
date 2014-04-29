@@ -10,7 +10,6 @@ import com.keepit.common.aws.AwsModule
 import com.keepit.common.logging.AccessLog
 import com.keepit.learning.porndetector._
 import com.google.inject.Provider
-import com.keepit.common.embedly.EmbedlyClient
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {

@@ -1,4 +1,4 @@
-package com.keepit.common
+package com.keepit.common.external
 
 import _root_.net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.pagepeeker._

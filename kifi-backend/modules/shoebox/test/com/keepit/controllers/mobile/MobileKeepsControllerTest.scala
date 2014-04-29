@@ -37,7 +37,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.{FakeExternalServiceModule, TestActorSystemModule}
+import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
@@ -46,6 +46,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.external.FakeExternalServiceModule
 
 class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 

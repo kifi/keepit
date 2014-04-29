@@ -18,7 +18,7 @@ import scala.collection.JavaConversions._
 import scala.reflect.ManifestFactory.classType
 import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse}
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.actor.{FakeExternalServiceModule, TestActorSystemModule}
+import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
@@ -30,6 +30,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.common.external.FakeExternalServiceModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 

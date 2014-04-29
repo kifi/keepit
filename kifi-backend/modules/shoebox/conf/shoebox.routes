@@ -100,7 +100,6 @@ GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserControlle
 GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findNonUsers(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
-POST    /ext/imageForUrl            @com.keepit.controllers.ext.ExtURIImageController.getImageForURL()
 
 GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
 GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)

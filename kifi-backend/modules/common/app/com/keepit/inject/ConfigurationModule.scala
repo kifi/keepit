@@ -9,7 +9,6 @@ import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.common.healthcheck.{ProdAirbrakeModule, DevAirbrakeModule, ProdMemoryUsageModule, DevMemoryUsageModule}
 import com.keepit.common.aws.AwsModule
-import com.keepit.common.{DevExternalServiceModule, ProdExternalServiceModule}
 
 abstract class AbstractModuleAccessor extends ScalaModule {
   protected def install0(module: ScalaModule) = install(module)
@@ -47,7 +46,6 @@ trait CommonProdModule extends CommonServiceModule {
 
   val airbrakeModule = ProdAirbrakeModule()
   val memoryUsageModule = ProdMemoryUsageModule()
-  val externalServiceModule = ProdExternalServiceModule()
 }
 
 trait CommonDevModule extends CommonServiceModule {
@@ -58,5 +56,4 @@ trait CommonDevModule extends CommonServiceModule {
 
   val airbrakeModule = DevAirbrakeModule()
   val memoryUsageModule = DevMemoryUsageModule()
-  val externalServiceModule = DevExternalServiceModule()
 }

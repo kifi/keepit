@@ -5,10 +5,17 @@ import scala.util.Try
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.imageio.ImageIO
 import org.imgscalr._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import java.awt.Color
+import play.api.libs.functional.syntax._
 
 case class ImageSize(width: Int, height: Int)
+object ImageSize {
+  implicit val format = (
+    (__ \ 'width).format[Int] and
+    (__ \ 'height).format[Int]
+  )(ImageSize.apply _, unlift(ImageSize.unapply))
+}
 
 //                        w
 //       +----------------------------------+

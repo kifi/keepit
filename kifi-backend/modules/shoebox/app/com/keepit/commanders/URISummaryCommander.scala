@@ -2,7 +2,6 @@ package com.keepit.commanders
 
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
-import com.keepit.controllers.RequestSource
 import scala.concurrent._
 import play.api.libs.json.{Json, JsValue}
 import com.keepit.model._
@@ -19,17 +18,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable
 import com.keepit.common.time._
 
-case class URISummaryRequest(
-  url: String,
-  imageType: ImageType,
-  minSize: ImageSize,
-  requestSource: RequestSource,
-  withDescription: Boolean,
-  waiting: Boolean,
-  silent: Boolean)
-
-case class URISummary(imageUrl: Option[String] = None, description: Option[String] = None)
-
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
   imageInfoRepo: ImageInfoRepo,
@@ -44,47 +32,11 @@ class URISummaryCommander @Inject()(
 ) extends Logging {
 
   /**
-   * Handles JSON-formatted URI summary requests
-   */
-  def getURISummary(value: JsValue, source: RequestSource): Future[JsValue] = {
-    parseRequest(value, source) match {
-      case Left(request) => {
-        getNormalizedURIForRequest(request).map { nUri =>
-          getURISummaryForRequest(request, nUri) map { uriSummary =>
-            val results = new mutable.HashMap[String, String]()
-            uriSummary.imageUrl map { imageUrl =>
-              results += ("url" -> imageUrl)
-            }
-            uriSummary.description foreach { description => results += ("description" -> description) }
-            if (!isCompleteSummary(uriSummary, request)) results += ("error" -> "incomplete_data")
-            Json.toJson(results.toMap)
-          }
-        } getOrElse future{Json.obj("error" -> "no_data_found")}
-      }
-      case Right(error) => future {Json.obj("error" -> error)}
-    }
-  }
-
-  private def parseRequest(value: JsValue, source: RequestSource): Either[URISummaryRequest,String] = {
-    (value \ "url").asOpt[String] map { url =>
-      (value \ "width").asOpt[Int] map { width =>
-        (value \ "height").asOpt[Int] map { height =>
-          val imageType = (value \ "type").asOpt[ImageType].getOrElse(ImageType.ANY)
-          val withDescription = (value \ "with_description").asOpt[Boolean].getOrElse(true)
-          val waiting = (value \ "waiting").asOpt[Boolean].getOrElse(true)
-          val silent = (value \ "silent").asOpt[Boolean].getOrElse(false)
-          Left(URISummaryRequest(url, imageType, ImageSize(width, height), RequestSource.EXTENSION, withDescription, waiting, silent))
-        } getOrElse Right("missing_min_height")
-      } getOrElse Right("missing_min_width")
-    } getOrElse Right("missing_url")
-  }
-
-  /**
    * Gets an image for the given URI. It can be an image on the page or a screenshot, and there are no size restrictions
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
-  def getURIImage(nUri: NormalizedURI, requestSource: RequestSource = RequestSource.UNKNOWN): Future[Option[String]] = {
-    val request = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0,0), requestSource, false, false, false)
+  def getURIImage(nUri: NormalizedURI): Future[Option[String]] = {
+    val request = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0,0), false, false, false)
     getURISummaryForRequest(request, nUri) map { _.imageUrl }
   }
 
