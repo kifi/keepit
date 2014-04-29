@@ -1,34 +1,40 @@
-@(rekeeps:Seq[(com.keepit.model.ReKeep, com.keepit.model.NormalizedURI, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean)
+@(rekeeps:Seq[(com.keepit.model.ReKeep, com.keepit.model.NormalizedURI, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, rekeepsCount:Int, pageSize:Int)
 
-@admin("Re-Keeps") {
+@otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(page, pageSize, showImage)}
 
-<table class="table table-striped">
-    <th><tr>
-        <td>Id</td>
-        <td>keeper</td>
-        <td>keepId</td>
-        <td>srcUser</td>
-        <td>srcKeepId</td>
-        <td>attr_factor</td>
-        <td>uriId</td>
-        <td>title</td>
-        <td>favicon</td>
-        @if(showImage){ <td>image</td> }
-    </tr></th>
-    @for((rekeep, uri, pageOpt, imgOpt) <- rekeeps){
-    <tr>
-        <td>@rekeep.id</td>
-        <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(rekeep.keeperId)">@rekeep.keeperId</a></td>
-        <td>@rekeep.keepId</td>
-        <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(rekeep.srcUserId)">@rekeep.srcUserId</a></td>
-        <td>@rekeep.srcKeepId</td>
-        <td>@rekeep.attributionFactor</td>
-        <td>@rekeep.uriId</td>
-        <td><a href="@uri.url">@uri.title</a></td>
-        <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
-        @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
-    </tr>
+@admin(rekeepsCount + " Re-Keeps") {
+
+    <h2>Showing @rekeeps.length ReKeeps (page @(page + 1))</h2>
+
+    @adminHelper.pagination(page, rekeepsCount, pageSize, otherPagesRoute _) {
+        <table class="table table-striped">
+            <th><tr>
+                <td>Id</td>
+                <td>keeper</td>
+                <td>keepId</td>
+                <td>srcUser</td>
+                <td>srcKeepId</td>
+                <td>attr_factor</td>
+                <td>uriId</td>
+                <td>title</td>
+                <td>favicon</td>
+                @if(showImage){ <td>image</td> }
+            </tr></th>
+            @for((rekeep, uri, pageOpt, imgOpt) <- rekeeps){
+            <tr>
+                <td>@rekeep.id</td>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(rekeep.keeperId)">@rekeep.keeperId</a></td>
+                <td>@rekeep.keepId</td>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(rekeep.srcUserId)">@rekeep.srcUserId</a></td>
+                <td>@rekeep.srcKeepId</td>
+                <td>@rekeep.attributionFactor</td>
+                <td>@rekeep.uriId</td>
+                <td><a href="@uri.url">@uri.title</a></td>
+                <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
+                @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
+            </tr>
+            }
+        </table>
     }
-</table>
 
 }
