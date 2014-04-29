@@ -7,7 +7,7 @@ CREATE TABLE rekeep(
     id bigint(20)       NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
-	state varchar(20)   NOT NULL,
+    state varchar(20)   NOT NULL,
 
     keeper_id bigint(20)  NOT NULL,
     keep_id bigint(20)  NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE rekeep(
 
     attr_factor int NOT NULL DEFAULT 1,
 
-  	PRIMARY KEY (id),
+    PRIMARY KEY (id),
 
     CONSTRAINT rekeep_keeper_id     FOREIGN KEY (keeper_id)     REFERENCES user(id),
     CONSTRAINT rekeep_src_user_id   FOREIGN KEY (src_user_id)   REFERENCES user(id),

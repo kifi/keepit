@@ -13,7 +13,3 @@ trait ScrapeProcessor {
   def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, pageInfo:Option[PageInfo], proxyOpt:Option[HttpProxy]):Unit
   def pull:Unit = {}
 }
-
-
-
-

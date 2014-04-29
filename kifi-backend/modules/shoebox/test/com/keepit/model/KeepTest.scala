@@ -179,25 +179,25 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           (uri, uriId, url, firstUserId, secondUserId, urlId)
         }
         db.readOnly{ implicit s =>
-          keepRepo.latestBookmark(uriId) === None
+          keepRepo.latestKeep(uriId) === None
         }
         val firstUserBookmark = db.readWrite{ implicit s =>
           keepRepo.save(Keep(userId = firstUserId, uriId = uriId, urlId = urlId, url = url, source = hover))
         }
         db.readOnly{ implicit s =>
-          keepRepo.latestBookmark(uriId).flatMap(_.id) === firstUserBookmark.id
+          keepRepo.latestKeep(uriId).flatMap(_.id) === firstUserBookmark.id
         }
         val secondUserBookmark = db.readWrite{ implicit s =>
           keepRepo.save(Keep(userId = secondUserId, uriId = uriId, urlId = urlId, url = url, source = hover))
         }
         db.readOnly{ implicit s =>
-          keepRepo.latestBookmark(uriId).flatMap(_.id) === secondUserBookmark.id
+          keepRepo.latestKeep(uriId).flatMap(_.id) === secondUserBookmark.id
         }
         val latestBookmark = db.readWrite{ implicit s =>
           keepRepo.save(firstUserBookmark)
         }
         db.readOnly{ implicit s =>
-          keepRepo.latestBookmark(uriId).flatMap(_.id) === latestBookmark.id
+          keepRepo.latestKeep(uriId).flatMap(_.id) === latestBookmark.id
         }
       }
     }

@@ -97,7 +97,8 @@ POST    /ext/pref/showSearchIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showFindFriends   @com.keepit.controllers.ext.ExtPreferenceController.setShowFindFriends(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
-GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findNonUsers(q: String, n: Int ?= 4)
+GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
+GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
@@ -300,6 +301,7 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
+GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
@@ -320,8 +322,8 @@ GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoC
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
 
-GET     /admin/keepClicks           @com.keepit.controllers.admin.AdminAttributionController.keepClicks(page:Int ?= 0, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeeps              @com.keepit.controllers.admin.AdminAttributionController.rekeeps(page:Int ?= 0, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepClicksView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
@@ -515,8 +517,8 @@ POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controlle
 
 GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
 POST    /admin/cortex/lda/showTopics                       @com.keepit.controllers.admin.AdminLDAController.showTopics
-POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic 
-POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic 
+POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
+POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 
 ##########################################
 # Common Healthcheck / service routes

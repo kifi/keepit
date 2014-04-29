@@ -334,7 +334,7 @@ class SyncScraper @Inject() (
 
   private def hasFishy301(movedUri: NormalizedURI): Boolean = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
-    lazy val isFishy = helper.syncGetLatestBookmark(movedUri.id.get).filter(_.updatedAt.isAfter(currentDateTime.minusHours(1))) match {
+    lazy val isFishy = helper.syncGetLatestBookmark(movedUri.id.get).filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
       case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
       case Some(importedBookmark) => {
         val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString()
