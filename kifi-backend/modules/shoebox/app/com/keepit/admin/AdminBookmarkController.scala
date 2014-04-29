@@ -56,7 +56,14 @@ class AdminBookmarksController @Inject() (
   def whoKeptMyKeeps = AdminHtmlAction.authenticated { implicit request =>
     val since = clock.now.minusDays(7)
     val richWhoKeptMyKeeps = db.readOnly { implicit session =>
-      val whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since, 30)
+      var maxUsers = 30
+      var whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since, maxUsers)
+
+      while (whoKeptMyKeeps.size > 15) {
+        //trimming the last article and removing most popular articles
+        maxUsers = maxUsers - 2
+        whoKeptMyKeeps = whoKeptMyKeeps.take(whoKeptMyKeeps.size - 1).filterNot(_.users.size < maxUsers)
+      }
       whoKeptMyKeeps map { whoKeptMyKeep =>
         RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep,
           uriRepo.get(whoKeptMyKeep.uri), whoKeptMyKeep.users map userRepo.get)
