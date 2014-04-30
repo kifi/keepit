@@ -37,18 +37,13 @@ class FeatureSQSQueueCommander(
     val (seq, version) = (SequenceNumber[NormalizedURI](lowSeq.seq), ModelVersion[DenseLDA](lowSeq.version))
 
     log.info(s"start pulling features from seq = ${seq}, version = ${version}")
+
     val t = System.currentTimeMillis()
-    val msgs = getLDAURIUpateMessgages(seq, version)
+    val seq2 = if (version.version < GraphUpdateConfigs.LDAVersionForGraphUpdate.version) SequenceNumber[NormalizedURI](-1L) else seq
+    val msgs = getLDAURIUpateMessgages(seq2, GraphUpdateConfigs.LDAVersionForGraphUpdate)
+
     log.info(s"get ${msgs.size} msgs in ${(System.currentTimeMillis - t)/1000f} seconds")
 
-    if (msgs.isEmpty){
-      if (version.version < GraphUpdateConfigs.updateUpToLDAVersion.version){
-        log.info(s"old version ${version.version} feature has exhausted. fetching new version ${GraphUpdateConfigs.updateUpToLDAVersion.version}")
-        val msgs2 = getLDAURIUpateMessgages(SequenceNumber[NormalizedURI](-1L), GraphUpdateConfigs.updateUpToLDAVersion)
-        msgs2.foreach{queue.send(_)}
-      }
-    } else {
-      msgs.foreach{queue.send(_)}
-    }
+    msgs.foreach{queue.send(_)}
   }
 }

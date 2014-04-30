@@ -44,7 +44,7 @@ package object cortex {
   }
 
   object GraphUpdateConfigs {
-    val updateUpToLDAVersion = ModelVersion[DenseLDA](1)       // doesn't have to sync with cortex lda version
+    val LDAVersionForGraphUpdate = ModelVersion[DenseLDA](1)       // doesn't have to sync with cortex lda version
   }
 
 }
