@@ -39,7 +39,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           sel.addRange(r);
         });
       } else {
-        showBroken();
+        showBroken(selector);
       }
     } else if (selector.lastIndexOf('i|', 0) === 0) {
       var img = snapshot.findImage(selector);
@@ -59,7 +59,13 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
           });
         });
       } else {
-        showBroken();
+        img = new Image();
+        $(img).on('load error', showBroken);
+        try {
+          img.src = decodeURIComponent(selector.split('|')[4]);
+        } catch (e) {
+          showBroken.call(img, {type: 'error'});
+        }
       }
     } else {
       var el = snapshot.fuzzyFind(selector);
@@ -122,9 +128,10 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
     return Math.max(400, Math.min(800, 100 * Math.log(dist)));
   }
 
-  function showBroken() {
+  function showBroken(e) {
+    var self = this;
     api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog();
+      showBrokenLookLinkDialog.call(self, e);
     });
   }
 }());

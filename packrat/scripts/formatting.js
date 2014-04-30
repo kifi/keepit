@@ -124,14 +124,35 @@ var formatMessage = (function () {
 
 var formatKifiSelRangeText = (function () {
   'use strict';
-  var replaceRe = /(\u001e[ \t\n\r]*|\u001f)/g;
+  var replaceRe = /[\u001e\u001f]/g;
   var replacements = {'\u001e': '\n\n', '\u001f': ''};
   function replace(s) {
-    var r = replacements[s[0]];
-    return r !== undefined ? r : ' ';
+    return replacements[s];
   }
   return function (selector) {
     return decodeURIComponent(selector.split('|')[6]).replace(replaceRe, replace);
+  };
+}());
+
+var formatKifiSelRangeTextAsHtml = (function () {
+  'use strict';
+  var replaceRe = /([\u001e\u001f])/g;
+  function replace(replacements, ch) {
+    return replacements[ch];
+  }
+  return function (selector, class1, class2) {
+    var pp = '<div class="' + class1 + ' ' + class2 + '">';
+    var p = '</div><div class="' + class1 + '">';
+    var parts = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
+    var html = [pp, Mustache.escape(parts[0]).replace(/\n/g, p)];
+    for (var i = 1; i < parts.length; i += 2) {
+      if (parts[i] === '\u001e') {
+        html.push('</div>', pp);
+      }
+      html.push(Mustache.escape(parts[i+1]).replace(/\n/g, p));
+    }
+    html.push('</div>');
+    return html.join('');
   };
 }());
 

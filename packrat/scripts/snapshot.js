@@ -348,7 +348,7 @@ var snapshot = function () {
       if (el && el.tagName.toUpperCase() === 'IMG') {
         return el;
       }
-      var imgs = document.querySelector('img[src="' + decodeURIComponent(parts[4]).replace(/"/g, '\\22 ') + '"]');
+      var imgs = document.querySelectorAll('img[src="' + decodeURIComponent(parts[4]).replace(/"/g, '\\22 ') + '"]');
       if (imgs.length === 1) {
         return imgs[0];
       } // TODO: use best match of original dimensions

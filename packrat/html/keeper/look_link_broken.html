@@ -2,9 +2,23 @@
   <div class="kifi-llb-dialog-box">
     <div class="kifi-llb-dialog-title">Sorry, this link appears to be broken</div>
     <div class="kifi-llb-dialog-body">
+    {{#rangeHtml}}
+      Due to changes in this page, the shortcut link you clicked is not
+      functioning properly. It used to reference this text:
+      <div class="kifi-llb-dialog-quote">
+        {{{rangeHtml}}}
+      </div>
+    {{/rangeHtml}}
+    {{#imageUrl}}
+      Due to changes in this page, the shortcut link you clicked is not
+      functioning properly. It used to reference this image:
+      <a class="kifi-llb-dialog-img-a" href="{{imageUrl}}" target="_blank"></a>
+    {{/imageUrl}}
+    {{^rangeHtml}}{{^imageUrl}}
       Due to changes in this page, the shortcut link you clicked is not
       functioning properly. We’re constantly improving this feature.
       For more information, visit <a href="http://support.kifi.com/customer/portal/articles/1405604" target="_blank">our support center</a>.
+    {{/imageUrl}}{{/rangeHtml}}
     </div>
     <a class="kifi-llb-dialog-x" href="javascript:"></a>
     <a class="kifi-llb-dialog-btn" href="javascript:">Okay</a>

@@ -5,13 +5,13 @@
   width: 100%;
   height: 100%;
   z-index: 99999999999998;
+  text-align: center;
 }
 .kifi-llb-dialog-box {
-  position: fixed;
-  top: 20%;
-  left: 50%;
+  position: relative;
+  margin: 0 auto;
+  top: 50%;
   width: 460px;
-  margin-left: -250px;
   box-shadow: rgba(52, 73, 94, .18) 5px 8px;
   border: 1px solid #dbe1e7;
   border-radius: 5px !important;
@@ -19,6 +19,7 @@
   color: #000;
   padding: 78px 60px 88px 80px;
   overflow: hidden;
+  text-align: left;
   opacity: 0;
   -webkit-transform: scale(.7,.7);
   transform: scale(.7,.7);
@@ -66,6 +67,28 @@
   font-size: 16px;
   line-height: 28px;
   color: #444;
+}
+.kifi-llb-dialog-img-a {
+  display: block;
+  margin: 20px 0 0;
+}
+.kifi-llb-dialog-img {
+  max-width: 400px;
+  max-height: 200px;
+}
+.kifi-llb-dialog-quote {
+  margin-top: 20px;
+  max-height: 200px;
+  overflow: auto;
+}
+.kifi-llb-dialog-p+.kifi-llb-dialog-pp {
+  padding-top: 6px;
+}
+.kifi-llb-dialog-p {
+  border-left: 3px solid #CCC;
+  padding-left: 10px;
+  font-size: 14px;
+  line-height: 18px;
 }
 .kifi-llb-dialog-btn {
   position: absolute;
