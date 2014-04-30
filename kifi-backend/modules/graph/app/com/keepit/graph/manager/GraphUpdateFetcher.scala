@@ -11,8 +11,8 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.{UserConnection, SocialUserInfo, SocialConnection, User, NormalizedURI}
-import com.keepit.cortex.VersionedSequenceNumber
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.cortex.CortexVersionedSequenceNumber
 
 trait GraphUpdateFetcher {
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
@@ -42,10 +42,7 @@ class GraphUpdateFetcherImpl @Inject() (
       shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
     case LDAURITopicGraphUpdate => {
       val seq = currentState.getCurrentSequenceNumber(LDAURITopicGraphUpdate)
-      val versionedSeq = VersionedSequenceNumber.fromLong(seq.value)
-      val desiredLDAVersion = 1  // change this when version up
-      val lowSeq = if (versionedSeq.version < desiredLDAVersion) SequenceNumber[NormalizedURI](0L) else SequenceNumber[NormalizedURI](versionedSeq.seq)
-      // cortex.sqsDenseLDAURIFeature(lowSeq, desiredLDAVersion, queue.queue)
+      //cortex.graphLDAURIFeatureUpdate(seq, queue.queue)
     }
   }
 }

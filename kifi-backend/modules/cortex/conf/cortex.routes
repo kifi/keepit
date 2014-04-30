@@ -19,4 +19,4 @@ GET     /internal/cortex/lda/showTopics                                         
 GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word)
 POST    /internal/cortex/lda/docTopic                                               @com.keepit.controllers.cortex.LDAController.docTopic
 
-POST    /internal/cortex/sqsdata/lda/uriFeature                                     @com.keepit.controllers.cortex.CortexDataController.sendLDAURIFeature
+POST    /internal/cortex/sqsdata/lda/graphLDAURIFeatureUpdate                       @com.keepit.controllers.cortex.CortexDataController.graphLDAURIFeatureUpdate

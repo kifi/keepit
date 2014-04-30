@@ -95,7 +95,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
     def removeOldTopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
       (0 until numTopics).foreach{ i =>
-        val versionedTopicId = LDATopicId(update.modelVersion, i)
+        val versionedTopicId = LDATopicId(update.uriSeq.version, i)
         writer.removeEdgeIfExists(uriVertexId, versionedTopicId, WeightedEdgeDataReader)
         writer.removeEdgeIfExists(versionedTopicId, uriVertexId, WeightedEdgeDataReader)
       }
@@ -107,7 +107,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     val uriData = UriData(uriVertexId)
 
     update.topics.zipWithIndex.sortBy(-1f * _._1).take(5).foreach{ case (score, topicId) =>
-      val versionedTopicId = LDATopicId(update.modelVersion, topicId)
+      val versionedTopicId = LDATopicId(update.uriSeq.version, topicId)
       val topicVertexId: VertexDataId[LDATopicIdReader] = versionedTopicId
       writer.saveVertex(LDATopicIdData(topicVertexId))
       writer.saveVertex(uriData)

@@ -282,7 +282,7 @@ object Cortex extends Service {
     def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
 
-    def sqsDenseLDAURIFeature() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/uriFeature")
+    def graphLDAURIFeatureUpdate() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/graphLDAURIFeatureUpdate")
   }
 }
 
