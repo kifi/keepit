@@ -36,7 +36,7 @@ object SearchConfig {
       "tailCutting" -> "0.3",
       "proximityBoost" -> "0.95",
       "semanticBoost" -> "0.8",
-      "dampingHalfDecayMine" -> "5.0",
+      "dampingHalfDecayMine" -> "6.0",
       "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
       "showExperts" -> "false",
