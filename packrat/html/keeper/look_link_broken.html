@@ -1,32 +1,25 @@
 <kifi class="kifi-root kifi-llb-dialog">
   <div class="kifi-llb-dialog-box">
-  {{#tooNew}}
-    <div class="kifi-llb-dialog-title">This link requires a newer version of Kifi</div>
-    <div class="kifi-llb-dialog-body">
-      <div class="kifi-llb-dialog-p">
-        {{#chrome}}Chrome{{/chrome}}{{#firefox}}Firefox{{/firefox}} normally updates your Kifi extension automatically.
-      </div>
-      <div class="kifi-llb-dialog-p">
-      To update it yourself,
-      {{#chrome}}
-        visit <b>chrome://extensions</b>, check <b>Developer mode</b> at the top
-        of the page, then click the <b>Update extensions now</b> button.
-      {{/chrome}}
-      {{#firefox}}
-        visit <b>about:addons</b> and choose <b>Check for Updates</b> from the gear menu
-        at the top of the page.
-      {{/firefox}}
-      </div>
-    </div>
-  {{/tooNew}}
-  {{^tooNew}}
     <div class="kifi-llb-dialog-title">Sorry, this link appears to be broken</div>
     <div class="kifi-llb-dialog-body">
+    {{#rangeHtml}}
+      Due to changes in this page, the shortcut link you clicked is not
+      functioning properly. It used to reference this text:
+      <div class="kifi-llb-dialog-quote">
+        {{{rangeHtml}}}
+      </div>
+    {{/rangeHtml}}
+    {{#imageUrl}}
+      Due to changes in this page, the shortcut link you clicked is not
+      functioning properly. It used to reference this image:
+      <a class="kifi-llb-dialog-img-a" href="{{imageUrl}}" target="_blank"></a>
+    {{/imageUrl}}
+    {{^rangeHtml}}{{^imageUrl}}
       Due to changes in this page, the shortcut link you clicked is not
       functioning properly. We’re constantly improving this feature.
       For more information, visit <a href="http://support.kifi.com/customer/portal/articles/1405604" target="_blank">our support center</a>.
+    {{/imageUrl}}{{/rangeHtml}}
     </div>
-  {{/tooNew}}
     <a class="kifi-llb-dialog-x" href="javascript:"></a>
     <a class="kifi-llb-dialog-btn" href="javascript:">Okay</a>
   </div>

@@ -47,6 +47,11 @@ panes.thread = function () {
 
       api.port.on(handlers);
       api.port.emit('thread', threadId);
+      api.port.emit('prefs', function (prefs) {
+        if ($holder) {
+          $holder.data('compose').reflectPrefs(prefs);
+        }
+      });
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
         pane.back($redirected.length ? '/messages:all' : '/messages');
@@ -63,19 +68,18 @@ panes.thread = function () {
 
   function renderBlank($paneBox, $tall, $who, threadId) {
     $(render('html/keeper/messages', {
-      draftPlaceholder: 'Type a message…',
-      snapshotUri: api.url('images/snapshot.png')
+      draftPlaceholder: 'Type a message…'
     }, {
       compose: 'compose'
     }))
     .prependTo($tall);
 
+    var compose = initCompose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks()
-      .data('threadId', threadId);
+      .data({threadId: threadId, compose: compose});
     var $scroll = $tall.find('.kifi-scroll-wrap');
-    var compose = initCompose($tall, {onSubmit: sendReply.bind(null, threadId), resetOnSubmit: true});
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
     $scroll.antiscroll({x: false});
