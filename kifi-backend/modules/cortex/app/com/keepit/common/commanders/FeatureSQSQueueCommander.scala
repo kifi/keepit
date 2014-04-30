@@ -34,7 +34,7 @@ class FeatureSQSQueueCommander(
 
   def graphLDAURIFeatureUpdate(lowSeq: CortexVersionedSequenceNumber[NormalizedURI], queueName: QueueName): Unit = {
     val queue = sqsClient.formatted[LDAURITopicGraphUpdate](queueName)
-    val (seq, version) = (SequenceNumber[NormalizedURI](lowSeq.seq), ModelVersion[DenseLDA](lowSeq.version))
+    val (seq, version) = (SequenceNumber[NormalizedURI](lowSeq.unversionedSeq), ModelVersion[DenseLDA](lowSeq.version))
 
     log.info(s"start pulling features from seq = ${seq}, version = ${version}")
 

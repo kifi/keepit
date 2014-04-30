@@ -17,7 +17,7 @@ case class ProdCortexServiceClientModule() extends CortexServiceClientModule {
 
   @Singleton
   @Provides
-  def searchServiceClient(
+  def cortexServiceClient(
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier): CortexServiceClient = {

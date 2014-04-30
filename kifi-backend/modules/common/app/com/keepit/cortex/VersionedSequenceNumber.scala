@@ -3,7 +3,9 @@ package com.keepit.cortex
 import play.api.libs.json._
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
-case class CortexVersionedSequenceNumber[T](version: Int, seq: Long)
+case class CortexVersionedSequenceNumber[T](version: Int, unversionedSeq: Long){
+  def versionedSeq: Long =  CortexVersionedSequenceNumber.toLong(this)
+}
 
 object CortexVersionedSequenceNumber {
   // top 8 bits reserved for version
@@ -12,16 +14,16 @@ object CortexVersionedSequenceNumber {
   implicit def format[T] = new Format[CortexVersionedSequenceNumber[T]]{
     def reads(json: JsValue): JsResult[CortexVersionedSequenceNumber[T]] = {
       val version = (json \ "version").as[Int]
-      val seq = (json \ "seq").as[Long]
+      val seq = (json \ "unversionedSeq").as[Long]
       JsSuccess(CortexVersionedSequenceNumber[T](version, seq))
     }
 
-    def writes(o: CortexVersionedSequenceNumber[T]) = Json.obj("version"-> o.version, "seq" -> o.seq)
+    def writes(o: CortexVersionedSequenceNumber[T]) = Json.obj("version"-> o.version, "unversionedSeq" -> o.unversionedSeq)
   }
 
   def toLong[T](vseq: CortexVersionedSequenceNumber[T]) = {
-    assume(vseq.seq <= maxSeq)
-    vseq.version.toLong << 56 | vseq.seq
+    assume(vseq.unversionedSeq <= maxSeq)
+    vseq.version.toLong << 56 | vseq.unversionedSeq
   }
 
   def fromLong[T](x: Long): CortexVersionedSequenceNumber[T] = {

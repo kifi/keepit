@@ -8,6 +8,9 @@ class CortexVersionedSequenceNumberTest extends Specification {
       CortexVersionedSequenceNumber.fromLong(CortexVersionedSequenceNumber.toLong(CortexVersionedSequenceNumber(1, 1234567890L))) === CortexVersionedSequenceNumber(1, 1234567890L)
       val maxSeq = (1L << 56) - 1
       CortexVersionedSequenceNumber.fromLong(CortexVersionedSequenceNumber.toLong(CortexVersionedSequenceNumber(1, maxSeq))) === CortexVersionedSequenceNumber(1, maxSeq)
+
+      val vseq = CortexVersionedSequenceNumber(1, maxSeq)
+      CortexVersionedSequenceNumber.fromLong(vseq.versionedSeq) === vseq
     }
   }
 }

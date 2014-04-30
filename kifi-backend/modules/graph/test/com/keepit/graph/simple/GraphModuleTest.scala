@@ -16,6 +16,7 @@ import scala.reflect.ManifestFactory.classType
 import com.keepit.graph.test.GraphApplication
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.graph.common.store.GraphFakeStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class GraphModuleTest extends Specification with Logging with ApplicationInjector {
 
@@ -33,6 +34,7 @@ class GraphModuleTest extends Specification with Logging with ApplicationInjecto
         SimpleGraphDevModule(),
         GraphFakeStoreModule(),
         TestActorSystemModule(),
+        FakeCortexServiceClientModule(),
         FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient)
       )) {
         val ClassRoute = "@(.+)@.+".r

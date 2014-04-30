@@ -109,7 +109,7 @@ case class LDAURITopicGraphUpdate(
 ) extends GraphUpdate {
   type U = LDAURITopicGraphUpdate
   def kind = LDAURITopicGraphUpdate
-  def seq = kind.seq(uriSeq.seq)
+  def seq = kind.seq(uriSeq.versionedSeq)
 }
 
 case object LDAURITopicGraphUpdate extends GraphUpdateKind[LDAURITopicGraphUpdate]{
