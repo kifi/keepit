@@ -874,11 +874,10 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.userConnectionGraphUpdate(), body = userConnectionUpdateRequest).map { r => assert(r.status == 202); () }
   }
 
-<<<<<<< HEAD
   def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]  = {
     val keepGraphUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
     call(Shoebox.internal.keepGraphUpdate(), body = keepGraphUpdateRequest).map { r => assert(r.status == 202); () }
-=======
+
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
     val updateScreenshotsForUriRequest = Json.toJson[NormalizedURI](nUri)
     call(Shoebox.internal.updateScreenshotsForUri(), body = updateScreenshotsForUriRequest).map { r => assert(r.status == 202); () }
@@ -889,6 +888,5 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getURIImage(), body = getURIImageRequest).map { r =>
       Json.fromJson[Option[String]](r.json).get
     }
->>>>>>> 5e51d79df1057ed8b096960b35cb3b3852549ece
   }
 }
