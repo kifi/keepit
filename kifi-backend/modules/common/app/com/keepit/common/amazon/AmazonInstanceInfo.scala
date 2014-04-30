@@ -61,6 +61,7 @@ case class AmazonInstanceInfo (
 
   lazy val instantTypeInfo: AmazonInstanceType = instanceType match {
     case AmazonInstanceType.C1XLarge.name => AmazonInstanceType.C1XLarge
+    case AmazonInstanceType.C3XLarge.name => AmazonInstanceType.C3XLarge
     case AmazonInstanceType.C1Medium.name => AmazonInstanceType.C1Medium
     case AmazonInstanceType.C3Large.name => AmazonInstanceType.C3Large
     case AmazonInstanceType.M1Large.name => AmazonInstanceType.M1Large
@@ -76,7 +77,7 @@ sealed abstract class AmazonInstanceType(val name: String, val cores: Int, val e
 
 object AmazonInstanceType {
   case object C1XLarge extends AmazonInstanceType("c1.xlarge", 8, 20)
-  case object C3XLarge  extends AmazonInstanceType("c3.xlarge", 14, 7)
+  case object C3XLarge  extends AmazonInstanceType("c3.xlarge", 8, 14)
   case object C1Medium extends AmazonInstanceType("c1.medium", 2, 5)
   case object C3Large  extends AmazonInstanceType("c3.large", 2, 7)
   case object M1Large  extends AmazonInstanceType("m1.large", 2, 4)
