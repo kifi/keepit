@@ -238,21 +238,23 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    val (candidateUrl, candidateNormalizationOption) = db.readWrite { implicit session => normUriRepo.getByUri(redirect.newDestination) match {
-      case None =>
-        val normalizedDestination = normUriRepo.internByUri(redirect.newDestination)
-        (normalizedDestination.url, normalizedDestination.normalization)
-      case Some(referenceUri) if referenceUri.state != NormalizedURIStates.REDIRECTED => (referenceUri.url, referenceUri.normalization)
-      case Some(reverseRedirectUri) if reverseRedirectUri.redirect == Some(uri.id.get) =>
-        (reverseRedirectUri.url, SchemeNormalizer.findSchemeNormalization(reverseRedirectUri.url))
-      case Some(redirectedUri) =>
-        val referenceUri = normUriRepo.get(redirectedUri.redirect.get)
-        (referenceUri.url, referenceUri.normalization)
-    }}
+    val verifiedCandidateOption = db.readOnly { implicit session =>
+      normalizationServiceProvider.get.prenormalize(redirect.newDestination).toOption.flatMap { prenormalizedDestination =>
+        val (candidateUrl, candidateNormalizationOption) = normUriRepo.getByNormalizedUrl(prenormalizedDestination) match {
+          case None => (prenormalizedDestination, SchemeNormalizer.findSchemeNormalization(prenormalizedDestination))
+          case Some(referenceUri) if referenceUri.state != NormalizedURIStates.REDIRECTED => (referenceUri.url, referenceUri.normalization)
+          case Some(reverseRedirectUri) if reverseRedirectUri.redirect == Some(uri.id.get) =>
+            (reverseRedirectUri.url, SchemeNormalizer.findSchemeNormalization(reverseRedirectUri.url))
+          case Some(redirectedUri) =>
+            val referenceUri = normUriRepo.get(redirectedUri.redirect.get)
+            (referenceUri.url, referenceUri.normalization)
+        }
+        candidateNormalizationOption.map(VerifiedCandidate(candidateUrl, _))
+      }
+    }
 
-    val resFutureOption = candidateNormalizationOption.map { normalization =>
+    val resFutureOption = verifiedCandidateOption.map { verifiedCandidate =>
       val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
-      val verifiedCandidate = VerifiedCandidate(candidateUrl, normalization)
       val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
       // Scraper reports entire NormalizedUri objects with a major chance of stale data / race conditions
       // The following is meant for synchronisation and should be revisited when scraper apis are rewritten to report modified fields only
