@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.json.JsonFormatters._
 import org.apache.commons.lang3.RandomStringUtils
+import com.keepit.common.store.ImageSize
 
 trait PageSafetyInfo {
   def safe:Option[Boolean]
@@ -145,8 +146,17 @@ case class ImageInfo(
   format: Option[ImageFormat] = None,
   priority: Option[Int] = None
 ) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
+  val defaultImageFormat = ImageFormat.JPG
   def withId(imageInfoId:Id[ImageInfo]) = copy(id = Some(imageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
+  def getImageSize: Option[ImageSize] = for {
+    w <- width
+    h <- height
+  } yield ImageSize(w,h)
+  def getFormatSuffix: String = format match {
+    case Some(f) => f.value
+    case None => defaultImageFormat.value
+  }
 }
 
 object ImageInfo {
@@ -169,3 +179,29 @@ object ImageInfo {
   )(ImageInfo.apply _, unlift(ImageInfo.unapply))
 }
 
+case class URISummaryRequest(
+  url: String,
+  imageType: ImageType,
+  minSize: ImageSize,
+  withDescription: Boolean,
+  waiting: Boolean,
+  silent: Boolean)
+object URISummaryRequest {
+  implicit val format =  (
+    (__ \ 'url).format[String] and
+    (__ \ 'imageType).format[ImageType] and
+    (__ \ 'width).format[ImageSize] and
+    (__ \ 'withDescription).format[Boolean] and
+    (__ \ 'waiting).format[Boolean] and
+    (__ \ 'silent).format[Boolean]
+    )(URISummaryRequest.apply _, unlift(URISummaryRequest.unapply))
+}
+
+case class URISummary(imageUrl: Option[String] = None, title: Option[String] = None, description: Option[String] = None)
+object URISummary {
+  implicit val format: Format[URISummary] = (
+    (__ \ 'imageUrl).formatNullable[String] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'description).formatNullable[String]
+    )(URISummary.apply _, unlift(URISummary.unapply))
+}

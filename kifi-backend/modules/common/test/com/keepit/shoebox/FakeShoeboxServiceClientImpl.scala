@@ -616,4 +616,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
     Future.successful(())
   }
+
+  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
+    Future.successful(())
+  }
+
+  def getURIImage(nUri: NormalizedURI): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 }

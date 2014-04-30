@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.search.{LangDetector, Article, ArticleStore}
-import com.keepit.common.store.S3ScreenshotStore
 import java.io.File
 import scala.concurrent.duration._
 import org.joda.time.Days
@@ -32,7 +31,6 @@ class SyncScraper @Inject() (
   httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
   articleStore: ArticleStore,
-  s3ScreenshotStore: S3ScreenshotStore,
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient
@@ -60,7 +58,7 @@ class SyncScraper @Inject() (
     }
   }
 
-  def shouldUpdateImage(uri:NormalizedURI, s3ScreenshotStore:S3ScreenshotStore, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
+  def shouldUpdateImage(uri:NormalizedURI, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
     if (NormalizedURIStates.DO_NOT_SCRAPE.contains(scrapedURI.state)) {
       log.warn(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] DO_NOT_SCRAPE; skipped.")
       false
@@ -127,11 +125,11 @@ class SyncScraper @Inject() (
             } getOrElse true
           }
           if(shouldUpdateScreenshot(scrapedURI)) {
-            s3ScreenshotStore.updatePicture(scrapedURI)
+            shoeboxClient.updateScreenshotsForUri(scrapedURI)
           }
 
-          if (shouldUpdateImage(uri, s3ScreenshotStore, scrapedURI, pageInfoOpt)) {
-            s3ScreenshotStore.asyncGetImageUrl(scrapedURI, pageInfoOpt, true) map { res => // todo: updateImage
+          if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
+            shoeboxClient.getURIImage(uri) map { res => // todo: updateImage
               log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
               res
             }
@@ -316,11 +314,16 @@ class SyncScraper @Inject() (
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
     redirects.find(_.isLocatedAt(uri.url)) match {
       case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => {
-        if (redirect.isPermanent) log.warn(s"Found fishy 301 $redirect for $uri")
+        if (redirect.isPermanent) log.warn(s"Found fishy $redirect for $uri") else log.warn(s"Found non permanent $redirect for $uri")
         updateRedirectRestriction(uri, redirect)
       }
-      case Some(permanentRedirect) if permanentRedirect.isAbsolute => helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
-      case _ => removeRedirectRestriction(uri)
+      case Some(permanentRedirect) if permanentRedirect.isAbsolute => {
+        log.info(s"Found permanent $permanentRedirect for $uri")
+        helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
+      }
+      case relativePermanentRedirectOption =>
+        relativePermanentRedirectOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
+        removeRedirectRestriction(uri)
     }
   }
 

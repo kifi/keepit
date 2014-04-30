@@ -19,6 +19,7 @@ import com.keepit.common.db.Id
 import com.keepit.queue._
 import com.keepit.common.aws.AwsConfig
 import scala.util.{Failure, Success, Try}
+import com.kifi.franz.SQSQueue
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -47,7 +48,7 @@ class NormalizedURIRepoImpl @Inject() (
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
   urlRepoProvider: Provider[URLRepo],
-  taskQ:NormalizationUpdateJobQueue,
+  updateQueue:SQSQueue[NormalizationUpdateTask],
   airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 
@@ -202,7 +203,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           session.onTransactionSuccess {
-            taskQ.sendTask(NormalizationUpdateTask(uri.id.get, false, candidates))
+            updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
           }
           uri
         case Success(Right(prenormalizedUrl)) => {
@@ -210,7 +211,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess{
-            taskQ.sendTask(NormalizationUpdateTask(newUri.id.get, true, candidates))
+            updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
           }
           newUri
         }

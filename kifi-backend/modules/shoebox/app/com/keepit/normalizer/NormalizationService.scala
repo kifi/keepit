@@ -156,9 +156,13 @@ class NormalizationServiceImpl @Inject() (
           uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
           log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
         }
+        log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some(betterReference)
       }
-      else None
+      else {
+        log.warn(s"Aborting verified normalization because of recent overwrite of $currentReference with $latestCurrentUri")
+        None
+      }
     }
 
   private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {

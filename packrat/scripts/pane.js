@@ -428,7 +428,7 @@ var pane = pane || function () {  // idempotent for Chrome
               if (recipient) {
                 compose.prefill(recipient);
               }
-              compose.focus();
+              compose.snapSelection() || compose.focus();
             }
           });
         }

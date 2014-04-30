@@ -410,7 +410,8 @@ class ShoeboxController @Inject() (
   def savePageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val info = json.as[PageInfo]
-    val saved = scraperHelper.savePageInfo(info)
+    val toSave = db.readOnly { implicit ro => pageInfoRepo.getByUri(info.uriId) } map { p => info.withId(p.id.get) } getOrElse info
+    val saved = scraperHelper.savePageInfo(toSave)
     log.info(s"[savePageInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
@@ -613,19 +614,9 @@ class ShoeboxController @Inject() (
     db.readWrite { implicit session =>
       if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
       else {
-        val randomUUID = ExternalId[ArticleSearchResult]()
         keepers.foreach { extId =>
           val keeperId: Id[User] = userRepo.get(extId).id.get
           userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
-          keepRepo.getByUriAndUser(uriId, keeperId) match {
-            case None =>
-              log.warn(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] keep not found for keeperId=${keeperId}")
-              // moving on
-            case Some(keep) =>
-              val keepClicks = KeepClick(searchUUID = randomUUID, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = uriId, clickerId = clicker)
-              log.info(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] saving $keepClicks")
-              keepClicksRepo.save(keepClicks)
-          }
         }
       }
     }

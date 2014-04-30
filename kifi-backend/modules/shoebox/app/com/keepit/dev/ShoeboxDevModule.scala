@@ -14,6 +14,7 @@ import com.keepit.scraper.DevScrapeSchedulerModule
 import com.keepit.common.queue.{ProdSimpleQueueModule, DevSimpleQueueModule}
 import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
+import com.keepit.common.external.DevExternalServiceModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -29,6 +30,6 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   domainTagImporterModule = DevDomainTagImporterModule(),
   scrapeSchedulerModule = DevScrapeSchedulerModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
-  cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
+  cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
+  externalServiceModule = DevExternalServiceModule()
 ) with CommonDevModule
-

@@ -6,7 +6,7 @@ const api = function() {
 
   self.port.on('api:respond', function (callbackId, response) {
     var cb = callbacks[callbackId];
-    log('[api:respond]', cb && cb[0] || '', response != null ? response : '')();
+    log('[api:respond]', cb && cb[0] || '', response != null && (response.length || 0) < 200 ? response : '')();
     if (cb) {
       delete callbacks[callbackId];
       cb[1](response);

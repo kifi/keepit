@@ -5,7 +5,7 @@
   "version": "see build.properties",
   "manifest_version": 2,
   "minimum_chrome_version": "32",
-  "content_security_policy": "default-src 'self'; connect-src http://dev.ezkeep.com:9000 ws://dev.ezkeep.com:9000 https://*.kifi.com wss://eliza.kifi.com https://api.airbrake.io https://api.mixpanel.com",
+  "content_security_policy": "default-src 'self'; connect-src http://dev.ezkeep.com:9000 ws://dev.ezkeep.com:9000 https://*.kifi.com wss://eliza.kifi.com https://api.airbrake.io https://api.mixpanel.com; img-src data:",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",
@@ -97,8 +97,7 @@
     "bookmarks",
     "webNavigation",
     "webRequest",
-    "http://*/",
-    "https://*/"
+    "<all_urls>"
   ],
   "web_accessible_resources": [
     "styles/iframes/login.css",
