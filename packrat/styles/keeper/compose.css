@@ -47,7 +47,7 @@
 .kifi-compose-draft a[href] {
   text-decoration: underline;
 }
-.kifi-compose-draft a[href='javascript:'] {
+.kifi-compose-draft a.kifi-stub {
   opacity: .3;
 }
 .kifi-compose-bar {

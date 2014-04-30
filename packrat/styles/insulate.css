@@ -254,6 +254,7 @@
 }
 .kifi-root.kifi-root.kifi-root {
   font-family: Arial,sans-serif !important;
+  display: block;
 }
 .kifi-root.kifi-root p,
 .kifi-root.kifi-root ol,
@@ -299,5 +300,7 @@
   text-shadow: initial;
 }
 @media print {
-  .kifi-root.kifi-root.kifi-root {display: none !important}
+  .kifi-root.kifi-root.kifi-root {
+    display: none !important;
+  }
 }

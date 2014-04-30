@@ -261,13 +261,13 @@ var snap = snap || (function () {
           if (!data.custom) {
             discardLookHereLink();
           } else {
-            $aLook.removeAttr('href');
+            $aLook.removeClass('kifi-stub').removeAttr('href');
           }
         }
       } else if (!$aLook) {
         tryToCreateLookHereLinkStub(r);
-      } else if (!$aLook.prop('href')) {
-        $aLook.prop('href', 'javascript:');
+      } else {
+        $aLook.addClass('kifi-stub').prop('href', 'javascript:');
       }
     }
   }
@@ -362,6 +362,7 @@ var snap = snap || (function () {
   }
 
   function finishFinalizeLookHereLink(bRect, href, title) {
+    var ms = 500;
     var $a = $aLook;
     $aLook = null;
     var $img = $(this).addClass('kifi-root').css({
@@ -372,10 +373,11 @@ var snap = snap || (function () {
       width: bRect.width,
       height: bRect.height,
       transformOrigin: '0 0',
-      transition: 'all .5s ease-in-out,opacity .5s ease-in'
+      transition: 'all ' + ms + 'ms ease-in-out,opacity ' + ms + 'ms ease-in'
     }).appendTo($('body')[0] || 'html');
     window.getSelection().removeAllRanges();
 
+    $a.prop('href', href);
     if (title) {
       $a.prop('title', title);
     }
@@ -383,18 +385,21 @@ var snap = snap || (function () {
 
     var aRect = $a[0].getClientRects()[0];
     var scale = Math.min(1, aRect.width / bRect.width);
-    $img.on('transitionend', function () {
-      $img.remove();
-      $a.prop('href', href);
-      $draft.focus();  // save draft
-    }).layout().css({
+    $img.on('transitionend', onEnd).layout().css({
       transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
       opacity: 0
     });
+    var onEndTimeout = setTimeout(onEnd, ms + 5); // in case transition fails
+    function onEnd() {
+      clearTimeout(onEndTimeout);
+      $img.remove();
+      $a.removeClass('kifi-stub');
+      $draft.focus();  // save draft
+    }
   }
 
   function insertLookHereLinkStub() {
-    var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:'});
+    var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:', class: 'kifi-stub'});
     var r = $draft.data('sel');
     if (r) {
       var sc = r.startContainer;
