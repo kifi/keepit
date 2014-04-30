@@ -12,10 +12,8 @@ import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.zookeeper._
-import com.keepit.model._
-import com.keepit.search.{ArticleSearchResult, ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment}
+import com.keepit.search.{ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment}
 import com.keepit.social._
-import com.keepit.model.ExperimentType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import play.api.libs.json._
@@ -27,30 +25,15 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.ImmediateMap
 import play.api.libs.json.Json._
 import org.joda.time.DateTime
-import play.api.libs.json.JsString
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import com.keepit.common.usersegment.UserSegmentKey
-import play.api.libs.json.JsObject
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.eliza.model.ThreadItem
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
-import com.kifi.franz.QueueName
 import com.keepit.graph.manager._
-import com.keepit.model.UserExperimentUserIdKey
-import com.keepit.model.UserValueKey
-import com.keepit.model.UrlPatternRuleAllKey
-import com.keepit.model.UserIdKey
-import com.keepit.model.KifiInstallation
-import com.keepit.model.ExternalUserIdKey
-import com.keepit.model.SocialUserInfoUserKey
+import com.keepit.model._
 import play.api.libs.json.JsString
-import scala.Some
 import com.keepit.model.ChangedURI
 import com.keepit.social.BasicUserUserIdKey
 import com.keepit.model.SearchFriendsKey
 import com.keepit.model.UserConnectionCountKey
-import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.model.ExtensionVersionInstallationIdKey
 import com.keepit.model.UserExternalIdKey
 import com.keepit.model.DeepLocator
@@ -658,7 +641,6 @@ class ShoeboxServiceClientImpl @Inject() (
                           redirect: => Option[Id[NormalizedURI]],
                           redirectTime: => Option[DateTime])(implicit timeout:Int): Future[Boolean] = {
     import com.keepit.common.strings.OptionWrappedJsObject
-    import NormalizedURI._
     val safeUrlHash = Option(urlHash).map(p => Option(p.hash)).flatten
     val safeSeq = Option(seq).map(v => if (v.value == -1L) None else Some(v)).flatten
 

@@ -99,7 +99,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       case KeepStates.INACTIVE | KeepStates.DUPLICATE =>
         writer.removeEdgeIfExists(userVertexId, keepVertexId, EmptyEdgeDataReader)
         writer.removeEdgeIfExists(keepVertexId, uriVertexId, EmptyEdgeDataReader)
-        // delete keep vertex
+        writer.removeVertexIfExists(keepVertexId)
 
       case KeepStates.ACTIVE =>
         writer.saveVertex(KeepData(keepVertexId))
