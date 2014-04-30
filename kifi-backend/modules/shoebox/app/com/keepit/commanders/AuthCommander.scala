@@ -189,14 +189,14 @@ class AuthCommander @Inject()(
       (user, emailPassIdentity)
     }
 
-  def finalizeEmailPassAccount(efi:EmailPassFinalizeInfo, userId:Id[User], externalUserId:ExternalId[User], identityOpt:Option[Identity], inviteExtIdOpt:Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, String, Identity)] = {
+  def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, String, Identity)] = {
     require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
     val resultFuture = SafeFuture {
       val identity = db.readOnly { implicit session =>
         socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
-      } getOrElse (identityOpt.get)
+      } getOrElse identityOpt.get
 
       val passwordInfo = identity.passwordInfo.get
       val email = identity.email.get

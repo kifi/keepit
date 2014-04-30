@@ -86,6 +86,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
       resultClickTracker,
       inject[ClickHistoryTracker],
+      inject[SearchConfigManager],
       inject[SpellCorrector],
       inject[MonitoredAwait],
       clock,

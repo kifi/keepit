@@ -61,6 +61,18 @@
   </form>
   <p id = "query_uri_sim_result"></p>
 
+  <br><br>
+  <div>Put a user Id and a uri Id. Return top similar user's keeps.</div>
+  <form id = "user_uri_similarity">
+    <div>
+      <input id = "userId" type = "text" value = "some user id">
+      <input id = "uriId" type = "text" value = "some uri id">
+      <button type = "submit">submit</button>
+    </div>
+  </form>
+  <p id = "user_uri_sim_result"></p>
+
+
 
 
   <script type="text/javascript">
@@ -83,6 +95,8 @@
 
     $("#keywords_detect").submit(function(){
       event.preventDefault();
+      $("#keywords").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.keywords',
         {text: $('#text').val()}
       ).done(done).fail(fail);
@@ -110,6 +124,8 @@
 
     $("#user_similarity").submit(function(){
       event.preventDefault();
+      $("#user_sim_result").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userSimilarity',
         {user1: $('#user1').val(), user2: $('#user2').val()}
       ).done(done).fail(fail);
@@ -123,6 +139,8 @@
 
     $("#query_uri_similarity").submit(function(){
       event.preventDefault();
+      $("#query_uri_sim_result").empty().prepend("loading...")
+
       $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.queryUriSimilarity',
         {query: $('#query').val(), uri: $('#uri').val()}
       ).done(done).fail(fail);
@@ -133,6 +151,23 @@
       function fail() { alert("bad things happened") }
 
     })
+
+    $("#user_uri_similarity").submit(function(){
+      event.preventDefault();
+      $("#user_uri_sim_result").empty().prepend("loading...")
+
+      $.post('@com.keepit.controllers.admin.routes.AdminWord2VecController.userUriSimilarity',
+        {user: $('#userId').val(), uri: $('#uriId').val()}
+      ).done(done).fail(fail);
+
+      function done(data) {
+        $("#user_uri_sim_result").empty().prepend(data)
+      }
+      function fail() { alert("bad things happened") }
+
+    })
+
+
 
 
 

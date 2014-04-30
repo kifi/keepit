@@ -20,6 +20,7 @@ import com.keepit.search.tracker.DevTrackingModule
 import com.keepit.common.store.{SearchFakeStoreModule, SearchDevStoreModule}
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.search.SearchConfigModule
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplicationFromGlobal(path, new TestGlobal(
@@ -38,7 +39,8 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
       TestShoeboxServiceClientModule(),
       FakeElizaServiceClientModule(),
       FakeSpellCorrectorModule(),
-      SearchCacheModule(HashMapMemoryCacheModule())
+      SearchCacheModule(HashMapMemoryCacheModule()),
+      SearchConfigModule()
     ), overridingModules
   ))
 
@@ -57,6 +59,7 @@ trait SearchTestInjector extends EmptyInjector with SearchInjectionHelpers {
     TestShoeboxServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
-    SearchCacheModule(HashMapMemoryCacheModule())
+    SearchCacheModule(HashMapMemoryCacheModule()),
+    SearchConfigModule()
   )
 }

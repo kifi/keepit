@@ -1,0 +1,39 @@
+@(keepInfos:Seq[(com.keepit.model.KeepClick, com.keepit.model.NormalizedURI, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)
+
+@otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(page, pageSize, showImage)}
+
+@admin(keepInfosCount + " Keep Clicks") {
+
+    <h2>Showing @keepInfos.length keep clicks (page @(page + 1))</h2>
+
+    @adminHelper.pagination(page, keepInfosCount, pageSize, otherPagesRoute _) {
+        <table class="table table-striped">
+            <th><tr>
+                <td>Id</td>
+                <td>uuid</td>
+                <td>numKeepers</td>
+                <td>keeperId</td>
+                <td>keepId</td>
+                <td>clickerId</td>
+                <td>uriId</td>
+                <td>title</td>
+                <td>favicon</td>
+                @if(showImage){ <td>image</td> }
+            </tr></th>
+            @for((click, uri, pageOpt, imgOpt) <- keepInfos){
+            <tr>
+                <td>@click.id</td>
+                <td>@click.searchUUID.toString().takeRight(5)</td>
+                <td>@click.numKeepers</td>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(click.keeperId)">@click.keeperId</a></td>
+                <td>@click.keepId</td>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(click.clickerId)">@click.clickerId</a></td>
+                <td>@click.uriId</td>
+                <td><a href="@uri.url">@uri.title</a></td>
+                <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
+                @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
+            </tr>
+            }
+        </table>
+    }
+}

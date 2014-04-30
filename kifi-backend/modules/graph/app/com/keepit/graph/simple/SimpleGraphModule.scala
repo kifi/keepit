@@ -9,6 +9,7 @@ import scala.util.Success
 import scala.util.Failure
 import com.keepit.common.zookeeper.ServiceDiscovery
 import java.io.File
+import org.apache.commons.io.FileUtils
 
 trait SimpleGraphModule extends GraphManagerModule {
 
@@ -28,7 +29,12 @@ trait SimpleGraphModule extends GraphManagerModule {
   }
 
   protected def getArchivedSimpleGraphDirectory(path: String, graphStore: GraphStore): ArchivedSimpleGraphDirectory = {
-    val archivedDirectory = new ArchivedSimpleGraphDirectory(new File(path), graphStore)
+    val dir = new File(path)
+    val tempDir = new File(current.configuration.getString("graph.temporary.directory").get, dir.getName())
+    FileUtils.deleteDirectory(tempDir)
+    FileUtils.forceMkdir(tempDir)
+    tempDir.deleteOnExit()
+    val archivedDirectory = new ArchivedSimpleGraphDirectory(dir, tempDir, graphStore)
     archivedDirectory.init()
     archivedDirectory
   }

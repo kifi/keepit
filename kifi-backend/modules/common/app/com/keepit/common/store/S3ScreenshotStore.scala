@@ -31,6 +31,7 @@ import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
 import com.keepit.common.embedly.{EmbedlyImage, EmbedlyClient}
+import scala.concurrent._
 
 trait S3ScreenshotStore {
   def config: S3ImageConfig
@@ -107,7 +108,7 @@ class S3ScreenshotStoreImpl(
           if (!update) Future.successful(None) else {
             fetchAndUpdatePageInfo(uri) map { case (pageOpt, imgOpt) =>
               imgOpt flatMap { imgInfo =>
-                mkImgUrl(uri.externalId, imgInfo.name)
+                mkImgUrl(uri.externalId, Some(imgInfo.name))
               }
             } recover {
               case t:Throwable =>
@@ -119,7 +120,7 @@ class S3ScreenshotStoreImpl(
           pageInfo.imageInfoId match {
             case Some(imgInfoId) =>
               shoeboxServiceClient.getImageInfo(imgInfoId) map { imgInfo =>
-                mkImgUrl(uri.externalId, imgInfo.name)
+                mkImgUrl(uri.externalId, Some(imgInfo.name))
               } recover {
                 case t:Throwable =>
                   mailNotify(s"[asyncGetImageUrl(${uri.id},${uri.url},$update)] failed to getImageInfo: Exception $t; cause=${t.getCause}", Some(t))
@@ -222,10 +223,19 @@ class S3ScreenshotStoreImpl(
   }
 
   private def fetchAndUpdateImageInfo(uri:NormalizedURI, imageInfo:ImageInfo):Future[Option[ImageInfo]] = {
+    imageInfo.url match {
+      case Some(imageUrl) => fetchAndUpdateImageInfo(uri, imageInfo, imageUrl)
+      case None => {
+        log.error(s"[processImage(${uri.id},${imageInfo.name})] Missing image url")
+        future{None}
+      }
+    }
+  }
+
+  private def fetchAndUpdateImageInfo(uri:NormalizedURI, imageInfo:ImageInfo, imageUrl: String):Future[Option[ImageInfo]] = {
     val trace = new StackTrace()
-    val url = imageInfo.url
-    val future = WS.url(url).withRequestTimeout(120000).get flatMap { resp =>
-      log.info(s"[processImage(${uri.id},${url})] resp=${resp.statusText}")
+    val future = WS.url(imageUrl).withRequestTimeout(120000).get flatMap { resp =>
+      log.info(s"[processImage(${uri.id},${imageUrl})] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
           withInputStream(resp.getAHCResponse.getResponseBodyAsStream) { is =>
@@ -234,22 +244,22 @@ class S3ScreenshotStoreImpl(
                 log.error(s"Failed to process image: (${uri.id},${imageInfo.url})")
                 Future.failed(ex) // image no good
               case Success(rawImage) =>
-                uploadOriginal(uri, url, imageInfo, rawImage) match {
+                uploadOriginal(uri, imageUrl, imageInfo, rawImage) match {
                   case Failure(t) =>
-                    log.error(s"Failed to upload origin image to S3 for (${uri.id},${url})")
+                    log.error(s"Failed to upload origin image to S3 for (${uri.id},${imageUrl})")
                     Future.failed(t) // todo(ray): recover
                   case Success(origRes) => {
                     log.info(s"[processImage(${uri.id},${imageInfo.url})] successfully loaded original image to S3; res=${origRes}")
-                    val origF = shoeboxServiceClient.saveImageInfo(imageInfo.copy(name = Some(ORIGINAL_TOKEN))) // async
-                    val resizeRes = resizeAndUpload(trace, url, uri, rawImage)
+                    val origF = shoeboxServiceClient.saveImageInfo(imageInfo.copy(name = ORIGINAL_TOKEN)) // async
+                    val resizeRes = resizeAndUpload(trace, imageUrl, uri, rawImage)
                     val resSeqF = resizeRes.collect { case (trRes) if (trRes.isSuccess && trRes.get._4.isSuccess) =>
                       val (imgSize, token, contentLen, s3Tr) = trRes.get
                       log.info(s"[processImage(${uri.id},${imageInfo.url})] successfully resized (w=${imgSize.width},h=${imgSize.height},contentLen=${contentLen}) & uploaded image to s3 (token=$token); res=${s3Tr}")
-                      shoeboxServiceClient.saveImageInfo(imageInfo.copy(name = Some(token), width = Some(imgSize.width), height = Some(imgSize.height), size = Some(contentLen))) // async
+                      shoeboxServiceClient.saveImageInfo(imageInfo.copy(name = token, width = Some(imgSize.width), height = Some(imgSize.height), size = Some(contentLen))) // async
                     }
 
                     if (resSeqF.isEmpty) {
-                      log.error(s"Failed to resize & upload images for (${uri.id},${url}")
+                      log.error(s"Failed to resize & upload images for (${uri.id},${imageUrl}")
                       origF map { Option(_) } // return original
                     } else {
                       val futSeq = Future.sequence(resSeqF)
@@ -260,8 +270,8 @@ class S3ScreenshotStoreImpl(
             }
           }
         case _ =>
-          log.error(s"[processImage(${uri.id},${url})] Failed to retrieve image. Response: ${resp.statusText}")
-          Future.failed(new InternalError(s"Failed to retrieve image (${uri.id},${url}); response: ${resp.statusText}")) // could not get the image
+          log.error(s"[processImage(${uri.id},${imageUrl})] Failed to retrieve image. Response: ${resp.statusText}")
+          Future.failed(new InternalError(s"Failed to retrieve image (${uri.id},${imageUrl}); response: ${resp.statusText}")) // could not get the image
       }
     }
     future

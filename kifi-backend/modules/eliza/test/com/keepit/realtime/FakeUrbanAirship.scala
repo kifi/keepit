@@ -13,7 +13,7 @@ import com.keepit.common.time._
 class FakeUrbanAirship extends UrbanAirship {
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = ???
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {}
-  def sendNotification(device: Device, notification: PushNotification): Unit = {}
+  def sendNotification(firstMessage: Boolean, device: Device, notification: PushNotification): Unit = {}
   def updateDeviceState(device: Device): Future[Device] = Promise.successful(device).future
 }
 

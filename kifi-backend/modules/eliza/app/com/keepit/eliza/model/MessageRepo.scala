@@ -130,7 +130,6 @@ class MessageRepoImpl @Inject() (
     afterOpt.map{ after =>
       StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
     } getOrElse {
-
       val n = Query(rows.filter(row => row.thread === threadId).length).first
       (n, n)
     }

@@ -8,32 +8,32 @@ trait Vertex {
   def edges: Map[VertexId, EdgeDataReader]
 }
 
-class GlobalVertexReaderImpl(vertices: Map[VertexId, Vertex]) extends GlobalVertexReader {
+class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVertexReader {
   private var currentVertexId: Option[VertexId] = None
   private def currentVertex: Vertex = vertices(id)
-  def id: VertexId = currentVertexId getOrElse { throw new VertexReaderException(s"$this is not initialized over a valid vertex") }
+  def id: VertexId = currentVertexId getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid vertex") }
   def data: VertexDataReader = currentVertex.data
   def kind: VertexKind[_ <: VertexDataReader] = data.kind
-  val edgeReader: LocalEdgeReader = new LocalEdgeReaderImpl(this, currentVertex.edges)
+  val edgeReader: LocalEdgeReader = new SimpleLocalEdgeReader(this, currentVertex.edges)
   def moveTo(vertex: VertexId): Unit = {
-    if (!vertices.contains(vertex)) { throw new VertexReaderException(s"$vertex is not a valid vertex") }
+    if (!vertices.contains(vertex)) { throw new VertexNotFoundException(vertex) }
     currentVertexId = Some(vertex)
     edgeReader.reset()
   }
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit = { moveTo(VertexId(vertex)) }
 }
 
-class LocalEdgeReaderImpl(owner: VertexReader, edges: => Map[VertexId, EdgeDataReader]) extends LocalEdgeReader {
+class SimpleLocalEdgeReader(owner: VertexReader, edges: => Map[VertexId, EdgeDataReader]) extends LocalEdgeReader {
   private var destinations: Option[Iterator[VertexId]] = None
   private var currentDestination: Option[VertexId] = None
   def source: VertexId = owner.id
   def sourceVertex = owner
-  def destination: VertexId = currentDestination getOrElse { throw new EdgeReaderException(s"$this is not initialized over a valid destination vertex") }
+  def destination: VertexId = currentDestination getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid destination vertex") }
   def data: EdgeDataReader = edges(destination)
   def kind: EdgeKind[_ <: EdgeDataReader] = data.kind
   def degree = edges.size
   def moveToNextEdge(): Boolean = destinations match {
-    case None => throw new EdgeReaderException(s"$this is not initialized over a valid source vertex")
+    case None => throw new UninitializedReaderException(s"$this is not initialized over a valid source vertex")
     case Some(iterator) if iterator.hasNext => currentDestination = Some(iterator.next()); true
     case _ => false
   }
@@ -43,9 +43,9 @@ class LocalEdgeReaderImpl(owner: VertexReader, edges: => Map[VertexId, EdgeDataR
   }
 }
 
-class GlobalEdgeReaderImpl(vertices: Map[VertexId, Vertex]) extends GlobalEdgeReader {
-  private val globalSourceReader = new GlobalVertexReaderImpl(vertices)
-  private val globalDestinationReader = new GlobalVertexReaderImpl(vertices)
+class SimpleGlobalEdgeReader(vertices: Map[VertexId, Vertex]) extends GlobalEdgeReader {
+  private val globalSourceReader = new SimpleGlobalVertexReader(vertices)
+  private val globalDestinationReader = new SimpleGlobalVertexReader(vertices)
 
   def kind: EdgeKind[_ <: EdgeDataReader] = data.kind
   def source: VertexId = globalSourceReader.id
@@ -55,14 +55,16 @@ class GlobalEdgeReaderImpl(vertices: Map[VertexId, Vertex]) extends GlobalEdgeRe
   def sourceVertex: VertexReader = globalSourceReader
   def destinationVertex: VertexReader = globalDestinationReader
   def moveTo(source: VertexId, destination: VertexId): Unit = {
-    if (!(vertices.contains(source) && vertices(source).edges.contains(destination))) { throw new EdgeReaderException(s"${(source, destination)} is not a valid edge") }
+    if (!vertices.contains(source)) { throw new VertexNotFoundException(source) }
+    if (!vertices.contains(destination)) { throw new VertexNotFoundException(destination) }
+    if (!vertices(source).edges.contains(destination)) { throw new EdgeNotFoundException(source, destination) }
     globalSourceReader.moveTo(source)
     globalDestinationReader.moveTo(destination)
   }
   def moveTo[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Unit = { moveTo(VertexId(source), VertexId(destination)) }
 }
 
-class GraphReaderImpl(vertices: Map[VertexId, Vertex]) extends GraphReader {
-  def getNewVertexReader(): GlobalVertexReader = new GlobalVertexReaderImpl(vertices)
-  def getNewEdgeReader(): GlobalEdgeReader = new GlobalEdgeReaderImpl(vertices)
+class SimpleGraphReader(vertices: Map[VertexId, Vertex]) extends GraphReader {
+  def getNewVertexReader(): GlobalVertexReader = new SimpleGlobalVertexReader(vertices)
+  def getNewEdgeReader(): GlobalEdgeReader = new SimpleGlobalEdgeReader(vertices)
 }
