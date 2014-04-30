@@ -394,7 +394,7 @@ var snap = snap || (function () {
       clearTimeout(onEndTimeout);
       $img.remove();
       $a.removeClass('kifi-stub');
-      $draft.focus();  // save draft
+      $draft.focus().triggerHandler('input'); // save draft
     }
   }
 
