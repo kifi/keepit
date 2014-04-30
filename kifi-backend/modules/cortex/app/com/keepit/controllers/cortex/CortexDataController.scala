@@ -12,17 +12,33 @@ import com.keepit.common.db.SequenceNumber
 import com.kifi.franz.QueueName
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex._
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.actor.ActorInstance
 
-class CortexDataController @Inject()(
-  featureSQSCommander: FeatureSQSQueueCommander
+class CortexGraphController @Inject()(
+  actor: ActorInstance[CortexGraphUpdateActor]
 ) extends CortexServiceController {
 
   def graphLDAURIFeatureUpdate = Action(parse.tolerantJson){ request =>
     val js = request.body
     val lowSeq =  CortexVersionedSequenceNumber.fromLong[NormalizedURI]((js \ "versionedLowSeq").as[Long])
     val queueId = (js \ "queue").as[String]
-    featureSQSCommander.graphLDAURIFeatureUpdate(lowSeq, QueueName(queueId))
+    actor.ref ! LDAURIFeatureUpdateMessage(lowSeq, QueueName(queueId))
     Status(202)("0")
   }
+}
 
+private sealed trait CortexGraphUpateMessage
+private case class LDAURIFeatureUpdateMessage(lowSeq: CortexVersionedSequenceNumber[NormalizedURI], queue: QueueName) extends CortexGraphUpateMessage
+
+private class CortexGraphUpdateActor @Inject()(
+  featureSQSCommander: FeatureSQSQueueCommander,
+  airbrake: AirbrakeNotifier
+) extends FortyTwoActor(airbrake) {
+
+  def receive = {
+    case LDAURIFeatureUpdateMessage(lowSeq, queue) => featureSQSCommander.graphLDAURIFeatureUpdate(lowSeq, queue)
+    case _ => throw new Exception("unknown CortexGraphUpateMessage")
+  }
 }
