@@ -56,7 +56,10 @@ class ScraperAdminController @Inject() (
     }
   }
 
-  def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction.authenticated { implicit request =>
+  def rescrapeByRegex() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    val urlRegex = body.getOrElse("urlRegex", "")
+    val withinMinutes = body.getOrElse("withinMinutes", "8").toInt
     val updateCount = db.readWrite { implicit session =>
       scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinMinutes)
     }
