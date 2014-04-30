@@ -1,6 +1,6 @@
-@(article: com.keepit.search.Article, uri: NormalizedURI, info: ScrapeInfo)
+@(article: Option[com.keepit.search.Article], uri: com.keepit.model.NormalizedURI, info: Option[com.keepit.model.ScrapeInfo])
 
-@admin("Article: " + article.title) {
+@admin(article.map("Article: " + _.title).getOrElse("No article available")) {
   <table class="table table-bordered">
       <tr>
         <th>Created at</th><td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>
@@ -9,10 +9,10 @@
         <th>Updated at</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
       </tr>
       <tr>
-        <th>Last scrape</th><td>@adminHelper.dateTimeDisplay(info.lastScrape)</td>
+        <th>Last scrape</th><td>@info.map(scrapeInfo => adminHelper.dateTimeDisplay(scrapeInfo.lastScrape))</td>
       </tr>
       <tr>
-        <th>Next scrape</th><td>@adminHelper.dateTimeDisplay(info.nextScrape)</td>
+        <th>Next scrape</th><td>@info.map(scrapeInfo => adminHelper.dateTimeDisplay(scrapeInfo.nextScrape))</td>
       </tr>
       <tr>
         <th>URL</th><td><a href="@uri.url">@uri.url</a></td>
@@ -21,34 +21,34 @@
         <th>URI title</th><td><a href="@uri.url">@uri.title</a></td>
       </tr>
       <tr>
-        <th>Article Canonical URL</th><td><a href="@article.canonicalUrl">@article.canonicalUrl.getOrElse("")</a></td>
+        <th>Article Canonical URL</th><td><a href="@article.flatMap(_.canonicalUrl)">@article.flatMap(_.canonicalUrl)</a></td>
       </tr>
       <tr>
-        <th>Article title</th><td>@article.title</td>
+        <th>Article title</th><td>@article.map(_.title)</td>
       </tr>
       <tr>
-        <th>Article description</th><td>@article.description.getOrElse("")</td>
+        <th>Article description</th><td>@article.flatMap(_.description)</td>
       </tr>
       <tr>
-        <th>Article keywords (URI|meta-tag)</th><td>@article.keywords.getOrElse("")</td>
+        <th>Article keywords (URI|meta-tag)</th><td>@article.flatMap(_.keywords)</td>
       </tr>
       <tr>
-        <th>Article media</th><td>@article.media.getOrElse("")</td>
+        <th>Article media</th><td>@article.flatMap(_.media)</td>
       </tr>
       <tr>
-        <th>Http ContentType</th><td>@article.httpContentType</td>
+        <th>Http ContentType</th><td>@article.flatMap(_.httpContentType)</td>
       </tr>
       <tr>
-        <th>Http Original ContentCharset</th><td>@article.httpOriginalContentCharset</td>
+        <th>Http Original ContentCharset</th><td>@article.flatMap(_.httpOriginalContentCharset)</td>
       </tr>
       <tr>
-        <th>State</th><td>@article.state</td>
+        <th>State</th><td>@article.map(_.state)</td>
       </tr>
       <tr>
-        <th>Error message</th><td>@article.message</td>
+        <th>Error message</th><td>@article.flatMap(_.message)</td>
       </tr>
       <tr>
-        <th>Article content</th><td>@article.content</td>
+        <th>Article content</th><td>@article.map(_.content)</td>
       </tr>
   </table>
 }
