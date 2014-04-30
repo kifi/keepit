@@ -128,9 +128,9 @@ class URISummaryCommander @Inject()(
   }
 
   /**
-   * Triggers screenshot update
+   * Triggers screenshot update and returns resulting image info
    */
-  def updateScreenshots(nUri: NormalizedURI) = fetchFromPagePeeker(nUri, ImageSize(0,0))
+  def updateScreenshots(nUri: NormalizedURI): Future[Option[ImageInfo]] = fetchFromPagePeeker(nUri, ImageSize(0,0))
 
   /**
    * The default size screenshot URL is returned (when the screenshot exists).

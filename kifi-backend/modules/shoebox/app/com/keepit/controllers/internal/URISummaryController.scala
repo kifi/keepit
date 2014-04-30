@@ -12,9 +12,10 @@ class URISummaryController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   uriSummaryCommander: URISummaryCommander) extends ShoeboxServiceController {
 
-  def updateURIScreenshots() = Action.async(parse.tolerantJson) { request =>
+  def updateURIScreenshots() = Action(parse.tolerantJson) { request =>
     val normalizedUri = Json.fromJson[NormalizedURI](request.body).get
-    uriSummaryCommander.updateScreenshots(normalizedUri) map { result => Status(202)("0") }
+    uriSummaryCommander.updateScreenshots(normalizedUri)
+    Status(202)("0")
   }
 
   def getURIImage() = Action.async(parse.tolerantJson) { request =>
