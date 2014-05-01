@@ -22,7 +22,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def syncSavePageInfo(info:PageInfo):PageInfo = await(savePageInfo(info))
   def syncSaveImageInfo(info:ImageInfo):ImageInfo = await(saveImageInfo(info))
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Keep] = await(getBookmarksByUriWithoutTitle(uriId))
-  def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Keep] = await(getLatestBookmark(uriId))
+  def syncGetLatestKeep(url: String): Option[Keep] = await(getLatestKeep(url))
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = await(recordPermanentRedirect(uri, redirect))
   def syncSaveBookmark(bookmark:Keep):Keep = await(saveBookmark(bookmark))
   def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Unit = {
@@ -41,7 +41,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def savePageInfo(info:PageInfo):Future[PageInfo] = shoeboxServiceClient.savePageInfo(info)
   def saveImageInfo(info:ImageInfo):Future[ImageInfo] = shoeboxServiceClient.saveImageInfo(info)
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Future[Seq[Keep]] = shoeboxServiceClient.getBookmarksByUriWithoutTitle(uriId)
-  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Keep]] = shoeboxServiceClient.getLatestBookmark(uriId)
+  def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxServiceClient.getLatestKeep(url)
   def saveBookmark(bookmark:Keep): Future[Keep] = shoeboxServiceClient.saveBookmark(bookmark)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
   def isUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
@@ -64,7 +64,7 @@ trait SyncShoeboxDbCallbacks {
   def syncSavePageInfo(info:PageInfo):PageInfo
   def syncSaveImageInfo(info:ImageInfo):ImageInfo
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Keep]
-  def syncGetLatestBookmark(uriId: Id[NormalizedURI]): Option[Keep]
+  def syncGetLatestKeep(url: String): Option[Keep]
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
   def syncSaveBookmark(bookmark:Keep):Keep
   def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Unit
@@ -79,7 +79,7 @@ trait ShoeboxDbCallbacks {
   def savePageInfo(info:PageInfo):Future[PageInfo]
   def saveImageInfo(info:ImageInfo):Future[ImageInfo]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Future[Seq[Keep]]
-  def getLatestBookmark(uriId: Id[NormalizedURI]): Future[Option[Keep]]
+  def getLatestKeep(url: String): Future[Option[Keep]]
   def saveBookmark(bookmark:Keep): Future[Keep]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
