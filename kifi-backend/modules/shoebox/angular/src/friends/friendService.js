@@ -52,7 +52,7 @@ angular.module('kifi.friendService', [
         return userId; // todo!
       },
 
-      getMore: function() {
+      getMore: function () {
         return api.getKifiFriends(++currentPage);
       },
 
