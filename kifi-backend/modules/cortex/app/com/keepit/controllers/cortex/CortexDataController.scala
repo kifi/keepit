@@ -37,8 +37,10 @@ private class CortexGraphUpdateActor @Inject()(
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) {
 
+  private class UnknownCortexGraphUpateMessageException(msg: String) extends Exception
+
   def receive = {
     case LDAURIFeatureUpdateMessage(lowSeq, queue) => featureSQSCommander.graphLDAURIFeatureUpdate(lowSeq, queue)
-    case _ => throw new Exception("unknown CortexGraphUpateMessage")
+    case msg => throw new UnknownCortexGraphUpateMessageException(s"unknown cortex graph update message: ${msg.toString}")
   }
 }

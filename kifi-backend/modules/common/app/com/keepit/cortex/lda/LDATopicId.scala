@@ -1,14 +1,12 @@
 package com.keepit.cortex.lda
 
-// id: from 0 to #Topics - 1
-case class LDATopicId (version: Int, id: Int)
 
-object LDATopicId {
+case class VersionedLDATopicId(id: Long) extends AnyVal
+
+object VersionedLDATopicId {
   // 8 bits for type tag, 8 bits for version, 48 bits left for id
-  def toLong(id: LDATopicId): Long = { id.version.toLong << 48 | id.id.toLong }
 
-  def fromLong(x: Long): LDATopicId = {
-    val (version, topicId) = (x >> 48, ~(0xFFL << 48) & x)
-    LDATopicId(version.toInt, topicId.toInt)
-  }
+  def apply(version: Int, unversionedId: Int): VersionedLDATopicId = VersionedLDATopicId(version.toLong << 48 | unversionedId.toLong)
+  def getVersion(versionedId: Long): Int = (versionedId >> 48).toInt
+  def getUnversionedId(versionedId: Long): Int = (~(0xFFL << 48) & versionedId).toInt
 }

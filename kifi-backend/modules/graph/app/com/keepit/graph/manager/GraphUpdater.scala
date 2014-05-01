@@ -6,7 +6,7 @@ import com.keepit.model.{SocialConnectionStates, UserConnectionStates}
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
-import com.keepit.cortex.lda.LDATopicId
+import com.keepit.cortex.lda.VersionedLDATopicId
 
 trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
@@ -93,23 +93,23 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
   private def processLDAUpdate(update: LDAURITopicGraphUpdate)(implicit writer: GraphWriter) = {
 
-    def removeOldTopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
+    def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
       (0 until numTopics).foreach{ i =>
-        val versionedTopicId = LDATopicId(update.uriSeq.version, i)
-        writer.removeEdgeIfExists(uriVertexId, versionedTopicId, WeightedEdgeDataReader)
-        writer.removeEdgeIfExists(versionedTopicId, uriVertexId, WeightedEdgeDataReader)
+        val topicId = VersionedLDATopicId(update.uriSeq.version, i)
+        writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeDataReader)
+        writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeDataReader)
       }
     }
 
     val uriVertexId: VertexDataId[UriReader] = update.uriId
-    removeOldTopicsIfExists(uriVertexId, update.topics.length)
+    removeOldURITopicsIfExists(uriVertexId, update.topics.length)
 
     val uriData = UriData(uriVertexId)
 
-    update.topics.zipWithIndex.sortBy(-1f * _._1).take(5).foreach{ case (score, topicId) =>
-      val versionedTopicId = LDATopicId(update.uriSeq.version, topicId)
-      val topicVertexId: VertexDataId[LDATopicIdReader] = versionedTopicId
-      writer.saveVertex(LDATopicIdData(topicVertexId))
+    update.topics.zipWithIndex.sortBy(-1f * _._1).take(5).foreach{ case (score, index) =>
+      val topicId = VersionedLDATopicId(update.uriSeq.version, index)
+      val topicVertexId: VertexDataId[LDATopicReader] = topicId
+      writer.saveVertex(LDATopicData(topicVertexId))
       writer.saveVertex(uriData)
       writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
       writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
