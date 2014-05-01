@@ -9,30 +9,41 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.model.NormalizedURI
 import com.kifi.franz.{QueueName, SimpleSQSClient}
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.graph.manager.LDAURITopicGraphUpdate
+import com.keepit.cortex.CortexVersionedSequenceNumber
+import com.keepit.cortex._
+import com.keepit.common.logging.Logging
 
 
 @Singleton
 class FeatureSQSQueueCommander(
   basicAWSCreds: BasicAWSCredentials,
   featureCommander: FeatureRetrievalCommander
-){
-  val DEFAULT_PUSH_SIZE = 500
+) extends Logging {
+  val DEFAULT_PUSH_SIZE = 100
+  private val sqsClient = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
 
-  private def createSQSClient = {
-    SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
+  private def getLDAURIUpateMessgages(lowSeq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA]): Seq[LDAURITopicGraphUpdate] = {
+    val feats = featureCommander.getLDAURIFeature(lowSeq, DEFAULT_PUSH_SIZE, version)
+    feats.map{ case (uri, feat) =>
+      val vseq = CortexVersionedSequenceNumber[NormalizedURI](version.version, uri.seq.value)
+      LDAURITopicGraphUpdate(uri.id.get, vseq, "dense_lda", feat.vectorize)
+    }
   }
 
-  def sendLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], queueName: QueueName): Unit = {
-    val feats = featureCommander.getLDAURIFeature(lowSeq, DEFAULT_PUSH_SIZE, version)
+  def graphLDAURIFeatureUpdate(lowSeq: CortexVersionedSequenceNumber[NormalizedURI], queueName: QueueName): Unit = {
+    val queue = sqsClient.formatted[LDAURITopicGraphUpdate](queueName)
+    val (seq, version) = (SequenceNumber[NormalizedURI](lowSeq.unversionedSeq), ModelVersion[DenseLDA](lowSeq.version))
 
-    val client = createSQSClient
-    val queue = client.formatted[DenseLDAURIFeatureMessage](queueName)
+    log.info(s"start pulling features from seq = ${seq}, version = ${version}")
 
-    feats.foreach{ case (uri, feat) =>
-      val msg = DenseLDAURIFeatureMessage(uri.id.get, uri.seq, "dense_lda", version.version, feat.vectorize)
-      queue.send(msg)
-    }
+    val t = System.currentTimeMillis()
+    val seq2 = if (version.version < GraphUpdateConfigs.LDAVersionForGraphUpdate.version) SequenceNumber[NormalizedURI](-1L) else seq
+    val msgs = getLDAURIUpateMessgages(seq2, GraphUpdateConfigs.LDAVersionForGraphUpdate)
+
+    log.info(s"get ${msgs.size} msgs in ${(System.currentTimeMillis - t)/1000f} seconds")
+
+    msgs.foreach{queue.send(_)}
   }
 }
