@@ -39,7 +39,6 @@ class SocialUserConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, i
 class SocialConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val socialUserInfoRepo: Provider[SocialUserInfoRepoImpl], // todo(andrew,léo): Inject tables instead; friends don't let friends inject repos.
   override protected val changeListener: Option[RepoModification.Listener[SocialConnection]],
   socialUserConnectionsCache: SocialUserConnectionsCache,
   socialRepo: SocialUserInfoRepoImpl)
