@@ -17,9 +17,7 @@ case class KeepClick(
 
   keeperId: Id[User],
   keepId: Id[Keep],
-  uriId: Id[NormalizedURI],
-
-  clickerId: Id[User]
+  uriId: Id[NormalizedURI]
 
 ) extends ModelWithState[KeepClick] {
   def withId(id: Id[KeepClick]): KeepClick = this.copy(id = Some(id))

@@ -625,9 +625,20 @@ class ShoeboxController @Inject() (
     db.readWrite { implicit session =>
       if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
       else {
+        val randomUUID = ExternalId[ArticleSearchResult]
         keepers.foreach { extId =>
           val keeperId: Id[User] = userRepo.get(extId).id.get
           userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
+          keepRepo.getByUriAndUser(uriId, keeperId) match {
+            case None =>
+              log.warn(s"[clickAttribution($clicker,$uriId,${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
+              // move on
+            case Some(keep) =>
+              // todo: check for abuse
+              val kc = KeepClick(searchUUID = randomUUID, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId)
+              log.info(s"[clickAttribution($clicker, $uriId, ${keepers.mkString(",")})] saving $kc")
+              keepClicksRepo.save(kc)
+          }
         }
       }
     }
