@@ -150,7 +150,7 @@ class MainSearcher(
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
-          if (!idFilter.contains(id)) {
+          if (idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
             if (myUriEdgeAccessor.seek(id) && mySearchUris.contains(id)) {
