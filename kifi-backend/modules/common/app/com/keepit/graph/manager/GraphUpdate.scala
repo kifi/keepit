@@ -7,6 +7,7 @@ import com.keepit.model._
 import com.keepit.common.time.DateTimeJsonFormat
 import play.api.libs.functional.syntax._
 import com.keepit.social.SocialNetworkType
+import com.keepit.cortex.CortexVersionedSequenceNumber
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate
@@ -98,4 +99,39 @@ case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnection
     (__ \ 'state).format(State.format[SocialConnection]) and
     (__ \ 'SocialConnectionSeq).format(SequenceNumber.format[SocialConnection])
   )(SocialConnectionGraphUpdate.apply, unlift(SocialConnectionGraphUpdate.unapply))
+}
+
+case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
+  type U = KeepGraphUpdate
+  def kind = KeepGraphUpdate
+  def seq = kind.seq(keepSeq.value)
+}
+
+case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
+  val code = "keep_graph_update"
+  implicit val format: Format[KeepGraphUpdate] = (
+    (__ \ 'id).format(Id.format[Keep]) and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'state).format(State.format[Keep]) and
+    (__ \ 'keepSeq).format(SequenceNumber.format[Keep])
+  )(KeepGraphUpdate.apply, unlift(KeepGraphUpdate.unapply))
+}
+
+case class LDAURITopicGraphUpdate(
+  uriId: Id[NormalizedURI],
+  uriSeq: CortexVersionedSequenceNumber[NormalizedURI],
+  modelName: String,
+  topics: Array[Float]
+) extends GraphUpdate {
+  type U = LDAURITopicGraphUpdate
+  def kind = LDAURITopicGraphUpdate
+  def seq = kind.seq(uriSeq.versionedSeq)
+}
+
+case object LDAURITopicGraphUpdate extends GraphUpdateKind[LDAURITopicGraphUpdate]{
+  val code = "lda_uri_topic_graph_update"
+  private implicit val uriIdFormat = Id.format[NormalizedURI]
+  private implicit val seqFormat = CortexVersionedSequenceNumber.format[NormalizedURI]
+  implicit val format = Json.format[LDAURITopicGraphUpdate]
 }

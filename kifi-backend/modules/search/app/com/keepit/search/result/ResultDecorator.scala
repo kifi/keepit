@@ -51,7 +51,7 @@ class ResultDecorator(
       result.hits.size < total
     }
 
-    val idFilter = result.hits.foldLeft(searchFilter.idFilter){ (s, h) => s + h.uriId.id }
+    val idFilter = result.hits.foldLeft(searchFilter.idFilter.toSet){ (s, h) => s + h.uriId.id }
 
     val basicUserJsonMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting basic users")
     val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)

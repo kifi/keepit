@@ -7,20 +7,11 @@ import com.keepit.model._
 import com.keepit.common.db._
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.model.Phrase
-import com.keepit.model.NormalizedURI
-import com.keepit.model.IndexableUri
-import com.keepit.model.User
-import com.keepit.model.ProbabilisticExperimentGenerator
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
 import com.keepit.social.{SocialNetworkType, BasicUser}
 import com.keepit.common.mail.{ElectronicMail}
-import com.keepit.model.ExperimentType
-import com.keepit.model.URL
-import com.keepit.model.UserExperiment
 import com.keepit.social.SocialId
-import com.keepit.model.UrlHash
 import play.api.libs.json.JsObject
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
 import com.google.inject.util.Providers
@@ -29,7 +20,9 @@ import com.keepit.common.actor.FakeScheduler
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
 import com.kifi.franz.QueueName
-import com.keepit.graph.manager.{UserConnectionGraphUpdate, SocialUserInfoGraphUpdate, SocialConnectionGraphUpdate, UserGraphUpdate}
+import com.keepit.graph.manager._
+import com.keepit.social.SocialId
+import play.api.libs.json.JsObject
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -628,4 +621,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
   def getUnsubscribeUrlForEmail(email: String): Future[String] = Future.successful("https://kifi.com")
+
+  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit] = {
+    Future.successful(())
+  }
 }

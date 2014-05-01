@@ -1,9 +1,9 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.db.Id
+import com.keepit.common.db.{State, SequenceNumber, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.service.RequestConsolidator
@@ -22,6 +22,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] with SeqNumberFunction
   def getSocialConnectionInfosByUser(id: Id[User])(implicit session: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int
+  def getConnAndNetworkBySeqNumber(lowerBound: SequenceNumber[SocialConnection], fetchSize: Int = -1)(implicit session: RSession): Seq[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)]
 }
 
 case class SocialUserConnectionsKey(id: Id[SocialUserInfo]) extends Key[Seq[SocialUserBasicInfo]] {
@@ -167,7 +168,7 @@ class SocialConnectionRepoImpl @Inject() (
 
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
     val connections = (for {
-      t <-rows if ((t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE)
+      t <-rows if (t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE
     } yield t ).list
     connections map (s => if(id == s.socialUser1) s.socialUser2 else s.socialUser1 ) match {
       case users if !users.isEmpty =>
@@ -183,5 +184,20 @@ class SocialConnectionRepoImpl @Inject() (
     val updatedRows = conns.map(_.state).update(SocialConnectionStates.INACTIVE)
     conns.list.map(invalidateCache)
     updatedRows
+  }
+
+  def getConnAndNetworkBySeqNumber(lowerBound: SequenceNumber[SocialConnection], fetchSize: Int = -1)(implicit session: RSession): Seq[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)] = {
+    import StaticQuery.interpolation
+    val query  = if (fetchSize > 0) { // unfortunately no easy way to make dynamic parts of interpolated sql queries
+      sql"""select sc.social_user_1, sc.social_user_2, sc.state, sc.seq, sui.network_type
+            from social_connection sc join social_user_info sui on sc.social_user_1 = sui.id
+            where sc.seq > ${lowerBound.value} limit $fetchSize"""
+    } else {
+      sql"""select sc.social_user_1, sc.social_user_2, sc.state, sc.seq, sui.network_type
+            from social_connection sc join social_user_info sui on sc.social_user_1 = sui.id
+            where sc.seq > ${lowerBound.value}"""
+    }
+
+    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list()
   }
 }
