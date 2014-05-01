@@ -4,7 +4,7 @@ import play.api.libs.json._
 
 trait StatModel
 
-case class ModelVersion[M <: StatModel](version: Int) extends AnyVal{
+case class ModelVersion[M <: StatModel](version: Int){
   override def toString = version.toString
 }
 

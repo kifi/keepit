@@ -6,7 +6,7 @@ import com.keepit.model.{SocialConnectionStates, UserConnectionStates}
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
-import com.keepit.cortex.lda.VersionedLDATopicId
+import com.keepit.cortex.models.lda.VersionedLDATopicId
 
 trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit

@@ -1,4 +1,4 @@
-package com.keepit.cortex.lda
+package com.keepit.cortex.models.lda
 
 import org.specs2.mutable.Specification
 

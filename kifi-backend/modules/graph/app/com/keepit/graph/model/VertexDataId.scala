@@ -4,7 +4,7 @@ import com.keepit.model.{SocialUserInfo, Collection, NormalizedURI, User}
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
 import play.api.libs.json.{JsNumber, Writes, Reads, Format}
-import com.keepit.cortex.lda.VersionedLDATopicId
+import com.keepit.cortex.models.lda.VersionedLDATopicId
 
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 

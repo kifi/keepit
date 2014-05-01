@@ -1,6 +1,6 @@
-package com.keepit.cortex.lda
+package com.keepit.cortex.models.lda
 
-
+case class LDATopicId(id: Int) extends AnyVal
 case class VersionedLDATopicId(id: Long) extends AnyVal
 
 object VersionedLDATopicId {
