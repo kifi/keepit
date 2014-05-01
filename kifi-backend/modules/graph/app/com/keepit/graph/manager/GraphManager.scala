@@ -8,7 +8,9 @@ import com.keepit.inject.AppScoped
 trait GraphManager {
   def readOnly[T](f: GraphReader => T): T
   def backup(): Unit
-  def update(updates: GraphUpdate*): GraphUpdaterState
+  def update(updates: GraphUpdate*): Unit
+  def state: GraphUpdaterState
+  def statistics: GraphStatistics
 }
 
 trait GraphManagerModule extends ScalaModule with Logging {

@@ -265,6 +265,11 @@ class UrlController @Inject() (
     }
     Ok(Json.toJson(problematicUris))
   }
+
+  def clearRestriction(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
+    db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, None) }
+    Redirect(routes.ScraperAdminController.getScraped(uriId))
+  }
 }
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)

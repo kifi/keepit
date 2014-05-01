@@ -9,9 +9,12 @@ import com.keepit.common.time._
 import com.keepit.common.store.S3Bucket
 import org.apache.commons.io.FileUtils
 
-trait GraphDirectory
+trait GraphDirectory  {
+  def asFile(): Option[File]
+}
 
 trait ArchivedGraphDirectory extends ArchivedDirectory with Logging { self: GraphDirectory =>
+  def asFile() = Some(getDirectory())
   protected def store: GraphStore
   protected def getArchive() = store.get(this).get
   protected def saveArchive(tarFile: File) = store += (this, tarFile)

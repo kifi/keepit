@@ -37,4 +37,10 @@ package object cortex {
 
   }
 
+  object MiscPrefix {
+    object LDA {
+      val topicWords = "misc/lda/topic_words/"
+    }
+  }
+
 }

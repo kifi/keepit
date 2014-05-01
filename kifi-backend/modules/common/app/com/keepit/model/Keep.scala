@@ -62,7 +62,7 @@ object Keep {
   def applyWithPrimary(id:Option[Id[Keep]], createdAt:DateTime, updatedAt:DateTime, externalId:ExternalId[Keep], title:Option[String], uriId:Id[NormalizedURI], isPrimary:Option[Boolean], urlId:Id[URL], url:String, bookmarkPath:Option[String], isPrivate:Boolean, userId:Id[User], state:State[Keep], source:KeepSource, kifiInstallation:Option[ExternalId[KifiInstallation]], seq:SequenceNumber[Keep]) =
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq)
   def unapplyWithPrimary(k:Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq)  
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq)
   }
 
   implicit def bookmarkFormat = (
@@ -115,13 +115,22 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 2
-  val namespace = "latest_bookmark_uri"
+  override val version = 3
+  val namespace = "latest_keep_uri"
   def toKey(): String = uriId.toString
 }
 
 class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+case class LatestKeepUrlKey(url: String) extends Key[Keep] {
+  override val version = 2
+  val namespace = "latest_keep_url"
+  def toKey(): String = NormalizedURI.hashUrl(url).hash
+}
+
+class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object KeepStates extends States[Keep] {
   val DUPLICATE = State[Keep]("duplicate")

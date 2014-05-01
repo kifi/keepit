@@ -7,6 +7,7 @@ import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
+import play.api.libs.json.JsString
 
 trait Service
 
@@ -73,7 +74,7 @@ object Shoebox extends Service {
     def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
     def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksByUriWithoutTitle", Param("uriId", uriId))
-    def getLatestBookmark(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getLatestBookmark", Param("uriId", uriId))
+    def getLatestKeep() = ServiceRoute(POST, "/internal/shoebox/database/getLatestKeep")
     def saveBookmark() = ServiceRoute(POST, "/internal/shoebox/database/saveBookmark")
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
@@ -133,6 +134,12 @@ object Shoebox extends Service {
     def getVerifiedAddressOwners() = ServiceRoute(POST, "/internal/shoebox/database/getVerifiedAddressOwners")
     def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
+    def userGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/user")
+    def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
+    def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
+    def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
+    def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
+    def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
   }
 }
 
@@ -272,6 +279,13 @@ object Cortex extends Service {
     def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")
     def word2vecUserUriSimilarity() = ServiceRoute(POST,"/internal/cortex/word2vec/userUriSimilarity")
     def word2vecFeedUserUris() = ServiceRoute(POST,"/internal/cortex/word2vec/feedUserUris")
+
+    def ldaNumOfTopics = ServiceRoute(GET, "/internal/cortex/lda/numOfTopics")
+    def ldaShowTopics(fromId: Int, toId: Int, topN: Int) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN))
+    def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
+    def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
+
+    def sqsDenseLDAURIFeature() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/uriFeature")
   }
 }
 

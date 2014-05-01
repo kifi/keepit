@@ -1,12 +1,14 @@
 package com.keepit.queue
 
-import com.keepit.common.queue.AmazonSQS
-import com.keepit.common.queue.AmazonSQSQueue
-import com.keepit.common.queue.SimpleQueueService
-import com.keepit.common.queue.SimpleQueueMessage
+import com.keepit.common.queue._
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.logging.Logging
+import com.amazonaws.auth.BasicAWSCredentials
+import com.kifi.franz.{FakeSQSQueue, QueueName, SimpleSQSClient, SQSQueue}
+import com.amazonaws.regions.{Region, Regions}
+import com.kifi.franz.QueueName
+import com.amazonaws.services.sqs.AmazonSQSClient
 
 trait NormalizationUpdateJobQueueModule extends ScalaModule {
   def queueName:String
@@ -22,12 +24,9 @@ case class ProdNormalizationUpdateJobQueueModule() extends NormalizationUpdateJo
 
   @Singleton
   @Provides
-  def normalizationUpdateJobQueue(sqs:SimpleQueueService):NormalizationUpdateJobQueue = {
-    val queueUrl = sqs.getUrl(queueName).getOrElse(throw new IllegalStateException(s"Cannot retrieve $queueName")) // todo(ray):test->prod mode
-    val q = sqs.getByUrl(queueUrl).getOrElse(throw new IllegalStateException(s"Cannot retrieve $queueName with url: $queueUrl"))
-    val awsQ = new AmazonSQSQueue(queueUrl, queueName, sqs.asInstanceOf[AmazonSQS].client) with NormalizationUpdateJobQueue
-    log.info(s"[normalizationUpdateTaskQueue] sqs=$sqs qUrl=$queueUrl q=$q awsQ=$awsQ")
-    awsQ
+  def normalizationUpdateQueue(basicAWSCreds:BasicAWSCredentials):SQSQueue[NormalizationUpdateTask] = {
+    val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
+    client.formatted[NormalizationUpdateTask](QueueName(queueName))
   }
 
 }
@@ -42,18 +41,7 @@ case class DevNormalizationUpdateJobQueueModule() extends NormalizationUpdateJob
 
   @Singleton
   @Provides
-  def normalizationUpdateJobQueue(sqs:SimpleQueueService):NormalizationUpdateJobQueue = {
-    val queueUrl = sqs.create(queueName)
-    log.info(s"[normalizationUpdateJobQueue] queueUrl=$queueUrl")
-    val q = sqs.getByUrl(queueUrl).getOrElse(throw new IllegalStateException())
-    log.info(s"[normalizationUpdateJobQueue] q=$q")
-    new NormalizationUpdateJobQueue {
-      def name = queueName
-      def queueUrl = q.queueUrl
-      def receive(): Seq[SimpleQueueMessage] = q.receive()
-      def send(s: String): Unit = q.send(s)
-      def delete(msgHandle: String): Unit = q.delete(msgHandle)
-    }
+  def normalizationUpdateQueue():SQSQueue[NormalizationUpdateTask] = {
+    new FakeSQSQueue[NormalizationUpdateTask]{}
   }
-
 }

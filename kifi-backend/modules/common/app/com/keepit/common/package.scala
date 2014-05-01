@@ -97,7 +97,7 @@ package object common {
       gZip.finish()
     }
 
-    def compress(file: File, destDir: String = FileUtils.getTempDirectoryPath): File = {
+    def compress(file: File, destDir: String): File = {
       val tarGz = new File(destDir, file.getName + ".tar.gz")
       val out = FileUtils.openOutputStream(tarGz)
       try { compress(file, out) }
@@ -129,13 +129,14 @@ package object common {
     def getDirectory(): File
     protected def getArchive(): File
     protected def saveArchive(archive: File): Unit
+    protected def tempDir(): File
 
     private val shouldBackup = new AtomicBoolean(false)
     def scheduleBackup() = shouldBackup.set(true)
     def cancelBackup() = shouldBackup.set(false)
     def doBackup() = if (shouldBackup.getAndSet(false)) {
       val dir = getDirectory()
-      val tarGz = IO.compress(dir)
+      val tarGz = IO.compress(dir, tempDir.getCanonicalPath)
       saveArchive(tarGz)
       tarGz.delete()
       true

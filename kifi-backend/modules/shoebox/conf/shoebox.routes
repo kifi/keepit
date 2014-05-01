@@ -97,7 +97,8 @@ POST    /ext/pref/showSearchIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showFindFriends   @com.keepit.controllers.ext.ExtPreferenceController.setShowFindFriends(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
-GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findNonUsers(q: String, n: Int ?= 4)
+GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
+GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
@@ -300,6 +301,7 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
+GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
@@ -316,9 +318,12 @@ GET     /admin/imagesForUri          @com.keepit.controllers.admin.AdminScreensh
 POST    /admin/imagesCompare         @com.keepit.controllers.admin.AdminScreenshotController.imagesCompare()
 
 GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoController.pageInfo(id:Id[PageInfo])
-GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos
+GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos(page:Int ?= 0, size:Int ?= 50)
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
+
+GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepClicksView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
@@ -341,8 +346,9 @@ POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminContr
 GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
 GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
 GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
-GET     /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex(urlRegex: String ?= "", withinMinutes: Int ?= 8)
+POST    /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex()
 GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
+POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -508,7 +514,12 @@ POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controlle
 POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
 POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
 POST    /admin/cortex/word2vec/queryUriSimilarity          @com.keepit.controllers.admin.AdminWord2VecController.queryUriSimilarity
-POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controllers.admin.AdminWord2VecController.userUriSimilarity 
+POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controllers.admin.AdminWord2VecController.userUriSimilarity
+
+GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
+POST    /admin/cortex/lda/showTopics                       @com.keepit.controllers.admin.AdminLDAController.showTopics
+POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
+POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 
 ##########################################
 # Common Healthcheck / service routes
@@ -552,7 +563,7 @@ GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.in
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.internal.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
-GET     /internal/shoebox/database/getLatestBookmark  @com.keepit.controllers.internal.ShoeboxController.getLatestBookmark(uriId: Id[NormalizedURI])
+POST    /internal/shoebox/database/getLatestKeep  @com.keepit.controllers.internal.ShoeboxController.getLatestKeep()
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.internal.ShoeboxController.saveBookmark
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
@@ -619,6 +630,15 @@ POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
 POST     /internal/shoebox/database/getVerifiedAddressOwners  @com.keepit.controllers.internal.ShoeboxController.getVerifiedAddressOwners()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxController.getAllURLPatternRules()
+
+POST     /internal/shoebox/graph/user                @com.keepit.controllers.internal.ShoeboxGraphController.sendUserUpdates()
+POST     /internal/shoebox/graph/socialConnection    @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialConnectionUpdates()
+POST     /internal/shoebox/graph/socialUserInfo      @com.keepit.controllers.internal.ShoeboxGraphController.sendSocialUserInfoUpdates()
+POST     /internal/shoebox/graph/userConnection      @com.keepit.controllers.internal.ShoeboxGraphController.sendUserConnectionUpdates()
+
+POST     /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateURIScreenshots()
+POST     /internal/shoebox/image/getURIImage         @com.keepit.controllers.internal.URISummaryController.getURIImage()
+POST     /internal/shoebox/image/getURISummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

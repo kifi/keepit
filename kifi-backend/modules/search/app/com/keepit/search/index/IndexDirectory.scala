@@ -15,7 +15,7 @@ trait IndexDirectory extends Directory with BackedUpDirectory {
 
 trait IndexStore extends ObjectStore[ArchivedIndexDirectory, File]
 
-class ArchivedIndexDirectory(dir: File, store: IndexStore) extends MMapDirectory(dir) with ArchivedDirectory with IndexDirectory {
+class ArchivedIndexDirectory(dir: File, protected val tempDir: File, store: IndexStore) extends MMapDirectory(dir) with ArchivedDirectory with IndexDirectory {
   def asFile() = Some(dir)
   protected def getArchive() = store.get(this).get
   protected def saveArchive(tarFile: File) = store += (this, tarFile)

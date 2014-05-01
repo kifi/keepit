@@ -36,7 +36,7 @@
 
     <h2>Rescrape Documents</h2>
 
-    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "GET">
+    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperAdminController.rescrapeByRegex()" method = "POST">
         <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
         <input type="number" min="0" name="withinMinutes" placeholder="Within 30 minutes">
         <button type="submit" class="btn">Rescrape</button>

@@ -16,7 +16,6 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
     bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
-    bind[AsyncScrapeProcessor].to[SimpleAsyncScrapeProcessor].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
     install(ProdScraperConfigModule())
   }
@@ -33,12 +32,6 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
       schedulingProperties,
       scraperConfig.httpConfig
     )
-  }
-
-  @Singleton
-  @Provides
-  def syncScrapeProcessor(sysProvider: Provider[ActorSystem], procProvider: Provider[SyncScraperActor], scraperConfig: ScraperConfig):SyncScrapeProcessor = {
-    new SyncScrapeProcessor(scraperConfig, sysProvider, procProvider, Runtime.getRuntime.availableProcessors * 128)
   }
 }
 

@@ -34,7 +34,11 @@ trait IndexModule extends ScalaModule with Logging {
   protected def getArchivedIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): Option[ArchivedIndexDirectory] = {
     maybeDir.map { d =>
       val dir = new File(d).getCanonicalFile
-      val indexDirectory = new ArchivedIndexDirectory(dir, indexStore)
+      val tempDir = new File(current.configuration.getString("search.temporary.directory").get, dir.getName)
+      FileUtils.deleteDirectory(tempDir)
+      FileUtils.forceMkdir(tempDir)
+      tempDir.deleteOnExit()
+      val indexDirectory = new ArchivedIndexDirectory(dir, tempDir, indexStore)
       if (!dir.exists()) {
         try {
           val t1 = currentDateTime.getMillis

@@ -82,7 +82,7 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "com.kifi" % "franz_2.10" % "0.3.1",
+    "com.kifi" % "franz_2.10" % "0.3.2",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -204,6 +204,7 @@ object ApplicationBuild extends Build {
     EclipseKeys.skipParents in ThisBuild := false,
     sources in doc in Compile := List(),
     Keys.fork := false,
+    // Keys.fork in Test := false, // uncomment to hook debugger while running tests
     /*skip in update := true,
      *skip in update in (Compile, test) := true*/
     aggregate in update := false,

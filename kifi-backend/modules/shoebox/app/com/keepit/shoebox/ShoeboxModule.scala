@@ -21,6 +21,7 @@ import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.queue.{NormalizationUpdateJobQueueModule}
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.cortex.ProdCortexServiceClientModule
+import com.keepit.common.external.ExternalServiceModule
 
 abstract class ShoeboxModule(
   //these are modules that inheriting modules need to provide
@@ -36,7 +37,8 @@ abstract class ShoeboxModule(
   val domainTagImporterModule: DomainTagImporterModule,
   val cacheModule: ShoeboxCacheModule,
   val scrapeSchedulerModule: ScrapeSchedulerModule,
-  val fjMonitorModule: ForkJoinContextMonitorModule
+  val fjMonitorModule: ForkJoinContextMonitorModule,
+  val externalServiceModule: ExternalServiceModule
 ) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients

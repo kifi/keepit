@@ -2,7 +2,6 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -11,11 +10,9 @@ import views.html
 
 class AdminPageInfoController @Inject()
 (actionAuthenticator: ActionAuthenticator,
- s3ScreenshotStore: S3ScreenshotStore,
  db: Database,
  keepRepo: KeepRepo,
  pageInfoRepo: PageInfoRepo,
- imageInfoRepo: ImageInfoRepo,
  uriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
@@ -26,9 +23,9 @@ class AdminPageInfoController @Inject()
     Ok(html.admin.pageInfo(pageInfo))
   }
 
-  def pageInfos() = AdminHtmlAction.authenticated { request =>
+  def pageInfos(page:Int, size:Int) = AdminHtmlAction.authenticated { request =>
     val pageInfos = db.readOnly { implicit ro =>
-      pageInfoRepo.page(page = 0, size = 50).sortBy(_.id.get.id)
+      pageInfoRepo.page(page, size).sortBy(_.id.get.id)
     }
     // add pagination
     Ok(html.admin.pageInfos(pageInfos))
