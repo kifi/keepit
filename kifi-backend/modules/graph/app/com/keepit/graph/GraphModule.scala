@@ -8,6 +8,7 @@ import com.keepit.graph.manager.GraphManagerModule
 import com.keepit.graph.common.store.GraphStoreModule
 import com.keepit.graph.common.cache.GraphCacheModule
 import com.keepit.social.RemoteSecureSocialModule
+import com.keepit.cortex.ProdCortexServiceClientModule
 
 abstract class GraphModule(
 
@@ -23,5 +24,6 @@ abstract class GraphModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
+  val cortexServiceClientModule = ProdCortexServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
 }

@@ -1,5 +1,7 @@
 package com.keepit.graph.model
 
+import com.keepit.cortex.lda.VersionedLDATopicId
+
 
 sealed trait VertexData[V <: VertexDataReader] { self: V =>
   def asReader: V = self
@@ -10,3 +12,9 @@ case class TagData(id: VertexDataId[TagReader]) extends TagReader with VertexDat
 case class ThreadData(id: VertexDataId[ThreadReader]) extends ThreadReader with VertexData[ThreadReader]
 case class FacebookAccountData(id: VertexDataId[FacebookAccountReader]) extends FacebookAccountReader with VertexData[FacebookAccountReader]
 case class LinkedInAccountData(id: VertexDataId[LinkedInAccountReader]) extends LinkedInAccountReader with VertexData[LinkedInAccountReader]
+case class LDATopicData(id: VertexDataId[LDATopicReader]) extends LDATopicReader with VertexData[LDATopicReader] {
+  lazy val version: Int = VersionedLDATopicId.getVersion(id.id)
+  lazy val topicId: Int = VersionedLDATopicId.getUnversionedId(id.id)
+  def getVersion(): Int = version
+  def getTopicId(): Int = topicId
+}

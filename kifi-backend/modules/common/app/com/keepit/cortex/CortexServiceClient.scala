@@ -12,6 +12,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.kifi.franz.QueueName
 import com.keepit.common.db.SequenceNumber
+import com.keepit.graph.manager.LDAURITopicGraphUpdate
 
 
 
@@ -31,7 +32,7 @@ trait CortexServiceClient extends ServiceClient{
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
 
-  def sqsDenseLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: Int, queue: QueueName): Future[Unit]
+  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit]
 }
 
 class CortexServiceClientImpl(
@@ -112,9 +113,9 @@ class CortexServiceClientImpl(
     }
   }
 
-  def sqsDenseLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], version: Int, queue: QueueName): Future[Unit] = {
-    val payload = Json.obj("lowSeq" -> lowSeq.value, "version" -> version, "queue" -> queue.name)
-    call(Cortex.internal.sqsDenseLDAURIFeature(), payload).map{ r =>
+  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit] = {
+    val payload = Json.obj("versionedLowSeq" -> lowSeq.value, "queue" -> queue.name)
+    call(Cortex.internal.graphLDAURIFeatureUpdate(), payload).map{ r =>
       assert(r.status == 202); ()
     }
   }
