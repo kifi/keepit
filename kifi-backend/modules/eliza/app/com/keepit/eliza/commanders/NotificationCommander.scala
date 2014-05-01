@@ -37,6 +37,8 @@ import scala.concurrent.duration._
 import com.keepit.common.net.URI
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.store.ImageSize
+import scala.util.matching.Regex._
+import java.net.URLDecoder
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
@@ -73,6 +75,25 @@ class NotificationCommander @Inject() (
 
   //temp, just for internal testing. Functionality broken up and moving to it's own commander/plugin once the semantics are finalized (pre ship)
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+    case class CleanedMessage(cleanText: String, lookHereTexts: Seq[String], lookHereImageUrls: Seq[String])
+
+    def parseMessage(msg: String): CleanedMessage = {
+      val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
+      var textLookHeres = Vector[String]()
+      var imageLookHereUrls = Vector[String]()
+      re.findAllMatchIn(msg).toSeq.toList.foreach { m =>
+        val segments = m.group(3).split('|')
+        val kind = segments.head
+        val payload = URLDecoder.decode(segments.last, "UTF-8")
+        kind match {
+          case "i" => imageLookHereUrls = imageLookHereUrls :+ payload
+          case "r" => textLookHeres = textLookHeres :+ payload
+          case _ => throw new Exception("Unknow look-here type: " + kind)
+        }
+      }
+      CleanedMessage( re.replaceAllIn(msg, (m: Match) => m.group(1)), textLookHeres, imageLookHereUrls)
+    }
+
     val (nuts, starterUserId) = db.readOnly { implicit session =>
       (nonUserThreadRepo.getByMessageThreadId(thread.id.get),
         userThreadRepo.getThreadStarter(thread.id.get)
@@ -132,11 +153,12 @@ class NotificationCommander @Inject() (
           }
 
           val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
+            val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
             message.from match {
-              case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).firstName, allUsers(id).lastName, allUserImageUrls(id), message.messageText, Seq.empty, Seq.empty)
+              case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).firstName, allUsers(id).lastName, allUserImageUrls(id), text, lookHereTexts, lookHereImageUrls)
               case MessageSender.NonUser(nup) => {
                 val (first, last) = nup.toNameTuple
-                ExtendedThreadItem(first, last, "https://www.kifi.com/assets/img/ghost.200.png", message.messageText, Seq.empty, Seq.empty)
+                ExtendedThreadItem(first, last, "https://www.kifi.com/assets/img/ghost.200.png", text, lookHereTexts, Seq.empty)
               }
               case _ => throw new Exception("Impossible")
             }
