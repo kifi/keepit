@@ -29,7 +29,18 @@ import com.keepit.common.actor.FakeScheduler
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
 import com.kifi.franz.QueueName
-import com.keepit.graph.manager.{UserConnectionGraphUpdate, SocialUserInfoGraphUpdate, SocialConnectionGraphUpdate, UserGraphUpdate}
+import com.keepit.graph.manager._
+import com.keepit.model.KifiInstallation
+import com.keepit.model.EmailAddress
+import scala.Some
+import com.keepit.model.ChangedURI
+import com.keepit.model.DeepLocator
+import com.kifi.franz.QueueName
+import com.keepit.model.URL
+import com.keepit.model.UserExperiment
+import com.keepit.social.SocialId
+import com.keepit.model.UrlHash
+import play.api.libs.json.JsObject
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -622,4 +633,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getURIImage(nUri: NormalizedURI): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit] = {
+    Future.successful(())
+  }
 }
