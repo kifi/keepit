@@ -111,7 +111,7 @@ class KeepRepoImpl @Inject() (
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
       countCache.remove(KeepCountKey(Some(bookmark.userId)))
-      if (bookmark.createdAt == bookmark.updatedAt) {
+      if (bookmark.createdAt.isBefore(bookmark.updatedAt.minusSeconds(1))) {
         latestKeepUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
         latestKeepUrlCache.set(LatestKeepUrlKey(bookmark.url), bookmark)
       }
