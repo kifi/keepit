@@ -238,7 +238,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Keep]] = ???
 
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Option[Keep]] = ???
+  def getLatestKeep(url: String)(implicit timeout:Int): Future[Option[Keep]] = ???
 
   def saveBookmark(bookmark: Keep)(implicit timeout:Int): Future[Keep] = ???
 

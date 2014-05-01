@@ -137,7 +137,7 @@ angular.module('kifi.detail',
         scope.getCommonTags = function () {
           var tagLists = _.pluck(scope.getSelectedKeeps(), 'tagList');
           var tagIds = _.map(tagLists, function (tagList) { return _.pluck(tagList, 'id'); });
-          var commonTagIds = _.intersection.apply(this, tagIds);
+          var commonTagIds = _.union.apply(this, tagIds);
           var tagMap = _.indexBy(_.flatten(tagLists, true), 'id');
           return _.map(commonTagIds, function (tagId) { return tagMap[tagId]; });
         };
@@ -359,7 +359,11 @@ angular.module('kifi.detail',
         };
 
         scope.removeTagFromSelectedKeeps = function (tag) {
-          tagService.removeKeepsFromTag(tag.id, _.pluck(scope.getSelectedKeeps(), 'id'));
+          var keepsWithTag = scope.getSelectedKeeps().filter(function (keep) {
+            var tagIds = _.pluck(keep.tagList, 'id');
+            return _.contains(tagIds, tag.id);
+          });
+          tagService.removeKeepsFromTag(tag.id, _.pluck(keepsWithTag, 'id'));
         };
 
         element.on('mousedown', '.page-coll-opt', function () {

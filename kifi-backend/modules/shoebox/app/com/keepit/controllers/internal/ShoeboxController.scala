@@ -463,11 +463,12 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(bookmarks))
   }
 
-  def getLatestBookmark(uriId: Id[NormalizedURI]) = Action { request =>
-    val bookmarkOpt = db.readOnly(2) { implicit session => //using cache
-      keepRepo.latestKeep(uriId)
+  def getLatestKeep() = Action(parse.json) { request =>
+    val url = request.body.as[String]
+    val bookmarkOpt = db.readOnly(2, Database.Slave) { implicit session => // using cache + Slate database for scanning older keeps
+      keepRepo.latestKeep(url)
     }
-    log.info(s"[getLatestBookmark($uriId)] $bookmarkOpt")
+    log.info(s"[getLatestKeep($url)] $bookmarkOpt")
     Ok(Json.toJson(bookmarkOpt))
   }
 
