@@ -94,7 +94,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Option[Keep]]
+  def getLatestKeep(url: String)(implicit timeout:Int = 10000): Future[Option[Keep]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Keep]]
   def saveBookmark(bookmark:Keep)(implicit timeout:Int = 10000): Future[Keep]
   def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
@@ -234,8 +234,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getLatestBookmark(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Option[Keep]] = {
-    call(Shoebox.internal.getLatestBookmark(uriId), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+  def getLatestKeep(url: String)(implicit timeout: Int): Future[Option[Keep]] = {
+    call(Shoebox.internal.getLatestKeep(), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), body = JsString(url)).map { r =>
       Json.fromJson[Option[Keep]](r.json).get
     }
   }
