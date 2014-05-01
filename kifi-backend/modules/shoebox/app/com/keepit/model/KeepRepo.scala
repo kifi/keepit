@@ -111,10 +111,10 @@ class KeepRepoImpl @Inject() (
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
       countCache.remove(KeepCountKey(Some(bookmark.userId)))
-      if (bookmark.createdAt.isAfter(clock.now().minusSeconds(1))) {
-        latestKeepUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
-        latestKeepUrlCache.set(LatestKeepUrlKey(bookmark.url), bookmark)
-      }
+      val latestKeepUriKey = LatestKeepUriKey(bookmark.uriId)
+      if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, bookmark) }
+      val latestKeepUrlKey = LatestKeepUrlKey(bookmark.url)
+      if (!latestKeepUrlCache.get(latestKeepUrlKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUrlCache.set(latestKeepUrlKey, bookmark) }
     }
   }
 
