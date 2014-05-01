@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model.{NotificationCategory, User}
+import com.keepit.model.{NotificationCategory, User, URISummaryRequest, URISummary, ImageType}
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.NonUserThread._
 import com.keepit.common.akka.SafeFuture
@@ -30,10 +30,13 @@ import com.keepit.eliza.model.UserThread
 import com.keepit.eliza.model.Notification
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
+import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser, NonUserKinds}
 import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddresses, GenericEmailAddress, EmailAddressHolder, PostOffice}
 import com.keepit.common.crypto.PublicIdConfiguration
 import scala.concurrent.duration._
+import com.keepit.common.net.URI
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.store.ImageSize
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
@@ -68,51 +71,94 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  //temp, needs to be removed before shipping!
-  def notifyEmailUsers(thread: MessageThread, exceptAddress: Option[String] = None): Unit = {
-    if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
-      val nuts = db.readOnly { implicit session =>
-        nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+  //temp, just for internal testing. Functionality broken up and moving to it's own commander/plugin once the semantics are finalized (pre ship)
+  def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+    val (nuts, starterUserId) = db.readOnly { implicit session =>
+      (nonUserThreadRepo.getByMessageThreadId(thread.id.get),
+        userThreadRepo.getThreadStarter(thread.id.get)
+      )
+    }
+
+    val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+
+
+    val allUsersFuture : Future[Map[Id[User], User]] = shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap)
+
+    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap)
+
+    val uriSummaryFuture : Future[URISummary] = shoebox.getUriSummary(URISummaryRequest(
+      url = thread.nUrl.get,
+      imageType = ImageType.ANY,
+      minSize = ImageSize(183, 96),
+      withDescription = true,
+      waiting = true,
+      silent = false))
+
+    FutureHelpers.combine(allUsersFuture, allUserImageUrlsFuture, uriSummaryFuture).map{ case (allUsers, allUserImageUrls, uriSummary) =>
+
+      val starterUser = allUsers(starterUserId)
+
+      val participants = allUsers.values.map{ u => u.firstName + " " + u.lastName } ++ nuts.map{ nut =>
+        val (first, last) = nut.participant.toNameTuple
+        if (last.length>0) first + " " + last else first
       }
+
+      val pageName = thread.nUrl.flatMap( url => URI.parse(url).toOption.flatMap( uri => uri.host.map(_.name)) ).get
+
       val messages = basicMessageCommander.getThreadMessages(thread)
 
-      val allUsersIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+      nuts.filterNot(_.muted).foreach{ nut =>
+        require(nut.participant.kind == NonUserKinds.email)
 
-      val allUsers : Map[Id[User], User] = Await.result(shoebox.getUsers(allUsersIds.toSeq), 2 minutes).map(u => u.id.get -> u).toMap
+        shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier).map{ unsubUrl =>
 
-      val authors: Seq[String] = thread.participants.map{ participants =>
-        participants.allUsers.map(id => allUsers(id).firstName + " " + allUsers(id).lastName).toSeq ++ participants.allNonUsers.map(_.identifier).toSeq
-      }.getOrElse(Seq[String]())
+          val threadInfo = ThreadEmailInfo(
+            pageUrl = thread.nUrl.get,
+            pageName = pageName,
+            pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
+            heroImageUrl = uriSummary.imageUrl.getOrElse("#"),
+            pageDescription = uriSummary.description.getOrElse(""),
+            participants = participants.toSeq,
+            conversationStarter = starterUser.firstName + " " + starterUser.lastName,
+            unsubUrl = unsubUrl,
+            muteUrl = "https://kifi.com/extmsg/email/mute?publicId=" + nut.publicId.get //Todo (Stephen): remove hard coded url with public id
+          )
 
-      val threadItems = messages.filterNot(_.from.isSystem).map{ message =>
-        message.from match {
-          case MessageSender.User(id) => ThreadItem(Some(id), None, message.messageText)
-          case MessageSender.NonUser(nup) => ThreadItem(None, Some(nup.identifier), message.messageText)
-          case _ => throw new Exception("This can't happen")
-        }
-      }.reverse
+          var relevantMessages = messages
+          nut.lastNotifiedAt.map { dt =>
+            relevantMessages = relevantMessages.filter{ m =>
+              m.createdAt.isAfter(dt.minusSeconds(2))  //Note (Stephen): Potential race condition here if a message is send right as the email is sent. Needs more thought.
+            }
+          }
 
-      val url = thread.url.getOrElse("")
+          val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
+            message.from match {
+              case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).firstName, allUsers(id).lastName, allUserImageUrls(id), message.messageText, Seq.empty, Seq.empty)
+              case MessageSender.NonUser(nup) => {
+                val (first, last) = nup.toNameTuple
+                ExtendedThreadItem(first, last, "https://www.kifi.com/assets/img/ghost.200.png", message.messageText, Seq.empty, Seq.empty)
+              }
+              case _ => throw new Exception("Impossible")
+            }
+          }.reverse
 
-      val title = thread.pageTitle.getOrElse(url)
+          val body = views.html.nonUserDigestEmail(threadInfo, threadItems).body
 
-      nuts.foreach{ nut =>
-        if ((exceptAddress.isEmpty || exceptAddress.get != nut.participant.identifier) && !nut.muted) {
-          val mute = "/eliza/email/mute/" + nut.publicId.get
-
-          val body =  views.html.nonUserMessagesEmail(authors, threadItems, url, title, allUsers, mute).body
-
+          val magicAddress = "discuss+" + nut.publicId.get + "@kifi.com"
           shoebox.sendMail(ElectronicMail (
             from = EmailAddresses.NOTIFICATIONS,
-            fromName = Some("Kifi"),
+            fromName = Some("Kifi Discussions"),
             to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-            subject = "Kifi Message on " + thread.url.getOrElse("a Page"),
+            subject = "Kifi Message on " + pageName,
             htmlBody = body,
             category = ElectronicMailCategory("external_message_test"),
-            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> ("discuss+" + nut.publicId.get + "@kifi.com")))
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress))
           ))
+          db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, currentDateTime) }
         }
+
       }
+
     }
 
   }

@@ -622,4 +622,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getURIImage(nUri: NormalizedURI): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
+
+  def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
+
+  def getUnsubscribeUrlForEmail(email: String): Future[String] = Future.successful("https://kifi.com")
 }

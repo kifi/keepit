@@ -139,6 +139,9 @@ object Shoebox extends Service {
     def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
     def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
     def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
+    def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
+    def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getURISummary")
+    def getUnsubscribeUrlForEmail(email: String) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email",email))
   }
 }
 
