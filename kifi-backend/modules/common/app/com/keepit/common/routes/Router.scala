@@ -138,6 +138,7 @@ object Shoebox extends Service {
     def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
     def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
     def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
+    def keepGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/keep")
     def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
     def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
   }
