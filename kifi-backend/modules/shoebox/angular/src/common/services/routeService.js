@@ -43,7 +43,7 @@ angular.module('kifi.routeService', [])
       tagOrdering: route('/collections/ordering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
-      friends: function(page, pageSize) {
+      friends: function (page, pageSize) {
         return route('/user/friends') + '?page=' + page + '&pageSize=' + pageSize;
       },
       friendRequest: function (id) {

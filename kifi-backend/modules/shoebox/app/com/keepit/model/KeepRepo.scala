@@ -33,6 +33,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
+  def latestKeep(url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
@@ -46,7 +47,8 @@ class KeepRepoImpl @Inject() (
   val clock: Clock,
   val countCache: KeepCountCache,
   bookmarkUriUserCache: KeepUriUserCache,
-  latestKeepUriCache: LatestKeepUriCache
+  latestKeepUriCache: LatestKeepUriCache,
+  latestKeepUrlCache: LatestKeepUrlCache
 ) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
 
   import db.Driver.simple._
@@ -100,6 +102,7 @@ class KeepRepoImpl @Inject() (
     bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(KeepCountKey(Some(bookmark.userId)))
     latestKeepUriCache.remove(LatestKeepUriKey(bookmark.uriId))
+    latestKeepUrlCache.remove(LatestKeepUrlKey(bookmark.url))
   }
 
   override def invalidateCache(bookmark: Keep)(implicit session: RSession): Unit = {
@@ -108,7 +111,10 @@ class KeepRepoImpl @Inject() (
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
       countCache.remove(KeepCountKey(Some(bookmark.userId)))
-      latestKeepUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
+      val latestKeepUriKey = LatestKeepUriKey(bookmark.uriId)
+      if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, bookmark) }
+      val latestKeepUrlKey = LatestKeepUrlKey(bookmark.url)
+      if (!latestKeepUrlCache.get(latestKeepUrlKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUrlCache.set(latestKeepUrlKey, bookmark) }
     }
   }
 
@@ -279,6 +285,16 @@ class KeepRepoImpl @Inject() (
       latest.sortBy(_.createdAt desc).firstOption
     }
   }
+
+  def latestKeep(url: String)(implicit session: RSession): Option[Keep] = {
+    latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
+      val keeps = for { keep <- rows if keep.url === url } yield keep
+      val max = keeps.map(_.createdAt).max
+      val latest = for { keep <- keeps if keep.createdAt >= max } yield keep
+      latest.sortBy(_.createdAt desc).firstOption
+    }
+  }
+
 
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
