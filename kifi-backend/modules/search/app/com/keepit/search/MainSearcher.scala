@@ -127,16 +127,16 @@ class MainSearcher(
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
-      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
-      val mySearchUris = socialGraphInfo.mySearchUris
-      val friendSearchUris = socialGraphInfo.friendSearchUris
-
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val weight = personalizedSearcher.createWeight(articleQuery)
+
+      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+      val mySearchUris = socialGraphInfo.mySearchUris
+      val friendSearchUris = socialGraphInfo.friendSearchUris
 
       val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
