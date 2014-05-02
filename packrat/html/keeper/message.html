@@ -1,9 +1,13 @@
 <div class="kifi-message-sent{{#auxData.length}} kifi-message-aux kifi-message-{{auxData.0}}{{/auxData.length}}" data-id="{{id}}">
   <div class="kifi-message-status"></div>
   <time datetime="{{createdAt}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>
-  <img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{user.id}}/pics/100/{{user.pictureName}}"/>
+  {{#user.isUser}}<img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{user.id}}/pics/100/{{user.pictureName}}"/>{{/user.isUser}}
+  {{#user.isEmail}}<span class="kifi-message-pic-email kifi-participant-background-{{user.color}}">{{user.initial}}</span>{{/user.isEmail}}
   <div class="kifi-message-body">
-    <div class="kifi-message-name">{{user.firstName}} {{user.lastName}}</div>
+    <div class="kifi-message-name">
+      {{#isUser}}{{user.firstName}} {{user.lastName}}{{/isUser}}
+      {{#isEmail}}{{user.id}}{{/isEmail}}
+    </div>
     {{#formatMessage}}{{{text}}}{{/formatMessage}}
   </div>
   {{#auxData.length}}<div class="kifi-aux-message">{{{formatAuxData}}}</div>{{/auxData.length}}

@@ -224,6 +224,7 @@ panes.notices = function () {
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
       notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
+      notice.picturedParticipants.map(formatParticipant);
       return render('html/keeper/notice_message', notice);
     case 'triggered':
       return render('html/keeper/notice_triggered', notice);

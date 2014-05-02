@@ -10,6 +10,7 @@ var THREAD_BATCH_SIZE = 8;
 //                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
 var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
 var hostRe = /^https?:\/\/([^\/?#]+)/;
+var emailAddrRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)(?:\b|$)/;
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
@@ -1031,6 +1032,7 @@ api.port.on({
   },
   search_friends: function(data, respond, tab) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    var searchContext = {sf: sf, q: data.q}
     var results;
     if (friendSearchCache) {
       results = friendSearchCache.get(data);
@@ -1047,18 +1049,40 @@ api.port.on({
         friendSearchCache.put(data, results);
       }
     }
-    if (results.length > data.n) {
-      results = results.slice(0, data.n);
+    if (emailAddrRe.test(data.q)) {
+      var i = 0;
+      while (i < data.participants.length && data.participants[i].id !== data.q) i++;
+      if (i >= data.participants.length) {
+        var newEmailResult = toContactResult.apply(searchContext, [{email: data.q, isNew: true}]);
+      }
     }
-    var nMoreDesired = data.n - results.length;
+    var nFriendResultsDesired = newEmailResult ? data.n - 1 : data.n;
+    if (results.length > nFriendResultsDesired) {
+      results = results.slice(0, nFriendResultsDesired);
+    }
+    var nMoreDesired = data.n - results.length; // q might be among the email addresses we receive
     var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
+    var friendSearchResults = results.map(toFriendSearchResult, searchContext)
     respond({
       searchId: searchId,
-      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
+      results: (newEmailResult ? [newEmailResult] : []).concat(friendSearchResults)
     });
     if (nMoreDesired) {
       ajax('GET', '/ext/contacts', {q: data.q, n: nMoreDesired}, function (contacts) {
-        api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: contacts.map(toContactResult, {sf: sf, q: data.q})});
+        if (newEmailResult) {
+          // check if one of the contacts is an exact match for the email address
+          var i = 0;
+          while (i < contacts.length && contacts[i].email !== newEmailResult.email) i++;
+          var hasMatchingEmail = i < contacts.length;
+        }
+        var update = {searchId: searchId, contacts: contacts.map(toContactResult, searchContext)};
+        if (hasMatchingEmail) {
+          // refreshing the whole list to remove the "new email address" result
+          update.friends = friendSearchResults;
+          update.refresh = true;
+        } else {
+        }
+        api.tabs.emit(tab, 'contacts', update);
       }, function () {
         api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: [], error: true});
       });
@@ -2108,6 +2132,12 @@ function toContactResult(f) {
       f.emailParts[n - 1] += f.email.substr(i);
     } else {
       f.emailParts.push(f.email.substr(i));
+    }
+    if (!f.id) {
+      f.id = {kind: "email", email: f.email};
+    }
+    if (!f.name) {
+      f.name = f.email;
     }
   }
   return f;

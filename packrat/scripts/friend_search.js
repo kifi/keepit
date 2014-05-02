@@ -15,13 +15,18 @@ var initFriendSearch = (function () {
       var withResults = searchCallbacks[o.searchId];
       if (withResults) {
         delete searchCallbacks[o.searchId];
-        withResults(o.contacts.concat(['tip']), false, o.error);
+        if (o.refresh) {
+          var results = o.friends.concat(o.contacts);
+        } else {
+          var results = o.contacts;
+        }
+        withResults(results.concat(['tip']), false, o.error, o.refresh);
       }
     }
   });
 
-  return function ($in, source, includeSelf, options) {
-    $in.tokenInput(search.bind(null, includeSelf), $.extend({
+  return function ($in, source, participants, includeSelf, options) {
+    $in.tokenInput(search.bind(null, participants, includeSelf), $.extend({
       resultsLimit: 4,
       preventDuplicates: true,
       tokenValue: 'id',
@@ -33,8 +38,8 @@ var initFriendSearch = (function () {
     $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   };
 
-  function search(includeSelf, numTokens, query, withResults) {
-    api.port.emit('search_friends', {q: query, n: 4, includeSelf: includeSelf(numTokens)}, function (o) {
+  function search(participants, includeSelf, numTokens, query, withResults) {
+    api.port.emit('search_friends', {q: query, n: 4, participants: participants, includeSelf: includeSelf(numTokens)}, function (o) {
       if (o.results.length || !o.searchId) {  // wait for more if none yet
         withResults(o.results.concat(o.searchId ? [] : ['tip']), !!o.searchId);
       }
@@ -52,13 +57,19 @@ var initFriendSearch = (function () {
       html.push('</li>');
       return html.join('');
     } else if (res.email) {
-      var html = ['<li class="kifi-ti-dropdown-contact-email">'];
+      var html = [];
+      if (res.isNew) {
+        html.push('<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-new-email">');
+      } else {
+        html.push('<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">')
+      }
       if (res.nameParts) {
         html.push('<div class="kifi-ti-dropdown-contact-name">');
         appendParts(html, res.nameParts);
-        html.push('</div>');
+        html.push('</div><div class="kifi-ti-dropdown-contact-sub">');
+      } else {
+        html.push('<div class="kifi-ti-dropdown-contact-name">');
       }
-      html.push('<div class="kifi-ti-dropdown-contact-sub">');
       appendParts(html, res.emailParts);
       html.push('</div></li>');
       return html.join('');
@@ -78,10 +89,8 @@ var initFriendSearch = (function () {
   }
 
   function onSelect($in, source, res, el) {
-    if (!res.pictureName) {
-      if (res.email) {
-        // TODO: add email address participant to token list
-      } else if (res === 'tip') {
+    if (!res.pictureName && !res.email) {
+      if (res === 'tip') {
         api.port.emit('import_contacts', source);
       }
       return false;

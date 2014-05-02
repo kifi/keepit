@@ -666,10 +666,10 @@
       }
     }
 
-    function receiveResults(query, results, partial, errored) {
+    function receiveResults(query, results, partial, errored, refresh) {
       if (!errored) {
         var o = cache.get(query);
-        if (!o) {
+        if (!o || refresh) {
           cache.add(query, {results: results, complete: !partial});
         } else if (!o.complete) {
           Array.prototype.push.apply(o.results, results);
@@ -678,7 +678,7 @@
       }
 
       if ($tokenInput.val().trim() === query && $dropdown.hasClass(classes.dropdownSearching)) {
-        if ($dropdown.data('q') !== query) {
+        if ($dropdown.data('q') !== query || refresh) {
           populateDropdown(query, results, partial);
         } else {
           if (!partial) {

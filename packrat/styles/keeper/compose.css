@@ -350,7 +350,8 @@ a.kifi-compose-submit.kifi-active {
   background-color: #6fa6ef;
   color: #fff;
 }
-.kifi-ti-dropdown-item:not(.kifi-ti-dropdown-contact-email)+.kifi-ti-dropdown-contact-email {
+.kifi-ti-dropdown-item:not(.kifi-ti-dropdown-token)+.kifi-ti-dropdown-token,
+.kifi-ti-dropdown-item:not(.kifi-ti-dropdown-email)+.kifi-ti-dropdown-email {
   border-top: 1px solid #ccc;
 }
 .kifi-ti-dropdown-item::before {
@@ -366,10 +367,15 @@ a.kifi-compose-submit.kifi-active {
 }
 .kifi-ti-dropdown-contact-email::before {
   background: #e36767 6px 7px/16px 14px no-repeat;
+}
+.kifi-ti-dropdown-new-email::before {
+  background: #33495F 6px 7px/16px 14px no-repeat;
+}
+.kifi-ti-dropdown-email::before {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAQAAACMJlQBAAAAW0lEQVR4AX3NoQ0CMABE0ZuEkNqy/wJ0DAySOsIAD8sJeva/5GI57R5Ppz1i2v5tu0UTnSUuTTq7xjZ/SOfpFZp0JjTpTGjSmVBkGH0XmnQmNOlM9N4+NFhOW18UF5AlmfH20gAAAABJRU5ErkJggg==);
 }
 @media (min-resolution: 1.3dppx) {
-  .kifi-ti-dropdown-contact-email::before {
+  .kifi-ti-dropdown-email::before {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAcCAQAAACqy3WpAAAAr0lEQVR4AaXOMVnEQACE0Um2QANSsHA2wAenIDU4yClBCZeTANWjop1iM/37v1ld3M3ucFnc85z5HYufPGV+v2s+c2YfMdzM7mZET+hcoid0LtETOpeYSez/XOLdKInOh2uwl0TnO6EnOif0ROeEnuic0BOdE3qic0JPdE7oVzsn1MRma5xQE5HGCT3ROaEnOif0ROeEnuichbR9JXlJ2UJObc2RM3usecsjs/vO6x9F5JZWip8jRwAAAABJRU5ErkJggg==);
   }
 }
@@ -380,7 +386,7 @@ a.kifi-compose-submit.kifi-active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.kifi-ti-dropdown-contact-name {
+.kifi-ti-dropdown-contact-name:not(:last-child) {
   line-height: 14px;
 }
 .kifi-ti-dropdown-contact-sub {
