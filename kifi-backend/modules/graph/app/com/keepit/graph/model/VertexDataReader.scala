@@ -126,10 +126,8 @@ trait LDATopicReader extends VertexDataReader {
   type V = LDATopicReader
   def kind = LDATopicReader
 
-  lazy val version = ModelVersion[DenseLDA](VersionedLDATopicId.getVersion(id.id))
-  lazy val topicId = LDATopicId(VersionedLDATopicId.getUnversionedId(id.id))
-  def getVersion(): ModelVersion[DenseLDA] = version
-  def getTopicId(): LDATopicId = topicId
+  def getVersion(): ModelVersion[DenseLDA] = VersionedLDATopicId.getVersion(id.id)
+  def getTopicId(): LDATopicId = VersionedLDATopicId.getUnversionedId(id.id)
 }
 
 case object LDATopicReader extends VertexKind[LDATopicReader]{
