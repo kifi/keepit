@@ -103,7 +103,6 @@ object Shoebox extends Service {
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq.value), Param("highSeq", highSeq.value))
-    def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
     def kifiHit() = ServiceRoute(POST, "/internal/shoebox/database/kifiHit")
     def assignScrapeTasks(zkId:Long, max:Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")

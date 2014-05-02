@@ -88,7 +88,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
-  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
   def kifiHit(clicker: Id[User], hit:SanitizedKifiHit):Future[Unit]
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
@@ -560,17 +559,6 @@ class ShoeboxServiceClientImpl @Inject() (
         case _ =>  m
       }
     }
-  }
-
-  def clickAttribution(clicker: Id[User], uri: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {
-    implicit val userFormatter = Id.format[User]
-    implicit val uriFormatter = Id.format[NormalizedURI]
-    val payload = Json.obj(
-      "clicker" -> JsNumber(clicker.id),
-      "uriId" -> JsNumber(uri.id),
-      "keepers" -> JsArray(keepers.map(id => JsString(id.id)))
-    )
-    call(Shoebox.internal.clickAttribution, payload)
   }
 
   def kifiHit(clickerId: Id[User], hit:SanitizedKifiHit): Future[Unit] = {
