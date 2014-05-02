@@ -641,6 +641,9 @@ POST     /internal/shoebox/graph/keep                @com.keepit.controllers.int
 POST     /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateURIScreenshots()
 POST     /internal/shoebox/image/getURIImage         @com.keepit.controllers.internal.URISummaryController.getURIImage()
 POST     /internal/shoebox/image/getURISummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
+GET      /internal/shoebox/image/getUserImageUrl    @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
+
+GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: String)
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

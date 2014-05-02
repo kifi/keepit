@@ -129,6 +129,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit]
   def getURIImage(nUri: NormalizedURI): Future[Option[String]]
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String]
+  def getUriSummary(request: URISummaryRequest): Future[URISummary]
+  def getUnsubscribeUrlForEmail(email: String): Future[String]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -856,6 +859,24 @@ class ShoeboxServiceClientImpl @Inject() (
     val getURIImageRequest = Json.toJson[NormalizedURI](nUri)
     call(Shoebox.internal.getURIImage(), body = getURIImageRequest).map { r =>
       Json.fromJson[Option[String]](r.json).get
+    }
+  }
+
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
+    call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
+      r.json.as[String]
+    }
+  }
+
+  def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
+    call(Shoebox.internal.getUriSummary, Json.toJson(request)).map{ r =>
+      r.json.as[URISummary]
+    }
+  }
+
+  def getUnsubscribeUrlForEmail(email: String): Future[String] = {
+    call(Shoebox.internal.getUnsubscribeUrlForEmail(email)).map{ r =>
+      r.body
     }
   }
 }

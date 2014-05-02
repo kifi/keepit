@@ -89,7 +89,7 @@
     </tr>
   }
 
-  @messageBlock(imageUrl: String, firstName: String, lastName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
+  @messageBlock(imageUrl: String, shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
     <tr>
       <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
@@ -104,13 +104,13 @@
                         <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tr>
                               <!-- Image -->
-                              <td width="73" valign="top"><img src="@imageUrl" width="73" height="73" alt="@firstName" style="display:block;" border="0" /></td>
+                              <td width="73" valign="top"><img src="@imageUrl" width="73" height="73" alt="@shortName" style="display:block;" border="0" /></td>
                               <!-- //Image -->
                               <td width="28">&nbsp;</td>
                               <!-- Content -->
                               <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                   <tr>
-                                    <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;text-decoration:none;">@firstName @lastName</td>
+                                    <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;text-decoration:none;">@fullName</td>
                                   </tr>
                                   <tr>
                                     <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -126,8 +126,8 @@
                             </tr>
                           </table></td>
                       </tr>
-                      @lookHereContent.map(lookHere(firstName, _))
-                      @lookHereImage.map(imageLookHere(firstName, _))
+                      @lookHereContent.map(lookHere(shortName, _))
+                      @lookHereImage.map(imageLookHere(shortName, _))
                       <tr>
                         <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
                       </tr>
@@ -316,7 +316,7 @@
                                         <td width="20" class="hide">&nbsp;</td>
                                         <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                             <tr>
-                                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;">6 Things People Believe About Love</td>
+                                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;">@threadInfo.pageTitle</td>
                                             </tr>
                                             <tr>
                                               <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -355,7 +355,7 @@
                                     </table></td>
                                 </tr>
                                 @{messages.map(message =>
-                                  messageBlock(message.imageUrl, message.senderFirstName, message.senderLastName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
+                                  messageBlock(message.imageUrl, message.senderShortName, message.senderFullName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
                                 )}
                               </table></td>
                             <td width="2" bgcolor="#f3f3f3"></td>

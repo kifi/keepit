@@ -709,4 +709,11 @@ class ShoeboxController @Inject() (
     val patterns = db.readOnly{implicit s => urlPatternRuleRepo.allActive()}
     Ok(Json.toJson(patterns))
   }
+
+  def getUserImageUrl(id: Long, width: Int) = Action.async { request =>
+    userCommander.getUserImageUrl(Id[User](id), width).map{ url =>
+      Ok(Json.toJson(url))
+    }
+  }
+
 }
