@@ -95,7 +95,7 @@ class AdminWord2VecController @Inject()(
 
     val t1 = System.currentTimeMillis
     val userUris = sampleUserUris(Id[User](user), 100)
-    val sim = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds).filter(_._2 > 0.7f).toArray.sortBy(-1f * _._2)
+    val sim = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds).filter{ case (uri, score) => score > 0.7f}.toArray.sortBy(-1f * _._2)
     val elapse = (System.currentTimeMillis() - t1) / 1000f
 
     val res = Json.obj("elapse" -> elapse, "uris" -> sim.map{_._1.toLong}, "scores" -> sim.map{_._2})
