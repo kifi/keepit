@@ -1,17 +1,19 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.Inject
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.AdminController
-import views.html
-import play.api.libs.json._
-import com.keepit.cortex.CortexServiceClient
 import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.duration.DurationInt
+import scala.util.Random
+
+import com.google.inject.Inject
+import com.keepit.common.controller.{ActionAuthenticator, AdminController}
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
+import com.keepit.cortex.CortexServiceClient
+import com.keepit.model.{NormalizedURI, User}
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.model.User
+
+import play.api.libs.json._
+
+import views.html
 
 class AdminWord2VecController @Inject()(
   cortex: CortexServiceClient,
@@ -58,10 +60,8 @@ class AdminWord2VecController @Inject()(
 
     val t1 = System.currentTimeMillis
 
-    val user1Keeps = shoebox.getBookmarks(Id[User](user1))
-    val user2Keeps = shoebox.getBookmarks(Id[User](user2))
-    val user1uris = Await.result(user1Keeps, 5 seconds).sortBy(-1*_.createdAt.getMillis()).take(100).map{_.uriId}
-    val user2uris = Await.result(user2Keeps, 5 seconds).sortBy(-1*_.createdAt.getMillis()).take(100).map{_.uriId}
+    val user1uris = sampleUserUris(Id[User](user1), 100)
+    val user2uris = sampleUserUris(Id[User](user2), 100)
     val sfuture = cortex.word2vecUserSimilarity(user1uris, user2uris)
     val s = Await.result(sfuture, 60 seconds)
 
@@ -94,16 +94,21 @@ class AdminWord2VecController @Inject()(
     val uri = Id[NormalizedURI](body.get("uri").get.toLong)
 
     val t1 = System.currentTimeMillis
-    val userUris = Await.result(shoebox.getBookmarks(Id[User](user)), 5 seconds).sortBy(-1 * _.createdAt.getMillis).map{_.uriId}.take(100)
-    val s = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds)
+    val userUris = sampleUserUris(Id[User](user), 100)
+    val sim = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds).filter(_._2 > 0.7f).toArray.sortBy(-1f * _._2)
     val elapse = (System.currentTimeMillis() - t1) / 1000f
 
-    val report = s"time elapsed: ${elapse} millis.\n\n" + s.map{ x => x._1 + " ---> " + x._2}.mkString("\n")
-    Ok(report.replaceAll("\n","\n<br>"))
+    val res = Json.obj("elapse" -> elapse, "uris" -> sim.map{_._1.toLong}, "scores" -> sim.map{_._2})
+    Ok(res)
   }
 
   def index() = AdminHtmlAction.authenticated { implicit request =>
     Ok(html.admin.word2vec())
   }
 
+  private def sampleUserUris(userId: Id[User], sampleSize: Int): Seq[Id[NormalizedURI]] = {
+    val uris = Await.result(shoebox.getBookmarks(userId), 5 seconds).map{_.uriId}
+    if (uris.size < sampleSize) uris
+    else Random.shuffle(uris.toList).take(sampleSize)
+  }
 }
