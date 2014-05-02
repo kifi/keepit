@@ -27,8 +27,8 @@ angular.module('kifi.search', [
 
     var reportSearchAnalytics = function () {
       var url = routeService.searchedAnalytics;
-      var lastSearchContext = keepService.lastSearchContext;
-      if (lastSearchContext) {
+      var lastSearchContext = keepService.lastSearchContext();
+      if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;

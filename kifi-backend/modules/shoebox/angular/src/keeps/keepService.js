@@ -11,7 +11,7 @@ angular.module('kifi.keepService', [
   function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location) {
 
     var list = [],
-      lastSearchContext = { },
+      lastSearchContext = null,
       refinements = -1,
       selected = {},
       before = null,
@@ -377,7 +377,7 @@ angular.module('kifi.keepService', [
 
       reset: function () {
         $log.log('keepService.reset()');
-        lastSearchContext = {};
+        lastSearchContext = null;
         refinements = -1;
         before = null;
         end = false;
@@ -617,6 +617,7 @@ angular.module('kifi.keepService', [
         $log.log('keepService.find() req', reqData);
 
         return $http.get(url, reqData).then(function (res) {
+          debugger;
           var resData = res.data,
             hits = resData.hits || [];
 
@@ -642,8 +643,8 @@ angular.module('kifi.keepService', [
             origin: $location.origin,
             uuid: res.uuid,
             experimentId: res.experimentId,
-            query: reqData.q,
-            filter: reqData.f,
+            query: reqData.params.q,
+            filter: reqData.params.f,
             kifiTime: null,
             kifiShownTime: null,
             kifiResultsClicked: null,
