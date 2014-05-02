@@ -25,7 +25,13 @@ angular.module('kifi.search', [
       $scope.search.text = $routeParams.q;
     }
 
-    var reportSearchAnalytics = function () {
+    var reportSEarchAnalyticsOnUnload = function() {
+      reportSearchAnalytics('unload');
+    };
+
+    //either "unload" or "refinement"
+    var reportSearchAnalytics = function(endedWith) {
+      $log.log('reportSearchAnalytics ended with ' + endedWith);
       var url = routeService.searchedAnalytics;
       var lastSearchContext = keepService.lastSearchContext();
       if (lastSearchContext && lastSearchContext.query) {
@@ -47,7 +53,7 @@ angular.module('kifi.search', [
           kifiResultsClicked: lastSearchContext.clicks,
           refinements: keepService.refinements,
           pageSession: lastSearchContext.pageSession,
-          endedWith: lastSearchContext.endedWith
+          endedWith: endedWith
         };
         $http.post(url, data)['catch'](function (res) {
           $log.log('res: ', res);
@@ -58,11 +64,11 @@ angular.module('kifi.search', [
     };
 
     $scope.$on('$destroy', function () {
-      reportSearchAnalytics();
-      $window.removeEventListener('beforeunload', reportSearchAnalytics);
+      reportSEarchAnalyticsOnUnload();
+      $window.removeEventListener('beforeunload', reportSEarchAnalyticsOnUnload);
     });
 
-    $window.addEventListener('beforeunload', reportSearchAnalytics);
+    $window.addEventListener('beforeunload', reportSEarchAnalyticsOnUnload);
 
     if (!$routeParams.q) {
       // No or blank query
@@ -173,7 +179,7 @@ angular.module('kifi.search', [
       if ($scope.loading) {
         return;
       }
-      reportSearchAnalytics();
+      reportSearchAnalytics('refinement');
 
       $scope.loading = true;
       keepService.find(query, filter, lastResult && lastResult.context).then(function (data) {

@@ -636,7 +636,6 @@ angular.module('kifi.keepService', [
           });
 
           _.forEach(hits, processHit);
-
           list.push.apply(list, hits);
 
           fetchScreenshots(hits);
@@ -654,7 +653,6 @@ angular.module('kifi.keepService', [
             kifiResultsClicked: null,
             refinements: refinements,
             pageSession: pageSession,
-            endedWith: null
           };
           return resData;
         });
