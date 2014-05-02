@@ -7,10 +7,13 @@ angular.module('kifi.keepService', [
 ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location) {
 
     var list = [],
+      lastSearchContext = null,
+      pageSession = createPageSession(),
+      refinements = -1,
       selected = {},
       before = null,
       end = false,
@@ -138,6 +141,10 @@ angular.module('kifi.keepService', [
       return -1;
     }
 
+    function createPageSession() {
+      return Math.random().toString(16).slice(2);
+    }
+
     function expiredConversationCount(keep) {
       if (!keep.conversationUpdatedAt) {
         return true;
@@ -145,8 +152,6 @@ angular.module('kifi.keepService', [
       var diff = new Date().getTime() - keep.conversationUpdatedAt.getTime();
       return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
-
-
 
     var keepList = new Clutch(function (url, config) {
       $log.log('keepService.getList()', config && config.params);
@@ -170,6 +175,10 @@ angular.module('kifi.keepService', [
       list: list,
 
       totalKeepCount: 0,
+
+      lastSearchContext: function () {
+        return lastSearchContext;
+      },
 
       isDetailOpen: function () {
         return isDetailOpen;
@@ -371,7 +380,9 @@ angular.module('kifi.keepService', [
 
       reset: function () {
         $log.log('keepService.reset()');
-
+        pageSession = createPageSession();
+        lastSearchContext = null;
+        refinements = -1;
         before = null;
         end = false;
         list.length = 0;
@@ -598,7 +609,7 @@ angular.module('kifi.keepService', [
         }
 
         var url = routeService.search,
-          data = {
+          reqData = {
             params: {
               q: query || void 0,
               f: filter || 'm',
@@ -607,20 +618,21 @@ angular.module('kifi.keepService', [
             }
           };
 
-        $log.log('keepService.find()', data);
+        $log.log('keepService.find() req', reqData);
 
-        return $http.get(url, data).then(function (res) {
-          var data = res.data,
-            hits = data.hits || [];
+        return $http.get(url, reqData).then(function (res) {
+          var resData = res.data,
+            hits = resData.hits || [];
 
-          if (!data.mayHaveMore) {
+          $log.log('keepService.find() res', resData);
+          if (!resData.mayHaveMore) {
             end = true;
           }
 
           $analytics.eventTrack('user_clicked_page', {
             'action': 'searchKifi',
             'hits': hits.size,
-            'mayHaveMore': data.mayHaveMore
+            'mayHaveMore': resData.mayHaveMore
           });
 
           _.forEach(hits, processHit);
@@ -629,7 +641,22 @@ angular.module('kifi.keepService', [
 
           fetchScreenshots(hits);
 
-          return data;
+          refinements++;
+          lastSearchContext = {
+            origin: $location.origin,
+            uuid: res.data.uuid,
+            experimentId: res.data.experimentId,
+            query: reqData.params.q,
+            filter: reqData.params.f,
+            maxResults: reqData.params.maxHits,
+            kifiTime: null,
+            kifiShownTime: null,
+            kifiResultsClicked: null,
+            refinements: refinements,
+            pageSession: pageSession,
+            endedWith: null
+          };
+          return resData;
         });
       },
 
