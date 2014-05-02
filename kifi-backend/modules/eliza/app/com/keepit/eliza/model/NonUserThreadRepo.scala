@@ -126,12 +126,11 @@ class NonUserThreadRepoImpl @Inject() (
   }
 
   def setLastNotifiedAndIncCount(nut: Id[NonUserThread], dt: DateTime)(implicit session: RWSession): Unit = {
-    (for (row <- rows if row.id===nut) yield row.lastNotifiedAt).update(dt)
     sqlu"""UPDATE non_user_thread
       SET notified_count = notified_count+1
       WHERE id = $nut
     """.execute()
-
+    (for (row <- rows if row.id===nut) yield (row.lastNotifiedAt, row.updatedAt)).update(dt, currentDateTime)
   }
 
 }
