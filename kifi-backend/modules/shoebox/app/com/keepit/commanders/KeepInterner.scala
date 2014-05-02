@@ -28,6 +28,8 @@ class KeepInterner @Inject() (
   uriRepo: NormalizedURIRepo,
   scraper: ScrapeSchedulerPlugin,
   keepRepo: KeepRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
+  collectionRepo: CollectionRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
@@ -174,17 +176,24 @@ class KeepInterner @Inject() (
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
       installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
+    val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
       case Some(bookmark) =>
+        val wasInactiveKeep = !bookmark.isActive
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
         val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
         val persistedKeep = if(keepWithTitle != bookmark) keepRepo.save(keepWithTitle) else bookmark
-        (false, persistedKeep)
+        (false, wasInactiveKeep, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
     }
+    if (wasInactiveKeep) {
+      // A inactive keep may have had tags already. Index them if any.
+      keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+    }
+
+    (isNewKeep, internedKeep)
   }
 
 }

@@ -15,6 +15,6 @@ case class GraphProdModule() extends GraphModule(
   graphManagerModule = SimpleGraphProdModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.ABOOK :: Nil
+    def servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.ABOOK :: ServiceType.CORTEX :: Nil
   }
 }

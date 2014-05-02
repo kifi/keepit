@@ -138,8 +138,12 @@ object Shoebox extends Service {
     def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
     def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
     def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
+    def keepGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/keep")
     def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
     def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
+    def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
+    def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getURISummary")
+    def getUnsubscribeUrlForEmail(email: String) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email",email))
   }
 }
 
@@ -285,7 +289,7 @@ object Cortex extends Service {
     def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
 
-    def sqsDenseLDAURIFeature() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/uriFeature")
+    def graphLDAURIFeatureUpdate() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/graphLDAURIFeatureUpdate")
   }
 }
 

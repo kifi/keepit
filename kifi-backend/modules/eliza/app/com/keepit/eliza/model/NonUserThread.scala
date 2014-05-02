@@ -19,6 +19,9 @@ sealed trait NonUserParticipant {
   val kind: NonUserKind
 
   override def toString() = identifier.toString
+
+  def shortName: String
+  def fullName: String
 }
 object NonUserParticipant {
   implicit val format = new Format[NonUserParticipant] {
@@ -50,6 +53,9 @@ case class NonUserEmailParticipant(address: EmailAddressHolder, econtactId: Opti
   val identifier = address.address
   val referenceId = econtactId.map(_.id.toString)
   val kind = NonUserKinds.email
+
+  def shortName = identifier
+  def fullName = identifier
 }
 
 case class NonUserThread(

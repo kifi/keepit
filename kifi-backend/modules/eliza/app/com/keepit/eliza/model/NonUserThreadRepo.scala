@@ -11,6 +11,7 @@ import com.keepit.model.{EContact, NormalizedURI}
 import com.keepit.common.mail.EmailAddressHolder
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.social.{NonUserKind, NonUserKinds}
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {
@@ -28,6 +29,8 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean
 
   def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean
+
+  def setLastNotifiedAndIncCount(nut: Id[NonUserThread], dt: DateTime)(implicit session: RWSession): Unit
 
 }
 
@@ -120,6 +123,14 @@ class NonUserThreadRepoImpl @Inject() (
     decText.map { i =>
       Id[NonUserThread](i.trim.split(" ").tail.dropWhile(_.length == 0).head.toLong)
     }.toOption
+  }
+
+  def setLastNotifiedAndIncCount(nut: Id[NonUserThread], dt: DateTime)(implicit session: RWSession): Unit = {
+    sqlu"""UPDATE non_user_thread
+      SET notified_count = notified_count+1
+      WHERE id = $nut
+    """.execute()
+    (for (row <- rows if row.id===nut) yield (row.lastNotifiedAt, row.updatedAt)).update(dt, currentDateTime)
   }
 
 }

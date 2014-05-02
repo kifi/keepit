@@ -42,9 +42,8 @@ object IdFilterCompressor {
     bytes(4) = (checksum).toByte
   }
 
-  def toSet(bytes: Array[Byte]): Set[Long]= {
+  def toSet(bytes: Array[Byte]): LongArraySet = {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes))
-    var idSet = Set.empty[Long]
 
     val version = in.readByte().toInt
     if (version > 1) {
@@ -58,15 +57,16 @@ object IdFilterCompressor {
       }
     }
     val size = in.readVInt()
+    var arr = new Array[Long](size)
     var current = 0L
     var i = 0
     while (i < size) {
       val id = current + in.readVLong
-      idSet += id
+      arr(i) = id
       current = id
       i += 1
     }
-    idSet
+    LongArraySet.from(arr)
   }
 
   private def computeChecksum(bytes: Array[Byte]) = {
@@ -77,8 +77,8 @@ object IdFilterCompressor {
 
   def fromSetToBase64(ids: Set[Long]):String = printBase64Binary(toByteArray(ids))
 
-  def fromBase64ToSet(base64: String) = {
-    if (base64.length == 0) Set.empty[Long]
+  def fromBase64ToSet(base64: String): LongArraySet = {
+    if (base64.length == 0) LongArraySet.empty
     else {
       val bytes = try {
         parseBase64Binary(base64)
