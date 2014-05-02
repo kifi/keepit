@@ -52,6 +52,7 @@ angular.module('kifi.routeService', [])
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       search: searchRoute('/site/search'),
+      searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
