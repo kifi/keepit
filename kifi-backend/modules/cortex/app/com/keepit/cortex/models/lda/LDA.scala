@@ -4,11 +4,6 @@ import com.keepit.cortex.core.{BinaryFormatter, StatModel, Versionable}
 import com.keepit.cortex.store.StoreUtil
 import play.api.libs.json._
 
-trait LDA extends StatModel
-
-// mapper: word -> topic vector
-case class DenseLDA(dimension: Int, mapper: Map[String, Array[Float]]) extends LDA
-
 object DenseLDAFormatter extends BinaryFormatter[DenseLDA] {
 
   def toBinary(lda: DenseLDA): Array[Byte] = StoreUtil.DenseWordVecFormatter.toBinary(lda.dimension, lda.mapper)
