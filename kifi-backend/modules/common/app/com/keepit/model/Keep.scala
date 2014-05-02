@@ -9,6 +9,7 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.heimdal.SanitizedKifiHit
 
 case class Keep(
   id: Option[Id[Keep]] = None,
@@ -131,6 +132,15 @@ case class LatestKeepUrlKey(url: String) extends Key[Keep] {
 
 class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+case class KifiHitKey(userId:Id[User], uriId:Id[NormalizedURI]) extends Key[SanitizedKifiHit] {
+  override val version = 1
+  val namespace = "keep_hit"
+  def toKey(): String = userId.id + "#" + uriId.id
+}
+
+class KifiHitCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[KifiHitKey, SanitizedKifiHit](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object KeepStates extends States[Keep] {
   val DUPLICATE = State[Keep]("duplicate")

@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import com.keepit.model.{Collection, User}
+import com.keepit.model.{NormalizedURI, Collection, User}
 import com.keepit.search._
 import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.{ExternalId, Id}
@@ -8,7 +8,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
-import com.keepit.common.healthcheck.{AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.social.BasicUser
@@ -95,13 +95,40 @@ object KifiHitContext {
     (__ \ 'count).read[Int] and
     ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[BasicUser]].fmap(_.map(_.externalId))) and
     ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten.map(ExternalId[Collection](_)))) and
-    ((__ \ 'title).read[String].fmap(Option(_)) orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
+    ((__ \ 'title).readNullable[String] orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
     ((__ \ 'titleMatches).read[Int] orElse (__ \'bookmark \\ 'matches \ 'title).read[JsArray].fmap(_.value.length) orElse Reads.pure(0)) and
     ((__ \ 'urlMatches).read[Int] orElse (__ \'bookmark \\ 'matches \ 'url).read[JsArray].fmap(_.value.length) orElse Reads.pure(0))
   )(KifiHitContext.apply _)
 
+  implicit val writes: Writes[KifiHitContext] = (
+      (__ \ 'isMyBookmark).write[Boolean] and
+      (__ \ 'isPrivate).write[Boolean] and
+      (__ \ 'count).write[Int] and
+      (__ \ 'keepers).write[Seq[ExternalId[User]]] and
+      (__ \ 'tags).write[Seq[ExternalId[Collection]]] and
+      (__ \ 'title).writeNullable[String] and
+      (__ \ 'titleMatches).write[Int] and
+      (__ \ 'urlMatches).write[Int]
+    )(unlift(KifiHitContext.unapply))
 }
 
+case class SanitizedKifiHit(
+  uuid:ExternalId[SanitizedKifiHit],
+  origin:String,
+  url:String,
+  uriId:Id[NormalizedURI],
+  context:KifiHitContext
+)
+
+object SanitizedKifiHit {
+  implicit val format = (
+    (__ \ 'uuid).format(ExternalId.format[SanitizedKifiHit]) and
+    (__ \ 'origin).format[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'context).format[KifiHitContext]
+  )(SanitizedKifiHit.apply _, unlift(SanitizedKifiHit.unapply))
+}
 
 @Singleton
 class SearchAnalytics @Inject() (

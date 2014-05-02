@@ -32,6 +32,7 @@ import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import scala.util.{Try, Failure, Success}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.SanitizedKifiHit
 
 
 class ShoeboxController @Inject() (
@@ -58,6 +59,7 @@ class ShoeboxController @Inject() (
   emailAddressRepo: EmailAddressRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
   keepClicksRepo: KeepClickRepo,
+  kifiHitCache: KifiHitCache,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
   pageInfoRepo:PageInfoRepo,
@@ -631,6 +633,36 @@ class ShoeboxController @Inject() (
         keepers.foreach { extId =>
           val keeperId: Id[User] = userRepo.get(extId).id.get
           userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
+        }
+      }
+    }
+    Ok
+  }
+
+  def kifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
+    val json = request.body
+    val clicker = (json \ "clickerId").as(Id.format[User])
+    val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
+    db.readWrite { implicit rw =>
+      val keepers = kifiHit.context.keepers
+      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true) else {
+        kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
+          case Some(hit) =>
+            log.warn(s"[kifiHit($clicker,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
+          case None =>
+            kifiHitCache.set(KifiHitKey(clicker, kifiHit.uriId), kifiHit)
+            keepers.foreach { extId =>
+              val keeperId: Id[User] = userRepo.get(extId).id.get
+              userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
+              keepRepo.getByUriAndUser(kifiHit.uriId, keeperId) match {
+                case None =>
+                  log.warn(s"[kifiHit($clicker,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
+                  // move on
+                case Some(keep) =>
+                  val saved = keepClicksRepo.save(KeepClick(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId))
+                  log.info(s"[kifiHit($clicker, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
+              }
+            }
         }
       }
     }
