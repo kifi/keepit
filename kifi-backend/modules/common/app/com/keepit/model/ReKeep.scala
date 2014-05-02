@@ -27,3 +27,5 @@ case class ReKeep(
 }
 
 object ReKeepState extends States[ReKeep]
+
+case class RichReKeep(id:Option[Id[ReKeep]], createdAt:DateTime, updatedAt:DateTime, state:State[ReKeep], keeper:User, keep:Keep, uri:NormalizedURI, srcUser:User, srcKeep:Keep, attributionFactor:Int)

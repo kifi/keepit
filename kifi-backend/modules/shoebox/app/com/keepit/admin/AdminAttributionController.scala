@@ -12,6 +12,7 @@ import views.html
 class AdminAttributionController @Inject()(
   actionAuthenticator: ActionAuthenticator,
   db: Database,
+  userRepo: UserRepo,
   keepRepo: KeepRepo,
   keepClickRepo: KeepClickRepo,
   rekeepRepo: ReKeepRepo,
@@ -40,6 +41,7 @@ class AdminAttributionController @Inject()(
   def rekeepsView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnly { implicit ro =>
       val t = rekeepRepo.page(page, size).map { k =>
+        val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
         val uri = uriRepo.get(k.uriId)
         val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
         val imgOpt = if (!showImage) None else
@@ -47,7 +49,7 @@ class AdminAttributionController @Inject()(
             pageInfo <- pageInfoOpt
             imgId <- pageInfo.imageInfoId
           } yield imageInfoRepo.get(imgId)
-        (k, uri, pageInfoOpt, imgOpt)
+        (rk, uri, pageInfoOpt, imgOpt)
       }
       (t, rekeepRepo.count)
     }
