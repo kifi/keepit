@@ -161,14 +161,22 @@
       ).done(done).fail(fail);
 
       function done(data) {
-        $("#user_uri_sim_result").empty().prepend(data)
+
+        var js = JSON.parse(data)
+        var elapsed = js.elapse
+        var uris = js.uris
+        var scores = js.scores
+        var msg = "<br>" + "Time elapsed (seconds): " + elapsed
+
+        for(var i = 0; i < uris.length; i++){
+          msg += "<br>" + '<a href = "/admin/scraped/' + uris[i] + '">' +  uris[i] + "</a>" + "  --->  " + scores[i]
+        }
+
+        $("#user_uri_sim_result").empty().prepend(msg)
       }
       function fail() { alert("bad things happened") }
 
     })
-
-
-
 
 
 
