@@ -33,6 +33,7 @@ class KeepInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
+  kifiHitCache: KifiHitCache,
   keepClickRepo: KeepClickRepo,
   rekeepRepo: ReKeepRepo,
   keptAnalytics: KeepingAnalytics,
@@ -102,21 +103,16 @@ class KeepInterner @Inject() (
   def keepAttribution(userId:Id[User], newKeeps:Seq[Keep]):Unit = {
     newKeeps.foreach { keep =>
       db.readWrite { implicit rw =>
-        // todo: memcache
-//        keepClickRepo.getMostRecentClickByClickerAndUriId(userId, keep.uriId) match {
-//          case None =>
-//            log.info(s"[keepAttribution($userId)] no click event found for ${keep.uriId}")
-//          case Some(click) =>
-//            if (click.createdAt.isAfter(currentDateTime.minusMinutes(15))) { // tweak
-//              keepClickRepo.getClicksByUUID(click.searchUUID) map { c =>
-//                val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
-//                rekeepRepo.save(rekeep)
-//                log.info(s"[keepAttribution($userId)] rekeep=$rekeep; most recent click: $c")
-//              }
-//            } else {
-//              log.info(s"[keepAttribution($userId)] most recent click beyond threshold: $click")
-//            }
-//        }
+        kifiHitCache.get(KifiHitKey(userId, keep.uriId)) match {
+          case None =>
+            println(s"[keepAttribution($userId)] no click event found for ${keep.uriId}")
+          case Some(hit) =>
+            keepClickRepo.getClicksByUUID(hit.uuid) map { c =>
+              val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
+              rekeepRepo.save(rekeep)
+              println(s"[keepAttribution($userId)] rekeep=$rekeep; most recent click: $c")
+            }
+        }
       }
     }
   }

@@ -7,7 +7,7 @@ import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
 import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{KifiHitContext, SanitizedKifiHit, HeimdalContext}
 import com.keepit.shoebox.{FakeKeepImportsModule, KeepImportsModule}
 import com.keepit.common.actor.{StandaloneTestActorSystemModule, TestActorSystemModule}
 import akka.actor.ActorSystem
@@ -90,10 +90,11 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
     "tracking clicks & rekeeps" in {
       withDb(modules: _*) { implicit injector =>
-        val (u1, u2) = db.readWrite { implicit session =>
+        val (u1, u2, u3) = db.readWrite { implicit session =>
           val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
-          val u2 = userRepo.save(User(firstName = "Clicker", lastName = "Foo"))
-          (u1, u2)
+          val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
+          val u3 = userRepo.save(User(firstName = "Clicker", lastName = "ClickyClickClick"))
+          (u1, u2, u3)
         }
         val bookmarkInterner = inject[KeepInterner]
         val raw = inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
@@ -107,39 +108,63 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         deduped === raw
         deduped.size === 2
         val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw, u1.id.get, KeepSource.email, true)
+        val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw, u2.id.get, KeepSource.default, true)
 
-        val (old, kc) = db.readWrite { implicit rw =>
-          val old = keepClickRepo.save(KeepClick(createdAt = currentDateTime.minusMinutes(10), searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
-          val kc = keepClickRepo.save(KeepClick(createdAt = currentDateTime, searchUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, clickerId = u2.id.get))
-          (old, kc)
+        val (kc1, kc2) = db.readWrite { implicit rw =>
+          val ts = currentDateTime
+          val uuid = ExternalId[SanitizedKifiHit]()
+          val kc1 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))  // u3 not recorded
+          val kc2 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(1).id.get, uriId = keeps2(1).uriId))
+
+          val kifiHitCache = inject[KifiHitCache]
+          kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, "https://www.google.com", raw(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
+
+          (kc1, kc2)
         }
 
-        val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw, u2.id.get, KeepSource.default, true)
+        val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw, u3.id.get, KeepSource.default, true)
 
         db.readWrite { implicit session =>
           userRepo.get(u1.id.get) === u1
           keeps1.size === 2
-          keepRepo.all.size === 4
+          keepRepo.all.size === 6
           keeps2.size === 2
+          keeps3.size === 2
 
-          val clicks = keepClickRepo.all()
-          clicks.size === 2
+          val allClicks = keepClickRepo.all()
+          allClicks.size === 2
 
-          val mostRecentOpt = keepClickRepo.getMostRecentClickByClickerAndKeepId(u2.id.get, kc.keepId)
-          val click = mostRecentOpt.get
-          click.createdAt !== old.createdAt
-          click.createdAt === kc.createdAt
-          click.searchUUID === kc.searchUUID
-          click.keeperId === u1.id.get
-          click.keepId === keeps1(1).id.get
-          click.clickerId === u2.id.get
+          val clicksByUUID = keepClickRepo.getClicksByUUID(kc2.hitUUID)
+          clicksByUUID.size === 2
+
+          val c1 = clicksByUUID.find(_.keeperId == u1.id.get).get
+          c1.createdAt === kc1.createdAt
+          c1.createdAt === kc2.createdAt
+          c1.hitUUID === kc2.hitUUID
+
+          c1.keeperId === u1.id.get
+          c1.keepId === keeps1(1).id.get
+
+          val c2 = clicksByUUID.find(_.keeperId == u2.id.get).get
+          c2.createdAt === kc1.createdAt
+          c2.hitUUID === kc1.hitUUID
+          c2.keeperId === u2.id.get
+          c2.keepId === keeps2(1).id.get
+
           val rekeeps = rekeepRepo.all
-          rekeeps.size === 1
-          val rekeep = rekeeps(0)
-          rekeep.keeperId === u1.id.get
-          rekeep.keepId === keeps1(1).id.get
-          rekeep.srcUserId === u2.id.get
-          rekeep.srcKeepId === keeps2(1).id.get
+          rekeeps.size === 2
+
+          val rk1 = rekeeps.find(_.keeperId == u1.id.get).get
+          rk1.keeperId === u1.id.get
+          rk1.keepId === keeps1(1).id.get
+          rk1.srcUserId === u3.id.get
+          rk1.srcKeepId === keeps3(1).id.get
+
+          val rk2 = rekeeps.find(_.keeperId == u2.id.get).get
+          rk2.keeperId === u2.id.get
+          rk2.keepId === keeps2(1).id.get
+          rk2.srcUserId === u3.id.get
+          rk2.srcKeepId === keeps3(1).id.get
         }
       }
     }

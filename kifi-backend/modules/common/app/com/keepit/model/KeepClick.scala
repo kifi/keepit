@@ -5,6 +5,7 @@ import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.search.ArticleSearchResult
+import com.keepit.heimdal.SanitizedKifiHit
 
 case class KeepClick(
   id: Option[Id[KeepClick]] = None,
@@ -12,7 +13,7 @@ case class KeepClick(
   updatedAt: DateTime = currentDateTime,
   state: State[KeepClick] = KeepClicksStates.ACTIVE,
 
-  searchUUID: ExternalId[ArticleSearchResult],
+  hitUUID: ExternalId[SanitizedKifiHit],
   numKeepers: Int,
 
   keeperId: Id[User],

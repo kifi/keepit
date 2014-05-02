@@ -35,7 +35,7 @@ import com.kifi.franz.QueueName
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
+import com.keepit.heimdal.SanitizedKifiHit
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -89,6 +89,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
+  def kifiHit(clicker: Id[User], hit:SanitizedKifiHit):Future[Unit]
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
@@ -570,6 +571,15 @@ class ShoeboxServiceClientImpl @Inject() (
       "keepers" -> JsArray(keepers.map(id => JsString(id.id)))
     )
     call(Shoebox.internal.clickAttribution, payload)
+  }
+
+  def kifiHit(clickerId: Id[User], hit:SanitizedKifiHit): Future[Unit] = {
+    implicit val userIdFormat = Id.format[User]
+    val payload = Json.obj(
+      "clickerId" -> clickerId,
+      "kifiHit" -> hit
+    )
+    call(Shoebox.internal.kifiHit, payload) map { r => Unit }
   }
 
   def assignScrapeTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = {

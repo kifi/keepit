@@ -1,8 +1,9 @@
 package com.keepit.typeahead
 
 import scala.math.min
+import com.keepit.common.logging.Logging
 
-object PrefixMatching {
+object PrefixMatching extends Logging {
   private[this] def initDistance(numTerms: Int): Array[Int] = {
     val scores = new Array[Int](numTerms + 1)
     var i = 0
@@ -30,7 +31,7 @@ object PrefixMatching {
   def distance(names: Array[String], queryTerms: Array[String]): Int = {
     // this code is performance critical, intentionally written in non-functional style
     val dists = initDistance(queryTerms.length)
-    var sc = 0;
+    var sc = 0
     var matchFlags = 1
     val allMatched =  ~(0xFFFFFFFF << (queryTerms.length + 1))
     val maxDist = Int.MaxValue
@@ -46,12 +47,15 @@ object PrefixMatching {
         sc = minScore(
           if (isMatch) {
             matchFlags |= (1 << j)
+            log.info(s"dist($i,$j) isMatch=TRUE name=$name queryTerms($j - 1)=${queryTerms(j - 1)} matchFlags=${java.lang.Integer.toBinaryString(matchFlags)} prev=$prev")
             prev
           } else {
             prev + i + j
           },
           if (j == queryTerms.length) {
-            if (matchFlags == allMatched) dists(j) else maxDist
+            if (matchFlags == allMatched) {
+              dists(j)
+            } else maxDist
           } else {
             dists(j) + i + j
           },

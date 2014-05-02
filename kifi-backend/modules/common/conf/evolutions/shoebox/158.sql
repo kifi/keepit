@@ -9,7 +9,7 @@ CREATE TABLE keep_click(
     updated_at datetime NOT NULL,
     state varchar(20)   NOT NULL,
 
-    search_uuid varchar(36) NOT NULL,
+    hit_uuid varchar(36) NOT NULL,
     num_keepers int  NOT NULL DEFAULT 1,
 
     keeper_id bigint(20)  NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE keep_click(
     CONSTRAINT keep_click_keeper_id  FOREIGN KEY (keeper_id)  REFERENCES user(id),
     CONSTRAINT keep_click_keep_id    FOREIGN KEY (keep_id) REFERENCES bookmark(id),
     CONSTRAINT keep_click_uri_id     FOREIGN KEY (uri_id) REFERENCES normalized_uri(id),
-    INDEX keep_click_uuid(search_uuid)
+    INDEX keep_click_uuid(hit_uuid)
 );
 
 insert into evolutions (name, description) values('158.sql', 'adding keep_click table');
