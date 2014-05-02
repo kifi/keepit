@@ -24,7 +24,7 @@ import play.api.mvc.Action
 import com.keepit.scraper._
 import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType}
 
-import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
+import com.keepit.commanders.{KeepsCommander, RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
 import com.keepit.normalizer.VerifiedCandidate
 import com.keepit.model.KifiInstallation
@@ -57,9 +57,7 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
-  userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  keepClicksRepo: KeepClickRepo,
-  kifiHitCache: KifiHitCache,
+  keepsCommander: KeepsCommander,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
   pageInfoRepo:PageInfoRepo,
@@ -622,50 +620,11 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def clickAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val clicker = Id.format[User].reads(json \ "clicker").get
-    val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
-    val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
-    db.readWrite { implicit session =>
-      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
-      else {
-        keepers.foreach { extId =>
-          val keeperId: Id[User] = userRepo.get(extId).id.get
-          userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
-        }
-      }
-    }
-    Ok
-  }
-
   def kifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val clicker = (json \ "clickerId").as(Id.format[User])
     val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
-    db.readWrite { implicit rw =>
-      val keepers = kifiHit.context.keepers
-      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true) else {
-        kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
-          case Some(hit) =>
-            log.warn(s"[kifiHit($clicker,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
-          case None =>
-            kifiHitCache.set(KifiHitKey(clicker, kifiHit.uriId), kifiHit)
-            keepers.foreach { extId =>
-              val keeperId: Id[User] = userRepo.get(extId).id.get
-              userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
-              keepRepo.getByUriAndUser(kifiHit.uriId, keeperId) match {
-                case None =>
-                  log.warn(s"[kifiHit($clicker,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
-                  // move on
-                case Some(keep) =>
-                  val saved = keepClicksRepo.save(KeepClick(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId))
-                  log.info(s"[kifiHit($clicker, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
-              }
-            }
-        }
-      }
-    }
+    keepsCommander.processKifiHit(clicker, kifiHit)
     Ok
   }
 
