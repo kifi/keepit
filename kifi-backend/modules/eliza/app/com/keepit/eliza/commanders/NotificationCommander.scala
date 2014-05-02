@@ -154,7 +154,7 @@ class NotificationCommander @Inject() (
             message.from match {
               case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, allUserImageUrls(id), text, lookHereTexts, lookHereImageUrls)
               case MessageSender.NonUser(nup) => {
-                ExtendedThreadItem(nup.shortName, nup.fullName, "https://www.kifi.com/assets/img/ghost.200.png", text, lookHereTexts, Seq.empty)
+                ExtendedThreadItem(nup.shortName, nup.fullName, "//www.kifi.com/assets/img/ghost.200.png", text, lookHereTexts, Seq.empty)
               }
               case _ => throw new Exception("Impossible")
             }

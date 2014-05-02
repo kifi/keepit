@@ -73,6 +73,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
   }
 
+  //endedWith is either "unload" or "refinement"
   function sendSearchedEvent(endedWith) {
     api.port.emit("log_search_event", [
       "searched",

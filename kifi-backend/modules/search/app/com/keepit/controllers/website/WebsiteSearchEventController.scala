@@ -43,7 +43,7 @@ class WebsiteSearchEventController @Inject() (
     val userId = request.userId
     val json = request.body
     val basicSearchContext = json.as[BasicSearchContext]
-    val endedWith = (json \ "endedWith").as[String]
+    val endedWith = (json \ "endedWith").as[String] //either "unload" or "refinement"
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       searchEventCommander.searched(userId, time, basicSearchContext, endedWith)(contextBuilder.build)
