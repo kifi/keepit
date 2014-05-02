@@ -150,6 +150,10 @@
   position: absolute;
   background-position: center;
   background-size: cover;
+  text-align: center;
+  font-size: 24px;
+  line-height: 26px;
+  color: white;
 }
 .kifi-notice-pic-0 {
   top: 0;
@@ -157,6 +161,17 @@
   height: 53px;
   width: 53px;
   border-radius: 3px !important;
+}
+.kifi-notice-mosaic-1>.kifi-notice-pic-0,
+.kifi-notice-mosaic-2>.kifi-notice-pic-1 {
+  line-height: 51px;
+  font-size: 36px;
+}
+.kifi-notice-mosaic-2>.kifi-notice-pic-0 {
+  font-size: 20px;
+}
+.kifi-notice-mosaic-3>.kifi-notice-pic-0 {
+  line-height: 51px;
 }
 .kifi-notice-mosaic-2>.kifi-notice-pic-0,
 .kifi-notice-mosaic-3>.kifi-notice-pic-0 {
@@ -170,16 +185,19 @@
   width: 26px;
   height: 26px;
   border-radius: 0 0 3px !important;
+  font-size: 20px;
 }
 .kifi-notice-sent .kifi-notice-pic-0 {
   top: 26px;
   left: 26px;
   height: 26px;
   width: 26px;
-  background-color: #fff;
   border: 2px solid #fff;
   border-radius: 50% !important;
   z-index: 1;
+}
+.kifi-notice-sent.kifi-notice-pic-user {
+  background-color: #fff;
 }
 .kifi-notice-sent>.kifi-notice-mosaic-3::before,
 .kifi-notice-sent>.kifi-notice-mosaic-4::before {

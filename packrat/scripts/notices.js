@@ -1,4 +1,5 @@
 // @require styles/keeper/notices.css
+// @require styles/keeper/participant_colors.css
 // @require scripts/api.js
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
