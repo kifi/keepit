@@ -22,7 +22,7 @@
             @for((click, uri, pageOpt, imgOpt) <- keepInfos){
             <tr>
                 <td>@click.id</td>
-                <td>@click.searchUUID.toString().takeRight(5)</td>
+                <td>@click.hitUUID.toString().takeRight(5)</td>
                 <td>@click.numKeepers</td>
                 <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(click.keeperId)">@click.keeperId</a></td>
                 <td>@click.keepId</td>
