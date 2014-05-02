@@ -30,7 +30,7 @@ object PrefixMatching {
   def distance(names: Array[String], queryTerms: Array[String]): Int = {
     // this code is performance critical, intentionally written in non-functional style
     val dists = initDistance(queryTerms.length)
-    var sc = 0
+    var sc = 0;
     var matchFlags = 1
     val allMatched =  ~(0xFFFFFFFF << (queryTerms.length + 1))
     val maxDist = Int.MaxValue
