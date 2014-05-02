@@ -142,7 +142,7 @@ class NotificationCommander @Inject() (
             participants = participants.toSeq,
             conversationStarter = starterUser.firstName + " " + starterUser.lastName,
             unsubUrl = unsubUrl,
-            muteUrl = "https://kifi.com/extmsg/email/mute?publicId=" + nut.publicId.get //Todo (Stephen): remove hard coded url with public id
+            muteUrl = "https://www.kifi.com/extmsg/email/mute?publicId=" + nut.publicId.get //Todo (Stephen): remove hard coded url with public id
           )
 
           var relevantMessages = messages
