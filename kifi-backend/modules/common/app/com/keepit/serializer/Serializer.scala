@@ -53,7 +53,6 @@ object Serializer {
         case JsBoolean(true) => Some(rawJs \ "data")
         case _ => Some(rawJs)
       }
-      print(s"[reads] obj=$obj rawJs=$rawJs js=$js")
       js.map(Json.fromJson[T](_)(formatter).get)
     }
   }

@@ -105,12 +105,12 @@ class KeepInterner @Inject() (
       db.readWrite { implicit rw =>
         kifiHitCache.get(KifiHitKey(userId, keep.uriId)) match {
           case None =>
-            println(s"[keepAttribution($userId)] no click event found for ${keep.uriId}")
+            log.info(s"[keepAttribution($userId)] no click event found for ${keep.uriId}")
           case Some(hit) =>
             keepClickRepo.getClicksByUUID(hit.uuid) map { c =>
               val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
               rekeepRepo.save(rekeep)
-              println(s"[keepAttribution($userId)] rekeep=$rekeep; most recent click: $c")
+              log.info(s"[keepAttribution($userId)] rekeep=$rekeep; most recent click: $c")
             }
         }
       }
