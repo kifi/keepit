@@ -247,6 +247,7 @@ class SearchAnalytics @Inject() (
     val (origin, source) = URI.parse(rawOrigin).toOption.flatMap(_.host) match {
       case Some(googleHost) if googleHost.domain.contains("google") => (googleHost.name, "Google")
       case Some(kifiHost) if kifiHost.domain.contains("kifi") => (kifiHost.name, "Site")
+      case Some(kifiHost) if kifiHost.domain.contains("ezkeep.com") => (kifiHost.name, "DevSite")
       case Some(otherHost) => (otherHost.name, "Unknown")
       case None if rawOrigin.toLowerCase == "mobile" || rawOrigin.toLowerCase() == "ios app" => ("iOS App", "iOS App")
       case None if rawOrigin.toLowerCase == "android App" => ("Android App", "Android App")
