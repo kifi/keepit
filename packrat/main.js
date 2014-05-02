@@ -722,6 +722,10 @@ api.port.on({
     }
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
+  set_look_here_mode: function (on) {
+    ajax('POST', '/ext/pref/lookHereMode?on=' + on);
+    if (prefs) prefs.lookHereMode = on;
+  },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
     if (prefs) prefs.enterToSend = data;
@@ -755,6 +759,32 @@ api.port.on({
   invite_friends: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/friends/invite');
     mixpanel.track('user_clicked_pane', {type: source, action: 'clickInviteFriends'});
+  },
+  screen_capture: function (data, respond) {
+    api.screenshot(function (drawableEl, canvas) {
+      var bounds = data.bounds;
+      var hScale = drawableEl.width / data.win.width;
+      var vScale = drawableEl.height / data.win.height;
+      canvas.width = bounds.width;
+      canvas.height = bounds.height;
+      var ctx = canvas.getContext('2d');
+      // ctx.fillStyle = 'rgb(200,0,0)';
+      // ctx.fillRect(0, 0, winWidth, winHeight);
+      for (var i = 0; i < data.rects.length; i++) {
+        var rect = data.rects[i];
+        ctx.drawImage(
+          drawableEl,
+          rect.left * hScale,
+          rect.top * vScale,
+          rect.width * hScale,
+          rect.height * vScale,
+          rect.left - bounds.left,
+          rect.top - bounds.top,
+          rect.width,
+          rect.height);
+      }
+      respond(canvas.toDataURL('image/png'));
+    });
   },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();

@@ -1,6 +1,5 @@
 package com.keepit.queue
 
-import com.keepit.common.queue.SimpleQueue
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.normalizer.NormalizationCandidate
@@ -17,8 +16,3 @@ object NormalizationUpdateTask {
     )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
 }
 
-trait NormalizationUpdateJobQueue extends SimpleQueue {
-  def sendTask(task:NormalizationUpdateTask) = {
-    send(Json.stringify(Json.toJson(task)))
-  }
-}

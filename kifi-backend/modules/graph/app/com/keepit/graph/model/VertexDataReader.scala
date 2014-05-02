@@ -129,10 +129,20 @@ trait LDATopicReader extends VertexDataReader {
   def getVersion(): ModelVersion[DenseLDA] = VersionedLDATopicId.getVersion(id.id)
   def getTopicId(): LDATopicId = VersionedLDATopicId.getUnversionedId(id.id)
 }
-
 case object LDATopicReader extends VertexKind[LDATopicReader]{
   val header = 7.toByte
   def apply(rawDataReader: RawDataReader): LDATopicReader = ???
   implicit val writes = Writes[LDATopicReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[LDATopicReader]] { json => (json \ "id").validate.map(LDATopicData(_)) }
+}
+
+trait KeepReader extends VertexDataReader {
+  type V = KeepReader
+  def kind = KeepReader
+}
+case object KeepReader extends VertexKind[KeepReader] {
+  val header = 8.toByte
+  def apply(rawDataReader: RawDataReader): KeepReader = ???
+  implicit val writes = Writes[KeepReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[KeepReader]] { json => (json \ "id").validate.map(KeepData(_)) }
 }

@@ -43,6 +43,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
+import com.keepit.common.external.FakeExternalServiceModule
 
 class KeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -53,7 +54,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    FakeExternalServiceModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id

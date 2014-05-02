@@ -18,10 +18,10 @@ import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
-import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import play.api.mvc.{AnyContent, Action}
+import com.keepit.commanders.URISummaryCommander
 import com.keepit.commanders.RichWhoKeptMyKeeps
 
 class AdminBookmarksController @Inject() (
@@ -33,9 +33,8 @@ class AdminBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
-  pageInfoRepo: PageInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  s3ScreenshotStore: S3ScreenshotStore,
+  uriSummaryCommander: URISummaryCommander,
   clock: Clock)
     extends AdminController(actionAuthenticator) {
 
@@ -46,10 +45,9 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val pageInfoOpt = pageInfoRepo.getByUri(bookmark.uriId)
-      s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrl =>
-        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imgUrl.getOrElse(""), screenshotUrl))
+      uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+        val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl))
       }
     }
   }
@@ -57,7 +55,17 @@ class AdminBookmarksController @Inject() (
   def whoKeptMyKeeps = AdminHtmlAction.authenticated { implicit request =>
     val since = clock.now.minusDays(7)
     val richWhoKeptMyKeeps = db.readOnly { implicit session =>
-      val whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since)
+      var maxUsers = 30
+      var whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since, maxUsers)
+
+      while (whoKeptMyKeeps.size > 15) {
+        //trimming the last article and removing most popular articles
+        maxUsers = maxUsers - 2
+        whoKeptMyKeeps = whoKeptMyKeeps.filterNot(_.users.size > maxUsers)
+        if (whoKeptMyKeeps.size > 15) {
+          whoKeptMyKeeps = whoKeptMyKeeps.take(whoKeptMyKeeps.size - 2)
+        }
+      }
       whoKeptMyKeeps map { whoKeptMyKeep =>
         RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep,
           uriRepo.get(whoKeptMyKeep.uri), whoKeptMyKeep.users map userRepo.get)

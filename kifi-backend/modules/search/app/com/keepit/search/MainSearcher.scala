@@ -127,16 +127,16 @@ class MainSearcher(
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
-      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
-      val mySearchUris = socialGraphInfo.mySearchUris
-      val friendSearchUris = socialGraphInfo.friendSearchUris
-
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val weight = personalizedSearcher.createWeight(articleQuery)
+
+      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+      val mySearchUris = socialGraphInfo.mySearchUris
+      val friendSearchUris = socialGraphInfo.friendSearchUris
 
       val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
@@ -150,7 +150,7 @@ class MainSearcher(
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
-          if (!idFilter.contains(id)) {
+          if (idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
             if (myUriEdgeAccessor.seek(id) && mySearchUris.contains(id)) {
@@ -206,15 +206,16 @@ class MainSearcher(
 
         val h = hit.hit
         val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
+        val sharingUserSize = sharingUsers.size.toFloat
 
-        if (numCollectStats > 0 && sharingUsers.size > 0) {
+        if (numCollectStats > 0 && sharingUserSize > 0.0f) {
           val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
           sharingUsers.destIdLongSet.foreach{ f =>
             val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
             if (keptTime < createdAt) {
-              friendStats.add(f, hit.score * 1.5f) // an early keeper gets more credit
+              friendStats.add(f, hit.score * 1.5f / sharingUserSize) // an early keeper gets more credit
             } else {
-              friendStats.add(f, hit.score)
+              friendStats.add(f, hit.score/ sharingUserSize)
             }
           }
           numCollectStats -= 1
@@ -243,11 +244,12 @@ class MainSearcher(
       friendsHits.toRankedIterator.forall{ case (hit, rank) =>
         val h = hit.hit
         val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
+        val sharingUserSize = sharingUsers.size.toFloat
 
         var recencyScoreVal = 0.0f
-        if (numCollectStats > 0) {
+        if (numCollectStats > 0 && sharingUserSize > 0.0f) {
           val introducedAt = sharingUsers.destIdLongSet.foldLeft(Long.MaxValue){ (t, f) =>
-            friendStats.add(f, hit.score)
+            friendStats.add(f, hit.score / sharingUserSize)
             val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
             min(t, keptTime)
           }

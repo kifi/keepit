@@ -35,13 +35,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig, embedlyClient: EmbedlyClient): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, embedlyClient, systemAdminMailSender, config)
-  }
-
-  @Singleton
-  @Provides
   def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
     new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
   }
@@ -85,13 +78,6 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     whenConfigured("amazon.s3.social.bucket")(
       prodStoreModule.socialUserRawInfoStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemorySocialUserRawInfoStoreImpl())
-
-  @Singleton
-  @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig, embedlyClient: EmbedlyClient): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, embedlyClient, systemAdminMailSender, config)
-  }
 
   @Singleton
   @Provides

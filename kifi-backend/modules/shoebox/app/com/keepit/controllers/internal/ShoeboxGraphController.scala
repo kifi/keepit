@@ -24,6 +24,7 @@ private case class UserUpdate(seq: SequenceNumber[User], queueRef: QueueName) ex
 private case class SocialConnectionUpdate(seq: SequenceNumber[SocialConnection], queueRef: QueueName) extends UpdateMessage
 private case class SocialUserInfoUpdate(seq: SequenceNumber[SocialUserInfo], queueRef: QueueName) extends UpdateMessage
 private case class UserConnectionUpdate(seq: SequenceNumber[UserConnection], queueRef: QueueName) extends UpdateMessage
+private case class KeepUpdate(seq: SequenceNumber[Keep], queueRef: QueueName) extends UpdateMessage
 
 
 private class GraphUpdateActor @Inject() (
@@ -33,6 +34,7 @@ private class GraphUpdateActor @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
+  keepRepo: KeepRepo,
   db: Database
 )  extends FortyTwoActor(airbrake) with Logging {
   private val fetchSize = 1000
@@ -46,7 +48,7 @@ private class GraphUpdateActor @Inject() (
     case UserUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
       val updates = db.readOnly { implicit session =>
-        userRepo.getUsersSince(seq, fetchSize)
+        userRepo.getBySequenceNumber(seq, fetchSize)
       }.map { user =>
         UserGraphUpdate(user.id.get, user.seq)
       }
@@ -56,12 +58,12 @@ private class GraphUpdateActor @Inject() (
     case SocialConnectionUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
       val updates = db.readOnly { implicit session =>
-        socialConnectionRepo.getBySequenceNumber(seq, fetchSize)
-      }.map { sc =>
-        //SocialConnectionGraphUpdate(sc.socialUser1, sc.socialUser2, sc.)
+        socialConnectionRepo.getConnAndNetworkBySeqNumber(seq, fetchSize)
+      }.map { case (su1, su2, state, seq, networkType) =>
+        SocialConnectionGraphUpdate(su1, su2, networkType, state, seq)
       }
 
-      //updates.map(queue.send)
+      updates.map(queue.send)
 
     case SocialUserInfoUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -83,6 +85,15 @@ private class GraphUpdateActor @Inject() (
 
       updates.map(queue.send)
 
+    case KeepUpdate(seq, queueRef) =>
+      val queue = createQueue(queueRef)
+      val updates = db.readOnly { implicit session =>
+        keepRepo.getBySequenceNumber(seq, fetchSize)
+      }.map { keep =>
+        KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.seq)
+      }
+
+      updates.map(queue.send)
   }
 }
 
@@ -115,6 +126,13 @@ class ShoeboxGraphController @Inject() (
     val seq = SequenceNumber[UserConnection]((request.body \ "seq").as[Long])
     val queueRef = QueueName((request.body \ "queue").as[String])
     actor.ref ! UserConnectionUpdate(seq, queueRef)
+    Status(202)("0")
+  }
+
+  def sendKeepUpdates() = Action(parse.tolerantJson) { request =>
+    val seq = SequenceNumber[Keep]((request.body \ "seq").as[Long])
+    val queueRef = QueueName((request.body \ "queue").as[String])
+    actor.ref ! KeepUpdate(seq, queueRef)
     Status(202)("0")
   }
 }

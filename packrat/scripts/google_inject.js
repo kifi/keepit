@@ -29,6 +29,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   var origin = location.origin;
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
+  var $kifi = $res.find('.kifi-res-bar-kifi');
   var $status = $bar.find('.kifi-res-bar-status');
   var $arrow = $res.find('.kifi-res-arrow');
   attachKifiRes();
@@ -72,6 +73,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
   }
 
+  //endedWith is either "unload" or "refinement"
   function sendSearchedEvent(endedWith) {
     api.port.emit("log_search_event", [
       "searched",
@@ -91,8 +93,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         "thirdPartyResultsClicked": clicks.google.length,
         "refinements": refinements,
         "pageSession": pageSession,
-        "endedWith": endedWith,
-        "stuff": "thing"
+        "endedWith": endedWith
       }
     ]);
   }
@@ -220,6 +221,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         }), 2000);
       }
     });
+    $kifi[0].search = '?q=' + encodeURIComponent(q);
 
     if (window.searchIntro) {
       searchIntro.hide();

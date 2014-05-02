@@ -43,7 +43,7 @@ angular.module('kifi.routeService', [])
       tagOrdering: route('/collections/ordering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
-      friends: function(page, pageSize) {
+      friends: function (page, pageSize) {
         return route('/user/friends') + '?page=' + page + '&pageSize=' + pageSize;
       },
       friendRequest: function (id) {
@@ -52,7 +52,8 @@ angular.module('kifi.routeService', [])
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       search: searchRoute('/site/search'),
-      searchAnalytics: searchRoute('/site/...'),
+      searchedAnalytics: searchRoute('/site/search/events/searched'),
+      searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');

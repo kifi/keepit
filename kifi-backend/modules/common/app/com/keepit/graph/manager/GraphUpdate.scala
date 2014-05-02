@@ -101,6 +101,23 @@ case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnection
   )(SocialConnectionGraphUpdate.apply, unlift(SocialConnectionGraphUpdate.unapply))
 }
 
+case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
+  type U = KeepGraphUpdate
+  def kind = KeepGraphUpdate
+  def seq = kind.seq(keepSeq.value)
+}
+
+case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
+  val code = "keep_graph_update"
+  implicit val format: Format[KeepGraphUpdate] = (
+    (__ \ 'id).format(Id.format[Keep]) and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'state).format(State.format[Keep]) and
+    (__ \ 'keepSeq).format(SequenceNumber.format[Keep])
+  )(KeepGraphUpdate.apply, unlift(KeepGraphUpdate.unapply))
+}
+
 case class LDAURITopicGraphUpdate(
   uriId: Id[NormalizedURI],
   uriSeq: CortexVersionedSequenceNumber[NormalizedURI],

@@ -129,7 +129,7 @@
     if (opts.insertBefore) {
       $h.insertBefore(opts.insertBefore);
     } else {
-      $h.appendTo(opts.parent || (doc.body.tagName === 'BODY' ? doc.body : doc.documentElement));
+      $h.appendTo(opts.parent || (doc.body.tagName.toLowerCase() === 'body' ? doc.body : doc.documentElement));
     }
   }
   function show() {

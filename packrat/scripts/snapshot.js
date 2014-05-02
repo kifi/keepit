@@ -1,7 +1,9 @@
 var snapshot = function () {
   'use strict';
 
-  // Characters that must not be considered part of names/tokens.
+  // Characters that must not be considered part of names/tokens when parsing a generated selector.
+  // ' ' is not here because it terminates a unicode escape and because generated selectors
+  // never use the ancestor combinator.
   var delimRe = /[#\.:>\t]/;
 
   // HTML IDs and class names may not contain any space characters.
@@ -36,39 +38,180 @@ var snapshot = function () {
   }
 
   // Generates a detailed CSS selector for an element including, at a minimum, the tag name,
-  // id (if present), and any classes on the element and all ancestors between it and the body.
+  // id (if present), and any classes on the element and all ancestors between it and scopeEl.
   // e.g. "body>section#content>div.wrap>div#content-main.full>article.article>div#wikiArticle.page-content.boxed>table.standard-table>tbody>tr:nth-child(1)>td:nth-child(2)"
-  function generateSelector(el) {
+  function generateSelector(el, scopeEl, scopeName) {
+    scopeEl = scopeEl || document.body;
+    scopeName = scopeName === undefined ? scopeEl.localName.toLowerCase() : scopeName;
     var matchesSelector = el.mozMatchesSelector ? 'mozMatchesSelector' : 'webkitMatchesSelector';
-    for (var parts = []; el; el = el.parentNode) {
+    for (var parts = []; el && el !== scopeEl; el = el.parentNode) {
       var sel = el.localName.toLowerCase();
-      if (sel === 'body') break;
-
       var id = el.id;
       if (id && !spaceRe.test(id)) sel += '#' + escapeToken(id);
 
-      sel += Array.slice(el.classList).map(function(c) {return '.' + escapeToken(c)}).join('');
+      sel += slice(el.classList).map(function (c) {return '.' + escapeToken(c)}).join('');
 
-      var children = Array.slice(el.parentNode.children);
-      if (children.some(function(ch) {return ch !== el && ch[matchesSelector](sel)})) {
+      var children = slice(el.parentNode.children);
+      if (children.some(function (ch) {return ch !== el && ch[matchesSelector](sel)})) {
         sel += ':nth-child(' + (1 + children.indexOf(el)) + ')';
       }
 
       parts.unshift(sel);
     }
-    parts.unshift('body');
+    if (scopeName != null) {
+      parts.unshift(scopeName);
+    }
     return parts.join('>');
   }
 
-  if (!Array.slice) {
-    Array.slice = Function.call.bind(Array.prototype.slice);
+  function elementSelfOrParent(node) {
+    return node.nodeType === 1 ? node : node.parentNode;
   }
+
+  var slice = Array.slice || Function.call.bind(Array.prototype.slice);
+  var indexOf = Array.indexOf || Function.call.bind(Array.prototype.indexOf);
+  var scopeChild = ':scope>';
+  try {
+    document.querySelector(scopeChild + '*'); // bugzil.la/528456
+  } catch (e) {
+    scopeChild = '';
+  }
+
+  var RANGE_TEXT_NODE_SEPARATOR_V = '\u001e';
+  var RANGE_TEXT_NODE_SEPARATOR_H = '\u001f';
+  var ALL_SPACES_RE = /^\s+$/;
+
+  // these same as \s+ except they omit non-breaking kinds of spaces and some rare semantics-carrying spaces
+  var COLLAPSIBLE_SPACES_GLOBAL_RE = /[ \f\n\r\t\v\u2000-\u200a\u205f\u3000]+/g;
+  var COLLAPSIBLE_LEADING_SPACES_RE = /^[ \f\n\r\t\v\u2000-\u200a\u205f\u3000]+/;
+  var COLLAPSIBLE_TRAILING_SPACES_RE = /[ \f\n\r\t\v\u2000-\u200a\u205f\u3000]+$/;
+  var TRAILING_SPACE_RE = /\s$/;
+
+  // same as Range.toString except this function:
+  // 1. inserts separators to preserve text node boundaries
+  // 2. substitutes one space (' ') for text from non-pre-formatted text nodes that contribute only spaces (/\s+/)
+  // 3. skips some inconsequential non-pre-formatted text nodes that contribute only spaces (/\s+/)
+  // 4. omits text from descendants of invisible elements (display:none or visibility:hidden)
+  // TODO: adhere more closely to dev.w3.org/csswg/css-text/#white-space-processing
+  function getRangeText(sce, sc, so, ece, ec, eo) {
+    var arr;
+    if (sce !== sc) {
+      var s = sc.nodeValue;
+      if (sc === ec) {
+        return eo < s.length ? s.substring(so, eo) : (so ? s.substr(so) : s);
+      }
+      arr = [];
+      if (s && so < s.length) {
+        s = so ? s.substr(so) : s;
+        if (s && (s = collapseSpaces(s, sce))) {
+          arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
+        }
+      }
+      so = indexOf(sce.childNodes, sc) + 1;
+      sc = sce;
+    } else {
+      arr = [];
+    }
+
+    var suffix;
+    if (ece !== ec) {
+      var s = ec.nodeValue;
+      suffix = eo < s.length ? s.substr(0, eo) : s;
+      eo = indexOf(ece.childNodes, ec);
+      ec = ece;
+    }
+
+    (function visit(c, o, recurseDownOnly) {
+      if (c === ec && o === eo) {
+        return true;
+      }
+      var node = c.childNodes[o];
+      if (!node) {
+        if (window.getComputedStyle(c).display.lastIndexOf('inline', 0) !== 0) {
+          makeLastSeparatorVertical();
+        }
+        var p = c.parentNode;
+        return visit(p, indexOf(p.childNodes, c) + 1);
+      } else if (node.nodeType === 3) {
+        var s = node.nodeValue;
+        if (s && (s = collapseSpaces(s, c))) {
+          arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
+        }
+        if (!recurseDownOnly) {
+          return visit(c, o + 1);
+        }
+      } else if (node.nodeType === 1) {
+        var cs = window.getComputedStyle(node);
+        var display = cs.display;
+        if (display !== 'none' && cs.visibility !== 'hidden') {
+          var inline = display.lastIndexOf('inline', 0) === 0;
+          if (!inline) {
+            makeLastSeparatorVertical();
+          }
+          for (var i = 0, n = node.childNodes.length; i < n; i++) {
+            if (visit(node, i, true)) {
+              return true;
+            }
+          }
+        }
+        if (node === ec && n === eo) {
+          return true;
+        }
+        if (!recurseDownOnly) {
+          if (!inline) {
+            makeLastSeparatorVertical();
+          }
+          return visit(c, o + 1);
+        }
+      } else if (!recurseDownOnly) {
+        return visit(c, o + 1);
+      }
+    }(sc, so));
+
+    if (suffix && (suffix = collapseSpaces(suffix, ece).trimRight())) {
+      arr.push(suffix);
+    } else if (arr.length) {
+      arr.pop();
+      if ((arr[arr.length - 1] = arr[arr.length - 1].trimRight()) === '') {
+        arr.length -= 2;
+      }
+    }
+    return arr.join('');
+
+    function collapseSpaces(s, el) {
+      if (window.getComputedStyle(el).whiteSpace.lastIndexOf('pre', 0) === 0) {
+        return s.replace(/^\s*(?:\r\n|[\r\n])/, arr[arr.length - 1] === RANGE_TEXT_NODE_SEPARATOR_V ? '' : '\n');
+      }
+      if (arr[arr.length - 1] === RANGE_TEXT_NODE_SEPARATOR_H && TRAILING_SPACE_RE.test(arr[arr.length - 2])) {
+        s = s.replace(COLLAPSIBLE_LEADING_SPACES_RE, '');
+      }
+      return s.replace(COLLAPSIBLE_SPACES_GLOBAL_RE, ' ');
+    }
+
+    function makeLastSeparatorVertical() {
+      var n = arr.length;
+      if (n && arr[n - 1] === RANGE_TEXT_NODE_SEPARATOR_H) {
+        var s = arr[n - 2].replace(COLLAPSIBLE_TRAILING_SPACES_RE, '');
+        if (s) {
+          arr[n - 2] = s;
+          arr[n - 1] = RANGE_TEXT_NODE_SEPARATOR_V;
+        } else {
+          arr.length = n - 2;
+          if (n > 2) {
+            arr[n - 3] = RANGE_TEXT_NODE_SEPARATOR_V;
+          }
+        }
+      }
+    }
+  }
+
 
   return {
     // Attempts to find an element in a document that corresponds to a selector returned by generateSelector
     // using some aribitrarily chosen fuzzy match heuristics. It would be fun to measure how each heuristic
     // performs and to collect information about real failures to gain insight into how to improve this.
     fuzzyFind: function (sel, doc) {
+      sel = decodeURIComponent(sel);
       doc = doc || document; //{querySelectorAll: function(s) { log('TRIED: ' + s); return []}}();
       var els = doc.querySelectorAll(sel);
       switch (els.length) {
@@ -145,83 +288,86 @@ var snapshot = function () {
       return null;
     },
 
-    take: function (onExit) {
-      document.documentElement.classList.add('kifi-snapshot-mode');
-      document.body.classList.add('kifi-snapshot-root');
+    ofRange: function (r) {
+      var an = r.commonAncestorContainer;
+      var sc = r.startContainer;
+      var so = r.startOffset;
+      var ec = r.endContainer;
+      var eo = r.endOffset;
 
-      var elViewport = document[document.compatMode === 'CSS1Compat' ? 'documentElement' : 'body'];
-      var sel = {}, cX, cY;
-      var $shades = $(['t','b','l','r'].map(function(s) {
-        return $('<kifi class="kifi-root kifi-snapshot-shade kifi-snapshot-shade-' + s + '">')[0];
-      }));
-      var $glass = $('<kifi class="kifi-root kifi-snapshot-glass">').css('position', 'fixed');
-      var $selectable = $shades.add($glass).appendTo('body').on('mousemove', function(e) {
-        updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
-      });
-      render('html/snapshot_bar', function (html) {
-        api.require('scripts/lib/jquery-ui-draggable.min.js', function() {  // for draggable
-          $(html).appendTo('body')
-            .draggable({cursor: 'move', distance: 10, handle: '.kifi-snapshot-bar', scroll: false})
-            .on('click', '.kifi-snapshot-cancel', exitSnapshotMode)
-            .add($shades).css('opacity', 0).animate({opacity: 1}, 300);
-          $(document).data('esc').add(exitSnapshotMode);
-        });
-      });
-      $(window).scroll(function() {
-        if (cX != null) updateSelection(cX, cY);
-      });
-      $glass.click(function() {
-        exitSnapshotMode(null, generateSelector(sel.el));
-      });
-      function exitSnapshotMode(e, selector) {
-        if (e && e.type === 'keydown') e.preventDefault();
-        document.documentElement.classList.remove('kifi-snapshot-mode');
-        $selectable.add('.kifi-snapshot-bar-wrap').animate({opacity: 0}, 400, function() {
-          $(this).remove();
-          document.body.classList.remove('kifi-snapshot-root');
-        });
-        $(document).data('esc').remove(exitSnapshotMode);
-        setTimeout(onExit.bind(null, selector));
-      }
-      function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
-        $selectable.hide();
-        var el = document.elementFromPoint(clientX, clientY);
-        $selectable.show();
-        if (!el) return;
-        if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
-        if (scrollTop == null) scrollTop = document.body.scrollTop;
-        var pageX = clientX + scrollLeft;
-        var pageY = clientY + scrollTop;
-        var pageHeight = Math.max(document.documentElement.scrollHeight, elViewport.clientHeight);
-        if (el === sel.el) {
-          // track the latest hover point over the current element
-          sel.x = pageX; sel.y = pageY;
-        } else {
-          var r = el.getBoundingClientRect();
-          var dx = Math.abs(pageX - sel.x);
-          var dy = Math.abs(pageY - sel.y);
-          if (!sel.el ||
-              (dx == 0 || r.width < sel.r.width * 2 * dx) &&
-              (dy == 0 || r.height < sel.r.height * 2 * dy) &&
-              (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
-            // if (sel.el) api.log(
-            //   r.width + ' < ' + sel.r.width + ' * 2 * ' + dx + ' AND ' +
-            //   r.height + ' < ' + sel.r.height + ' * 2 * ' + dy + ' AND ' +
-            //   r.width * r.height + ' < ' + sel.r.width * sel.r.height + ' * ' + Math.sqrt(dx * dx + dy * dy));
-            var bod = $('body').offset();
-            var yT = scrollTop - bod.top + r.top - 2;
-            var yB = scrollTop - bod.top + r.bottom + 2;
-            var xL = scrollLeft - bod.left + r.left - 3;
-            var xR = scrollLeft - bod.left + r.right + 3;
-            $shades.eq(0).css({height: yT});
-            $shades.eq(1).css({top: yB, height: pageHeight - yB});
-            $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
-            $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
-            $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL, position: ''});
-            sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
+      var ane = elementSelfOrParent(an);
+      var sce = elementSelfOrParent(sc);
+      var ece = elementSelfOrParent(ec);
+
+      return ['r',
+        encodeURIComponent(generateSelector(ane)),
+        sce === ane ? '' : encodeURIComponent(generateSelector(sce, ane, null)),
+        sc === sce ? so : indexOf(sce.childNodes, sc) + ':' + so,
+        ece === ane ? '' : encodeURIComponent(generateSelector(ece, ane, null)),
+        ec === ece ? eo : indexOf(ece.childNodes, ec) + ':' + eo,
+        encodeURIComponent(getRangeText(sce, sc, so, ece, ec, eo))
+      ].join('|');
+    },
+
+    findRange: function (selector) {
+      var parts = selector.split('|');
+      var ane = snapshot.fuzzyFind(parts[1]);
+      if (ane) {
+        var sce = parts[2] ? ane.querySelector(scopeChild + decodeURIComponent(parts[2])) : ane;
+        var ece = parts[4] ? ane.querySelector(scopeChild + decodeURIComponent(parts[4])) : ane;
+        if (sce && ece) {
+          var sos = parts[3].split(':');
+          var eos = parts[5].split(':');
+          var sc = sos.length > 1 ? sce.childNodes[sos[0]] : sce;
+          var ec = eos.length > 1 ? ece.childNodes[eos[0]] : ece;
+          try {
+            var r = document.createRange();
+            r.setStart(sc, sos.pop());
+            r.setEnd(ec, eos.pop());
+            return r;
+          } catch (e) {
+            log('[snapshot.findRange]', e)();
           }
         }
       }
+      return null;
+    },
+
+    ofImage: function (img) {
+      return ['i',
+        encodeURIComponent(generateSelector(img)),
+        img.naturalWidth + 'x' + img.naturalHeight,
+        img.width + 'x' + img.height,
+        encodeURIComponent(img.src)
+      ].join('|');
+    },
+
+    findImage: function (selector) {
+      var parts = selector.split('|');
+      var el = snapshot.fuzzyFind(parts[1]);
+      if (el && el.tagName.toUpperCase() === 'IMG') {
+        return el;
+      }
+      var imgs = document.querySelectorAll('img[src="' + decodeURIComponent(parts[4]).replace(/"/g, '\\22 ') + '"]');
+      if (imgs.length === 1) {
+        return imgs[0];
+      } // TODO: use best match of original dimensions
+      return null;
+    },
+
+    getImgContentRect: function (img) {
+      var cr = img.getBoundingClientRect();
+      var cs = window.getComputedStyle(img);
+      var pxTop = parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+      var pxLeft = parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft);
+      var pxRight = parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight);
+      var pxBottom = parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom);
+      return {
+        top: cr.top + pxTop,
+        left: cr.left + pxLeft,
+        width: cr.width - pxLeft - pxRight,
+        height: cr.height - pxTop - pxBottom
+      };
     }
   }
 }();

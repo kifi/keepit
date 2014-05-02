@@ -11,3 +11,4 @@ case class ThreadData(id: VertexDataId[ThreadReader]) extends ThreadReader with 
 case class FacebookAccountData(id: VertexDataId[FacebookAccountReader]) extends FacebookAccountReader with VertexData[FacebookAccountReader]
 case class LinkedInAccountData(id: VertexDataId[LinkedInAccountReader]) extends LinkedInAccountReader with VertexData[LinkedInAccountReader]
 case class LDATopicData(id: VertexDataId[LDATopicReader]) extends LDATopicReader with VertexData[LDATopicReader]
+case class KeepData(id: VertexDataId[KeepReader]) extends KeepReader with VertexData[KeepReader]

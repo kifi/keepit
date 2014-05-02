@@ -33,11 +33,12 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
+  def latestKeep(url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
   def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
-  def whoKeptMyKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Seq[WhoKeptMyKeeps]
+  def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
 }
 
 @Singleton
@@ -46,7 +47,8 @@ class KeepRepoImpl @Inject() (
   val clock: Clock,
   val countCache: KeepCountCache,
   bookmarkUriUserCache: KeepUriUserCache,
-  latestKeepUriCache: LatestKeepUriCache
+  latestKeepUriCache: LatestKeepUriCache,
+  latestKeepUrlCache: LatestKeepUrlCache
 ) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
 
   import db.Driver.simple._
@@ -100,6 +102,7 @@ class KeepRepoImpl @Inject() (
     bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
     countCache.remove(KeepCountKey(Some(bookmark.userId)))
     latestKeepUriCache.remove(LatestKeepUriKey(bookmark.uriId))
+    latestKeepUrlCache.remove(LatestKeepUrlKey(bookmark.url))
   }
 
   override def invalidateCache(bookmark: Keep)(implicit session: RSession): Unit = {
@@ -108,7 +111,10 @@ class KeepRepoImpl @Inject() (
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
       countCache.remove(KeepCountKey(Some(bookmark.userId)))
-      latestKeepUriCache.set(LatestKeepUriKey(bookmark.uriId), bookmark)
+      val latestKeepUriKey = LatestKeepUriKey(bookmark.uriId)
+      if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, bookmark) }
+      val latestKeepUrlKey = LatestKeepUrlKey(bookmark.url)
+      if (!latestKeepUrlCache.get(latestKeepUrlKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUrlCache.set(latestKeepUrlKey, bookmark) }
     }
   }
 
@@ -169,7 +175,7 @@ class KeepRepoImpl @Inject() (
     interpolated.as[Keep].list
   }
 
-  def whoKeptMyKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Seq[WhoKeptMyKeeps] = {
+  def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps] = {
     import StaticQuery.interpolation
     val interpolated = sql"""
           SELECT b.c user_count, b.t last_keep_time, b.uri_id, b.users FROM (
@@ -180,7 +186,7 @@ class KeepRepoImpl @Inject() (
             WHERE ub.uri_id = ab.uri_id AND ab.is_private = FALSE AND ab.user_id != ${userId}
             GROUP BY ab.uri_id
           ) b
-          WHERE b.t > '${since}' AND b.c BETWEEN 1 AND 50
+          WHERE b.t > ${since} AND b.c BETWEEN 1 AND ${maxKeepers}
           ORDER BY b.t DESC;"""
     interpolated.as[(Int, DateTime, Id[NormalizedURI], String)].list map { row =>
       WhoKeptMyKeeps(row._1, row._2, row._3, row._4.split(',').map(_.toInt).map(Id[User](_)) )
@@ -279,6 +285,16 @@ class KeepRepoImpl @Inject() (
       latest.sortBy(_.createdAt desc).firstOption
     }
   }
+
+  def latestKeep(url: String)(implicit session: RSession): Option[Keep] = {
+    latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
+      val keeps = for { keep <- rows if keep.url === url } yield keep
+      val max = keeps.map(_.createdAt).max
+      val latest = for { keep <- keeps if keep.createdAt >= max } yield keep
+      latest.sortBy(_.createdAt desc).firstOption
+    }
+  }
+
 
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined

@@ -7,6 +7,7 @@ import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
+import play.api.libs.json.JsString
 
 trait Service
 
@@ -73,7 +74,7 @@ object Shoebox extends Service {
     def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
     def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksByUriWithoutTitle", Param("uriId", uriId))
-    def getLatestBookmark(uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getLatestBookmark", Param("uriId", uriId))
+    def getLatestKeep() = ServiceRoute(POST, "/internal/shoebox/database/getLatestKeep")
     def saveBookmark() = ServiceRoute(POST, "/internal/shoebox/database/saveBookmark")
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
@@ -137,6 +138,12 @@ object Shoebox extends Service {
     def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
     def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
     def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
+    def keepGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/keep")
+    def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
+    def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
+    def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
+    def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getURISummary")
+    def getUnsubscribeUrlForEmail(email: String) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email",email))
   }
 }
 

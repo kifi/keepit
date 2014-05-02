@@ -24,6 +24,8 @@ abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
 object LongArraySet {
 
   def fromSorted(a: Array[Long]): LongArraySet = {
+    if (a.length == 0) return empty
+
     new LongArraySet(a) {
       override def findIndex(key: Long): Int = Arrays.binarySearch(a, key)
       override def contains(key: Long): Boolean = (Arrays.binarySearch(a, key) >= 0)
@@ -37,7 +39,10 @@ object LongArraySet {
     }
   }
 
-  def from(a: Array[Long]): LongArraySet = from(a, ReverseArrayMapper(a, 0.9d, -1L))
+  def from(a: Array[Long]): LongArraySet = {
+    if (a.length == 0) empty else from(a, ReverseArrayMapper(a, 0.9d, -1L))
+  }
+
 
   def from(a: Array[Long], mapper: ReverseArrayMapper): LongArraySet = {
     if (a.length != mapper.size) throw new Exception("array size not equal to mapper size")
@@ -52,5 +57,11 @@ object LongArraySet {
         }
       }
     }
+  }
+
+  val empty: LongArraySet = new LongArraySet(new Array[Long](0)) {
+    override def findIndex(key: Long): Int = -1
+    override def contains(key: Long): Boolean = false
+    override def verify: Boolean = true
   }
 }

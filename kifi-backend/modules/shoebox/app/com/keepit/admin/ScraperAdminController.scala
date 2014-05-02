@@ -56,7 +56,10 @@ class ScraperAdminController @Inject() (
     }
   }
 
-  def rescrapeByRegex(urlRegex: String, withinMinutes: Int) = AdminHtmlAction.authenticated { implicit request =>
+  def rescrapeByRegex() = AdminHtmlAction.authenticated { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
+    val urlRegex = body.getOrElse("urlRegex", "")
+    val withinMinutes = body.getOrElse("withinMinutes", "8").toInt
     val updateCount = db.readWrite { implicit session =>
       scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinMinutes)
     }
@@ -66,24 +69,9 @@ class ScraperAdminController @Inject() (
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
-    def errorMsg(id: Id[NormalizedURI]) = {
-      val uri = db.readOnly{ implicit s =>
-        normalizedURIRepo.get(id)
-      }
-      Ok(s"Oops, this page was not scraped.\ntitle = ${uri.title.getOrElse("N/A")}\nurl = ${uri.url}")
-    }
-
-    articleStore.get(id) match {
-      case Some(article) => {
-        db.readOnly { implicit s =>
-          (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUriId(article.id))
-        } match {
-          case (uri, Some(info)) => Ok(html.admin.article(article, uri, info))
-          case (uri, None) => errorMsg(id)
-        }
-      }
-      case None => errorMsg(id)
-    }
+    val articleOption = articleStore.get(id)
+    val (uri, scrapeInfoOption) = db.readOnly { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
+    Ok(html.admin.article(articleOption, uri, scrapeInfoOption))
   }
 
   def getProxies = AdminHtmlAction.authenticated { implicit request =>

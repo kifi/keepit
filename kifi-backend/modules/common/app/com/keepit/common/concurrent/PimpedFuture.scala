@@ -1,7 +1,7 @@
 package com.keepit.common.concurrent
 
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Future, Await, Promise}
 
 import java.util.concurrent.{TimeUnit, Executor}
 
@@ -11,6 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.duration._
 
+import scala.util.Try
 
 object PimpMyFuture {
 
@@ -40,9 +41,29 @@ object PimpMyFuture {
       fut.flatMap(r => ev(r))
     }
 
+    def marker: Future[Unit] = fut.map{ v => ()}
+
   }
+
 
 }
 
+object FutureHelpers {
+  import PimpMyFuture._
 
+  def map[A,B](in: Map[A,Future[B]]): Future[Map[A,B]] = {
+    val seq = in.map{ case (key, fut) =>
+      val p = Promise[(A,B)]()
+      fut.onComplete{ t =>
+        val withKey : Try[(A,B)] = t.map((key, _))
+        p.complete(withKey)
+      }
+      p.future
+    }
+    Future.sequence(seq).map(_.toMap)
+  }
+
+
+
+}
 
