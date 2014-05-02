@@ -20,8 +20,8 @@ sealed trait NonUserParticipant {
 
   override def toString() = identifier.toString
 
-  //first, last
-  def toNameTuple: (String, String)
+  def shortName: String
+  def fullName: String
 }
 object NonUserParticipant {
   implicit val format = new Format[NonUserParticipant] {
@@ -54,7 +54,8 @@ case class NonUserEmailParticipant(address: EmailAddressHolder, econtactId: Opti
   val referenceId = econtactId.map(_.id.toString)
   val kind = NonUserKinds.email
 
-  def toNameTuple = (identifier, "")
+  def shortName = identifier
+  def fullName = identifier
 }
 
 case class NonUserThread(

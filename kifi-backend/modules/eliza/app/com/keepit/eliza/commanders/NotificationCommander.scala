@@ -119,10 +119,7 @@ class NotificationCommander @Inject() (
 
       val starterUser = allUsers(starterUserId)
 
-      val participants = allUsers.values.map{ u => u.firstName + " " + u.lastName } ++ nuts.map{ nut =>
-        val (first, last) = nut.participant.toNameTuple
-        if (last.length>0) first + " " + last else first
-      }
+      val participants = allUsers.values.map{ u => u.fullName } ++ nuts.map{ nut => nut.participant.fullName }
 
       val pageName = thread.nUrl.flatMap( url => URI.parse(url).toOption.flatMap( uri => uri.host.map(_.name)) ).get
 
@@ -155,10 +152,9 @@ class NotificationCommander @Inject() (
           val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
             val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
             message.from match {
-              case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).firstName, allUsers(id).lastName, allUserImageUrls(id), text, lookHereTexts, lookHereImageUrls)
+              case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, allUserImageUrls(id), text, lookHereTexts, lookHereImageUrls)
               case MessageSender.NonUser(nup) => {
-                val (first, last) = nup.toNameTuple
-                ExtendedThreadItem(first, last, "https://www.kifi.com/assets/img/ghost.200.png", text, lookHereTexts, Seq.empty)
+                ExtendedThreadItem(nup.shortName, nup.fullName, "https://www.kifi.com/assets/img/ghost.200.png", text, lookHereTexts, Seq.empty)
               }
               case _ => throw new Exception("Impossible")
             }
