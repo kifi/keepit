@@ -47,6 +47,11 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
 
   @Singleton
   @Provides
+  def latestBookmarkUrlCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LatestKeepUrlCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def userCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserCollectionsCache(stats, accessLog, (outerRepo, 1 day))
 

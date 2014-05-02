@@ -40,7 +40,7 @@ var toaster = (function () {
       } else {
         api.port.emit('prefs', function (prefs) {
           if (!$toaster) {
-            show($parent, prefs, deferred);
+            show($parent, prefs || {}, deferred);
           }
         });
       }
@@ -63,8 +63,7 @@ var toaster = (function () {
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
-      draftDefault: 'Check this out.',
-      snapshotUri: api.url('images/snapshot.png')
+      draftDefault: 'Check this out.'
     }, {
       compose: 'compose'
     }))
@@ -76,7 +75,9 @@ var toaster = (function () {
     .on('click', '.kifi-toast-intro-x', onFindFriendsXClick)
     .appendTo($parent);
 
-    $toaster.data('compose', initCompose($toaster, {onSubmit: send}));
+    var compose = initCompose($toaster, {onSubmit: send});
+    compose.reflectPrefs(prefs);
+    $toaster.data('compose', compose);
     $(document).data('esc').add(hide);
     pane.onHide.add(hide);
 

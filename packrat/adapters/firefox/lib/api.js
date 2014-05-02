@@ -42,6 +42,7 @@ const icon = require('./icon');
 const windows = require('sdk/windows').browserWindows;
 const tabs = require('sdk/tabs');
 const workerNs = require('sdk/core/namespace').ns();
+const screenshot = require('./screenshot');
 
 const httpRe = /^https?:/;
 
@@ -246,6 +247,10 @@ exports.requestUpdateCheck = function () {
   }
 };
 
+exports.screenshot = function (callback) {
+  callback(screenshot.takeToCanvas(), screenshot.createBlankCanvas());
+};
+
 const {SocketCommander} = require('./socket_commander');
 var socketPage, socketCommanders = {}, nextSocketId = 1;
 exports.socket = {
@@ -427,7 +432,8 @@ exports.tabs = {
     if (tab) {
       tab.reload();
     }
-  }};
+  }
+};
 
 exports.timers = {
   setTimeout: function (f, ms) {

@@ -22,6 +22,25 @@
     <tbody></tbody>
   </table>
 
+  <br><br>
+  <div>Show word topic. Only the top few topics are returned.</div>
+  <form id = "word_topic">
+    <input id = "word" type = "text" value = "">
+    <button type = "submit">submit</button>
+  </form>
+
+  <p id = "word_topic_result"></p>
+
+
+  <br><br>
+  <div>Paste some text here. Identify topics</div>
+  <form id = "doc_topic">
+    <textarea id = "doc"></textarea>
+    <button type = "submit">submit</button>
+  </form>
+
+  <p id = "doc_topic_result"></p>
+
 
 
 
@@ -59,6 +78,30 @@
 
 
 
+      $('#word_topic').submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.wordTopic',
+          {word: $('#word').val()}
+        ).done(done).fail(fail);
+
+        function done(data){ $("#word_topic_result").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+      })
+
+
+      $('#doc_topic').submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.docTopic',
+          {doc: $('#doc').val()}
+        ).done(done).fail(fail);
+
+        function done(data){ $("#doc_topic_result").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+      })
 
 
 

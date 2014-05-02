@@ -1,7 +1,7 @@
 package com.keepit.queue
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.queue.SimpleQueueMessage
+import com.kifi.franz.{FakeSQSQueue, SQSQueue}
 
 case class FakeNormalizationUpdateJobQueueModule() extends NormalizationUpdateJobQueueModule {
 
@@ -12,12 +12,6 @@ case class FakeNormalizationUpdateJobQueueModule() extends NormalizationUpdateJo
 
   @Singleton
   @Provides
-  def normalizationUpdateTaskQ():NormalizationUpdateJobQueue = new NormalizationUpdateJobQueue {
-    def name = queueName
-    def queueUrl = "http://foo.com/barQ"
-    def receive(): Seq[SimpleQueueMessage] = Seq.empty[SimpleQueueMessage]
-    def send(s: String): Unit = {}
-    def delete(msgHandle: String): Unit = {}
-  }
+  def normalizationUpdateQueue:SQSQueue[NormalizationUpdateTask] = new FakeSQSQueue[NormalizationUpdateTask]{}
 
 }

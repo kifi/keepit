@@ -1,9 +1,11 @@
 package com.keepit.graph.model
 
-import com.keepit.model.{SocialUserInfo, Collection, NormalizedURI, User}
+import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
 import play.api.libs.json.{JsNumber, Writes, Reads, Format}
+import play.api.libs.json.JsNumber
+import com.keepit.cortex.lda.VersionedLDATopicId
 
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 
@@ -27,4 +29,10 @@ object VertexDataId {
 
   implicit def fromSocialUserIdToLinkedInAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[LinkedInAccountReader] = VertexDataId(socialUserId.id)
   implicit def fromLinkedInAccountIdtoSocialUserId(linkedInAccountReaderId: VertexDataId[LinkedInAccountReader]): Id[SocialUserInfo] = Id(linkedInAccountReaderId.id)
+
+  implicit def fromKeepId(keepId: Id[Keep]): VertexDataId[KeepReader] = VertexDataId(keepId.id)
+  implicit def toKeepId(keepReaderId: VertexDataId[KeepReader]): Id[Keep] = Id(keepReaderId.id)
+
+  implicit def fromVersionedLDATopicId(id: VersionedLDATopicId): VertexDataId[LDATopicReader] = VertexDataId(id.id)
+  implicit def toVersionedLDATopicId(id: VertexDataId[LDATopicReader]): VersionedLDATopicId = VersionedLDATopicId(id.id)
 }

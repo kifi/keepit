@@ -32,11 +32,13 @@ class GraphManagerActor @Inject() (
       updating = true
     }
     case ProcessGraphUpdates(updates, maxBatchSize, lockTimeout) => {
-      val state = graph.update(updates.map(_.body): _*)
-      updates.foreach(_.consume())
-      updating = false
-      if (updates.length < maxBatchSize) { graphUpdateFetcher.fetch(state) }
-      else { self ! UpdateGraph(maxBatchSize, lockTimeout) }
+      if (updates.isEmpty) { graphUpdateFetcher.fetch(graph.state) }
+      else {
+        graph.update(updates.map(_.body): _*)
+        updates.foreach(_.consume())
+        updating = false
+        self ! UpdateGraph(maxBatchSize, lockTimeout)
+      }
     }
     case BackupGraph => graph.backup()
     case m => throw new UnsupportedActorMessage(m)

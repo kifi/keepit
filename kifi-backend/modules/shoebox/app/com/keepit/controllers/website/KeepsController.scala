@@ -15,7 +15,6 @@ import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
 
 import play.api.libs.json._
-import com.keepit.common.store.S3ScreenshotStore
 import scala.util.Try
 import org.joda.time.Seconds
 import scala.concurrent.Future
@@ -23,6 +22,7 @@ import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class KeepsController @Inject() (
     db: Database,
@@ -31,9 +31,9 @@ class KeepsController @Inject() (
     collectionRepo: CollectionRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo,
     actionAuthenticator: ActionAuthenticator,
-    s3ScreenshotStore: S3ScreenshotStore,
+    uriSummaryCommander: URISummaryCommander,
+    shoebox: ShoeboxServiceClient,
     collectionCommander: CollectionCommander,
     bookmarksCommander: KeepsCommander,
     userValueRepo: UserValueRepo,
@@ -59,8 +59,8 @@ class KeepsController @Inject() (
     urlOpt.map { url =>
       db.readOnlyAsync { implicit session =>
         uriRepo.getByUri(url)
-      } map { uri =>
-        s3ScreenshotStore.getScreenshotUrl(uri) match {
+      } map { uriOpt =>
+        uriOpt flatMap { uriSummaryCommander.getScreenshotURL(_) } match {
           case Some(url) => Ok(Json.obj("url" -> url))
           case None => NotFound(JsString("0"))
         }
@@ -71,7 +71,7 @@ class KeepsController @Inject() (
           urls.map( url => url -> uriRepo.getByUri(url) )
         } map { case uris =>
           val results = uris.map { case (uri, ssOpt) =>
-            uri -> (s3ScreenshotStore.getScreenshotUrl(ssOpt).map(JsString).getOrElse(JsNull): JsValue)
+            uri -> (ssOpt.flatMap{uriSummaryCommander.getScreenshotURL(_)}.map(JsString).getOrElse(JsNull): JsValue)
           }
           Ok(Json.obj("urls" -> JsObject(results)))
         }
@@ -81,8 +81,8 @@ class KeepsController @Inject() (
 
   // todo: add uriId, sizes, colors, etc.
   private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
-    val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
-    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt) map { imgUrlOpt =>
+    val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
+    uriSummaryCommander.getURIImage(uri) map { imgUrlOpt =>
       (screenshotUrlOpt, imgUrlOpt) match {
         case (None, None) =>
           Json.obj("url" -> url, "uriId" -> uri.id.get)

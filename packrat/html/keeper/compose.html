@@ -4,7 +4,7 @@
   {{/showTo}}
   <div class="kifi-compose-draft" contenteditable="" data-placeholder="{{draftPlaceholder}}" data-default="{{draftDefault}}"></div>
   <div class="kifi-compose-bar">
-    <a class="kifi-compose-snapshot" href="javascript:" style="background-image:url({{snapshotUri}})" tabindex="-1"></a>
+    <a class="kifi-compose-highlight{{^lookHereMode}} kifi-disabled{{/lookHereMode}}" href="javascript:" tabindex="-1"></a>
     <span class="kifi-compose-tip">Enter to send<span class="kifi-compose-tip-tri">&#x25be;</span></span>{{!
   }}<a href="javascript:" class="kifi-compose-submit" tabindex="0">Send</a>
   </div>

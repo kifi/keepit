@@ -1,28 +1,24 @@
 package com.keepit.common.embedly
 
 import com.keepit.model._
+import scala.concurrent._
 import scala.concurrent.Future
 import play.api.http.Status
 import play.api.libs.json._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.db.Id
 import play.api.libs.functional.syntax._
-import scala.Some
-import play.api.libs.ws.{WS, Response}
+import play.api.libs.ws.WS
 import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.concurrent.RetryFuture
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
-import com.keepit.common.healthcheck.SystemAdminMailSender
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Singleton, Inject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import play.api.libs.ws.Response
 import scala.Some
-import play.api.Play
-import play.api.Play.current
 
 case class EmbedlyImage(
   url:String,
@@ -30,7 +26,8 @@ case class EmbedlyImage(
   width:Option[Int]      = None,
   height:Option[Int]     = None,
   size:Option[Int]       = None) extends ImageGenericInfo {
-  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = ImageInfo(uriId = nuriId, url = this.url, caption = this.caption, width = this.width, height = this.height, size = this.size)
+  def toImageInfoWithPriority(nuriId:Id[NormalizedURI], priority: Option[Int]):ImageInfo = ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height, size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority)
+  implicit def toImageInfo(nuriId:Id[NormalizedURI]):ImageInfo = toImageInfoWithPriority(nuriId, None)
 }
 
 object EmbedlyImage {
@@ -43,7 +40,7 @@ object EmbedlyImage {
     )(EmbedlyImage.apply _, unlift(EmbedlyImage.unapply))
 }
 
-case class EmbedlyExtractResponse(
+case class EmbedlyInfo(
   originalUrl:String,
   url:Option[String],
   title:Option[String],
@@ -63,10 +60,16 @@ case class EmbedlyExtractResponse(
       lang = this.lang,
       faviconUrl = (this.faviconUrl.collect{ case f:String if f.startsWith("http") => f }) // embedly bug
     )
+
+  def buildImageInfo(nUriId: Id[NormalizedURI]) = {
+    images.zipWithIndex flatMap { case (embedlyImage, priority) =>
+      Some(embedlyImage.toImageInfoWithPriority(nUriId, Some(priority)))
+    }
+  }
 }
 
-object EmbedlyExtractResponse {
-  val EMPTY = EmbedlyExtractResponse("", None, None, None, None, None, None, None, Seq.empty[EmbedlyImage])
+object EmbedlyInfo {
+  val EMPTY = EmbedlyInfo("", None, None, None, None, None, None, None, Seq.empty[EmbedlyImage])
 
   implicit val format = (
     (__ \ 'original_url).format[String] and
@@ -78,51 +81,59 @@ object EmbedlyExtractResponse {
     (__ \ 'language).formatNullable[String] and
     (__ \ 'favicon_url).formatNullable[String] and
     (__ \ 'images).format[Seq[EmbedlyImage]]
-    )(EmbedlyExtractResponse.apply _, unlift(EmbedlyExtractResponse.unapply))
+    )(EmbedlyInfo.apply _, unlift(EmbedlyInfo.unapply))
 }
 
-class EmbedlyClient @Inject() extends Logging {
+trait EmbedlyClient {
+  def embedlyUrl(url: String): String
+  def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]]
+  def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]]
+}
 
-  private val embedlyKey = (if (Play.maybeApplication.isDefined) Play.configuration.getString("embedly.key") else None) get
+@Singleton
+class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
-  def embedlyUrl(url: String, key: String = embedlyKey) = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(url, UTF8)}"
+  private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
-  def getExtractResponse(uri:NormalizedURI):Future[Option[EmbedlyExtractResponse]] =
-    getExtractResponse(uri.url, Some(uri))
+  override def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
 
-  def getExtractResponse(url:String, uriOpt:Option[NormalizedURI] = None):Future[Option[EmbedlyExtractResponse]] = {
-    val apiUrl = embedlyUrl(url)
-    val loggingHint = uriOpt match {
-      case Some(uri) => s"(${uri},${url})"
-      case None => url
+  override def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]] = {
+    getEmbedlyInfo(nUri.url) map {
+      infoOpt => nUri.id flatMap { uriId =>
+        infoOpt.map(_.buildImageInfo(uriId))
+      } getOrElse Seq()
     }
+  }
+
+  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = {
+    val apiUrl = embedlyUrl(url)
     fetchPageInfoConsolidator(apiUrl) { urlString =>
       fetchWithRetry(apiUrl, 120000) map { resp =>
-        log.info(s"[getExtractResponse${loggingHint}] resp.status=${resp.statusText} body=${resp.body}")
+        log.info(s"getEmbedlyInfo($url)] resp.status=${resp.statusText} body=${resp.body}")
         resp.status match {
           case Status.OK =>
             val js = Json.parse(resp.body) // resp.json has some issues
-          val extractRespOpt = js.validate[EmbedlyExtractResponse].fold(
+          val extractRespOpt = js.validate[EmbedlyInfo].fold(
               valid = (res => Some(res)),
               invalid = (e => {
-                log.info(s"[getExtractResponse${loggingHint}] Failed to parse JSON: body=${resp.body} errors=${e.toString}")
+                log.info(s"Failed to parse JSON: body=${resp.body} errors=${e.toString}")
                 None
               })
             )
-            log.info(s"[getExtractResponse${loggingHint}] extractRespOpt=$extractRespOpt")
+            log.info(s"extractRespOpt=$extractRespOpt")
             extractRespOpt
           case _ => // todo(ray): need better handling of error codes
-            log.info(s"[getExtractResponse${loggingHint}] ERROR while invoking ($apiUrl): status=${resp.status} body=${resp.body}")
+            log.info(s"ERROR while invoking ($apiUrl): status=${resp.status} body=${resp.body}")
             None
         }
       } recover { case t:Throwable =>
-        log.info(s"[getExtractResponse${loggingHint}] Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
+        log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
         None
       }
     }
   }
 
-  private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyExtractResponse]](2 minutes)
+  private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyInfo]](2 minutes)
 
   private def fetchWithRetry(url:String, timeout:Int):Future[Response] = {
     val count = new AtomicInteger()
@@ -136,4 +147,10 @@ class EmbedlyClient @Inject() extends Logging {
       WS.url(url).withRequestTimeout(timeout).get()
     }
   }
+}
+
+class DevEmbedlyClient extends EmbedlyClient {
+  override def embedlyUrl(url: String): String = "http://dev.ezkeep.com"
+  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = future{None}
+  def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]] = future{Seq()}
 }

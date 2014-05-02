@@ -13,7 +13,7 @@ import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.{SearchConfig, Lang}
+import com.keepit.search.{ArticleSearchResult, SearchConfig, Lang}
 import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
@@ -63,6 +63,9 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
   implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
+  implicit val articleSearchResultUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
+  implicit val uriImageFormatTypeMapper = MappedColumnType.base[ImageProvider, String](_.value, ImageProvider.apply)
+  implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
     str => Json.parse(str).as(ProbabilityDensity.format[T])

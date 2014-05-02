@@ -10,7 +10,6 @@ import com.keepit.common.aws.AwsModule
 import com.keepit.common.logging.AccessLog
 import com.keepit.learning.porndetector._
 import com.google.inject.Provider
-import com.keepit.common.embedly.EmbedlyClient
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -22,13 +21,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     val bucket = current.configuration.getString("cdn.bucket")
     val base = current.configuration.getString("cdn.base")
     S3ImageConfig(bucket.get, base.get)
-  }
-
-  @Singleton
-  @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
   }
 
   @Singleton
@@ -47,13 +39,6 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
   @Provides
   def s3ImageConfig: S3ImageConfig =
     whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
-
-  @Singleton
-  @Provides
-  def screenshotStore(amazonS3Client: AmazonS3, shoeboxServiceClient: ShoeboxServiceClient,
-      airbrake: AirbrakeNotifier, clock: Clock, systemAdminMailSender:SystemAdminMailSender, config: S3ImageConfig): S3ScreenshotStore = {
-    new S3ScreenshotStoreImpl(amazonS3Client, shoeboxServiceClient: ShoeboxServiceClient, airbrake, clock, new EmbedlyClient(), systemAdminMailSender, config)
-  }
 
   @Singleton
   @Provides

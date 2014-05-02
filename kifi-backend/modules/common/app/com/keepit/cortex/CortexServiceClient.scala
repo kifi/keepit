@@ -10,6 +10,9 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import com.kifi.franz.QueueName
+import com.keepit.common.db.SequenceNumber
+import com.keepit.graph.manager.LDAURITopicGraphUpdate
 
 
 
@@ -26,6 +29,10 @@ trait CortexServiceClient extends ServiceClient{
 
   def ldaNumOfTopics(): Future[Int]
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]]
+  def ldaWordTopic(word: String): Future[Option[Array[Float]]]
+  def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
+
+  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit]
 }
 
 class CortexServiceClientImpl(
@@ -86,10 +93,30 @@ class CortexServiceClientImpl(
       (r.json).as[Int]
     }
   }
+
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = {
     call(Cortex.internal.ldaShowTopics(fromId, toId, topN)).map{ r =>
       (r.json).as[Map[String, Map[String, Float]]]
     }
   }
 
+  def ldaWordTopic(word: String): Future[Option[Array[Float]]] = {
+    call(Cortex.internal.ldaWordTopic(word)).map{ r =>
+      Json.fromJson[Option[Array[Float]]](r.json).get
+    }
+  }
+
+  def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = {
+    val payload = Json.obj("doc" -> doc)
+    call(Cortex.internal.ldaDocTopic(), payload).map{ r =>
+      Json.fromJson[Option[Array[Float]]](r.json).get
+    }
+  }
+
+  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit] = {
+    val payload = Json.obj("versionedLowSeq" -> lowSeq.value, "queue" -> queue.name)
+    call(Cortex.internal.graphLDAURIFeatureUpdate(), payload).map{ r =>
+      assert(r.status == 202); ()
+    }
+  }
 }

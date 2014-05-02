@@ -61,8 +61,3 @@ class S3LDATopicWordsStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS
 }
 
 class InMemoryLDATopicWordsStore extends VersionedInMemoryStore[String, DenseLDA, DenseLDATopicWords] with LDATopicWordsStore
-
-
-
-
-
