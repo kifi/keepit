@@ -52,7 +52,7 @@ object FutureHelpers {
   import PimpMyFuture._
 
   def map[A,B](in: Map[A,Future[B]]): Future[Map[A,B]] = {
-    val seq : Seq[Future[(A, B)]]= in.toSeq.map{ case (key, fut) =>
+    val seq = in.map{ case (key, fut) =>
       val p = Promise[(A,B)]()
       fut.onComplete{ t =>
         val withKey : Try[(A,B)] = t.map((key, _))
