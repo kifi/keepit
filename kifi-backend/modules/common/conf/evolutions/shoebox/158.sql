@@ -17,6 +17,7 @@ CREATE TABLE keep_click(
     uri_id bigint(20)   NOT NULL,
 
     clicker_id bigint(20) NOT NULL,
+
     PRIMARY KEY (id),
 
     CONSTRAINT keep_click_keeper_id  FOREIGN KEY (keeper_id)  REFERENCES user(id),
