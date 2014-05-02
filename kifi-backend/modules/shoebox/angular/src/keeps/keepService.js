@@ -12,6 +12,7 @@ angular.module('kifi.keepService', [
 
     var list = [],
       lastSearchContext = null,
+      pageSession = createPageSession(),
       refinements = -1,
       selected = {},
       before = null,
@@ -140,6 +141,10 @@ angular.module('kifi.keepService', [
       return -1;
     }
 
+    function createPageSession() {
+      return Math.random().toString(16).slice(2);
+    }
+
     function expiredConversationCount(keep) {
       if (!keep.conversationUpdatedAt) {
         return true;
@@ -147,8 +152,6 @@ angular.module('kifi.keepService', [
       var diff = new Date().getTime() - keep.conversationUpdatedAt.getTime();
       return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
-
-
 
     var keepList = new Clutch(function (url, config) {
       $log.log('keepService.getList()', config && config.params);
@@ -377,6 +380,7 @@ angular.module('kifi.keepService', [
 
       reset: function () {
         $log.log('keepService.reset()');
+        pageSession = createPageSession();
         lastSearchContext = null;
         refinements = -1;
         before = null;
@@ -617,7 +621,6 @@ angular.module('kifi.keepService', [
         $log.log('keepService.find() req', reqData);
 
         return $http.get(url, reqData).then(function (res) {
-          debugger;
           var resData = res.data,
             hits = resData.hits || [];
 
@@ -641,15 +644,16 @@ angular.module('kifi.keepService', [
           refinements++;
           lastSearchContext = {
             origin: $location.origin,
-            uuid: res.uuid,
-            experimentId: res.experimentId,
+            uuid: res.data.uuid,
+            experimentId: res.data.experimentId,
             query: reqData.params.q,
             filter: reqData.params.f,
+            maxResults: reqData.params.maxHits,
             kifiTime: null,
             kifiShownTime: null,
             kifiResultsClicked: null,
-            refinements: null,
-            pageSession: null,
+            refinements: refinements,
+            pageSession: pageSession,
             endedWith: null
           };
           return resData;

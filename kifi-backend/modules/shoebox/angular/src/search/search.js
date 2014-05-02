@@ -39,7 +39,8 @@ angular.module('kifi.search', [
           experimentId: lastSearchContext.experimentId,
           query: lastSearchContext.query,
           filter: lastSearchContext.filter,
-          maxResults: keepService.limit,
+          maxResults: lastSearchContext.maxResults,
+          kifiExpanded: true,
           kifiResults: keepService.list.length,
           kifiTime: lastSearchContext.kifiTime,
           kifiShownTime: lastSearchContext.kifiShownTime,
@@ -48,8 +49,6 @@ angular.module('kifi.search', [
           pageSession: lastSearchContext.pageSession,
           endedWith: lastSearchContext.endedWith
         };
-        $log.log('dumping logging to ' + url, data);
-        debugger;
         $http.post(url, data)['catch'](function (res) {
           $log.log('res: ', res);
         });
@@ -174,8 +173,6 @@ angular.module('kifi.search', [
       if ($scope.loading) {
         return;
       }
-      //just for debugging...
-      $log.log('executing reportSearchAnalytics...');
       reportSearchAnalytics();
 
       $scope.loading = true;
