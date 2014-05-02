@@ -63,53 +63,6 @@ object FutureHelpers {
     Future.sequence(seq).map(_.toMap)
   }
 
-  def combine[T1, T2](f1: Future[T1], f2: Future[T2]): Future[(T1,T2)] = {
-    val p = Promise[(T1,T2)]()
-    val masterFuture = Future.sequence(Seq(f1.marker, f2.marker))
-    masterFuture.onComplete{ t =>
-      val completeTry = t.map{ _ =>
-        (Await.result(f1,Duration.Inf), Await.result(f2,Duration.Inf))
-      }
-      p.complete(completeTry)
-    }
-    p.future
-  }
-
-  def combine[T1, T2, T3](f1: Future[T1], f2: Future[T2], f3: Future[T3]): Future[(T1,T2,T3)] = {
-    val p = Promise[(T1,T2,T3)]()
-    val masterFuture = Future.sequence(Seq(f1.marker, f2.marker, f3.marker))
-    masterFuture.onComplete{ t =>
-      val completeTry = t.map{ _ =>
-        (Await.result(f1,Duration.Inf), Await.result(f2,Duration.Inf), Await.result(f3,Duration.Inf))
-      }
-      p.complete(completeTry)
-    }
-    p.future
-  }
-
-  def combine[T1, T2, T3, T4](f1: Future[T1], f2: Future[T2], f3: Future[T3], f4: Future[T4]): Future[(T1,T2,T3,T4)] = {
-    val p = Promise[(T1,T2,T3, T4)]()
-    val masterFuture = Future.sequence(Seq(f1.marker, f2.marker, f3.marker, f4.marker))
-    masterFuture.onComplete{ t =>
-      val completeTry = t.map{ _ =>
-        (Await.result(f1,Duration.Inf), Await.result(f2,Duration.Inf), Await.result(f3,Duration.Inf), Await.result(f4,Duration.Inf))
-      }
-      p.complete(completeTry)
-    }
-    p.future
-  }
-
-  def combine[T1, T2, T3, T4, T5](f1: Future[T1], f2: Future[T2], f3: Future[T3], f4: Future[T4], f5: Future[T5]): Future[(T1,T2,T3,T4,T5)] = {
-    val p = Promise[(T1,T2,T3, T4, T5)]()
-    val masterFuture = Future.sequence(Seq(f1.marker, f2.marker, f3.marker, f4.marker, f5.marker))
-    masterFuture.onComplete{ t =>
-      val completeTry = t.map{ _ =>
-        (Await.result(f1,Duration.Inf), Await.result(f2,Duration.Inf), Await.result(f3,Duration.Inf), Await.result(f4,Duration.Inf), Await.result(f5,Duration.Inf))
-      }
-      p.complete(completeTry)
-    }
-    p.future
-  }
 
 
 }

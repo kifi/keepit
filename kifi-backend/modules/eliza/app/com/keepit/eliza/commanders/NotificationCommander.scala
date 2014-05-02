@@ -115,7 +115,7 @@ class NotificationCommander @Inject() (
       waiting = true,
       silent = false))
 
-    FutureHelpers.combine(allUsersFuture, allUserImageUrlsFuture, uriSummaryFuture).map{ case (allUsers, allUserImageUrls, uriSummary) =>
+    for (allUsers <- allUsersFuture; allUserImageUrls <- allUserImageUrlsFuture; uriSummary <- uriSummaryFuture) {
 
       val starterUser = allUsers(starterUserId)
 
