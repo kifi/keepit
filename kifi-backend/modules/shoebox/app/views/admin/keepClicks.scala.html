@@ -17,7 +17,7 @@
                 <td>keep</td>
                 <td>uriId</td>
                 <td>title</td>
-                <td>favicon</td>
+                <td>origin</td>
                 @if(showImage){ <td>image</td> }
             </tr></th>
             @for((click, pageOpt, imgOpt) <- keepInfos){
@@ -30,7 +30,7 @@
                 <td>@click.keep.id.get</td>
                 <td>@click.uri.id.get</td>
                 <td><a href="@click.uri.url">@click.uri.title</a></td>
-                <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
+                <td>@click.origin.getOrElse("")</td>
                 @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
             </tr>
             }

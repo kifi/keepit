@@ -24,7 +24,7 @@ class AdminAttributionController @Inject()(
   def keepClicksView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnly { implicit ro =>
       val t = keepClickRepo.page(page, size).map { c =>
-        val rc = RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId))
+        val rc = RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
         val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
         val imgOpt = if (!showImage) None else
           for {
