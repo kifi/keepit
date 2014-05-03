@@ -10,6 +10,7 @@
         <table class="table table-striped">
             <th><tr>
                 <td>Id</td>
+                <td>Date</td>
                 <td>keeper</td>
                 <td>keep</td>
                 <td>Re-keeper</td>
@@ -23,6 +24,7 @@
             @for((rekeep, pageOpt, imgOpt) <- rekeeps){
             <tr>
                 <td>@rekeep.id</td>
+                <td>@adminHelper.dateDisplay(rekeep.createdAt)</td>
                 <td>@adminHelper.userDisplay(rekeep.keeper)</td>
                 <td>@rekeep.keep.id.get</td>
                 <td>@adminHelper.userDisplay(rekeep.srcUser)</td>

@@ -10,6 +10,7 @@
         <table class="table table-striped">
             <th><tr>
                 <td>Id</td>
+                <td>Date</td>
                 <td>uuid</td>
                 <td>numKeepers</td>
                 <td>keeper</td>
@@ -22,6 +23,7 @@
             @for((click, pageOpt, imgOpt) <- keepInfos){
             <tr>
                 <td>@click.id</td>
+                <td>@adminHelper.dateDisplay(click.createdAt)</td>
                 <td>@click.hitUUID.toString().takeRight(5)</td>
                 <td>@click.numKeepers</td>
                 <td>@adminHelper.userDisplay(click.keeper)</td>
