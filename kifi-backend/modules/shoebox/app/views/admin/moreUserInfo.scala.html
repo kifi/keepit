@@ -2,7 +2,6 @@
   rawInfos: Seq[SocialUserRawInfo],
   socialUserInfos: Seq[SocialUserInfo],
   socialConnections: Seq[SocialUserInfo],
-  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
   abookInfos: Seq[ABookInfo],
   econtacts: Seq[EContact]
   )
@@ -60,27 +59,4 @@
         </table>
     </div>
   }
-
-   <h2>User has sent @sentElectronicMails.size emails</h2>
-   <table class="table table-bordered">
-    <tr>
-      <th>#</th>
-      <th>From</th>
-      <th>To</th>
-      <th>Subject</th>
-      <th>Creation</th>
-    </tr>
-  @for((electronicMail, i) <- sentElectronicMails.zipWithIndex) {
-    <tr>
-      <td rowspan="2">@{i+1}</td>
-      <td>@electronicMail.fromName</td>
-      <td>@{electronicMail.to map {a => a.address} mkString(",")}</td>
-      <td>@electronicMail.subject</td>
-      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
-    </tr>
-    <tr>
-      <td colspan="4">@electronicMail.htmlBody</td>
-    </tr>
-  }
-  </table>
 }
