@@ -144,11 +144,12 @@ class AdminUserController @Inject() (
   def moreUserInfoView(userId: Id[User], showPrivates:Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 40000000) else Future.successful(Seq.empty[EContact])
-    val (user, socialUserInfos, sentElectronicMails) = db.readOnly { implicit s =>
+    val (user, socialUserInfos, sentElectronicMails, socialConnections) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
+      val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
       val sentElectronicMails = mailRepo.forSender(userId)
-      (user, socialUserInfos, sentElectronicMails)
+      (user, socialUserInfos, sentElectronicMails, socialConnections)
     }
     val rawInfos = socialUserInfos map {info =>
       socialUserRawInfoStore.get(info.id.get)
@@ -156,7 +157,7 @@ class AdminUserController @Inject() (
     for {
       abookInfos <- abookInfoF
       econtacts <- econtactsF
-    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, sentElectronicMails, abookInfos, econtacts))
+    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, sentElectronicMails, abookInfos, econtacts))
   }
 
   def updateCollectionsForBookmark(id: Id[Keep]) = AdminHtmlAction.authenticated { implicit request =>
@@ -224,10 +225,9 @@ class AdminUserController @Inject() (
     val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = if (showPrivateContacts) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
 
-    val (bookmarkCount, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
+    val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
-      val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
@@ -235,7 +235,7 @@ class AdminUserController @Inject() (
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = invitedBy(socialUsers, emails)
-      (bookmarkCount, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
+      (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
     val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
@@ -245,7 +245,7 @@ class AdminUserController @Inject() (
       econtactCount <- econtactCountF
       econtacts <- econtactsF
     } yield {
-      Ok(html.admin.user(user, bookmarkCount, experiments, socialUsers, socialConnections,
+      Ok(html.admin.user(user, bookmarkCount, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
         econtacts, invitedByUsers))
     }

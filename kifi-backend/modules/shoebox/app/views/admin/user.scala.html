@@ -2,7 +2,6 @@
   totalBookmarks: Int,
   experiments: Set[ExperimentType],
   socialUsers: Seq[SocialUserInfo],
-  socialConnections: Seq[SocialUserInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
   allowedInvites: Int,
@@ -122,30 +121,15 @@
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.userKeepsView(user.id.get)">User Keeps</a>
     </p>
 
-	<div class="row-fluid">
-	  <ul class="thumbnails">
-      <li class="span6 well">
-        <h2>@socialConnections.size Social Users</h2>
-        <div class="scrollArea">
-          <ol>
-          @for(socialConnection <- socialConnections) {
-            <li>@adminHelper.socialUserDisplay(socialConnection)</li>
-          }
-          </ol>
-        </div>
-      </li>
-	    <li class="span6 well">
-	      <h2>@fortyTwoConnections.size FortyTwo Users</h2>
-	      <div class="scrollArea">
-	        <ol>
-	        @for(u <- fortyTwoConnections) {
-	          <li>@adminHelper.userDisplay(u)</li>
-	        }
-	        </ol>
-	      </div>
-	    </li>
-	  </ul>
-	</div>
+      <h2>@fortyTwoConnections.size FortyTwo Users</h2>
+      <div class="scrollArea">
+        <ol>
+        @for(u <- fortyTwoConnections) {
+          <li>@adminHelper.userDisplay(u)</li>
+        }
+        </ol>
+      </div>
+
   <h2>Prefix Search</h2>
   <br/>
     <table>
