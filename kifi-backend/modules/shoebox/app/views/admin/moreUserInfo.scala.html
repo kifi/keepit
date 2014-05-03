@@ -1,6 +1,7 @@
 @(user: User,
   rawInfos: Seq[SocialUserRawInfo],
   socialUserInfos: Seq[SocialUserInfo],
+  socialConnections: Seq[SocialUserInfo],
   sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
   abookInfos: Seq[ABookInfo],
   econtacts: Seq[EContact]
@@ -26,7 +27,16 @@
         }</td>
       </tr>
   </table>
-  
+
+    <h2>@socialConnections.size Social Users</h2>
+    <div class="scrollArea">
+        <ol>
+            @for(socialConnection <- socialConnections) {
+            <li>@adminHelper.socialUserDisplay(socialConnection)</li>
+            }
+        </ol>
+    </div>
+
   <h2>User has uploaded @abookInfos.size Address Book(s)</h2>
     @if(abookInfos.size > 0) {
       <br/>
