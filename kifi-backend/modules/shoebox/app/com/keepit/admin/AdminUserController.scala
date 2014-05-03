@@ -192,6 +192,10 @@ class AdminUserController @Inject() (
     doUserViewById(userId, showPrivates)
   }
 
+  def userKeepsView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    doUserKeepsView(userId, showPrivates)
+  }
+
   def userViewByEitherId(userIdStr: String, showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     Try(userIdStr.toLong).toOption map { id =>
       doUserViewById(Id[User](id), showPrivates)
@@ -214,19 +218,14 @@ class AdminUserController @Inject() (
     } getOrElse Promise.successful(NotFound).future
   }
 
-  private def doUserView(user: User, showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+  private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
+    val econtactsF = if (showPrivateContacts) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
 
-    if (showPrivates) {
-      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
-    }
-
-    val (bookmarks, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
-      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
-      val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
+    val (bookmarkCount, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
+      val bookmarkCount = keepRepo.getCountByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
@@ -236,7 +235,33 @@ class AdminUserController @Inject() (
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = invitedBy(socialUsers, emails)
-      ((bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
+      (bookmarkCount, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
+    }
+
+    val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
+
+    for {
+      abookInfos <- abookInfoF
+      econtactCount <- econtactCountF
+      econtacts <- econtactsF
+    } yield {
+      Ok(html.admin.user(user, bookmarkCount, experiments, socialUsers, socialConnections,
+        fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
+        econtacts, invitedByUsers))
+    }
+  }
+
+
+  private def doUserKeepsView(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): SimpleResult = {
+    if (showPrivates) {
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
+    }
+
+    val (user, bookmarks) = db.readOnly {implicit s =>
+      val user = userRepo.get(userId)
+      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
+      (user, (bookmarks, uris).zipped.toList.seq)
     }
 
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
@@ -262,17 +287,8 @@ class AdminUserController @Inject() (
       }
     }
     val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
-    val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
-    for {
-      abookInfos <- abookInfoF
-      econtactCount <- econtactCountF
-      econtacts <- econtactsF
-    } yield {
-      Ok(html.admin.user(user, bookmarks.size, experiments, filteredBookmarks, socialUsers, socialConnections,
-        fortyTwoConnections, kifiInstallations, bookmarkSearch, allowedInvites, emails, abookInfos, econtactCount,
-        econtacts, collections, collectionFilter, invitedByUsers))
-    }
+    Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch, collections, collectionFilter))
   }
 
   def allUsersView = usersView(0)

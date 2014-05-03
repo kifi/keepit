@@ -1,0 +1,109 @@
+@(user: User,
+  totalBookmarks: Int,
+  bookmarks: Seq[(Keep, NormalizedURI, Seq[String])],
+  bookmarkSearch: Option[String],
+  collections: Seq[Collection],
+  collectionFilter: Option[Id[Collection]]
+)
+
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <br/>
+    <table class="user-summary table table-bordered">
+      <tr>
+        <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25>@user.firstName @user.lastName</td>
+      </tr>
+      <tr>
+        <th>Id</th><td>@user.id</td>
+      </tr>
+    </table>
+
+  <h2>User kept @totalBookmarks Bookmarks</h2>
+  <h3>Showing @bookmarks.size Bookmarks of total @totalBookmarks</h3>
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)" method="POST">
+    @if(bookmarkSearch.isDefined){
+      <input type="text" name="bookmarkSearch" value="@{bookmarkSearch.get}"/>
+    } else {
+      <input type="text" name="bookmarkSearch" placeholder="query"/>
+    }
+    <select name="collectionFilter">
+      <option value="-1">All collections</option>
+    @for(c <- collections) {
+      <option value="@c.id.get" @if(collectionFilter == c.id) { selected }>@c.name</option>
+    }
+    </select>
+    <input type="submit" value="Search"/>
+  </form>
+  <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminBookmarksController.updateBookmarks()"
+  method="POST">
+    <button type="submit" class="btn">Update</button><br/><br/>
+			<table class="table table-bordered">
+		    <tr>
+		      <th>#</th>
+		      <th>BID</th>
+		      <th>Private</th>
+		      <th>Active</th>
+		      <th>Bookmark</th>
+              <th>Collections</th>
+              <th>Source</th>
+          <th>Created At</th>
+          <th>State</th>
+		    </tr>
+			 @for(((bookmark, uri, collections), i) <- bookmarks.zipWithIndex) {
+			   <tr>
+		        <td>@{i+1}</td>
+		        <td><span class="badge">@bookmark.id.get.id</span></td>
+		        <td>
+		          <input type="hidden" name="private_@{bookmark.id.get.id}" value="0" />
+  					  <center><input type="checkbox" id="private_@bookmark.id.get.id" name="private_@{bookmark.id.get.id}" value="1" @if(bookmark.isPrivate) {checked="checked"}"></input></center>
+		        </td>
+		        <td>
+              <input type="hidden" name="active_@{bookmark.id.get.id}" value="0" />
+							<center><input type="checkbox" id="active_@bookmark.id.get.id" name="active_@{bookmark.id.get.id}" value="1" @if(bookmark.state.value == "active") {checked="checked"}"></input></center>
+		        </td>
+		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
+                <td><div class="collections" data-id="@bookmark.id.get.id">@{collections.mkString(", ")}</div></td>
+                <td>@bookmark.source</td>
+            <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
+            <td>@adminHelper.uriStateDisplay(uri)</td>
+			   </tr>
+			 }
+			</table>
+    <button type="submit" class="btn">Update</button>
+  </form>
+
+  <script type="text/javascript">
+    $(function() {
+      $('.table').on('click', 'div.collections', function () {
+        var $input = $('<input type="text">').addClass('collections').val($(this).text());
+        $(this).hide().parent().append($input);
+        $input.focus();
+      });
+      $('.table').on('keydown', 'input.collections', function (e) {
+        if (e.keyCode === 13) {
+          e.preventDefault();
+          $(this).blur();
+        }
+      });
+      $('.table').on('change', 'input.collections', function () {
+        var $div = $(this).parent().find('div.collections');
+        var $td = $div.closest("td");
+        var $sp = $("<img src='/assets/images/spinner.15.gif'>").appendTo($td);
+        var bookmarkId = $div.data("id");
+        $.post('@com.keepit.controllers.admin.routes.AdminUserController.updateCollectionsForBookmark(Id(-1))'
+            .replace('-1', bookmarkId), { collections: $(this).val() }).done(done).fail(fail);
+        function done(data) {
+          $div.text(data.collections.join(", ")).show();
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+        return false;
+      });
+      $('.table').on('blur', 'input.collections', function () {
+        $(this).parent().find('.collections').show();
+        $(this).remove();
+      });
+    });
+  </script>
+}
