@@ -111,7 +111,7 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
+  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, experimants: Seq[UserExperiment])(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
     val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
     SafeFuture{
@@ -120,7 +120,7 @@ class KeepsCommander @Inject() (
     KeepInfo.fromBookmark(keep)
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, experimants: Seq[UserExperiment])(implicit context: HeimdalContext):
       (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
@@ -135,6 +135,18 @@ class KeepsCommander @Inject() (
       searchClient.updateURIGraph()
     }
     (keeps.map(KeepInfo.fromBookmark), addedToCollection)
+  }
+
+  /**
+   * todo(eishay): have it run in a delay and recheck that the keep didn't change to inactive or private
+   */
+  private def notifyNetwork(userId: Id[User], experimants: Seq[UserExperiment], keeps: Keep*): Unit = if (experimants.contains(ExperimentType.WHO_KEPT_MY_KEEP)) keeps foreach { keep =>
+    db.readOnly { implicit s =>
+      if (keep.isPrivate) return
+      val uri = uriRepo.get(keep.uriId)
+      if (uri.restriction.isDefined) return
+      val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate)
+    }
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
