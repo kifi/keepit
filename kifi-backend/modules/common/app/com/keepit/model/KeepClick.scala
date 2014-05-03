@@ -18,7 +18,8 @@ case class KeepClick(
 
   keeperId: Id[User],
   keepId: Id[Keep],
-  uriId: Id[NormalizedURI]
+  uriId: Id[NormalizedURI],
+  origin: Option[String] = None
 
 ) extends ModelWithState[KeepClick] {
   def withId(id: Id[KeepClick]): KeepClick = this.copy(id = Some(id))
@@ -27,4 +28,4 @@ case class KeepClick(
 
 object KeepClicksStates extends States[KeepClick]
 
-case class RichKeepClick(id:Option[Id[KeepClick]], createdAt:DateTime, updatedAt:DateTime, state:State[KeepClick], hitUUID:ExternalId[SanitizedKifiHit], numKeepers:Int, keeper:User, keep:Keep, uri:NormalizedURI)
+case class RichKeepClick(id:Option[Id[KeepClick]], createdAt:DateTime, updatedAt:DateTime, state:State[KeepClick], hitUUID:ExternalId[SanitizedKifiHit], numKeepers:Int, keeper:User, keep:Keep, uri:NormalizedURI, origin:Option[String])

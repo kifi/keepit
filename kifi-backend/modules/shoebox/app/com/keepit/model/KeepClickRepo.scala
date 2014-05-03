@@ -30,7 +30,8 @@ class KeepClickRepoImpl @Inject() (
     def keeperId = column[Id[User]]("keeper_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def uriId  = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, hitUUID, numKeepers, keeperId, keepId, uriId) <> ((KeepClick.apply _).tupled, KeepClick.unapply)
+    def origin = column[String]("origin", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, hitUUID, numKeepers, keeperId, keepId, uriId, origin.?) <> ((KeepClick.apply _).tupled, KeepClick.unapply)
   }
 
   def table(tag:Tag) = new KeepClicksTable(tag)
