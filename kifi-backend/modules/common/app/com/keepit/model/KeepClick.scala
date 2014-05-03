@@ -26,3 +26,5 @@ case class KeepClick(
 }
 
 object KeepClicksStates extends States[KeepClick]
+
+case class RichKeepClick(id:Option[Id[KeepClick]], createdAt:DateTime, updatedAt:DateTime, state:State[KeepClick], hitUUID:ExternalId[SanitizedKifiHit], numKeepers:Int, keeper:User, keep:Keep, uri:NormalizedURI)
