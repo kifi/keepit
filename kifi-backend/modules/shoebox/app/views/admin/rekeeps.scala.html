@@ -18,7 +18,6 @@
                 <td>attr_factor</td>
                 <td>uriId</td>
                 <td>title</td>
-                <td>favicon</td>
                 @if(showImage){ <td>image</td> }
             </tr></th>
             @for((rekeep, pageOpt, imgOpt) <- rekeeps){
@@ -32,7 +31,6 @@
                 <td>@rekeep.attributionFactor</td>
                 <td>@rekeep.uri.id</td>
                 <td><a href="@rekeep.uri.url">@rekeep.uri.title</a></td>
-                <td>@if(pageOpt.isDefined){ <img src="@pageOpt.get.faviconUrl" width="50" height="50" alt="no favicon"/> }</td>
                 @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
             </tr>
             }
