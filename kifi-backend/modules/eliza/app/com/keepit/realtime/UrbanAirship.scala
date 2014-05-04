@@ -217,7 +217,7 @@ class UrbanAirshipImpl @Inject()(
         "android" -> Json.obj(
           "alert" -> message,
           "extra" -> Json.obj(
-			"unreadCount" -> notification.unvisitedCount,
+			"unreadCount" -> notification.unvisitedCount.toString,
 			"id" -> notification.id.id
 		  )
         )
@@ -228,7 +228,7 @@ class UrbanAirshipImpl @Inject()(
         "android" -> Json.obj(
 		  "alert" -> s"",
 		  "extra" -> Json.obj(
-		    "unreadCount" -> notification.unvisitedCount,
+		    "unreadCount" -> notification.unvisitedCount.toString,
 		    "id" -> notification.id.id
 		  )
 		)

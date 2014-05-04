@@ -24,7 +24,7 @@ import play.api.mvc.Action
 import com.keepit.scraper._
 import com.keepit.social.{SocialGraphPlugin, BasicUser, SocialNetworkType}
 
-import com.keepit.commanders.{RawKeepImporterPlugin, UserCommander}
+import com.keepit.commanders.{KeepsCommander, RawKeepImporterPlugin, UserCommander}
 import com.keepit.common.db.slick.Database.Slave
 import com.keepit.normalizer.VerifiedCandidate
 import com.keepit.model.KifiInstallation
@@ -32,6 +32,7 @@ import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import scala.util.{Try, Failure, Success}
 import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.SanitizedKifiHit
 
 
 class ShoeboxController @Inject() (
@@ -56,8 +57,7 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
-  userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  keepClicksRepo: KeepClickRepo,
+  keepsCommander: KeepsCommander,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
   pageInfoRepo:PageInfoRepo,
@@ -620,20 +620,11 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def clickAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
+  def kifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
-    val clicker = Id.format[User].reads(json \ "clicker").get
-    val uriId = Id.format[NormalizedURI].reads(json \ "uriId").get
-    val keepers = (json \ "keepers").as[JsArray].value.map(ExternalId.format[User].reads(_).get)
-    db.readWrite { implicit session =>
-      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, uriId, true)
-      else {
-        keepers.foreach { extId =>
-          val keeperId: Id[User] = userRepo.get(extId).id.get
-          userBookmarkClicksRepo.increaseCounts(keeperId, uriId, false)
-        }
-      }
-    }
+    val clicker = (json \ "clickerId").as(Id.format[User])
+    val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
+    keepsCommander.processKifiHit(clicker, kifiHit)
     Ok
   }
 
