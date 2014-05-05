@@ -125,11 +125,11 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     }
 
     val uriVertexId: VertexDataId[UriReader] = update.uriId
-    removeOldURITopicsIfExists(uriVertexId, update.dimension)
+    removeOldURITopicsIfExists(uriVertexId, update.sparseTopics.dimension)
 
     val uriData = UriData(uriVertexId)
 
-    (update.topicScores zip update.topicIds) foreach { case (score, index) =>
+    update.sparseTopics.topics foreach { case (index, score) =>
       val topicId = VersionedLDATopicId(update.uriSeq.version, index)
       val topicVertexId: VertexDataId[LDATopicReader] = topicId
       writer.saveVertex(LDATopicData(topicVertexId))
