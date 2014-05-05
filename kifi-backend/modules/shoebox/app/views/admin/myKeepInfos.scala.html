@@ -1,16 +1,18 @@
-@(user:User, clicks:Seq[com.keepit.model.RichKeepClick], rekeeps:Seq[com.keepit.model.RichReKeep])
+@(user:User, clicks:Seq[com.keepit.model.RichKeepClick], rekeeps:Seq[com.keepit.model.RichReKeep], rekepts:Seq[com.keepit.model.RichReKeep])
 
-@admin("Keep-Attribution Infos") {
+@admin("My Keep Infos") {
 
 <ul>
     <li>The following shows <i>personalized</i> lists of recognized <i>keep_click</i> and </i><i>rekeep</i> events in the last week.</li>
     <li>For the <i>global</i> list, check out the <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(0,50,false)">Keep Clicks page</a> and
         <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0,50,false)">ReKeeps Page</a> for more information.</li>
-    <li><b>Note</b>: that we started tracking the relevant events only very recently -- on <b>2 May</b> (Friday) to be exact. If the stats do not look good now -- check back in a few days!</li>
+    <li><b>Note</b>: that we started tracking the relevant events only very recently -- on <b>2 May</b> (Friday) to be exact. If the stats do not look good now -- check back in a few days
+    (or better yet -- find, keep and re-keep more!)</li>
 </ul>
 
-<h2>Who Viewed my Keeps?</h2>
-(You've helped @clicks.length people discover new things in the last week!)
+<p/>
+<h2>Are my keeps being discovered?</h2>
+<i>Your keeps have been viewed @clicks.length times last week!</i>
 
 <table class="table table-striped">
     <th><tr>
@@ -37,8 +39,9 @@
     }
 </table>
 
-<h2>Who Re-Kept my Keeps?</h2>
-(@rekeeps.length people have kept new discoveries into their libraries because of you!)
+<p/>
+<h2>Who Re-Kept my keeps?</h2>
+<i>@rekeeps.length people have kept new discoveries into their libraries because of you!</i>
 
 <table class="table table-striped">
     <th><tr>
@@ -61,6 +64,35 @@
         <td>@rekeep.attributionFactor</td>
         <td>@rekeep.uri.id</td>
         <td><a href="@rekeep.uri.url">@rekeep.uri.title</a></td>
+    </tr>
+    }
+</table>
+
+<p/>
+<h2>Whose keeps have I re-kept?</h2>
+<i>You have kept @rekepts.length new discoveries into your library because of your friends!</i>
+
+<table class="table table-striped">
+    <th><tr>
+        <td>Id</td>
+        <td>Date</td>
+        <td>Keeper</td>
+        <td>Keep</td>
+        <td>Re-keep</td>
+        <td>attr_factor (1/n)</td>
+        <td>uriId</td>
+        <td>title</td>
+    </tr></th>
+    @for(rekept <- rekepts){
+    <tr>
+        <td>@rekept.id</td>
+        <td>@adminHelper.dateDisplay(rekept.createdAt)</td>
+        <td>@adminHelper.userDisplay(rekept.keeper)</td>
+        <td>@rekept.keep.id.get</td>
+        <td>@rekept.srcKeep.id.get</td>
+        <td>@rekept.attributionFactor</td>
+        <td>@rekept.uri.id</td>
+        <td><a href="@rekept.uri.url">@rekept.uri.title</a></td>
     </tr>
     }
 </table>
