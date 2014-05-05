@@ -1,5 +1,6 @@
 // @require styles/keeper/thread.css
 // @require styles/keeper/compose.css
+// @require styles/keeper/participant_colors.css
 // @require scripts/html/keeper/messages.js
 // @require scripts/html/keeper/message.js
 // @require scripts/html/keeper/compose.js
@@ -200,6 +201,7 @@ panes.thread = function () {
     m.formatAuxData = formatAuxData;
     m.formatLocalDate = formatLocalDate;
     m.isLoggedInUser = m.user && m.user.id === me.id;
+    formatParticipant(m.user);
     return $(render('html/keeper/message', m))
       .find('time').timeago().end()[0];
   }

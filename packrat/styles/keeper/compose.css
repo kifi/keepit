@@ -350,7 +350,8 @@ a.kifi-compose-submit.kifi-active {
   background-color: #6fa6ef;
   color: #fff;
 }
-.kifi-ti-dropdown-item:not(.kifi-ti-dropdown-contact-email)+.kifi-ti-dropdown-contact-email {
+.kifi-ti-dropdown-item:not(.kifi-ti-dropdown-token)+.kifi-ti-dropdown-token,
+.kifi-ti-dropdown-item:not(.kifi-ti-dropdown-email)+.kifi-ti-dropdown-email {
   border-top: 1px solid #ccc;
 }
 .kifi-ti-dropdown-item::before {
@@ -366,10 +367,15 @@ a.kifi-compose-submit.kifi-active {
 }
 .kifi-ti-dropdown-contact-email::before {
   background: #e36767 6px 7px/16px 14px no-repeat;
+}
+.kifi-ti-dropdown-new-email::before {
+  background: #33495F 6px 7px/16px 14px no-repeat;
+}
+.kifi-ti-dropdown-email::before {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAQAAACMJlQBAAAAW0lEQVR4AX3NoQ0CMABE0ZuEkNqy/wJ0DAySOsIAD8sJeva/5GI57R5Ppz1i2v5tu0UTnSUuTTq7xjZ/SOfpFZp0JjTpTGjSmVBkGH0XmnQmNOlM9N4+NFhOW18UF5AlmfH20gAAAABJRU5ErkJggg==);
 }
 @media (min-resolution: 1.3dppx) {
-  .kifi-ti-dropdown-contact-email::before {
+  .kifi-ti-dropdown-email::before {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAcCAQAAACqy3WpAAAAr0lEQVR4AaXOMVnEQACE0Um2QANSsHA2wAenIDU4yClBCZeTANWjop1iM/37v1ld3M3ucFnc85z5HYufPGV+v2s+c2YfMdzM7mZET+hcoid0LtETOpeYSez/XOLdKInOh2uwl0TnO6EnOif0ROeEnuic0BOdE3qic0JPdE7oVzsn1MRma5xQE5HGCT3ROaEnOif0ROeEnuichbR9JXlJ2UJObc2RM3usecsjs/vO6x9F5JZWip8jRwAAAABJRU5ErkJggg==);
   }
 }
@@ -380,7 +386,7 @@ a.kifi-compose-submit.kifi-active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.kifi-ti-dropdown-contact-name {
+.kifi-ti-dropdown-contact-name:not(:last-child) {
   line-height: 14px;
 }
 .kifi-ti-dropdown-contact-sub {
@@ -439,3 +445,18 @@ a.kifi-compose-submit.kifi-active {
 .kifi-ti-dropdown b {
   font-weight: bold;
 }
+.kifi-ti-email-token-icon {
+  display: inline-block;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAKCAYAAAC9vt6cAAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAB3RJTUUH3gUEExoUF/X8VwAAAM5JREFUKM+dkjFKQ2EQhL95eIxYpbaWtAFNOlNYaEiRNELwTMEj2FqIYG1ta6EYbHICQz4LE/jfwzyCU84wy87sRhX4AB6BcBi+gT7QRX1W39QewO+8dqgD9V1doT5tyaV6foD5qvB8HRVaB7hXj5MsVJI0zTdAL0l/x1WFvklyAZyq8yS1OOoMOEkyK/nqjy03wEid7DZQp8B4q9VQDqjUB+AlyQC4VK/VW2CU5Ax4Ve9q0dpKVOfquK3EvWds5G+WOVQ/1VXUNbD87yP9AHdzrKaEIpxRAAAAAElFTkSuQmCC);
+  background-repeat: no-repeat;
+  background-size: 16px 10px;
+  padding-right: 4px;
+  height: 10px;
+  width: 16px;
+}
+@media (min-resolution: 1.3dppx) {
+  .kifi-ti-email-token-icon {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAUCAYAAAB1aeb6AAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAB2IAAAdiAH5K19/AAAAB3RJTUUH3gUEExs0NYDt3gAAAe9JREFUSMfFls9OU1EQxn9foa00QkuJBIXERNGtrgyPoO+g8V18KeMbGFe6MDEqu4JStLToAkvxc+GceFpv/wAKs7n3zM2d35m538y5sm0uy/zHflwQr52ACf4s20TtP4J7wXhs26XwfwQ24/7AduVffY0Ux/YXYAm4D3wASHBJ2ga2gArQAsrn3YBtScJ2B1gAFiS9AZTDk70CHgHXgB2gfB4wULHdA+Yj6yFdDcElGXgR0AbwzXb1rKUG2oAlLQEnEb8YnjYgaQA0gSpwZLtyGrikBC5JamQ+JsKzAN+B5Vh+tT03TQOZuFpR5uakd0pTMugCdeAE2AY0LphtQlwtoAbcAAZFGc8EH7GbwPuiDWQZ7wHrwExtUppSxgbQA+aAVeBWdEFpNGNgD1jU78URsAvMn6nstq8CB7FckbQfLXgd6KYBlZW6LqkWvnXgEOicquy2Zfsh0Im+vCKpH0E7AV8Edm0/sf0WWMvFFddV4Kft7kj7/XWwPM3B4WvbLo+pypqHbSOGymgS1Zjnh9Etimdb+WxP9gB4DuyHcI7HdMFnZQbsjA6QWPcl1YEB0AXuFpXdtm8DL4E+sAEcT/peBaBCfwiyGXHf2b6XuiHBN+NkA1iW1J8VPOO0Q9JKiPA1cOfSfyZk+1Oo9aJt8AuVZWcjzbERSgAAAABJRU5ErkJggg==);
+  }
+}
+

@@ -167,6 +167,36 @@ function formatLocalDate() {
   }
 }
 
+function formatParticipant(participant) {
+  participant.isUser = !participant.kind || participant.kind === 'user';
+  participant.isEmail = participant.kind === 'email';
+  if (participant.isEmail) {
+    participant.initial = participant.id[0].toUpperCase();
+    // generate hashcode for background color
+    var hash = 0, i, chr, len;
+    for (i = 0, len = participant.id.length; i < len; i++) {
+      chr = participant.id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    var numColors = 4;
+    switch (((hash%numColors)+numColors)%numColors) {
+      case 0:
+        participant.color = 'red';
+        break;
+      case 1:
+        participant.color = 'orange';
+        break;
+      case 2:
+        participant.color = 'green';
+        break;
+      case 3:
+        participant.color = 'purple';
+        break;
+    }
+  }
+}
+
 function convertDraftToText(html) {
  'use strict';
   var html2 = html
