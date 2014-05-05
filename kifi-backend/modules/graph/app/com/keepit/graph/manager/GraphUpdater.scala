@@ -19,7 +19,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialUserInfoGraphUpdate: SocialUserInfoGraphUpdate => processSocialUserInfoGraphUpdate(socialUserInfoGraphUpdate)
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
-    case ldaUpdate: LDAURITopicGraphUpdate => {/*processLDAUpdate(ldaUpdate)*/}
+    case ldaUpdate: LDAURITopicGraphUpdate => processLDAUpdate(ldaUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
