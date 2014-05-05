@@ -155,7 +155,12 @@ class UrbanAirshipImpl @Inject()(
   def updateDeviceState(device: Device): Future[Device] = {
     log.info(s"Checking state of device: ${device.token}")
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
-      authenticatedClient.getFuture(DirectUrl(s"${config.baseUrl}/api/device_tokens/${device.token}"), url => {
+      val uaUrl = device.deviceType match {
+        case DeviceType.IOS => s"${config.baseUrl}/api/device_tokens/${device.token}"
+        case DeviceType.Android => s"${config.baseUrl}/api/apids/${device.token}"
+        case dt => throw new Exception(s"Unknown device type: $dt")
+      }
+      authenticatedClient.getFuture(DirectUrl(uaUrl), url => {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
       }) map { r =>
         val active = (r.json \ "active").as[Boolean]
