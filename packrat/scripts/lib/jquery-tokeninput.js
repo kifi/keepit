@@ -21,7 +21,11 @@
     tokenLimit: Infinity,
     preventDuplicates: false,
     formatToken: function (item) {
-      return '<li><span>' + htmlEscape(item.name) + '</span></li>';
+      var iconHtml = '';
+      if (item.id.kind && item.id.kind === 'email') {
+        iconHtml = '<span class="kifi-ti-email-token-icon"></span>';
+      }
+      return '<li>' + iconHtml + '<span>' + htmlEscape(item.name) + '</span></li>';
     },
 
     // Callbacks

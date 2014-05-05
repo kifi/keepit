@@ -5,8 +5,8 @@
   {{#user.isEmail}}<span class="kifi-message-pic-email kifi-participant-background-{{user.color}}">{{user.initial}}</span>{{/user.isEmail}}
   <div class="kifi-message-body">
     <div class="kifi-message-name">
-      {{#isUser}}{{user.firstName}} {{user.lastName}}{{/isUser}}
-      {{#isEmail}}{{user.id}}{{/isEmail}}
+      {{#user.isUser}}{{user.firstName}} {{user.lastName}}{{/user.isUser}}
+      {{#user.isEmail}}{{user.id}}{{/user.isEmail}}
     </div>
     {{#formatMessage}}{{{text}}}{{/formatMessage}}
   </div>
