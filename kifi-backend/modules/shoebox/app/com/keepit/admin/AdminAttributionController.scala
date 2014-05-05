@@ -55,4 +55,18 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.rekeeps(t, showImage, page, count, size))
   }
 
+  def myKeepInfos() = AdminHtmlAction.authenticated { request =>
+    val (u, kc, rk) = db.readOnly { implicit ro =>
+      val u  = userRepo.get(request.userId)
+      val rc = keepClickRepo.getClicksByKeeper(request.userId) map { c =>
+        RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+      }
+      val rk = rekeepRepo.getReKeepsByKeeper(request.userId) map { k =>
+        RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, u, keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
+      }
+      (u, rc, rk)
+    }
+    Ok(html.admin.myKeepInfos(u, kc, rk))
+  }
+
 }
