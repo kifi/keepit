@@ -240,7 +240,11 @@ var formatAuxData = (function () {
   }
 
   function nameOf(user) {
-    return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+    if (user.kind === "email") {
+      return Mustache.escape(user.id); 
+    } else {
+      return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+    }
   }
 
   function boldNamesOf(users) {
