@@ -10,6 +10,11 @@ angular.module('kifi.keepService', [
   '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location',
   function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location) {
 
+
+    function createPageSession() {
+      return Math.random().toString(16).slice(2);
+    }
+
     var list = [],
       lastSearchContext = null,
       pageSession = createPageSession(),
@@ -139,10 +144,6 @@ angular.module('kifi.keepService', [
         }
       }
       return -1;
-    }
-
-    function createPageSession() {
-      return Math.random().toString(16).slice(2);
     }
 
     function expiredConversationCount(keep) {
@@ -652,7 +653,7 @@ angular.module('kifi.keepService', [
             kifiShownTime: null,
             kifiResultsClicked: null,
             refinements: refinements,
-            pageSession: pageSession,
+            pageSession: pageSession
           };
           return resData;
         });
