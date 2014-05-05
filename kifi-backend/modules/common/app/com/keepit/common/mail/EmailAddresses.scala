@@ -33,7 +33,7 @@ object EmailAddresses {
   case object SENDGRID extends SystemEmailAddress("sendgrid@42go.com")
   case object SUPPORT extends SystemEmailAddress("support@kifi.com")
   case object OLD_SUPPORT extends SystemEmailAddress("support@42go.com")//keep for serialization of mail
-  case class  DISCUSSION(id: String) extends SystemEmailAddress("discuss+" + id + "@kifi.com")
+  case class  DISCUSSION(override val address: String) extends SystemEmailAddress(address)
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, MARTIN)
   val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, EDUARDO, EFFI, NOTIFY, SENDGRID)
@@ -41,7 +41,13 @@ object EmailAddresses {
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 
   def apply(email: String): SystemEmailAddress =
-    ALL_EMAILS.find(_.address == email).getOrElse(throw new IllegalArgumentException(s"No system email for $email"))
+    ALL_EMAILS.find(_.address == email).getOrElse{
+      if (email.startsWith("discuss+")) {
+        DISCUSSION(email)
+      } else {
+        throw new IllegalArgumentException(s"No system email for $email")
+      }
+    }
 
-  def discussion(id: String): SystemEmailAddress = DISCUSSION(id)
+  def discussion(id: String): SystemEmailAddress = DISCUSSION("discuss+" + id + "@kifi.com")
 }
