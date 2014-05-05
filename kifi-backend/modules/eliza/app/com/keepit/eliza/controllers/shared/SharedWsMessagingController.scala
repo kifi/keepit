@@ -89,8 +89,7 @@ class SharedWsMessagingController @Inject() (
         (obj \ "email").as[String]
       }
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingCommander.addUsersToThread(socket.userId, ExternalId[MessageThread](threadId), users)
-      messagingCommander.addEmailNonUsersToThread(socket.userId, ExternalId[MessageThread](threadId), emailAddresses)
+      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailAddresses)
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
