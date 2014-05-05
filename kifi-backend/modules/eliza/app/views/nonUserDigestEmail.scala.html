@@ -329,12 +329,15 @@
                                             </tr>
                                             <tr>
                                               <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                                @threadInfo.pageDescription.map{ pageDescription =>
                                                   <tr>
-                                                    <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@threadInfo.heroImageUrl" width="183" class="img_1" style="display:block;" border="0" /></a></td>
-                                                    <td width="18" class="width">&nbsp;</td>
+                                                    @threadInfo.heroImageUrl.map{ heroImageUrl =>
+                                                      <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="183" class="img_1" style="display:block;" border="0" /></a></td>
+                                                      <td width="18" class="width">&nbsp;</td>
+                                                    }
                                                     <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                         <tr>
-                                                          <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;color:#333333;line-height:18px;">@threadInfo.pageDescription</td>
+                                                          <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;color:#333333;line-height:18px;">pageDescription</td>
                                                         </tr>
                                                         <tr>
                                                           <td height="6" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -347,7 +350,8 @@
                                                         </tr>
                                                       </table></td>
                                                   </tr>
-                                                </table></td>
+                                                }
+                                              </table></td>
                                             </tr>
                                           </table></td>
                                         <td width="20" class="hide">&nbsp;</td>
