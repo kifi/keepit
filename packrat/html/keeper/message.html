@@ -1,14 +1,17 @@
-<div class="kifi-message-sent{{#auxData.length}} kifi-message-aux kifi-message-{{auxData.0}}{{/auxData.length}}" data-id="{{id}}">
+<div class="kifi-message-sent{{#isAuxMessage}} kifi-message-aux kifi-message-{{auxData.0}}{{/isAuxMessage}}" data-id="{{id}}">
   <div class="kifi-message-status"></div>
-  <time datetime="{{createdAt}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>
+  {{#isAuxMessage}}<div class="kifi-message-tip"><time datetime="{{createdAt}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>{{#source}}<span class="kifi-message-source"> via {{source}}</span>{{/source}}</div>{{/isAuxMessage}}
   {{#user.isUser}}<img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{user.id}}/pics/100/{{user.pictureName}}"/>{{/user.isUser}}
   {{#user.isEmail}}<span class="kifi-message-pic-email kifi-participant-background-{{user.color}}">{{user.initial}}</span>{{/user.isEmail}}
   <div class="kifi-message-body">
-    <div class="kifi-message-name">
-      {{#user.isUser}}{{user.firstName}} {{user.lastName}}{{/user.isUser}}
-      {{#user.isEmail}}{{user.id}}{{/user.isEmail}}
+    <div class="kifi-message-top">
+      {{#isUserMessage}}<div class="kifi-message-tip"><time datetime="{{createdAt}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>{{#source}}<span class="kifi-message-source"> via {{source}}</span>{{/source}}</div>{{/isUserMessage}}
+      <div class="kifi-message-name">
+        {{#user.isUser}}{{user.firstName}} {{user.lastName}}{{/user.isUser}}
+        {{#user.isEmail}}{{user.id}}{{/user.isEmail}}
+      </div>
     </div>
     {{#formatMessage}}{{{text}}}{{/formatMessage}}
   </div>
-  {{#auxData.length}}<div class="kifi-aux-message">{{{formatAuxData}}}</div>{{/auxData.length}}
+  {{#isAuxMessage}}<div class="kifi-aux-message">{{{formatAuxData}}}</div>{{/isAuxMessage}}
 </div>
