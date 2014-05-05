@@ -74,6 +74,10 @@ class KeepsCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
+    userRepo: UserRepo,
+    userBookmarkClicksRepo: UserBookmarkClicksRepo,
+    keepClicksRepo: KeepClickRepo,
+    kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory
  ) extends Logging {
@@ -324,4 +328,32 @@ class KeepsCommander @Inject() (
       }
     }
   }
+
+  def processKifiHit(clicker:Id[User], kifiHit:SanitizedKifiHit):Unit = {
+    db.readWrite { implicit rw =>
+      val keepers = kifiHit.context.keepers
+      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
+      else {
+        kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
+          case Some(hit) =>
+            log.warn(s"[kifiHit($clicker,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
+          case None =>
+            kifiHitCache.set(KifiHitKey(clicker, kifiHit.uriId), kifiHit)
+            keepers.foreach { extId =>
+              val keeperId: Id[User] = userRepo.get(extId).id.get
+              userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
+              keepRepo.getByUriAndUser(kifiHit.uriId, keeperId) match {
+                case None =>
+                  log.warn(s"[kifiHit($clicker,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
+                  // move on
+                case Some(keep) =>
+                  val saved = keepClicksRepo.save(KeepClick(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
+                  log.info(s"[kifiHit($clicker, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
+              }
+            }
+        }
+      }
+    }
+  }
+
 }

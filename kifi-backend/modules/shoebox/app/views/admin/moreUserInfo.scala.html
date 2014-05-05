@@ -1,7 +1,7 @@
 @(user: User,
   rawInfos: Seq[SocialUserRawInfo],
   socialUserInfos: Seq[SocialUserInfo],
-  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
+  socialConnections: Seq[SocialUserInfo],
   abookInfos: Seq[ABookInfo],
   econtacts: Seq[EContact]
   )
@@ -26,7 +26,16 @@
         }</td>
       </tr>
   </table>
-  
+
+    <h2>@socialConnections.size Social Users</h2>
+    <div class="scrollArea">
+        <ol>
+            @for(socialConnection <- socialConnections) {
+            <li>@adminHelper.socialUserDisplay(socialConnection)</li>
+            }
+        </ol>
+    </div>
+
   <h2>User has uploaded @abookInfos.size Address Book(s)</h2>
     @if(abookInfos.size > 0) {
       <br/>
@@ -50,27 +59,4 @@
         </table>
     </div>
   }
-
-   <h2>User has sent @sentElectronicMails.size emails</h2>
-   <table class="table table-bordered">
-    <tr>
-      <th>#</th>
-      <th>From</th>
-      <th>To</th>
-      <th>Subject</th>
-      <th>Creation</th>
-    </tr>
-  @for((electronicMail, i) <- sentElectronicMails.zipWithIndex) {
-    <tr>
-      <td rowspan="2">@{i+1}</td>
-      <td>@electronicMail.fromName</td>
-      <td>@{electronicMail.to map {a => a.address} mkString(",")}</td>
-      <td>@electronicMail.subject</td>
-      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
-    </tr>
-    <tr>
-      <td colspan="4">@electronicMail.htmlBody</td>
-    </tr>
-  }
-  </table>
 }
