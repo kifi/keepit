@@ -45,7 +45,7 @@ class GraphUpdateFetcherImpl @Inject() (
       shoebox.sendKeepGraphUpdate(queue.queue, seq)
     case LDAURITopicGraphUpdate => {
       val seq = currentState.getCurrentSequenceNumber(LDAURITopicGraphUpdate)
-      //cortex.graphLDAURIFeatureUpdate(seq, queue.queue)
+      cortex.graphLDAURIFeatureUpdate(seq, queue.queue)
     }
   }
 }
