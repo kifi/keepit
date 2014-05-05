@@ -122,7 +122,9 @@ case class LDAURITopicGraphUpdate(
   uriId: Id[NormalizedURI],
   uriSeq: CortexVersionedSequenceNumber[NormalizedURI],
   modelName: String,
-  topics: Array[Float]
+  dimension: Int,
+  topicIds: Array[Int],
+  topicScores: Array[Float]
 ) extends GraphUpdate {
   type U = LDAURITopicGraphUpdate
   def kind = LDAURITopicGraphUpdate

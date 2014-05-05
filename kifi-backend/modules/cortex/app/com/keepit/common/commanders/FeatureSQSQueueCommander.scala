@@ -28,8 +28,14 @@ class FeatureSQSQueueCommander(
     val feats = featureCommander.getLDAURIFeature(lowSeq, DEFAULT_PUSH_SIZE, version)
     feats.map{ case (uri, feat) =>
       val vseq = CortexVersionedSequenceNumber[NormalizedURI](version.version, uri.seq.value)
-      LDAURITopicGraphUpdate(uri.id.get, vseq, "dense_lda", feat.vectorize)
+      val (topicIds, topicScores) = generateSparseRepresentation(feat.vectorize)
+      LDAURITopicGraphUpdate(uri.id.get, vseq, "dense_lda", feat.vectorize.length, topicIds, topicScores)
     }
+  }
+
+  private def generateSparseRepresentation(topicVector: Array[Float]): (Array[Int], Array[Float]) = {
+    val s = topicVector.zipWithIndex.sortBy(-1f * _._1).take(5).map{case (score, idx) => (idx, score)}
+    (s.map{_._1}, s.map{_._2})
   }
 
   def graphLDAURIFeatureUpdate(lowSeq: CortexVersionedSequenceNumber[NormalizedURI], queueName: QueueName): Unit = {
