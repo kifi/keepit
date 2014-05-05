@@ -72,13 +72,13 @@ class AdminAttributionController @Inject()(
   }
 
   def keepInfos(userId:Id[User]) = AdminHtmlAction.authenticated { request =>
-    val t = getKeepInfos(userId)
-    Ok(html.admin.myKeepInfos(t._1, t._2, t._3, t._4))
+    val (u, clicks, rekeeps, rekepts) = getKeepInfos(userId)
+    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
 
   def myKeepInfos() = AdminHtmlAction.authenticated { request =>
-    val t = getKeepInfos(request.userId)
-    Ok(html.admin.myKeepInfos(t._1, t._2, t._3, t._4))
+    val (u, clicks, rekeeps, rekepts) = getKeepInfos(request.userId)
+    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
 
 }
