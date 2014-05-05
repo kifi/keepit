@@ -15,10 +15,11 @@ import com.keepit.graph.manager.LDAURITopicGraphUpdate
 import com.keepit.cortex.CortexVersionedSequenceNumber
 import com.keepit.cortex._
 import com.keepit.common.logging.Logging
+import com.google.inject.Inject
 
 
 @Singleton
-class FeatureSQSQueueCommander(
+class FeatureSQSQueueCommander @Inject()(
   basicAWSCreds: BasicAWSCredentials,
   featureCommander: FeatureRetrievalCommander
 ) extends Logging {

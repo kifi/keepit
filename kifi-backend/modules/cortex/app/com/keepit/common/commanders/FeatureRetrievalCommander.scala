@@ -9,7 +9,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.cortex.core.FeatureRepresentation
 
 @Singleton
-class FeatureRetrievalCommander(
+class FeatureRetrievalCommander @Inject()(
   ldaURIFeat: LDAURIFeatureRetriever
 ) {
   def getLDAURIFeature(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA]): Seq[(NormalizedURI, FeatureRepresentation[NormalizedURI, DenseLDA])] = {
