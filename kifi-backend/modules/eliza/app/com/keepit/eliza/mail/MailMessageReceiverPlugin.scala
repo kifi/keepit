@@ -108,7 +108,7 @@ class MailDiscussionMessageParser @Inject() (
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
     getPublicId(message) map { publicId =>
-      MailNotificationReply(getTimestamp(message), getText(message).map(s => (new Regex("\n[^\n]*kifi.com>")).split(s)(0).trim), publicId)
+      MailNotificationReply(getTimestamp(message), getText(message).map(s => (new Regex(raw"\n[^\n]*<[^\s]+@[^\s]+>[^\n]*:")).split(s)(0).trim), publicId)
     }
 
   }
