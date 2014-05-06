@@ -31,6 +31,8 @@ trait MessagingTypeMappers { self: {val db: DataBaseComponent } =>
       case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Seq of Normalized URI ids: $source")
     }
   })
+    implicit def threadAccessTokenTypeMapper = MappedColumnType.base[ThreadAccessToken, String](_.token, ThreadAccessToken.apply _)
+
 }
 
 @deprecated("Not needed anymore!","2014-02-06")

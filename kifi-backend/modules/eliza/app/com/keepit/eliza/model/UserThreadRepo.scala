@@ -126,7 +126,8 @@ class UserThreadRepoImpl @Inject() (
     def replyable = column[Boolean]("replyable", O.NotNull)
     def lastActive = column[DateTime]("last_active", O.Nullable)
     def started = column[Boolean]("started", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, user, thread, uriId.?, lastSeen.?, unread, muted, lastMsgFromOther.?, lastNotification, notificationUpdatedAt, notificationLastSeen.?, notificationEmailed, replyable, lastActive.?, started) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def accessToken = column[ThreadAccessToken]("access_token", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, user, thread, uriId.?, lastSeen.?, unread, muted, lastMsgFromOther.?, lastNotification, notificationUpdatedAt, notificationLastSeen.?, notificationEmailed, replyable, lastActive.?, started, accessToken.?) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, thread), unique = true)
   }
