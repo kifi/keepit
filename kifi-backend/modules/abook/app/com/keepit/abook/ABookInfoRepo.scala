@@ -24,7 +24,7 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
   import db.Driver.simple._
 
   type RepoImpl = ABookTable
-  class ABookTable(tag: Tag) extends RepoTable[ABookInfo](db, tag, "abook_info") {
+  class ABookTable(tag: Tag) extends RepoTable[ABookInfo](db, tag, "abook_info") with ExternalIdColumn[ABookInfo] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def origin = column[ABookOriginType]("origin", O.NotNull)
     def ownerId = column[String]("owner_id")
@@ -33,7 +33,7 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     def oauth2TokenId = column[Id[OAuth2Token]]("oauth2_token_id")
     def numContacts = column[Int]("num_contacts", O.Nullable)
     def numProcessed = column[Int]("num_processed", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, userId, origin, ownerId.?, ownerEmail.?, rawInfoLoc.?, oauth2TokenId.?, numContacts.?, numProcessed.?) <> ((ABookInfo.apply _).tupled, ABookInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, state, userId, origin, ownerId.?, ownerEmail.?, rawInfoLoc.?, oauth2TokenId.?, numContacts.?, numProcessed.?) <> ((ABookInfo.apply _).tupled, ABookInfo.unapply _)
   }
 
   def table(tag: Tag) = new ABookTable(tag)
