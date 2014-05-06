@@ -38,7 +38,7 @@ class EmailMessageProcessingCommander @Inject() (
                   case Some(content: String) => {
                     val contextBuilder = heimdalContextBuilder()
                     contextBuilder += ("source", "email")
-                    messagingCommander.sendMessageWithNonUserThread(id, content, None)(contextBuilder.build)
+                    messagingCommander.sendMessageWithNonUserThread(id, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
                   }
                   case None => airbrake.notify(s"Could not extract contents of email: publicId = ${id} and timestamp = ${message.timestamp}")
                 }
