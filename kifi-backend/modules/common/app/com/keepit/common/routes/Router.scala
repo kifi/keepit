@@ -293,6 +293,12 @@ object Cortex extends Service {
   }
 }
 
+object Graph extends Service {
+  object internal {
+    def getGraphStatistics() = ServiceRoute(GET, "/internal/graph/statistics")
+  }
+}
+
 object Common {
   object internal {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")

@@ -1,4 +1,5 @@
 
-GET     /internal/discover       @com.keepit.graph.controllers.internal.GraphController.discover()
+GET     /internal/discover              @com.keepit.graph.controllers.internal.GraphController.discover()
+GET     /internal/graph/statistics      @com.keepit.graph.controllers.internal.GraphController.getGraphStatistics()
 
 ->  / common.Routes
