@@ -84,6 +84,7 @@ class MobileMessagingController @Inject() (
   }
 
 
+  // todo(eishay, léo): the next version of this endpoint should rename the "uri" field to "url"
   def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = JsonAction.authenticatedAsync { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, allMsgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
