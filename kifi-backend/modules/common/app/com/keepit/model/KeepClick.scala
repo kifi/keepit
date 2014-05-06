@@ -11,7 +11,7 @@ case class KeepClick(
   id: Option[Id[KeepClick]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  state: State[KeepClick] = KeepClicksStates.ACTIVE,
+  state: State[KeepClick] = KeepClickStates.ACTIVE,
 
   hitUUID: ExternalId[SanitizedKifiHit],
   numKeepers: Int,
@@ -26,6 +26,6 @@ case class KeepClick(
   def withUpdateTime(now: DateTime): KeepClick = this.copy(updatedAt = now)
 }
 
-object KeepClicksStates extends States[KeepClick]
+object KeepClickStates extends States[KeepClick]
 
 case class RichKeepClick(id:Option[Id[KeepClick]], createdAt:DateTime, updatedAt:DateTime, state:State[KeepClick], hitUUID:ExternalId[SanitizedKifiHit], numKeepers:Int, keeper:User, keep:Keep, uri:NormalizedURI, origin:Option[String])

@@ -168,7 +168,7 @@ class MessagingTest extends Specification with DbTestInjector {
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1), Duration(4, "seconds")).jsons.length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addUsersToThread(user1, thread.externalId, Seq(user3ExtId))
+        messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId), Seq.empty)
         Thread.sleep(200) //See comment for same above
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1), Duration(4, "seconds")).jsons.length === 1
       }

@@ -32,7 +32,8 @@ case class UserThread(
     notificationEmailed: Boolean = false,
     replyable: Boolean = true,
     lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
-    started: Boolean = false //Whether or not this thread was started by this user
+    started: Boolean = false, //Whether or not this thread was started by this user
+    accessToken: Option[ThreadAccessToken] = Some(ThreadAccessToken())
   )
   extends Model[UserThread] with ModelWithPublicId[UserThread] {
 

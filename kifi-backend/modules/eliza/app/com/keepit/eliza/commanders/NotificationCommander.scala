@@ -134,8 +134,8 @@ class NotificationCommander @Inject() (
             pageUrl = thread.nUrl.get,
             pageName = pageName,
             pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
-            heroImageUrl = uriSummary.imageUrl.getOrElse("#"),
-            pageDescription = uriSummary.description.getOrElse(""),
+            heroImageUrl = uriSummary.imageUrl,
+            pageDescription = uriSummary.description,
             participants = participants.toSeq,
             conversationStarter = starterUser.firstName + " " + starterUser.lastName,
             unsubUrl = unsubUrl,
@@ -162,15 +162,15 @@ class NotificationCommander @Inject() (
 
           val body = views.html.nonUserDigestEmail(threadInfo, threadItems).body
 
-          val magicAddress = "discuss+" + nut.publicId.get + "@kifi.com"
+          val magicAddress = EmailAddresses.discussion(nut.publicId.get)
           shoebox.sendMail(ElectronicMail (
-            from = EmailAddresses.NOTIFICATIONS,
+            from = magicAddress,
             fromName = Some("Kifi Discussions"),
             to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
             subject = "Kifi Message on " + pageName,
             htmlBody = body,
             category = ElectronicMailCategory("external_message_test"),
-            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress))
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
           ))
           db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, currentDateTime) }
         }

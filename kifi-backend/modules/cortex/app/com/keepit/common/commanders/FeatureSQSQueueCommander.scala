@@ -7,6 +7,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.queue.messages.DenseLDAURIFeatureMessage
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.lda.SparseTopicRepresentation
 import com.keepit.model.NormalizedURI
 import com.kifi.franz.{QueueName, SimpleSQSClient}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -14,10 +15,11 @@ import com.keepit.graph.manager.LDAURITopicGraphUpdate
 import com.keepit.cortex.CortexVersionedSequenceNumber
 import com.keepit.cortex._
 import com.keepit.common.logging.Logging
+import com.google.inject.Inject
 
 
 @Singleton
-class FeatureSQSQueueCommander(
+class FeatureSQSQueueCommander @Inject()(
   basicAWSCreds: BasicAWSCredentials,
   featureCommander: FeatureRetrievalCommander
 ) extends Logging {
@@ -28,8 +30,15 @@ class FeatureSQSQueueCommander(
     val feats = featureCommander.getLDAURIFeature(lowSeq, DEFAULT_PUSH_SIZE, version)
     feats.map{ case (uri, feat) =>
       val vseq = CortexVersionedSequenceNumber[NormalizedURI](version.version, uri.seq.value)
-      LDAURITopicGraphUpdate(uri.id.get, vseq, "dense_lda", feat.vectorize)
+      val sparseTopics = generateSparseRepresentation(feat.vectorize)
+      LDAURITopicGraphUpdate(uri.id.get, vseq, "dense_lda", sparseTopics)
     }
+  }
+
+  private def generateSparseRepresentation(topicVector: Array[Float]): SparseTopicRepresentation = {
+    val dim = topicVector.length
+    val topicMap = topicVector.zipWithIndex.sortBy(-1f * _._1).take(5).map{ case (score, idx) => (idx, score)}.toMap
+    SparseTopicRepresentation(dim, topicMap)
   }
 
   def graphLDAURIFeatureUpdate(lowSeq: CortexVersionedSequenceNumber[NormalizedURI], queueName: QueueName): Unit = {

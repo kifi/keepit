@@ -42,7 +42,7 @@ class NonUserThreadRepoImpl @Inject() (
   val clock: Clock,
   val db: DataBaseComponent
   )
-  extends DbRepo[NonUserThread] with NonUserThreadRepo with Logging {
+  extends DbRepo[NonUserThread] with NonUserThreadRepo with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
@@ -59,15 +59,16 @@ class NonUserThreadRepoImpl @Inject() (
     def lastNotifiedAt = column[DateTime]("last_notified_at", O.Nullable)
     def threadUpdatedAt = column[DateTime]("thread_updated_at", O.Nullable)
     def muted = column[Boolean]("muted", O.NotNull)
+    def accessToken = column[ThreadAccessToken]("access_token", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedAt.?, muted, state) <> (rowToObj2 _, objToRow _)
+    def * = (id.?, createdAt, updatedAt, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedAt.?, muted, state, accessToken.?) <> (rowToObj2 _, objToRow _)
 
-    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, NonUserKind, Option[EmailAddressHolder], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread])): NonUserThread = {
+    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, NonUserKind, Option[EmailAddressHolder], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], Option[ThreadAccessToken])): NonUserThread = {
       val participant = t._4 match {
         case NonUserKinds.email =>
           NonUserEmailParticipant(t._5.get, t._6)
       }
-      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, participant = participant, threadId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedAt = t._11, muted = t._12, state = t._13)
+      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, participant = participant, threadId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedAt = t._11, muted = t._12, state = t._13, accessToken = t._14)
     }
 
     private def objToRow(n: NonUserThread) = {
@@ -75,7 +76,7 @@ class NonUserThreadRepoImpl @Inject() (
         case ep: NonUserEmailParticipant =>
           (ep.kind, Option(ep.address), ep.econtactId)
       }
-      Option((n.id, n.createdAt, n.updatedAt, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedAt, n.muted, n.state))
+      Option((n.id, n.createdAt, n.updatedAt, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedAt, n.muted, n.state, n.accessToken))
     }
   }
   def table(tag: Tag) = new NonUserThreadTable(tag)

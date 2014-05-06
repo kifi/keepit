@@ -369,93 +369,61 @@ class MessagingCommander @Inject() (
     }
   }
 
-  // todo: Add adding non-users by kind/identifier
-  def addUsersToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Future[Boolean] = {
+  //Todo: Non User Analytics, email address validation
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], addresses: Seq[String])(implicit context: HeimdalContext): Future[Boolean] = {
     new SafeFuture(shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
+      val resultInfoOpt = db.readWrite{ implicit session =>
 
-      val messageThreadOpt = db.readWrite { implicit session =>
         val oldThread = threadRepo.get(threadExtId)
-        val actuallyNewParticipantUserIds = newParticipantsUserIds.filterNot(oldThread.containsUser)
 
-        if (!oldThread.participants.exists(_.contains(adderUserId)) || actuallyNewParticipantUserIds.isEmpty) {
+        if (!oldThread.participants.exists(_.contains(adderUserId)) || !oldThread.replyable) {
+          throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
+        }
+
+        val nups = addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None))
+        val actuallyNewUsers = newParticipantsUserIds.filterNot(oldThread.containsUser)
+        val actuallyNewNonUsers = nups.filterNot(oldThread.containsNonUser)
+
+        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
         } else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds))
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers, actuallyNewNonUsers))
 
           val message = messageRepo.save(Message(
             from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,
             messageText = "",
-            auxData = Some(Json.arr("add_participants", adderUserId.id.toString, actuallyNewParticipantUserIds.map(_.id))),
+            auxData = Some(Json.arr("add_participants", adderUserId.id.toString,
+              actuallyNewUsers.map(u => Json.toJson(u.id)) ++ actuallyNewNonUsers.map(Json.toJson(_))
+            )),
             sentOnUrl = None,
             sentOnUriId = None
           ))
-          Some((actuallyNewParticipantUserIds, message, thread))
+
+          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
+
         }
       }
 
-      messageThreadOpt.exists { case (newParticipants, message, thread) =>
+      resultInfoOpt.exists { case (newUsers, newNonUsers, message, thread) =>
+
         SafeFuture {
           db.readOnly { implicit session =>
             messageRepo.refreshCache(thread.id.get)
           }
         }
 
-        notificationCommander.notifyAddParticipants(newParticipants, Seq.empty, thread, message, adderUserId)
-
-        messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
+        notificationCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
+        messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, thread, context)
         true
+
       }
+
     }, Some("Adding Participants to Thread"))
   }
 
-  //Todo: Analytics, email validation
-  def addEmailNonUsersToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], addresses: Seq[String]) : Boolean = {
-    val nups = addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None))
 
-    val resultInfoOpt = db.readWrite{ implicit session =>
-      val oldThread = threadRepo.get(threadExtId)
-
-      if (!oldThread.participants.exists(_.contains(adderUserId)) || !oldThread.replyable) {
-        throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
-      }
-
-      val actuallyNewNups = nups.filterNot(oldThread.containsNonUser)
-
-      if (actuallyNewNups.isEmpty) {
-        None
-      } else {
-        val thread = threadRepo.save(oldThread.withParticipants(clock.now, Seq.empty, actuallyNewNups))
-
-        val message = messageRepo.save(Message(
-          from = MessageSender.System,
-          thread = thread.id.get,
-          threadExtId = thread.externalId,
-          messageText = "",
-          auxData = Some(Json.arr("add_participants", adderUserId.id.toString, actuallyNewNups)),
-          sentOnUrl = None,
-          sentOnUriId = None
-        ))
-
-        Some(actuallyNewNups, message, thread)
-      }
-
-
-    }
-
-    resultInfoOpt.exists { case (newParticipants, message, thread) =>
-      SafeFuture {
-        db.readOnly { implicit session =>
-          messageRepo.refreshCache(thread.id.get)
-        }
-      }
-
-      notificationCommander.notifyAddParticipants(Seq.empty, newParticipants, thread, message, adderUserId)
-      true
-    }
-
-  }
 
   def setRead(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
     val (message: Message, thread: MessageThread) = db.readOnly { implicit session =>

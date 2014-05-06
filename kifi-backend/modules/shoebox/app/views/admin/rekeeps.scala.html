@@ -6,6 +6,12 @@
 
     <h2>Showing @rekeeps.length ReKeeps (page @(page + 1))</h2>
 
+    <ul>
+        <li>The following shows a <i>global</i> list of recognized <i>rekeep</i> events.</li>
+        <li>Currently, a rekeep is recognized when a user does a search (say on google), clicks on a <b>kifi</b> results, and <i>then</i> <b>keeps</b> the result.
+        <li>See the <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(0,50,false)">Keep Clicks page</a> for more information.</li>
+    </ul>
+
     @adminHelper.pagination(page, rekeepsCount, pageSize, otherPagesRoute _) {
         <table class="table table-striped">
             <th><tr>
@@ -15,7 +21,7 @@
                 <td>keep</td>
                 <td>Re-keeper</td>
                 <td>Re-keep</td>
-                <td>attr_factor</td>
+                <td>attr_factor (1/n)</td>
                 <td>uriId</td>
                 <td>title</td>
                 @if(showImage){ <td>image</td> }
