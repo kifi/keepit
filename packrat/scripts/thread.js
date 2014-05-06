@@ -207,6 +207,9 @@ panes.thread = function () {
     } else {
       m.isUserMessage = true;
     }
+    if (m.source && m.source !== "server") {
+      m.displayedSource = m.source
+    }
     return $(render('html/keeper/message', m))
       .find('time').timeago().end()[0];
   }
