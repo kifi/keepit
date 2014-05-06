@@ -3,12 +3,9 @@ package com.keepit.graph.controllers.internal
 import com.google.inject.Inject
 import com.keepit.common.controller.GraphServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.graph.manager.{GraphUpdaterState, GraphManager}
+import com.keepit.graph.manager.{GraphStatistics, GraphManager}
 import play.api.mvc.Action
 import play.api.libs.json._
-import play.api.libs.json.JsString
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
 
 class GraphController @Inject() (
   graphManager: GraphManager
@@ -19,22 +16,8 @@ class GraphController @Inject() (
   }
 
   def getGraphStatistics() = Action { request =>
-
     val statistics = graphManager.statistics
-
-    val writableVertexStatistics = JsArray(statistics.vertexStatistics.flatMap { case (vertexKind, count) =>
-      Seq(JsString(vertexKind.toString), JsNumber(count))
-    }.toSeq)
-
-    val writableEdgeStatistics = JsArray(statistics.edgeStatistics.flatMap { case ((sourceKind, destinationKind, edgeKind), count) =>
-      Seq(JsString(sourceKind.toString), JsString(destinationKind.toString), JsString(edgeKind.toString), JsNumber(count))
-    }.toSeq)
-
-    val json = Json.obj(
-      "vertices" -> writableVertexStatistics,
-      "edges" -> writableEdgeStatistics
-    )
-
+    val json = Json.toJson(GraphStatistics.prettify(statistics))
     Ok(json)
   }
 
