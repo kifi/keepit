@@ -88,9 +88,9 @@ class MessagingTest extends Specification with DbTestInjector {
         val messagingCommander = inject[MessagingCommander]
         var messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationCommander]
-        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!")
+        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!", None)
 
-        val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None)
+        val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None, None)
 
         Await.result(notificationCommander.getLatestSendableNotifications(user1, 20), Duration(4, "seconds")).jsons.length === 1
 
@@ -124,8 +124,8 @@ class MessagingTest extends Specification with DbTestInjector {
           }
         }
 
-        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat")
-        val (thread2, msg2) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!")
+        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat", None)
+        val (thread2, msg2) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Hello Chat again!", None)
 
         messagingCommander.getUnreadUnmutedThreadCount(user1) === 0
 
@@ -161,14 +161,14 @@ class MessagingTest extends Specification with DbTestInjector {
         val messagingCommander = inject[MessagingCommander]
         val notificationCommander = inject[NotificationCommander]
 
-        val (thread, msg) = messagingCommander.sendNewMessage(user1, Seq(user2), Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Fortytwo")
+        val (thread, msg) = messagingCommander.sendNewMessage(user1, Seq(user2), Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Fortytwo", None)
 
         Thread.sleep(100) //AHHHHHH. Really need to figure out how to test Async code with multiple execution contexts. (https://app.asana.com/0/5674704693855/9223435240746)
         Await.result(notificationCommander.getLatestSendableNotifications(user2, 1), Duration(4, "seconds")).jsons.length === 1
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1), Duration(4, "seconds")).jsons.length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addUsersToThread(user1, thread.externalId, Seq(user3ExtId))
+        messagingCommander.addUsersToThread(user1, thread.externalId, Seq(user3ExtId), None)
         Thread.sleep(200) //See comment for same above
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1), Duration(4, "seconds")).jsons.length === 1
       }
