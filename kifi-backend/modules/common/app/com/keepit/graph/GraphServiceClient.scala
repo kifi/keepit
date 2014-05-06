@@ -8,13 +8,13 @@ import scala.concurrent.Future
 import com.keepit.common.routes.Graph
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.amazon.AmazonInstanceId
-import com.keepit.graph.manager.PrettyGraphStatistics
+import com.keepit.graph.manager.{GraphUpdaterState, PrettyGraphStatistics}
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
 
   def getGraphStatistics(): Future[PrettyGraphStatistics]
-  def getGraphUpdaterStates(): Future[Map[String, Long]]
+  def getGraphUpdaterStates(): Future[GraphUpdaterState]
 }
 
 class GraphServiceClientImpl(
@@ -29,9 +29,9 @@ class GraphServiceClientImpl(
     }
   }
 
-  def getGraphUpdaterStates(): Future[Map[String, Long]] = {
+  def getGraphUpdaterStates(): Future[GraphUpdaterState] = {
     call(Graph.internal.getGraphUpdaterState()).map { response =>
-      response.json.as[Map[String, Long]]
+      response.json.as[GraphUpdaterState]
     }
   }
 }

@@ -23,7 +23,7 @@ class GraphController @Inject() (
 
   def getGraphUpdaterState() = Action { request =>
     val state = graphManager.state
-    val json = JsObject(state.state.map { case (kind, seq) => kind.toString -> JsNumber(seq) }.toSeq)
+    val json = Json.toJson(state)
     Ok(json)
   }
 }
