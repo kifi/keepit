@@ -4,6 +4,7 @@ import com.google.inject.Inject
 
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.db._
+import com.keepit.common.strings._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.time._
@@ -21,6 +22,8 @@ import play.api.libs.json._
 
 import scala.concurrent.Future
 import scala.util.Try
+import akka.actor.Scheduler
+import com.keepit.eliza.ElizaServiceClient
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -79,7 +82,9 @@ class KeepsCommander @Inject() (
     keepClicksRepo: KeepClickRepo,
     kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
-    rawBookmarkFactory: RawBookmarkFactory
+    rawBookmarkFactory: RawBookmarkFactory,
+    scheduler: Scheduler,
+    eliza: ElizaServiceClient
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -141,15 +146,26 @@ class KeepsCommander @Inject() (
     (keeps.map(KeepInfo.fromBookmark), addedToCollection)
   }
 
-  /**
-   * todo(eishay): have it run in a delay and recheck that the keep didn't change to inactive or private
-   */
-  private def notifyNetwork(userId: Id[User], experimants: Seq[UserExperiment], keeps: Keep*): Unit = if (experimants.contains(ExperimentType.WHO_KEPT_MY_KEEP)) keeps foreach { keep =>
-    db.readOnly { implicit s =>
-      if (keep.isPrivate) return
-      val uri = uriRepo.get(keep.uriId)
-      if (uri.restriction.isDefined) return
-      val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate)
+  private def notifyNetwork(userId: Id[User], experimants: Seq[UserExperiment], keepIds: Id[Keep]*): Unit = if (experimants.contains(ExperimentType.WHO_KEPT_MY_KEEP)) keepIds foreach { keepId =>
+    import scala.concurrent.duration._
+    // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
+    scheduler.scheduleOnce(5 minutes) {
+      db.readOnly { implicit s =>
+        val keep = keepRepo.get(keepId)
+        //deal only with good standing, fully public keeps and uris
+        if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
+        val uri = uriRepo.get(keep.uriId)
+        if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
+        val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE)
+        //don't mess with keeps that are even a bit popular, has more then two keepers. we don't want to create noise, be extra careful
+        if (otherKeeps.length > 2) return
+        val keeper = userRepo.get(keep.userId)
+        val otherKeepers = otherKeeps.map(_.userId)
+        val title = s"""${keeper.fullName} also kept "${uri.title.get.abbreviate(80)}""""
+        val bodyHtml =
+        eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, linkText, url.getOrElse(""), image,
+          isSticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
+      }
     }
   }
 
