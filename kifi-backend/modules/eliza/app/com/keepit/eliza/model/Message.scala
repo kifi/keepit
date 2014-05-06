@@ -68,6 +68,29 @@ object MessageSender {
   }
 }
 
+case class MessageSource(value: String)
+object MessageSource {
+  val CHROME = MessageSource("Chrome")
+  val FIREFOX = MessageSource("Firefox")
+  val EMAIL = MessageSource("Email")
+  val IPHONE = MessageSource("iPhone")
+  val IPAD = MessageSource("iPad")
+  val ANDROID = MessageSource("Android")
+  val SERVER = MessageSource("server")
+
+  implicit val messageSourceFormat = new Format[MessageSource] {
+    def reads(json: JsValue): JsResult[MessageSource] = {
+      json.asOpt[String] match {
+        case Some(str) => JsSuccess(MessageSource(str))
+        case None => JsError()
+      }
+    }
+    def writes(kind: MessageSource): JsValue = {
+      JsString(kind.value)
+    }
+  }
+}
+
 case class Message(
     id: Option[Id[Message]] = None,
     createdAt: DateTime = currentDateTime,
@@ -77,6 +100,7 @@ case class Message(
     thread: Id[MessageThread],
     threadExtId: ExternalId[MessageThread],
     messageText: String,
+    source: Option[MessageSource],
     auxData: Option[JsArray] = None,
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]]
@@ -97,6 +121,7 @@ object Message {
       (__ \ 'thread).format(Id.format[MessageThread]) and
       (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
       (__ \ 'messageText).format[String] and
+      (__ \ 'source).formatNullable[MessageSource] and
       (__ \ 'auxData).formatNullable[JsArray] and
       (__ \ 'sentOnUrl).formatNullable[String] and
       (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
@@ -111,6 +136,7 @@ object Message {
     thread: Id[MessageThread],
     threadExtId: ExternalId[MessageThread],
     messageText: String,
+    source: Option[MessageSource],
     auxData: Option[JsArray],
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]],
@@ -125,13 +151,14 @@ object Message {
       thread,
       threadExtId,
       messageText,
+      source,
       auxData,
       sentOnUrl,
       sentOnUriId
     )
   }
 
-  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[JsArray],Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[MessageSource],Option[JsArray],Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
@@ -141,6 +168,7 @@ object Message {
       message.thread,
       message.threadExtId,
       message.messageText,
+      message.source,
       message.auxData,
       message.sentOnUrl,
       message.sentOnUriId,

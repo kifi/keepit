@@ -806,6 +806,7 @@ api.port.on({
   send_message: function(data, respond, tab) {
     discardDraft([tab.nUri, tab.url]);
     data.extVersion = api.version;
+    data.source = api.browser.name;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
       log('[send_message] resp:', o)();
       // thread (notification) JSON comes via socket
@@ -818,6 +819,7 @@ api.port.on({
     delete data.threadId;
     discardDraft([threadId]);
     data.extVersion = api.version;
+    data.source = api.browser.name;
     ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
       log('[send_reply] resp:', o)();
