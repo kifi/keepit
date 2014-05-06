@@ -12,7 +12,7 @@ angular.module('kifi.layout.nav', ['util'])
       link: function (scope /*, element, attrs*/ ) {
         scope.counts = {
           keepCount: keepService.totalKeepCount,
-          friendsCount: friendService.friends.length,
+          friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };
 
@@ -22,9 +22,7 @@ angular.module('kifi.layout.nav', ['util'])
           scope.counts.friendsNotifCount = value;
         });
 
-        scope.$watch(function () {
-          return friendService.friends.length;
-        }, function (value) {
+        scope.$watch(friendService.totalFriends, function (value) {
           scope.counts.friendsCount = value;
         });
 
