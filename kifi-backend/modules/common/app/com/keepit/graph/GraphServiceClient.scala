@@ -13,8 +13,8 @@ import com.keepit.graph.manager.{GraphUpdaterState, PrettyGraphStatistics}
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
 
-  def getGraphStatistics(): Future[PrettyGraphStatistics]
-  def getGraphUpdaterStates(): Future[GraphUpdaterState]
+  def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]]
+  def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, GraphUpdaterState]]
 }
 
 class GraphServiceClientImpl(
@@ -23,15 +23,19 @@ class GraphServiceClientImpl(
   val airbrakeNotifier: AirbrakeNotifier
 ) extends GraphServiceClient {
 
-  def getGraphStatistics(): Future[PrettyGraphStatistics] = {
-    call(Graph.internal.getGraphStatistics()).map { response =>
-      response.json.as[PrettyGraphStatistics]
+  def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = {
+    Future.sequence(broadcast(Graph.internal.getGraphStatistics())).map { responses =>
+      responses.map { response =>
+        response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphStatistics]
+      }.toMap
     }
   }
 
-  def getGraphUpdaterStates(): Future[GraphUpdaterState] = {
-    call(Graph.internal.getGraphUpdaterState()).map { response =>
-      response.json.as[GraphUpdaterState]
+  def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, GraphUpdaterState]] = {
+    Future.sequence(broadcast(Graph.internal.getGraphUpdaterState())).map { responses =>
+      responses.map { response =>
+        response.request.instance.get.instanceInfo.instanceId -> response.json.as[GraphUpdaterState]
+      }.toMap
     }
   }
 }
