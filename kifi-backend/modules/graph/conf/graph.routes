@@ -1,5 +1,6 @@
 
 GET     /internal/discover              @com.keepit.graph.controllers.internal.GraphController.discover()
 GET     /internal/graph/statistics      @com.keepit.graph.controllers.internal.GraphController.getGraphStatistics()
+GET     /internal/graph/state           @com.keepit.graph.controllers.internal.GraphController.getGraphUpdaterState()
 
 ->  / common.Routes

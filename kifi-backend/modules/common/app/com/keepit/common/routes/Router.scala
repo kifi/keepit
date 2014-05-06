@@ -296,6 +296,7 @@ object Cortex extends Service {
 object Graph extends Service {
   object internal {
     def getGraphStatistics() = ServiceRoute(GET, "/internal/graph/statistics")
+    def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
   }
 }
 

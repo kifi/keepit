@@ -7,11 +7,13 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.common.routes.Graph
 import play.api.libs.json.{JsNumber, JsString, JsArray}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
 
   def getGraphStatistics(): Future[(Map[String, Long], Map[(String, String, String), Long])]
+  def getGraphUpdaterStates(): Future[Map[String, Long]]
 }
 
 class GraphServiceClientImpl(
@@ -34,6 +36,9 @@ class GraphServiceClientImpl(
     }
   }
 
-  def getGraphUpdaterStates(): Future[Map[String, Long]] = ???
-
+  def getGraphUpdaterStates(): Future[Map[String, Long]] = {
+    call(Graph.internal.getGraphUpdaterState()).map { response =>
+      response.json.as[Map[String, Long]]
+    }
+  }
 }
