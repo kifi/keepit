@@ -75,11 +75,21 @@ class SharedWsMessagingController @Inject() (
         SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
       }
     },
-    "add_participants_to_thread" -> { case JsString(threadId) +: JsArray(whoDat) +: _ =>
-      val (usersJson, nonUsersJson) = whoDat.partition{ json =>
-        json match {
-          case JsString(_) => true
-          case _ => false
+    "add_participants_to_thread" -> { case JsString(threadId) +: (data: JsValue) +: _ =>
+      val (usersJson, nonUsersJson, source) = data match {
+        case JsArray(whoDat) => {
+          val (usersJson, nonUsersJson) = whoDat.partition{ json =>
+            json match {
+              case JsString(_) => true
+              case _ => false
+            }
+          }
+          (usersJson, nonUsersJson, None)
+        }
+        case _ => {
+          val usersJson = (data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq())
+          val nonUsersJson = (data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq())
+          (usersJson, nonUsersJson, (data \ "source").asOpt[MessageSource])
         }
       }
       val users = usersJson.map { s =>
@@ -89,7 +99,7 @@ class SharedWsMessagingController @Inject() (
         (obj \ "email").as[String]
       }
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailAddresses)
+      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailAddresses, source)
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)

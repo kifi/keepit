@@ -232,7 +232,7 @@ class NotificationCommander @Inject() (
         newParticipants.zip(permanentNotifications) map { case (userId, permanentNotification) =>
           sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
         }
-        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.externalId, message.createdAt, "", message.auxData, "", "", None, participants)
+        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.externalId, message.createdAt, "", message.source, message.auxData, "", "", None, participants)
         messageWithBasicUser.map { augmentedMessage =>
           thread.participants.map(_.allUsers.par.foreach { userId =>
             sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
@@ -287,6 +287,7 @@ class NotificationCommander @Inject() (
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = s"$title (on $linkText): $body",
+        source = Some(MessageSource.SERVER),
         sentOnUrl = Some(linkUrl),
         sentOnUriId = None
       ))
@@ -466,6 +467,7 @@ class NotificationCommander @Inject() (
         message.externalId,
         message.createdAt,
         message.messageText,
+        message.source,
         None,
         message.sentOnUrl.getOrElse(""),
         thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
