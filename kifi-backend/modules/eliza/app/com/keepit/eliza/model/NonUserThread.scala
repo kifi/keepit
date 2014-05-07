@@ -70,7 +70,7 @@ case class NonUserThread(
   threadUpdatedAt: Option[DateTime],
   muted: Boolean = false,
   state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
-  accessToken: Option[ThreadAccessToken] = Some(ThreadAccessToken())
+  accessToken: ThreadAccessToken = ThreadAccessToken()
 ) extends ModelWithState[NonUserThread] with ModelWithPublicId[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
