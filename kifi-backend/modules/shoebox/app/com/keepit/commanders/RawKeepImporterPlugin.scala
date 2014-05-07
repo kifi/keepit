@@ -107,19 +107,19 @@ private class RawKeepImporterActor @Inject() (
         //the bookmarks list may be very large!
         searchClient.updateURIGraph()
 
-        val tagCache = scala.collection.mutable.Map.empty[String, Collection]
+        // Reduce all successes to a map of tagIdString -> tagId (typed), ignore errors (we c
+        val tagStrToId = successesRawKeep.map { rk =>
+          rk.tagIds.map { tags =>
+            tags.split(",").toSeq.map { c => Try(c.toLong).map(Id[Collection]).toOption.map( c -> _) }.flatten
+          }
+        }.flatten.flatten.toMap
 
+        // Populate cache from tagIdString -> Collection
+        val tagCache = scala.collection.mutable.Map.empty[String, Collection]
         db.readOnly { implicit session =>
-          successesRawKeep.map { rk =>
-            // Parse stored tag IDs, verify tag exists,
-            if (rk.tagIds.isDefined) {
-              rk.tagIds.get.split(",").map { candidate =>
-                Try(candidate.toLong).map(Id[Collection]).map { tid =>
-                  tagCache.getOrElseUpdate(candidate, collectionRepo.get(tid)(session))
-                }.toOption
-              }.flatten.toSeq
-            } else Seq.empty
-          }.flatten
+          tagStrToId.map { case (tagStr, id) =>
+            tagCache.getOrElseUpdate(tagStr, collectionRepo.get(id))
+          }
         }
 
         successes.foreach { keep =>
