@@ -25,7 +25,7 @@ trait GraphStoreModule extends StoreModule with Logging {
     val thisInstanceQueuePrefix = queuePrefix + "-" + amazonInstanceInfo.instanceId.id
     val deletedQueues = Await.result(client.deleteByPrefix(thisInstanceQueuePrefix), 5 minutes)
     log.info(s"$deletedQueues GraphUpdate queues belonging to Graph instance ${amazonInstanceInfo.instanceId} have been deleted.")
-    val queue = client.formatted[GraphUpdate](QueueName(thisInstanceQueuePrefix + "-" + currentDateTime), true)
+    val queue = client.formatted[GraphUpdate](QueueName(thisInstanceQueuePrefix + "-" + currentDateTime.getMillis), true)
     queue
   }
 }
