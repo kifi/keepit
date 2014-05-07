@@ -10,9 +10,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.{UserConnection, SocialUserInfo, SocialConnection, User, NormalizedURI}
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.cortex.CortexVersionedSequenceNumber
 import com.keepit.common.logging.Logging
 
 trait GraphUpdateFetcher {
@@ -28,27 +26,26 @@ class GraphUpdateFetcherImpl @Inject() (
   cortex: CortexServiceClient
 ) extends GraphUpdateFetcher with Logging{
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
-  def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
-    case UserGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(UserGraphUpdate)
-      shoebox.sendUserGraphUpdate(queue.queue, seq)
-    case SocialConnectionGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(SocialConnectionGraphUpdate)
-      shoebox.sendSocialConnectionGraphUpdate(queue.queue, seq)
-    case SocialUserInfoGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(SocialUserInfoGraphUpdate)
-      shoebox.sendSocialUserInfoGraphUpdate(queue.queue, seq)
-    case UserConnectionGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(UserConnectionGraphUpdate)
-      shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
-    case KeepGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(KeepGraphUpdate)
-      log.info(s"starting a new fetch of keep updates ${seq}")
-      shoebox.sendKeepGraphUpdate(queue.queue, seq)
-    case LDAURITopicGraphUpdate => {
-      val seq = currentState.getCurrentSequenceNumber(LDAURITopicGraphUpdate)
-      log.info(s"starting a new fetch of lda topic update from ${seq}")
-      cortex.graphLDAURIFeatureUpdate(seq, queue.queue)
+  def fetch(currentState: GraphUpdaterState): Unit = {
+    implicit val state = currentState
+    GraphUpdateKind.all.foreach {
+      case UserGraphUpdate => shoebox.sendUserGraphUpdate(queue.queue, seq(UserGraphUpdate))
+
+      case SocialConnectionGraphUpdate => shoebox.sendSocialConnectionGraphUpdate(queue.queue, seq(SocialConnectionGraphUpdate))
+
+      case SocialUserInfoGraphUpdate => shoebox.sendSocialUserInfoGraphUpdate(queue.queue, seq(SocialUserInfoGraphUpdate))
+
+      case UserConnectionGraphUpdate => shoebox.sendUserConnectionGraphUpdate(queue.queue, seq(UserConnectionGraphUpdate))
+
+      case KeepGraphUpdate => shoebox.sendKeepGraphUpdate(queue.queue, seq(KeepGraphUpdate))
+
+      case LDAURITopicGraphUpdate => cortex.graphLDAURIFeatureUpdate(queue.queue, seq(LDAURITopicGraphUpdate))
     }
+  }
+
+  private def seq[U <: GraphUpdate](kind: GraphUpdateKind[U])(implicit state: GraphUpdaterState): SequenceNumber[U] = {
+    val sequenceNumber = state.getCurrentSequenceNumber(kind)
+    log.info(s"Fetching $kind from sequence number $sequenceNumber")
+    sequenceNumber
   }
 }
