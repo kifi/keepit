@@ -167,7 +167,7 @@ class NotificationCommander @Inject() (
             from = magicAddress,
             fromName = Some(starterUser.firstName + " " + starterUser.lastName + " (via Kifi)"),
             to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-            subject = "Kifi Message on " + pageName,
+            subject = "Kifi Message on " + uriSummary.title.getOrElse(pageName),
             htmlBody = body,
             category = ElectronicMailCategory("external_message_test"),
             extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
