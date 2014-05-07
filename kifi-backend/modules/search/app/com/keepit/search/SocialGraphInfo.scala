@@ -2,7 +2,6 @@ package com.keepit.search
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
 import com.keepit.model.NormalizedURI
@@ -10,6 +9,7 @@ import com.keepit.model.User
 import com.keepit.search.graph._
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
+import com.keepit.search.util.LongArraySet
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.math.max
@@ -18,10 +18,10 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
 
   private[this] val startTime: Long = System.currentTimeMillis
 
-  lazy val (myUriEdgeAccessor, mySearchUris, part1End) = {
+  lazy val (myUriEdgeAccessor, mySearchUris: LongArraySet, part1End) = {
     monitoredAwait.result(part1, 5 seconds, s"getting SocialGraphInfo.my* for user Id $userId")
   }
-  lazy val (friendsUriEdgeAccessors, friendSearchUris, relevantFriendEdgeSet, part2End) = {
+  lazy val (friendsUriEdgeAccessors, friendSearchUris: LongArraySet, relevantFriendEdgeSet, part2End) = {
     monitoredAwait.result(part2, 5 seconds, s"getting SocialGraphInfo.friends* for user Id $userId")
   }
 
@@ -51,7 +51,7 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
             case _ => myUriEdges.destIdLongSet
           }
       }
-    (myUriEdges.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]], mySearchUris, System.currentTimeMillis)
+    (myUriEdges.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]], LongArraySet.fromSet(mySearchUris), System.currentTimeMillis)
   }
 
   private[this] val part2 = SafeFuture {
@@ -83,6 +83,6 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
         }
     }
 
-    (friendsUriEdgeSets.mapValues{ _.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]] }, friendSearchUris, relevantFriendEdgeSet, System.currentTimeMillis)
+    (friendsUriEdgeSets.mapValues{ _.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]] }, LongArraySet.fromSet(friendSearchUris), relevantFriendEdgeSet, System.currentTimeMillis)
   }
 }
