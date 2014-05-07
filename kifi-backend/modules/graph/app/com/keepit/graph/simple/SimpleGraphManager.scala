@@ -53,6 +53,7 @@ class SimpleGraphManager(
     if (irrelevantUpdates.nonEmpty) { airbrake.notify(new IrrelevantGraphUpdatesException(irrelevantUpdates)) }
     simpleGraph.readWrite { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(graphUpdater(_)) }
     state = state.withUpdates(relevantUpdates) // todo(Léo): not threadsafe
+    log.info(s"Processed ${relevantUpdates.length} updates. Graph state:\n${state}")
   }
 
   def statistics: GraphStatistics = simpleGraph.statistics
