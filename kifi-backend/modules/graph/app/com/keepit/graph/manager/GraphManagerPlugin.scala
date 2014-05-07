@@ -38,9 +38,9 @@ class GraphManagerActor @Inject() (
         graph.update(updates.map(_.body): _*)
         updates.foreach(_.consume())
         log.info(s"${updates.length} graph updates were consumed from the queue.")
-        updating = false
         self ! UpdateGraph(maxBatchSize, lockTimeout)
       }
+      updating = false
     }
     case BackupGraph => graph.backup()
     case m => throw new UnsupportedActorMessage(m)
