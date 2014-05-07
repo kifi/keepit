@@ -165,7 +165,7 @@ class NotificationCommander @Inject() (
           val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
           shoebox.sendMail(ElectronicMail (
             from = magicAddress,
-            fromName = Some("Kifi Discussions"),
+            fromName = Some(starterUser.firstName + " " + starterUser.lastName + " (via Kifi)"),
             to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
             subject = "Kifi Message on " + pageName,
             htmlBody = body,
