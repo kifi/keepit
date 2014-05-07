@@ -28,18 +28,19 @@ class GraphUpdateFetcherImpl @Inject() (
   def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
   def fetch(currentState: GraphUpdaterState): Unit = {
     implicit val state = currentState
+    val queueName = queue.queue
     GraphUpdateKind.all.foreach {
-      case UserGraphUpdate => shoebox.sendUserGraphUpdate(queue.queue, seq(UserGraphUpdate))
+      case UserGraphUpdate => shoebox.sendUserGraphUpdate(queueName, seq(UserGraphUpdate))
 
-      case SocialConnectionGraphUpdate => shoebox.sendSocialConnectionGraphUpdate(queue.queue, seq(SocialConnectionGraphUpdate))
+      case SocialConnectionGraphUpdate => shoebox.sendSocialConnectionGraphUpdate(queueName, seq(SocialConnectionGraphUpdate))
 
-      case SocialUserInfoGraphUpdate => shoebox.sendSocialUserInfoGraphUpdate(queue.queue, seq(SocialUserInfoGraphUpdate))
+      case SocialUserInfoGraphUpdate => shoebox.sendSocialUserInfoGraphUpdate(queueName, seq(SocialUserInfoGraphUpdate))
 
-      case UserConnectionGraphUpdate => shoebox.sendUserConnectionGraphUpdate(queue.queue, seq(UserConnectionGraphUpdate))
+      case UserConnectionGraphUpdate => shoebox.sendUserConnectionGraphUpdate(queueName, seq(UserConnectionGraphUpdate))
 
-      case KeepGraphUpdate => shoebox.sendKeepGraphUpdate(queue.queue, seq(KeepGraphUpdate))
+      case KeepGraphUpdate => shoebox.sendKeepGraphUpdate(queueName, seq(KeepGraphUpdate))
 
-      case LDAURITopicGraphUpdate => cortex.graphLDAURIFeatureUpdate(queue.queue, seq(LDAURITopicGraphUpdate))
+      case LDAURITopicGraphUpdate => cortex.graphLDAURIFeatureUpdate(queueName, seq(LDAURITopicGraphUpdate))
     }
   }
 
