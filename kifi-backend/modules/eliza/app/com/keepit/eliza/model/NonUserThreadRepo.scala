@@ -32,6 +32,8 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def setLastNotifiedAndIncCount(nut: Id[NonUserThread], dt: DateTime)(implicit session: RWSession): Unit
 
+  def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread]
+
 }
 
 /**
@@ -132,6 +134,10 @@ class NonUserThreadRepoImpl @Inject() (
       WHERE id = $nut
     """.execute()
     (for (row <- rows if row.id===nut) yield (row.lastNotifiedAt, row.updatedAt)).update(dt, currentDateTime)
+  }
+
+  def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread] = {
+    (for (row <- rows if row.accessToken===token) yield row).firstOption
   }
 
 }
