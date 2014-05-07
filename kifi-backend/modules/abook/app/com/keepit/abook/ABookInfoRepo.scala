@@ -5,13 +5,14 @@ import com.keepit.model.{OAuth2Token, ABookOriginType, User, ABookInfo}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{Model, Id}
+import com.keepit.common.db.{ExternalId, Model, Id}
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
 trait ABookInfoRepo extends Repo[ABookInfo] {
   def getById(id:Id[ABookInfo])(implicit session:RSession):Option[ABookInfo]
+  def getByExternalId(externalId:ExternalId[ABookInfo])(implicit session:RSession):Option[ABookInfo]
   def getByUserIdAndABookId(userId:Id[User], id:Id[ABookInfo])(implicit session:RSession):Option[ABookInfo]
   def findByUserIdOriginAndOwnerId(userId:Id[User], origin:ABookOriginType, ownerId:Option[String])(implicit session:RSession):Option[ABookInfo]
   def findByUserIdAndOrigin(userId:Id[User], origin:ABookOriginType)(implicit session:RSession):Seq[ABookInfo]

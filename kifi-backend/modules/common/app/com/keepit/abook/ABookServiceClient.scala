@@ -3,7 +3,7 @@ package com.keepit.abook
 
 // import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -44,6 +44,7 @@ trait ABookServiceClient extends ServiceClient {
   def getABooksCount():Future[Int]
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Future[Option[ABookInfo]]
+  def getABookIdByExternalId(id: ExternalId[ABookInfo]):Future[Option[Id[ABookInfo]]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
@@ -120,6 +121,12 @@ class ABookServiceClientImpl @Inject() (
   def getABooksCount():Future[Int] = {
     call(ABook.internal.getABooksCount()).map { r =>
       Json.fromJson[Int](r.json).get
+    }
+  }
+
+  def getABookIdByExternalId(id: ExternalId[ABookInfo]):Future[Option[Id[ABookInfo]]] = {
+    call(ABook.internal.getABookIdByExternalId(id)).map { r =>
+      Json.fromJson[Option[Id[ABookInfo]]](r.json).get
     }
   }
 
@@ -289,6 +296,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getAllABookInfos(): Future[Seq[ABookInfo]] = ???
 
   def getPagedABookInfos(page: Int, size: Int): Future[Seq[ABookInfo]] = ???
+
+  def getABookIdByExternalId(id: ExternalId[ABookInfo]):Future[Option[Id[ABookInfo]]] = ???
 
   def getABooksCount(): Future[Int] = ???
 

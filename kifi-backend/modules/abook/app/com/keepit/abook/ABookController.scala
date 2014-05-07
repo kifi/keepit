@@ -4,9 +4,9 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{WebsiteController, ABookServiceController, ActionAuthenticator}
 import com.keepit.model._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.performance.timing
-import play.api.mvc.Action
+import play.api.mvc.{AnyContent, Action}
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
 import java.io.File
@@ -247,6 +247,13 @@ class ABookController @Inject() (
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = Action { request =>
     val infoOpt = abookCommander.getABookInfo(userId, id)
     Ok(Json.toJson(infoOpt))
+  }
+
+  def getABookIdByExternalId(externalId: ExternalId[ABookInfo]) = Action { request =>
+    db.readOnly { implicit session =>
+      val abookInfoOpt = abookInfoRepo.getByExternalId(externalId)
+      Ok(Json.toJson(abookInfoOpt flatMap { _.id }))
+    }
   }
 
   // retrieve from S3

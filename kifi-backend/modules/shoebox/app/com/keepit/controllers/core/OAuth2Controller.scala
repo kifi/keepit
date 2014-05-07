@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import java.net.URLEncoder
-import play.api.mvc.{AnyContent, Request, Action, Results}
+import play.api.mvc._
 import play.api.libs.ws.{Response, WS}
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
@@ -16,10 +16,17 @@ import play.api.libs.json._
 import java.security.SecureRandom
 import java.math.BigInteger
 import com.keepit.model.{ABookInfo, User, OAuth2Token}
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{Failure, Success}
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.ws.Response
+import com.keepit.controllers.core.OAuth2Config
+import com.keepit.controllers.core.OAuth2CommonConfig
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -252,7 +259,19 @@ class OAuth2Controller @Inject() (
     Ok(json)
   }
 
+  def refreshContacts(abookExtId: ExternalId[ABookInfo], provider: Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+    abookServiceClient.getABookIdByExternalId(abookExtId) flatMap { abookIdOpt =>
+       abookIdOpt map { abookId =>
+         refreshContactsHelper(abookId, provider)
+       } getOrElse Future.successful(BadRequest("invalid_id"))
+    }
+  }
+
   def refreshContacts(abookId:Id[ABookInfo], provider:Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+    refreshContactsHelper(abookId, provider)
+  }
+
+  private def refreshContactsHelper(abookId:Id[ABookInfo], provider:Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
     val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
     log.infoP(s"userId=${request.userId}")
