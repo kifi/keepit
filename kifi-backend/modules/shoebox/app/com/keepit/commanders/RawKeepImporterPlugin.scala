@@ -100,12 +100,16 @@ private class RawKeepImporterActor @Inject() (
             "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
           }
           val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-          bookmarksCommanderProvider.get.addToCollection(tag, successes)(context)
+          bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes)(context)
         }
+
         //the bookmarks list may be very large!
         searchClient.updateURIGraph()
 
         db.readWriteBatch(successesRawKeep) { case (session, rk) =>
+          if (rk.tagId.isDefined) {
+            bookmarksCommanderProvider.get.addToCollection(rk.tagId.get, successes)(context)
+          }
           rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
         }
       }

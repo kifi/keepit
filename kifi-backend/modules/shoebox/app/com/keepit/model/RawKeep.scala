@@ -20,7 +20,8 @@ case class RawKeep(
   source: KeepSource,
   installationId: Option[ExternalId[KifiInstallation]] = None,
   originalJson: Option[JsValue] = None,
-  state: State[RawKeep] = RawKeepStates.ACTIVE) extends Model[RawKeep] {
+  state: State[RawKeep] = RawKeepStates.ACTIVE,
+  tagId: Option[Id[Collection]] = None) extends Model[RawKeep] {
   def withId(id: Id[RawKeep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }

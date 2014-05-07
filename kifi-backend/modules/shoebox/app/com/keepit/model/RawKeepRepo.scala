@@ -33,8 +33,9 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallationId = column[ExternalId[KifiInstallation]]("installation_id", O.Nullable)
     def originalJson = column[JsValue]("original_json", O.Nullable)
+    def tagId = column[Id[Collection]]("tag_id", O.Nullable) // This is a foreign key to the `collection` table (improperly named)
 
-    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson.?, state) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
+    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson.?, state, tagId.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
   }
 
   def table(tag: Tag) = new RawKeepTable(tag)
