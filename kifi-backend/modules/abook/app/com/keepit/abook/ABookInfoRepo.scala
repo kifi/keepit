@@ -46,6 +46,10 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     (for { c <- rows if c.id === id } yield c).firstOption
   }
 
+  def getByExternalId(externalId:ExternalId[ABookInfo])(implicit session:RSession):Option[ABookInfo] = {
+    (for { c <- rows if c.externalId === externalId } yield c).firstOption
+  }
+
   def getByUserIdAndABookId(userId: Id[User], id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo] = {
     (for { c <- rows if c.userId === userId && c.id === id } yield c).firstOption
   }

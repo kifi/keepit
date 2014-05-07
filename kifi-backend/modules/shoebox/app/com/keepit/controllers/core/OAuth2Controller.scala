@@ -260,10 +260,10 @@ class OAuth2Controller @Inject() (
   }
 
   def refreshContacts(abookExtId: ExternalId[ABookInfo], provider: Option[String]) = JsonAction.authenticatedAsync { implicit request =>
-    abookServiceClient.getABookIdByExternalId(abookExtId) flatMap { abookIdOpt =>
-       abookIdOpt map { abookId =>
-         refreshContactsHelper(abookId, provider)
-       } getOrElse Future.successful(BadRequest("invalid_id"))
+    abookServiceClient.getABookInfoByExternalId(abookExtId) flatMap { abookInfoOpt =>
+      abookInfoOpt flatMap (_.id) map { abookId =>
+        refreshContactsHelper(abookId, provider)
+      } getOrElse Future.successful(BadRequest("invalid_id"))
     }
   }
 

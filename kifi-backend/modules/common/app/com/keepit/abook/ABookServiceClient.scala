@@ -44,7 +44,7 @@ trait ABookServiceClient extends ServiceClient {
   def getABooksCount():Future[Int]
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Future[Option[ABookInfo]]
-  def getABookIdByExternalId(id: ExternalId[ABookInfo]):Future[Option[Id[ABookInfo]]]
+  def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]]
   def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
@@ -124,9 +124,9 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getABookIdByExternalId(id: ExternalId[ABookInfo]):Future[Option[Id[ABookInfo]]] = {
+  def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]] = {
     call(ABook.internal.getABookIdByExternalId(id)).map { r =>
-      Json.fromJson[Option[Id[ABookInfo]]](r.json).get
+      Json.fromJson[Option[ABookInfo]](r.json).get
     }
   }
 
@@ -297,7 +297,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getPagedABookInfos(page: Int, size: Int): Future[Seq[ABookInfo]] = ???
 
-  def getABookIdByExternalId(id: ExternalId[ABookInfo]):Future[Option[Id[ABookInfo]]] = ???
+  def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]] = ???
 
   def getABooksCount(): Future[Int] = ???
 

@@ -249,10 +249,9 @@ class ABookController @Inject() (
     Ok(Json.toJson(infoOpt))
   }
 
-  def getABookIdByExternalId(externalId: ExternalId[ABookInfo]) = Action { request =>
+  def getABookInfoByExternalId(externalId: ExternalId[ABookInfo]) = Action { request =>
     db.readOnly { implicit session =>
-      val abookInfoOpt = abookInfoRepo.getByExternalId(externalId)
-      Ok(Json.toJson(abookInfoOpt flatMap { _.id }))
+      Ok(Json.toJson(abookInfoRepo.getByExternalId(externalId)))
     }
   }
 
