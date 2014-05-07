@@ -202,6 +202,14 @@ panes.thread = function () {
     m.formatLocalDate = formatLocalDate;
     m.isLoggedInUser = m.user && m.user.id === me.id;
     formatParticipant(m.user);
+    if (m.auxData && m.auxData.length) {
+      m.isAuxMessage = true;
+    } else {
+      m.isUserMessage = true;
+    }
+    if (m.source && m.source !== "server") {
+      m.displayedSource = m.source
+    }
     return $(render('html/keeper/message', m))
       .find('time').timeago().end()[0];
   }

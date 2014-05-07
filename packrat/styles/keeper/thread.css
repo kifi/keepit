@@ -28,23 +28,23 @@
   background-color: #fafafa;
   display: none;
 }
-.kifi-message-sent>time {
-  position: absolute;
-  right: 10px;
-  top: 11px;
+.kifi-message-sent .kifi-message-tip {
   line-height: 11px;
   font-size: 11px;
-  padding: 0 3px;
+  float: right;
   background-color: #fafafa;
   color: #a9a9a9;
   display: none;
 }
-.kifi-message-sent:hover>time,
-.kifi-message-sent:last-child>time {
+.kifi-message-sent:hover .kifi-message-tip,
+.kifi-message-sent:last-child .kifi-message-tip {
   display: block;
 }
-.kifi-message-sent:hover~.kifi-message-sent:last-child>time {
+.kifi-message-sent:hover~.kifi-message-sent:last-child .kifi-message-tip {
   display: none;
+}
+.kifi-message-source {
+  font-size: 10px;
 }
 img.kifi-message-pic,
 span.kifi-message-pic-email {
@@ -69,11 +69,18 @@ img.kifi-message-pic.kifi-self {
   margin-left: 40px;
   word-wrap: break-word;
 }
-.kifi-message-name {
+.kifi-message-top {
   position: relative;
   top: -2px;
   margin-bottom: 2px;
+  width: 100%;
+  overflow: hidden;
+}
+.kifi-message-name {
   font-weight: bold;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .kifi-message-p {
   line-height: 16px;
@@ -111,8 +118,11 @@ img.kifi-message-pic.kifi-self {
   margin-top: 0;
   margin-bottom: 0;
 }
-.kifi-message-aux>time {
+.kifi-message-aux .kifi-message-tip {
+  position: absolute;
+  right: 10px;
   top: -6px;
+  padding: 0 3px;
 }
 .kifi-message-aux + .kifi-message-sent {
   border-top: 0;
