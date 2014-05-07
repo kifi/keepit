@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{timing,timingWithResult}
 import java.util.concurrent.locks.ReentrantLock
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import play.modules.statsd.api.Statsd
 
 
 @Singleton
@@ -61,7 +62,9 @@ class ScraperCallbackHelper @Inject()(
       if (res.length == 0) {
         log.warn(s"[assignTask($zkId,$max)] 0 tasks assigned") // can be more aggressive
       }
-      res.take(max)
+      val limit = res.take(max)
+      Statsd.gauge("scraper.assign", limit.length)
+      limit
     }
   }
 
