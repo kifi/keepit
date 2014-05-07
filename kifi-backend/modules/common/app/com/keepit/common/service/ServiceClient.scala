@@ -64,8 +64,8 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
 
   protected def url(path: String): ServiceUri = new ServiceUri(nextInstance(), protocol, port, path)
 
-  protected def urls(path: String, allMembers: Boolean = false, self: Boolean = false): Seq[ServiceUri] = {
-    val relevantInstances = (if (allMembers) serviceCluster.allMembers else serviceCluster.allServices).filter(self || !_.thisInstance)
+  protected def urls(path: String, includeUnavailable: Boolean = false, includeSelf: Boolean = false): Seq[ServiceUri] = {
+    val relevantInstances = (if (includeUnavailable) serviceCluster.allMembers else serviceCluster.allServices).filter(includeSelf || !_.thisInstance)
     relevantInstances.map(new ServiceUri(_, protocol, port, path)) tap { uris =>
       if (uris.length == 0) {
         log.warn("Broadcasting/Teeing to no-one!")
@@ -131,8 +131,8 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }
 
-  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull, allMembers: Boolean = false, self: Boolean = true): Seq[Future[ClientResponse]] = {
-    urls(call.url, allMembers, self) map { url =>
+  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull, includeUnavailable: Boolean = false, includeSelf: Boolean = true): Seq[Future[ClientResponse]] = {
+    urls(call.url, includeUnavailable, includeSelf) map { url =>
       logBroadcast(url, body)
       callUrl(call, url, body)
     }

@@ -27,7 +27,7 @@ class GraphServiceClientImpl(
 ) extends GraphServiceClient {
 
   def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = {
-    Future.sequence(broadcast(Graph.internal.getGraphStatistics(), allMembers = true, self = (mode == Mode.Dev))).map { responses =>
+    Future.sequence(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
       responses.map { response =>
         response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphStatistics]
       }.toMap
@@ -35,7 +35,7 @@ class GraphServiceClientImpl(
   }
 
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, GraphUpdaterState]] = {
-    Future.sequence(broadcast(Graph.internal.getGraphUpdaterState(), allMembers = true, self = (mode == Mode.Dev))).map { responses =>
+    Future.sequence(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
       responses.map { response =>
         response.request.instance.get.instanceInfo.instanceId -> response.json.as[GraphUpdaterState]
       }.toMap
