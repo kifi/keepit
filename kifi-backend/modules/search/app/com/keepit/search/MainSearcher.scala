@@ -153,9 +153,9 @@ class MainSearcher(
           if (idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
-            if (myUriEdgeAccessor.seek(id) && mySearchUris.contains(id)) {
+            if (myUriEdgeAccessor.seek(id) && mySearchUris.findIndex(id) >= 0) { // use findIndex to avoid boxing
               myHits.insert(id, luceneScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
-            } else if (friendSearchUris.contains(id)) {
+            } else if (friendSearchUris.findIndex(id) >= 0) {
               if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false, false)
             } else {
               if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false, false)

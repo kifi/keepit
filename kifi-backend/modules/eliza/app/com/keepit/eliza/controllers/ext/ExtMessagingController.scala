@@ -45,9 +45,10 @@ class ExtMessagingController @Inject() (
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val o = request.body
     val extVersion = (o \ "extVersion").asOpt[String]
-    val (title, text) = (
+    val (title, text, source) = (
       (o \ "title").asOpt[String],
-      (o \ "text").as[String].trim
+      (o \ "text").as[String].trim,
+      (o \ "source").asOpt[MessageSource]
     )
     val (userExtRecipients, nonUserRecipients) = messagingCommander.recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
     val url = (o \ "url").asOpt[String]
@@ -58,7 +59,7 @@ class ExtMessagingController @Inject() (
     extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
 
-    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
+    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
         userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
       Ok(Json.obj(
         "id" -> message.externalId.id,
@@ -74,12 +75,15 @@ class ExtMessagingController @Inject() (
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
     val tStart = currentDateTime
     val o = request.body
-    val text = (o \ "text").as[String].trim
+    val (text, source) = (
+      (o \ "text").as[String].trim,
+      (o \ "source").asOpt[MessageSource]
+    )
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "extension")
     (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
-    val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
+    val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
