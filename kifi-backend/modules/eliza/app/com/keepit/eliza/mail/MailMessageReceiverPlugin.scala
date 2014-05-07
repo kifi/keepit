@@ -34,13 +34,13 @@ case class MailDiscussionServerSettings(
   val username: String = identifier + "@" + domain
 }
 
-case class MailNotificationReply(timestamp:DateTime, content:Option[String], publicId:String)
+case class MailNotificationReply(timestamp:DateTime, content:Option[String], token:String)
 
 object MailNotificationReply {
   implicit val format = (
     (__ \ 'timestamp).format[DateTime] and
     (__ \ 'content).formatNullable[String] and
-    (__ \ 'publicId).format[String]
+    (__ \ 'token).format[String]
   )(MailNotificationReply.apply _, unlift(MailNotificationReply.unapply))
 }
 

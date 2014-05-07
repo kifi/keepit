@@ -122,22 +122,17 @@ class MessagingController @Inject() (
     Status(ACCEPTED)
   }
 
-  def getNonUserThreadMuteInfo(publicId: String) = Action { request =>
-    val result = ModelWithPublicId.decode[NonUserThread](publicId) match {
-      case Success(id) => {
-        messagingCommander.getNonUserThreadOpt(id) map { (nonUserThread: NonUserThread) =>
-          Some((nonUserThread.participant.identifier, nonUserThread.muted))
-        } getOrElse (None)
-      }
-      case _ => None
-    }
+  def getNonUserThreadMuteInfo(token: String) = Action { request =>
+    val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)) map { (nonUserThread: NonUserThread) =>
+      Some((nonUserThread.participant.identifier, nonUserThread.muted))
+    } getOrElse (None)
     Ok(Json.toJson(result))
   }
 
-  def setNonUserThreadMuteState(publicId: String, muted: Boolean) = Action {
+  def setNonUserThreadMuteState(token: String, muted: Boolean) = Action {
     // returns wether the mute state was modified
-    val result = ModelWithPublicId.decode[NonUserThread](publicId) match {
-      case Success(id) => messagingCommander.setNonUserThreadMuteState(id, muted)
+    val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)) match {
+      case Some(nut) => messagingCommander.setNonUserThreadMuteState(nut.id.get, muted)
       case _ => false
     }
     Ok(Json.toJson(result))

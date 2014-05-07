@@ -33,9 +33,9 @@ case class UserThread(
     replyable: Boolean = true,
     lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
     started: Boolean = false, //Whether or not this thread was started by this user
-    accessToken: Option[ThreadAccessToken] = Some(ThreadAccessToken())
+    accessToken: ThreadAccessToken = ThreadAccessToken()
   )
-  extends Model[UserThread] with ModelWithPublicId[UserThread] {
+  extends Model[UserThread] {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
@@ -45,10 +45,4 @@ case class UserThread(
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
 }
 
-object UserThread {
-  implicit object userThread extends ModelWithPublicId[UserThread] {
-    val id = None
-    override val prefix = "us"
-  }
-}
 
