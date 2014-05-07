@@ -37,14 +37,15 @@ class BookmarkImporter @Inject() (
         .flatMap(parseNetscapeBookmarks)
         .map { parsed =>
           val tagSet = scala.collection.mutable.Set.empty[String]
-          parsed.foreach { case (_, _, tagOpt) =>
-            if (tagOpt.isDefined) {
-              tagSet.add(tagOpt.get)
+          parsed.foreach { case (_, _, tagsOpt) =>
+            tagsOpt.map { tagName =>
+              tagSet.add(tagName)
             }
           }
-          val tags = tagSet.map { tagStr => keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }
-          val taggedKeeps = parsed.map { case (t, h, tg) =>
-            (t, h, tags.find(t => tg.isDefined && t.name == tg.get.trim).map(_.id.get))
+          val tags = tagSet.map { tagStr => tagStr.trim -> keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }.toMap
+          val taggedKeeps = parsed.map { case (t, h, tagNames) =>
+            val keepTags = tagNames.map(tags.get).flatten.map(_.id.get)
+            (t, h, keepTags)
           }
           val (importId, rawKeeps) = createRawKeeps(request.userId, taggedKeeps)
 
@@ -60,7 +61,7 @@ class BookmarkImporter @Inject() (
     }
   }
 
-  def parseNetscapeBookmarks(bookmarks: File): Try[List[(String, String, Option[String])]] = Try {
+  def parseNetscapeBookmarks(bookmarks: File): Try[List[(String, String, List[String])]] = Try {
     // This is a standard for bookmark exports.
     // http://msdn.microsoft.com/en-us/library/aa753582(v=vs.85).aspx
 
@@ -75,21 +76,26 @@ class BookmarkImporter @Inject() (
         title <- Option(elem.text())
         href <- Option(elem.attr("href"))
       } yield {
-        val tagOpt = Option(elem.attr("list"))
+        val tagsOpt = Option(elem.attr("list")).map(_.split(",").toList).getOrElse(List.empty)
 
         // These may be useful in the future, but we currently are not using them:
         // val createdDate = Option(elem.attr("add_date"))
         // val lastVisitDate = Option(elem.attr("last_visit"))
 
-        (title, href, tagOpt)
+        (title, href, tagsOpt)
       }
     }.toList.flatten
   }
 
-  def createRawKeeps(userId: Id[User], bookmarks: List[(String, String, Option[Id[Collection]])]) = {
+  def createRawKeeps(userId: Id[User], bookmarks: List[(String, String, List[Id[Collection]])]) = {
     val importId = UUID.randomUUID.toString
-    val rawKeeps = bookmarks.map { case (title, href, tagId) =>
+    val rawKeeps = bookmarks.map { case (title, href, tagIds) =>
       val titleOpt = if (title.length > 0) Some(title) else None
+      val tags = tagIds.map(_.id.toString).mkString(",") match {
+        case s if s.length == 0 => None
+        case s => Some(s)
+      }
+
       RawKeep(userId = userId,
         title = titleOpt,
         url = href,
@@ -98,7 +104,7 @@ class BookmarkImporter @Inject() (
         source = KeepSource.bookmarkFileImport,
         originalJson = None,
         installationId = None,
-        tagId = tagId)
+        tagIds = tags)
     }
     (importId, rawKeeps)
   }

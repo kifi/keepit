@@ -36,6 +36,7 @@ private class RawKeepImporterActor @Inject() (
   urlRepo: URLRepo,
   scraper: ScrapeSchedulerPlugin,
   keptAnalytics: KeepingAnalytics,
+  collectionRepo: CollectionRepo,
   kifiInstallationRepo: KifiInstallationRepo,
   bookmarksCommanderProvider: Provider[KeepsCommander],
   searchClient: SearchServiceClient,
@@ -106,10 +107,31 @@ private class RawKeepImporterActor @Inject() (
         //the bookmarks list may be very large!
         searchClient.updateURIGraph()
 
-        db.readWriteBatch(successesRawKeep) { case (session, rk) =>
-          if (rk.tagId.isDefined) {
-            bookmarksCommanderProvider.get.addToCollection(rk.tagId.get, successes)(context)
+        val tagCache = scala.collection.mutable.Map.empty[String, Collection]
+
+        db.readOnly { implicit session =>
+          successesRawKeep.map { rk =>
+            // Parse stored tag IDs, verify tag exists,
+            if (rk.tagIds.isDefined) {
+              rk.tagIds.get.split(",").map { candidate =>
+                Try(candidate.toLong).map(Id[Collection]).map { tid =>
+                  tagCache.getOrElseUpdate(candidate, collectionRepo.get(tid)(session))
+                }.toOption
+              }.flatten.toSeq
+            } else Seq.empty
+          }.flatten
+        }
+
+        successes.foreach { keep =>
+          val tags = rawKeepByUrl.get(keep.url).flatMap(_.tagIds.map(_.split(",").map(tagCache.get).flatten)).getOrElse(Array.empty)
+
+          tags.foreach { tag =>
+            bookmarksCommanderProvider.get.addToCollection(tag.id.get, Seq(keep))(context)
           }
+        }
+
+
+        db.readWriteBatch(successesRawKeep) { case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
         }
       }
