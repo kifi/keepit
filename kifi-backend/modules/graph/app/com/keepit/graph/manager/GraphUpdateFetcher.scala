@@ -25,7 +25,10 @@ class GraphUpdateFetcherImpl @Inject() (
   abook: ABookServiceClient,
   cortex: CortexServiceClient
 ) extends GraphUpdateFetcher with Logging{
-  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
+  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = {
+    log.info(s"Loading next batch of graph updates from the queue: maxBatchSize=$maxBatchSize, lockTimeout=$lockTimeout")
+    new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
+  }
   def fetch(currentState: GraphUpdaterState): Unit = {
     implicit val state = currentState
     val queueName = queue.queue
@@ -46,7 +49,7 @@ class GraphUpdateFetcherImpl @Inject() (
 
   private def seq[U <: GraphUpdate](kind: GraphUpdateKind[U])(implicit state: GraphUpdaterState): SequenceNumber[U] = {
     val sequenceNumber = state.getCurrentSequenceNumber(kind)
-    log.info(s"Fetching $kind from sequence number $sequenceNumber")
+    log.info(s"Requesting $kind from sequence number $sequenceNumber")
     sequenceNumber
   }
 }

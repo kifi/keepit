@@ -27,6 +27,7 @@ class GraphManagerActor @Inject() (
   def receive = {
     case UpdateGraph(maxBatchSize, lockTimeout) => if (!updating) {
       graphUpdateFetcher.nextBatch(maxBatchSize, lockTimeout).map { updates =>
+        log.info(s"${updates.length} graph updates were loaded from the queue.")
         self ! ProcessGraphUpdates(updates, maxBatchSize, lockTimeout)
       }
       updating = true
@@ -36,6 +37,7 @@ class GraphManagerActor @Inject() (
       else {
         graph.update(updates.map(_.body): _*)
         updates.foreach(_.consume())
+        log.info(s"${updates.length} graph updates were consumed from the queue.")
         updating = false
         self ! UpdateGraph(maxBatchSize, lockTimeout)
       }
