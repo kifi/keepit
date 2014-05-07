@@ -151,6 +151,8 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           c2.keeperId === u2.id.get
           c2.keepId === keeps2(1).id.get
 
+          keepClickRepo.getClicksByKeeper(u1.id.get).head === c1
+
           val rekeeps = rekeepRepo.all
           rekeeps.size === 2
 
@@ -165,6 +167,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rk2.keepId === keeps2(1).id.get
           rk2.srcUserId === u3.id.get
           rk2.srcKeepId === keeps3(1).id.get
+
+          rekeepRepo.getReKeepsByKeeper(u1.id.get).head === rk1
+          rekeepRepo.getReKeepsByKeeper(u2.id.get).head === rk2
+          rekeepRepo.getReKeepsByReKeeper(u3.id.get).length === 2
         }
       }
     }

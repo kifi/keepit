@@ -55,4 +55,30 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.rekeeps(t, showImage, page, count, size))
   }
 
+  private def getKeepInfos(userId:Id[User]):(User, Seq[RichKeepClick], Seq[RichReKeep], Seq[RichReKeep]) = {
+    db.readOnly { implicit ro =>
+      val u = userRepo.get(userId)
+      val rc = keepClickRepo.getClicksByKeeper(userId) map { c =>
+        RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+      }
+      val rk = rekeepRepo.getReKeepsByKeeper(userId) map { k =>
+        RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, u, keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
+      }
+      val rkr = rekeepRepo.getReKeepsByReKeeper(userId) map { k =>
+        RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), u, keepRepo.get(k.srcKeepId), k.attributionFactor)
+      }
+      (u, rc, rk, rkr)
+    }
+  }
+
+  def keepInfos(userId:Id[User]) = AdminHtmlAction.authenticated { request =>
+    val (u, clicks, rekeeps, rekepts) = getKeepInfos(userId)
+    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
+  }
+
+  def myKeepInfos() = AdminHtmlAction.authenticated { request =>
+    val (u, clicks, rekeeps, rekepts) = getKeepInfos(request.userId)
+    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
+  }
+
 }

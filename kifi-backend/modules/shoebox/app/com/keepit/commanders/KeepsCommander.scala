@@ -21,9 +21,9 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.Future
-import scala.util.Try
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.common.store.ImageSize
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -84,7 +84,8 @@ class KeepsCommander @Inject() (
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
-    eliza: ElizaServiceClient
+    eliza: ElizaServiceClient,
+    imageRepo: ImageInfoRepo
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -120,16 +121,17 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, experimants: Seq[UserExperiment])(implicit context: HeimdalContext): KeepInfo = {
+  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, experimants: Set[ExperimentType])(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
     val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
     SafeFuture{
       searchClient.updateURIGraph()
+      notifyWhoKeptMyKeep(userId, experimants)
     }
     KeepInfo.fromBookmark(keep)
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, experimants: Seq[UserExperiment])(implicit context: HeimdalContext):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, experimants: Set[ExperimentType])(implicit context: HeimdalContext):
       (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
@@ -142,11 +144,17 @@ class KeepsCommander @Inject() (
     }
     SafeFuture{
       searchClient.updateURIGraph()
+      notifyWhoKeptMyKeep(userId, experimants)
     }
     (keeps.map(KeepInfo.fromBookmark), addedToCollection)
   }
 
-  private def notifyNetwork(userId: Id[User], experimants: Seq[UserExperiment], keepIds: Id[Keep]*): Unit = if (experimants.contains(ExperimentType.WHO_KEPT_MY_KEEP)) keepIds foreach { keepId =>
+  /**
+   * This is a very experimental test, needs to be tested and verified with product as there are few concepts here that are
+   * not part of the "regular" flow of kifi, like having unconnected people know about each public keeps etc.
+   * To be explicit, this is an internal only experiment and likely to be removed soon.
+   */
+  private def notifyWhoKeptMyKeep(userId: Id[User], experimants: Set[ExperimentType], keepIds: Id[Keep]*): Unit = if (experimants.contains(ExperimentType.WHO_KEPT_MY_KEEP)) keepIds foreach { keepId =>
     import scala.concurrent.duration._
     // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
     scheduler.scheduleOnce(5 minutes) {
@@ -160,11 +168,12 @@ class KeepsCommander @Inject() (
         //don't mess with keeps that are even a bit popular, has more then two keepers. we don't want to create noise, be extra careful
         if (otherKeeps.length > 2) return
         val keeper = userRepo.get(keep.userId)
-        val otherKeepers = otherKeeps.map(_.userId)
-        val title = s"""${keeper.fullName} also kept "${uri.title.get.abbreviate(80)}""""
-        val bodyHtml =
-        eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, linkText, url.getOrElse(""), image,
-          isSticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
+        val otherKeepers = otherKeeps.map(_.userId).toSet
+        val title = s"${keeper.fullName} also kept your keep"
+        val bodyHtml = "Great minds think alike!"
+        val image = imageRepo.getByUriWithSize(uri.id.get, ImageSize(42, 42)).headOption.map(_.url).flatten.getOrElse("")
+        eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, image,
+          sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
       }
     }
   }
@@ -188,7 +197,7 @@ class KeepsCommander @Inject() (
     }
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
-    val deactivatedKeepInfos = deactivatedBookmarks.map(KeepInfo.fromBookmark(_))
+    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromBookmark
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos

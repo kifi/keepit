@@ -25,13 +25,14 @@ class MessageFetchingCommander @Inject() (
     id: ExternalId[Message],
     createdAt: DateTime,
     text: String,
+    source: Option[MessageSource],
     auxData: Option[JsArray],
     url: String,
     nUrl: String,
     user: Option[BasicUser],
     participants: Seq[BasicUserLikeEntity]
   ): Future[MessageWithBasicUser] = {
-    modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, auxData, url, nUrl, user, participants))
+    modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, source, auxData, url, nUrl, user, participants))
   }
 
   def getThreadMessages(thread: MessageThread) : Seq[Message] =  db.readOnly { implicit session =>
@@ -51,6 +52,7 @@ class MessageFetchingCommander @Inject() (
           id           = message.externalId,
           createdAt    = message.createdAt,
           text         = message.messageText,
+          source       = message.source,
           auxData      = message.auxData,
           url          = message.sentOnUrl.getOrElse(""),
           nUrl         = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads

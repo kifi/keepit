@@ -19,7 +19,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialUserInfoGraphUpdate: SocialUserInfoGraphUpdate => processSocialUserInfoGraphUpdate(socialUserInfoGraphUpdate)
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
-    case ldaUpdate: LDAURITopicGraphUpdate => {/*processLDAUpdate(ldaUpdate)*/}
+    case ldaUpdate: LDAURITopicGraphUpdate => processLDAUpdate(ldaUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
@@ -125,11 +125,11 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     }
 
     val uriVertexId: VertexDataId[UriReader] = update.uriId
-    removeOldURITopicsIfExists(uriVertexId, update.topics.length)
+    removeOldURITopicsIfExists(uriVertexId, update.sparseTopics.dimension)
 
     val uriData = UriData(uriVertexId)
 
-    update.topics.zipWithIndex.sortBy(-1f * _._1).take(5).foreach{ case (score, index) =>
+    update.sparseTopics.topics foreach { case (index, score) =>
       val topicId = VersionedLDATopicId(update.uriSeq.version, index)
       val topicVertexId: VertexDataId[LDATopicReader] = topicId
       writer.saveVertex(LDATopicData(topicVertexId))

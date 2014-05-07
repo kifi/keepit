@@ -13,6 +13,7 @@ import com.keepit.heimdal.SanitizedKifiHit
 trait KeepClickRepo extends Repo[KeepClick] {
   def getClicksByUUID(uuid:ExternalId[SanitizedKifiHit])(implicit r:RSession):Seq[KeepClick]
   def getByKeepId(keepId:Id[Keep])(implicit r:RSession):Seq[KeepClick]
+  def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[KeepClick]
 }
 
 
@@ -41,11 +42,14 @@ class KeepClickRepoImpl @Inject() (
   override def invalidateCache(model: KeepClick)(implicit session: RSession): Unit = {}
 
   def getClicksByUUID(uuid: ExternalId[SanitizedKifiHit])(implicit r: RSession): Seq[KeepClick] = {
-    (for (r <- rows if (r.hitUUID === uuid && r.state === KeepClicksStates.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.hitUUID === uuid && r.state === KeepClickStates.ACTIVE)) yield r).list()
   }
 
   def getByKeepId(keepId: Id[Keep])(implicit r: RSession): Seq[KeepClick] = {
-    (for (r <- rows if (r.keepId === keepId && r.state === KeepClicksStates.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.keepId === keepId && r.state === KeepClickStates.ACTIVE)) yield r).list()
   }
 
+  def getClicksByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Seq[KeepClick] = {
+    (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).list()
+  }
 }
