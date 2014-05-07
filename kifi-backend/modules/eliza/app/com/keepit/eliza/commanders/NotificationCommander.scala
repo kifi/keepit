@@ -139,7 +139,7 @@ class NotificationCommander @Inject() (
             participants = participants.toSeq,
             conversationStarter = starterUser.firstName + " " + starterUser.lastName,
             unsubUrl = unsubUrl,
-            muteUrl = "https://www.kifi.com/extmsg/email/mute?publicId=" + nut.publicId.get //Todo (Stephen): remove hard coded url with public id
+            muteUrl = "https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token //Todo (Stephen): remove hard coded url with public id
           )
 
           var relevantMessages = messages
@@ -162,7 +162,7 @@ class NotificationCommander @Inject() (
 
           val body = views.html.nonUserDigestEmail(threadInfo, threadItems).body
 
-          val magicAddress = EmailAddresses.discussion(nut.publicId.get)
+          val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
           shoebox.sendMail(ElectronicMail (
             from = magicAddress,
             fromName = Some("Kifi Discussions"),

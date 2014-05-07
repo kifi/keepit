@@ -10,11 +10,12 @@ import scala.util.Failure
 import com.keepit.common.zookeeper.ServiceDiscovery
 import java.io.File
 import org.apache.commons.io.FileUtils
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 trait SimpleGraphModule extends GraphManagerModule {
 
   @Provides @Singleton
-  def simpleGraphManager(graphDirectory: SimpleGraphDirectory, graphQueue: SQSQueue[GraphUpdate], graphUpdater: GraphUpdater, serviceDiscovery: ServiceDiscovery): GraphManager = {
+  def simpleGraphManager(graphDirectory: SimpleGraphDirectory, graphQueue: SQSQueue[GraphUpdate], graphUpdater: GraphUpdater, serviceDiscovery: ServiceDiscovery, airbrake: AirbrakeNotifier): GraphManager = {
     val (simpleGraph, state) = Try(graphDirectory.load()) match {
       case Success((graph, state)) =>
         log.info(s"Successfully loaded SimpleGraph from disk. State:\n$state")
@@ -25,7 +26,7 @@ trait SimpleGraphModule extends GraphManagerModule {
         (SimpleGraph(), GraphUpdaterState.empty)
     }
 
-    new SimpleGraphManager(simpleGraph, state, graphDirectory, graphUpdater, serviceDiscovery)
+    new SimpleGraphManager(simpleGraph, state, graphDirectory, graphUpdater, serviceDiscovery, airbrake)
   }
 
   protected def getArchivedSimpleGraphDirectory(path: String, graphStore: GraphStore): ArchivedSimpleGraphDirectory = {

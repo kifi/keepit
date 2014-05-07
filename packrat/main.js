@@ -1569,6 +1569,7 @@ function searchOnServer(request, respond) {
     resp.filter = request.filter;
     resp.me = me;
     resp.prefs = prefs || {maxResults: 1};
+    resp.origin = webBaseUri();
     resp.experiments = experiments;
     resp.admBaseUri = admBaseUri();
     resp.myTotal = resp.myTotal || 0;
@@ -1583,13 +1584,13 @@ function searchOnServer(request, respond) {
 }
 
 function processSearchHit(hit) {
-  var tags = hit.bookmark && hit.bookmark.tags;
-  if (tags && tags.length) {
-    var tagNames = hit.bookmark.tagNames = [];
-    for (var i = 0; i < tags.length; i++) {
-      var tag = tagsById && tagsById[tags[i]];
+  var tagIds = hit.bookmark && hit.bookmark.tags;
+  if (tagIds && tagIds.length && tagsById) {
+    var tags = hit.tags = [];
+    for (var i = 0; i < tagIds.length; i++) {
+      var tag = tagsById[tagIds[i]];
       if (tag) {
-        tagNames.push(tag.name);
+        tags.push(tag);
       }
     }
   }

@@ -1,13 +1,11 @@
-# SHOEBOX
+# ELIZA
 
 # --- !Ups
 
-alter TABLE raw_keep
-  add column tag_id bigint(20) NULL;
+CREATE UNIQUE INDEX non_user_thread_u_access_token ON non_user_thread (access_token);
+-- mysql verion for prod:
+-- CREATE UNIQUE INDEX non_user_thread_u_access_token ON non_user_thread (access_token(6));
 
-alter TABLE raw_keep
-  add CONSTRAINT raw_keep_tag_id FOREIGN KEY (tag_id) REFERENCES collection(id);
-
-insert into evolutions (name, description) values('164.sql', 'add tag_id to raw_keep');
+insert into evolutions (name, description) values('164.sql', 'adding access token index to non_user_thread');
 
 # --- !Downs
