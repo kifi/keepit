@@ -54,7 +54,7 @@ class GraphManagerPlugin @Inject() (
 
   override def onStart() {
     log.info(s"starting $this")
-    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateGraph(10, 1 minute))
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateGraph(500, 1 minute))
     scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }
