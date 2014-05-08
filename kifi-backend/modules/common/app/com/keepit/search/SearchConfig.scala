@@ -7,6 +7,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ExperimentType, UserExperimentGenerator, User}
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
@@ -35,7 +36,7 @@ object SearchConfig {
       "tailCutting" -> "0.3",
       "proximityBoost" -> "0.95",
       "semanticBoost" -> "0.8",
-      "dampingHalfDecayMine" -> "5.0",
+      "dampingHalfDecayMine" -> "6.0",
       "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
       "showExperts" -> "false",
@@ -123,9 +124,14 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId }
 
   def getConfig(userId: Id[User], userExperiments: Set[ExperimentType]): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+    val future = getConfigFuture(userId, userExperiments)
+    monitoredAwait.result(future, 1 seconds, "getting search config")
+  }
+
+  def getConfigFuture(userId: Id[User], userExperiments: Set[ExperimentType]): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
     val segFuture = shoeboxClient.getUserSegment(userId)
     userConfig.get(userId) match {
-      case Some(config) => (config, None)
+      case Some(config) => Future.successful((config, None))
       case None =>
         val (experimentConfig, experimentId) =
           if (userExperiments.contains(ExperimentType.NO_SEARCH_EXPERIMENTS)) (SearchConfig.empty, None)
@@ -134,9 +140,10 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
             (activeExperiments(experiment), Some(Id[SearchConfigExperiment](id.toLong)))
           } getOrElse (SearchConfig.empty, None)
 
-        val seg = monitoredAwait.result(segFuture, 1 seconds, "getting user segment")
-        val segmentConfig = SearchConfig.byUserSegment(seg)
-        (defaultConfig.overrideWith(segmentConfig).overrideWith(experimentConfig), experimentId)
+        segFuture.map{ seg =>
+          val segmentConfig = SearchConfig.byUserSegment(seg)
+          (defaultConfig.overrideWith(segmentConfig).overrideWith(experimentConfig), experimentId)
+        }
       }
   }
 }

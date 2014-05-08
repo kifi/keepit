@@ -56,3 +56,16 @@ case object EmptyEdgeDataReader extends EdgeKind[EmptyEdgeDataReader] {
   implicit val writes = Writes[EmptyEdgeDataReader](_ => Json.obj())
   implicit val readsAsEdgeData: Reads[EdgeData[EmptyEdgeDataReader]] = Reads[EdgeData[EmptyEdgeDataReader]](json => json.validate[JsObject].map(_ => EmptyEdgeData))
 }
+
+trait WeightedEdgeDataReader extends EdgeDataReader {
+  def kind = WeightedEdgeDataReader
+  type E = WeightedEdgeDataReader
+  def getWeight: Float
+}
+
+case object WeightedEdgeDataReader extends EdgeKind[WeightedEdgeDataReader] {
+  val header = 2.toByte
+  def apply(rawDataReader: RawDataReader): WeightedEdgeDataReader = ???
+  implicit val writes = Writes[WeightedEdgeDataReader](x => JsNumber(x.getWeight))
+  implicit val readsAsEdgeData: Reads[EdgeData[WeightedEdgeDataReader]] = Reads[EdgeData[WeightedEdgeDataReader]](json => json.validate[JsNumber].map{ x => WeightedEdgeData(x.as[Float])})
+}

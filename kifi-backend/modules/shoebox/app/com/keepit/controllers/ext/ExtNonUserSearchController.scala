@@ -5,15 +5,14 @@ import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.model.EContact
-import com.keepit.typeahead.TypeaheadHit
-import com.keepit.typeahead.abook.EContactTypeahead
+import com.keepit.commanders.TypeaheadCommander
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsArray, JsObject, JsString, JsValue}
 
 class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  econtactTypeahead: EContactTypeahead)
+  typeaheadCommander: TypeaheadCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def findPeopleToInvite(q: String, n: Int) = JsonAction.authenticated { request =>
@@ -22,13 +21,9 @@ class ExtNonUserSearchController @Inject() (
 
   def findPeopleToMessage(q: String, n: Int) = JsonAction.authenticatedAsync { request =>
     new SafeFuture({
-      econtactTypeahead.asyncSearch(request.userId, q)(TypeaheadHit.defaultOrdering[EContact])
-    }) map { contactsOpt =>
-      contactsOpt map { contacts =>
-        Ok(JsArray(contacts.filterNot(_.contactUserId.isDefined).take(n).map(serializeContact)))
-      } getOrElse { // TODO: airbrake?
-        Ok(JsArray())
-      }
+      typeaheadCommander.queryContacts(request.userId, Some(q), n, _.contactUserId.isEmpty)
+    }) map { contacts =>
+      Ok(JsArray(contacts.map(serializeContact)))
     }
   }
 

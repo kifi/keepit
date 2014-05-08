@@ -12,13 +12,12 @@ import play.api.libs.json.{JsObject, Json}
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.store.S3ScreenshotStore
 import scala.concurrent.Future
 import scala.util.{Success, Failure}
 
 class MobileBookmarksController @Inject() (
   db: Database,
-  s3ScreenshotStore: S3ScreenshotStore,
+  uriSummaryCommander: URISummaryCommander,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
@@ -135,19 +134,17 @@ class MobileBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
-  private def toJsObject(url: String, uri: NormalizedURI, pageInfoOpt: Option[PageInfo]): Future[JsObject] = {
-    val screenshotUrlOpt = s3ScreenshotStore.getScreenshotUrl(uri)
-    s3ScreenshotStore.asyncGetImageUrl(uri, pageInfoOpt, false) map { imgUrlOpt =>
-      (screenshotUrlOpt, imgUrlOpt) match {
-        case (None, None) =>
-          Json.obj("url" -> url, "uriId" -> uri.id.get)
-        case (None, Some(imgUrl)) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl)
-        case (Some(ssUrl), None) =>
-          Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
-        case (Some(ssUrl), Some(imgUrl)) =>
-          Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
-      }
+  private def toJsObject(url: String, uri: NormalizedURI, screenshotUrlOpt: Option[String], imageUrlOpt: Option[String]): JsObject = {
+    log.info(s"[getImageUrl] returning screenshot ${screenshotUrlOpt} and image ${imageUrlOpt}")
+    (screenshotUrlOpt, imageUrlOpt) match {
+      case (None, None) =>
+        Json.obj("url" -> url, "uriId" -> uri.id.get)
+      case (None, Some(imgUrl)) =>
+        Json.obj("url" -> url, "imgUrl" -> imgUrl)
+      case (Some(ssUrl), None) =>
+        Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
+      case (Some(ssUrl), Some(imgUrl)) =>
+        Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
     }
   }
 
@@ -159,15 +156,14 @@ class MobileBookmarksController @Inject() (
     urlOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
       case Some(url) => {
-        val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
-          val uriOpt = uriRepo.getByUri(url)
-          val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
-          (uriOpt, pageInfoOpt)
-        }
+        val (uriOpt) = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
         uriOpt match {
           case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
           case Some(uri) => {
-            toJsObject(url, uri, pageInfoOpt) map { js => Ok(js) }
+            val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
+            uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+              Ok(toJsObject(url, uri, screenshotUrlOpt, imageUrlOpt))
+            }
           }
         }
       }
@@ -186,15 +182,14 @@ class MobileBookmarksController @Inject() (
           }
         }
         val tuplesF = tuples map { case (url, uriOpt) =>
-          val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
-            val uriOpt = uriRepo.getByUri(url)
-            val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
-            (uriOpt, pageInfoOpt)
-          }
+          val uriOpt = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
           uriOpt match {
             case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
             case Some(uri) => {
-              toJsObject(url, uri, pageInfoOpt) // todo: batch
+              val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
+              uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+                toJsObject(url, uri, screenshotUrlOpt, imageUrlOpt)
+              }
             }
           }
         }

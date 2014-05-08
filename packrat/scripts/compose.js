@@ -3,29 +3,37 @@
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/underscore.js
 // @require scripts/friend_search.js
-// @request scripts/look.js
-// @require scripts/snapshot.js
+// @require scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
+// @require scripts/snap.js
 
 var initCompose = (function() {
   'use strict';
 
-  var $composes = $();
-  var prefix = CO_KEY + '-';
-  var enterToSend;
-  api.port.emit('prefs', function (o) {
-    enterToSend = o.enterToSend;
-    updateKeyTip($composes);
-  });
+  var KEY_PREFIX = CO_KEY + '-';
 
-  return function ($container, opts) {
+  var $composes = $();
+  var enterToSend;
+
+  function updateKeyTip($f) {
+    if (enterToSend != null) {
+      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : KEY_PREFIX);
+      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? KEY_PREFIX : '');
+    }
+  }
+
+  function getSelRange() {
+    var s = window.getSelection();
+    return s.rangeCount ? s.getRangeAt(0) : null;
+  }
+
+  return function initCompose($container, opts) {
 
   var $f = $container.find('.kifi-compose');
   var $t = $f.find('.kifi-compose-to');
   var $d = $f.find('.kifi-compose-draft');
   var defaultText = $d.data('default');  // real text, not placeholder
   $composes = $composes.add($f);
-  updateKeyTip($f);
 
   api.port.emit('load_draft', {to: !!$t.length}, function (draft) {
     if (draft) {
@@ -63,8 +71,9 @@ var initCompose = (function() {
   }).mousedown(function () {
     $d.removeData('preventNextMouseUp');
   }).mouseup(function (e) {
-    if (document.activeElement === this) {
-      $d.data('sel', getSelRange());
+    var r = getSelRange();
+    if (r && $d[0].contains(r.commonAncestorContainer)) {
+      $d.data('sel', r);
     }
 
     if ($d.data('preventNextMouseUp')) {
@@ -72,19 +81,21 @@ var initCompose = (function() {
       e.preventDefault();
     }
   }).on('mousedown mouseup click', function () {
-    var sel = window.getSelection(), r = getSelRange(sel);
+    var r = getSelRange();
     if (r && r.startContainer === this.parentNode) {  // related to bugzil.la/904846
       var r2 = document.createRange();
       r2.selectNodeContents(this);
       if (r.collapsed) {
         r2.collapse(true);
       }
+      var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r2);
     }
   }).keyup(function () {
-    if (document.activeElement === this) {
-      $d.data('sel', getSelRange());
+    var r = getSelRange();
+    if ($d[0].contains(r.commonAncestorContainer)) {
+      $d.data('sel', r);
     }
   }).on('input', function () {
     var empty = this.firstElementChild === this.lastElementChild && !this.textContent;
@@ -104,7 +115,7 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    initFriendSearch($t, 'composePane', function includeSelf(numTokens) {
+    initFriendSearch($t, 'composePane', [], function includeSelf(numTokens) {
       return numTokens === 0;
     }, {
       placeholder: 'To',
@@ -179,11 +190,11 @@ var initCompose = (function() {
     }
   }
 
-  $f.hoverfu('.kifi-compose-snapshot', function (configureHover) {
+  $f.hoverfu('.kifi-compose-highlight', function (configureHover) {
     var $a = $(this);
     render('html/keeper/titled_tip', {
-      title: 'Microfind',
-      html: 'Click to mark something on<br/>the page and reference it in<br/>your message.'
+      title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Look here” mode',
+      html: '“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.'
     }, function (html) {
       configureHover(html, {
         mustHoverFor: 500,
@@ -192,65 +203,20 @@ var initCompose = (function() {
         position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
     });
   })
-  .on('click', '.kifi-compose-snapshot', function (e) {
-    if (e.originalEvent.isTrusted === false) return;
-    snapshot.take(function (selector) {
-      $d.focus();
-      if (!selector) return;
-      $f.removeClass('kifi-empty');
-
-      // insert link
-      var r = $d.data('sel'), $a = $('<a>', {href: 'x-kifi-sel:' + selector, text: 'look\u00A0here'}), pad = true;
-      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest('a').length) {
-        var par = r.endContainer, i = r.startOffset, j = r.endOffset;
-        if (par.nodeType == 3) {  // text
-          var s = par.textContent;
-          if (i < j) {
-            $a.text(s.substring(i, j));
-            pad = false;
-          }
-          $(par).replaceWith($a);
-          $a.before(s.substr(0, i))
-          $a.after(s.substr(j));
-        } else if (i == j || !r.cloneContents().querySelector('a')) {
-          var next = par.childNodes.item(j);
-          if (i < j) {
-            $a.empty().append(r.extractContents());
-            pad = false;
-          }
-          par.insertBefore($a[0], next);
-        }
-      }
-      if (!$a[0].parentNode) {
-        $d.append($a);
-      }
-
-      if (pad) {
-        var sib;
-        if ((sib = $a[0].previousSibling) && (sib.nodeType != 3 || !/\s$/.test(sib.nodeValue))) {
-          $a.before(' ');
-        }
-        if ((sib = $a[0].nextSibling) && (sib.nodeType != 3 || /^\S/.test(sib.nodeValue))) {
-          $a.after(' ');
-        }
-      }
-
-      // position caret immediately after link
-      r = r || document.createRange();
-      r.setStartAfter($a[0]);
-      r.collapse(true);
-      var sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(r);
-
-      saveDraft();
-    });
+  .on('click', '.kifi-compose-highlight', function () {
+    var enabled = !this.classList.toggle('kifi-disabled');
+    api.port.emit('set_look_here_mode', enabled);
+    if (enabled) {
+      snap.enable($d, true);
+    } else {
+      snap.disable();
+    }
   })
   .on('mousedown', '.kifi-compose-tip', function (e) {
     if (e.originalEvent.isTrusted === false) return;
     e.preventDefault();
     var $tip = $(this);
-    var $alt = $('<span class="kifi-compose-tip-alt" data-prefix="' + (enterToSend ? prefix : '') + '">' + $tip[0].firstChild.textContent + '</span>')
+    var $alt = $('<span class="kifi-compose-tip-alt" data-prefix="' + (enterToSend ? KEY_PREFIX : '') + '">' + $tip[0].firstChild.textContent + '</span>')
       .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
       .hover(function () {
         this.classList.add('kifi-hover');
@@ -293,19 +259,22 @@ var initCompose = (function() {
     }
   });
 
-  function getSelRange(sel) {
-    sel = sel || window.getSelection();
-    return sel.rangeCount ? sel.getRangeAt(0) : null;
-  }
-
-  function getId(o) {
-    return o.id;
-  }
-
   // compose API
   return {
     form: function () {
       return $f[0];
+    },
+    reflectPrefs: function (prefs) {
+      if (enterToSend !== prefs.enterToSend) {
+        enterToSend = prefs.enterToSend;
+        updateKeyTip($f);
+      }
+      $f.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !prefs.lookHereMode);
+      if (prefs.lookHereMode) {
+        snap.enable($d);
+      } else {
+        snap.disable();
+      }
     },
     prefill: function (r) {
       log('[compose.prefill]', r)();
@@ -313,6 +282,9 @@ var initCompose = (function() {
       defaultText = '';
       $t.tokenInput('clear').tokenInput('add', r);
       $d.empty();
+    },
+    snapSelection: function () {
+      return snap.enabled() && snap.attempt();
     },
     focus: function () {
       log('[compose.focus]')();
@@ -331,13 +303,9 @@ var initCompose = (function() {
       if ($t.length) {
         $t.tokenInput('destroy');
       }
+      if (!$composes.length) {
+        snap.disable();
+      }
     }};
   };
-
-  function updateKeyTip ($f) {
-    if (enterToSend != null) {
-      $f.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : prefix);
-      $f.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? prefix : '');
-    }
-  }
 }());

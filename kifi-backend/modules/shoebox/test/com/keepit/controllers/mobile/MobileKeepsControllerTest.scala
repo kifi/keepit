@@ -46,6 +46,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.external.FakeExternalServiceModule
 
 class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -56,7 +57,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    FakeExternalServiceModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id

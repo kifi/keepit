@@ -21,7 +21,11 @@
     tokenLimit: Infinity,
     preventDuplicates: false,
     formatToken: function (item) {
-      return '<li><span>' + htmlEscape(item.name) + '</span></li>';
+      var iconHtml = '';
+      if (item.id.kind && item.id.kind === 'email') {
+        iconHtml = '<span class="kifi-ti-email-token-icon"></span>';
+      }
+      return '<li>' + iconHtml + '<span>' + htmlEscape(item.name) + '</span></li>';
     },
 
     // Callbacks
@@ -666,10 +670,10 @@
       }
     }
 
-    function receiveResults(query, results, partial, errored) {
+    function receiveResults(query, results, partial, errored, refresh) {
       if (!errored) {
         var o = cache.get(query);
-        if (!o) {
+        if (!o || refresh) {
           cache.add(query, {results: results, complete: !partial});
         } else if (!o.complete) {
           Array.prototype.push.apply(o.results, results);
@@ -678,7 +682,7 @@
       }
 
       if ($tokenInput.val().trim() === query && $dropdown.hasClass(classes.dropdownSearching)) {
-        if ($dropdown.data('q') !== query) {
+        if ($dropdown.data('q') !== query || refresh) {
           populateDropdown(query, results, partial);
         } else {
           if (!partial) {

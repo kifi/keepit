@@ -10,6 +10,7 @@ var THREAD_BATCH_SIZE = 8;
 //                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
 var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
 var hostRe = /^https?:\/\/([^\/?#]+)/;
+var emailAddrRe = /^[^@\s]+@[^@\s]+$/; // very lenient
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
@@ -722,6 +723,10 @@ api.port.on({
     }
     ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
   },
+  set_look_here_mode: function (on) {
+    ajax('POST', '/ext/pref/lookHereMode?on=' + on);
+    if (prefs) prefs.lookHereMode = on;
+  },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);
     if (prefs) prefs.enterToSend = data;
@@ -756,6 +761,32 @@ api.port.on({
     api.tabs.selectOrOpen(webBaseUri() + '/invite');
     mixpanel.track('user_clicked_pane', {type: source, action: 'clickImportContacts'});
   },
+  screen_capture: function (data, respond) {
+    api.screenshot(function (drawableEl, canvas) {
+      var bounds = data.bounds;
+      var hScale = drawableEl.width / data.win.width;
+      var vScale = drawableEl.height / data.win.height;
+      canvas.width = bounds.width;
+      canvas.height = bounds.height;
+      var ctx = canvas.getContext('2d');
+      // ctx.fillStyle = 'rgb(200,0,0)';
+      // ctx.fillRect(0, 0, winWidth, winHeight);
+      for (var i = 0; i < data.rects.length; i++) {
+        var rect = data.rects[i];
+        ctx.drawImage(
+          drawableEl,
+          rect.left * hScale,
+          rect.top * vScale,
+          rect.width * hScale,
+          rect.height * vScale,
+          rect.left - bounds.left,
+          rect.top - bounds.top,
+          rect.width,
+          rect.height);
+      }
+      respond(canvas.toDataURL('image/png'));
+    });
+  },
   load_draft: function (data, respond, tab) {
     var drafts = loadDrafts();
     if (data.to) {
@@ -775,6 +806,7 @@ api.port.on({
   send_message: function(data, respond, tab) {
     discardDraft([tab.nUri, tab.url]);
     data.extVersion = api.version;
+    data.source = api.browser.name;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
       log('[send_message] resp:', o)();
       // thread (notification) JSON comes via socket
@@ -787,6 +819,7 @@ api.port.on({
     delete data.threadId;
     discardDraft([threadId]);
     data.extVersion = api.version;
+    data.source = api.browser.name;
     ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
       log('[send_reply] resp:', o)();
@@ -1001,6 +1034,7 @@ api.port.on({
   },
   search_friends: function(data, respond, tab) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    var searchContext = {sf: sf, q: data.q}
     var results;
     if (friendSearchCache) {
       results = friendSearchCache.get(data);
@@ -1017,18 +1051,40 @@ api.port.on({
         friendSearchCache.put(data, results);
       }
     }
-    if (results.length > data.n) {
-      results = results.slice(0, data.n);
+    if (emailAddrRe.test(data.q)) {
+      var i = 0;
+      while (i < data.participants.length && data.participants[i].id !== data.q) i++;
+      if (i >= data.participants.length) {
+        var newEmailResult = toContactResult.apply(searchContext, [{email: data.q, isNew: true}]);
+      }
     }
-    var nMoreDesired = data.n - results.length;
+    var nFriendResultsDesired = newEmailResult ? data.n - 1 : data.n;
+    if (results.length > nFriendResultsDesired) {
+      results = results.slice(0, nFriendResultsDesired);
+    }
+    var nMoreDesired = data.n - results.length; // q might be among the email addresses we receive
     var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
+    var friendSearchResults = results.map(toFriendSearchResult, searchContext)
     respond({
       searchId: searchId,
-      results: results.map(toFriendSearchResult, {sf: sf, q: data.q})
+      results: (newEmailResult ? [newEmailResult] : []).concat(friendSearchResults)
     });
     if (nMoreDesired) {
       ajax('GET', '/ext/contacts', {q: data.q, n: nMoreDesired}, function (contacts) {
-        api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: contacts.map(toContactResult, {sf: sf, q: data.q})});
+        if (newEmailResult) {
+          // check if one of the contacts is an exact match for the email address
+          var i = 0;
+          while (i < contacts.length && contacts[i].email !== newEmailResult.email) i++;
+          var hasMatchingEmail = i < contacts.length;
+        }
+        var update = {searchId: searchId, contacts: contacts.map(toContactResult, searchContext)};
+        if (hasMatchingEmail) {
+          // refreshing the whole list to remove the "new email address" result
+          update.friends = friendSearchResults;
+          update.refresh = true;
+        } else {
+        }
+        api.tabs.emit(tab, 'contacts', update);
       }, function () {
         api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: [], error: true});
       });
@@ -2078,6 +2134,12 @@ function toContactResult(f) {
       f.emailParts[n - 1] += f.email.substr(i);
     } else {
       f.emailParts.push(f.email.substr(i));
+    }
+    if (!f.id) {
+      f.id = {kind: "email", email: f.email};
+    }
+    if (!f.name) {
+      f.name = f.email;
     }
   }
   return f;

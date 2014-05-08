@@ -1,3 +1,6 @@
+// @require scripts/lib/jquery.js
+// @require scripts/ranges.js
+// @require scripts/scroll_to.js
 // @require scripts/snapshot.js
 
 $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
@@ -10,78 +13,125 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
       });
   };
 
-function lookMouseDown(e) {
-  if (e.which != 1) return;
-  e.preventDefault();
-  var selector = unescape(this.href).substr(11);  // spaces need unescaping in Firefox
-  var el, tooNew = selector.indexOf('|') >= 0;
-  if (!tooNew && (el = snapshot.fuzzyFind(selector))) {
-    // make absolute positioning relative to document instead of viewport
-    document.documentElement.style.position = "relative";
+  function lookMouseDown(e) {
+    if (e.which != 1) return;
+    e.preventDefault();
+    var selector = this.href.substr(11);
+    if (selector.lastIndexOf('r|', 0) === 0) {
+      var r = snapshot.findRange(selector);
+      if (r) {
+        var sel = window.getSelection();
+        sel.removeAllRanges();
 
-    var aRect = this.getBoundingClientRect();
-    var elRect = el.getBoundingClientRect();
-    var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
-    var ms = scrollTo(elRect);
-    $("<kifi class='kifi-root kifi-snapshot-highlight'>").css({
-      left: aRect.left + sLeft,
-      top: aRect.top + sTop,
-      width: aRect.width,
-      height: aRect.height
-    }).appendTo("body").animate({
-      left: elRect.left + sLeft - 3,
-      top: elRect.top + sTop - 2,
-      width: elRect.width + 6,
-      height: elRect.height + 4
-    }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
-  } else {
-    api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog(tooNew);
+        var rects = ranges.getClientRects(r);
+        var bounds = ranges.getBoundingClientRect(r, rects);
+        var anim = scrollTo(bounds, computeScrollToDuration);
+        var $cnv = $('<canvas>').prop({width: bounds.width, height: bounds.height});
+        var ctx = $cnv[0].getContext('2d');
+        ctx.fillStyle = 'rgba(128,184,255,.59)';
+        for (var i = 0; i < rects.length; i++) {
+          var rect = rects[i];
+          ctx.fillRect(rect.left - bounds.left, rect.top - bounds.top, rect.width, rect.height);
+        }
+        animateFromTo($cnv, this, bounds, anim, function () {
+          $cnv.remove();
+          sel.removeAllRanges();
+          sel.addRange(r);
+        });
+      } else {
+        showBroken(selector);
+      }
+    } else if (selector.lastIndexOf('i|', 0) === 0) {
+      var img = snapshot.findImage(selector);
+      if (img) {
+        var rect = snapshot.getImgContentRect(img);
+        var anim = scrollTo(rect, computeScrollToDuration);
+        var $el = $('<kifi class="kifi-snapshot-highlight-v2">').css({width: rect.width, height: rect.height});
+        animateFromTo($el, this, rect, anim, function () {
+          $el.css({transition: '', transform: '', transformOrigin: '', opacity: ''});
+          setTimeout(function () {
+            $el.on('transitionend', removeThis)
+            .addClass('kifi-snapshot-highlight-v2-bye')
+            .css({
+              transform: 'scale(' + (1 + 16 / rect.width) + ',' + (1 + 16 / rect.height) + ')',
+              borderRadius: '10px'
+            });
+          });
+        });
+      } else {
+        img = new Image();
+        $(img).on('load error', showBroken);
+        try {
+          img.src = decodeURIComponent(selector.split('|')[4]);
+        } catch (e) {
+          showBroken.call(img, {type: 'error'});
+        }
+      }
+    } else {
+      var el = snapshot.fuzzyFind(selector);
+      if (el) {
+        // make absolute positioning relative to document instead of viewport
+        document.documentElement.style.position = 'relative';
+
+        var aRect = this.getBoundingClientRect();
+        var elRect = el.getBoundingClientRect();
+        var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
+        var anim = scrollTo(elRect, computeScrollToDuration);
+        $('<kifi class="kifi-root kifi-snapshot-highlight">').css({
+          left: aRect.left + sLeft,
+          top: aRect.top + sTop,
+          width: aRect.width,
+          height: aRect.height
+        }).appendTo('body').animate({
+          left: elRect.left + sLeft - 3,
+          top: elRect.top + sTop - 2,
+          width: elRect.width + 6,
+          height: elRect.height + 4
+        }, anim.ms).delay(2000).fadeOut(1000, removeThis);
+      } else {
+        showBroken();
+      }
+    }
+  }
+
+  function animateFromTo($el, fromEl, toRect, anim, done) {
+    var fromRect = fromEl.getClientRects()[0];
+    var bPos = {
+      left: toRect.left - anim.dx,
+      top: toRect.top - anim.dy
+    };
+    var scale = Math.min(1, fromRect.width / toRect.width);
+    $el.addClass('kifi-root').css({
+      position: 'fixed',
+      zIndex: 999999999993,
+      top: bPos.top,
+      left: bPos.left,
+      opacity: 0,
+      transformOrigin: '0 0',
+      transform: 'translate(' + (fromRect.left - bPos.left) + 'px,' + (fromRect.top - bPos.top) + 'px) scale(' + scale + ',' + scale + ')',
+      transition: 'all ' + anim.ms + 'ms ease-in-out,opacity ' + anim.ms + 'ms ease-out'
+    })
+    .appendTo($('body')[0] || 'html')
+    .one('transitionend', done)
+    .layout()
+    .css({
+      transform: '',
+      opacity: 1
     });
   }
 
-  function scrollTo(r) {  // TODO: factor out for reuse
-    var pad = 100;
-    var hWin = $(window).height();
-    var wWin = $(window).width();
-    var sTop = $(document).scrollTop(), sTop2;
-    var sLeft = $(document).scrollLeft(), sLeft2;
-    var oTop = sTop + r.top;
-    var oLeft = sLeft + r.left;
-
-    if (r.height + 2 * pad < hWin) { // fits with space around it
-      sTop2 = (sTop > oTop - pad) ? oTop - pad :
-        (sTop + hWin < oTop + r.height + pad) ? oTop + r.height + pad - hWin : sTop;
-    } else if (r.height < hWin) { // fits without full space around it, so center
-      sTop2 = oTop - (hWin - r.height) / 2;
-    } else { // does not fit, so get it to fill up window
-      sTop2 = sTop < oTop ? oTop : (sTop + hWin > oTop + r.height) ? oTop + r.height - hWin : sTop;
-    }
-    sTop2 = Math.max(0, sTop2);
-
-    if (r.width + 2 * pad < wWin) { // fits with space around it
-      sLeft2 = (sLeft > oLeft - pad) ? oLeft - pad :
-        (sLeft + wWin < oLeft + r.width + pad) ? oLeft + r.width + pad - wWin : sLeft;
-    } else if (r.width < wWin) { // fits without full space around it, so center
-      sLeft2 = oLeft - (wWin - r.width) / 2;
-    } else { // does not fit, so get it to fill up window
-      sLeft2 = sLeft < oLeft ? oLeft : (sLeft + wWin > oLeft + r.width) ? oLeft + r.width - wWin : sLeft;
-    }
-    sLeft2 = Math.max(0, sLeft2);
-
-    if (sTop2 == sTop && sLeft2 == sLeft) return 400;
-
-    var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
-    $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
-        duration: ms,
-        step: function(a) {
-          window.scroll(
-            sLeft2 * a + sLeft * (1 - a),
-            sTop2 * a + sTop * (1 - a));
-        }, complete: function() {
-          $(this).remove()
-        }});
-    return ms;
+  function removeThis() {
+    $(this).remove();
   }
-}
+
+  function computeScrollToDuration(dist) {
+    return Math.max(400, Math.min(800, 100 * Math.log(dist)));
+  }
+
+  function showBroken(e) {
+    var self = this;
+    api.require('scripts/look_link_broken.js', function () {
+      showBrokenLookLinkDialog.call(self, e);
+    });
+  }
 }());

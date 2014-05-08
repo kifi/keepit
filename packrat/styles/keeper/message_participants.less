@@ -136,11 +136,23 @@
   margin: 0;
   margin-right: 3px;
 
+  img, .kifi-message-participant-email-image {
+    border-radius: 2px !important;
+  }
+
   img {
     display: block;
     width: 100%;
     height: 100%;
-    border-radius: 2px !important;
+  }
+
+  .kifi-message-participant-email-image{
+    display: table-cell;
+    width: @picSize;
+    line-height: 29px;
+    text-align: center;
+    font-size: 24px;
+    color: white;
   }
 
   &.kifi-highlight {
@@ -232,7 +244,7 @@
   font-size: 12px;
   font-weight: 500;
 
-  img {
+  img, .kifi-message-participant-email-image {
     width: @listPicSize;
     height: @listPicSize;
     border: 0;
@@ -242,6 +254,14 @@
     margin-right: 10px;
     float: left;
     vertical-align: middle;
+  }
+
+  .kifi-message-participant-email-image {
+    line-height: 34px;
+    text-align: center;
+    font-size: 30px;
+    font-weight: 400;
+    color: white;
   }
 
   &.kifi-highlight {

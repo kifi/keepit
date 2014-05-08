@@ -37,6 +37,7 @@ class MainSearcherFactory @Inject() (
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
+    searchConfigManager: SearchConfigManager,
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     implicit private val clock: Clock,
@@ -47,6 +48,7 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
   private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
+  private[this] val consolidateConfigReq = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
 
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
@@ -175,6 +177,18 @@ class MainSearcherFactory @Inject() (
       }
     }
   }
+
+  def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
+    predefinedConfig match {
+      case None =>
+        consolidateConfigReq(userId){ k => searchConfigManager.getConfigFuture(userId, experiments) }
+      case Some(conf) =>
+        val default = searchConfigManager.defaultConfig
+        // almost complete overwrite. But when search config parameter list changes, this prevents exception
+        Future.successful((new SearchConfig(default.params ++ conf.params), None))
+    }
+  }
+
 
   def getIndexShards(): Seq[Shard[NormalizedURI]] = shardedArticleIndexer.indexShards.keys.toSeq
 

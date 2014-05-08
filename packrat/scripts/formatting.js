@@ -13,23 +13,20 @@ var formatMessage = (function () {
   var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
 
   var formatAsHtml =
-    processKifiSelMarkdownToLinksThen.bind(
-      null,
-      processEmailAddressesThen.bind(
-        null,
-        processUrls.bind(
-          null,
-          processEmoji)),
-      processEmoji);
+    processLineBreaksThen.bind(null,
+      processKifiSelMarkdownToLinksThen.bind(null,
+        processEmailAddressesThen.bind(null,
+          processUrls.bind(null,
+            processEmoji)),
+        processEmoji));
 
   var formatAsHtmlSnippet =
-    processKifiSelMarkdownToTextThen.bind(
-      null,
-      processEmoji);
+      processKifiSelMarkdownToTextThen.bind(null,
+        processEmoji);
 
   function renderAndFormatFull(text, render) {
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return processLineBreaks(formatAsHtml(render(text)));
+    return formatAsHtml(render(text));
   }
 
   function renderAndFormatSnippet(text, render) {
@@ -39,10 +36,28 @@ var formatMessage = (function () {
     return html.length > 200 ? html.substring(0, 190) + '…' : html;
   }
 
+  function processLineBreaksThen(process, text) {
+    var parts = text.split(lineBreaksRe);
+    var html = ['<div class="kifi-message-p">', process(parts[0])];
+    for (var i = 1; i < parts.length; i += 2) {
+      html.push(parts[i] ?
+        '</div><div class="kifi-message-p kifi-message-pp">' :
+        '</div><div class="kifi-message-p">',
+        process(parts[i+1]));
+    }
+    html.push('</div>');
+    return html.join('');
+  }
+
   function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
     var parts = text.split(kifiSelMarkdownToLinkRe);
     for (var i = 1; i < parts.length; i += 3) {
-      parts[i] = '<a href="x-kifi-sel:' + parts[i+1].replace(escapedRightParenRe, ')') + '">' +
+      var selector = parts[i+1].replace(escapedRightParenRe, ')');
+      var titleAttr = '';
+      if (selector.lastIndexOf('r|', 0) === 0) {
+        titleAttr = ' title="' + Mustache.escape(formatKifiSelRangeText(selector)) + '"';
+      }
+      parts[i] = '<a href="x-kifi-sel:' + Mustache.escape(selector) + '"' + titleAttr + '>' +
         processInside(parts[i].replace(escapedRightBracketRe, ']'));
       parts[i+1] = '</a>';
     }
@@ -97,16 +112,6 @@ var formatMessage = (function () {
     return Mustache.escape(emoji.supported() ? emoji.decode(text) : text);
   }
 
-  function processLineBreaks(html) {
-    return '<div class="kifi-message-p">' + html.replace(lineBreaksRe, getLineBreakSubstitution) + '</div>';
-  }
-
-  function getLineBreakSubstitution(_, multiple) {
-    return multiple ?
-      '</div><div class="kifi-message-p kifi-message-pp">' :
-      '</div><div class="kifi-message-p">';
-  }
-
   return {
     full: function() {
       return renderAndFormatFull;
@@ -114,6 +119,40 @@ var formatMessage = (function () {
     snippet: function () {
       return renderAndFormatSnippet;
     }
+  };
+}());
+
+var formatKifiSelRangeText = (function () {
+  'use strict';
+  var replaceRe = /[\u001e\u001f]/g;
+  var replacements = {'\u001e': '\n\n', '\u001f': ''};
+  function replace(s) {
+    return replacements[s];
+  }
+  return function (selector) {
+    return decodeURIComponent(selector.split('|')[6]).replace(replaceRe, replace);
+  };
+}());
+
+var formatKifiSelRangeTextAsHtml = (function () {
+  'use strict';
+  var replaceRe = /([\u001e\u001f])/g;
+  function replace(replacements, ch) {
+    return replacements[ch];
+  }
+  return function (selector, class1, class2) {
+    var pp = '<div class="' + class1 + ' ' + class2 + '">';
+    var p = '</div><div class="' + class1 + '">';
+    var parts = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
+    var html = [pp, Mustache.escape(parts[0]).replace(/\n/g, p)];
+    for (var i = 1; i < parts.length; i += 2) {
+      if (parts[i] === '\u001e') {
+        html.push('</div>', pp);
+      }
+      html.push(Mustache.escape(parts[i+1]).replace(/\n/g, p));
+    }
+    html.push('</div>');
+    return html.join('');
   };
 }());
 
@@ -128,6 +167,36 @@ function formatLocalDate() {
   }
 }
 
+function formatParticipant(participant) {
+  participant.isUser = !participant.kind || participant.kind === 'user';
+  participant.isEmail = participant.kind === 'email';
+  if (participant.isEmail) {
+    participant.initial = participant.id[0].toUpperCase();
+    // generate hashcode for background color
+    var hash = 0, i, chr, len;
+    for (i = 0, len = participant.id.length; i < len; i++) {
+      chr = participant.id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    var numColors = 4;
+    switch (((hash%numColors)+numColors)%numColors) {
+      case 0:
+        participant.color = 'red';
+        break;
+      case 1:
+        participant.color = 'orange';
+        break;
+      case 2:
+        participant.color = 'green';
+        break;
+      case 3:
+        participant.color = 'purple';
+        break;
+    }
+  }
+}
+
 function convertDraftToText(html) {
  'use strict';
   var html2 = html
@@ -136,7 +205,7 @@ function convertDraftToText(html) {
     .replace(/<\/div><div>/gi, '\n')
     .replace(/<div\s*[\/]?>/gi, '\n')
     .replace(/<\/div>/gi, '')
-    .replace(/<a [^>]*\bhref="x-kifi-sel:([^"]*)"[^>]*>(.*?)<\/a>/gi, function($0, $1, $2) {
+    .replace(/<a(?: [\w-]+="[^"]*")*? href="x-kifi-sel:([^"]*)"(?: [\w-]+="[^"]*")*>(.*?)<\/a>/gi, function($0, $1, $2) {
       return '[' + $2.replace(/\]/g, '\\]') + '](x-kifi-sel:' + $1.replace(/\)/g, '\\)') + ')';
     });
   html2 = emoji.encode(html2);
@@ -171,7 +240,11 @@ var formatAuxData = (function () {
   }
 
   function nameOf(user) {
-    return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+    if (user.kind === "email") {
+      return Mustache.escape(user.id);
+    } else {
+      return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+    }
   }
 
   function boldNamesOf(users) {

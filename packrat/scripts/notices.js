@@ -1,4 +1,5 @@
 // @require styles/keeper/notices.css
+// @require styles/keeper/participant_colors.css
 // @require scripts/api.js
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
@@ -224,6 +225,7 @@ panes.notices = function () {
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
       notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
+      notice.picturedParticipants.map(formatParticipant);
       return render('html/keeper/notice_message', notice);
     case 'triggered':
       return render('html/keeper/notice_triggered', notice);
