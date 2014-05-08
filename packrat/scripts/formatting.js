@@ -241,7 +241,7 @@ var formatAuxData = (function () {
 
   function nameOf(user) {
     if (user.kind === "email") {
-      return Mustache.escape(user.id); 
+      return Mustache.escape(user.id);
     } else {
       return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
     }

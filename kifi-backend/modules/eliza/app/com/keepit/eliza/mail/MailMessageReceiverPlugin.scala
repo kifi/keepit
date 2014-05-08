@@ -34,13 +34,13 @@ case class MailDiscussionServerSettings(
   val username: String = identifier + "@" + domain
 }
 
-case class MailNotificationReply(timestamp:DateTime, content:Option[String], publicId:String)
+case class MailNotificationReply(timestamp:DateTime, content:Option[String], token:String)
 
 object MailNotificationReply {
   implicit val format = (
     (__ \ 'timestamp).format[DateTime] and
     (__ \ 'content).formatNullable[String] and
-    (__ \ 'publicId).format[String]
+    (__ \ 'token).format[String]
   )(MailNotificationReply.apply _, unlift(MailNotificationReply.unapply))
 }
 
@@ -108,7 +108,7 @@ class MailDiscussionMessageParser @Inject() (
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
     getPublicId(message) map { publicId =>
-      MailNotificationReply(getTimestamp(message), getText(message).map(s => (new Regex("On.*wrote:")).split(s)(0).trim), publicId)
+      MailNotificationReply(getTimestamp(message), getText(message).map(s => (new Regex(raw"\n[^\n]*((<[\s\S]+@[\s\S]+>)|(\([\s\S]+@[\s\S]+\)))[^\n]*:")).split(s)(0).trim), publicId)
     }
 
   }

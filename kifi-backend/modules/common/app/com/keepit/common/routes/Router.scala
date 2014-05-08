@@ -103,7 +103,7 @@ object Shoebox extends Service {
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
     def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) =  ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq.value), Param("highSeq", highSeq.value))
-    def clickAttribution() = ServiceRoute(POST, "/internal/shoebox/database/clickAttribution")
+    def kifiHit() = ServiceRoute(POST, "/internal/shoebox/database/kifiHit")
     def assignScrapeTasks(zkId:Long, max:Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def getScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/getScrapeInfo")
     def saveScrapeInfo()  = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
@@ -141,6 +141,9 @@ object Shoebox extends Service {
     def keepGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/keep")
     def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
     def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
+    def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
+    def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getURISummary")
+    def getUnsubscribeUrlForEmail(email: String) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email",email))
   }
 }
 
@@ -232,6 +235,7 @@ object ABook extends Service {
     def getPagedABookInfos(page:Int, size:Int) = ServiceRoute(GET, s"/internal/abooks/page/${page}?size=${size}")
     def getABooksCount() = ServiceRoute(GET, s"/internal/abooksCount/")
     def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfo", Param("userId", userId), Param("id", id))
+    def getABookInfoByExternalId(id: ExternalId[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/getABookInfoByExternalId", Param("externalId", id))
     def getContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getContacts", Param("maxRows", maxRows))
     def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
     def getEContactCount(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactCount")
@@ -287,6 +291,13 @@ object Cortex extends Service {
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
 
     def graphLDAURIFeatureUpdate() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/graphLDAURIFeatureUpdate")
+  }
+}
+
+object Graph extends Service {
+  object internal {
+    def getGraphStatistics() = ServiceRoute(GET, "/internal/graph/statistics")
+    def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
   }
 }
 

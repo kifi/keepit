@@ -55,21 +55,20 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
   }
 
   private def getImageKey(imageInfo: ImageInfo, nUri: NormalizedURI): String = {
-    imageInfo.provider map { provider =>
-      provider match {
-        case ImageProvider.EMBEDLY => s"images/${nUri.externalId}/${ImageProvider.getProviderIndex(imageInfo.provider)}/${imageInfo.name}.${imageInfo.getFormatSuffix}"
-        case ImageProvider.PAGEPEEKER => getScreenshotKey(nUri, imageInfo.getImageSize)
-        case _ => {
-          airbrake.notify(s"Unsupported image provider: ${imageInfo.provider}")
-          ""
-        }
+    val provider = imageInfo.provider.getOrElse(ImageProvider.EMBEDLY) // Use Embedly as default provider (backwards compatibility)
+    provider match {
+      case ImageProvider.EMBEDLY => s"images/${nUri.externalId}/${ImageProvider.getProviderIndex(imageInfo.provider)}/${imageInfo.name}.${imageInfo.getFormatSuffix}"
+      case ImageProvider.PAGEPEEKER => getScreenshotKey(nUri, imageInfo.getImageSize)
+      case _ => {
+        airbrake.notify(s"Unsupported image provider: ${imageInfo.provider}")
+        ""
       }
-    } getOrElse("")
+    }
   }
 
   private val screenshotFormat = ImageFormat.JPG
   private val defaultSize = ImageSize(500, 280)
-  private def getScreenshotKey(nUri: NormalizedURI, imageSizeOpt: Option[ImageSize]) = {
+  private def getScreenshotKey(nUri: NormalizedURI, imageSizeOpt: Option[ImageSize]): String = {
     val size = imageSizeOpt getOrElse defaultSize
     s"screenshot/${nUri.externalId}/${size.width}x${size.height}.${screenshotFormat.value}"
   }

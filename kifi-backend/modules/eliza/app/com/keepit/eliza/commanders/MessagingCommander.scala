@@ -183,7 +183,7 @@ class MessagingCommander @Inject() (
     Future.sequence(pimpedParticipants)
   }
 
-  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String)(implicit context: HeimdalContext) : (MessageThread, Message) = {
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext) : (MessageThread, Message) = {
     val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
@@ -222,35 +222,31 @@ class MessagingCommander @Inject() (
       }
       (thread, isNew)
     }
-    sendMessage(MessageSender.User(from), thread, messageText, urlOpt, nUriOpt, Some(isNew))
+    sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt, nUriOpt, Some(isNew))
   }
 
-  def sendMessageWithNonUserThread(id: Id[NonUserThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): Option[(MessageThread, Message)] = {
-    db.readOnly { implicit session =>
-      getNonUserThreadOptWithSession(id) map { nonUserThread =>
-        (nonUserThread.participant, threadRepo.get(nonUserThread.threadId))
-      }
-    } map { case (participant, threadId) =>
-      log.info(s"Sending message from non-user with id $id to thread $threadId with text ${messageText.take(50)}")
-      sendMessage(MessageSender.NonUser(participant), threadId, messageText, urlOpt)
-    }
+
+  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+    log.info(s"Sending message from non-user with id ${nut.id} to thread ${nut.threadId}")
+    val thread = db.readOnly { implicit session => threadRepo.get(nut.threadId)}
+    sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
-    sendMessage(MessageSender.User(from), thread, messageText, urlOpt)
+    sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
     }
-    sendMessage(MessageSender.User(from), thread, messageText, urlOpt)
+    sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
+  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     from match {
       case MessageSender.User(id) =>
         if (! thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
@@ -268,6 +264,7 @@ class MessagingCommander @Inject() (
         thread = thread.id.get,
         threadExtId = thread.externalId,
         messageText = messageText,
+        source = source,
         sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
         sentOnUriId = thread.uriId
       ))
@@ -284,6 +281,7 @@ class MessagingCommander @Inject() (
       message.externalId,
       message.createdAt,
       message.messageText,
+      source,
       None,
       message.sentOnUrl.getOrElse(""),
       thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
@@ -326,7 +324,7 @@ class MessagingCommander @Inject() (
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-    notificationCommander.notifyEmailUsers(thread, from.asNonUser.map(_.identifier))
+    notificationCommander.notifyEmailUsers(thread)
 
     from.asUser.map{ id =>
       notificationCommander.notifySendMessage(id, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
@@ -362,6 +360,9 @@ class MessagingCommander @Inject() (
   def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread] =
     db.readOnly { implicit session => getNonUserThreadOptWithSession(id) }
 
+  def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread] =
+    db.readOnly { implicit session => nonUserThreadRepo.getByAccessToken(token) }
+
   def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
     db.readOnly { implicit session =>
       val threadIds = userThreadRepo.getThreadIds(user)
@@ -369,93 +370,61 @@ class MessagingCommander @Inject() (
     }
   }
 
-  // todo: Add adding non-users by kind/identifier
-  def addUsersToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], addresses: Seq[String], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
     new SafeFuture(shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
+      val resultInfoOpt = db.readWrite{ implicit session =>
 
-      val messageThreadOpt = db.readWrite { implicit session =>
         val oldThread = threadRepo.get(threadExtId)
-        val actuallyNewParticipantUserIds = newParticipantsUserIds.filterNot(oldThread.containsUser)
 
-        if (!oldThread.participants.exists(_.contains(adderUserId)) || actuallyNewParticipantUserIds.isEmpty) {
+        if (!oldThread.participants.exists(_.contains(adderUserId)) || !oldThread.replyable) {
+          throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
+        }
+
+        val nups = addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None))
+        val actuallyNewUsers = newParticipantsUserIds.filterNot(oldThread.containsUser)
+        val actuallyNewNonUsers = nups.filterNot(oldThread.containsNonUser)
+
+        if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
         } else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewParticipantUserIds))
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers, actuallyNewNonUsers))
 
           val message = messageRepo.save(Message(
             from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,
             messageText = "",
-            auxData = Some(Json.arr("add_participants", adderUserId.id.toString, actuallyNewParticipantUserIds.map(_.id))),
+            source = source,
+            auxData = Some(Json.arr("add_participants", adderUserId.id.toString,
+              actuallyNewUsers.map(u => Json.toJson(u.id)) ++ actuallyNewNonUsers.map(Json.toJson(_))
+            )),
             sentOnUrl = None,
             sentOnUriId = None
           ))
-          Some((actuallyNewParticipantUserIds, message, thread))
+
+          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
+
         }
       }
 
-      messageThreadOpt.exists { case (newParticipants, message, thread) =>
+      resultInfoOpt.exists { case (newUsers, newNonUsers, message, thread) =>
+
         SafeFuture {
           db.readOnly { implicit session =>
             messageRepo.refreshCache(thread.id.get)
           }
         }
 
-        notificationCommander.notifyAddParticipants(newParticipants, Seq.empty, thread, message, adderUserId)
-
-        messagingAnalytics.addedParticipantsToConversation(adderUserId, newParticipants, thread, context)
+        notificationCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
+        messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, thread, context)
         true
+
       }
+
     }, Some("Adding Participants to Thread"))
   }
 
-  //Todo: Analytics, email validation
-  def addEmailNonUsersToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], addresses: Seq[String]) : Boolean = {
-    val nups = addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None))
 
-    val resultInfoOpt = db.readWrite{ implicit session =>
-      val oldThread = threadRepo.get(threadExtId)
-
-      if (!oldThread.participants.exists(_.contains(adderUserId)) || !oldThread.replyable) {
-        throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
-      }
-
-      val actuallyNewNups = nups.filterNot(oldThread.containsNonUser)
-
-      if (actuallyNewNups.isEmpty) {
-        None
-      } else {
-        val thread = threadRepo.save(oldThread.withParticipants(clock.now, Seq.empty, actuallyNewNups))
-
-        val message = messageRepo.save(Message(
-          from = MessageSender.System,
-          thread = thread.id.get,
-          threadExtId = thread.externalId,
-          messageText = "",
-          auxData = Some(Json.arr("add_participants", adderUserId.id.toString, actuallyNewNups)),
-          sentOnUrl = None,
-          sentOnUriId = None
-        ))
-
-        Some(actuallyNewNups, message, thread)
-      }
-
-
-    }
-
-    resultInfoOpt.exists { case (newParticipants, message, thread) =>
-      SafeFuture {
-        db.readOnly { implicit session =>
-          messageRepo.refreshCache(thread.id.get)
-        }
-      }
-
-      notificationCommander.notifyAddParticipants(Seq.empty, newParticipants, thread, message, adderUserId)
-      true
-    }
-
-  }
 
   def setRead(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
     val (message: Message, thread: MessageThread) = db.readOnly { implicit session =>
@@ -564,20 +533,23 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def sendMessageAction(title: Option[String], text: String,
-      userExtRecipients: Seq[ExternalId[User]],
-      nonUserRecipients: Seq[NonUserParticipant],
-      url: Option[String],
-      urls: JsObject, //wtf its not Seq[String]?
-      userId: Id[User],
-      context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
+  def sendMessageAction(
+    title: Option[String],
+    text: String,
+    source: Option[MessageSource],
+    userExtRecipients: Seq[ExternalId[User]],
+    nonUserRecipients: Seq[NonUserParticipant],
+    url: Option[String],
+    urls: JsObject, //wtf its not Seq[String]?
+    userId: Id[User],
+    context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val resFut = for {
       userRecipients <- constructUserRecipients(userExtRecipients)
       nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
     } yield {
-      val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text)(context)
+      val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
       val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
 
       val threadInfoOpt = url.map { url =>

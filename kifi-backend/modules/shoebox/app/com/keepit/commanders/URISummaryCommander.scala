@@ -233,7 +233,7 @@ class URISummaryCommander @Inject()(
       }
     }
   }
-  
+
   /**
    * Get S3 url for image info
    */

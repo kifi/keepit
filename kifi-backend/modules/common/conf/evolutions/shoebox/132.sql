@@ -13,7 +13,7 @@ CREATE TABLE raw_keep (
   import_id varchar(36) DEFAULT NULL,
   source varchar(256) NOT NULL,
   installation_id varchar(36) DEFAULT NULL,
-  original_json TEXT NOT NULL,
+  original_json TEXT NULL,
   state varchar(20) NOT NULL,
   PRIMARY KEY (id),
   KEY raw_keep_i_state (state),

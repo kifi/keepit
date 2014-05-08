@@ -35,7 +35,7 @@ import com.kifi.franz.QueueName
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
+import com.keepit.heimdal.SanitizedKifiHit
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -88,7 +88,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
-  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit
+  def kifiHit(clicker: Id[User], hit:SanitizedKifiHit):Future[Unit]
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
@@ -129,6 +129,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit]
   def getURIImage(nUri: NormalizedURI): Future[Option[String]]
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String]
+  def getUriSummary(request: URISummaryRequest): Future[URISummary]
+  def getUnsubscribeUrlForEmail(email: String): Future[String]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -558,15 +561,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def clickAttribution(clicker: Id[User], uri: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {
-    implicit val userFormatter = Id.format[User]
-    implicit val uriFormatter = Id.format[NormalizedURI]
+  def kifiHit(clickerId: Id[User], hit:SanitizedKifiHit): Future[Unit] = {
+    implicit val userIdFormat = Id.format[User]
     val payload = Json.obj(
-      "clicker" -> JsNumber(clicker.id),
-      "uriId" -> JsNumber(uri.id),
-      "keepers" -> JsArray(keepers.map(id => JsString(id.id)))
+      "clickerId" -> clickerId,
+      "kifiHit" -> hit
     )
-    call(Shoebox.internal.clickAttribution, payload)
+    call(Shoebox.internal.kifiHit, payload) map { r => Unit }
   }
 
   def assignScrapeTasks(zkId:Long, max: Int): Future[Seq[ScrapeRequest]] = {
@@ -856,6 +857,24 @@ class ShoeboxServiceClientImpl @Inject() (
     val getURIImageRequest = Json.toJson[NormalizedURI](nUri)
     call(Shoebox.internal.getURIImage(), body = getURIImageRequest).map { r =>
       Json.fromJson[Option[String]](r.json).get
+    }
+  }
+
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
+    call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
+      r.json.as[String]
+    }
+  }
+
+  def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
+    call(Shoebox.internal.getUriSummary, Json.toJson(request)).map{ r =>
+      r.json.as[URISummary]
+    }
+  }
+
+  def getUnsubscribeUrlForEmail(email: String): Future[String] = {
+    call(Shoebox.internal.getUnsubscribeUrlForEmail(email)).map{ r =>
+      r.body
     }
   }
 }

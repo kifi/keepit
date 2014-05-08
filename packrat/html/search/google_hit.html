@@ -1,22 +1,26 @@
 <li class="g">
   <div class="vsc">
-    <h3 class="r"><a href="{{bookmark.url}}">{{{titleHtml}}}</a></h3>
+    <h3 class="r"><a class="kifi-res-title" href="{{bookmark.url}}">{{{titleHtml}}}</a></h3>
     <div class="s">
-      {{#tagsText}}
+      {{#tags.length}}
       <div class="kifi-res-sub">
         <div class="kifi-res-sub-1">
           <cite class="kifi-res-desc">{{{descHtml}}}</cite>
         </div>
         <div class="kifi-res-sub-2">
-          <div class="kifi-res-tags">{{tagsText}}</div>
+          <div class="kifi-res-tags">
+          {{#tags}}
+            <a class="kifi-res-tag" href="{{origin}}/tag/{{id}}" target="_blank">{{name}}</a>{{^last}},{{/last}}
+          {{/tags}}
+          </div>
         </div>
       </div>
-      {{/tagsText}}
-      {{^tagsText}}
+      {{/tags.length}}
+      {{^tags}}
       <div class="f kv">
         <cite class="kifi-res-desc">{{{descHtml}}}</cite>
       </div>
-      {{/tagsText}}
+      {{/tags}}
     </div>
     {{#scoreText}}
       <div class="kifi-res-score">{{scoreText}}</div>

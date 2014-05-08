@@ -21,5 +21,5 @@ class FakeCortexServiceClientImpl extends CortexServiceClientImpl(null, null, nu
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
 
-  override def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit] = ???
+  override def graphLDAURIFeatureUpdate(queue: QueueName, lowSeq: SequenceNumber[LDAURITopicGraphUpdate]): Future[Unit] = ???
 }

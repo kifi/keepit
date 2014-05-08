@@ -22,6 +22,7 @@ import com.keepit.queue.{NormalizationUpdateJobQueueModule}
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.common.external.ExternalServiceModule
+import com.keepit.graph.ProdGraphServiceClientModule
 
 abstract class ShoeboxModule(
   //these are modules that inheriting modules need to provide
@@ -49,6 +50,7 @@ abstract class ShoeboxModule(
   val abookServiceClientModule = ProdABookServiceClientModule()
   val scraperServiceClientModule = ProdScraperServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
+  val graphServiceClientModule = ProdGraphServiceClientModule()
 
 
   val abuseControlModule = AbuseControlModule()

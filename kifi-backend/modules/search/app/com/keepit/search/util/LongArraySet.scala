@@ -23,6 +23,13 @@ abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
 
 object LongArraySet {
 
+  def fromSet(s: Set[Long]): LongArraySet = {
+    s match {
+      case arraySet: LongArraySet => arraySet
+      case _ => from(s.toArray)
+    }
+  }
+
   def fromSorted(a: Array[Long]): LongArraySet = {
     if (a.length == 0) return empty
 

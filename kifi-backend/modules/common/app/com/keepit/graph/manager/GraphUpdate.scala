@@ -8,6 +8,7 @@ import com.keepit.common.time.DateTimeJsonFormat
 import play.api.libs.functional.syntax._
 import com.keepit.social.SocialNetworkType
 import com.keepit.cortex.CortexVersionedSequenceNumber
+import com.keepit.cortex.models.lda.SparseTopicRepresentation
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate
@@ -122,7 +123,7 @@ case class LDAURITopicGraphUpdate(
   uriId: Id[NormalizedURI],
   uriSeq: CortexVersionedSequenceNumber[NormalizedURI],
   modelName: String,
-  topics: Array[Float]
+  sparseTopics: SparseTopicRepresentation
 ) extends GraphUpdate {
   type U = LDAURITopicGraphUpdate
   def kind = LDAURITopicGraphUpdate

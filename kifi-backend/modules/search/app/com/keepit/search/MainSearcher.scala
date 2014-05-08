@@ -127,16 +127,16 @@ class MainSearcher(
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
-      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
-      val mySearchUris = socialGraphInfo.mySearchUris
-      val friendSearchUris = socialGraphInfo.friendSearchUris
-
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val weight = personalizedSearcher.createWeight(articleQuery)
+
+      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+      val mySearchUris = socialGraphInfo.mySearchUris
+      val friendSearchUris = socialGraphInfo.friendSearchUris
 
       val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
@@ -153,9 +153,9 @@ class MainSearcher(
           if (idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
-            if (myUriEdgeAccessor.seek(id) && mySearchUris.contains(id)) {
+            if (myUriEdgeAccessor.seek(id) && mySearchUris.findIndex(id) >= 0) { // use findIndex to avoid boxing
               myHits.insert(id, luceneScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
-            } else if (friendSearchUris.contains(id)) {
+            } else if (friendSearchUris.findIndex(id) >= 0) {
               if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false, false)
             } else {
               if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false, false)

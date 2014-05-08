@@ -58,6 +58,9 @@
               <ul class="dropdown-menu" role="menu">
                 <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Bookmarks</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.whoKeptMyKeeps()">Who Kept My Keeps</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminAttributionController.myKeepInfos()">KeepInfos</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(0, 50, false)">KeepClicks</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0, 50, false)">Rekeeps</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.pornUrisView(0, false)">Sensitive URIs</a>
                   <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.pornUrisView(0, true)">Sensitive Public URIs</a>
             </ul>
@@ -129,6 +132,14 @@
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns()">Url Pattern Rules</a>
                         <li><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.searchScraper">Scraper</a>
                         <li><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getProxies">Proxies</a>
+                    </ul>
+
+                </li>
+
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown"  href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Graph</a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="@com.keepit.controllers.admin.routes.GraphAdminController.ingestion()">Ingestion</a>
                     </ul>
 
                 </li>

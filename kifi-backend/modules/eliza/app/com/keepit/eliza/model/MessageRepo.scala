@@ -51,12 +51,13 @@ class MessageRepoImpl @Inject() (
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
+    def source = column[MessageSource]("source", O.Nullable)
     def auxData = column[JsArray]("aux_data", O.Nullable)
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
     def nonUserSender = column[JsValue]("non_user_sender", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, auxData.?, sentOnUrl.?, sentOnUriId.?, nonUserSender.?) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
+    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, source.?, auxData.?, sentOnUrl.?, sentOnUriId.?, nonUserSender.?) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
   }
   def table(tag: Tag) = new MessageTable(tag)
 

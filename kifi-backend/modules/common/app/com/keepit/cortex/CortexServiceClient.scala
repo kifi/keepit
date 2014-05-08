@@ -32,7 +32,7 @@ trait CortexServiceClient extends ServiceClient{
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
 
-  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit]
+  def graphLDAURIFeatureUpdate(queue: QueueName, lowSeq: SequenceNumber[LDAURITopicGraphUpdate]): Future[Unit]
 }
 
 class CortexServiceClientImpl(
@@ -113,7 +113,7 @@ class CortexServiceClientImpl(
     }
   }
 
-  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit] = {
+  def graphLDAURIFeatureUpdate(queue: QueueName, lowSeq: SequenceNumber[LDAURITopicGraphUpdate]): Future[Unit] = {
     val payload = Json.obj("versionedLowSeq" -> lowSeq.value, "queue" -> queue.name)
     call(Cortex.internal.graphLDAURIFeatureUpdate(), payload).map{ r =>
       assert(r.status == 202); ()
