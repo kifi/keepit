@@ -85,7 +85,7 @@ class KeepsCommander @Inject() (
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
     eliza: ElizaServiceClient,
-    userExperimentRepo: UserExperimentRepo,
+    localUserExperimentCommander: LocalUserExperimentCommander,
     imageRepo: ImageInfoRepo
  ) extends Logging {
 
@@ -176,7 +176,7 @@ class KeepsCommander @Inject() (
         if (otherKeeps.length > 3) return // how did that happen???
         val keeper = userRepo.get(keep.userId)
         val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
-          userExperimentRepo.hasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
+          localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
         }
         val title = s"${keeper.fullName} also kept your keep"
         val bodyHtml = "Great minds think alike!"
