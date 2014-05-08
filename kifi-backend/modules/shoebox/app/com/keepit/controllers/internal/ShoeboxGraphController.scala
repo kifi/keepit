@@ -46,7 +46,7 @@ private class GraphUpdateActor @Inject() (
   }
 
   private def sendSequentially[T](queue: SQSQueue[T], messages: Seq[T]): Unit = messages match {
-    case Seq.empty => // done
+    case Seq() => // done
     case Seq(head, tail @ _*) => queue.send(head).onComplete {
       case Success(_) => sendSequentially(queue, tail)
       case Failure(ex) => throw ex
