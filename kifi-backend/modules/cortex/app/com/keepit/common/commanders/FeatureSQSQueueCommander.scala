@@ -11,7 +11,7 @@ import com.keepit.cortex.models.lda.SparseTopicRepresentation
 import com.keepit.model.NormalizedURI
 import com.kifi.franz.{QueueName, SimpleSQSClient}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.graph.manager.LDAURITopicGraphUpdate
+import com.keepit.graph.manager.{GraphUpdate, LDAURITopicGraphUpdate}
 import com.keepit.cortex.CortexVersionedSequenceNumber
 import com.keepit.cortex._
 import com.keepit.common.logging.Logging
@@ -42,7 +42,7 @@ class FeatureSQSQueueCommander @Inject()(
   }
 
   def graphLDAURIFeatureUpdate(lowSeq: CortexVersionedSequenceNumber[NormalizedURI], queueName: QueueName): Unit = {
-    val queue = sqsClient.formatted[LDAURITopicGraphUpdate](queueName)
+    val queue = sqsClient.formatted[GraphUpdate](queueName)
     val (seq, version) = (SequenceNumber[NormalizedURI](lowSeq.unversionedSeq), ModelVersion[DenseLDA](lowSeq.version))
 
     log.info(s"start pulling features from seq = ${seq}, version = ${version}")
