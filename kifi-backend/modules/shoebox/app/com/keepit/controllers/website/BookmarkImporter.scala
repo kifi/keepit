@@ -17,6 +17,7 @@ import java.io.File
 import com.keepit.common.db.Id
 import java.util.UUID
 import com.keepit.heimdal.{HeimdalContextBuilderFactory, HeimdalContextBuilder}
+import com.keepit.common.logging.Logging
 
 class BookmarkImporter @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -25,7 +26,7 @@ class BookmarkImporter @Inject() (
   keepInterner: KeepInterner,
   heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
   keepsCommander: KeepsCommander
-)  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+)  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
 
   def uploadBookmarkFile() = JsonAction.authenticated(allowPending = true, parser = parse.maxLength(1024*1024*5, parse.temporaryFile)) { request =>
@@ -36,6 +37,7 @@ class BookmarkImporter @Inject() (
         Try(bookmarks.file)
         .flatMap(parseNetscapeBookmarks)
         .map { case (sourceOpt, parsed) =>
+
           val tagSet = scala.collection.mutable.Set.empty[String]
           parsed.foreach { case (_, _, tagsOpt) =>
             tagsOpt.map { tagName =>
@@ -55,9 +57,11 @@ class BookmarkImporter @Inject() (
           val (importId, rawKeeps) = createRawKeeps(request.userId, sourceOpt, taggedKeeps)
 
           keepInterner.persistRawKeeps(rawKeeps, Some(importId))
+
+          rawKeeps.length
         } match {
-          case Success(a) =>
-            Ok(s"""{"done": "kindly let the user know that it is working and may take a sec"}""")
+          case Success(size) =>
+            Ok(s"""{"done": "kindly let the user know that it is working and may take a sec", "count": $size}""")
           case Failure(oops) =>
             BadRequest(s"""{"error": "couldnt_complete", "message": "${oops.getMessage}"}""")
         }

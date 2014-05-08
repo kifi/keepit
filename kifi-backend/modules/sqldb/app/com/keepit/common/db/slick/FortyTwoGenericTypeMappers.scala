@@ -117,7 +117,11 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val jsValueMapper = MappedColumnType.base[JsValue, String]({ json =>
     Json.stringify(json)
   }, { src =>
-    Json.parse(src)
+    if (src == null || src.length == 0) {
+      JsNull
+    } else {
+      Json.parse(src)
+    }
   })
 
   // SetParameter conversions to be used for interpolated query parameters

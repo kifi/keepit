@@ -32,10 +32,10 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def importId = column[String]("import_id", O.Nullable)
     def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallationId = column[ExternalId[KifiInstallation]]("installation_id", O.Nullable)
-    def originalJson = column[JsValue]("original_json", O.Nullable)
+    def originalJson = column[Option[JsValue]]("original_json", O.Nullable)
     def tagIds = column[String]("tag_ids", O.Nullable) // Comma separated list of references to `collection.id`
 
-    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson.?, state, tagIds.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
+    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
   }
 
   def table(tag: Tag) = new RawKeepTable(tag)
