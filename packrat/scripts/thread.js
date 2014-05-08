@@ -4,6 +4,7 @@
 // @require scripts/html/keeper/messages.js
 // @require scripts/html/keeper/message_aux.js
 // @require scripts/html/keeper/message_discussion.js
+// @require scripts/html/keeper/message_tip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/formatting.js
@@ -201,16 +202,19 @@ panes.thread = function () {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
     m.formatLocalDate = formatLocalDate;
-    m.isLoggedInUser = m.user && m.user.id === me.id;
-    formatParticipant(m.user);
+    m.sender = m.user;
+    m.isLoggedInUser = m.sender && m.sender.id === me.id;
+    formatParticipant(m.sender);
     if (m.source && m.source !== "server") {
-      m.displayedSource = m.source
+      m.displayedSource = m.source;
     }
+    var templates = {
+      messageTip: 'message_tip'
+    };
     if (m.auxData && m.auxData.length) {
-      console.log("rendering aux");
-      var rendered = $(render('html/keeper/message_aux', m))
+      var rendered = $(render('html/keeper/message_aux', m, templates));
     } else {
-      var rendered = $(render('html/keeper/message_discussion', m))
+      var rendered = $(render('html/keeper/message_discussion', m, templates));
     }
     return rendered.find('time').timeago().end()[0];
   }
