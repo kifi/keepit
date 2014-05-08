@@ -92,6 +92,11 @@ class BookmarkImporter @Inject() (
         title <- Option(elem.text())
         href <- Option(elem.attr("href"))
       } yield {
+        val lists = Option(elem.attr("list")).getOrElse("")
+        val tags = Option(elem.attr("tags")).getOrElse("")
+
+        val tagList = (lists + tags).split(",").map(_.trim).filter(_.length > 0).toList
+
         val tagsOpt = Option(elem.attr("list")).map(_.split(",").toList).getOrElse(List.empty)
 
         // These may be useful in the future, but we currently are not using them:

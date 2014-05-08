@@ -108,11 +108,14 @@ private class RawKeepImporterActor @Inject() (
         searchClient.updateURIGraph()
 
         // Reduce all successes to a map of tagIdString -> tagId (typed), ignore errors (we don't care at this stage)
-        val tagStrToId: Map[String, Id[Collection]] = successesRawKeep.map { rk =>
+        val tagStrToId = scala.collection.mutable.Map[String, Id[Collection]]()
+        successesRawKeep.foreach { rk =>
           rk.tagIds.map { tags =>
-            tags.split(",").toSeq.map { c => Try(c.toLong).map(Id[Collection]).toOption.map( c -> _) }.flatten
+            tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption.map( c -> _) }.flatten
+          }.getOrElse(Seq.empty).map { case (tagStr, id) =>
+            tagStrToId.put(tagStr, id)
           }
-        }.flatten.flatten.toMap
+        }
 
         // Populate cache from tagIdString -> Collection
         val tagCache = scala.collection.mutable.Map.empty[String, Collection]
