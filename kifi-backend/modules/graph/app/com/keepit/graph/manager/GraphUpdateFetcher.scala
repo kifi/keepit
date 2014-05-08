@@ -10,9 +10,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.{UserConnection, SocialUserInfo, SocialConnection, User, NormalizedURI}
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.cortex.CortexVersionedSequenceNumber
 import com.keepit.common.logging.Logging
 
 trait GraphUpdateFetcher {
@@ -27,28 +25,31 @@ class GraphUpdateFetcherImpl @Inject() (
   abook: ABookServiceClient,
   cortex: CortexServiceClient
 ) extends GraphUpdateFetcher with Logging{
-  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
-  def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
-    case UserGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(UserGraphUpdate)
-      shoebox.sendUserGraphUpdate(queue.queue, seq)
-    case SocialConnectionGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(SocialConnectionGraphUpdate)
-      shoebox.sendSocialConnectionGraphUpdate(queue.queue, seq)
-    case SocialUserInfoGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(SocialUserInfoGraphUpdate)
-      shoebox.sendSocialUserInfoGraphUpdate(queue.queue, seq)
-    case UserConnectionGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(UserConnectionGraphUpdate)
-      shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
-    case KeepGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(KeepGraphUpdate)
-      log.info(s"starting a new fetch of keep updates ${seq}")
-      shoebox.sendKeepGraphUpdate(queue.queue, seq)
-    case LDAURITopicGraphUpdate => {
-      val seq = currentState.getCurrentSequenceNumber(LDAURITopicGraphUpdate)
-      log.info(s"starting a new fetch of lda topic update from ${seq}")
-      cortex.graphLDAURIFeatureUpdate(seq, queue.queue)
+  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = {
+    log.info(s"Loading next batch of graph updates from the queue: maxBatchSize=$maxBatchSize, lockTimeout=$lockTimeout")
+    new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
+  }
+  def fetch(currentState: GraphUpdaterState): Unit = {
+    implicit val state = currentState
+    val queueName = queue.queue
+    GraphUpdateKind.all.foreach {
+      case UserGraphUpdate => shoebox.sendUserGraphUpdate(queueName, seq(UserGraphUpdate))
+
+      case SocialConnectionGraphUpdate => shoebox.sendSocialConnectionGraphUpdate(queueName, seq(SocialConnectionGraphUpdate))
+
+      case SocialUserInfoGraphUpdate => shoebox.sendSocialUserInfoGraphUpdate(queueName, seq(SocialUserInfoGraphUpdate))
+
+      case UserConnectionGraphUpdate => shoebox.sendUserConnectionGraphUpdate(queueName, seq(UserConnectionGraphUpdate))
+
+      case KeepGraphUpdate => shoebox.sendKeepGraphUpdate(queueName, seq(KeepGraphUpdate))
+
+      case LDAURITopicGraphUpdate => cortex.graphLDAURIFeatureUpdate(queueName, seq(LDAURITopicGraphUpdate))
     }
+  }
+
+  private def seq[U <: GraphUpdate](kind: GraphUpdateKind[U])(implicit state: GraphUpdaterState): SequenceNumber[U] = {
+    val sequenceNumber = state.getCurrentSequenceNumber(kind)
+    log.info(s"Requesting $kind from sequence number $sequenceNumber")
+    sequenceNumber
   }
 }
