@@ -310,7 +310,7 @@ class KeepsController @Inject() (
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Keep]]](_).asOpt) map { keepExtIds =>
         val keeps = db.readOnly { implicit session => keepExtIds.map(keepRepo.get) }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val added = bookmarksCommander.addToCollection(collection, keeps)
+        val added = bookmarksCommander.addToCollection(collection.id.get, keeps)
         Ok(Json.obj("added" -> added.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
