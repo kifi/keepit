@@ -85,6 +85,7 @@ class KeepsCommander @Inject() (
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
     eliza: ElizaServiceClient,
+    userExperimentRepo: UserExperimentRepo,
     imageRepo: ImageInfoRepo
  ) extends Logging {
 
@@ -121,17 +122,17 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, experimants: Set[ExperimentType])(implicit context: HeimdalContext): KeepInfo = {
+  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
     val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
     SafeFuture{
       searchClient.updateURIGraph()
-      notifyWhoKeptMyKeep(userId, experimants)
+      notifyWhoKeptMyKeeps(userId, Seq(keep))
     }
     KeepInfo.fromBookmark(keep)
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, experimants: Set[ExperimentType])(implicit context: HeimdalContext):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
       (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
     val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
@@ -144,7 +145,7 @@ class KeepsCommander @Inject() (
     }
     SafeFuture{
       searchClient.updateURIGraph()
-      notifyWhoKeptMyKeep(userId, experimants)
+      notifyWhoKeptMyKeeps(userId, keeps)
     }
     (keeps.map(KeepInfo.fromBookmark), addedToCollection)
   }
@@ -154,7 +155,11 @@ class KeepsCommander @Inject() (
    * not part of the "regular" flow of kifi, like having unconnected people know about each public keeps etc.
    * To be explicit, this is an internal only experiment and likely to be removed soon.
    */
-  private def notifyWhoKeptMyKeep(userId: Id[User], experimants: Set[ExperimentType], keepIds: Id[Keep]*): Unit = if (experimants.contains(ExperimentType.WHO_KEPT_MY_KEEP)) keepIds foreach { keepId =>
+  private def notifyWhoKeptMyKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = keeps.filterNot(_.isPrivate).filter(_.id.isDefined) foreach { keep =>
+    notifyWhoKeptMyKeep(userId, keep.id.get)
+  }
+
+  private def notifyWhoKeptMyKeep(userId: Id[User], keepId: Id[Keep]): Unit = {
     import scala.concurrent.duration._
     // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
     scheduler.scheduleOnce(5 minutes) {
@@ -164,11 +169,15 @@ class KeepsCommander @Inject() (
         if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
         val uri = uriRepo.get(keep.uriId)
         if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
-        val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE)
-        //don't mess with keeps that are even a bit popular, has more then two keepers. we don't want to create noise, be extra careful
-        if (otherKeeps.length > 2) return
+        val countPublicActiveByUri = keepRepo.countPublicActiveByUri(uri.id.get)
+        //don't mess with keeps that are even a bit popular, has more then four keepers (with the latest keeper). we don't want to create noise, be extra careful
+        if (countPublicActiveByUri <= 1 || countPublicActiveByUri >= 5) return
+        val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE).filterNot(_.userId == userId)
+        if (otherKeeps.length > 3) return // how did that happen???
         val keeper = userRepo.get(keep.userId)
-        val otherKeepers = otherKeeps.map(_.userId).toSet
+        val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
+          userExperimentRepo.hasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
+        }
         val title = s"${keeper.fullName} also kept your keep"
         val bodyHtml = "Great minds think alike!"
         val image = imageRepo.getByUriWithSize(uri.id.get, ImageSize(42, 42)).headOption.map(_.url).flatten.getOrElse("")

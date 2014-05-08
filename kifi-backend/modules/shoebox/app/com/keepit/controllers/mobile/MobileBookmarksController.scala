@@ -58,7 +58,7 @@ class MobileBookmarksController @Inject() (
     val fromJson = request.body.as[KeepInfosWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, request.experiments)
+    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
     Ok(Json.obj(
       "keeps" -> keeps,
       "addedToCollection" -> addedToCollection
@@ -69,7 +69,7 @@ class MobileBookmarksController @Inject() (
     val fromJson = request.body.as[KeepInfosWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, request.experiments)
+    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
     Ok(Json.obj(
       "keepCount" -> keeps.size,
       "addedToCollection" -> addedToCollection
@@ -135,7 +135,7 @@ class MobileBookmarksController @Inject() (
   }
 
   private def toJsObject(url: String, uri: NormalizedURI, screenshotUrlOpt: Option[String], imageUrlOpt: Option[String]): JsObject = {
-    log.info(s"[getImageUrl] returning screenshot ${screenshotUrlOpt} and image ${imageUrlOpt}")
+    log.info(s"[getImageUrl] returning screenshot $screenshotUrlOpt and image $imageUrlOpt")
     (screenshotUrlOpt, imageUrlOpt) match {
       case (None, None) =>
         Json.obj("url" -> url, "uriId" -> uri.id.get)

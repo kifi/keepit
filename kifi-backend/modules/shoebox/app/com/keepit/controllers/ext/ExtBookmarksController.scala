@@ -127,7 +127,7 @@ class ExtBookmarksController @Inject() (
     val info = request.body.as[JsObject]
     val source = KeepSource.keeper
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    Ok(Json.toJson(bookmarksCommander.keepOne(info, request.userId, request.kifiInstallationId, source, request.experiments)))
+    Ok(Json.toJson(bookmarksCommander.keepOne(info, request.userId, request.kifiInstallationId, source)))
   }
 
   def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
