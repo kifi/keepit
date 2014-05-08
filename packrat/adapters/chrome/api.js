@@ -352,7 +352,7 @@ var api = (function createApi() {
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
-      log("[injectContentScripts] forbidden", page.url)();
+      log('[injectContentScripts] forbidden', page.url)();
       return;
     }
     page.injecting = true;
@@ -361,7 +361,7 @@ var api = (function createApi() {
 
     var injected;
     chrome.tabs.executeScript(page.id, {
-      code: (doLogging ? '' : 'function log() {return log}') + 'this.api&&api.injected',
+      code: 'this.api&&api.injected',
       runAt: 'document_start'
     }, function (arr) {
       injected = arr && arr[0] || {};
@@ -382,9 +382,15 @@ var api = (function createApi() {
         if (api.mode.isDev()) {
           chrome.tabs.executeScript(page.id, {code: 'api.dev=1', runAt: 'document_start'}, api.noop);
         }
-        api.tabs.emit(page, 'api:injected', Object.keys(injected));
         page.injected = true;
         delete page.injecting;
+        var port = ports[page.id];
+        if (port) {
+          port.postMessage(['api:injected', Object.keys(injected)]);
+          if (doLogging) {
+            port.postMessage(['api:log', true]);
+          }
+        }
       }
     }
   }
@@ -681,7 +687,12 @@ var api = (function createApi() {
       }
     },
     toggleLogging: function (bool) {
-      doLogging = bool;
+      if (doLogging !== bool) {
+        doLogging = bool;
+        api.tabs.each(function (page) {
+          api.tabs.emit(page, 'api:log', doLogging);
+        });
+      }
     },
     timers: {
       setTimeout: function (f, ms) {
