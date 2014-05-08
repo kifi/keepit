@@ -587,7 +587,7 @@ class AdminUserController @Inject() (
     val category = categoryOpt.map(NotificationCategory.apply) getOrElse NotificationCategory.User.ANNOUNCEMENT
 
     val usersOpt : Option[Seq[Id[User]]] = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
-    val isSticky : Boolean = sticky.map(_ => true).getOrElse(false)
+    val isSticky : Boolean = sticky.isDefined
 
     log.info("Sending global notification via Eliza!")
     usersOpt.map {
