@@ -89,7 +89,7 @@
     </tr>
   }
 
-  @messageBlock(imageUrl: String, shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
+  @messageBlock(imageUrl: Option[String], shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
     <tr>
       <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
@@ -104,7 +104,13 @@
                         <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tr>
                               <!-- Image -->
-                              <td width="73" valign="top"><img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block;" border="0" /></td>
+                              @imageUrl.map{ iUrl =>
+                                <td width="73" valign="top"><img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block;" border="0" /></td>
+                              }.getOrElse{
+                                <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle;">
+                                  @{shortName(0)}
+                                </div>
+                              }
                               <!-- //Image -->
                               <td width="28">&nbsp;</td>
                               <!-- Content -->
