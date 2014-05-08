@@ -2,7 +2,8 @@
 // @require styles/keeper/compose.css
 // @require styles/keeper/participant_colors.css
 // @require scripts/html/keeper/messages.js
-// @require scripts/html/keeper/message.js
+// @require scripts/html/keeper/message_aux.js
+// @require scripts/html/keeper/message_discussion.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/formatting.js
@@ -202,16 +203,16 @@ panes.thread = function () {
     m.formatLocalDate = formatLocalDate;
     m.isLoggedInUser = m.user && m.user.id === me.id;
     formatParticipant(m.user);
-    if (m.auxData && m.auxData.length) {
-      m.isAuxMessage = true;
-    } else {
-      m.isUserMessage = true;
-    }
     if (m.source && m.source !== "server") {
       m.displayedSource = m.source
     }
-    return $(render('html/keeper/message', m))
-      .find('time').timeago().end()[0];
+    if (m.auxData && m.auxData.length) {
+      console.log("rendering aux");
+      var rendered = $(render('html/keeper/message_aux', m))
+    } else {
+      var rendered = $(render('html/keeper/message_discussion', m))
+    }
+    return rendered.find('time').timeago().end()[0];
   }
 
   function handleReplyError($reply, status, originalText, threadId) {
