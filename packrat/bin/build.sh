@@ -100,11 +100,10 @@ sed -e "s/\"version\":.*/\"version\": \"$version\",/" \
   adapters/firefox/package.json > out/firefox/package.json
 IFS="$savedIFS"
 
-# TODO: factor kifi-specific stuff below out of this script
 if [ "$1" == "package" ]; then
   cd out/chrome
   sed -i '' -e 's/http:\/\/dev.ezkeep.com:9000 ws:\/\/dev.ezkeep.com:9000 //' manifest.json
-  zip -rDq ../kifi-beta.zip * -x "*/.*"
+  zip -rDq ../kifi.zip * -x "*/.*"
   cd - > /dev/null
 
   cd out
@@ -122,7 +121,7 @@ if [ "$1" == "package" ]; then
     aws s3 cp out/kifi-beta.update.rdf s3://kifi-bin/ext/firefox/
     echo "Done."
 
-    echo -e "\n!! Please upload kifi-beta.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"
+    echo -e "\n!! Please upload kifi.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"
   fi
 fi
 
