@@ -67,7 +67,7 @@ private class GraphUpdateActor @Inject() (
         SocialConnectionGraphUpdate(su1, su2, networkType, state, seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
 
     case SocialUserInfoUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -87,7 +87,7 @@ private class GraphUpdateActor @Inject() (
         UserConnectionGraphUpdate(uc.user1, uc.user2, uc.state, uc.seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
 
     case KeepUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
