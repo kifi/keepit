@@ -17,6 +17,7 @@ import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.model.SocialConnection
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 
 private sealed trait UpdateMessage
@@ -44,8 +45,12 @@ private class GraphUpdateActor @Inject() (
     client.formatted[GraphUpdate](queueRef, true)
   }
 
-  private def sendSequentially[T](queue: SQSQueue[T], messages: Seq[T]): Future[Unit] = {
-    queue.send(messages.head).map { _ => sendSequentially(queue, messages.tail) }
+  private def sendSequentially[T](queue: SQSQueue[T], messages: Seq[T]): Unit = messages match {
+    case Seq.empty => // done
+    case Seq(head, tail @ _*) => queue.send(head).onComplete {
+      case Success(_) => sendSequentially(queue, tail)
+      case Failure(ex) => throw ex
+    }
   }
 
   def receive = {
