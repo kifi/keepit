@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 
 import com.google.inject.{Provider, Inject, Singleton}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import play.api.Plugin
@@ -107,29 +107,34 @@ private class RawKeepImporterActor @Inject() (
         //the bookmarks list may be very large!
         searchClient.updateURIGraph()
 
-        // Reduce all successes to a map of tagIdString -> tagId (typed), ignore errors (we don't care at this stage)
-        val tagStrToId: Map[String, Id[Collection]] = successesRawKeep.map { rk =>
-          rk.tagIds.map { tags =>
-            tags.split(",").toSeq.map { c => Try(c.toLong).map(Id[Collection]).toOption.map( c -> _) }.flatten
-          }
-        }.flatten.flatten.toMap
-
-        // Populate cache from tagIdString -> Collection
-        val tagCache = scala.collection.mutable.Map.empty[String, Collection]
-        db.readOnly { implicit session =>
-          tagStrToId.map { case (tagStr, id) =>
-            tagCache.getOrElseUpdate(tagStr, collectionRepo.get(id))
-          }
-        }
+        /* The strategy here is to go through all the keeps, grabbing their tags, and generating a list
+         * of keeps per tag. That way applying the tag to the keeps is much more efficient, since
+         * bookmarksCommander.addToCollection is super expensive.
+         */
+        val tagIdToKeeps = scala.collection.mutable.Map.empty[Id[Collection], scala.collection.mutable.Buffer[Keep]]
 
         successes.foreach { keep =>
-          val tags = rawKeepByUrl.get(keep.url).flatMap(_.tagIds.map(_.split(",").map(tagCache.get).flatten)).getOrElse(Array.empty)
+          val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
+            rk.tagIds.map { tags =>
+              tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
+            }
+          }.getOrElse(Seq.empty)
 
-          tags.foreach { tag =>
-            bookmarksCommanderProvider.get.addToCollection(tag.id.get, Seq(keep))(context)
+          allTagIdsForThisKeep.map { tagId =>
+            val keepsList = tagIdToKeeps.get(tagId).getOrElse(scala.collection.mutable.Buffer.empty)
+            keepsList.append(keep)
+            tagIdToKeeps.put(tagId, keepsList)
           }
         }
 
+        tagIdToKeeps.map { case (tagId, keeps) =>
+          // Make sure tag actually exists still
+          Try(bookmarksCommanderProvider.get.addToCollection(tagId, keeps)(context)) match {
+            case Success(r) => // yay!
+            case Failure(e) =>
+              log.info(s"[RawKeepImporterActor] Had problems applying tagId $tagId to ${keeps.length} keeps. Moving along.")
+          }
+        }
 
         db.readWriteBatch(successesRawKeep) { case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)

@@ -92,13 +92,16 @@ class BookmarkImporter @Inject() (
         title <- Option(elem.text())
         href <- Option(elem.attr("href"))
       } yield {
-        val tagsOpt = Option(elem.attr("list")).map(_.split(",").toList).getOrElse(List.empty)
+        val lists = Option(elem.attr("list")).getOrElse("")
+        val tags = Option(elem.attr("tags")).getOrElse("")
+
+        val tagList = (lists + tags).split(",").map(_.trim).filter(_.length > 0).toList
 
         // These may be useful in the future, but we currently are not using them:
         // val createdDate = Option(elem.attr("add_date"))
         // val lastVisitDate = Option(elem.attr("last_visit"))
 
-        (title, href, tagsOpt)
+        (title, href, tagList)
       }
     }.toList.flatten
     (source, extracted)
