@@ -3,18 +3,18 @@
 @content = {
 <main>
     <h1 class="main-logo">kifi</h1>
-    <h2 class="page-title">Opt-out of Kifi Emails</h2>
+    <h2 class="page-title">Kifi discussion preferences</h2>
     <section>
         <h3>@if(msg.isDefined){@msg}else{@email}</h3>
         @if(muted){
-            <p>Click on Resubscribe to start receiving email updates again.</p>
+            <p>Changed your mind? Just click below to start receiving email updates again.</p>
         } else {
-            <p>Click on the button below to stop receiving email updates for this discussion.</p>
+            <p>Click below to stop receiving email updates for this discussion.</p>
         }
         </p>
         <form id="optout" method="POST">
             <input type="hidden" name="should-mute" id="can-receive-emails">
-            <span class="kifi-action" id="update">@if(muted){Resubscribe}else{Opt-out}</span>
+            <span class="kifi-action" id="update">@if(muted){Unmute}else{Mute}</span>
         </form>
     </section>
 </main>
