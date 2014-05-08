@@ -11,7 +11,7 @@ GET      /internal/abooks/page/:page                            @com.keepit.aboo
 GET      /internal/abooksCount/                                 @com.keepit.abook.ABookController.getABooksCount()
 GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.ABookController.getABookInfos(userId:Id[User])
 GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
-GET      /internal/abook/getABookIdByExternalId                 @com.keepit.abook.ABookController.getABookInfoByExternalId(externalId:ExternalId[ABookInfo])
+GET      /internal/abook/getABookInfoByExternalId               @com.keepit.abook.ABookController.getABookInfoByExternalId(externalId:ExternalId[ABookInfo])
 GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.ABookController.getContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getEContacts                   @com.keepit.abook.ABookController.getEContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.ABookController.getEContactCount(userId:Id[User])

@@ -125,7 +125,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]] = {
-    call(ABook.internal.getABookIdByExternalId(id)).map { r =>
+    call(ABook.internal.getABookInfoByExternalId(id)).map { r =>
       Json.fromJson[Option[ABookInfo]](r.json).get
     }
   }
