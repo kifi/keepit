@@ -9,7 +9,7 @@ panes.settings = function () {
   var box;
   return {
     render: function ($paneBox) {
-      log('[panes.settings.render]')();
+      log('[panes.settings.render]');
       api.port.on(handlers);
       api.port.emit('settings');
 
