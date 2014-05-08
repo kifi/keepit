@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 trait ReKeepRepo extends Repo[ReKeep] {
   def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
   def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepersForKeeps(userId:Id[User], keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Set[Id[User]]]
 }
 
 @Singleton
@@ -41,5 +42,16 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
     (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
+  }
+
+  def getReKeepersForKeeps(userId: Id[User], keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep], Set[Id[User]]] = {
+    val map = collection.mutable.HashMap.empty[Id[Keep], Set[Id[User]]]
+    (for (r <- rows if (r.keeperId === userId && r.keepId.inSet(keepIds) && r.state === ReKeepState.ACTIVE)) yield r).list foreach { rk =>
+      map get (rk.keepId) match {
+        case None => map += (rk.keepId -> Set(rk.srcUserId))
+        case Some(s) => map += (rk.keepId -> (s + rk.srcUserId))
+      }
+    }
+    map.toMap
   }
 }

@@ -24,7 +24,7 @@ import scala.util.Try
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
-case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
+case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = 0)
 
 class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
   def writes(info: FullKeepInfo) = Json.obj(
@@ -35,6 +35,7 @@ class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo]
     "createdAt" -> info.bookmark.createdAt,
     "others" -> info.others,
     "keepers" -> info.users,
+    "clickCount" -> info.clickCount,
     "collections" -> info.collections.map(_.id)
   )
 }
@@ -77,13 +78,14 @@ class KeepsCommander @Inject() (
     userRepo: UserRepo,
     userBookmarkClicksRepo: UserBookmarkClicksRepo,
     keepClicksRepo: KeepClickRepo,
+    rekeepRepo: ReKeepRepo,
     kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    val (keeps, collectionOpt) = db.readOnly { implicit s =>
+    val (keeps, collectionOpt, clickCounts) = db.readOnly { implicit s =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
@@ -91,7 +93,8 @@ class KeepsCommander @Inject() (
         case None =>
           keepRepo.getByUser(userId, before, after, count)
       }
-      (keeps, collectionOpt)
+      val clickCounts = keepClicksRepo.getClickCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
+      (keeps, collectionOpt, clickCounts)
     }
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
@@ -109,7 +112,7 @@ class KeepsCommander @Inject() (
       }
       val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
+        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCounts.getOrElse(keep.id.get, 0))
       }
       (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
     }

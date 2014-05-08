@@ -1,4 +1,4 @@
-@(user:User, clicks:Seq[com.keepit.model.RichKeepClick], rekeeps:Seq[com.keepit.model.RichReKeep], rekepts:Seq[com.keepit.model.RichReKeep])
+@(user:User, clicks:Seq[com.keepit.model.RichKeepClick], clickCounts:Seq[(Id[Keep],Int)], rekeeps:Seq[com.keepit.model.RichReKeep], rekepts:Seq[com.keepit.model.RichReKeep])
 
 @admin("My Keep Infos") {
 
@@ -14,6 +14,21 @@
 <h2>Are my keeps being discovered?</h2>
 <i>Your keeps have been viewed @clicks.length times last week!</i>
 
+<h3>Summary / Counts</h3>
+<table class="table table-striped">
+    <th><tr>
+        <td>Id</td>
+        <td>Count</td>
+    </tr></th>
+    @for(clickCount <- clickCounts) {
+    <tr>
+        <td>@clickCount._1</td>
+        <td>@clickCount._2</td>
+    </tr>
+    }
+</table>
+
+<h3>Events</h3>
 <table class="table table-striped">
     <th><tr>
         <td>Id</td>
