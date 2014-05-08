@@ -31,6 +31,7 @@ case class User(
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
   def withState(state: State[User]) = copy(state = state)
   def fullName = s"$firstName $lastName"
+  def shortName = if (firstName.length>0) firstName else lastName
   override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",state=$state]"""
 }
 

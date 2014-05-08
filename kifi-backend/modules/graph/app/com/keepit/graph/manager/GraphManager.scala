@@ -21,3 +21,6 @@ trait GraphManagerModule extends ScalaModule with Logging {
     bind[GraphManagerPlugin].in[AppScoped]
   }
 }
+
+class IrrelevantGraphUpdatesException(irrelevantUpdates: Seq[GraphUpdate])
+  extends Throwable(s"${irrelevantUpdates.length} graph updates have been received out of order: $irrelevantUpdates")

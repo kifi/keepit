@@ -63,10 +63,35 @@ object ABookRawInfo {
   val EMPTY = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray())
 }
 
+case class ExternalABookInfo(
+  externalId: ExternalId[ABookInfo] = ExternalId(),
+  origin: ABookOriginType,
+  ownerId: Option[String] = None, // iOS
+  ownerEmail: Option[String] = None,
+  rawInfoLoc: Option[String] = None,
+  numContacts: Option[Int] = None
+)
+
+object ExternalABookInfo {
+  implicit val format: Format[ExternalABookInfo] = (
+    (__ \ 'externalId).format[ExternalId[ABookInfo]] and
+    (__ \ 'origin).format[ABookOriginType] and
+    (__ \ 'ownerId).formatNullable[String] and
+    (__ \ 'ownerEmail).formatNullable[String] and
+    (__ \ 'rawInfoLoc).formatNullable[String] and
+    (__ \ 'numContacts).formatNullable[Int]
+  )(ExternalABookInfo.apply, unlift(ExternalABookInfo.unapply))
+
+  def fromABookInfo(info: ABookInfo) = {
+    ExternalABookInfo(info.externalId, info.origin, info.ownerId, info.ownerEmail, info.rawInfoLoc, info.numContacts)
+  }
+}
+
 case class ABookInfo(
     id: Option[Id[ABookInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
+    externalId: ExternalId[ABookInfo] = ExternalId(),
     state: State[ABookInfo] = ABookInfoStates.ACTIVE,
     userId: Id[User],
     origin: ABookOriginType,
@@ -76,7 +101,7 @@ case class ABookInfo(
     oauth2TokenId: Option[Id[OAuth2Token]] = None,
     numContacts: Option[Int] = None,
     numProcessed: Option[Int] = None
-  ) extends ModelWithState[ABookInfo] {
+  ) extends ModelWithState[ABookInfo] with ModelWithExternalId[ABookInfo] {
   def withId(id: Id[ABookInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withOwnerInfo(ownerId: Option[String], ownerEmail: Option[String]) = this.copy(ownerId = ownerId, ownerEmail = ownerEmail)
@@ -93,10 +118,11 @@ object ABookInfoStates extends States[ABookInfo] {
 }
 
 object ABookInfo {
-  implicit val format = (
+  implicit val format: Format[ABookInfo] = (
       (__ \ 'id).formatNullable(Id.format[ABookInfo]) and
       (__ \ 'createdAt).format[DateTime] and
       (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format[ExternalId[ABookInfo]] and
       (__ \ 'state).format(State.format[ABookInfo]) and
       (__ \ 'userId).format(Id.format[User]) and
       (__ \ 'origin).format[ABookOriginType] and

@@ -767,6 +767,11 @@ class UserCommander @Inject() (
     userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get)))
     heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address))
   }
+
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
+    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
+  }
 }
 
 

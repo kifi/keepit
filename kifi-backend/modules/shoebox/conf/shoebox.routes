@@ -8,7 +8,7 @@ GET     /-ss/login                   securesocial.controllers.LoginPage.login
 GET     /-logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String], approvalPromptOpt:Option[String])
-GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:Id[ABookInfo], provider:Option[String])
+GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:ExternalId[ABookInfo], provider:Option[String])
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
@@ -274,6 +274,7 @@ POST    /site/user/pic              @com.keepit.controllers.website.UserControll
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: String)
 GET     /site/friends/wti           @com.keepit.controllers.website.WTIController.getRipestInvitees(page: Int ?= 0, pageSize: Int ?= 20)
 POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block()
+POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile()
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
@@ -324,6 +325,8 @@ GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminCo
 
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepClicksView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/myKeepInfos           @com.keepit.controllers.admin.AdminAttributionController.myKeepInfos()
+GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttributionController.keepInfos(id:Id[User])
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
@@ -378,6 +381,7 @@ GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
+GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
@@ -521,6 +525,8 @@ POST    /admin/cortex/lda/showTopics                       @com.keepit.controlle
 POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 
+GET     /admin/graph/ingestion                             @com.keepit.controllers.admin.GraphAdminController.ingestion
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
@@ -582,7 +588,7 @@ GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.contr
 GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
-POST    /internal/shoebox/database/clickAttribution   @com.keepit.controllers.internal.ShoeboxController.clickAttribution()
+POST    /internal/shoebox/database/kifiHit   @com.keepit.controllers.internal.ShoeboxController.kifiHit()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments
@@ -641,6 +647,9 @@ POST     /internal/shoebox/graph/keep                @com.keepit.controllers.int
 POST     /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateURIScreenshots()
 POST     /internal/shoebox/image/getURIImage         @com.keepit.controllers.internal.URISummaryController.getURIImage()
 POST     /internal/shoebox/image/getURISummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
+GET      /internal/shoebox/image/getUserImageUrl    @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
+
+GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: String)
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

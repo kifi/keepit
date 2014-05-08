@@ -74,6 +74,10 @@ class KeepsCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
+    userRepo: UserRepo,
+    userBookmarkClicksRepo: UserBookmarkClicksRepo,
+    keepClicksRepo: KeepClickRepo,
+    kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory
  ) extends Logging {
@@ -129,7 +133,7 @@ class KeepsCommander @Inject() (
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
       case Right(name) => Some(getOrCreateTag(userId, name))
     } map { coll =>
-      addToCollection(coll, keeps).size
+      addToCollection(coll.id.get, keeps).size
     }
     SafeFuture{
       searchClient.updateURIGraph()
@@ -196,19 +200,20 @@ class KeepsCommander @Inject() (
     } else None
   }
 
-  def addToCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
+  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
     db.readWrite(attempts = 2) { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
-      val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
+      val collection = collectionRepo.get(collectionId)
+      val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
       val created = (keepsById.keySet -- existing.map(_.keepId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(keepId = bid, collectionId = collection.id.get))
+        keepToCollectionRepo.save(KeepToCollection(keepId = bid, collectionId = collectionId))
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
-      collectionRepo.collectionChanged(collection.id.get, (created.size + activated.size) > 0)
+      collectionRepo.collectionChanged(collectionId, (created.size + activated.size) > 0)
 
       val tagged = (activated ++ created).toSet
       val taggingAt = currentDateTime
@@ -235,7 +240,7 @@ class KeepsCommander @Inject() (
 
   def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
     val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
-    addToCollection(tag, bookmarks)
+    addToCollection(tag.id.get, bookmarks)
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
@@ -309,7 +314,7 @@ class KeepsCommander @Inject() (
 
     val keepsByTag = keepsByTagName.map { case (tagName, keeps) =>
       val tag = getOrCreateTag(userId, tagName)
-      addToCollection(tag, keeps)
+      addToCollection(tag.id.get, keeps)
       tag -> keeps
     }.toMap
 
@@ -324,4 +329,32 @@ class KeepsCommander @Inject() (
       }
     }
   }
+
+  def processKifiHit(clicker:Id[User], kifiHit:SanitizedKifiHit):Unit = {
+    db.readWrite { implicit rw =>
+      val keepers = kifiHit.context.keepers
+      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
+      else {
+        kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
+          case Some(hit) =>
+            log.warn(s"[kifiHit($clicker,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
+          case None =>
+            kifiHitCache.set(KifiHitKey(clicker, kifiHit.uriId), kifiHit)
+            keepers.foreach { extId =>
+              val keeperId: Id[User] = userRepo.get(extId).id.get
+              userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
+              keepRepo.getByUriAndUser(kifiHit.uriId, keeperId) match {
+                case None =>
+                  log.warn(s"[kifiHit($clicker,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
+                  // move on
+                case Some(keep) =>
+                  val saved = keepClicksRepo.save(KeepClick(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
+                  log.info(s"[kifiHit($clicker, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
+              }
+            }
+        }
+      }
+    }
+  }
+
 }

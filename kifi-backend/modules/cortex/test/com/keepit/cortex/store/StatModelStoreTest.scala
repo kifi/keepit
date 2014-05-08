@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.cortex.core._
 
 class StatModelStoreTest extends Specification {
-  "statModel InMemoryBlobStore and ModelLoader" should {
+  "statModel and InMemoryBlobStore" should {
     "work" in {
 
       case class FakeModel(modelData: Array[Float]) extends StatModel
@@ -29,11 +29,6 @@ class StatModelStoreTest extends Specification {
       modelStore.+=(v2 -> m2)
 
       modelStore.-=(v1) must throwA [UnsupportedOperationException]
-
-      val modelLoader = new StoreBasedModelLoader(modelStore){}
-      modelLoader.load(v1).get.modelData === m1.modelData
-      modelLoader.load(v2).get.modelData === m2.modelData
-
     }
   }
 }

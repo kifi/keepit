@@ -321,7 +321,7 @@ div.kifi-res-menu-item {
   line-height: 28px;
   border-bottom: 1px solid #f2f3f3;
 }
-#kifi-res-list a:visited {
+.kifi-res-title:visited {
   color: #2518b5;
 }
 
@@ -379,6 +379,13 @@ div.kifi-res-menu-item {
   .kifi-res-tags {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAACFUlEQVR42sWXW0sCURDHg6hnP5g958ex94i8EAW9VFBR9FIUVNCNNsEou2mKlZhp7qZL5v2205k4GxXlzNkeHPmz7HFmfsw57JxzBvauxzkaEnIL+YROhPJCDam8HPNJnyFOTsrBJeQVMoSAqRcZ43IK9shqwKEw1qMCHhSaYgNoTWFOCowOa04AhNYwdy9wgEziXMG/wKNOkx5EJ+HsfklokfId/Ql2Celc0GHUB9HMJmQK51CqPYNldQENn9rtdK9YHVlfwV6VCvXXONhmid9rNQvtTh3Q4tkdKt5rg4dVvtPTuwX4asnc/se4Fp+BTrcFxXKKymEgE8FulWrNcvobOJyc+/yvXDega3XgKBag8rgR7OdCL1Kr8NOeihHYv5mA84dlsCwL0G4eN6hcAQQfc8FvtTz8Zl2r/e09Z15RubQB7vpiFVy7fdom1xnBTQqKU1lrmixotVFEfwrcZIET2V3g2nV6HWNYYINqFs12hQUt1XJ2HGuqtV5Od8+HwLXIwwoXrJGfk1FKsKCycXAVIBtIKDELZiVNgsPJeRXwiN0yC5RzLLMl1rr6GxN7Nx8qW6bSJnEUC0LWvLR59o6Es6IC9jreFnHvrdRfkItbo2q1LuIgQDeVSGoFnypgz19Hn2Afjj59OOz14XhLHuh1p0AZ6/nPFWZMqKAALGAMdYVRvbT5hUKympaULsf80meYk/Md6HeeeP8MV9EAAAAASUVORK5CYII=);
   }
+}
+.kifi-res-tag {
+  color: inherit;
+}
+.kifi-res-tag:hover,
+.kifi-res-tag:focus {
+  color: #555;
 }
 
 .kifi-who {

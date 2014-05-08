@@ -27,6 +27,7 @@ class GraphManagerActor @Inject() (
   def receive = {
     case UpdateGraph(maxBatchSize, lockTimeout) => if (!updating) {
       graphUpdateFetcher.nextBatch(maxBatchSize, lockTimeout).map { updates =>
+        log.info(s"${updates.length} graph updates were loaded from the queue.")
         self ! ProcessGraphUpdates(updates, maxBatchSize, lockTimeout)
       }
       updating = true
@@ -36,9 +37,10 @@ class GraphManagerActor @Inject() (
       else {
         graph.update(updates.map(_.body): _*)
         updates.foreach(_.consume())
-        updating = false
+        log.info(s"${updates.length} graph updates were consumed from the queue.")
         self ! UpdateGraph(maxBatchSize, lockTimeout)
       }
+      updating = false
     }
     case BackupGraph => graph.backup()
     case m => throw new UnsupportedActorMessage(m)
@@ -54,7 +56,7 @@ class GraphManagerPlugin @Inject() (
 
   override def onStart() {
     log.info(s"starting $this")
-    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateGraph(10, 1 minute))
+    scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(500, 1 minute))
     scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }

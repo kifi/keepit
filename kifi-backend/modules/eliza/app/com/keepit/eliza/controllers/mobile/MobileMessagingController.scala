@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.mobile
 
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{Message, MessageThread}
+import com.keepit.eliza.model.{MessageSource, Message, MessageThread}
 import com.keepit.common.controller.{ElizaServiceController, MobileController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.heimdal._
@@ -47,9 +47,10 @@ class MobileMessagingController @Inject() (
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val o = request.body
-    val (title, text) = (
+    val (title, text, source) = (
       (o \ "title").asOpt[String],
-      (o \ "text").as[String].trim
+      (o \ "text").as[String].trim,
+      (o \ "source").asOpt[MessageSource]
     )
     val (userExtRecipients, nonUserRecipients) = messagingCommander.recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
     val url = (o \ "url").asOpt[String]
@@ -58,7 +59,7 @@ class MobileMessagingController @Inject() (
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "mobile")
 
-    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text,
+    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
         userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
       Ok(Json.obj(
         "id" -> message.externalId.id,
@@ -74,16 +75,20 @@ class MobileMessagingController @Inject() (
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
     val tStart = currentDateTime
     val o = request.body
-    val text = (o \ "text").as[String].trim
+    val (text, source) = (
+      (o \ "text").as[String].trim,
+      (o \ "source").asOpt[MessageSource]
+    )
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "mobile")
-    val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, None)(contextBuilder.build)
+    val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
 
+  // todo(eishay, léo): the next version of this endpoint should rename the "uri" field to "url"
   def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = JsonAction.authenticatedAsync { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map { case (thread, allMsgs) =>
       val url = thread.url.getOrElse("")  // needs to change when we have detached threads
@@ -156,7 +161,7 @@ class MobileMessagingController @Inject() (
           )
           val msgJson = baseJson ++ (m.user match {
               case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind=="email" => Json.obj("userId" -> bnu.toString)
+              case Some(bnu: BasicNonUser) if bnu.kind.name=="email" => Json.obj("userId" -> bnu.toString)
               case _ => Json.obj()
           })
 

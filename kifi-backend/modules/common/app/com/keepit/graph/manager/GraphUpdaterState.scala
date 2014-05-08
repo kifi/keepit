@@ -11,7 +11,7 @@ case class GraphUpdaterState(state: Map[GraphUpdateKind[_ <: GraphUpdate], Long]
 }
 
 object GraphUpdaterState {
-  val format: Format[GraphUpdaterState] = new Format[GraphUpdaterState] {
+  implicit val format: Format[GraphUpdaterState] = new Format[GraphUpdaterState] {
     def reads(json: JsValue): JsResult[GraphUpdaterState] = json.validate[JsObject].map { case obj =>
       val state = obj.value.map { case (kindName, seqValue) =>
         GraphUpdateKind(kindName) -> seqValue.as[Long]

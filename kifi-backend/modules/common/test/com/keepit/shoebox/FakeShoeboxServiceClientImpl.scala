@@ -23,6 +23,8 @@ import com.kifi.franz.QueueName
 import com.keepit.graph.manager._
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
+import com.keepit.graph.manager.{UserConnectionGraphUpdate, SocialUserInfoGraphUpdate, SocialConnectionGraphUpdate, UserGraphUpdate}
+import com.keepit.heimdal.SanitizedKifiHit
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -506,7 +508,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 
-  def clickAttribution(clicker: Id[User], uriId: Id[NormalizedURI], keepers: ExternalId[User]*): Unit = {}
+  def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     Future.successful(Seq.empty[ScrapeRequest])
@@ -615,6 +617,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getURIImage(nUri: NormalizedURI): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
+
+  def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
+
+  def getUnsubscribeUrlForEmail(email: String): Future[String] = Future.successful("https://kifi.com")
 
   def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit] = {
     Future.successful(())

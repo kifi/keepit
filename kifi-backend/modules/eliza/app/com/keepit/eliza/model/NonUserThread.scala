@@ -19,6 +19,9 @@ sealed trait NonUserParticipant {
   val kind: NonUserKind
 
   override def toString() = identifier.toString
+
+  def shortName: String
+  def fullName: String
 }
 object NonUserParticipant {
   implicit val format = new Format[NonUserParticipant] {
@@ -50,6 +53,9 @@ case class NonUserEmailParticipant(address: EmailAddressHolder, econtactId: Opti
   val identifier = address.address
   val referenceId = econtactId.map(_.id.toString)
   val kind = NonUserKinds.email
+
+  def shortName = identifier
+  def fullName = identifier
 }
 
 case class NonUserThread(
@@ -63,18 +69,14 @@ case class NonUserThread(
   lastNotifiedAt: Option[DateTime],
   threadUpdatedAt: Option[DateTime],
   muted: Boolean = false,
-  state: State[NonUserThread] = NonUserThreadStates.ACTIVE
-) extends ModelWithState[NonUserThread] with ModelWithPublicId[NonUserThread] {
+  state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
+  accessToken: ThreadAccessToken = ThreadAccessToken()
+) extends ModelWithState[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
 }
 
-object NonUserThread {
-  implicit object nonUserThread extends ModelWithPublicId[NonUserThread] {
-    val id = None
-    override val prefix = "nu"
-  }
-}
+
 
 object NonUserThreadStates extends States[NonUserThread]

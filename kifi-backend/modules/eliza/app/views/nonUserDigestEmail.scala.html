@@ -25,7 +25,7 @@
                                   <tr>
                                     <td valign="top"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-big-quotes.jpg" width="32" height="24" style="display:block;" border="0" /></td>
                                     <td width="10">&nbsp;</td>
-                                    <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;font-style:italic;line-height:24px;color:#333333;">@text”</td>
+                                    <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;font-style:italic;line-height:24px;color:#333333;">@text</td>
                                   </tr>
                                 </table></td>
                             </tr>
@@ -50,7 +50,7 @@
             <td width="102" class="hide">&nbsp;</td>
             <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td><table width="360" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper" bgcolor="#FFFFFF">
+                  <td><table width="360" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper" bgcolor="#fafafa">
                       <tr>
                         <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tr>
@@ -69,7 +69,7 @@
                                     <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                         <tr>
                                           <td width="28" class="hide"></td>
-                                          <td width="240"  align="center"><img src="@link" width="240" height="180" style="display:block;" border="0" /></td>
+                                          <td width="240"  align="center"><img src="@link" width="240" style="display:block;" border="0" /></td>
                                           <td width="64" class="hide"></td>
                                         </tr>
                                       </table></td>
@@ -89,7 +89,7 @@
     </tr>
   }
 
-  @messageBlock(imageUrl: String, firstName: String, lastName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
+  @messageBlock(imageUrl: Option[String], shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
     <tr>
       <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
@@ -104,13 +104,21 @@
                         <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tr>
                               <!-- Image -->
-                              <td width="73" valign="top"><img src="@imageUrl" width="73" height="73" alt="@firstName" style="display:block;" border="0" /></td>
+                              <td width="73" valign="top">
+                                @imageUrl.map{ iUrl =>
+                                  <img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block;" border="0" />
+                                }.getOrElse{
+                                  <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle;">
+                                    @{shortName(0).toUpper}
+                                  </div>
+                                }
+                              </td>
                               <!-- //Image -->
                               <td width="28">&nbsp;</td>
                               <!-- Content -->
                               <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                   <tr>
-                                    <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;text-decoration:none;">@firstName @lastName</td>
+                                    <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;text-decoration:none;">@fullName</td>
                                   </tr>
                                   <tr>
                                     <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -126,8 +134,8 @@
                             </tr>
                           </table></td>
                       </tr>
-                      @lookHereContent.map(lookHere(firstName, _))
-                      @lookHereImage.map(imageLookHere(firstName, _))
+                      @lookHereContent.map(lookHere(shortName, _))
+                      @lookHereImage.map(imageLookHere(shortName, _))
                       <tr>
                         <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
                       </tr>
@@ -316,7 +324,7 @@
                                         <td width="20" class="hide">&nbsp;</td>
                                         <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                             <tr>
-                                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;">6 Things People Believe About Love</td>
+                                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;">@threadInfo.pageTitle</td>
                                             </tr>
                                             <tr>
                                               <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -329,12 +337,15 @@
                                             </tr>
                                             <tr>
                                               <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                                @threadInfo.pageDescription.map{ pageDescription =>
                                                   <tr>
-                                                    <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="@threadInfo.heroImageUrl" alt="New Yorker" width="183" height="96" class="img_1" style="display:block;" border="0" /></a></td>
-                                                    <td width="18" class="width">&nbsp;</td>
+                                                    @threadInfo.heroImageUrl.map{ heroImageUrl =>
+                                                      <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="183" class="img_1" style="display:block;" border="0" /></a></td>
+                                                      <td width="18" class="width">&nbsp;</td>
+                                                    }
                                                     <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                         <tr>
-                                                          <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;color:#333333;line-height:18px;">@threadInfo.pageDescription</td>
+                                                          <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;color:#333333;line-height:18px;">@pageDescription</td>
                                                         </tr>
                                                         <tr>
                                                           <td height="6" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -347,15 +358,17 @@
                                                         </tr>
                                                       </table></td>
                                                   </tr>
-                                                </table></td>
+                                                }
+                                              </table></td>
                                             </tr>
+                                            <tr><td height="2" bgcolor="#FFFFFF" style="line-height:1px;font-size:1px;">&nbsp;</td></tr>
                                           </table></td>
                                         <td width="20" class="hide">&nbsp;</td>
                                       </tr>
                                     </table></td>
                                 </tr>
                                 @{messages.map(message =>
-                                  messageBlock(message.imageUrl, message.senderFirstName, message.senderLastName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
+                                  messageBlock(message.imageUrl, message.senderShortName, message.senderFullName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
                                 )}
                               </table></td>
                             <td width="2" bgcolor="#f3f3f3"></td>
@@ -478,7 +491,7 @@
                                 <tr>
                                   <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br class="br" />
                                     View our <a href="https://www.kifi.com/privacy" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>. Click here <a href="@threadInfo.unsubUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a> from friends’ messages like this.<br class="br" />
-                                    &copy; 2014 FourtyTwo, Inc, All rights reserved.</td>
+                                    &copy; 2014 FortyTwo, Inc, All rights reserved.</td>
                                 </tr>
                               </table></td>
                           </tr>

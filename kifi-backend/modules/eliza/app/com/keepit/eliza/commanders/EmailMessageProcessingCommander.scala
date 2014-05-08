@@ -32,18 +32,18 @@ class EmailMessageProcessingCommander @Inject() (
         try {
           result.map { sqsMessage =>
             val message = sqsMessage.body
-            ModelWithPublicId.decode[NonUserThread](message.publicId) match {
-              case Success(id: Id[NonUserThread]) => {
-                message.content match {
-                  case Some(content: String) => {
-                    val contextBuilder = heimdalContextBuilder()
-                    contextBuilder += ("source", "email")
-                    messagingCommander.sendMessageWithNonUserThread(id, content, None)(contextBuilder.build)
-                  }
-                  case None => airbrake.notify(s"Could not extract contents of email: publicId = ${id} and timestamp = ${message.timestamp}")
+            val nutOpt = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(message.token))
+            nutOpt.map { nut =>
+              message.content match {
+                case Some(content: String) => {
+                  val contextBuilder = heimdalContextBuilder()
+                  contextBuilder += ("source", "email")
+                  messagingCommander.sendMessageWithNonUserThread(nut, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
                 }
+                case None => airbrake.notify(s"Could not extract contents of email: token = ${message.token} and timestamp = ${message.timestamp}")
               }
-              case _ => log.info(s"Email with invalid public id ${message.publicId}")
+            } getOrElse {
+              airbrake.notify(s"Invalid Access Token ${message.token}")
             }
             sqsMessage.consume()
           }

@@ -22,4 +22,11 @@ object GraphStatistics {
   def filter(vertexCounter: Map[VertexType, AtomicLong], edgeCounter: Map[(VertexType, VertexType, EdgeType), AtomicLong]): GraphStatistics = {
     GraphStatistics(vertexCounter.mapValues(_.get()).filter(_._2 > 0), edgeCounter.mapValues(_.get()).filter(_._2 > 0))
   }
+
+  def prettify(statistics: GraphStatistics): PrettyGraphStatistics = PrettyGraphStatistics(
+    statistics.vertexStatistics.map { case (vertexKind, count) => (vertexKind.toString -> count) }.toMap,
+    statistics.edgeStatistics.map { case ((sourceKind, destinationKind, edgeKind), count) =>
+      (sourceKind.toString, destinationKind.toString, edgeKind.toString) -> count
+    }.toMap
+  )
 }

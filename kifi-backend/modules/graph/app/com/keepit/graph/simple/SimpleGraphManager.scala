@@ -7,13 +7,15 @@ import com.keepit.common.service.ServiceStatus
 import play.modules.statsd.api.Statsd
 import org.apache.commons.io.FileUtils
 import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class SimpleGraphManager(
   val simpleGraph: SimpleGraph,
   var state: GraphUpdaterState,
   graphDirectory: SimpleGraphDirectory,
   graphUpdater: GraphUpdater,
-  serviceDiscovery: ServiceDiscovery
+  serviceDiscovery: ServiceDiscovery,
+  airbrake: AirbrakeNotifier
 ) extends GraphManager with Logging {
 
   def readOnly[T](f: GraphReader => T): T = simpleGraph.readOnly(f)
@@ -47,9 +49,11 @@ class SimpleGraphManager(
   }
 
   def update(updates: GraphUpdate*): Unit = {
-    val relevantUpdates = updates.filter { graphUpdate => graphUpdate.seq > state.getCurrentSequenceNumber(graphUpdate.kind) }
+    val (relevantUpdates, irrelevantUpdates) = updates.partition { graphUpdate => graphUpdate.seq > state.getCurrentSequenceNumber(graphUpdate.kind) }
+    if (irrelevantUpdates.nonEmpty) { airbrake.notify(new IrrelevantGraphUpdatesException(irrelevantUpdates)) }
     simpleGraph.readWrite { implicit writer => relevantUpdates.sortBy(_.seq.value).foreach(graphUpdater(_)) }
     state = state.withUpdates(relevantUpdates) // todo(Léo): not threadsafe
+    log.info(s"Processed ${relevantUpdates.length} updates. Graph state:\n${state}")
   }
 
   def statistics: GraphStatistics = simpleGraph.statistics

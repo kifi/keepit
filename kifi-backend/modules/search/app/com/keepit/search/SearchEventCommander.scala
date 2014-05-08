@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.tracker._
 import com.keepit.heimdal._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.model.User
 import org.joda.time.DateTime
 import com.keepit.common.net.URI
@@ -28,9 +28,8 @@ class SearchEventCommander @Inject() (
       val uriId = uri.id.get
       resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
       clickHistoryTracker.add(userId, ClickedURI(uriId))
-      if (kifiHitContext.isOwnKeep) shoeboxClient.clickAttribution(userId, uriId) else {
-        shoeboxClient.clickAttribution(userId, uriId, kifiHitContext.keepers: _*)
-      }
+      val hit = SanitizedKifiHit(ExternalId[SanitizedKifiHit](), searchContext.origin, searchResultUrl, uriId, kifiHitContext)
+      shoeboxClient.kifiHit(userId, hit)
     }
     searchAnalytics.clickedSearchResult(userId, clickedAt, searchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), context)
   }

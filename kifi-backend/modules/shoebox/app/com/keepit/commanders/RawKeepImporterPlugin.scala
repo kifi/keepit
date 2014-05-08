@@ -36,6 +36,7 @@ private class RawKeepImporterActor @Inject() (
   urlRepo: URLRepo,
   scraper: ScrapeSchedulerPlugin,
   keptAnalytics: KeepingAnalytics,
+  collectionRepo: CollectionRepo,
   kifiInstallationRepo: KifiInstallationRepo,
   bookmarksCommanderProvider: Provider[KeepsCommander],
   searchClient: SearchServiceClient,
@@ -100,10 +101,35 @@ private class RawKeepImporterActor @Inject() (
             "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
           }
           val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-          bookmarksCommanderProvider.get.addToCollection(tag, successes)(context)
+          bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes)(context)
         }
+
         //the bookmarks list may be very large!
         searchClient.updateURIGraph()
+
+        // Reduce all successes to a map of tagIdString -> tagId (typed), ignore errors (we don't care at this stage)
+        val tagStrToId: Map[String, Id[Collection]] = successesRawKeep.map { rk =>
+          rk.tagIds.map { tags =>
+            tags.split(",").toSeq.map { c => Try(c.toLong).map(Id[Collection]).toOption.map( c -> _) }.flatten
+          }
+        }.flatten.flatten.toMap
+
+        // Populate cache from tagIdString -> Collection
+        val tagCache = scala.collection.mutable.Map.empty[String, Collection]
+        db.readOnly { implicit session =>
+          tagStrToId.map { case (tagStr, id) =>
+            tagCache.getOrElseUpdate(tagStr, collectionRepo.get(id))
+          }
+        }
+
+        successes.foreach { keep =>
+          val tags = rawKeepByUrl.get(keep.url).flatMap(_.tagIds.map(_.split(",").map(tagCache.get).flatten)).getOrElse(Array.empty)
+
+          tags.foreach { tag =>
+            bookmarksCommanderProvider.get.addToCollection(tag.id.get, Seq(keep))(context)
+          }
+        }
+
 
         db.readWriteBatch(successesRawKeep) { case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)

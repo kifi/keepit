@@ -73,6 +73,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
   }
 
+  //endedWith is either "unload" or "refinement"
   function sendSearchedEvent(endedWith) {
     api.port.emit("log_search_event", [
       "searched",
@@ -528,7 +529,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         });
       }
     }).on('mouseup', '.kifi-res-kifi-com', function () {
-      location.href = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
+      location.href = response ? response.origin : 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
     }).on('mouseup', '.kifi-res-max-results-n', function () {
       var $this = $(this).addClass('kifi-checked').removeAttr('href');
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');
@@ -605,6 +606,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     $res.find('.kifi-res-box')
       .append(render('html/search/google_hits', {
           results: response.hits,
+          origin: response.origin,
           self: response.me,
           images: api.url('images'),
           filter: response.filter && response.filter.who !== 'a',
@@ -700,7 +702,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
     hit.scoreText = ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
-    hit.tagsText = (hit.bookmark.tagNames || []).join(', ');
+    if (hit.tags) {
+      hit.tags[hit.tags.length - 1].last = true;
+    }
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;

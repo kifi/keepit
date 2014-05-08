@@ -2,6 +2,10 @@ package com.keepit.graph.model
 
 import com.keepit.common.reflection.CompanionTypeSystem
 import play.api.libs.json._
+import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.lda.LDATopicId
+import com.keepit.cortex.models.lda.VersionedLDATopicId
 
 
 sealed trait VertexDataReader { self =>
@@ -121,8 +125,9 @@ case object LinkedInAccountReader extends VertexKind[LinkedInAccountReader] {
 trait LDATopicReader extends VertexDataReader {
   type V = LDATopicReader
   def kind = LDATopicReader
-  def getVersion(): Int
-  def getTopicId(): Int
+
+  def getVersion(): ModelVersion[DenseLDA] = VersionedLDATopicId.getVersion(id.id)
+  def getTopicId(): LDATopicId = VersionedLDATopicId.getUnversionedId(id.id)
 }
 case object LDATopicReader extends VertexKind[LDATopicReader]{
   val header = 7.toByte
