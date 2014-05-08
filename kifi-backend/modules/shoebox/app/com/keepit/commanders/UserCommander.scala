@@ -278,7 +278,6 @@ class UserCommander @Inject() (
             category = NotificationCategory.User.FRIEND_JOINED)
           )
         }
-
       }
 
       elizaServiceClient.sendGlobalNotification(

@@ -153,7 +153,7 @@ class KeepsController @Inject() (
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
         val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
+        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, request.experiments)
         log.info(s"kept ${keeps.size} new keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
