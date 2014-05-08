@@ -114,7 +114,7 @@ class BookmarkImporter @Inject() (
         url = href,
         isPrivate = true,
         importId = Some(importId),
-        source = KeepSource.bookmarkFileImport,
+        source = source.getOrElse(KeepSource.bookmarkFileImport),
         originalJson = None,
         installationId = None,
         tagIds = tags)
