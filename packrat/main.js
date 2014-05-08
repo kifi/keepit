@@ -33,7 +33,7 @@ var tags;
 var tagsById;
 
 function clearDataCache() {
-  log('[clearDataCache]')();
+  log('[clearDataCache]');
   tabsByUrl = {};
   tabsByLocator = {};
   tabsTagging = [];
@@ -67,7 +67,7 @@ function clearDataCache() {
     notice.context.userAgent = api.browser.userAgent;
     notice.context.userId = me && me.id;
     api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
-      log('#c00', '[airbrake] report', o.id, o.url)();
+      log('#c00', '[airbrake] report', o.id, o.url);
     });
   });
   api.timers.setTimeout(api.errors.init.bind(null, ab), 0);
@@ -181,12 +181,12 @@ function onGetFail(uri, done, failures, req) {
   if ([403,404].indexOf(req.status) < 0) {
     if (failures < 10) {
       var ms = failures * 2000;
-      log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms')();
+      log('[onGetFail]', req.status, uri, failures, 'failure(s), will retry in', ms, 'ms');
       api.timers.setTimeout(
         api.request.bind(api, 'GET', uri, null, done, onGetFail.bind(null, uri, done, failures + 1)),
         ms);
     } else {
-      log('[onGetFail]', req.status, uri, failures, 'failures, giving up')();
+      log('[onGetFail]', req.status, uri, failures, 'failures, giving up');
     }
   }
 }
@@ -221,7 +221,7 @@ var mixpanel = {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
-      log("#aaa", "[mixpanel.track] %s %o", eventName, properties)();
+      log("#aaa", "[mixpanel.track] %s %o", eventName, properties);
       properties.time = Date.now();
       var data = {
         'event': eventName,
@@ -245,7 +245,7 @@ var mixpanel = {
 
 function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (eventFamily !== 'slider') {
-    log("#800", "[logEvent] invalid event family:", eventFamily)();
+    log("#800", "[logEvent] invalid event family:", eventFamily);
     return;
   }
   var ev = {
@@ -258,7 +258,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
   if (prevEvents && prevEvents.length) {
     ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
   }
-  log("#aaa", "[logEvent] %s %o", ev.eventName, ev)();
+  log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
     socket.send(["log_event", ev]);
   } else {
@@ -290,7 +290,7 @@ function onSocketConnect() {
 }
 
 function onSocketDisconnect(why, sec) {
-  log('[onSocketDisconnect]', why, sec || '')();
+  log('[onSocketDisconnect]', why, sec || '');
 }
 
 function getLatestThreads() {
@@ -298,7 +298,7 @@ function getLatestThreads() {
 }
 
 function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
-  log('[gotLatestThreads]', arr, numUnreadUnmuted, numUnread, serverTime)();
+  log('[gotLatestThreads]', arr, numUnreadUnmuted, numUnread, serverTime);
 
   var serverTimeDate = new Date(serverTime);
   var staleMessageIds = (threadLists.all || {ids: []}).ids.reduce(function (o, threadId) {
@@ -349,7 +349,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
 }
 
 function gotFilteredThreads(kind, tl, arr, numTotal) {
-  log('[gotFilteredThreads]', kind, arr, numTotal || '')();
+  log('[gotFilteredThreads]', kind, arr, numTotal || '');
   arr.forEach(function (n) {
     standardizeNotification(n);
     updateIfJustRead(n);
@@ -365,22 +365,22 @@ function gotFilteredThreads(kind, tl, arr, numTotal) {
 
 var socketHandlers = {
   denied: function () {
-    log('[socket:denied]')();
+    log('[socket:denied]');
     clearSession();
   },
   version: function (v) {
-    log('[socket:version]', v)();
+    log('[socket:version]', v);
     if (api.version !== v) {
       api.requestUpdateCheck();
     }
   },
   experiments: function (exp) {
-    log('[socket:experiments]', exp)();
+    log('[socket:experiments]', exp);
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
   new_pic: function (name) {
-    log('[socket:new_pic]', name)();
+    log('[socket:new_pic]', name);
     if (me) {
       me.pictureName = name;
       emitAllTabs('me_change', me);
@@ -407,7 +407,7 @@ var socketHandlers = {
     }
   },
   new_friends: function (fr) {
-    log('[socket:new_friends]', fr)();
+    log('[socket:new_friends]', fr);
     if (friends) {
       for (var i = 0; i < fr.length; i++) {
         var f = standardizeUser(fr[i]);
@@ -421,7 +421,7 @@ var socketHandlers = {
     }
   },
   lost_friends: function (fr) {
-    log('[socket:lost_friends]', fr)();
+    log('[socket:lost_friends]', fr);
     if (friends) {
       for (var i = 0; i < fr.length; i++) {
         var f = fr[i];
@@ -437,7 +437,7 @@ var socketHandlers = {
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
   remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   thread_participants: function(threadId, participants) {
-    log('[socket:thread_participants]', threadId, participants)();
+    log('[socket:thread_participants]', threadId, participants);
     var thread = threadsById[threadId];
     if (thread) {
       thread.participants = participants;
@@ -447,15 +447,15 @@ var socketHandlers = {
     });
   },
   thread_muted: function(threadId, muted) {
-    log("[socket:thread_muted]", threadId, muted)();
+    log("[socket:thread_muted]", threadId, muted);
     setMuted(threadId, muted);
   },
   url_patterns: function(patterns) {
-    log("[socket:url_patterns]", patterns)();
+    log("[socket:url_patterns]", patterns);
     urlPatterns = compilePatterns(patterns);
   },
   notification: function(n, th) {  // a new notification (real-time)
-    log('[socket:notification]', n, th || '')();
+    log('[socket:notification]', n, th || '');
     standardizeNotification(n);
     if (insertNewNotification(th ? standardizeNotification(th) : n)) {
       handleRealTimeNotification(n);
@@ -463,17 +463,17 @@ var socketHandlers = {
     }
   },
   all_notifications_visited: function(id, time) {
-    log('[socket:all_notifications_visited]', id, time)();
+    log('[socket:all_notifications_visited]', id, time);
     markAllThreadsRead(id, time);
   },
   thread: function(o) {
-    log('[socket:thread]', o)();
+    log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
     forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages));
   },
   message: function(threadId, message) {
-    log('[socket:message]', threadId, message, message.nUrl)();
+    log('[socket:message]', threadId, message, message.nUrl);
     forEachTabAtLocator('/messages/' + threadId, function (tab) {
       api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id}, {queue: true});
     });
@@ -483,12 +483,12 @@ var socketHandlers = {
     }
   },
   message_read: function(nUri, threadId, time, messageId) {
-    log("[socket:message_read]", nUri, threadId, time)();
+    log("[socket:message_read]", nUri, threadId, time);
     removeNotificationPopups(threadId);
     markRead(threadId, messageId, time);
   },
   message_unread: function(nUri, threadId, time, messageId) {
-    log("[socket:message_unread]", nUri, threadId, time)();
+    log("[socket:message_unread]", nUri, threadId, time);
     markUnread(threadId, messageId);
   }
 };
@@ -533,7 +533,7 @@ function emitSettings(tab) {
 }
 
 function onAddTagResponse(nUri, result) {
-  log('[onAddTagResponse]', result)();
+  log('[onAddTagResponse]', result);
   if (result.success) {
     var tag = result.response;
     if (tags && addTag(tags, tag)) {
@@ -551,7 +551,7 @@ function onAddTagResponse(nUri, result) {
 }
 
 function onRemoveTagResponse(nUri, tagId, result) {
-  log('[onRemoveTagResponse]', tagId, result)();
+  log('[onRemoveTagResponse]', tagId, result);
   if (result.success) {
     var d = pageData[nUri];
     if (d) {
@@ -565,7 +565,7 @@ function onRemoveTagResponse(nUri, tagId, result) {
 }
 
 function onClearTagsResponse(nUri, result) {
-  log('[onClearTagsResponse]', result)();
+  log('[onClearTagsResponse]', result);
   if (result.success) {
     var d = pageData[nUri];
     if (d) {
@@ -579,9 +579,9 @@ function onClearTagsResponse(nUri, result) {
 }
 
 function makeRequest(name, method, url, data, callbacks) {
-  log("[" + name + "]", data)();
+  log("[" + name + "]", data);
   ajax(method, url, data, function(response) {
-    log("[" + name + "] response:", response)();
+    log("[" + name + "] response:", response);
     var result = {
       success: true,
       response: response,
@@ -593,7 +593,7 @@ function makeRequest(name, method, url, data, callbacks) {
       });
     }
   }, function(response) {
-    log("[" + name + "] error:", response)();
+    log("[" + name + "] error:", response);
     var result = {
       success: false,
       response: response,
@@ -615,12 +615,12 @@ api.port.on({
   deauthenticate: deauthenticate,
   get_keeps: searchOnServer,
   get_keepers: function(_, respond, tab) {
-    log('[get_keepers]', tab.id)();
+    log('[get_keepers]', tab.id);
     var d = pageData[tab.nUri] || {};
     respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
   },
   keep: function(data, _, tab) {
-    log('[keep]', data)();
+    log('[keep]', data);
     var d = pageData[tab.nUri];
     if (!d) {
       api.tabs.emit(tab, 'kept', {fail: true});
@@ -633,7 +633,7 @@ api.port.on({
         og: data.og,
         isPrivate: data.how === 'private'
       }, function done(keep) {
-        log('[unkeep:done]', keep)();
+        log('[unkeep:done]', keep);
         delete d.state;
         d.kept = data.how;
         d.keepId = keep.id;
@@ -641,7 +641,7 @@ api.port.on({
           setIcon(tab, data.how);
         });
       }, function fail() {
-        log('[keep:fail]', data.url)();
+        log('[keep:fail]', data.url);
         delete d.state;
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
@@ -655,12 +655,12 @@ api.port.on({
   },
   unkeep: function(_, __, tab) {
     var d = pageData[tab.nUri];
-    log('[unkeep]', d && d.keepId || '', d && d.state || '')();
+    log('[unkeep]', d && d.keepId || '', d && d.state || '');
     if (!d || !d.keepId) {
       api.tabs.emit(tab, 'kept', {fail: true});
     } else if (!d.state) {
       ajax('POST', '/ext/keeps/' + d.keepId + '/unkeep', function done(o) {
-        log('[unkeep:done]', o)();
+        log('[unkeep:done]', o);
         delete d.state;
         delete d.kept;
         delete d.keepId;
@@ -668,7 +668,7 @@ api.port.on({
           setIcon(tab, false);
         });
       }, function fail() {
-        log('[unkeep:fail]', d.keepId)();
+        log('[unkeep:fail]', d.keepId);
         delete d.state;
         api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
       });
@@ -678,9 +678,9 @@ api.port.on({
     }
   },
   set_private: function(data, _, tab) {
-    log("[setPrivate]", data)();
+    log("[setPrivate]", data);
     ajax('POST', '/bookmarks/update', data, function (o) {
-      log("[setPrivate] response:", o)();
+      log("[setPrivate] response:", o);
     });
     forEachTabAt(tab.url, tab.nUri, function(tab) {
       api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
@@ -808,7 +808,7 @@ api.port.on({
     data.extVersion = api.version;
     data.source = api.browser.name;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
-      log('[send_message] resp:', o)();
+      log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
       respond({threadId: o.parentId});
@@ -822,11 +822,11 @@ api.port.on({
     data.source = api.browser.name;
     ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
-      log('[send_reply] resp:', o)();
+      log('[send_reply] resp:', o);
       respond(o);
     }
     function logErrorAndRespond(req) {
-      log('#c00', '[send_reply] resp:', req)();
+      log('#c00', '[send_reply] resp:', req);
       respond({status: req.status});
     }
   },
@@ -1385,7 +1385,7 @@ function markRead(threadId, messageId, time) {
       th ? '' : 'not loaded',
       th && !th.unread ? 'read' : '',
       th && th.id !== messageId ? 'message: ' + th.id : '',
-      th && th.time > time ? 'newer: ' + th.time : '')();
+      th && th.time > time ? 'newer: ' + th.time : '');
   }
 }
 
@@ -1472,14 +1472,14 @@ function awaitDeepLink(link, tabId, retrySec) {
     delete deepLinkTimers[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
-      log('[awaitDeepLink]', tabId, link)();
+      log('[awaitDeepLink]', tabId, link);
       api.tabs.emit(tab, 'open_to', {
         trigger: 'deepLink',
         locator: loc,
         redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
       }, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {
-      log('[awaitDeepLink]', tabId, 'retrying in', retrySec, 'sec')();
+      log('[awaitDeepLink]', tabId, 'retrying in', retrySec, 'sec');
       deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
     if (loc.lastIndexOf('/messages/', 0) === 0) {
@@ -1489,7 +1489,7 @@ function awaitDeepLink(link, tabId, retrySec) {
       }
     }
   } else {
-    log('[awaitDeepLink] no locator', tabId, link)();
+    log('[awaitDeepLink] no locator', tabId, link);
   }
 }
 
@@ -1588,7 +1588,7 @@ function searchOnServer(request, respond) {
   if (request.first && getPrefetchedResults(request.query, respond)) return;
 
   if (!me || !enabled('search')) {
-    log('[searchOnServer] noop, me:', me)();
+    log('[searchOnServer] noop, me:', me);
     respond({});
     return;
   }
@@ -1603,7 +1603,7 @@ function searchOnServer(request, respond) {
     w: request.whence};
 
   ajax('search', 'GET', '/search', params, function (resp) {
-    log('[searchOnServer] response:', resp)();
+    log('[searchOnServer] response:', resp);
     resp.filter = request.filter;
     resp.me = me;
     resp.prefs = prefs || {maxResults: 1};
@@ -1635,7 +1635,7 @@ function processSearchHit(hit) {
 }
 
 function kifify(tab) {
-  log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', me ? '' : 'no session')();
+  log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', me ? '' : 'no session');
   if (!tab.icon) {
     api.icon.set(tab, 'icons/k_gray' + (silence ? '.paused' : '') + '.png');
   } else {
@@ -1696,11 +1696,11 @@ function stashTabByNormUri(tab, uri) {
   } else {
     tabsByUrl[uri] = [tab];
   }
-  log('[stashTabByNormUri]', tab.id)();
+  log('[stashTabByNormUri]', tab.id);
 }
 
 function kififyWithPageData(tab, d) {
-  log('[kififyWithPageData]', tab.id, tab.engaged ? 'already engaged' : '')();
+  log('[kififyWithPageData]', tab.id, tab.engaged ? 'already engaged' : '');
   setIcon(tab, d.kept);
   if (silence) return;
 
@@ -1718,9 +1718,9 @@ function kififyWithPageData(tab, d) {
     tab.engaged = true;
     if (!d.kept && !hide) {
       if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
-        log('[initTab]', tab.id, 'restricted')();
+        log('[initTab]', tab.id, 'restricted');
       } else if (ruleSet.rules.shown && d.shown) {
-        log('[initTab]', tab.id, 'shown before')();
+        log('[initTab]', tab.id, 'shown before');
       } else {
         var focused = api.tabs.isFocused(tab);
         if (ruleSet.rules.scroll) {
@@ -1742,7 +1742,7 @@ function kififyWithPageData(tab, d) {
 function gotPageDetailsFor(url, tab, resp) {
   var tabIsOld = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
 
-  log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url, resp)();
+  log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url, resp);
 
   var nUri = resp.normalized;
   var d = pageData[nUri] || new PageData;
@@ -1766,7 +1766,7 @@ function gotPageDetailsFor(url, tab, resp) {
 }
 
 function gotPageThreads(uri, nUri, threads, numTotal) {
-  log('[gotPageThreads]', threads.length, 'of', numTotal, uri, nUri !== uri ? nUri : '')();
+  log('[gotPageThreads]', threads.length, 'of', numTotal, uri, nUri !== uri ? nUri : '');
 
   // incorporating new threads into our cache and noting any changes
   var updatedThreadIds = [];
@@ -1836,26 +1836,26 @@ function paneIsOpen(tabId) {
 }
 
 function setIcon(tab, kept) {
-  log('[setIcon] tab:', tab.id, 'kept:', kept)();
+  log('[setIcon] tab:', tab.id, 'kept:', kept);
   api.icon.set(tab, (kept ? 'icons/k_blue' : 'icons/k_dark') + (silence ? '.paused' : '') + '.png');
 }
 
 function updateIconSilence(tab) {
-  log('[updateIconSilence] tab:', tab.id, 'silent:', !!silence)();
+  log('[updateIconSilence] tab:', tab.id, 'silent:', !!silence);
   if (tab.icon && tab.icon.indexOf('.paused') < 0 !== !silence) {
     api.icon.set(tab, tab.icon.substr(0, tab.icon.indexOf('.')) + (silence ? '.paused' : '') + '.png');
   }
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
-  log("[postBookmarks]")();
+  log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
-    log("[postBookmarks] bookmarks:", bookmarks)();
+    log("[postBookmarks] bookmarks:", bookmarks);
     ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
-        log("[postBookmarks] resp:", o)();
+        log("[postBookmarks] resp:", o);
       });
   });
 }
@@ -1887,7 +1887,7 @@ api.icon.on.click.add(function (tab) {
 });
 
 api.tabs.on.focus.add(function(tab) {
-  log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab)();
+  log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
   for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
@@ -1898,17 +1898,17 @@ api.tabs.on.focus.add(function(tab) {
 });
 
 api.tabs.on.blur.add(function(tab) {
-  log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab)();
+  log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
   ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
 });
 
 api.tabs.on.loading.add(function(tab) {
-  log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab)();
+  log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   kifify(tab);
 });
 
 api.tabs.on.unload.add(function(tab, historyApi) {
-  log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab)();
+  log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   var tabs = tabsByUrl[tab.nUri];
   for (var i = tabs && tabs.length; i--;) {
     if (tabs[i] === tab) {
@@ -1957,7 +1957,7 @@ api.on.beforeSearch.add(throttle(function (whence) {
 var searchPrefetchCache = {};  // for searching before the results page is ready
 api.on.search.add(function prefetchResults(query, whence) {
   if (!me || !enabled('search')) return;
-  log('[prefetchResults] prefetching for query:', query)();
+  log('[prefetchResults] prefetching for query:', query);
   var entry = searchPrefetchCache[query];
   if (!entry) {
     entry = searchPrefetchCache[query] = {callbacks: [], response: null};
@@ -1991,7 +1991,7 @@ function getPrefetchedResults(query, cb) {
   var entry = searchPrefetchCache[query];
   if (entry) {
     var consume = function (r) {
-      log('[getPrefetchedResults]', query, r)();
+      log('[getPrefetchedResults]', query, r);
       cb(r);
     };
     if (entry.response) {
@@ -2013,7 +2013,7 @@ function stored(key) {
 function store(key, value) {
   var qKey = qualify(key), prev = api.storage[qKey];
   if (value != null && prev !== String(value)) {
-    log('[store] %s = %s (was %s)', key, value, prev)();
+    log('[store] %s = %s (was %s)', key, value, prev);
     api.storage[qKey] = value;
   }
 }
@@ -2057,13 +2057,13 @@ function storeDrafts(drafts) {
 }
 
 function saveDraft(key, draft) {
-  log('[saveDraft]', key)();
+  log('[saveDraft]', key);
   var now = draft.saved = Date.now();
   var drafts = loadDrafts();
   for (var k in drafts) {
     var d = drafts[k];
     if (now - d.saved > 259.2e6) { // 3 days
-      log('[saveDraft] culling', k, d, Date(d.saved))();
+      log('[saveDraft] culling', k, d, Date(d.saved));
       delete drafts[k];
     }
   }
@@ -2076,7 +2076,7 @@ function discardDraft(keys) {
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     if (key in drafts) {
-      log('[discardDraft]', key, drafts[key])();
+      log('[discardDraft]', key, drafts[key]);
       delete drafts[key];
       found = true;
     }
@@ -2090,11 +2090,11 @@ function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   var secName = type + 'Sec', timerName = type + 'Timer';
   if (tab[secName] == null || tab[timerName]) return;
-  log('[scheduleAutoEngage]', tab.id, type)();
+  log('[scheduleAutoEngage]', tab.id, type);
   tab[timerName] = api.timers.setTimeout(function autoEngage() {
     delete tab[secName];
     delete tab[timerName];
-    log('[autoEngage]', tab.id, type)();
+    log('[autoEngage]', tab.id, type);
     api.tabs.emit(tab, 'auto_engage', type, {queue: 1});
   }, tab[secName] * 1000);
 }
@@ -2194,7 +2194,7 @@ var admBaseUri = devUriOr.bind(null, 'https://admin.kifi.com');
 
 function getFriends(next) {
   ajax('GET', '/ext/user/friends', function gotFriends(fr) {
-    log('[gotFriends]', fr)();
+    log('[gotFriends]', fr);
     friends = fr;
     friendsById = {};
     for (var i = 0; i < fr.length; i++) {
@@ -2208,7 +2208,7 @@ function getFriends(next) {
 
 function getTags(next) {
   ajax('GET', '/tags', function gotTags(arr) {
-    log('[gotTags]', arr)();
+    log('[gotTags]', arr);
     tags = arr;
     tagsById = tags.reduce(function(o, tag) {
       o[tag.id] = tag;
@@ -2220,7 +2220,7 @@ function getTags(next) {
 
 function getPrefs(next) {
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
-    log('[gotPrefs]', o)();
+    log('[gotPrefs]', o);
     if (me) {
       me = standardizeUser(o.user);
       prefs = o.prefs;
@@ -2233,7 +2233,7 @@ function getPrefs(next) {
 
 function getRules(next) {
   ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
-    log('[gotRules]', o)();
+    log('[gotRules]', o);
     if (o && Object.getOwnPropertyNames(o).length > 0) {
       ruleSet = o.slider_rules;
       urlPatterns = compilePatterns(o.url_patterns);
@@ -2286,7 +2286,7 @@ function authenticate(callback, retryMs) {
     version: api.version
   },
   function done(data) {
-    log('[authenticate:done] reason: %s session: %o', api.loadReason, data)();
+    log('[authenticate:done] reason: %s session: %o', api.loadReason, data);
     unstore('logout');
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
@@ -2308,7 +2308,7 @@ function authenticate(callback, retryMs) {
     callback();
   },
   function fail(xhr) {
-    log('[authenticate:fail] xhr.status:', xhr.status)();
+    log('[authenticate:fail] xhr.status:', xhr.status);
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
         api.timers.setTimeout(authenticate.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
@@ -2351,7 +2351,7 @@ function clearSession() {
 }
 
 function deauthenticate() {
-  log("[deauthenticate]")();
+  log("[deauthenticate]");
   clearSession();
   store('logout', Date.now());
   ajax('GET', '/logout');
@@ -2374,7 +2374,7 @@ api.timers.setTimeout(api.errors.wrap(function() {
 
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
-    log('[main] fresh install')();
+    log('[main] fresh install');
     var tab = api.tabs.anyAt(webBaseUri() + '/install');
     if (tab) {
       api.tabs.navigate(tab.id, webBaseUri() + '/');

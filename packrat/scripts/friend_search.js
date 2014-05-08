@@ -6,7 +6,7 @@ var initFriendSearch = (function () {
   var searchCallbacks = {};
 
   api.onEnd.push(function () {
-    log('[friendSearch:onEnd]')();
+    log('[friendSearch:onEnd]');
     $('.kifi-ti-dropdown').remove();
   });
 

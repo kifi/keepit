@@ -6,7 +6,7 @@ const api = function() {
 
   self.port.on('api:respond', function (callbackId, response) {
     var cb = callbacks[callbackId];
-    log('[api:respond]', cb && cb[0] || '', response != null && (response.length || 0) < 200 ? response : '')();
+    log('[api:respond]', cb && cb[0] || '', response != null && (response.length || 0) < 200 ? response : '');
     if (cb) {
       delete callbacks[callbackId];
       cb[1](response);
@@ -101,7 +101,7 @@ function log() {
     }
   }
   args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
-  return console.log.apply.bind(console.log, console, args);
+  console.log.apply(console, args);
 }
 
 /^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
