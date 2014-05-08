@@ -8,7 +8,7 @@ GET     /-ss/login                   securesocial.controllers.LoginPage.login
 GET     /-logout                     securesocial.controllers.LoginPage.logout
 
 GET     /importContacts             @com.keepit.controllers.core.OAuth2Controller.importContacts(provider:Option[String], approvalPromptOpt:Option[String])
-GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:Id[ABookInfo], provider:Option[String])
+GET     /refreshContacts            @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:ExternalId[ABookInfo], provider:Option[String])
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
