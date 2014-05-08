@@ -1,0 +1,19 @@
+<div class="kifi-message-sent" data-id="{{id}}">
+  <div class="kifi-message-status"></div>
+  {{#sender.isUser}}
+    <img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{sender.id}}/pics/100/{{sender.pictureName}}"/>
+  {{/sender.isUser}}
+  {{^sender.isUser}}
+    <span class="kifi-message-pic-email kifi-participant-background-{{sender.color}}">{{sender.initial}}</span>
+  {{/sender.isUser}}
+  <div class="kifi-message-body">
+    <div class="kifi-message-top">
+      {{>messageTip}}
+      <div class="kifi-message-name">
+        {{#sender.isUser}}{{sender.firstName}} {{sender.lastName}}{{/sender.isUser}}
+        {{#sender.isEmail}}{{sender.id}}{{/sender.isEmail}}
+      </div>
+    </div>
+    {{#formatMessage}}{{{text}}}{{/formatMessage}}
+  </div>
+</div>
