@@ -35,19 +35,24 @@ class BookmarkImporter @Inject() (
 
         Try(bookmarks.file)
         .flatMap(parseNetscapeBookmarks)
-        .map { parsed =>
+        .map { case (sourceOpt, parsed) =>
           val tagSet = scala.collection.mutable.Set.empty[String]
           parsed.foreach { case (_, _, tagsOpt) =>
             tagsOpt.map { tagName =>
               tagSet.add(tagName)
             }
           }
+
+          val importTag = sourceOpt match {
+            case Some(source) => keepsCommander.getOrCreateTag(request.userId, "Imported from " + source.value)(context)
+            case None => keepsCommander.getOrCreateTag(request.userId, "Imported links")(context)
+          }
           val tags = tagSet.map { tagStr => tagStr.trim -> keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }.toMap
           val taggedKeeps = parsed.map { case (t, h, tagNames) =>
-            val keepTags = tagNames.map(tags.get).flatten.map(_.id.get)
+            val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
             (t, h, keepTags)
           }
-          val (importId, rawKeeps) = createRawKeeps(request.userId, taggedKeeps)
+          val (importId, rawKeeps) = createRawKeeps(request.userId, sourceOpt, taggedKeeps)
 
           keepInterner.persistRawKeeps(rawKeeps, Some(importId))
         } match {
@@ -61,17 +66,24 @@ class BookmarkImporter @Inject() (
     }
   }
 
-  def parseNetscapeBookmarks(bookmarks: File): Try[List[(String, String, List[String])]] = Try {
+  /* Parses Netscape-bookmark formatted file, extracting useful fields */
+  def parseNetscapeBookmarks(bookmarks: File): Try[(Option[KeepSource], List[(String, String, List[String])])] = Try {
     // This is a standard for bookmark exports.
     // http://msdn.microsoft.com/en-us/library/aa753582(v=vs.85).aspx
 
     import scala.collection.JavaConversions._
 
     val parsed = Jsoup.parse(bookmarks, "UTF-8")
+    val title = Option(parsed.select("title").text())
+
+    val source = title match {
+      case Some("Kippt Bookmarks") => Some(KeepSource("Kippt"))
+      case _ => None
+    }
 
     val links = parsed.select("dt a")
 
-    links.iterator().map { elem =>
+    val extracted = links.iterator().map { elem =>
       for {
         title <- Option(elem.text())
         href <- Option(elem.attr("href"))
@@ -85,9 +97,10 @@ class BookmarkImporter @Inject() (
         (title, href, tagsOpt)
       }
     }.toList.flatten
+    (source, extracted)
   }
 
-  def createRawKeeps(userId: Id[User], bookmarks: List[(String, String, List[Id[Collection]])]) = {
+  def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: List[(String, String, List[Id[Collection]])]) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map { case (title, href, tagIds) =>
       val titleOpt = if (title.length > 0) Some(title) else None
