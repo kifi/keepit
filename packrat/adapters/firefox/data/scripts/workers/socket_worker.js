@@ -12,7 +12,7 @@ function log() {
     }
   }
   a.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
-  return console.log.apply.bind(console.log, console, a);
+  console.log.apply(console, a);
 }
 
 var sockets = {};
@@ -24,7 +24,7 @@ if (self.options) {
 }
 
 function openSocket(socketId, url) {
-  log("[worker:openSocket]", socketId, url)();
+  log("[worker:openSocket]", socketId, url);
   sockets[socketId] = new ReconnectingWebSocket(url, {
     onConnect: function() {
       self.port.emit("socket_connect", socketId);
@@ -38,7 +38,7 @@ function openSocket(socketId, url) {
 }
 
 function closeSocket(socketId) {
-  log("[worker:closeSocket]", socketId)();
+  log("[worker:closeSocket]", socketId);
   var socket = sockets[socketId];
   if (socket) {
     socket.close();
@@ -49,7 +49,7 @@ function closeSocket(socketId) {
 function socketSend(socketId, data) {
   var socket = sockets[socketId];
   if (socket) {
-    log("[worker:socketSend]", socketId, data)();
+    log("[worker:socketSend]", socketId, data);
     socket.send(data);
   } else {
     console.error("[worker:socketSend] no socket", socketId, data);
