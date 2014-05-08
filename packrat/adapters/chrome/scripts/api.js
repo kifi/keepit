@@ -1,26 +1,41 @@
 // API for content scripts
 
-var api = api || function() {  // idempotent for Chrome
+var api = api || function () {
   'use strict';
   var msgHandlers = [], callbacks = {}, nextCallbackId = 1, port;
 
   function createPort() {
-    port = chrome.runtime.connect({name: ""});
+    port = chrome.runtime.connect({name: ''});
     port.onMessage.addListener(function(msg) {
       var kind = msg[0];
-      if (kind == "api:respond") {
+      switch (kind) {
+      case 'api:respond':
         var id = msg[1], cb = callbacks[id];
-        log("[api:respond]", cb && cb[0] || "", msg[2] != null ? msg[2] : "")();
+        log('[api:respond]', cb && cb[0] || '', msg[2] != null ? msg[2] : '')();
         if (cb) {
           delete callbacks[id];
           cb[1](msg[2]);
         }
-      } else if (kind == "api:injected") {
+        break;
+      case 'api:injected':
         markInjected(msg[1]);
         requireNext();
-      } else {
+        break;
+      case 'api:log':
+        var enable = msg[1], buf = log.buffer;
+        if (!enable && !buf) {
+          log.buffer = [];
+        } else if (enable && buf) {
+          log.buffer = null;
+          for (var i = 0; i < buf.length; i++) {
+            var o = buf[i];
+            log.apply(o.d, o.args)();
+          }
+        }
+        break;
+      default:
         var data = msg[1], handler;
-        log("[onMessage]", kind, data != null ? data : "")();
+        log('[onMessage]', kind, data != null ? data : '')();
         for (var i in msgHandlers) {
           if (handler = msgHandlers[i][kind]) {
             handler(data);
@@ -29,7 +44,7 @@ var api = api || function() {  // idempotent for Chrome
       }
     });
     port.onDisconnect.addListener(function() {
-      log("[onDisconnect]")();
+      log('[onDisconnect]')();
       api.port.on = api.port.emit = api.noop;
       for (var i in api.onEnd) {
         api.onEnd[i]();
@@ -51,7 +66,7 @@ var api = api || function() {  // idempotent for Chrome
       done();
     } else {
       requireQueue = requireQueue || [];
-      api.port.emit("api:require", {paths: paths, injected: api.injected}, function(paths) {
+      api.port.emit('api:require', {paths: paths, injected: api.injected}, function(paths) {
         markInjected(paths);
         done();
       });
@@ -82,7 +97,7 @@ var api = api || function() {  // idempotent for Chrome
     onEnd: [],
     port: {
       emit: function(type, data, callback) {
-        if (!callback && typeof data == "function") {
+        if (!callback && typeof data == 'function') {
           callback = data, data = null;
         }
         if (callback) {
@@ -115,11 +130,27 @@ var api = api || function() {  // idempotent for Chrome
     url: chrome.runtime.getURL};
 }();
 
-var log = log || function() {  // idempotent for Chrome
+var log = log || function () {
   'use strict';
-  var d = new Date, ds = d.toString();
-  arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
-  return console.log.apply.bind(console.log, console, arguments);
-};
+  function log() {
+    var buf = log.buffer;
+    if (buf) {
+      var i = 0, d = new Date;
+      while (i < buf.length && d - buf[i].d > 5000) {
+        i++;
+      }
+      if (i) {
+        log.buffer = buf.slice(i);
+      }
+      log.buffer.push({d: d, args: Array.prototype.slice.call(arguments)});
+      return api.noop;
+    }
+    var d = this || new Date, ds = d.toString();
+    arguments[0] = '[' + ds.substr(0, 2) + ds.substr(15,9) + '.' + String(+d).substr(10) + '] ' + arguments[0];
+    return console.log.apply.bind(console.log, console, arguments);
+  }
+  log.buffer = [];
+  return log;
+}();
 
 /^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
