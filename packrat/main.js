@@ -1347,7 +1347,7 @@ function markRead(threadId, messageId, time) {
       th ? '' : 'not loaded',
       th && !th.unread ? 'read' : '',
       th && th.id !== messageId ? 'message: ' + th.id : '',
-      th && th.time > time ? 'newer: ' + th.time : '')();
+      th && th.time > time ? 'newer: ' + th.time : '');
   }
 }
 
