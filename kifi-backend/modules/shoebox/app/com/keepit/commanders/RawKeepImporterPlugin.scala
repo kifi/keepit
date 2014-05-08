@@ -107,8 +107,8 @@ private class RawKeepImporterActor @Inject() (
         //the bookmarks list may be very large!
         searchClient.updateURIGraph()
 
-        // Reduce all successes to a map of tagIdString -> tagId (typed), ignore errors (we c
-        val tagStrToId = successesRawKeep.map { rk =>
+        // Reduce all successes to a map of tagIdString -> tagId (typed), ignore errors (we don't care at this stage)
+        val tagStrToId: Map[String, Id[Collection]] = successesRawKeep.map { rk =>
           rk.tagIds.map { tags =>
             tags.split(",").toSeq.map { c => Try(c.toLong).map(Id[Collection]).toOption.map( c -> _) }.flatten
           }
