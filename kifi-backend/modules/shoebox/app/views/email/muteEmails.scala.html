@@ -6,10 +6,15 @@
     <h2 class="page-title">Opt-out of Kifi Emails</h2>
     <section>
         <h3>@if(msg.isDefined){@msg}else{@email}</h3>
-        <p>You will no longer receive email updates for this discussion.</p>
+        @if(muted){
+            <p>Click on Resubscribe to start receiving email updates again.</p>
+        } else {
+            <p>Click on the button below to stop receiving email updates for this discussion.</p>
+        }
+        </p>
         <form id="optout" method="POST">
             <input type="hidden" name="should-mute" id="can-receive-emails">
-            <span class="optout" id="update">@if(muted){Resubscribe}else{Opt-out}</span>
+            <span class="kifi-action" id="update">@if(muted){Resubscribe}else{Opt-out}</span>
         </form>
     </section>
 </main>
@@ -30,7 +35,7 @@
 @styles = {
 <link rel="stylesheet" href="/assets/css/auth2.css">
 <link rel="stylesheet" href="/assets/css/auth-footer.css">
-<link rel="stylesheet" href="/assets/css/optout.css">
+<link rel="stylesheet" href="/assets/css/userAction.css">
 }
 
 @views.html.marketing.helper.page(title = "kifi • Opt-out of emails", styles = styles, content = content, scripts = scripts, dataTrack = "optOutEmails", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")
