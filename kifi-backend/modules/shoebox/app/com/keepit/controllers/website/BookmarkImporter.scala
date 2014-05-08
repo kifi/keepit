@@ -97,13 +97,11 @@ class BookmarkImporter @Inject() (
 
         val tagList = (lists + tags).split(",").map(_.trim).filter(_.length > 0).toList
 
-        val tagsOpt = Option(elem.attr("list")).map(_.split(",").toList).getOrElse(List.empty)
-
         // These may be useful in the future, but we currently are not using them:
         // val createdDate = Option(elem.attr("add_date"))
         // val lastVisitDate = Option(elem.attr("last_visit"))
 
-        (title, href, tagsOpt)
+        (title, href, tagList)
       }
     }.toList.flatten
     (source, extracted)
