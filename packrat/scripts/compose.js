@@ -240,7 +240,7 @@ var initCompose = (function() {
       $menu.remove();
       if (toggle) {
         enterToSend = !enterToSend;
-        log('[enterToSend]', enterToSend)();
+        log('[enterToSend]', enterToSend);
         updateKeyTip($composes);
         api.port.emit('set_enter_to_send', enterToSend);
       }
@@ -277,7 +277,7 @@ var initCompose = (function() {
       }
     },
     prefill: function (r) {
-      log('[compose.prefill]', r)();
+      log('[compose.prefill]', r);
       r.name = r.name || r.firstName + ' ' + r.lastName;
       defaultText = '';
       $t.tokenInput('clear').tokenInput('add', r);
@@ -287,7 +287,7 @@ var initCompose = (function() {
       return snap.enabled() && snap.attempt();
     },
     focus: function () {
-      log('[compose.focus]')();
+      log('[compose.focus]');
       if ($t.length && !$t.tokenInput('get').length) {
         $f.find('.kifi-ti-token-for-input>input').focus();
       } else {

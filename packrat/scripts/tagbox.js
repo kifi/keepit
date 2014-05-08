@@ -34,7 +34,7 @@ this.tagbox = (function ($, win) {
 	function log(name) {
 		var args = Array.prototype.slice.call(arguments);
 		args[0] = '[tagbox.' + name + ']';
-		return win.log.apply(win, args)();
+		return win.log.apply(win, args);
 	}
 
 	function indexOfTag(tags, tagId) {

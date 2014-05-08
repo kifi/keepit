@@ -5,7 +5,7 @@ document.addEventListener('click', function(e) {
   'use strict';
   var uri, loc;
   if (!e.button && (uri = e.target.href) && (loc = e.target.dataset.locator)) {
-    log('[deep_link_site:click]', uri, loc)();
+    log('[deep_link_site:click]', uri, loc);
     api.port.emit("open_deep_link", {nUri: uri, locator: loc});
     e.preventDefault();
     e.stopPropagation();
