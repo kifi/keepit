@@ -758,7 +758,7 @@ api.port.on({
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
   import_contacts: function (source) {
-    api.tabs.selectOrOpen(webBaseUri() + '/invite');
+    api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
     mixpanel.track('user_clicked_pane', {type: source, action: 'clickImportContacts'});
   },
   screen_capture: function (data, respond) {
@@ -1092,6 +1092,9 @@ api.port.on({
   },
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);
+  },
+  close_tab: function (_, __, tab) {
+    api.tabs.close(tab.id);
   },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
