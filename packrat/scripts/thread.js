@@ -86,7 +86,7 @@ panes.thread = function () {
         var link = this;
         render('html/keeper/message_email_tooltip', function (html) {
           configureHover(html, {
-            mustHoverFor: 9000000, click: 'toggle',
+            mustHoverFor: 1e9, click: 'toggle',
             position: {my: 'right+50 bottom-10', at: 'center top', of: link, collision: 'none'}
           });
         });
@@ -211,6 +211,11 @@ panes.thread = function () {
   function renderMessage(m) {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
+    if (m.auxData && m.auxData.length >= 3 && m.auxData[0] === 'add_participants') {
+      var added = m.auxData[2], i = 0;
+      while (i < added.length && added[i].kind !== 'email') i++;
+      m.hasEmail = i < added.length;
+    }
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
     m.isLoggedInUser = m.sender && m.sender.id === me.id;

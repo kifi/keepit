@@ -1,5 +1,4 @@
 // @require scripts/emoji.js
-// @require scripts/html/keeper/message_aux_email.js
 
 var formatMessage = (function () {
   'use strict';
@@ -219,18 +218,12 @@ var formatAuxData = (function () {
     add_participants: function (actor, added) {
       var message;
       if (isMe(actor)) {
-        message = 'You added ' + boldNamesOf(added) + '.';
-      } else if (added.some(isMe)) {
-        message = boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
-      } else {
-        message = nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
+        return 'You added ' + boldNamesOf(added) + '.';
       }
-      var i = 0;
-      while (i < added.length && added[i].kind !== 'email') i++;
-      return render('html/keeper/message_aux_email', {
-        message: message,
-        hasEmail: i < added.length
-      });   
+      if (added.some(isMe)) {
+        return boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
+      }
+      return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';  
     }
   };
 
