@@ -212,9 +212,7 @@ panes.thread = function () {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
     if (m.auxData && m.auxData.length >= 3 && m.auxData[0] === 'add_participants') {
-      var added = m.auxData[2], i = 0;
-      while (i < added.length && added[i].kind !== 'email') i++;
-      m.hasEmail = i < added.length;
+      m.hasEmail = m.auxData[2].some(function (o) {return o.kind === 'email'});
     }
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
