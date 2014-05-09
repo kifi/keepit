@@ -17,16 +17,8 @@ sealed trait GraphUpdate { self =>
   def instance: U = self
 }
 
-object GraphUpdate {
-  implicit val format = new Format[GraphUpdate] {
-    def writes(update: GraphUpdate) = Json.obj("code" -> update.kind.code, "value" -> update.kind.format.writes(update.instance))
-    def reads(json: JsValue) = (json \ "code").validate[String].flatMap { code => GraphUpdateKind(code).format.reads(json \ "value") }
-  }
-}
-
 sealed trait GraphUpdateKind[U <: GraphUpdate] {
   def code: String
-  def format: Format[U]
   def seq(value: Long): SequenceNumber[U] = SequenceNumber(value)
 }
 
@@ -34,7 +26,7 @@ object GraphUpdateKind {
   val all: Set[GraphUpdateKind[_ <: GraphUpdate]] = CompanionTypeSystem[GraphUpdate, GraphUpdateKind[_ <: GraphUpdate]]("U")
   private val byCode: Map[String, GraphUpdateKind[_ <: GraphUpdate]] = {
     require(all.size == all.map(_.code).size, "Duplicate GraphUpdateKind names.")
-    all.map { ingestableKind => ingestableKind.code -> ingestableKind }.toMap
+    all.map { kind => kind.code -> kind }.toMap
   }
   def apply(code: String): GraphUpdateKind[_ <: GraphUpdate] = byCode(code)
 }
@@ -47,10 +39,7 @@ case class UserGraphUpdate(userId: Id[User], userSeq: SequenceNumber[User]) exte
 
 case object UserGraphUpdate extends GraphUpdateKind[UserGraphUpdate] {
   val code = "user_graph_update"
-  implicit val format: Format[UserGraphUpdate] = (
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'userSeq).format(SequenceNumber.format[User])
-  )(UserGraphUpdate.apply, unlift(UserGraphUpdate.unapply))
+  def apply(user: User): UserGraphUpdate = UserGraphUpdate(user.id.get, user.seq)
 }
 
 case class UserConnectionGraphUpdate(firstUserId: Id[User], secondUserId: Id[User], state: State[UserConnection], userConnectionSeq: SequenceNumber[UserConnection]) extends GraphUpdate {
@@ -61,12 +50,7 @@ case class UserConnectionGraphUpdate(firstUserId: Id[User], secondUserId: Id[Use
 
 case object UserConnectionGraphUpdate extends GraphUpdateKind[UserConnectionGraphUpdate] {
   val code = "user_connection_graph_update"
-  implicit val format: Format[UserConnectionGraphUpdate] = (
-    (__ \ 'firstUserId).format(Id.format[User]) and
-    (__ \ 'secondUserId).format(Id.format[User]) and
-    (__ \ 'state).format(State.format[UserConnection]) and
-    (__ \ 'userConnectionSeq).format(SequenceNumber.format[UserConnection])
-  )(UserConnectionGraphUpdate.apply, unlift(UserConnectionGraphUpdate.unapply))
+  def apply(userConnection: UserConnection): UserConnectionGraphUpdate = UserConnectionGraphUpdate(userConnection.user1, userConnection.user2, userConnection.state, userConnection.seq)
 }
 
 case class SocialUserInfoGraphUpdate(socialUserId: Id[SocialUserInfo], network: SocialNetworkType, userId: Option[Id[User]], socialUserSeq: SequenceNumber[SocialUserInfo]) extends GraphUpdate {
@@ -77,12 +61,6 @@ case class SocialUserInfoGraphUpdate(socialUserId: Id[SocialUserInfo], network: 
 
 case object SocialUserInfoGraphUpdate extends GraphUpdateKind[SocialUserInfoGraphUpdate] {
   val code = "social_user_info_graph_update"
-  implicit val format: Format[SocialUserInfoGraphUpdate] = (
-    (__ \ 'socialUserId).format(Id.format[SocialUserInfo]) and
-    (__ \ 'network).format[SocialNetworkType] and
-    (__ \ 'userId).formatNullable(Id.format[User]) and
-    (__ \ 'socialUserSeq).format(SequenceNumber.format[SocialUserInfo])
-  )(SocialUserInfoGraphUpdate.apply, unlift(SocialUserInfoGraphUpdate.unapply))
 }
 
 case class SocialConnectionGraphUpdate(firstSocialUserId: Id[SocialUserInfo], secondSocialUserId: Id[SocialUserInfo], network: SocialNetworkType, state: State[SocialConnection], socialConnectionSeq: SequenceNumber[SocialConnection]) extends GraphUpdate {
@@ -93,13 +71,6 @@ case class SocialConnectionGraphUpdate(firstSocialUserId: Id[SocialUserInfo], se
 
 case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnectionGraphUpdate] {
   val code = "social_connection_graph_update"
-  implicit val format: Format[SocialConnectionGraphUpdate] = (
-    (__ \ 'firstSocialUserId).format(Id.format[SocialUserInfo]) and
-    (__ \ 'secondSocialUserId).format(Id.format[SocialUserInfo]) and
-    (__ \ 'network).format[SocialNetworkType] and
-    (__ \ 'state).format(State.format[SocialConnection]) and
-    (__ \ 'SocialConnectionSeq).format(SequenceNumber.format[SocialConnection])
-  )(SocialConnectionGraphUpdate.apply, unlift(SocialConnectionGraphUpdate.unapply))
 }
 
 case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
@@ -110,13 +81,7 @@ case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedU
 
 case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
   val code = "keep_graph_update"
-  implicit val format: Format[KeepGraphUpdate] = (
-    (__ \ 'id).format(Id.format[Keep]) and
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'state).format(State.format[Keep]) and
-    (__ \ 'keepSeq).format(SequenceNumber.format[Keep])
-  )(KeepGraphUpdate.apply, unlift(KeepGraphUpdate.unapply))
+  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.seq)
 }
 
 case class LDAURITopicGraphUpdate(
