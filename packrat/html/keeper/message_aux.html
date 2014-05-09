@@ -1,5 +1,13 @@
 <div class="kifi-message-sent kifi-message-aux kifi-message-{{auxData.0}}" data-id="{{id}}">
   <div class="kifi-message-status"></div>
   {{>messageTip}}
-  <div class="kifi-aux-message">{{{formatAuxData}}}</div>
+  <div class="kifi-aux-message">
+    <p>{{{formatAuxData}}}</p>
+    {{#hasEmail}}
+      <p>
+        <a href="javascript:" class="kifi-message-email-view">View email</a> | 
+        <a href="javascript:" class="kifi-message-email-learn">Learn more</a>
+      </p>
+    {{/hasEmail}}
+  </div>
 </div>

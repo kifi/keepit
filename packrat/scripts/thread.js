@@ -5,6 +5,7 @@
 // @require scripts/html/keeper/message_aux.js
 // @require scripts/html/keeper/message_discussion.js
 // @require scripts/html/keeper/message_tip.js
+// @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/formatting.js
@@ -81,6 +82,15 @@ panes.thread = function () {
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks()
+      .hoverfu('.kifi-message-email-learn', function (configureHover) {
+        var link = this;
+        render('html/keeper/message_email_tooltip', function (html) {
+          configureHover(html, {
+            mustHoverFor: 1e9, click: 'toggle',
+            position: {my: 'right+50 bottom-10', at: 'center top', of: link, collision: 'none'}
+          });
+        });
+      })
       .data({threadId: threadId, compose: compose});
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
@@ -193,7 +203,7 @@ panes.thread = function () {
     setTimeout(function() {
       if (!$m.attr('data-id') && !$m.data('error')) {
         $m.find('time').hide();
-        $m.find('.kifi-message-status').text('sending…')
+        $m.find('.kifi-message-status').text('sending…');
       }
     }, 1000);
   }
@@ -201,6 +211,11 @@ panes.thread = function () {
   function renderMessage(m) {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
+    if (m.auxData && m.auxData.length >= 3 && m.auxData[0] === 'add_participants') {
+      var added = m.auxData[2], i = 0;
+      while (i < added.length && added[i].kind !== 'email') i++;
+      m.hasEmail = i < added.length;
+    }
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
     m.isLoggedInUser = m.sender && m.sender.id === me.id;
@@ -212,11 +227,11 @@ panes.thread = function () {
       messageTip: 'message_tip'
     };
     if (m.auxData && m.auxData.length) {
-      var rendered = $(render('html/keeper/message_aux', m, templates));
+      var $rendered = $(render('html/keeper/message_aux', m, templates));
     } else {
-      var rendered = $(render('html/keeper/message_discussion', m, templates));
+      var $rendered = $(render('html/keeper/message_discussion', m, templates));
     }
-    return rendered.find('time').timeago().end()[0];
+    return $rendered.find('time').timeago().end()[0];
   }
 
   function handleReplyError($reply, status, originalText, threadId) {

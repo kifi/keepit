@@ -137,3 +137,67 @@ img.kifi-message-pic.kifi-self {
   width: 100%;
   background-color: #fafafa;
 }
+.kifi-message-email-view,
+.kifi-message-email-learn {
+  text-decoration: underline;
+}
+.kifi-message-email-tooltip {
+  width: 300px;
+  padding: 15px;
+  background-color: #fff;
+  color: black;
+  box-shadow: rgba(103,130,156,.35) 2px 3px;
+  border: 1px solid #b8c5d2;
+  border-radius: 3px;
+  text-align: left;
+  font-size: 13px;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 999999999992;
+  -webkit-transform: translate(0, 3px);
+  transform: translate(0, 3px);
+  transition: opacity linear, -webkit-transform ease-in-out;
+  transition: opacity linear, transform ease-in-out;
+  transition-duration: 100ms;
+}
+.kifi-message-email-tooltip.kifi-showing {
+  -webkit-transform: none;
+  transform: none;
+  transition-duration: 60ms;
+  opacity: 1;
+  visibility: visible;
+}
+.kifi-message-email-tooltip-tri {
+  position: absolute;
+  height: 14px;
+  width: 28px;
+  bottom: -14px;
+  right: 40px;
+  margin-left: -14px;
+  overflow: hidden;
+  border-color: inherit;
+}
+.kifi-message-email-tooltip-tri::after {
+  content: ' ';
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 7px;
+  top: -7px;
+  -webkit-transform: rotate(45deg);
+  transform: rotate(45deg);
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  box-shadow: rgba(103, 130, 156, .35) 2px 1px;
+  border: 1px solid;
+  border-color: inherit;
+  background-color: #fff;
+}
+
+a.kifi-message-email-view,
+a.kifi-message-email-learn,
+a.kifi-message-email-view:hover,
+a.kifi-message-email-learn:hover {
+  color: inherit;
+}
+
