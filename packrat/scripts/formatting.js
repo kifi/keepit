@@ -216,14 +216,13 @@ var formatAuxData = (function () {
   'use strict';
   var formatters = {
     add_participants: function (actor, added) {
-      var message;
       if (isMe(actor)) {
         return 'You added ' + boldNamesOf(added) + '.';
       }
       if (added.some(isMe)) {
         return boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
       }
-      return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';  
+      return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
     }
   };
 
