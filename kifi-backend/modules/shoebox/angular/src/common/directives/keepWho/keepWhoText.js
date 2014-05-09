@@ -15,11 +15,10 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
       link: function (scope) {
 
         scope.me = profileService.me;
-        profileService.getMe();
 
-        scope.helprankEnabled = function() {
+        scope.helprankEnabled = function () {
           var experiments = scope.me.experiments;
-          return (experiments.indexOf('helprank') > -1);
+          return experiments.indexOf('helprank') > -1;
         };
 
         scope.isPrivate = function () {
@@ -36,12 +35,12 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
           return keep.others > 0;
         };
 
-        scope.hasClicks = function() {
+        scope.hasClicks = function () {
           var keep = scope.keep;
           return (keep.clickCount && keep.clickCount > 0);
         };
 
-        scope.getClicks = function() {
+        scope.getClicks = function () {
           var keep = scope.keep;
           return (keep.clickCount || 0);
         };
@@ -70,17 +69,6 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
           }
           if (scope.keep.isMyBookmark || scope.keep.keepers.length > 0) {
             text = '+ ' + text;
-          }
-          return text;
-        };
-
-        scope.getClicksText = function() {
-          var clickCount = scope.keep.clickCount || 0;
-          var text;
-          if (clickCount === 0) {
-            text = '';
-          } else {
-            text = clickCount + ' discovered this keep!';
           }
           return text;
         };
