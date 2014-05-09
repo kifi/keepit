@@ -16,10 +16,12 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
 
         scope.me = profileService.me;
 
-        scope.helprankEnabled = function () {
-          var experiments = scope.me.experiments;
-          return experiments.indexOf('helprank') > -1;
-        };
+        scope.helprankEnabled = false;
+        scope.$watch(function () {
+          return profileService.me.seqNum;
+        }, function () {
+          scope.helprankEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('helprank') > -1;
+        });
 
         scope.isPrivate = function () {
           return scope.keep.isPrivate || false;
