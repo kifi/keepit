@@ -127,9 +127,11 @@ class KeepInterner @Inject() (
   }
 
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
-    db.readWrite { implicit s => internUriAndBookmark(rawBookmark, userId, source, mutatePrivacy) } map { persistedBookmarksWithUris =>
-      val bookmark = persistedBookmarksWithUris.bookmark
-      if (persistedBookmarksWithUris.isNewKeep) {
+    db.readWrite { implicit s =>
+      internUriAndBookmark(rawBookmark, userId, source, mutatePrivacy)
+    } map { persistedBookmarksWithUri =>
+      val bookmark = persistedBookmarksWithUri.bookmark
+      if (persistedBookmarksWithUri.isNewKeep) {
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
         keepAttribution(userId, Seq(bookmark))
       }

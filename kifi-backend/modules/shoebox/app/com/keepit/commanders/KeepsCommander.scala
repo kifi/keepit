@@ -128,9 +128,8 @@ class KeepsCommander @Inject() (
 
   def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
-    val rawBookmarks = rawBookmarkFactory.toRawBookmark(keepJson)
-    if (rawBookmarks.size != 1) throw new Exception(s"there should be only one bookmark in json where actually there are ${rawBookmarks.size} : $keepJson")
-    keepInterner.internRawBookmark(rawBookmarks.head, userId, source, mutatePrivacy = true, installationId) match {
+    val rawBookmark = rawBookmarkFactory.toRawBookmark(keepJson)
+    keepInterner.internRawBookmark(rawBookmark, userId, source, mutatePrivacy = true, installationId) match {
       case Failure(e) =>
         throw e
       case Success(keep) =>
@@ -295,7 +294,7 @@ class KeepsCommander @Inject() (
   }
 
   def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
+    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmarks(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag.id.get, bookmarks)
   }
 
