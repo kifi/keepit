@@ -31,7 +31,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val bookmarkInterner = inject[KeepInterner]
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.obj(
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
           )), user.id.get, KeepSource.email, true)
@@ -68,7 +68,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val bookmarkInterner = inject[KeepInterner]
-        val raw = inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+        val raw = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
         ), Json.obj(
@@ -97,7 +97,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           (u1, u2, u3)
         }
         val bookmarkInterner = inject[KeepInterner]
-        val raw1 = inject[RawBookmarkFactory].toRawBookmark(Json.arr(
+        val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(
           Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> false
@@ -107,7 +107,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           ))
         )
 
-        val raw2 = inject[RawBookmarkFactory].toRawBookmark(Json.arr(
+        val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(
           Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> false
@@ -122,7 +122,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           ))
         )
 
-        val raw3 = inject[RawBookmarkFactory].toRawBookmark(Json.arr(
+        val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(
           Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> false
@@ -257,7 +257,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "dedup on" in {
       withDb(modules: _*) { implicit injector =>
         val bookmarkInterner = inject[KeepInterner]
-        val raw = inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+        val raw = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
         ), Json.obj(
@@ -270,7 +270,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "dedup off" in {
       withDb(modules: _*) { implicit injector =>
         val bookmarkInterner = inject[KeepInterner]
-        val raw = inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+        val raw = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://43go.com",
           "isPrivate" -> true
         ), Json.obj(
@@ -289,7 +289,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val fakeAirbrake = inject[FakeAirbrakeNotifier]
         fakeAirbrake.errorCount() === 0
         val bookmarkInterner = inject[KeepInterner]
-        val raw = inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+        val raw = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
         ), Json.obj(
@@ -320,7 +320,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "Greg", lastName = "Smith"))
         }
         val bookmarkInterner = inject[KeepInterner]
-        val (initialBookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+        val (initialBookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
         ))), user.id.get, KeepSource.keeper, true)
@@ -328,7 +328,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           keepRepo.save(keepRepo.getByUser(user.id.get).head.withActive(false))
         }
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmark(Json.arr(Json.obj(
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
         ))), user.id.get, KeepSource.keeper, true)
