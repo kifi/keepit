@@ -1,14 +1,14 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import java.net.URLEncoder
 import play.api.mvc._
-import play.api.libs.ws.{Response, WS}
+import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
-import play.api.{Logger, Play}
+import play.api.Play
 import play.api.Play.current
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.functional.syntax._
@@ -19,14 +19,11 @@ import com.keepit.model.{ABookInfo, User, OAuth2Token}
 import com.keepit.common.db.{ExternalId, Id}
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.{Failure, Success}
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.ws.Response
-import com.keepit.controllers.core.OAuth2Config
-import com.keepit.controllers.core.OAuth2CommonConfig
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 

@@ -24,6 +24,7 @@ import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.store.ImageSize
+import scala.util.{Success, Failure}
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -127,18 +128,24 @@ class KeepsCommander @Inject() (
 
   def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
-    val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
-    SafeFuture{
-      searchClient.updateURIGraph()
-      notifyWhoKeptMyKeeps(userId, Seq(keep))
+    val rawBookmarks = rawBookmarkFactory.toRawBookmark(keepJson)
+    if (rawBookmarks.size != 1) throw new Exception(s"there should be only one bookmark in json where actually there are ${rawBookmarks.size} : $keepJson")
+    keepInterner.internRawBookmark(rawBookmarks.head, userId, source, mutatePrivacy = true, installationId) match {
+      case Failure(e) =>
+        throw e
+      case Success(keep) =>
+        SafeFuture{
+          searchClient.updateURIGraph()
+          notifyWhoKeptMyKeeps(userId, Seq(keep))
+        }
+        KeepInfo.fromBookmark(keep)
     }
-    KeepInfo.fromBookmark(keep)
   }
 
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
       (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
+    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
