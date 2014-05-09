@@ -143,22 +143,18 @@ img.kifi-message-pic.kifi-self {
   text-decoration: underline;
 }
 .kifi-message-email-tooltip {
-  position: absolute;
   width: 300px;
   padding: 15px;
-  left: -84px;
   background-color: #fff;
-  color: #faf9f9;
+  color: black;
   box-shadow: rgba(103,130,156,.35) 2px 3px;
   border: 1px solid #b8c5d2;
   border-radius: 3px;
   text-align: left;
-  cursor: pointer;
-  z-index: 999999999992;
-  color: black;
   font-size: 13px;
   opacity: 0;
   visibility: hidden;
+  z-index: 999999999992;
   -webkit-transform: translate(0, 3px);
   transform: translate(0, 3px);
   transition: opacity linear, -webkit-transform ease-in-out;
