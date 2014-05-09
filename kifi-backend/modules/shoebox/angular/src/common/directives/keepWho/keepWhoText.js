@@ -37,16 +37,6 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
           return keep.others > 0;
         };
 
-        scope.hasClicks = function () {
-          var keep = scope.keep;
-          return (keep.clickCount && keep.clickCount > 0);
-        };
-
-        scope.getClicks = function () {
-          var keep = scope.keep;
-          return (keep.clickCount || 0);
-        };
-
         scope.getFriendText = function () {
           var keepers = scope.keep.keepers,
             len = keepers && keepers.length || 0,
