@@ -35,7 +35,7 @@ class NormalizationWorker @Inject()(
   }
 
   def consume() = {
-    updateQ.nextBatchWithLock(10, 2 minutes) onComplete {
+    updateQ.nextBatchWithLock(5, 2 minutes) onComplete {
       case Failure(t) =>
         airbrake.notify(s"Caught exception $t while consuming messages from $updateQ",t)
       case Success(messages) =>
