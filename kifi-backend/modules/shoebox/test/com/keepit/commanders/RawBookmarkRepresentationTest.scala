@@ -7,17 +7,17 @@ class RawBookmarkRepresentationTest extends Specification {
   "BookmarkInterner" should {
 
     "toRawBookmark from top level" in {
-      val raw = new RawBookmarkFactory(null).toRawBookmark(Json.parse("""{"bookmarks":[{"title":"Presto | Distributed SQL Query Engine for Big Data","url":"http://prestodb.io/","isPrivate":false}],"source":"HOVER_KEEP"}"""))
+      val raw = new RawBookmarkFactory(null).toRawBookmarks(Json.parse("""{"bookmarks":[{"title":"Presto | Distributed SQL Query Engine for Big Data","url":"http://prestodb.io/","isPrivate":false}],"source":"HOVER_KEEP"}"""))
       raw.size === 1
       raw(0).url === "http://prestodb.io/"
     }
     "toRawBookmark from array" in {
-      val raw = new RawBookmarkFactory(null).toRawBookmark(Json.parse("""[{"title":"Presto | Distributed SQL Query Engine for Big Data","url":"http://prestodb.io/","isPrivate":false}]"""))
+      val raw = new RawBookmarkFactory(null).toRawBookmarks(Json.parse("""[{"title":"Presto | Distributed SQL Query Engine for Big Data","url":"http://prestodb.io/","isPrivate":false}]"""))
       raw.size === 1
       raw(0).url === "http://prestodb.io/"
     }
     "toRawBookmark from single object" in {
-      val raw = new RawBookmarkFactory(null).toRawBookmark(Json.parse("""{"title":"Presto | Distributed SQL Query Engine for Big Data","url":"http://prestodb.io/","isPrivate":false}"""))
+      val raw = new RawBookmarkFactory(null).toRawBookmarks(Json.parse("""{"title":"Presto | Distributed SQL Query Engine for Big Data","url":"http://prestodb.io/","isPrivate":false}"""))
       raw.size === 1
       raw(0).url === "http://prestodb.io/"
     }

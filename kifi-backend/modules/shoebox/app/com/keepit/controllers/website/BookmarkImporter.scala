@@ -95,7 +95,7 @@ class BookmarkImporter @Inject() (
         val lists = Option(elem.attr("list")).getOrElse("")
         val tags = Option(elem.attr("tags")).getOrElse("")
 
-        val tagList = (lists + tags).split(",").map(_.trim).filter(_.length > 0).toList
+        val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList
 
         // These may be useful in the future, but we currently are not using them:
         // val createdDate = Option(elem.attr("add_date"))
@@ -110,9 +110,9 @@ class BookmarkImporter @Inject() (
   def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: List[(String, String, List[Id[Collection]])]) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map { case (title, href, tagIds) =>
-      val titleOpt = if (title.length > 0) Some(title) else None
+      val titleOpt = if (title.nonEmpty) Some(title) else None
       val tags = tagIds.map(_.id.toString).mkString(",") match {
-        case s if s.length == 0 => None
+        case s if s.isEmpty => None
         case s => Some(s)
       }
 
