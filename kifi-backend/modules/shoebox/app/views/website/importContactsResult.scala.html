@@ -6,9 +6,9 @@
     <section>
         <h3>
             @if(isSuccess){
-                @if(numImported.isEmpty){Your}else{@{numImported.get}} gmail contacts were successfully imported!
+                @if(numImported.isEmpty){Your}else{@{numImported.get}} Gmail contacts were successfully imported!
             } else {
-                Failed to import your gmail contacts.
+                Sorry, we couldn't import your Gmail contacts. Please try again later!
             }
         </h3>
         @if(redirectUrl.isEmpty){

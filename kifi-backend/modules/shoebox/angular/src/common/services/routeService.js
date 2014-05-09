@@ -28,7 +28,7 @@ angular.module('kifi.routeService', [])
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
       importGmail: function () {
-        return env.origin + '/importContacts?redirectUrl=' + $location.url(); // wtf, why top level route?
+        return env.origin + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
