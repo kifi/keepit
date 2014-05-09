@@ -22,4 +22,6 @@ object GraphUpdaterState {
   }
 
   def empty = GraphUpdaterState(Map.empty)
+
+  def prettify(state: GraphUpdaterState): PrettyGraphState = PrettyGraphState(state.state.map { case (kind, seq) => kind.toString -> seq }.toMap)
 }

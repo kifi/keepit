@@ -3,7 +3,7 @@ package com.keepit.graph.controllers.internal
 import com.google.inject.Inject
 import com.keepit.common.controller.GraphServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.graph.manager.{GraphStatistics, GraphManager}
+import com.keepit.graph.manager.{GraphUpdaterState, GraphStatistics, GraphManager}
 import play.api.mvc.Action
 import play.api.libs.json._
 
@@ -23,7 +23,7 @@ class GraphController @Inject() (
 
   def getGraphUpdaterState() = Action { request =>
     val state = graphManager.state
-    val json = Json.toJson(state)
+    val json = Json.toJson(GraphUpdaterState.prettify(state))
     Ok(json)
   }
 }
