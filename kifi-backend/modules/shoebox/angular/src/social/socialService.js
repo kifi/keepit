@@ -143,7 +143,7 @@ angular.module('kifi.socialService', [
         $analytics.eventTrack('user_clicked_page', {
           'action': 'importGmail'
         });
-        $window.location.href = routeService.importGmail;
+        $window.location.href = routeService.importGmail();
       },
 
       disconnectFacebook: function () {
