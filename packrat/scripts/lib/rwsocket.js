@@ -22,7 +22,7 @@ function ReconnectingWebSocket(url, opts) {
     }
   };
   this.close = function() {
-    log('#0bf', '[RWS.close]')();
+    log('#0bf', '[RWS.close]');
     disconnect('close');
     this.send = this.close = outbox = null;
     window.removeEventListener('online', onOnlineConnect);
@@ -33,7 +33,7 @@ function ReconnectingWebSocket(url, opts) {
   function connect(retryPolicy, elapsedRetryDelayMs) {
     clearTimers();
     if (navigator.onLine) {
-      log('#0bf', '[RWS.connect]')();
+      log('#0bf', '[RWS.connect]');
       ws = new WebSocket(url);
       ws.onopen = onOpen;
       ws.onclose = onClose;
@@ -42,14 +42,14 @@ function ReconnectingWebSocket(url, opts) {
         disconnect.bind(null, 'connect', o.openTimeoutMs, retryPolicy, elapsedRetryDelayMs),
         o.openTimeoutMs);  // expecting onOpen
     } else {
-      log('#0bf', '[RWS.connect] offline')();
+      log('#0bf', '[RWS.connect] offline');
       window.addEventListener('online', onOnlineConnect);
     }
   }
 
   function disconnect(why, msWaited, retryPolicy, prevRetryDelayMs) {
     var retryDelayMs = why === 'close' ? null : calcRetryConnectDelay[retryPolicy || 'standard'](prevRetryDelayMs);
-    log('#0bf', '[RWS.disconnect] why:', why, 'readyState:', ws && ws.readyState, 'outbox:', outbox.length, 'retry:', retryDelayMs || 'no')();
+    log('#0bf', '[RWS.disconnect] why:', why, 'readyState:', ws && ws.readyState, 'outbox:', outbox.length, 'retry:', retryDelayMs || 'no');
     if (ws) {
       ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
       ws.close();  // noop if already closed
@@ -63,7 +63,7 @@ function ReconnectingWebSocket(url, opts) {
   }
 
   function onOpen() {
-    log('#0bf', '[RWS.onopen]')();
+    log('#0bf', '[RWS.onopen]');
     ws.onmessage = onMessage1;
     clearTimers();
     timers.disconnect = setTimeout(
@@ -72,12 +72,12 @@ function ReconnectingWebSocket(url, opts) {
   }
 
   function onClose() {
-    log('#0bf', '[RWS.onclose]')();
+    log('#0bf', '[RWS.onclose]');
     disconnect('onclose');
   }
 
   function onError(e) {
-    log('#a00', '[RWS.onerror]', e)();
+    log('#a00', '[RWS.onerror]', e);
   }
 
   function onMessage1(e) {
@@ -85,18 +85,18 @@ function ReconnectingWebSocket(url, opts) {
     timers.ping = setTimeout(ping, o.pingAfterMs);
     lastRecOrPingTime = Date.now();
     if (e.data === '["hi"]') {
-      log('#0bf', '[RWS.onMessage1]', e.data)();
+      log('#0bf', '[RWS.onMessage1]', e.data);
       ws.onmessage = onMessageN;
       o.onConnect();
       sendOutboxMessages();
     } else if (e.data === '["denied"]') {
-      log('#a00', '[RWS.onMessage1]', e.data)();
+      log('#a00', '[RWS.onMessage1]', e.data);
       disconnect('denied');
     } else if (e.data.lastIndexOf('["bye"', 0) === 0) {
-      log('#a00', '[RWS.onMessage1]', e.data)();
+      log('#a00', '[RWS.onMessage1]', e.data);
       disconnect('bye', null, 'polite');
     } else {  // shouldn't happen
-      log('#a00', '[RWS.onMessage1] relaying')();
+      log('#a00', '[RWS.onMessage1] relaying');
       o.onMessage.call(self, e);
     }
   }
@@ -106,10 +106,10 @@ function ReconnectingWebSocket(url, opts) {
     timers.ping = setTimeout(ping, o.pingAfterMs);
     lastRecOrPingTime = Date.now();
     if (e.data === '["pong"]') {
-      log('#0ac', '[RWS.pong]')();
+      log('#0ac', '[RWS.pong]');
       sendOutboxMessages();
     } else if (e.data.lastIndexOf('["bye"', 0) === 0) {
-      log('#0ac', '[RWS.onMessageN]', e.data)();
+      log('#0ac', '[RWS.onMessageN]', e.data);
       disconnect('bye', null, 'polite');
     } else {
       o.onMessage.call(self, e);
@@ -119,20 +119,20 @@ function ReconnectingWebSocket(url, opts) {
   function sendOutboxMessages() {
     while (outbox.length) {
       var a = outbox.shift();
-      log('#0bf', '[RWS] sending, delayed %i ms: %s', Date.now() - a[1], (/\w+/.exec(a[0]) || a)[0])();
+      log('#0bf', '[RWS] sending, delayed %i ms: %s', Date.now() - a[1], (/\w+/.exec(a[0]) || a)[0]);
       ws.send(a[0]);
     }
   }
 
   function onOnlineConnect() {
-    log('#0bf', '[RWS.onOnlineConnect]')();
+    log('#0bf', '[RWS.onOnlineConnect]');
     window.removeEventListener('online', onOnlineConnect);
     clearTimers();
     timers.connect = setTimeout(connect, 200);  // patience, Danielson
   }
 
   function ping() {
-    log('#0bf', '[RWS.ping]')();
+    log('#0bf', '[RWS.ping]');
     ws.send('["ping"]');
     lastRecOrPingTime = Date.now();
     clearTimers();

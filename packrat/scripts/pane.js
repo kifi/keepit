@@ -35,7 +35,7 @@ var pane = pane || function () {  // idempotent for Chrome
   });
 
   api.onEnd.push(function () {
-    log('[pane:onEnd]')();
+    log('[pane:onEnd]');
     if ($pane) $pane.remove();
     $('html').removeAttr('kifi-with-pane kifi-pane-parent');
   });
@@ -57,23 +57,23 @@ var pane = pane || function () {  // idempotent for Chrome
   function showPane(locator, back, redirected) {
     var locatorCurr = paneHistory && paneHistory[0];
     if (locator === locatorCurr) {
-      log('[showPane] already at', locator)();
+      log('[showPane] already at', locator);
       return;
     }
     var paneState = $pane && $pane.data('state');
     if (paneState && paneState !== 'open') {
-      log('[showPane] aborting', locator, back ? 'back' : '', paneState)();
+      log('[showPane] aborting', locator, back ? 'back' : '', paneState);
       return;
     }
     // TODO: have a state for pane-to-pane transitions and avoid interrupting
     var name = toPaneName(locator);
     var nameCurr = locatorCurr && toPaneName(locatorCurr);
     if (name === nameCurr && panes[name].switchTo) {
-      log('[showPane] delegating', name, locator)();
+      log('[showPane] delegating', name, locator);
       panes[name].switchTo(locator);
       return;
     }
-    log('[showPane]', locator, name, back ? 'back' : '', redirected ? 'redirected' : '')();
+    log('[showPane]', locator, name, back ? 'back' : '', redirected ? 'redirected' : '');
     if (!paneHistory) {
       paneHistory = [locator];
     } else if (back) {
@@ -269,10 +269,10 @@ var pane = pane || function () {  // idempotent for Chrome
   function hidePane(leaveSlider) {
     var state = $pane && $pane.data('state');
     if (state !== 'open') {
-      log('[hidePane] ignored, state:', state)();
+      log('[hidePane] ignored, state:', state);
       return;
     }
-    log('[hidePane]', leaveSlider ? 'leaving slider' : '')();
+    log('[hidePane]', leaveSlider ? 'leaving slider' : '');
     if (leaveSlider) {
       $(tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
       keeper.onPaneChange();
@@ -379,7 +379,7 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function beforeUnload(e) {
-    log('[beforeUnload]')();
+    log('[beforeUnload]');
     e.preventDefault();
     return ' ';
   }
@@ -390,7 +390,7 @@ var pane = pane || function () {  // idempotent for Chrome
       return !!$pane;
     },
     show: function (o) {
-      log('[pane.show]', o.locator, o.trigger || '', o.redirected || '', o.composeTo || '')();
+      log('[pane.show]', o.locator, o.trigger || '', o.redirected || '', o.composeTo || '');
       if (o.composeTo) {
         pane.compose(o.trigger, o.composeTo);
       } else {
@@ -402,7 +402,7 @@ var pane = pane || function () {  // idempotent for Chrome
       locator = locator || '/messages:all';
       if ($pane) {
         if ($pane.data('state') === 'closing') {
-          log('[pane.toggle] ignoring, hiding')();
+          log('[pane.toggle] ignoring, hiding');
         } else if (window.toaster && toaster.showing()) {
           toaster.hide();
           showPane(locator);
@@ -416,7 +416,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     compose: function(trigger, recipient) {
-      log('[pane:compose]', trigger)();
+      log('[pane:compose]', trigger);
       api.require('scripts/compose_toaster.js', function () {
         if (!$pane) {
           showPane('/messages:all');

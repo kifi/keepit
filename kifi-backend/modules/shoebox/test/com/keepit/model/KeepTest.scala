@@ -57,6 +57,10 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           keepRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), 5).map(_.uriId) === Seq(uri3.id.get)
           keepRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
           keepRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
+          keepRepo.countPublicActiveByUri(uri1.id.get) === 2
+          keepRepo.countPublicActiveByUri(uri2.id.get) === 1
+          keepRepo.countPublicActiveByUri(uri3.id.get) === 0
+          keepRepo.countPublicActiveByUri(Id[NormalizedURI](10000)) === 0
         }
       }
     }

@@ -10,10 +10,10 @@ var promptForKeepName = (function () {
 
   return function (parent, onHide) {
     if ($box) {
-      log('[promptForKeepName] already showing')();
+      log('[promptForKeepName] already showing');
       return;
     }
-    log('[promptForKeepName]')();
+    log('[promptForKeepName]');
     $box = $(render('html/keeper/keep_name_prompt'))
       .data('onHide', onHide)
       .appendTo(parent)
@@ -40,7 +40,7 @@ var promptForKeepName = (function () {
     if (name) {
       $input.prop('disabled', true);
       api.port.emit('set_title', withUrls({title: name}), function (success) {
-        log('[save]', success ? 'success' : 'error')();
+        log('[save]', success ? 'success' : 'error');
         $input.prop('disabled', false);
         clearTimeout(progressTimeout), progressTimeout = null;
         if (success) {
@@ -92,7 +92,7 @@ var promptForKeepName = (function () {
 
   var progressTimeout;
   function updateProgress(frac) {
-    log('[updateProgress]', frac)();
+    log('[updateProgress]', frac);
     this.style.width = Math.min(frac * 100, 100) + '%';
     var fracLeft = .9 - frac;
     if (fracLeft > .0001) {

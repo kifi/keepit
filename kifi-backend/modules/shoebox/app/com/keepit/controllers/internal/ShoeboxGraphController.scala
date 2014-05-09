@@ -7,7 +7,7 @@ import play.api.mvc.Action
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.actor.ActorInstance
-import com.kifi.franz.{QueueName, SimpleSQSClient}
+import com.kifi.franz.{SQSQueue, QueueName, SimpleSQSClient}
 import com.amazonaws.regions.Regions
 import com.keepit.graph.manager._
 import com.amazonaws.auth.BasicAWSCredentials
@@ -15,8 +15,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.kifi.franz.QueueName
 import com.keepit.model.SocialConnection
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
 
 
 private sealed trait UpdateMessage
@@ -44,6 +45,14 @@ private class GraphUpdateActor @Inject() (
     client.formatted[GraphUpdate](queueRef, true)
   }
 
+  private def sendSequentially[T](queue: SQSQueue[T], messages: Seq[T]): Unit = messages match {
+    case Seq() => // done
+    case Seq(head, tail @ _*) => queue.send(head).onComplete {
+      case Success(_) => sendSequentially(queue, tail)
+      case Failure(ex) => throw ex
+    }
+  }
+
   def receive = {
     case UserUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -53,7 +62,7 @@ private class GraphUpdateActor @Inject() (
         UserGraphUpdate(user.id.get, user.seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
 
     case SocialConnectionUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -63,7 +72,7 @@ private class GraphUpdateActor @Inject() (
         SocialConnectionGraphUpdate(su1, su2, networkType, state, seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
 
     case SocialUserInfoUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -73,7 +82,7 @@ private class GraphUpdateActor @Inject() (
         SocialUserInfoGraphUpdate(su.id.get, su.networkType, su.userId, su.seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
 
     case UserConnectionUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -83,7 +92,7 @@ private class GraphUpdateActor @Inject() (
         UserConnectionGraphUpdate(uc.user1, uc.user2, uc.state, uc.seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
 
     case KeepUpdate(seq, queueRef) =>
       val queue = createQueue(queueRef)
@@ -93,7 +102,7 @@ private class GraphUpdateActor @Inject() (
         KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.seq)
       }
 
-      updates.map(queue.send)
+      sendSequentially(queue, updates)
   }
 }
 

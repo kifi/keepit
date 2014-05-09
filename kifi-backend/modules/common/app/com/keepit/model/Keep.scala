@@ -153,6 +153,7 @@ case class KeepSource(value: String) {
 object KeepSource {
   val keeper = KeepSource("keeper")
   val bookmarkImport = KeepSource("bookmarkImport")
+  val bookmarkFileImport = KeepSource("bookmarkFileImport")
   val site = KeepSource("site")
   val mobile = KeepSource("mobile")
   val email = KeepSource("email")

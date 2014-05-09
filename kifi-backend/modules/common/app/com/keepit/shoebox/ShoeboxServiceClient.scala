@@ -769,7 +769,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
-    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize)).map{ r =>
+    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
       Json.fromJson[Seq[UserConnection]](r.json).get
     }
   }

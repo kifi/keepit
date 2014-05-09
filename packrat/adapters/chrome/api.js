@@ -10,7 +10,7 @@ function log() {
   } else {
     args[0] = t + a0;
   }
-  return console.log.apply.bind(console.log, console, args);
+  console.log.apply(console, args);
 }
 
 var api = (function createApi() {
@@ -59,17 +59,17 @@ var api = (function createApi() {
   });
 
   chrome.pageAction.onClicked.addListener(errors.wrap(function (tab) {
-    log("[pageAction.onClicked]", tab)();
+    log("[pageAction.onClicked]", tab);
     dispatch.call(api.icon.on.click, pages[tab.id]);
   }));
 
   chrome.runtime.onStartup.addListener(errors.wrap(function () {
-    log("[onStartup]")();
+    log("[onStartup]");
     api.loadReason = "startup";
   }));
 
   chrome.runtime.onInstalled.addListener(errors.wrap(function (details) {
-    log("[onInstalled] details:", details)();
+    log("[onInstalled] details:", details);
     if (details.reason === "install" || details.reason === "update") {
       api.loadReason = details.reason;
     }
@@ -77,19 +77,19 @@ var api = (function createApi() {
 
   var updateCheckRequested, updateVersion;
   chrome.runtime.onUpdateAvailable.addListener(errors.wrap(function (details) {
-    log("#666", "[onUpdateAvailable]", updateVersion = details.version)();
+    log("#666", "[onUpdateAvailable]", updateVersion = details.version);
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
   }));
 
   chrome.tabs.onCreated.addListener(errors.wrap(function (tab) {
-    log("#666", "[tabs.onCreated]", tab.id, tab.url)();
+    log("#666", "[tabs.onCreated]", tab.id, tab.url);
     normalTab[tab.id] = !!selectedTabIds[tab.windowId];
   }));
 
   chrome.tabs.onActivated.addListener(errors.wrap(function (info) {
-    log("#666", "[tabs.onActivated] tab info:", info)();
+    log("#666", "[tabs.onActivated] tab info:", info);
     var prevPageId = selectedTabIds[info.windowId];
     if (prevPageId) { // ignore popups, etc.
       selectedTabIds[info.windowId] = info.tabId;
@@ -115,7 +115,7 @@ var api = (function createApi() {
       try {
         query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
       } catch (e) {
-        log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e)();  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+        log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
       }
       if (query) {
         dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
@@ -128,27 +128,27 @@ var api = (function createApi() {
       var page = pages[details.tabId];
       if (page) {
         if (page.url === details.url) {
-          log('[onDOMContentLoaded]', details.tabId, details.url)();
+          log('[onDOMContentLoaded]', details.tabId, details.url);
         } else {
-          log('#a00', '[onDOMContentLoaded] %i url mismatch:\n%s\n%s', details.tabId, details.url, page.url)();
+          log('#a00', '[onDOMContentLoaded] %i url mismatch:\n%s\n%s', details.tabId, details.url, page.url);
         }
         injectContentScripts(page);
       } else if (normalTab[details.tabId]) {
-        log('#a00', '[onDOMContentLoaded] no page for', details.tabId, details.url)();
+        log('#a00', '[onDOMContentLoaded] no page for', details.tabId, details.url);
       }
     }
   }));
 
   chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log('#666', '[onCommitted]', e.tabId, e)();
+    log('#666', '[onCommitted]', e.tabId, e);
     onRemoved(e.tabId, {temp: true});
     createPage(e.tabId, e.url);
   }));
 
   chrome.webNavigation.onHistoryStateUpdated.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log('#666', '[onHistoryStateUpdated]', e.tabId, e)();
+    log('#666', '[onHistoryStateUpdated]', e.tabId, e);
     var page = pages[e.tabId];
     if (page && page.url !== e.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
@@ -163,7 +163,7 @@ var api = (function createApi() {
 
   chrome.webNavigation.onReferenceFragmentUpdated.addListener(errors.wrap(function (e) {
     if (e.frameId || !normalTab[e.tabId]) return;
-    log('#666', '[onReferenceFragmentUpdated]', e.tabId, e)();
+    log('#666', '[onReferenceFragmentUpdated]', e.tabId, e);
     var page = pages[e.tabId];
     if (page) {
       page.url = e.url;
@@ -172,12 +172,12 @@ var api = (function createApi() {
 
   chrome.tabs.onUpdated.addListener(errors.wrap(function (tabId, change) {
     if ((change.status || change.url) && normalTab[tabId]) {
-      log('#666', '[tabs.onUpdated] %i change: %o', tabId, change)();
+      log('#666', '[tabs.onUpdated] %i change: %o', tabId, change);
     }
   }));
 
   chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
-    log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId)();
+    log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId);
     normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
     for (var winId in selectedTabIds) {
@@ -223,7 +223,7 @@ var api = (function createApi() {
     topNormalWinId = win && win.type == 'normal' ? win.id : chrome.windows.WINDOW_ID_NONE;
   }));
   chrome.windows.onFocusChanged.addListener(errors.wrap(function (winId) {
-    log('[onFocusChanged] win %o -> %o', focusedWinId, winId)();
+    log('[onFocusChanged] win %o -> %o', focusedWinId, winId);
     if (focusedWinId > 0) {
       var page = pages[selectedTabIds[focusedWinId]];
       if (page && httpRe.test(page.url)) {
@@ -278,7 +278,7 @@ var api = (function createApi() {
         for (var i = 0; i < toEmit.length;) {
           var m = toEmit[i];
           if (port.handling[m[0]]) {
-            log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "")();
+            log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "");
             port.postMessage(m);
             toEmit.splice(i, 1);
           } else {
@@ -312,10 +312,10 @@ var api = (function createApi() {
   chrome.runtime.onConnect.addListener(errors.wrap(function (port) {
     var tab = port.sender.tab;
     var tabId = tab && tab.id;
-    log('#0a0', '[onConnect]', tabId, port.name, tab ? tab.url : '')();
+    log('#0a0', '[onConnect]', tabId, port.name, tab ? tab.url : '');
     if (port.sender.id === chrome.runtime.id && tabId) {
       if (ports[tabId]) {
-        log('#a00', '[onConnect] %i disconnecting prev port', tabId)();
+        log('#a00', '[onConnect] %i disconnecting prev port', tabId);
         ports[tabId].disconnect();
       }
       ports[tabId] = port;
@@ -329,14 +329,14 @@ var api = (function createApi() {
     var kind = msg[0], data = msg[1], callbackId = msg[2];
     var handler = portHandlers[kind];
     if (page && handler) {
-      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '')();
+      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '');
       handler(data, respondToTab.bind(null, port, callbackId), page, port);
     } else {
-      log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler)();
+      log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler);
     }
   });
   var onPortDisconnect = errors.wrap(function (tabId) {
-    log('#0a0', '[onDisconnect]', tabId)();
+    log('#0a0', '[onDisconnect]', tabId);
     delete ports[tabId].handling;
     delete ports[tabId];
   });
@@ -352,7 +352,7 @@ var api = (function createApi() {
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
-      log("[injectContentScripts] forbidden", page.url)();
+      log('[injectContentScripts] forbidden', page.url);
       return;
     }
     page.injecting = true;
@@ -361,7 +361,7 @@ var api = (function createApi() {
 
     var injected;
     chrome.tabs.executeScript(page.id, {
-      code: (doLogging ? '' : 'function log() {return log}') + 'this.api&&api.injected',
+      code: 'this.api&&api.injected',
       runAt: 'document_start'
     }, function (arr) {
       injected = arr && arr[0] || {};
@@ -382,9 +382,15 @@ var api = (function createApi() {
         if (api.mode.isDev()) {
           chrome.tabs.executeScript(page.id, {code: 'api.dev=1', runAt: 'document_start'}, api.noop);
         }
-        api.tabs.emit(page, 'api:injected', Object.keys(injected));
         page.injected = true;
         delete page.injecting;
+        var port = ports[page.id];
+        if (port) {
+          port.postMessage(['api:injected', Object.keys(injected)]);
+          if (doLogging) {
+            port.postMessage(['api:log', true]);
+          }
+        }
       }
     }
   }
@@ -409,7 +415,7 @@ var api = (function createApi() {
         }
       });
       paths.forEach(function (path) {
-        log("#bbb", "[injectWithDeps] %i %s", tabId, path)();
+        log("#bbb", "[injectWithDeps] %i %s", tabId, path);
         inject(tabId, {file: path, runAt: 'document_end'}, afterInject);
       });
     } else {
@@ -557,7 +563,7 @@ var api = (function createApi() {
       } else {
         updateCheckRequested = true;
         chrome.runtime.requestUpdateCheck(errors.wrap(function (status) {
-          log("[requestUpdateCheck]", status)();
+          log("[requestUpdateCheck]", status);
         }));
       }
     },
@@ -570,7 +576,7 @@ var api = (function createApi() {
     },
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
-        log('[api.socket.open]', url)();
+        log('[api.socket.open]', url);
         var sc, rws = new ReconnectingWebSocket(url, {
           onConnect: errors.wrap(function () {
             sc.onConnect();
@@ -632,7 +638,7 @@ var api = (function createApi() {
         if (page && (page === tab || page.url.match(hostRe)[0] == tab.url.match(hostRe)[0])) {
           var port = ports[tab.id];
           if (port && port.handling[type]) {
-            log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data)();
+            log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data);
             port.postMessage([type, data]);
           } else if (opts && opts.queue) {
             var toEmit = page.toEmit;
@@ -652,7 +658,7 @@ var api = (function createApi() {
             }
           }
         } else {
-          log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url)();
+          log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url);
         }
       },
       get: function(tabId) {
@@ -681,7 +687,12 @@ var api = (function createApi() {
       }
     },
     toggleLogging: function (bool) {
-      doLogging = bool;
+      if (doLogging !== bool) {
+        doLogging = bool;
+        api.tabs.each(function (page) {
+          api.tabs.emit(page, 'api:log', doLogging);
+        });
+      }
     },
     timers: {
       setTimeout: function (f, ms) {
