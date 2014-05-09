@@ -106,9 +106,9 @@
                               <!-- Image -->
                               <td width="73" valign="top">
                                 @imageUrl.map{ iUrl =>
-                                  <img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block;" border="0" />
+                                  <img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block; border-radius: 3px;" border="0" />
                                 }.getOrElse{
-                                  <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle;">
+                                  <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle; border-radius: 3px;">
                                     @{shortName(0).toUpper}
                                   </div>
                                 }
