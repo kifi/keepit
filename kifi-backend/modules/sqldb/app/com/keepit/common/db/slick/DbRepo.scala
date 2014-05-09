@@ -90,11 +90,19 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   def count(implicit session: RSession): Int = Query(rows.length).first
 
+  private def checkTiming(time:Long, operation:String, model: M):Unit = {
+    if (time > 5000) { // tweak
+    val msg = s"DB-$operation (${model.getClass.getSimpleName}) takes too long ($time ms); model:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}"
+      log.error(msg, new IllegalStateException(msg))
+    }
+  }
+
   def get(id: Id[M])(implicit session: RSession): M = {
     val startTime = System.currentTimeMillis()
     val model = (for(f <- rows if f.id is id) yield f).first
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:GET\tduration:$time\tmodel:${model.getClass.getSimpleName}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    checkTiming(time, "GET", model)
     model
   }
 
@@ -112,6 +120,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val inserted = (rows returning rows.map(_.id)) += model
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:$time\tmodel:${inserted.getClass.getSimpleName}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    checkTiming(time, "INSERT", model)
     inserted
   }
 
@@ -121,6 +130,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    checkTiming(time, "UPDATE", model)
     if (count != 1) {
       deleteCache(model)
       throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
