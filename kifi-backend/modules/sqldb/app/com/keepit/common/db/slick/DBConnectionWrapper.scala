@@ -9,28 +9,28 @@ import java.util.concurrent.Executor
 import com.keepit.common.time._
 import com.keepit.common.strings._
 
-class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterSlave: Database.DBMasterSlave) extends Connection {
+class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterSlave: Database.DBMasterSlave, sessionId:String) extends Connection {
   def createStatement(): Statement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
     conn.createStatement()
   }
   def prepareStatement(sql: String): PreparedStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
     conn.prepareStatement(sql)
   }
   def prepareCall(sql: String): CallableStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_CALL\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_CALL\tsql:$sql".abbreviate(600))
     conn.prepareCall(sql)
   }
   def nativeSQL(sql: String): String = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:NATIVE_SQL\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:NATIVE_SQL\tsql:$sql".abbreviate(600))
     conn.nativeSQL(sql)
   }
   def setAutoCommit(autoCommit: Boolean): Unit = conn.setAutoCommit(autoCommit)
   def getAutoCommit: Boolean = conn.getAutoCommit
   def commit(): Unit = conn.commit()
   def rollback(): Unit = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:ROLLBACK")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:ROLLBACK")
     conn.rollback()
   }
   def close(): Unit = conn.close()
@@ -45,15 +45,15 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterS
   def getWarnings: SQLWarning = conn.getWarnings
   def clearWarnings(): Unit = conn.clearWarnings()
   def createStatement(resultSetType: Int, resultSetConcurrency: Int): Statement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
     conn.createStatement(resultSetType, resultSetConcurrency)
   }
   def prepareStatement(sql: String, resultSetType: Int, resultSetConcurrency: Int): PreparedStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
     conn.prepareStatement(sql, resultSetType, resultSetConcurrency)
   }
   def prepareCall(sql: String, resultSetType: Int, resultSetConcurrency: Int): CallableStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_CALL\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_CALL\tsql:$sql".abbreviate(600))
     conn.prepareCall(sql, resultSetType, resultSetConcurrency)
   }
   def getTypeMap: util.Map[String, Class[_]] = conn.getTypeMap
@@ -63,48 +63,48 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterS
   def setSavepoint(): Savepoint = conn.setSavepoint()
   def setSavepoint(name: String): Savepoint = conn.setSavepoint(name)
   def rollback(savepoint: Savepoint): Unit = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:ROLLBACK")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:ROLLBACK")
     conn.rollback(savepoint)
   }
   def releaseSavepoint(savepoint: Savepoint): Unit = conn.releaseSavepoint(savepoint)
   def createStatement(resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int): Statement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
     conn.createStatement(resultSetType, resultSetConcurrency, resultSetHoldability)
   }
   def prepareStatement(sql: String, resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int): PreparedStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
     conn.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability)
   }
   def prepareCall(sql: String, resultSetType: Int, resultSetConcurrency: Int, resultSetHoldability: Int): CallableStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_CALL\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_CALL\tsql:$sql".abbreviate(600))
     conn.prepareCall(sql, resultSetType, resultSetConcurrency, resultSetHoldability)
   }
   def prepareStatement(sql: String, autoGeneratedKeys: Int): PreparedStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
     conn.prepareStatement(sql, autoGeneratedKeys)
   }
   def prepareStatement(sql: String, columnIndexes: Array[Int]): PreparedStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
     conn.prepareStatement(sql, columnIndexes)
   }
   def prepareStatement(sql: String, columnNames: Array[String]): PreparedStatement = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tsql:$sql".abbreviate(600))
     conn.prepareStatement(sql, columnNames)
   }
   def createClob(): Clob = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_CLOB")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_CLOB")
     conn.createClob()
   }
   def createBlob(): Blob = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_BLOB")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_BLOB")
     conn.createBlob()
   }
   def createNClob(): NClob = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_NLOB")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_NLOB")
     conn.createNClob()
   }
   def createSQLXML(): SQLXML = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_SQLXML") //NOOOOOOOOOOOOOOOOOOOOOO!!!
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_SQLXML") //NOOOOOOOOOOOOOOOOOOOOOO!!!
     conn.createSQLXML()
   }
   def isValid(timeout: Int): Boolean = conn.isValid(timeout)
@@ -113,18 +113,18 @@ class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterS
   def getClientInfo(name: String): String = conn.getClientInfo(name)
   def getClientInfo: Properties = conn.getClientInfo
   def createArrayOf(typeName: String, elements: Array[AnyRef]): sql.Array = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_ARRAY")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_ARRAY")
     conn.createArrayOf(typeName, elements)
   }
   def createStruct(typeName: String, attributes: Array[AnyRef]): Struct = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:CREATE_STRUCT")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_STRUCT")
     conn.createStruct(typeName, attributes)
   }
   def setSchema(schema: String): Unit = conn.setSchema(schema)
   def getSchema: String = conn.getSchema
   def abort(executor: Executor): Unit = conn.abort(executor)
   def setNetworkTimeout(executor: Executor, milliseconds: Int): Unit = {
-    dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:SET_TIMEOUT\tvalue:$milliseconds")
+    dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SET_TIMEOUT\tvalue:$milliseconds")
     conn.setNetworkTimeout(executor, milliseconds)
   }
   def getNetworkTimeout: Int = conn.getNetworkTimeout

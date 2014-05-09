@@ -189,7 +189,7 @@ class ExtBookmarksController @Inject() (
           log.debug(s"adding bookmarks of user $userId")
 
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
-          bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)
+          bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmarks(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)
           searchClient.updateURIGraph()
         }
         Status(ACCEPTED)(JsNumber(0))
