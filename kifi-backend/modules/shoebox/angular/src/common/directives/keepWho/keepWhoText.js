@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.keepWhoText', [])
+angular.module('kifi.keepWhoText', ['kifi.profileService'])
 
 .directive('kfKeepWhoText', [
-
-  function () {
+  'profileService',
+  function (profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,6 +13,15 @@ angular.module('kifi.keepWhoText', [])
         keep: '='
       },
       link: function (scope) {
+
+        scope.me = profileService.me;
+        profileService.getMe();
+
+        scope.helprankEnabled = function() {
+          var experiments = scope.me.experiments;
+          return (experiments.indexOf('helprank') > -1);
+        };
+
         scope.isPrivate = function () {
           return scope.keep.isPrivate || false;
         };
@@ -25,6 +34,16 @@ angular.module('kifi.keepWhoText', [])
         scope.hasOthers = function () {
           var keep = scope.keep;
           return keep.others > 0;
+        };
+
+        scope.hasClicks = function() {
+          var keep = scope.keep;
+          return (keep.clickCount && keep.clickCount > 0);
+        };
+
+        scope.getClicks = function() {
+          var keep = scope.keep;
+          return (keep.clickCount || 0);
         };
 
         scope.getFriendText = function () {
@@ -51,6 +70,17 @@ angular.module('kifi.keepWhoText', [])
           }
           if (scope.keep.isMyBookmark || scope.keep.keepers.length > 0) {
             text = '+ ' + text;
+          }
+          return text;
+        };
+
+        scope.getClicksText = function() {
+          var clickCount = scope.keep.clickCount || 0;
+          var text;
+          if (clickCount === 0) {
+            text = '';
+          } else {
+            text = clickCount + ' discovered this keep!';
           }
           return text;
         };
