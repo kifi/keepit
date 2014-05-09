@@ -19,7 +19,6 @@ trait GraphUpdateFetcher {
 }
 
 class GraphUpdateFetcherImpl @Inject() (
-  queue: SQSQueue[GraphUpdate],
   shoebox: ShoeboxServiceClient,
   eliza: ElizaServiceClient,
   abook: ABookServiceClient,

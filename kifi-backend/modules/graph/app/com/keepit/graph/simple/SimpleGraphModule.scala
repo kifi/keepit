@@ -4,7 +4,6 @@ import com.keepit.graph.manager._
 import com.google.inject.{Singleton, Provides}
 import play.api.Play.current
 import scala.util.Try
-import com.kifi.franz.SQSQueue
 import scala.util.Success
 import scala.util.Failure
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -15,7 +14,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 trait SimpleGraphModule extends GraphManagerModule {
 
   @Provides @Singleton
-  def simpleGraphManager(graphDirectory: SimpleGraphDirectory, graphQueue: SQSQueue[GraphUpdate], graphUpdater: GraphUpdater, serviceDiscovery: ServiceDiscovery, airbrake: AirbrakeNotifier): GraphManager = {
+  def simpleGraphManager(graphDirectory: SimpleGraphDirectory, graphUpdater: GraphUpdater, serviceDiscovery: ServiceDiscovery, airbrake: AirbrakeNotifier): GraphManager = {
     val (simpleGraph, state) = Try(graphDirectory.load()) match {
       case Success((graph, state)) =>
         log.info(s"Successfully loaded SimpleGraph from disk. State:\n$state")
