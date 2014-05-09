@@ -193,14 +193,13 @@ panes.thread = function () {
     setTimeout(function() {
       if (!$m.attr('data-id') && !$m.data('error')) {
         $m.find('time').hide();
-        $m.find('.kifi-message-status').text('sending…')
+        $m.find('.kifi-message-status').text('sending…');
       }
     }, 1000);
   }
 
   function renderMessage(m) {
     m.formatMessage = formatMessage.full;
-    m.formatAuxData = formatAuxData;
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
     m.isLoggedInUser = m.sender && m.sender.id === me.id;
@@ -212,11 +211,12 @@ panes.thread = function () {
       messageTip: 'message_tip'
     };
     if (m.auxData && m.auxData.length) {
-      var rendered = $(render('html/keeper/message_aux', m, templates));
+      var $rendered = $(render('html/keeper/message_aux', m, templates));
+      $rendered.find('.kifi-aux-message').append(formatAuxData.apply(m));
     } else {
-      var rendered = $(render('html/keeper/message_discussion', m, templates));
+      var $rendered = $(render('html/keeper/message_discussion', m, templates));
     }
-    return rendered.find('time').timeago().end()[0];
+    return $rendered.find('time').timeago().end()[0];
   }
 
   function handleReplyError($reply, status, originalText, threadId) {

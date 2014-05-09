@@ -137,3 +137,8 @@ img.kifi-message-pic.kifi-self {
   width: 100%;
   background-color: #fafafa;
 }
+.kifi-message-email-view,
+.kifi-message-email-learn {
+  cursor: pointer;
+  text-decoration: underline;
+}
