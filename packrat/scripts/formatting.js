@@ -1,7 +1,5 @@
 // @require scripts/emoji.js
-// @require scripts/html/keeper/message_email_tooltip.js
-// @require scripts/html/keeper/message_email_links.js
-// @require styles/keeper/formatting.css
+// @require scripts/html/keeper/message_aux_email.js
 
 var formatMessage = (function () {
   'use strict';
@@ -219,56 +217,20 @@ var formatAuxData = (function () {
   'use strict';
   var formatters = {
     add_participants: function (actor, added) {
-      var $element = $('<div/>');
-      var message = '<p>';
+      var message;
       if (isMe(actor)) {
-        message += 'You added ' + boldNamesOf(added) + '.';
+        message = 'You added ' + boldNamesOf(added) + '.';
       } else if (added.some(isMe)) {
-        message += boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
+        message = boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
       } else {
-        message += nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
+        message = nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
       }
-      message += '</p>';
-      $element.append(message);
       var i = 0;
       while (i < added.length && added[i].kind !== 'email') i++;
-      if (i < added.length) {
-        // at least one recipient is an email address
-        var $links = $(render('html/keeper/message_email_links'));
-
-        $links.find('.kifi-message-email-view').on('click', function () {
-          // todo(martin): show email here
-        });
-
-        // Configure explanation tooltip
-        var $learnMore = $links.find('.kifi-message-email-learn');
-        var $kifiPane = $('.kifi-pane');
-        var $scroll = $kifiPane.find('.kifi-messages-sent-inner');
-        var $learnMoreTooltip = $('.kifi-message-email-tooltip').first();
-        if ($learnMoreTooltip.length === 0) {
-          var $learnMoreTooltip = $(render('html/keeper/message_email_tooltip'))
-            .appendTo($kifiPane);
-        }
-
-        $learnMore.on('click', function () {
-          $learnMoreTooltip.addClass('kifi-showing');
-          $learnMoreTooltip.css({
-            top: (parseInt($learnMore.offset().top) - $(document).scrollTop() - parseInt($learnMoreTooltip.height()) - 44) + 'px'
-          });
-
-          function hide(e) {
-            $learnMoreTooltip.removeClass('kifi-showing');
-            e.preventDefault();
-            e.stopPropagation();
-            $scroll.off('scroll', hide);
-            document.body.removeEventListener('click', hide, true);
-          }
-          $scroll.on('scroll', hide);
-          document.body.addEventListener('click', hide, true);
-        });
-        $element.append($links);
-      }
-      return $element;    
+      return render('html/keeper/message_aux_email', {
+        message: message,
+        hasEmail: i < added.length
+      });   
     }
   };
 

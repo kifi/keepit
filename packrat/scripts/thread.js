@@ -5,6 +5,7 @@
 // @require scripts/html/keeper/message_aux.js
 // @require scripts/html/keeper/message_discussion.js
 // @require scripts/html/keeper/message_tip.js
+// @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/formatting.js
@@ -81,6 +82,15 @@ panes.thread = function () {
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks()
+      .hoverfu('.kifi-message-email-learn', function (configureHover) {
+        var link = this;
+        render('html/keeper/message_email_tooltip', function (html) {
+          configureHover(html, {
+            mustHoverFor: 9000000, click: 'toggle',
+            position: {my: 'right+50 bottom-10', at: 'center top', of: link, collision: 'none'}
+          });
+        });
+      })
       .data({threadId: threadId, compose: compose});
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
@@ -200,6 +210,7 @@ panes.thread = function () {
 
   function renderMessage(m) {
     m.formatMessage = formatMessage.full;
+    m.formatAuxData = formatAuxData;
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
     m.isLoggedInUser = m.sender && m.sender.id === me.id;
@@ -212,7 +223,6 @@ panes.thread = function () {
     };
     if (m.auxData && m.auxData.length) {
       var $rendered = $(render('html/keeper/message_aux', m, templates));
-      $rendered.find('.kifi-aux-message').append(formatAuxData.apply(m));
     } else {
       var $rendered = $(render('html/keeper/message_discussion', m, templates));
     }
