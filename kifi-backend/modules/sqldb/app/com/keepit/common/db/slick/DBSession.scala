@@ -42,7 +42,11 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
+      dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
+      if (time > 5000) { // tweak
+        val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long ($time ms)"
+        log.error(msg, new IllegalStateException(msg))
+      }
     }
 
     def rollback() { doRollback = true }
