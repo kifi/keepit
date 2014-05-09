@@ -242,9 +242,14 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rekeepRepo.getReKeepsByKeeper(u2.id.get).head === rk2
           rekeepRepo.getReKeepsByReKeeper(u3.id.get).length === 2
 
-          val rk1a = rekeepRepo.getReKeepersForKeeps(u1.id.get, keeps1.map(_.id.get).toSet)
-          rk1a.get(keeps1(0).id.get) === None
-          rk1a.get(keeps1(1).id.get) === Some(Set(u3.id.get))
+          val rkc1 = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
+          rkc1.get(keeps1(0).id.get) === None
+          rkc1.get(keeps1(1).id.get) === Some(1)
+
+          val rkc2 = rekeepRepo.getReKeepCountsByKeeper(u2.id.get)
+          rkc2.get(keeps2(0).id.get) === Some(1)
+          rkc2.get(keeps2(1).id.get) === None
+          rkc2.get(keeps2(2).id.get) === None
         }
       }
     }
