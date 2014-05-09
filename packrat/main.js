@@ -1093,6 +1093,9 @@ api.port.on({
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);
   },
+  close_tab: function (_, __, tab) {
+    api.tabs.close(tab.id);
+  },
   open_deep_link: function(link, _, tab) {
     if (link.inThisTab || tab.nUri === link.nUri) {
       awaitDeepLink(link, tab.id);
