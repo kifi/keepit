@@ -14,13 +14,14 @@ import com.keepit.common.actor.{ActorBuilder, TestActorSystemModule}
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 
 class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
   // This is a good example of how to test actor side effects.
   implicit val context = HeimdalContext.empty
 
-  def modules = KeepImportsModule() :: TestActorSystemModule() :: TestSearchServiceClientModule() :: TestShoeboxServiceClientModule() :: FakeHttpClientModule() :: FakeScrapeSchedulerModule() :: Nil
+  def modules = KeepImportsModule() :: TestActorSystemModule() :: TestSearchServiceClientModule() :: TestShoeboxServiceClientModule() :: FakeHttpClientModule() :: FakeScrapeSchedulerModule() :: ShoeboxFakeStoreModule() :: Nil
 
   "RawKeepImporter" should {
 
