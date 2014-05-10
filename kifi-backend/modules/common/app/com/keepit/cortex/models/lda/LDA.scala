@@ -9,10 +9,14 @@ trait LDA extends StatModel
 
 // mapper: word -> topic vector
 case class DenseLDA(dimension: Int, mapper: Map[String, Array[Float]]) extends LDA
+case class LDATopic(index: Int) extends AnyVal
+object LDATopic {
+  implicit val format = Json.format[LDATopic]
+}
 
 case class SparseTopicRepresentation(
   dimension: Int,
-  topics: Map[Int, Float]
+  topics: Map[LDATopic, Float]
 )
 
 object SparseTopicRepresentation {
@@ -23,7 +27,7 @@ object SparseTopicRepresentation {
 
     def reads(json: JsValue): JsResult[SparseTopicRepresentation] = {
       val d = (json \ "dimension").as[Int]
-      val ids = (json \ "topicIds").as[JsArray].value.map{_.as[Int]}
+      val ids = (json \ "topicIds").as[JsArray].value.map{_.as[LDATopic]}
       val scores = (json \ "topicScores").as[JsArray].value.map{_.as[Float]}
       val topics = (ids zip scores).toMap
       JsSuccess(SparseTopicRepresentation(d, topics))
@@ -35,4 +39,3 @@ case class UriSparseLDAFeatures(uriId: Id[NormalizedURI], uriSeq: SequenceNumber
 object UriSparseLDAFeatures {
   implicit val format = Json.format[UriSparseLDAFeatures]
 }
-

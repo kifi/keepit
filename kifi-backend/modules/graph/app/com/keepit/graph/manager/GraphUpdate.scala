@@ -89,8 +89,7 @@ case class SparseLDAGraphUpdate(
 ) extends GraphUpdate {
   type U = SparseLDAGraphUpdate
   def kind = SparseLDAGraphUpdate
-  private val versionedSeq = ModelVersionedSequenceNumber(modelVersion, uriSeq)
-  def seq = kind.seq(versionedSeq.seq)
+  val seq = kind.seq(CortexSequenceNumber(modelVersion, uriSeq).toLong)
 }
 
 case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate]{

@@ -1,12 +1,13 @@
 package com.keepit.common.commanders
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, SparseTopicRepresentation, LDAURIFeatureRetriever, DenseLDA}
+import com.keepit.cortex.models.lda._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.core.FeatureRepresentation
 import com.keepit.cortex._
+import com.keepit.cortex.models.lda.DenseLDA
 
 @Singleton
 class FeatureRetrievalCommander @Inject()(
@@ -25,7 +26,7 @@ class FeatureRetrievalCommander @Inject()(
 
   private def generateSparseRepresentation(topicVector: Array[Float], sparsity: Int): SparseTopicRepresentation = {
     val dim = topicVector.length
-    val topicMap = topicVector.zipWithIndex.sortBy(-1f * _._1).take(sparsity).map{ case (score, idx) => (idx, score)}.toMap
+    val topicMap = topicVector.zipWithIndex.sortBy(-1f * _._1).take(sparsity).map{ case (score, idx) => (LDATopic(idx), score)}.toMap
     SparseTopicRepresentation(dim, topicMap)
   }
 }

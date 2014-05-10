@@ -16,9 +16,8 @@ case class VertexId(id: Long) extends AnyVal {
 }
 
 object VertexId {
-  val totalSpace = 64
   val headerSpace = 8
-  val dataIdSpace = totalSpace - headerSpace
+  val dataIdSpace = 56
   val maxVertexDataId: Long = (1.toLong << dataIdSpace) - 1
   def apply[V <: VertexDataReader](id: VertexDataId[V])(implicit kind: VertexKind[V]): VertexId = {
     require(id.id <= maxVertexDataId, s"VertexDataId $id is too large to be globalized")

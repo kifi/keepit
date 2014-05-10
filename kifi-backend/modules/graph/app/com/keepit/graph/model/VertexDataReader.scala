@@ -3,8 +3,8 @@ package com.keepit.graph.model
 import com.keepit.common.reflection.CompanionTypeSystem
 import play.api.libs.json._
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.graph.manager.{LDATopicId, VersionedLDATopicId}
+import com.keepit.cortex.models.lda.{LDATopic, DenseLDA}
+import com.keepit.graph.manager.LDATopicId
 
 
 sealed trait VertexDataReader { self =>
@@ -125,8 +125,8 @@ trait LDATopicReader extends VertexDataReader {
   type V = LDATopicReader
   def kind = LDATopicReader
 
-  def getVersion(): ModelVersion[DenseLDA] = VersionedLDATopicId.getVersion(id.id)
-  def getTopicId(): LDATopicId = VersionedLDATopicId.getUnversionedId(id.id)
+  def version(): ModelVersion[DenseLDA] = LDATopicId.versionFromLong(id.id)
+  def topic(): LDATopic = LDATopicId.topicFromLong(id.id)
 }
 case object LDATopicReader extends VertexKind[LDATopicReader]{
   val header = 7.toByte

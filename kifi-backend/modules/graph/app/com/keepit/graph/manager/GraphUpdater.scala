@@ -6,6 +6,7 @@ import com.keepit.model.{KeepStates, SocialConnectionStates, UserConnectionState
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
+import com.keepit.cortex.models.lda.LDATopic
 
 trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
@@ -117,7 +118,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
       (0 until numTopics).foreach{ i =>
-        val topicId = VersionedLDATopicId(update.modelVersion, i)
+        val topicId = LDATopicId(update.modelVersion, LDATopic(i))
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeDataReader)
         writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeDataReader)
       }
@@ -129,7 +130,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     val uriData = UriData(uriVertexId)
 
     update.sparseTopics.topics foreach { case (index, score) =>
-      val topicId = VersionedLDATopicId(update.modelVersion, index)
+      val topicId = LDATopicId(update.modelVersion, index)
       val topicVertexId: VertexDataId[LDATopicReader] = topicId
       writer.saveVertex(LDATopicData(topicVertexId))
       writer.saveVertex(uriData)
