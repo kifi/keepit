@@ -2,13 +2,10 @@ package com.keepit.graph.manager
 
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.reflection.CompanionTypeSystem
-import play.api.libs.json._
 import com.keepit.model._
-import com.keepit.common.time.DateTimeJsonFormat
-import play.api.libs.functional.syntax._
 import com.keepit.social.SocialNetworkType
-import com.keepit.cortex.CortexVersionedSequenceNumber
-import com.keepit.cortex.models.lda.SparseTopicRepresentation
+import com.keepit.cortex.models.lda.{DenseLDA, SparseTopicRepresentation}
+import com.keepit.cortex.core.ModelVersion
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate
@@ -84,20 +81,18 @@ case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
   def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.seq)
 }
 
-case class LDAURITopicGraphUpdate(
+case class SparseLDAGraphUpdate(
+  modelVersion: ModelVersion[DenseLDA],
   uriId: Id[NormalizedURI],
-  uriSeq: CortexVersionedSequenceNumber[NormalizedURI],
-  modelName: String,
+  uriSeq: SequenceNumber[NormalizedURI],
   sparseTopics: SparseTopicRepresentation
 ) extends GraphUpdate {
-  type U = LDAURITopicGraphUpdate
-  def kind = LDAURITopicGraphUpdate
-  def seq = kind.seq(uriSeq.versionedSeq)
+  type U = SparseLDAGraphUpdate
+  def kind = SparseLDAGraphUpdate
+  private val versionedSeq = ModelVersionedSequenceNumber(modelVersion, uriSeq)
+  def seq = kind.seq(versionedSeq.seq)
 }
 
-case object LDAURITopicGraphUpdate extends GraphUpdateKind[LDAURITopicGraphUpdate]{
-  val code = "lda_uri_topic_graph_update"
-  private implicit val uriIdFormat = Id.format[NormalizedURI]
-  private implicit val seqFormat = CortexVersionedSequenceNumber.format[NormalizedURI]
-  implicit val format = Json.format[LDAURITopicGraphUpdate]
+case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate]{
+  val code = "sparse_lda_graph_update"
 }

@@ -4,8 +4,7 @@ import com.keepit.common.reflection.CompanionTypeSystem
 import play.api.libs.json._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.cortex.models.lda.LDATopicId
-import com.keepit.cortex.models.lda.VersionedLDATopicId
+import com.keepit.graph.manager.{LDATopicId, VersionedLDATopicId}
 
 
 sealed trait VertexDataReader { self =>

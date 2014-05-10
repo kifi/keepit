@@ -1,6 +1,5 @@
 package com.keepit.graph.manager
 
-import com.kifi.franz.{SQSMessage, SQSQueue}
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -41,7 +40,7 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case KeepGraphUpdate => shoebox.getBookmarksChanged(seq.copy(), fetchSize).imap(_.map(KeepGraphUpdate.apply))
 
-      case LDAURITopicGraphUpdate => Future.successful(Seq.empty)
+      case SparseLDAGraphUpdate => Future.successful(Seq.empty)
 
     }
   }
