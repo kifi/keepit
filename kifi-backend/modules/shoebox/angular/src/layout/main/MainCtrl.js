@@ -6,8 +6,8 @@ angular.module('kifi.layout.main', [
 ])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope', '$analytics',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope, $analytics) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope', '$analytics', 'keepService',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope, $analytics, keepService) {
 
     $scope.search = {};
     $scope.data = $scope.data || {};
@@ -97,6 +97,11 @@ angular.module('kifi.layout.main', [
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
+    function initBookmarkFileUpload() {
+      $scope.modal = 'import_bookmark_file';
+      $scope.data.showBookmarkFileModal1 = true;
+    }
+
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
         case 'addNetworks':
@@ -105,6 +110,9 @@ angular.module('kifi.layout.main', [
           break;
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
+          break;
+        case 'importBookmarkFile':
+          initBookmarkFileUpload();
           break;
         case 'addKeeps':
           $scope.modal = 'add_keeps';
@@ -141,6 +149,76 @@ angular.module('kifi.layout.main', [
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
       $scope.data.showImportModal = false;
+    };
+
+    $scope.disableBookmarkImport = true;
+
+    $scope.allowUpload = function (elem) {
+      var file = elem.files[0];
+      if (file.name.endsWith('.html')) {
+        $scope.importFilename = file.name;
+        $scope.disableBookmarkImport = false;
+        $scope.importFileStatus = '';
+      } else {
+        $scope.importFilename = '';
+        $scope.disableBookmarkImport = true;
+        $scope.importFileStatus = 'Invalid bookmark file. Try picking it again.';
+      }
+    };
+
+    $scope.openExportPopup = function($event, url) {
+      $window.open(url, 'export_popup', 'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=no,width=500,height=500');
+      $event.preventDefault();
+      return false;
+    };
+
+    $scope.uploadBookmarkFile = function ($event) {
+      if (!$scope.disableBookmarkImport) {
+        var $file = angular.element($event.target).parent().parent().find('input:file');
+        var file = $file && $file[0] && $file[0].files && $file[0].files[0];
+        if (file) {
+          $scope.disableBookmarkImport = true;
+
+          var tooSlowTimer = $timeout(function () {
+            $scope.disableBookmarkImport = false;
+            $scope.importFileStatus = 'Looks like we were too slow uploading your bookmarks. Try again?';
+          }, 50000);
+
+          $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot links.';
+          $scope.importFilename = '';
+
+          keepService.uploadBookmarkFile(file).then(function (result) {
+            $timeout.cancel(tooSlowTimer);
+            $scope.importFileStatus = '';
+            if (!result.error) { // success!
+              $scope.data.showBookmarkFileModal1 = false;
+              $scope.data.showBookmarkFileModal2 = true;
+              $scope.modal = 'import_bookmark_file2';
+            } else { // hrmph.
+              $scope.modal = 'import_bookmarks_error';
+              $scope.data.showBookmarkFileModal1 = false;
+              $scope.data.showBookmarkFileError = true;
+              $scope.modal = 'import_bookmark_error';
+            }
+          });
+        } else {
+          $scope.importFileStatus = 'Hm, couldn\'t upload your file. Try picking it again.';
+        }
+      }
+    };
+
+    $scope.cancelBookmarkUpload = function () {
+      $scope.disableBookmarkImport = true;
+      $scope.modal = '';
+      $scope.importFilename = '';
+      $scope.importFileStatus = '';
+    };
+
+    $scope.openBookmarkFileSelector = function ($event) {
+      var $file = angular.element($event.target).parent().parent().find('input:file');
+      $timeout(function () {
+        $file.click();
+      });
     };
 
     if (/^Mac/.test($window.navigator.platform)) {
