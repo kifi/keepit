@@ -2,6 +2,8 @@ package com.keepit.cortex.models.lda
 
 import com.keepit.cortex.core.StatModel
 import play.api.libs.json._
+import com.keepit.model.NormalizedURI
+import com.keepit.common.db.{SequenceNumber, Id}
 
 trait LDA extends StatModel
 
@@ -28,3 +30,9 @@ object SparseTopicRepresentation {
     }
   }
 }
+
+case class UriSparseLDAFeatures(uriId: Id[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI], features: SparseTopicRepresentation)
+object UriSparseLDAFeatures {
+  implicit val format = Json.format[UriSparseLDAFeatures]
+}
+
