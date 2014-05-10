@@ -181,9 +181,10 @@ class KeepsCommander @Inject() (
         if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
         val countPublicActiveByUri = keepRepo.countPublicActiveByUri(uri.id.get)
         //don't mess with keeps that are even a bit popular, has more then four keepers (with the latest keeper). we don't want to create noise, be extra careful
-        if (countPublicActiveByUri <= 1 || countPublicActiveByUri >= 5) return
+        val maxKeepers = 5
+        if (countPublicActiveByUri <= 1 || countPublicActiveByUri > maxKeepers) return
         val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE).filterNot(_.userId == userId)
-        if (otherKeeps.length > 3) return // how did that happen???
+        if (otherKeeps.length > (maxKeepers - 1)) return // how did that happen???
         val keeper = userRepo.get(keep.userId)
         val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
           localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
