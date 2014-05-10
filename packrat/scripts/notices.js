@@ -34,11 +34,11 @@ panes.notices = function () {
           kind === 'sent' && isSent(o.thread)) {
         showNew(o.thread);
       } else {
-        log('[new_thread] kind mismatch', kind, o)();
+        log('[new_thread] kind mismatch', kind, o);
       }
     },
     threads: function (o) {
-      log('[notices:threads]', $list.data('kind'), o.kind, o.threads.length, o.includesOldest)();
+      log('[notices:threads]', $list.data('kind'), o.kind, o.threads.length, o.includesOldest);
       if ($list.data('kind') === o.kind) {
         if ($list.hasClass('kifi-loading')) {
           renderList(o);
@@ -230,7 +230,7 @@ panes.notices = function () {
     case 'global':
       return render('html/keeper/notice_global', notice);
     default:
-      log('#a00', '[renderOne] unrecognized category', notice.category)();
+      log('#a00', '[renderOne] unrecognized category', notice.category);
       return '';
     }
   }
@@ -333,7 +333,7 @@ panes.notices = function () {
   }
 
   function onClickState(e) {
-    log('[onClickState] toggling read state')();
+    log('[onClickState] toggling read state');
     e.stopImmediatePropagation();
     var $notice = $(this).closest('.kifi-notice');
     var data = $notice.data();

@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.keepWhoText', [])
+angular.module('kifi.keepWhoText', ['kifi.profileService'])
 
 .directive('kfKeepWhoText', [
-
-  function () {
+  'profileService',
+  function (profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,6 +13,16 @@ angular.module('kifi.keepWhoText', [])
         keep: '='
       },
       link: function (scope) {
+
+        scope.me = profileService.me;
+
+        scope.helprankEnabled = false;
+        scope.$watch(function () {
+          return profileService.me.seqNum;
+        }, function () {
+          scope.helprankEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('helprank') > -1;
+        });
+
         scope.isPrivate = function () {
           return scope.keep.isPrivate || false;
         };

@@ -48,7 +48,7 @@ class SliderShownListener @Inject() (
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, normUri) = db.readWrite(attempts = 3) { implicit s =>
+      val (user, normUri) = db.readWrite(attempts = 1) { implicit s =>
         val user = userRepo.get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
           normalizedURIRepo.internByUri(url, NormalizationCandidate(metaData): _*)

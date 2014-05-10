@@ -135,7 +135,7 @@ class MobileBookmarksController @Inject() (
   }
 
   private def toJsObject(url: String, uri: NormalizedURI, screenshotUrlOpt: Option[String], imageUrlOpt: Option[String]): JsObject = {
-    log.info(s"[getImageUrl] returning screenshot ${screenshotUrlOpt} and image ${imageUrlOpt}")
+    log.info(s"[getImageUrl] returning screenshot $screenshotUrlOpt and image $imageUrlOpt")
     (screenshotUrlOpt, imageUrlOpt) match {
       case (None, None) =>
         Json.obj("url" -> url, "uriId" -> uri.id.get)

@@ -5,7 +5,7 @@
 var me, tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
-  log("[keeper_scout]", location.hostname)();
+  log("[keeper_scout]", location.hostname);
 
   var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount, onScroll;
   while ((tile = document.getElementById('kifi-tile'))) {
@@ -102,9 +102,9 @@ var tile = tile || function() {  // idempotent for Chrome
             var hPage = srEl.scrollHeight;
             var hViewport = srEl.clientHeight;
             var hSeen = window.pageYOffset + hViewport;
-            log('[onScroll]', Math.round(hSeen / hPage * 10000) / 100, '>', r[1], '% and', hPage, '>', r[0] * hViewport, '?')();
+            log('[onScroll]', Math.round(hSeen / hPage * 10000) / 100, '>', r[1], '% and', hPage, '>', r[0] * hViewport, '?');
             if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage && e.isTrusted !== false) {
-              log('[onScroll] showing')();
+              log('[onScroll] showing');
               loadAndDo('keeper', 'engage', 'scroll', 'button');
             }
           }
@@ -259,7 +259,7 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function setTileVertOffset(px) {
-    log('[setTileVertOffset] px:', px)();
+    log('[setTileVertOffset] px:', px);
     tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 

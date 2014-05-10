@@ -1,4 +1,4 @@
-function SocketCommander (socket, handlers, onConnect, onDisconnect, log) {
+function SocketCommander(socket, handlers, onConnect, onDisconnect, log) {
   this.socket = socket;
   this._seq = 0;
   this._nextCallbackId = 1;
@@ -22,10 +22,10 @@ SocketCommander.prototype = {
           func: callback
         };
       }
-      this._log('#0ac', '[socket.send]', arr)();
+      this._log('#0ac', '[socket.send]', arr);
       this.socket.send(JSON.stringify(arr));
     } else {
-      this._log('#c00', '[socket.send] ignored, closed', arr)();
+      this._log('#c00', '[socket.send] ignored, closed', arr);
     }
   },
   close: function () {
@@ -33,7 +33,7 @@ SocketCommander.prototype = {
       this.socket.close();
       this.socket = null;
     } else {
-      this._log('#c00', '[socket.close] already closed')();
+      this._log('#c00', '[socket.close] already closed');
     }
   },
   onConnect: function () {
@@ -49,23 +49,23 @@ SocketCommander.prototype = {
       if (id > 0) {
         var cb = this._callbacks[id];
         if (cb) {
-          this._log('#0ac', '[socket.receive] response', id, '(' + (Date.now() - cb.sent) + 'ms)')();
+          this._log('#0ac', '[socket.receive] response', id, '(' + (Date.now() - cb.sent) + 'ms)');
           delete this._callbacks[id];
           cb.func.apply(null, msg);
         } else {
-          this._log('#0ac', '[socket.receive] ignoring', id, msg)();
+          this._log('#0ac', '[socket.receive] ignoring', id, msg);
         }
       } else {
         var handler = this._handlers[id];
         if (handler) {
-          this._log('#0ac', '[socket.receive]', id)();
+          this._log('#0ac', '[socket.receive]', id);
           handler.apply(null, msg);
         } else {
-          this._log('#0ac', '[socket.receive] ignoring', id, msg)();
+          this._log('#0ac', '[socket.receive] ignoring', id, msg);
         }
       }
     } else {
-      this._log('#0ac', '[socket.receive] ignoring', msg)();
+      this._log('#0ac', '[socket.receive] ignoring', msg);
     }
   }
 };

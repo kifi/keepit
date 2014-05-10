@@ -34,7 +34,7 @@ var toaster = (function () {
         if ($toaster.data('compose').isBlank()) {
           hide();
         } else {
-          log('[toaster:toggle] no-op')();
+          log('[toaster:toggle] no-op');
         }
         deferred.resolve();
       } else {
@@ -50,7 +50,7 @@ var toaster = (function () {
       if ($toaster) {
         hide();
       } else {
-        log('[toaster:hide] no-op')();
+        log('[toaster:hide] no-op');
       }
     },
     showing: function () {
@@ -59,7 +59,7 @@ var toaster = (function () {
   };
 
   function show($parent, prefs, deferred) {
-    log('[toaster:show]')();
+    log('[toaster:show]');
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Type a message…',
@@ -91,7 +91,7 @@ var toaster = (function () {
 
   function onShown(deferred, prefs, e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
-      log('[toaster:onShown]')();
+      log('[toaster:onShown]');
       var $t = $(this).off('transitionend', onShown);
       deferred.resolve($t.data('compose'));
       if (prefs.showFindFriends) {
@@ -101,7 +101,7 @@ var toaster = (function () {
   }
 
   function hide(e) {
-    log('[toaster:hide]')();
+    log('[toaster:hide]');
     api.port.off(handlers);
     pane.onHide.remove(hide);
     $(document).data('esc').remove(hide);
@@ -116,7 +116,7 @@ var toaster = (function () {
 
   function onHidden(e) {
     if (e.target === this && e.originalEvent.propertyName === 'background-color') {
-      log('[toaster:onHidden]')();
+      log('[toaster:onHidden]');
       var $t = $(this);
       $t.data('compose').destroy();
       $t.remove();
@@ -129,7 +129,7 @@ var toaster = (function () {
       'send_message',
       withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf)}),
       function (resp) {
-        log('[sendMessage] resp:', resp)();
+        log('[sendMessage] resp:', resp);
         pane.show({locator: '/messages/' + resp.threadId});
       });
   }

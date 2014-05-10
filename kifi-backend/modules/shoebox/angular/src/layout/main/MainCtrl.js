@@ -6,8 +6,10 @@ angular.module('kifi.layout.main', [
 ])
 
 .controller('MainCtrl', [
-  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices', 'injectedState', '$rootScope', '$analytics', 'keepService',
-  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices, injectedState, $rootScope, $analytics, keepService) {
+  '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
+  'injectedState', '$rootScope', '$analytics', 'keepService',
+  function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
+    injectedState, $rootScope, $analytics, keepService) {
 
     $scope.search = {};
     $scope.data = $scope.data || {};

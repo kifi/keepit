@@ -95,7 +95,7 @@
         if (this.numUnreadUnmuted > 0) {
           this.numUnreadUnmuted--;
         } else {
-          log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted)();
+          log('#a00', '[decNumUnreadUnmuted] already at:', this.numUnreadUnmuted);
           if (~experiments.indexOf('admin')) {
             this.numUnreadUnmuted--;
           }

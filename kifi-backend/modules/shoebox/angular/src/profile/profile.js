@@ -231,7 +231,7 @@ angular.module('kifi.profile', [
         });
 
         scope.importGmailContacts = function () {
-          $window.location = env.origin + '/importContacts';
+          $window.location = socialService.importGmail();
         };
       }
     };

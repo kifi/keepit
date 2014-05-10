@@ -23,7 +23,9 @@ class RawBookmarkFactory @Inject() (
       Seq()
   }
 
-  def toRawBookmark(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map { json =>
+  def toRawBookmarks(value: JsValue): Seq[RawBookmarkRepresentation] = getBookmarkJsonObjects(value) map toRawBookmark
+
+  def toRawBookmark(json: JsObject): RawBookmarkRepresentation = {
     val title = (json \ "title").asOpt[String].map(_.take(URLFactory.MAX_URL_SIZE))
     val url = (json \ "url").asOpt[String].map(_.take(URLFactory.MAX_URL_SIZE)).getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)

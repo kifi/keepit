@@ -5,7 +5,7 @@
 var initFriendSearch = (function () {
 
   api.onEnd.push(function () {
-    log('[friendSearch:onEnd]')();
+    log('[friendSearch:onEnd]');
     $('.kifi-ti-dropdown').remove();
   });
 
