@@ -193,6 +193,7 @@ class KeepsCommander @Inject() (
             localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
           }
           val title = s"${keeper.fullName} also kept your keep"
+          log.info(s"""sending WKMK "$title" or $keeper to ${otherKeepers}""")
           val userImageSize = Some(53)
           keeper.pictureName.map { pictureName =>
             imageStore.getPictureUrl(userImageSize, keeper, pictureName)
