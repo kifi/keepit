@@ -3,9 +3,12 @@ package com.keepit.graph.model
 import scala.util.Try
 import play.api.libs.json.{JsNumber, Writes, Reads, Format}
 
+case class InvalidVertexIdException[V <: VertexDataReader](vertexId: VertexId, expectedKind: VertexKind[V])
+  extends Throwable(s"VertexId $vertexId is not of extected kind $expectedKind.")
+
 case class VertexId(id: Long) extends AnyVal {
   def asId[V <: VertexDataReader](implicit kind: VertexKind[V]): VertexDataId[V] = {
-    require(code == kind.header, "Invalid VertexId")
+    if (code != kind.header) { throw InvalidVertexIdException(this, kind) }
     VertexDataId[V](dataId)
   }
   def asIdOpt[V <: VertexDataReader](implicit kind: VertexKind[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
@@ -17,10 +20,12 @@ case class VertexId(id: Long) extends AnyVal {
 
 object VertexId {
   val headerSpace = 8
-  val dataIdSpace = 56
-  val maxVertexDataId: Long = (1.toLong << dataIdSpace) - 1
+  val dataIdSpace = 55
+  val maxVertexDataId: Long = (1L << dataIdSpace) - 1
+  val maxHeader: Long = (1L << headerSpace) - 1
   def apply[V <: VertexDataReader](id: VertexDataId[V])(implicit kind: VertexKind[V]): VertexId = {
-    require(id.id <= maxVertexDataId, s"VertexDataId $id is too large to be globalized")
+    require(id.id <= maxVertexDataId, s"VertexDataId $id is too large")
+    require(kind.header.toLong <= maxHeader, s"Header ${kind.header} is too large")
     VertexId((kind.header.toLong << dataIdSpace) | id.id)
   }
 

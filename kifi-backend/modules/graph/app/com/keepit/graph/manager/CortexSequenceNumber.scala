@@ -10,11 +10,11 @@ case class CortexSequenceNumber[M <: StatModel, T](modelVersion: ModelVersion[M]
 }
 
 object CortexSequenceNumber {
-  // top 8 bits reserved for version
+  // 8 bits reserved for version
   val versionSpace = 8
-  val seqSpace = 56
-  val maxSeq = (1L << seqSpace) - 1
-  val maxVersion = (1 << versionSpace) - 1
+  val seqSpace = 55
+  val maxSeq: Long = (1L << seqSpace) - 1
+  val maxVersion: Long = (1L << versionSpace) - 1
 
   def toLong[M <: StatModel, T](cortexSeq: CortexSequenceNumber[M, T]) = {
     require(cortexSeq.seq.value <= maxSeq, s"Sequence number ${cortexSeq.seq} is too large.")
@@ -34,17 +34,17 @@ case class LDATopicId(version: ModelVersion[DenseLDA], topic: LDATopic)  {
 }
 
 object LDATopicId {
-  // 32 bits for topic, 24 bits for version, 8 bits left for type tag,
+  // 31 bits for topic, 24 bits for version, 8 bits left for type tag,
 
   val versionSpace = 24
-  val topicSpace = 32
-  val maxTopic = (1L << topicSpace) - 1
-  val maxVersion = (1L << versionSpace) - 1
+  val topicSpace = 31
+  val maxTopic: Long = (1L << topicSpace) - 1
+  val maxVersion: Long = (1L << versionSpace) - 1
 
-  def toLong(versionedTopicId: LDATopicId): Long = {
-    require(versionedTopicId.topic.index <= maxTopic, s"Topic ${versionedTopicId.topic} is too large.")
-    require(versionedTopicId.version.version <= maxVersion, s"Version number ${versionedTopicId.version} is too large.")
-    versionedTopicId.version.version.toLong << topicSpace | versionedTopicId.topic.index.toLong
+  def toLong(topicId: LDATopicId): Long = {
+    require(topicId.topic.index <= maxTopic, s"Topic ${topicId.topic} is too large.")
+    require(topicId.version.version <= maxVersion, s"Version number ${topicId.version} is too large.")
+    topicId.version.version.toLong << topicSpace | topicId.topic.index.toLong
   }
   def versionFromLong(topicId: Long): ModelVersion[DenseLDA] = ModelVersion[DenseLDA]((topicId >> topicSpace).toInt)
   def topicFromLong(topicId: Long): LDATopic = LDATopic((topicId & maxTopic).toInt)
