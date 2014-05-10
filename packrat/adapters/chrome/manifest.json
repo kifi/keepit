@@ -107,6 +107,7 @@
     "scripts/html/iframes/view_email.js",
     "scripts/iframes/view_email.js",
     "scripts/iframes/lib/jquery.js",
-    "scripts/iframes/lib/jquery-ui-position.js"
+    "scripts/iframes/lib/jquery-ui-position.js",
+    "images/spinner_32.gif"
   ]
 }
