@@ -212,8 +212,8 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfEmailImport', [
-  'profileService', '$window', 'env', 'socialService',
-  function (profileService, $window, env, socialService) {
+  'profileService', '$window', 'env', 'socialService', 'routeService',
+  function (profileService, $window, env, socialService, routeService) {
     return {
       restrict: 'A',
       replace: true,
@@ -231,7 +231,7 @@ angular.module('kifi.profile', [
         });
 
         scope.importGmailContacts = function () {
-          $window.location = env.origin + '/importContacts';
+          $window.location = socialService.importGmail();
         };
       }
     };

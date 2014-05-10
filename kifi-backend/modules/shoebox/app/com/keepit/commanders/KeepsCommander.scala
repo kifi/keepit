@@ -24,10 +24,11 @@ import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.store.ImageSize
+import scala.util.{Success, Failure}
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
-case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int)
+case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = 0)
 
 class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
   def writes(info: FullKeepInfo) = Json.obj(
@@ -38,6 +39,7 @@ class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo]
     "createdAt" -> info.bookmark.createdAt,
     "others" -> info.others,
     "keepers" -> info.users,
+    "clickCount" -> info.clickCount,
     "collections" -> info.collections.map(_.id)
   )
 }
@@ -80,6 +82,7 @@ class KeepsCommander @Inject() (
     userRepo: UserRepo,
     userBookmarkClicksRepo: UserBookmarkClicksRepo,
     keepClicksRepo: KeepClickRepo,
+    rekeepRepo: ReKeepRepo,
     kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory,
@@ -90,7 +93,7 @@ class KeepsCommander @Inject() (
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    val (keeps, collectionOpt) = db.readOnly { implicit s =>
+    val (keeps, collectionOpt, clickCounts) = db.readOnly { implicit s =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
@@ -98,7 +101,8 @@ class KeepsCommander @Inject() (
         case None =>
           keepRepo.getByUser(userId, before, after, count)
       }
-      (keeps, collectionOpt)
+      val clickCounts = keepClicksRepo.getClickCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
+      (keeps, collectionOpt, clickCounts)
     }
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
@@ -116,7 +120,7 @@ class KeepsCommander @Inject() (
       }
       val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
+        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCounts.getOrElse(keep.id.get, 0))
       }
       (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
     }
@@ -124,18 +128,23 @@ class KeepsCommander @Inject() (
 
   def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
-    val (keep :: _, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepJson), userId, source, true, installationId)
-    SafeFuture{
-      searchClient.updateURIGraph()
-      notifyWhoKeptMyKeeps(userId, Seq(keep))
+    val rawBookmark = rawBookmarkFactory.toRawBookmark(keepJson)
+    keepInterner.internRawBookmark(rawBookmark, userId, source, mutatePrivacy = true, installationId) match {
+      case Failure(e) =>
+        throw e
+      case Success(keep) =>
+        SafeFuture{
+          searchClient.updateURIGraph()
+          notifyWhoKeptMyKeeps(userId, Seq(keep))
+        }
+        KeepInfo.fromBookmark(keep)
     }
-    KeepInfo.fromBookmark(keep)
   }
 
   def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
       (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, true)
+    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -285,7 +294,7 @@ class KeepsCommander @Inject() (
   }
 
   def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
+    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmarks(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
     addToCollection(tag.id.get, bookmarks)
   }
 

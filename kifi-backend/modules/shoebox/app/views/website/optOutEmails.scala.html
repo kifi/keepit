@@ -25,8 +25,8 @@
       </label>
       <input type="hidden" name="all" value="if(all){true}else{false}" id="can-recieve-emails">
 
-      <span class="optout" id="update">Update email preferences</span>
-      <span class="optout" id="all">Opt-out of all emails</span>
+      <span class="kifi-action" id="update">Update email preferences</span>
+      <span class="kifi-action" id="all">Opt-out of all emails</span>
     </form>
   </section>
 </main>
@@ -52,7 +52,7 @@
 @styles = {
   <link rel="stylesheet" href="/assets/css/auth2.css">
   <link rel="stylesheet" href="/assets/css/auth-footer.css">
-  <link rel="stylesheet" href="/assets/css/optout.css">
+  <link rel="stylesheet" href="/assets/css/userAction.css">
 }
 
 @views.html.marketing.helper.page(title = "kifi • Opt-out of emails", styles = styles, content = content, scripts = scripts, dataTrack = "optOutEmails", htmlClass = "login-page", isLoggedIn = true, headerType = "grey", footerType = "minimalist")
