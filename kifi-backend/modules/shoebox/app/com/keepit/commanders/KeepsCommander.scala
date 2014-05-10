@@ -23,7 +23,7 @@ import play.api.libs.json._
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{S3ImageStore, ImageSize}
 import scala.util.{Success, Failure}
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
@@ -89,7 +89,8 @@ class KeepsCommander @Inject() (
     scheduler: Scheduler,
     eliza: ElizaServiceClient,
     localUserExperimentCommander: LocalUserExperimentCommander,
-    imageRepo: ImageInfoRepo
+    imageRepo: ImageInfoRepo,
+    imageStore: S3ImageStore
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -188,10 +189,18 @@ class KeepsCommander @Inject() (
           localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
         }
         val title = s"${keeper.fullName} also kept your keep"
-        val bodyHtml = "Great minds think alike!"
-        val image = imageRepo.getByUriWithSize(uri.id.get, ImageSize(42, 42)).headOption.map(_.url).flatten.getOrElse("")
-        eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, image,
-          sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
+        val userImageSize = Some(53)
+        keeper.pictureName.map { pictureName =>
+          imageStore.getPictureUrl(userImageSize, keeper, pictureName)
+        } getOrElse {
+          imageStore.getPictureUrl(userImageSize, keeper, "0")
+        } map { userImage =>
+          val pageImageSize = 42
+          val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
+          val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
+          eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
+            sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
+        }
       }
     }
   }
