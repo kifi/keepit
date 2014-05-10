@@ -90,9 +90,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   def count(implicit session: RSession): Int = Query(rows.length).first
 
-  private def checkTiming(time:Long, operation:String, model: M):Unit = {
+  private[slick] def checkTiming(time:Long, operation:String, model: M)(implicit session:RSession):Unit = {
     if (time > 5000) { // tweak
-    val msg = s"DB-$operation (${model.getClass.getSimpleName}) takes too long ($time ms); model:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}"
+    val msg = s"DB-$operation (${session.sessionId};${model.getClass.getSimpleName}) takes too long ($time ms); model:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}"
       log.error(msg, new IllegalStateException(msg))
     }
   }
@@ -101,7 +101,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val startTime = System.currentTimeMillis()
     val model = (for(f <- rows if f.id is id) yield f).first
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET\tduration:$time\tmodel:${model.getClass.getSimpleName}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:GET\tduration:$time\tmodel:${model.getClass.getSimpleName}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     checkTiming(time, "GET", model)
     model
   }
@@ -119,7 +119,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val startTime = System.currentTimeMillis()
     val inserted = (rows returning rows.map(_.id)) += model
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:INSERT\tduration:$time\tmodel:${inserted.getClass.getSimpleName}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:INSERT\tduration:$time\tmodel:${inserted.getClass.getSimpleName}\tmodel:${inserted.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     checkTiming(time, "INSERT", model)
     inserted
   }
@@ -129,7 +129,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val target = for(t <- rows if t.id === model.id.get) yield t
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     checkTiming(time, "UPDATE", model)
     if (count != 1) {
       deleteCache(model)
@@ -192,7 +192,8 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
     val count = target.delete
     deleteCache(model)
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:DELETE\tduration:${time}\ttype:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    checkTiming(time, "DELETE", model)
     if (changeListener.isDefined) session.onTransactionSuccess{
      changeListener.get(RepoEntryRemoved(model))
     }
@@ -243,7 +244,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
     val startTime = System.currentTimeMillis()
     val model = (for(f <- rowsWithExternalIdColumn if f.externalId === id) yield f).firstOption
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\ttype:GET-EXT\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
+    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:GET-EXT\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 }
