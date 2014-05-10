@@ -25,10 +25,6 @@ angular.module('kifi.search', [
       $scope.search.text = $routeParams.q;
     }
 
-    var reportSearchAnalyticsOnUnload = function() {
-      reportSearchAnalytics('unload');
-    };
-
     //either "unload" or "refinement"
     var reportSearchAnalytics = function(endedWith) {
       var url = routeService.searchedAnalytics;
@@ -109,12 +105,15 @@ angular.module('kifi.search', [
       }
     };
 
-    $scope.$on('$destroy', function () {
-      reportSearchAnalyticsOnUnload();
-      $window.removeEventListener('beforeunload', reportSearchAnalyticsOnUnload);
-    });
-
+    function reportSearchAnalyticsOnUnload() {
+      if (!reportSearchAnalyticsOnUnload.done) {
+        reportSearchAnalytics('unload');
+        $window.removeEventListener('beforeunload', reportSearchAnalyticsOnUnload);
+        reportSearchAnalyticsOnUnload.done = true;
+      }
+    }
     $window.addEventListener('beforeunload', reportSearchAnalyticsOnUnload);
+    $scope.$on('$destroy', reportSearchAnalyticsOnUnload);
 
     if (!$routeParams.q) {
       // No or blank query
