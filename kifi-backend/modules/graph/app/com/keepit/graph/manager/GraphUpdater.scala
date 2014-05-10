@@ -124,13 +124,13 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       }
     }
 
-    val uriVertexId: VertexDataId[UriReader] = update.uriId
-    removeOldURITopicsIfExists(uriVertexId, update.sparseTopics.dimension)
+    val uriVertexId: VertexDataId[UriReader] = update.uriFeatures.uriId
+    removeOldURITopicsIfExists(uriVertexId, update.uriFeatures.features.dimension)
 
     val uriData = UriData(uriVertexId)
 
-    update.sparseTopics.topics foreach { case (index, score) =>
-      val topicId = LDATopicId(update.modelVersion, index)
+    update.uriFeatures.features.topics foreach { case (topic, score) =>
+      val topicId = LDATopicId(update.modelVersion, topic)
       val topicVertexId: VertexDataId[LDATopicReader] = topicId
       writer.saveVertex(LDATopicData(topicVertexId))
       writer.saveVertex(uriData)

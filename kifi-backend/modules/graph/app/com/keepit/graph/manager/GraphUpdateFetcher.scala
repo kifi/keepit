@@ -9,9 +9,10 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.{UserConnection, User}
+import com.keepit.model.{NormalizedURI, UserConnection, User}
 import com.keepit.common.ImmediateMap
 import com.keepit.common.db.SequenceNumber
+import com.keepit.cortex.models.lda.DenseLDA
 
 trait GraphUpdateFetcher {
   def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]]
@@ -40,7 +41,12 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case KeepGraphUpdate => shoebox.getBookmarksChanged(seq.copy(), fetchSize).imap(_.map(KeepGraphUpdate.apply))
 
-      case SparseLDAGraphUpdate => Future.successful(Seq.empty)
+      case SparseLDAGraphUpdate => {
+        val cortexSeq = CortexSequenceNumber.fromLong[DenseLDA, NormalizedURI](seq.value)
+        cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap { case (modelVersion, uriFeaturesBatch) =>
+          uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
+        }
+      }
 
     }
   }

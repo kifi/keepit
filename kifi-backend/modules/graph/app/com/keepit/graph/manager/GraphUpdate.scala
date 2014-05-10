@@ -4,7 +4,7 @@ import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.model._
 import com.keepit.social.SocialNetworkType
-import com.keepit.cortex.models.lda.{DenseLDA, SparseTopicRepresentation}
+import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, DenseLDA, SparseTopicRepresentation}
 import com.keepit.cortex.core.ModelVersion
 
 sealed trait GraphUpdate { self =>
@@ -81,15 +81,10 @@ case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
   def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.seq)
 }
 
-case class SparseLDAGraphUpdate(
-  modelVersion: ModelVersion[DenseLDA],
-  uriId: Id[NormalizedURI],
-  uriSeq: SequenceNumber[NormalizedURI],
-  sparseTopics: SparseTopicRepresentation
-) extends GraphUpdate {
+case class SparseLDAGraphUpdate(modelVersion: ModelVersion[DenseLDA], uriFeatures: UriSparseLDAFeatures) extends GraphUpdate {
   type U = SparseLDAGraphUpdate
   def kind = SparseLDAGraphUpdate
-  val seq = kind.seq(CortexSequenceNumber(modelVersion, uriSeq).toLong)
+  val seq = kind.seq(CortexSequenceNumber(modelVersion, uriFeatures.uriSeq).toLong)
 }
 
 case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate]{
