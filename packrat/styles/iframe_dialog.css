@@ -30,7 +30,7 @@
   transition: transform .3s;
   border: 1px solid #e3e5e8;
   border-radius: 5px !important;
-  background: #fff;
+  background: rgb(52, 73, 94);
   color: #000;
   line-height: 0;
   text-align: center;
