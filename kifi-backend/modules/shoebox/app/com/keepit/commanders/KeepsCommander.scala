@@ -26,6 +26,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.store.{S3ImageStore, ImageSize}
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.eliza.model.MessageHandle
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -193,7 +194,7 @@ class KeepsCommander @Inject() (
             localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
           }
           val title = s"${keeper.fullName} also kept your keep"
-          log.info(s"""sending WKMK "$title" or $keeper to ${otherKeepers}""")
+          log.info(s"""sending WKMK "$title" or $keeper to $otherKeepers""")
           val userImageSize = Some(53)
           keeper.pictureName.map { pictureName =>
             imageStore.getPictureUrl(userImageSize, keeper, pictureName)
@@ -204,7 +205,12 @@ class KeepsCommander @Inject() (
             val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
             val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
             eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
-              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
+              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP) onComplete { messageHandle =>
+                messageHandle match {
+                  case Success(id) => log.info(s"""[$id] sent WKMK "$title" or $keeper to ${otherKeepers}""")
+                  case Failure(ex) => log.error(s"""Error sending WKMK "$title" or $keeper to ${otherKeepers}""", ex)
+                }
+            }
           }
         } catch {
           case e: Exception => airbrake.notify(s"on parsing WKMK for user $userId and keep $keepId", e)
