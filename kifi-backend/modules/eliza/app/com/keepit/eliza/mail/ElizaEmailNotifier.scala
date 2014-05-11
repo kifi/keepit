@@ -23,7 +23,8 @@ import scala.util.matching.Regex.Match
 import akka.util.Timeout
 
 object MessageLookHereRemover {
-  private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
+  private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:[^)]*(?:(?<=\\)\)[^)]*)*\)""".r
+
 
   def apply(text: String): String = {
     try {
