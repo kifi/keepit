@@ -30,6 +30,14 @@ object DBSession {
     }
     lazy val clock = new SystemClock
     val sessionId = TrackingId.get
+    def runningTime():Long = System.currentTimeMillis - startTime
+    def timeCheck():Unit = {
+      val t = runningTime()
+      if (t > 5000) { // tweak
+        val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long: $t ms"
+        log.error(msg, new IllegalStateException(msg))
+      }
+    }
 
     private val dbLog = Logger("com.keepit.db")
     def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave, sessionId)
@@ -43,10 +51,7 @@ object DBSession {
       session.close()
       val time = System.currentTimeMillis - startTime
       dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
-      if (time > 5000) { // tweak
-        val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long ($time ms)"
-        log.error(msg, new IllegalStateException(msg))
-      }
+      timeCheck()
     }
 
     def rollback() { doRollback = true }
