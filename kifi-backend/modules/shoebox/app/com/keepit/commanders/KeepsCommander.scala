@@ -23,8 +23,10 @@ import play.api.libs.json._
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{S3ImageStore, ImageSize}
 import scala.util.{Success, Failure}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.eliza.model.MessageHandle
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -89,7 +91,9 @@ class KeepsCommander @Inject() (
     scheduler: Scheduler,
     eliza: ElizaServiceClient,
     localUserExperimentCommander: LocalUserExperimentCommander,
-    imageRepo: ImageInfoRepo
+    imageRepo: ImageInfoRepo,
+    imageStore: S3ImageStore,
+    airbrake: AirbrakeNotifier
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
@@ -173,25 +177,44 @@ class KeepsCommander @Inject() (
     // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
     scheduler.scheduleOnce(5 minutes) {
       db.readOnly { implicit s =>
-        val keep = keepRepo.get(keepId)
-        //deal only with good standing, fully public keeps and uris
-        if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
-        val uri = uriRepo.get(keep.uriId)
-        if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
-        val countPublicActiveByUri = keepRepo.countPublicActiveByUri(uri.id.get)
-        //don't mess with keeps that are even a bit popular, has more then four keepers (with the latest keeper). we don't want to create noise, be extra careful
-        if (countPublicActiveByUri <= 1 || countPublicActiveByUri >= 5) return
-        val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE).filterNot(_.userId == userId)
-        if (otherKeeps.length > 3) return // how did that happen???
-        val keeper = userRepo.get(keep.userId)
-        val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
-          localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
+        try {
+          val keep = keepRepo.get(keepId)
+          //deal only with good standing, fully public keeps and uris
+          if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
+          val uri = uriRepo.get(keep.uriId)
+          if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
+          val countPublicActiveByUri = keepRepo.countPublicActiveByUri(uri.id.get)
+          //don't mess with keeps that are even a bit popular, has more then four keepers (with the latest keeper). we don't want to create noise, be extra careful
+          val maxKeepers = 5
+          if (countPublicActiveByUri <= 1 || countPublicActiveByUri > maxKeepers) return
+          val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE).filterNot(_.userId == userId)
+          if (otherKeeps.length > (maxKeepers - 1)) return // how did that happen???
+          val keeper = userRepo.get(keep.userId)
+          val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
+            localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
+          }
+          val title = s"${keeper.fullName} also kept your keep"
+          log.info(s"""sending WKMK "$title" or $keeper to $otherKeepers""")
+          val userImageSize = Some(53)
+          keeper.pictureName.map { pictureName =>
+            imageStore.getPictureUrl(userImageSize, keeper, pictureName)
+          } getOrElse {
+            imageStore.getPictureUrl(userImageSize, keeper, "0")
+          } map { userImage =>
+            val pageImageSize = 42
+            val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
+            val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
+            eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
+              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP) onComplete { messageHandle =>
+                messageHandle match {
+                  case Success(id) => log.info(s"""[$id] sent WKMK "$title" or $keeper to ${otherKeepers}""")
+                  case Failure(ex) => log.error(s"""Error sending WKMK "$title" or $keeper to ${otherKeepers}""", ex)
+                }
+            }
+          }
+        } catch {
+          case e: Exception => airbrake.notify(s"on parsing WKMK for user $userId and keep $keepId", e)
         }
-        val title = s"${keeper.fullName} also kept your keep"
-        val bodyHtml = "Great minds think alike!"
-        val image = imageRepo.getByUriWithSize(uri.id.get, ImageSize(42, 42)).headOption.map(_.url).flatten.getOrElse("")
-        eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, image,
-          sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP)
       }
     }
   }

@@ -11,6 +11,8 @@ import com.google.inject.Inject
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 
 //This thing isn't really very efficient, but it should do for now, on account of most threads being very short -Stephen
@@ -18,8 +20,9 @@ class MessagingIndexCommander @Inject() (
     messageRepo : MessageRepo,
     threadRepo : MessageThreadRepo,
     db: Database,
-    shoebox: ShoeboxServiceClient
-  ) {
+    shoebox: ShoeboxServiceClient,
+    airbrake: AirbrakeNotifier
+  ) extends Logging {
 
   private def getMessages(fromId: Id[Message], toId: Id[Message], maxId: Id[Message]) : Seq[Message] = {
     val messages = db.readOnly{ implicit session => messageRepo.getFromIdToId(fromId, toId) }
@@ -29,6 +32,7 @@ class MessagingIndexCommander @Inject() (
   }
 
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
+    log.info(s"getting content for thread $threadId seq $seq")
     val thread = db.readOnly{ implicit session => threadRepo.get(threadId) }
     val participants : Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(participants)
@@ -41,6 +45,17 @@ class MessagingIndexCommander @Inject() (
       !message.from.isSystem
     }
 
+    val digest = try { MessageLookHereRemover(messages.head.messageText).slice(0,255) } catch {
+      case e: Throwable =>
+        airbrake.notify(e)
+        messages.head.messageText
+    }
+    val content = try { messages.map{ message => MessageLookHereRemover(message.messageText) } } catch {
+      case e: Throwable =>
+        airbrake.notify(e)
+        messages.map{ message => message.messageText }
+    }
+
     participantBasicUsersFuture.map{ participantBasicUsers =>
       ThreadContent(
         mode = FULL,
@@ -51,8 +66,8 @@ class MessagingIndexCommander @Inject() (
         url = thread.url.getOrElse(""),
         threadExternalId = thread.externalId.id,
         pageTitleOpt = thread.pageTitle,
-        digest = MessageLookHereRemover(messages.head.messageText).slice(0,255),
-        content = messages.map{ message => MessageLookHereRemover(message.messageText) },
+        digest = digest,
+        content = content,
         participantIds = participants
       )
     }
@@ -60,7 +75,9 @@ class MessagingIndexCommander @Inject() (
 
   def getThreadContentsForMessagesFromIdToId(fromId: Id[Message], toId: Id[Message]) : Future[Seq[ThreadContent]] = {
     val maxMessageId = db.readOnly{ implicit session => messageRepo.getMaxId()}
+    log.info(s"trying to get messages from $fromId, to $toId max $maxMessageId")
     val allMessages = getMessages(fromId, toId, maxMessageId)
+    log.info(s"got messages ${allMessages.map(_.id.get).mkString(",")}")
     val threadMessages = allMessages.groupBy(_.thread)
     Future.sequence(threadMessages.toSeq.map{ case (threadId, messages) =>
       getThreadContentsForThreadWithSequenceNumber(threadId, SequenceNumber(messages.map(_.id.get.id).max))
