@@ -169,8 +169,9 @@ angular.module('kifi.layout.main', [
       }
     };
 
-    $scope.openExportPopup = function($event, url) {
-      $window.open(url, 'export_popup', 'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=no,width=500,height=500');
+    $scope.openExportPopup = function($event) {
+      var url = angular.element($event.target)[0].href;
+      $window.open(url, '', 'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=no,width=1000,height=500');
       $event.preventDefault();
       return false;
     };
