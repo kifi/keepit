@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.ext
 
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.MessagingCommander
+import com.keepit.eliza.commanders.{MessagingCommander, ElizaEmailCommander}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.controller.{ElizaServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -31,6 +31,7 @@ class ExtMessagingController @Inject() (
     notificationRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
+    emailCommander: ElizaEmailCommander,
     protected val shoebox: ShoeboxServiceClient,
     protected val search: SearchServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
@@ -88,4 +89,9 @@ class ExtMessagingController @Inject() (
     Statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
+
+  def getEmailPreview(msgExtId: String) = AnyAction.authenticatedAsync { request =>
+    emailCommander.getEmailPreview(ExternalId[Message](msgExtId)).map(Ok(_))
+  }
+
 }

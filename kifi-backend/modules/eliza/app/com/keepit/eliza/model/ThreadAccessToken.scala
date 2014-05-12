@@ -15,6 +15,5 @@ object ThreadAccessToken {
 
   val IDPattern = "[0-9a-f]{32}".r
 
-
   def apply(): ThreadAccessToken = ThreadAccessToken(UUID.randomUUID.toString.replace("-", ""))
 }

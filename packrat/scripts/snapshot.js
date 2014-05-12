@@ -326,7 +326,7 @@ var snapshot = function () {
             r.setEnd(ec, eos.pop());
             return r;
           } catch (e) {
-            log('[snapshot.findRange]', e)();
+            log('[snapshot.findRange]', e);
           }
         }
       }

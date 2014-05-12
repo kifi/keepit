@@ -24,7 +24,7 @@ $.fn.layout = function () {
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
 if (searchUrlRe.test(document.URL)) !function () {
   'use strict';
-  log('[google_inject]')();
+  log('[google_inject]');
 
   var origin = location.origin;
   var $res = $(render('html/search/google', {images: api.url('images')}));   // a reference to our search results (kept so that we can reinsert when removed)
@@ -68,7 +68,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     var hash = location.hash, qs = /[#&]q=/.test(hash) ? hash : location.search;
     var isV = /[?#&]tbm=/.test(qs);
     if (isV !== isVertical) {
-      log("[checkSearchType] search type:", isV ? "vertical" : "web")();
+      log("[checkSearchType] search type:", isV ? "vertical" : "web");
       isVertical = isV;
     }
   }
@@ -103,7 +103,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
     var q = ($qp.val() || $q.val() || useLocation && (parseQ(location.hash) || parseQ(location.search)) || '').trim().replace(/\s+/g, ' ');  // TODO: also detect "Showing results for" and prefer that
     if (q === query && areSameFilter(newFilter, filter)) {
-      log("[search] nothing new, query:", q, "filter:", newFilter)();
+      log("[search] nothing new, query:", q, "filter:", newFilter);
       if (isFirst) {
         document.addEventListener('DOMContentLoaded', search.bind(null, false, false, true));
       }
@@ -115,13 +115,13 @@ if (searchUrlRe.test(document.URL)) !function () {
       } catch (e) {}
     }
     if (!q) {
-      log('[search] empty query')();
+      log('[search] empty query');
       return;
     }
     query = q;
     filter = newFilter;
 
-    log("[search] query:", q, "filter:", newFilter)();
+    log("[search] query:", q, "filter:", newFilter);
 
     if (!newFilter) {
       if (!isFirst) {
@@ -141,16 +141,16 @@ if (searchUrlRe.test(document.URL)) !function () {
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst, whence: 'i'}, function results(resp) {
       if (q !== query || !areSameFilter(newFilter, filter)) {
-        log("[results] ignoring for query:", q, "filter:", newFilter)();
+        log("[results] ignoring for query:", q, "filter:", newFilter);
         return;
       } else if (!resp.me) {
-        log("[results] no user info")();
+        log("[results] no user info");
         $res.hide();
         return;
       }
 
       var now = tKifiResultsReceived = Date.now();
-      log('[results] took', now - t1, 'ms')();
+      log('[results] took', now - t1, 'ms');
       if (!newFilter) {
         clicks.kifi.length = clicks.google.length = 0;
       }
@@ -166,7 +166,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var inDoc = document.contains($res[0]);
       var showAny = Boolean(resp.show && resp.hits.length && resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
-      log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc)();
+      log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc);
       resp.hits.forEach(processHit, resp);
       if (!resp.hits.length) resp.mayHaveMore = false;
 
@@ -234,13 +234,13 @@ if (searchUrlRe.test(document.URL)) !function () {
       try {
         return decodeURIComponent(m[1].replace(/\+/g, ' ')).trim();
       } catch (e) {
-        log('[parseQ] non-UTF-8 query:', m[1], e)();  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+        log('[parseQ] non-UTF-8 query:', m[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
       }
     }
   }
 
   $(window).on('hashchange', function () {  // e.g. a click on a Google doodle or a switch from shopping to web search
-    log("[hashchange]")();
+    log("[hashchange]");
     checkSearchType();
     if (!query && !response.query) {
       search(true, null, true);
@@ -260,7 +260,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
-          log("[withMutations] Google results inserted")();
+          log("[withMutations] Google results inserted");
           tGoogleResultsShown = Date.now();
           if (attachKifiRes(nodes[j]) && !(tKifiResultsShown >= tKifiResultsReceived)) {
             tKifiResultsShown = tGoogleResultsShown;
@@ -353,7 +353,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   });
 
   api.onEnd.push(function() {
-    log("[google_inject:onEnd]")();
+    log("[google_inject:onEnd]");
     $(window).off("hashchange unload");
     observer.disconnect();
     $q.off("input");
@@ -416,7 +416,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   function makeDescAndTagsFit() {  // this is a .kifi-res-sub
     var targetWidth = this.parentNode.offsetWidth;
     var actualWidth = this.offsetWidth;
-    log('[makeDescAndTagsFit]', actualWidth, targetWidth, this.textContent)();
+    log('[makeDescAndTagsFit]', actualWidth, targetWidth, this.textContent);
     if (!actualWidth || !targetWidth) {
       return;
     }
@@ -448,7 +448,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   var boundResHandlers;
   function bindResHandlers() {
-    log('[bindResHandlers]')();
+    log('[bindResHandlers]');
     $status.click(function (e) {
       if (e.which > 1 || !this.href) return;
       e.preventDefault();
@@ -529,7 +529,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         });
       }
     }).on('mouseup', '.kifi-res-kifi-com', function () {
-      location.href = 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
+      location.href = response ? response.origin : 'https://www.kifi.com' + (query ? '/find?q=' + encodeURIComponent(query).replace(/%20/g, '+') : '');
     }).on('mouseup', '.kifi-res-max-results-n', function () {
       var $this = $(this).addClass('kifi-checked').removeAttr('href');
       $this.siblings('.kifi-checked').removeClass('kifi-checked').attr('href', 'javascript:');
@@ -606,6 +606,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     $res.find('.kifi-res-box')
       .append(render('html/search/google_hits', {
           results: response.hits,
+          origin: response.origin,
           self: response.me,
           images: api.url('images'),
           filter: response.filter && response.filter.who !== 'a',
@@ -613,7 +614,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         }, {
           google_hit: 'google_hit'
         }));
-    log('[attachResults] done')();
+    log('[attachResults] done');
   }
 
   function prefetchMore() {
@@ -626,7 +627,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         "context": response.context
       }, function onPrefetchResponse(resp) {
         if (response === origResp) {
-          log('[onPrefetchResponse]')();
+          log('[onPrefetchResponse]');
           resp.hits.forEach(processHit, resp);
 
           response.nextHits = resp.hits;
@@ -649,7 +650,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   function showMore() {
-    log('[showMore] already showing:', response.hits.length, 'avail:', response.nextHits)();
+    log('[showMore] already showing:', response.hits.length, 'avail:', response.nextHits);
     exitPreview();
     if (response.nextHits) {
       renderMore();
@@ -664,7 +665,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   function renderMore() {
     var hits = response.nextHits;
     var hitHtml = response.numTop === response.hits.length ? ['<li class=kifi-res-more-heading>More keeps</li>'] : [];
-    log("[renderMore] hits:", hits)();
+    log("[renderMore] hits:", hits);
     response.hits.push.apply(response.hits, hits);
     response.uuid = response.nextUUID;
     response.context = response.nextContext;
@@ -701,7 +702,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
     hit.scoreText = ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
-    hit.tagsText = (hit.bookmark.tagNames || []).join(', ');
+    if (hit.tags) {
+      hit.tags[hit.tags.length - 1].last = true;
+    }
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;

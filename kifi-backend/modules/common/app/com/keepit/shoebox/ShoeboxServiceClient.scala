@@ -122,11 +122,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
-  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserGraphUpdate]): Future[Unit]
-  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit]
-  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit]
-  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit]
-  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit]
   def getURIImage(nUri: NormalizedURI): Future[Option[String]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
@@ -769,7 +764,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
-    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize)).map{ r =>
+    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
       Json.fromJson[Seq[UserConnection]](r.json).get
     }
   }
@@ -821,31 +816,6 @@ class ShoeboxServiceClientImpl @Inject() (
         Json.fromJson[Seq[UrlPatternRule]](r.json).get
       }
     }
-  }
-
-  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserGraphUpdate]): Future[Unit] = {
-    val userUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.userGraphUpdate(), body = userUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit] = {
-    val socialConnectionUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.socialConnectionGraphUpdate(), body = socialConnectionUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit] = {
-    val socialUserInfoUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.socialUserInfoGraphUpdate(), body = socialUserInfoUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
-    val userConnectionUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.userConnectionGraphUpdate(), body = userConnectionUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]  = {
-    val keepGraphUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.keepGraphUpdate(), body = keepGraphUpdateRequest).map { r => assert(r.status == 202); () }
   }
 
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {

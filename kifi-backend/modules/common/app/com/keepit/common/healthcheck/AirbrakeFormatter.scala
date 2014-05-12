@@ -51,7 +51,8 @@ object ErrorWithStack {
         e.getFileName != "Threads.scala" &&
         e.getFileName != "Promise.scala" &&
         e.getFileName != "Future.scala" &&
-        e.getFileName != "AbstractDispatcher.scala"))
+        e.getFileName != "AbstractDispatcher.scala")
+      .take(AirbrakeError.MaxStackTrace))
 }
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {
@@ -121,7 +122,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
         val leader = serviceDiscovery.isLeader()
         val errorString = error.rootCause.error match {
           case _: DefaultAirbrakeException => ""
-          case e: Throwable => e.toString()
+          case e: Throwable => e.toString
         }
         s"[${instance.map(_.id.id).getOrElse("NA")}${if(leader) "L" else "_"}]${message.getOrElse("")} ${errorString}".trim
         }</message>

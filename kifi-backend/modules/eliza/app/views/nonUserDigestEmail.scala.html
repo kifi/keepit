@@ -23,7 +23,7 @@
                             <tr>
                               <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                   <tr>
-                                    <td valign="top"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-big-quotes.jpg" width="32" height="24" style="display:block;" border="0" /></td>
+                                    <td valign="top" width="35"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-big-quotes.jpg" width="32" height="24" style="display:block;" border="0" /></td>
                                     <td width="10">&nbsp;</td>
                                     <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;font-style:italic;line-height:24px;color:#333333;">@text</td>
                                   </tr>
@@ -89,7 +89,7 @@
     </tr>
   }
 
-  @messageBlock(imageUrl: String, shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
+  @messageBlock(imageUrl: Option[String], shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
     <tr>
       <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
           <tr>
@@ -104,7 +104,15 @@
                         <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tr>
                               <!-- Image -->
-                              <td width="73" valign="top"><img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block;" border="0" /></td>
+                              <td width="73" valign="top">
+                                @imageUrl.map{ iUrl =>
+                                  <img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block; border-radius: 3px;" border="0" />
+                                }.getOrElse{
+                                  <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle; border-radius: 3px;">
+                                    @{shortName(0).toUpper}
+                                  </div>
+                                }
+                              </td>
                               <!-- //Image -->
                               <td width="28">&nbsp;</td>
                               <!-- Content -->

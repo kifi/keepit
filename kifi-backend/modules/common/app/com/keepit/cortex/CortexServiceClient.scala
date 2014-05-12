@@ -10,10 +10,10 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
-import com.kifi.franz.QueueName
 import com.keepit.common.db.SequenceNumber
-import com.keepit.graph.manager.LDAURITopicGraphUpdate
-
+import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, DenseLDA}
+import com.keepit.serializer.TraversableFormat
 
 
 trait CortexServiceClient extends ServiceClient{
@@ -32,7 +32,7 @@ trait CortexServiceClient extends ServiceClient{
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
 
-  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit]
+  def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
 
 class CortexServiceClientImpl(
@@ -113,10 +113,12 @@ class CortexServiceClientImpl(
     }
   }
 
-  def graphLDAURIFeatureUpdate(lowSeq: SequenceNumber[LDAURITopicGraphUpdate], queue: QueueName): Future[Unit] = {
-    val payload = Json.obj("versionedLowSeq" -> lowSeq.value, "queue" -> queue.name)
-    call(Cortex.internal.graphLDAURIFeatureUpdate(), payload).map{ r =>
-      assert(r.status == 202); ()
+  def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = {
+    call(Cortex.internal.getSparseLDAFeaturesChanged(modelVersion, seqNum, fetchSize)).map { response =>
+      val publishedModelVersion = (response.json \ "modelVersion").as[ModelVersion[DenseLDA]]
+      val uriFeatures = (response.json \ "features").as[JsArray].value.map(_.as[UriSparseLDAFeatures])
+      (publishedModelVersion, uriFeatures)
     }
   }
+
 }

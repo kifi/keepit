@@ -9,7 +9,7 @@ var searchIntro = searchIntro || (function () {
   return {
     show: function show($parent) {
       if (!$el && document.hasFocus()) {
-        log('[searchIntro.show]')();
+        log('[searchIntro.show]');
         $el = $(render('html/search/search_intro'))
           .appendTo($parent)
           .layout()

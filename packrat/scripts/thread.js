@@ -38,7 +38,7 @@ panes.thread = function () {
   return {
     render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
-      log('[panes.thread.render]', threadId)();
+      log('[panes.thread.render]', threadId);
 
       $who = $paneBox.find('.kifi-thread-who');  // uncomment code below once header is pre-rendered again
       var $tall = $paneBox.find('.kifi-pane-tall'); //.css('margin-top', $who.outerHeight());
@@ -155,7 +155,7 @@ panes.thread = function () {
 
   function textMatches(messageText, el) {
     var matches = $(el).data('text') === messageText;
-    log('[textMatches]', matches)();
+    log('[textMatches]', matches);
     return matches;
   }
 
@@ -227,7 +227,7 @@ panes.thread = function () {
 
   function transmitReply($m, originalText, threadId) {
     api.port.emit('send_reply', {text: originalText, threadId: threadId}, function (o) {
-      log('[transmitReply] resp:', o)();
+      log('[transmitReply] resp:', o);
       if (o.id) { // success, got a response
         $m.attr('data-id', o.id);
         $m.find('.kifi-message-body').css({opacity: ''});

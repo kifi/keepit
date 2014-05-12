@@ -2,11 +2,9 @@ package com.keepit.graph.manager
 
 import com.keepit.graph.model._
 import com.google.inject.Inject
-import com.keepit.model.{KeepStates, SocialConnectionStates, UserConnectionStates}
+import com.keepit.model._
 import com.keepit.social.SocialNetworks
-import com.keepit.graph.model.UserData
-import com.keepit.graph.model.FacebookAccountData
-import com.keepit.cortex.models.lda.VersionedLDATopicId
+import com.keepit.cortex.models.lda.LDATopic
 
 trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
@@ -19,11 +17,13 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialUserInfoGraphUpdate: SocialUserInfoGraphUpdate => processSocialUserInfoGraphUpdate(socialUserInfoGraphUpdate)
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
-    case ldaUpdate: LDAURITopicGraphUpdate => processLDAUpdate(ldaUpdate)
+    case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
+    case uriUpdate: NormalizedUriGraphUpdate => processNormalizedUriGraphUpdate(uriUpdate)
   }
 
-  private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
-    writer.saveVertex(UserData(update.userId))
+  private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case UserStates.ACTIVE => writer.saveVertex(UserData(update.userId))
+    case _ => writer.removeVertexIfExists(update.userId)
   }
 
   private def processUserConnectionGraphUpdate(update: UserConnectionGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -114,28 +114,33 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     }
   }
 
-  private def processLDAUpdate(update: LDAURITopicGraphUpdate)(implicit writer: GraphWriter) = {
+  private def processLDAUpdate(update: SparseLDAGraphUpdate)(implicit writer: GraphWriter) = {
 
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
       (0 until numTopics).foreach{ i =>
-        val topicId = VersionedLDATopicId(update.uriSeq.version, i)
+        val topicId = LDATopicId(update.modelVersion, LDATopic(i))
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeDataReader)
         writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeDataReader)
       }
     }
 
-    val uriVertexId: VertexDataId[UriReader] = update.uriId
-    removeOldURITopicsIfExists(uriVertexId, update.sparseTopics.dimension)
+    val uriVertexId: VertexDataId[UriReader] = update.uriFeatures.uriId
+    removeOldURITopicsIfExists(uriVertexId, update.uriFeatures.features.dimension)
 
     val uriData = UriData(uriVertexId)
 
-    update.sparseTopics.topics foreach { case (index, score) =>
-      val topicId = VersionedLDATopicId(update.uriSeq.version, index)
+    update.uriFeatures.features.topics foreach { case (topic, score) =>
+      val topicId = LDATopicId(update.modelVersion, topic)
       val topicVertexId: VertexDataId[LDATopicReader] = topicId
       writer.saveVertex(LDATopicData(topicVertexId))
       writer.saveVertex(uriData)
       writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
       writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
     }
+  }
+
+  private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => writer.removeVertexIfExists(update.id)
+    case _ => writer.saveVertex(UriData(update.id))
   }
 }

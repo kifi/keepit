@@ -42,7 +42,7 @@ class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) 
   override val monitoredPools = ManagementFactory.getMemoryPoolMXBeans.flatMap{ pool =>
     if (pool.getType == MemoryType.HEAP && poolsToBeMonitored.contains(pool.getName)) {
       val maxHeapSize = pool.getUsage.getMax
-      val threshold = (maxHeapSize.toDouble * percentThreshold).toInt
+      val threshold = (maxHeapSize.toDouble * percentThreshold).toLong
 
       if (pool.isUsageThresholdSupported && pool.isCollectionUsageThresholdSupported) {
         pool.setUsageThreshold(threshold)

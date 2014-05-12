@@ -221,7 +221,7 @@ var snap = snap || (function () {
   var mouseDownSeriesStartTime;
   var mouseDownSeriesSelChanges;
   function onWinMouseDown(e) {
-    log('[onWinMouseDown]')();
+    log('[onWinMouseDown]');
     var el = e.target;
     if (!el[MATCHES]('.kifi-root,.kifi-root *')) {
       mouseDown = true;
@@ -251,7 +251,7 @@ var snap = snap || (function () {
   }
 
   function onSelectionChange() {
-    log('[onSelectionChange]')();
+    log('[onSelectionChange]');
     if (mouseDown) {
       mouseDownSeriesSelChanges++;
       var r = getSelRange();
@@ -274,7 +274,7 @@ var snap = snap || (function () {
 
   function onWinMouseUp(e) {
     var seriesMs = mouseDownSeriesStartTime ? Date.now() - mouseDownSeriesStartTime : null;
-    log('[onWinMouseUp]', mouseDownSeriesLen, mouseDownSeriesSelChanges, seriesMs)();
+    log('[onWinMouseUp]', mouseDownSeriesLen, mouseDownSeriesSelChanges, seriesMs);
     mouseDown = false;
     if ($aLook) {
       if (!$(e.target).is('.kifi-root,.kifi-root *')) {
@@ -303,7 +303,7 @@ var snap = snap || (function () {
   function finalizeOrDiscardLink() {
     clearTimeout(finalizeOrDiscardTimer);
     var r = getSelRangeIfItQualifies();
-    log('[finalizeOrDiscardLink]', r ? 'yep' : 'nope')();
+    log('[finalizeOrDiscardLink]', r ? 'yep' : 'nope');
     if (r) {
       finalizeLookHereLink(r);
     } else if ($aLook) {
@@ -449,7 +449,7 @@ var snap = snap || (function () {
       }
     }
 
-    log('[insertLookHereLinkStub] $a.data():', $a.data())();
+    log('[insertLookHereLinkStub] $a.data():', $a.data());
 
     $draft.triggerHandler('input');
     return $a;

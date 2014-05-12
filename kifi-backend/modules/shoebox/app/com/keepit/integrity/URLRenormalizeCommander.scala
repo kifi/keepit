@@ -122,7 +122,7 @@ class URLRenormalizeCommander @Inject()(
 
     batchUrls.map { urls =>
       log.info(s"begin a new batch of renormalization. lastId from zookeeper: ${centralConfig(RenormalizationCheckKey)}")
-      db.readWrite(attempts = 2) { implicit s =>
+      db.readWrite(attempts = 1) { implicit s =>
         urls.foreach { url =>
           try {
             needRenormalization(url) match {

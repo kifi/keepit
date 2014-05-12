@@ -1,14 +1,14 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import java.net.URLEncoder
-import play.api.mvc.{AnyContent, Request, Action, Results}
-import play.api.libs.ws.{Response, WS}
+import play.api.mvc._
+import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.db.slick.Database
-import play.api.{Logger, Play}
+import play.api.Play
 import play.api.Play.current
 import com.keepit.abook.ABookServiceClient
 import play.api.libs.functional.syntax._
@@ -16,10 +16,14 @@ import play.api.libs.json._
 import java.security.SecureRandom
 import java.math.BigInteger
 import com.keepit.model.{ABookInfo, User, OAuth2Token}
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.{Failure, Success}
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.ws.Response
 
 case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
 
@@ -84,6 +88,14 @@ case class OAuth2AccessTokenResponse(
       tokenType = tokenType,
       idToken = idToken
     )
+}
+
+case class StateToken(token: String, redirectUrl: Option[String])
+object StateToken {
+  implicit val formatStateToken: Format[StateToken] = (
+    (__ \ 'token).format[String] and
+    (__ \ 'redirectUrl).formatNullable[String]
+    )(StateToken.apply, unlift(StateToken.unapply))
 }
 
 object OAuth2AccessTokenResponse {
@@ -157,8 +169,11 @@ class OAuth2Controller @Inject() (
     val stateOptFromSession = request.session.get("stateToken") orElse Some("")
     log.infoP(s"code=$codeOpt state=$stateOpt stateFromSession=$stateOptFromSession")
 
-    if (stateOpt.isEmpty || stateOpt.get != stateOptFromSession.get) {
-      log.warnP(s"state token mismatch: callback-state=$stateOpt session-stateToken=$stateOptFromSession headers=${request.headers}")
+    val stateTokenOpt = stateOpt flatMap { Json.parse(_).asOpt[StateToken] }
+    val stateTokenOptFromSession = stateOptFromSession flatMap { Json.parse(_).asOpt[StateToken] }
+
+    if (stateTokenOpt.isEmpty || stateTokenOptFromSession.isEmpty || stateTokenOpt.get.token != stateTokenOptFromSession.get.token) {
+      log.warnP(s"invalid state token: callback-state=$stateOpt session-stateToken=$stateOptFromSession headers=${request.headers}")
       resolve(redirectInvite)
     } else if (codeOpt.isEmpty) {
       log.warnP(s"code is empty; consent might not have been granted") // for server app
@@ -212,14 +227,17 @@ class OAuth2Controller @Inject() (
             provider match {
               case "google" => {
                 val resF = abookServiceClient.importContacts(request.userId, tokenResp.toOAuth2Token(request.userId))
+                val redirectUrlOpt = stateTokenOpt flatMap (_.redirectUrl)
                 resF map { trRes =>
                   trRes match {
                     case Failure(t) =>
                       airbrake.notify(s"$prefix Caught exception $t while importing contacts", t)
-                      redirectHome
+                      val route = com.keepit.controllers.website.routes.ContactsImportController.importContactsFailure(redirectUrlOpt)
+                      Redirect(route).withSession(session - STATE_TOKEN_KEY)
                     case Success(abookInfo) =>
                       log.infoP(s"abook imported: $abookInfo")
-                      redirectInvite // forces one consent per acct; may need to be revisited
+                      val route = com.keepit.controllers.website.routes.ContactsImportController.importContactsSuccess(redirectUrlOpt, abookInfo.numContacts)
+                      Redirect(route).withSession(session - STATE_TOKEN_KEY)
                   }
                 }
               }
@@ -252,7 +270,19 @@ class OAuth2Controller @Inject() (
     Ok(json)
   }
 
+  def refreshContacts(abookExtId: ExternalId[ABookInfo], provider: Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+    abookServiceClient.getABookInfoByExternalId(abookExtId) flatMap { abookInfoOpt =>
+      abookInfoOpt flatMap (_.id) map { abookId =>
+        refreshContactsHelper(abookId, provider)
+      } getOrElse Future.successful(BadRequest("invalid_id"))
+    }
+  }
+
   def refreshContacts(abookId:Id[ABookInfo], provider:Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+    refreshContactsHelper(abookId, provider)
+  }
+
+  private def refreshContactsHelper(abookId:Id[ABookInfo], provider:Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
     val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
     log.infoP(s"userId=${request.userId}")
@@ -310,8 +340,8 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def importContacts(provider:Option[String], approvalPromptOpt:Option[String]) = HtmlAction.authenticated { implicit request =>
-    val stateToken = "/friends/invite$" + new BigInteger(130, new SecureRandom()).toString(32)
+  def importContacts(provider:Option[String], approvalPromptOpt:Option[String], redirectUrl: Option[String] = None) = HtmlAction.authenticated { implicit request =>
+    val stateToken = Json.toJson(StateToken(new BigInteger(130, new SecureRandom()).toString(32), redirectUrl)).toString()
     val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
     log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")
     Redirect(route).withSession(session - STATE_TOKEN_KEY)

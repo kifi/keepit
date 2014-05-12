@@ -114,7 +114,7 @@ exports.mode = {
 };
 
 const hexRe = /^#[0-9a-f]{3}$/i;
-exports.log = function() {
+var log = exports.log = function log() {
   var d = new Date, ds = d.toString(), t = "[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]";
   for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
     var arg = args[i];
@@ -131,14 +131,8 @@ exports.log = function() {
   } else {
     args.unshift(t);
   }
-  return console.log.apply.bind(console.log, console, args);
+  console.log.apply(console, args);
 };
-function log() {
-  exports.log.apply(null, arguments)();
-}
-function bindLogCall() {
-  return exports.log.bind(null, arguments)()
-}
 
 // TODO: actually toggle content script logging
 exports.toggleLogging = exports.noop = function () {};
@@ -269,7 +263,7 @@ exports.socket = {
           socketPage = null;
         }
       }
-    }, handlers, onConnect, onDisconnect, bindLogCall);
+    }, handlers, onConnect, onDisconnect, log);
     if (socketPage) {
       socketPage.port.emit('open_socket', socketId, url);
     } else {

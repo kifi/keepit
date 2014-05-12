@@ -104,7 +104,7 @@ class UserController @Inject() (
   def abookInfo() = JsonAction.authenticatedAsync { request =>
     val abookF = abookServiceClient.getABookInfos(request.userId)
     abookF.map { abooks =>
-      Ok(Json.toJson(abooks))
+      Ok(Json.toJson(abooks.map(ExternalABookInfo.fromABookInfo _)))
     }
   }
 

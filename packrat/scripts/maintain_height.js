@@ -25,7 +25,7 @@ function maintainHeight(elMaxHeight, elScrollTop, elContainer, otherEls) {
     }
     hNew = Math.max(0, hNew);
     if (hNew !== hOld) {
-      log('[maxHeight:update]', hOld, '->', hNew)();
+      log('[maxHeight:update]', hOld, '->', hNew);
       var scrollTop = elScrollTop.scrollTop;
       elMaxHeight.style.maxHeight = hNew + 'px';
       elScrollTop.scrollTop = hOld == null ? 99999 : Math.max(0, scrollTop + hOld - hNew);

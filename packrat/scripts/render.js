@@ -32,7 +32,7 @@ var render = function() {
       }
     } else { // sync
       if (paths.length) {
-        log('[render] not yet cached:', paths)();
+        log('[render] not yet cached:', paths);
         return '';
       }
       return mustacheRender();

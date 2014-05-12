@@ -137,7 +137,7 @@ class ShoeboxController @Inject() (
   def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
-    val saved = db.readWrite(attempts = 3) { implicit s =>
+    val saved = db.readWrite(attempts = 1) { implicit s =>
       normUriRepo.save(normalizedUri)
     }
     log.info(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
@@ -145,7 +145,7 @@ class ShoeboxController @Inject() (
   }
 
   def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
-     val saveResult = Try(db.readWrite(attempts = 3) { implicit s =>
+     val saveResult = Try(db.readWrite(attempts = 1) { implicit s =>
        // Handle serialization in session to be transactional.
        val originalNormalizedUri = normUriRepo.get(uriId)
        val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
@@ -181,7 +181,7 @@ class ShoeboxController @Inject() (
     else {
       val uri = uriOpt.get
       val info = infoOpt.get
-      val savedUri = db.readWrite(attempts = 2) { implicit request =>
+      val savedUri = db.readWrite(attempts = 1) { implicit request =>
         val savedUri  = normUriRepo.save(uri)
         val savedInfo = scrapeInfoRepo.save(info)
         if (updateBookmark) {
@@ -207,7 +207,7 @@ class ShoeboxController @Inject() (
       val (savedUri, savedInfo) = {
         val uri = uriOpt.get
         val info = infoOpt.get
-        db.readWrite(attempts = 2) { implicit request =>
+        db.readWrite(attempts = 1) { implicit request =>
           val uri2 = uri.id match {
             case Some(id) => Some(normUriRepo.get(id))
             case None => normUriRepo.getByUri(uri.url)
@@ -374,7 +374,7 @@ class ShoeboxController @Inject() (
   def internNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
-    val uri = db.readWrite(attempts = 2) { implicit s =>  //using cache
+    val uri = db.readWrite(attempts = 1) { implicit s =>  //using cache
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false

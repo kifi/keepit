@@ -157,7 +157,9 @@ object ApplicationBuild extends Build {
     "com.keepit.common.db.{ExternalId, Id, State, SequenceNumber}",
     "com.keepit.model._",
     "com.keepit.social._",
-    "com.keepit.search._"
+    "com.keepit.search._",
+    "com.keepit.cortex.core._",
+    "com.keepit.cortex.models.lda._"
   )
 
   lazy val commonResolvers = Seq(

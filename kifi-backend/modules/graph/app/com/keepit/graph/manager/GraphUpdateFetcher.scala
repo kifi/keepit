@@ -1,54 +1,54 @@
 package com.keepit.graph.manager
 
-import com.kifi.franz.{SQSMessage, SQSQueue}
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
-import com.keepit.common.db.SequenceNumber
-import com.keepit.model.{UserConnection, SocialUserInfo, SocialConnection, User, NormalizedURI}
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.cortex.CortexVersionedSequenceNumber
 import com.keepit.common.logging.Logging
+import com.keepit.model.{NormalizedURI, UserConnection, User}
+import com.keepit.common.ImmediateMap
+import com.keepit.common.db.SequenceNumber
+import com.keepit.cortex.models.lda.DenseLDA
 
 trait GraphUpdateFetcher {
-  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
-  def fetch(currentState: GraphUpdaterState): Unit
+  def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]]
 }
 
 class GraphUpdateFetcherImpl @Inject() (
-  queue: SQSQueue[GraphUpdate],
   shoebox: ShoeboxServiceClient,
   eliza: ElizaServiceClient,
   abook: ABookServiceClient,
   cortex: CortexServiceClient
 ) extends GraphUpdateFetcher with Logging{
-  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
-  def fetch(currentState: GraphUpdaterState): Unit = GraphUpdateKind.all.foreach {
-    case UserGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(UserGraphUpdate)
-      shoebox.sendUserGraphUpdate(queue.queue, seq)
-    case SocialConnectionGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(SocialConnectionGraphUpdate)
-      shoebox.sendSocialConnectionGraphUpdate(queue.queue, seq)
-    case SocialUserInfoGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(SocialUserInfoGraphUpdate)
-      shoebox.sendSocialUserInfoGraphUpdate(queue.queue, seq)
-    case UserConnectionGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(UserConnectionGraphUpdate)
-      shoebox.sendUserConnectionGraphUpdate(queue.queue, seq)
-    case KeepGraphUpdate =>
-      val seq = currentState.getCurrentSequenceNumber(KeepGraphUpdate)
-      log.info(s"starting a new fetch of keep updates ${seq}")
-      shoebox.sendKeepGraphUpdate(queue.queue, seq)
-    case LDAURITopicGraphUpdate => {
-      val seq = currentState.getCurrentSequenceNumber(LDAURITopicGraphUpdate)
-      log.info(s"starting a new fetch of lda topic update from ${seq}")
-      cortex.graphLDAURIFeatureUpdate(seq, queue.queue)
+
+  def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]] = {
+
+    log.info(s"Fetching up to $fetchSize $kind from sequence number $seq")
+
+    kind match {
+
+      case UserGraphUpdate => shoebox.getUserIndexable(seq.copy(), fetchSize).imap(_.map(UserGraphUpdate.apply))
+
+      case SocialConnectionGraphUpdate => Future.successful(Seq.empty)
+
+      case SocialUserInfoGraphUpdate => Future.successful(Seq.empty)
+
+      case UserConnectionGraphUpdate => shoebox.getUserConnectionsChanged(seq.copy(), fetchSize).imap(_.map(UserConnectionGraphUpdate.apply))
+
+      case KeepGraphUpdate => shoebox.getBookmarksChanged(seq.copy(), fetchSize).imap(_.map(KeepGraphUpdate.apply))
+
+      case SparseLDAGraphUpdate => {
+        val cortexSeq = CortexSequenceNumber.fromLong[DenseLDA, NormalizedURI](seq.value)
+        cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap { case (modelVersion, uriFeaturesBatch) =>
+          uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
+        }
+      }
+
+      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
     }
   }
 }

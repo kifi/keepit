@@ -25,7 +25,7 @@
 
   function onMessage(event) {
     if (event.origin === origin) {
-      log('[onMessage]', event.data)();
+      log('[onMessage]', event.data);
       switch (event.data) {
       case 'get_bookmark_count_if_should_import':
         api.port.emit('get_bookmark_count_if_should_import', function (count) {

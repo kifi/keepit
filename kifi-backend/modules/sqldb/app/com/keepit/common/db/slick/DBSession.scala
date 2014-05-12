@@ -11,6 +11,7 @@ import com.keepit.common.logging.Logging
 import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType, ResultSetHoldability}
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
+import com.keepit.common.util.TrackingId
 
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session with Logging with TransactionalCaching {
@@ -28,9 +29,10 @@ object DBSession {
       s
     }
     lazy val clock = new SystemClock
+    val sessionId = TrackingId.get
 
     private val dbLog = Logger("com.keepit.db")
-    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave)
+    def conn: Connection = new DBConnectionWrapper(session.conn, dbLog, clock, masterSlave, sessionId)
     def metaData = session.metaData
     def capabilities = session.capabilities
     override def resultSetType = session.resultSetType
@@ -40,7 +42,11 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
+      dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
+      if (time > 5000) { // tweak
+        val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long ($time ms)"
+        log.error(msg, new IllegalStateException(msg))
+      }
     }
 
     def rollback() { doRollback = true }
@@ -95,7 +101,7 @@ object DBSession {
         val newPreparedStatement = this.conn.prepareStatement(statement)
         newPreparedStatement
       })
-      dbLog.info(s"t:${clock.now}\tdb:$masterSlave\ttype:USE_PRP_STMT\tstatement:$statement")
+      dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:USE_PRP_STMT\tstatement:$statement")
       preparedStatement
     }
 

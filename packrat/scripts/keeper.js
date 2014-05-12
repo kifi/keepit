@@ -58,7 +58,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   api.onEnd.push(function () {
-    log('[keeper:onEnd]')();
+    log('[keeper:onEnd]');
     $slider && $slider.remove();
     $(tile).remove();
     $('.kifi-root').remove();
@@ -69,7 +69,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
   function createSlider(locator) {
     var kept = tile && tile.dataset.kept;
     var count = +(tile && tile.dataset.count || 0);
-    log('[createSlider] kept: %s count: %o', kept || 'no', count)();
+    log('[createSlider] kept: %s count: %o', kept || 'no', count);
     lastCreatedAt = Date.now();
 
     $slider = $(render('html/keeper/keeper', {
@@ -99,14 +99,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
       } else if (!data.stickiness && !data.dragStarting && !data.$dragGlass) {
         if (e.relatedTarget) {
           if (!this.contains(e.relatedTarget)) {
-            log('[slider.mouseout] hiding')();
+            log('[slider.mouseout] hiding');
             hideSlider('mouseout');
           }
         } else {  // out of window
-          log('[slider.mouseout] out of window')();
+          log('[slider.mouseout] out of window');
           document.addEventListener('mouseover', function f(e) {
             this.removeEventListener('mouseover', f, true);
-            log('[document.mouseover]', e.target)();
+            log('[document.mouseover]', e.target);
             if ($slider && !$slider[0].contains(e.target)) {
               hideSlider('mouseout');
             }
@@ -120,7 +120,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       data.mousedownEvent = e.originalEvent;
     }).mouseup(function () {
       if (data.dragTimer || data.dragStarting) {
-        log('[mouseup]')();
+        log('[mouseup]');
         clearTimeout(data.dragTimer), delete data.dragTimer;
         delete data.dragStarting;
       }
@@ -287,7 +287,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   function showSlider(trigger) {
-    log('[showSlider]', trigger)();
+    log('[showSlider]', trigger);
 
     createSlider();
     $slider.prependTo(tile);
@@ -307,7 +307,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   // trigger is for the event log (e.g. 'key', 'icon')
   function hideSlider(trigger) {
-    log('[hideSlider]', trigger)();
+    log('[hideSlider]', trigger);
     idleTimer.kill();
     $slider.addClass('kifi-hiding')
     .off('transitionend')
@@ -332,14 +332,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   function startDrag(data) {
-    log('[startDrag]')();
+    log('[startDrag]');
     clearTimeout(data.dragTimer);
     delete data.dragTimer;
     data.dragStarting = true;
     api.require('scripts/lib/jquery-ui-draggable.min.js', function () {
       if (data.dragStarting) {
         delete data.dragStarting;
-        log('[startDrag] installing draggable')();
+        log('[startDrag] installing draggable');
         data.$dragGlass = $('<div class=kifi-drag-glass>').mouseup(stopDrag).appendTo(tile.parentNode);
         $(tile).draggable({axis: 'y', containment: 'window', scroll: false, stop: stopDrag})[0]
           .dispatchEvent(data.mousedownEvent); // starts drag
@@ -347,7 +347,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       function stopDrag() {
         var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
         var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
-        log('[stopDrag] top:', r.top, 'bot:', r.bottom, JSON.stringify(pos))();
+        log('[stopDrag] top:', r.top, 'bot:', r.bottom, JSON.stringify(pos));
         $(tile).draggable('destroy');
         data.$dragGlass.remove();
         delete data.$dragGlass;
@@ -360,20 +360,20 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   var idleTimer = {
     start: function (ms) {
-      log('[idleTimer.start]', ms, 'ms')();
+      log('[idleTimer.start]', ms, 'ms');
       clearTimeout(this.timeout), this.timeout = setTimeout(hideSlider.bind(null, 'idle'), ms);
       $slider.on('mouseenter.idle', $.proxy(this, 'kill'));
     },
     kill: function () {
       if (this.timeout) {
-        log('[idleTimer.kill]')();
+        log('[idleTimer.kill]');
         clearTimeout(this.timeout), delete this.timeout;
         $slider && $slider.off('.idle');
       }
     }};
 
   function keepPage(how, suppressNamePrompt) {
-    log('[keepPage]', how)();
+    log('[keepPage]', how);
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
@@ -390,12 +390,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   function unkeepPage() {
-    log('[unkeepPage]', document.URL)();
+    log('[unkeepPage]', document.URL);
     api.port.emit('unkeep', withUrls({}));
   }
 
   function toggleKeep(how) {
-    log('[toggleKeep]', how)();
+    log('[toggleKeep]', how);
     api.port.emit('set_private', withUrls({private: how == 'private'}));
   }
 
@@ -509,9 +509,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
     },
     show: function (trigger) {  // trigger is for event log (e.g. 'tile')
       if ($slider) {
-        log('[show] ignored, already showing')();
+        log('[show] ignored, already showing');
       } else {
-        log('[show]', trigger)();
+        log('[show]', trigger);
         $(tile).hoverfu('destroy');
         showSlider(trigger);
         growSlider('', 'kifi-wide');

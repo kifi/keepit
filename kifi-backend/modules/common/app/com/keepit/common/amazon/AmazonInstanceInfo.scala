@@ -79,7 +79,7 @@ sealed abstract class AmazonInstanceType(val name: String, val cores: Int, val e
 
 object AmazonInstanceType {
   case object C1XLarge extends AmazonInstanceType("c1.xlarge", 8, 20)
-  case object C3XLarge  extends AmazonInstanceType("c3.xlarge", 8, 14)
+  case object C3XLarge  extends AmazonInstanceType("c3.xlarge", 4, 14)
   case object C1Medium extends AmazonInstanceType("c1.medium", 2, 5)
   case object C3Large  extends AmazonInstanceType("c3.large", 2, 7)
   case object C3XXLarge extends AmazonInstanceType("c3.2xlarge", 8, 24)

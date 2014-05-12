@@ -15,7 +15,6 @@ import com.keepit.common.store.ImageSize
 @ImplementedBy(classOf[ImageInfoRepoImpl])
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
   def getByUri(id:Id[NormalizedURI])(implicit ro:RSession):Seq[ImageInfo]
-  def getByUrl(url:String)(implicit ro:RSession):Option[ImageInfo]
   def getByUriWithSize(id:Id[NormalizedURI], minSize: ImageSize)(implicit ro:RSession):List[ImageInfo]
 }
 
@@ -62,9 +61,6 @@ class ImageInfoRepoImpl @Inject() (
     (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE) yield f).list()
   }
 
-  def getByUrl(url:String)(implicit ro: RSession): Option[ImageInfo] = {
-    (for(f <- rows if f.url === url && f.state === ImageInfoStates.ACTIVE) yield f).firstOption
-  }
 
   def getByUriWithSize(id:Id[NormalizedURI], minSize: ImageSize)(implicit ro:RSession):List[ImageInfo] = {
     (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&

@@ -70,18 +70,13 @@ case class NonUserThread(
   threadUpdatedAt: Option[DateTime],
   muted: Boolean = false,
   state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
-  accessToken: Option[ThreadAccessToken] = Some(ThreadAccessToken())
-) extends ModelWithState[NonUserThread] with ModelWithPublicId[NonUserThread] {
+  accessToken: ThreadAccessToken = ThreadAccessToken()
+) extends ModelWithState[NonUserThread] {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
 }
 
-object NonUserThread {
-  implicit object nonUserThread extends ModelWithPublicId[NonUserThread] {
-    val id = None
-    override val prefix = "nu"
-  }
-}
+
 
 object NonUserThreadStates extends States[NonUserThread]
