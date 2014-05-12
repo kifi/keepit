@@ -16,7 +16,7 @@ object RemoteService {
 case class RemoteService(amazonInstanceInfo: AmazonInstanceInfo, status: ServiceStatus, serviceType: ServiceType) {
   def healthyStatus: ServiceStatus = serviceType.healthyStatus(amazonInstanceInfo)
 
-  def getShardSpec: Option[String] = amazonInstanceInfo.tags.get("shards")
+  def getShardSpec: Option[String] = amazonInstanceInfo.tags.get("ShardSpec")
 }
 
 
