@@ -157,15 +157,15 @@ angular.module('kifi.layout.main', [
     $scope.disableBookmarkImport = true;
 
     $scope.allowUpload = function (elem) {
-      var file = elem.files[0];
-      if (file.name.endsWith('.html')) {
+      var file = elem && elem.files && elem.files[0];
+      if (file && file.name.indexOf('.html', file.name.length - 5) !== -1) { // checking if file.name ends with '.html'
         $scope.importFilename = file.name;
         $scope.disableBookmarkImport = false;
         $scope.importFileStatus = '';
       } else {
         $scope.importFilename = '';
         $scope.disableBookmarkImport = true;
-        $scope.importFileStatus = 'Invalid bookmark file. Try picking it again.';
+        $scope.importFileStatus = 'Invalid bookmark file (*.html). Try picking it again.';
       }
     };
 
