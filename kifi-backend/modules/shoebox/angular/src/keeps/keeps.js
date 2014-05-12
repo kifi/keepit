@@ -20,7 +20,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     });
 
     $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
-      var draggedKeeps = keepService.getSelected();
+      var draggedKeeps = [];//keepService.getSelected();
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
@@ -59,7 +59,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.select = keepService.select;
         scope.unselect = keepService.unselect;
         scope.toggleSelect = keepService.toggleSelect;
-        scope.isSelected = keepService.isSelected;
         scope.preview = keepService.preview;
         scope.togglePreview = keepService.togglePreview;
         scope.isPreviewed = keepService.isPreviewed;
@@ -147,6 +146,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         };
 
         scope.onClickKeep = function (keep, $event) {
+          return; // short circuting, not used yet.
           if ($event.target.tagName !== 'A') {
             if ($event.ctrlKey || $event.metaKey) {
               if (scope.isSelected(keep)) {
