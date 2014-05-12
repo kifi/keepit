@@ -38,6 +38,7 @@ sealed trait VertexKind[V <: VertexDataReader] {
   // Binary Helpers
   def header: Byte
   def apply(rawDataReader: RawDataReader): V
+  def id(id: Long): VertexDataId[V] = VertexDataId[V](id)
 
   // Json helpers
   implicit def idFormat: Format[VertexDataId[V]] = VertexDataId.format[V]

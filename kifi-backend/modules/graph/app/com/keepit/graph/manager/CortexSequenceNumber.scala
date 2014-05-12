@@ -10,7 +10,7 @@ case class CortexSequenceNumber[M <: StatModel, T](modelVersion: ModelVersion[M]
 }
 
 object CortexSequenceNumber {
-  // 8 bits reserved for version
+  val totalSpace = 63 // To ensure non-negative CortexSequenceNumbers
   val versionSpace = 8
   val seqSpace = 55
   val maxSeq: Long = (1L << seqSpace) - 1
@@ -36,8 +36,9 @@ case class LDATopicId(version: ModelVersion[DenseLDA], topic: LDATopic)  {
 object LDATopicId {
   // 31 bits for topic, 24 bits for version, 8 bits left for type tag,
 
+  val totalSpace = 55 // To be turned into VertexIds
   val versionSpace = 24
-  val topicSpace = 31
+  val topicSpace = 31 // assuming non-negative Topics
   val maxTopic: Long = (1L << topicSpace) - 1
   val maxVersion: Long = (1L << versionSpace) - 1
 

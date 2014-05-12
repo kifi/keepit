@@ -19,6 +19,7 @@ case class VertexId(id: Long) extends AnyVal {
 }
 
 object VertexId {
+  val totalSpace = 63 // To ensure non-negative VertexIds
   val headerSpace = 8
   val dataIdSpace = 55
   val maxVertexDataId: Long = (1L << dataIdSpace) - 1
