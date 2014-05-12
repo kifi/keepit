@@ -67,7 +67,7 @@ class ElizaEmailCommander @Inject() (
       kind match {
         case "i" => imageLookHereUrls = imageLookHereUrls :+ payload
         case "r" => textLookHeres = textLookHeres :+ payload
-        case _ => throw new Exception("Unknow look-here type: " + kind)
+        case _ => throw new Exception("Unknown look-here type: " + kind)
       }
     }
     CleanedMessage(re.replaceAllIn(msg, (m: Match) => m.group(1)), textLookHeres, imageLookHereUrls)
@@ -132,14 +132,14 @@ class ElizaEmailCommander @Inject() (
       }
 
       val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
-      val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
-      message.from match {
-        case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), text, lookHereTexts, lookHereImageUrls)
-        case MessageSender.NonUser(nup) => {
-          ExtendedThreadItem(nup.shortName, nup.fullName, None, text, lookHereTexts, Seq.empty)
+        val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
+        message.from match {
+          case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), text, lookHereTexts, lookHereImageUrls)
+          case MessageSender.NonUser(nup) => {
+            ExtendedThreadItem(nup.shortName, nup.fullName, None, text, lookHereTexts, Seq.empty)
+          }
+          case _ => throw new Exception("Impossible")
         }
-        case _ => throw new Exception("Impossible")
-      }
       }.reverse
 
       ProtoEmail(
