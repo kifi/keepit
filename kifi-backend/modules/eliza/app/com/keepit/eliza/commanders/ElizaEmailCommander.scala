@@ -60,7 +60,7 @@ class ElizaEmailCommander @Inject() (
     val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
     var textLookHeres = Vector[String]()
     var imageLookHereUrls = Vector[String]()
-    re.findAllMatchIn(msg).toSeq.toList.foreach { m =>
+    re.findAllMatchIn(msg).toList.foreach { m =>
       val segments = m.group(3).split('|')
       val kind = segments.head
       val payload = URLDecoder.decode(segments.last, "UTF-8")
