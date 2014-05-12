@@ -16,6 +16,13 @@ var iframeDialog = function () {
       styles: ['styles/iframes/login.css'],
       scripts: ['scripts/iframes/login.js', 'scripts/html/iframes/login.js', 'scripts/iframes/lib/jquery.js'],
       onMessage: onLoginMessage
+    },
+    viewEmail: {
+      height: 660,
+      width: 660,
+      templatePath: 'html/iframe_dialog',
+      styles: ['styles/iframes/view_email.css'],
+      scripts: ['scripts/iframes/view_email.js', 'scripts/html/iframes/view_email.js']
     }
   };
   var $dialog;

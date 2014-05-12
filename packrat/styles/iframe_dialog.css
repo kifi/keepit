@@ -78,25 +78,33 @@
 .kifi-dialog-x:hover:after,
 .kifi-dialog-x:focus:before,
 .kifi-dialog-x:focus:after {
-  background: #8e939a;
+  background: #c1c6cd;
 }
 .kifi-dialog-x:active:before,
 .kifi-dialog-x:active:after {
   background: #fff;
 }
 .kifi-dialog-x:active {
-  background: #d0d4da;
+  background: #485b6e;
 }
 
-
+.kifi-dialog-header,
 .kifi-dialog-iframe {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+}
+.kifi-dialog-header {
+  height: 41px;
+  background: #34495e;
+  border-top-left-radius: inherit !important;
+  border-top-right-radius: inherit !important;
+}
+.kifi-dialog-iframe {
+  height: 100%;
   border-top: 41px solid transparent;
   background: #f6f6f6 content-box;
   border-bottom-left-radius: inherit !important;

@@ -225,7 +225,14 @@ panes.thread = function () {
       messageTip: 'message_tip'
     };
     if (m.auxData && m.auxData.length) {
-      var $rendered = $(render('html/keeper/message_aux', m, templates));
+      var $rendered = $(render('html/keeper/message_aux', m, templates))
+        .on('click', '.kifi-message-email-view', function() {
+          api.require('scripts/iframe_dialog.js', function() {
+            api.port.emit('auth_info', function (info) {
+              iframeDialog.toggle('viewEmail', info.origin, {msgId: m.id});
+            });
+          });
+        });
     } else {
       var $rendered = $(render('html/keeper/message_discussion', m, templates));
     }
