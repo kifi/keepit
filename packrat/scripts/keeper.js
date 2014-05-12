@@ -257,7 +257,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var $a = $(this);
       var tip = {
         i: ['Message Box (' + CO_KEY + '+Shift+O)', 'Open your Message Box<br/>and see your messages.'],
-        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br/>and start a discussion.']
+        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
