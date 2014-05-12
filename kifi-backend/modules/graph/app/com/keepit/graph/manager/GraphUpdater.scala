@@ -2,10 +2,8 @@ package com.keepit.graph.manager
 
 import com.keepit.graph.model._
 import com.google.inject.Inject
-import com.keepit.model.{KeepStates, SocialConnectionStates, UserConnectionStates}
+import com.keepit.model._
 import com.keepit.social.SocialNetworks
-import com.keepit.graph.model.UserData
-import com.keepit.graph.model.FacebookAccountData
 import com.keepit.cortex.models.lda.LDATopic
 
 trait GraphUpdater {
@@ -20,10 +18,12 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
     case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
+    case uriUpdate: NormalizedUriGraphUpdate => processNormalizedUriGraphUpdate(uriUpdate)
   }
 
-  private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
-    writer.saveVertex(UserData(update.userId))
+  private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case UserStates.ACTIVE => writer.saveVertex(UserData(update.userId))
+    case _ => writer.removeVertexIfExists(update.userId)
   }
 
   private def processUserConnectionGraphUpdate(update: UserConnectionGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -137,5 +137,10 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
       writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
     }
+  }
+
+  private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => writer.removeVertexIfExists(update.id)
+    case _ => writer.saveVertex(UriData(update.id))
   }
 }

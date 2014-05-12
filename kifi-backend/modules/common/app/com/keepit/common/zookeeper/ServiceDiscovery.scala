@@ -10,16 +10,14 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
-import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
-import scala.util.{Try, Success, Failure}
-import scala.annotation.tailrec
+import scala.util.{Success, Failure}
 
 import akka.actor.Scheduler
 
 import play.api.libs.json._
 
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Provider
 
 import org.apache.zookeeper.CreateMode._
 
@@ -176,7 +174,7 @@ class ServiceDiscoveryImpl(
       }
 
       val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceType.name + "_", RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
-      myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
+      myInstance = Some(new ServiceInstance(myNode, true, thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
       watchServices(zk)
@@ -196,8 +194,8 @@ class ServiceDiscoveryImpl(
         log.info(s"Changing instance status to $newStatus")
         lastStatusChangeTime = System.currentTimeMillis
         myServiceStatus = newStatus
-        instance.setRemoteService(getThisRemoteService)
-        zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
+        myInstance = Some(new ServiceInstance(instance.node, true, getThisRemoteService))
+        zk.setData(myInstance.get.node, RemoteService.toJson(myInstance.get.remoteService))
       }
     }
   }
