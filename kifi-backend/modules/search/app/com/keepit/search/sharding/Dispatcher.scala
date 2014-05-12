@@ -6,26 +6,18 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.util.Random
 
-class ShardedServiceInstance[T](val serviceInstance: ServiceInstance, val shards: Set[Shard[T]])
+class ShardedServiceInstance[T](val serviceInstance: ServiceInstance) {
+  val shards: Set[Shard[T]] = Dispatcher.shardSpecParser.parse[T](serviceInstance.remoteService.getShardSpec)
+}
 
 object Dispatcher {
-  private val shardSpecParser = new ShardSpecParser
+  private[sharding] val shardSpecParser = new ShardSpecParser
 
-  def apply[R, T](instances: Vector[ServiceInstance]): Dispatcher[R, T] = {
-
-    val upList = instances.filter(_.isUp)
-    val availableList = instances.filter(_.isAvailable)
-    val list = if (upList.length < availableList.length / 2.0) {
-      availableList
-    } else {
-      upList
-    }
-
+  def invert[T](instances: Vector[ServiceInstance]): Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]] = {
     var shardToInstances = Map.empty[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]]
-    list.foreach{ i =>
-      val shards = shardSpecParser.parse[T](i.remoteService.amazonInstanceInfo.tags.get("shards"))
-      val shardedServiceInstance = new ShardedServiceInstance[T](i, shards)
-      shards.foreach{ s =>
+    instances.foreach{ i =>
+      val shardedServiceInstance = new ShardedServiceInstance[T](i)
+      shardedServiceInstance.shards.foreach{ s =>
         shardToInstances += {
           shardToInstances.get(s) match {
             case Some(buf) => s -> (buf += shardedServiceInstance)
@@ -34,14 +26,25 @@ object Dispatcher {
         }
       }
     }
-    new Dispatcher[R, T](shardToInstances)
+    shardToInstances
+  }
+
+  def apply[T](instances: Vector[ServiceInstance]): Dispatcher[T] = {
+    val upList = instances.filter(_.isUp)
+    val availableList = instances.filter(_.isAvailable)
+    val list = if (upList.length < availableList.length / 2.0) {
+      availableList
+    } else {
+      upList
+    }
+    new Dispatcher[T](invert(list))
   }
 }
 
-class Dispatcher[R, T](shardToInstances: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]]) extends Logging {
+class Dispatcher[T](shardToInstances: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]]) extends Logging {
   private[this] val rnd = new Random()
 
-  def dispatch(myShards: Set[Shard[T]], allShards: Set[Shard[T]], submit: (ServiceInstance, Set[Shard[T]]) => Future[R]) = {
+  def dispatch[R](myShards: Set[Shard[T]], allShards: Set[Shard[T]])(submit: (ServiceInstance, Set[Shard[T]]) => Future[R]): Seq[Future[R]] = {
     var futures = new ArrayBuffer[Future[R]]
     var remaining = allShards -- myShards
     while (remaining.nonEmpty) {
@@ -50,12 +53,13 @@ class Dispatcher[R, T](shardToInstances: Map[Shard[T], ArrayBuffer[ShardedServic
           remaining --= shards
           futures += submit(ss.serviceInstance, shards)
         case (None, _) =>
+          throw new Exception("no instance found")
       }
     }
     futures
   }
 
-  def next(shards: Set[Shard[T]], numTrials: Int = 0): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
+  def next(shards: Set[Shard[T]], numTrials: Int = 1): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
     var numEntries = 0
     val table = shards.toSeq.map{ shard =>
       shardToInstances.get(shard) match {
