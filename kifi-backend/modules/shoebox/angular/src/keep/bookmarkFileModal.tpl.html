@@ -11,18 +11,18 @@
       <div class="file-import-well">
         <p class="import-how-to">How to import your content into Kifi:</p>
         <div class="import-inset">
-          <p>Step 1: Export your links from <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event, 'https://getpocket.com/export')">Pocket</a>, <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event, 'http://export.delicious.com/settings/bookmarks/export')">Delicious</a> or <a href="https://kippt.com/export/" ng-click="openExportPopup($event, 'https://kippt.com/export/')">Kippt</a>.</p>
+          <p>Step 1: Export your links from <a href="https://getpocket.com/export" ng-click="openExportPopup($event)">Pocket</a>, <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event)">Delicious</a> or <a href="https://kippt.com/export/" ng-click="openExportPopup($event)">Kippt</a>.</p>
           <p ng-click="openBookmarkFileSelector($event)" class="import-file-link">Step 2: <a href="javascript:">Click here to select the file you downloaded</a>.
           <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)"></p>
+          <div class="dialog-buttons">
+            <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }" ng-show="importFilename">Step 3: Upload your bookmarks</button>
+          </div>
           <div ng-click="openBookmarkFileSelector($event)" class="import-file-status">
             <div ng-if="importFilename"><i>{{importFilename}}</i> selected.</div>
             <div ng-if="!importFilename && !importFileStatus">Please select a file to get started.</div>
             <div ng-if="importFileStatus">{{importFileStatus}}</div>
           </div>
         </div>
-      </div>
-      <div class="dialog-buttons">
-        <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }" ng-show="importFilename">Step 3: Upload your bookmarks</button>
       </div>
     </div>
   </div>
