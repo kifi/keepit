@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
 
-import com.keepit.eliza.mail.MessageLookHereRemover
+import com.keepit.eliza.util.MessageFormatter
 import com.keepit.search.message.{ThreadContent, FULL}
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.db.slick.Database
@@ -45,15 +45,21 @@ class MessagingIndexCommander @Inject() (
       !message.from.isSystem
     }
 
-    val digest = try { MessageLookHereRemover(messages.head.messageText).slice(0,255) } catch {
+    val digest = try {
+      MessageFormatter.toText(messages.head.messageText).slice(0,255)
+    } catch {
       case e: Throwable =>
         airbrake.notify(e)
         messages.head.messageText
     }
-    val content = try { messages.map{ message => MessageLookHereRemover(message.messageText) } } catch {
-      case e: Throwable =>
-        airbrake.notify(e)
-        messages.map{ message => message.messageText }
+    val content = messages.map { m =>
+      try {
+        MessageFormatter.toText(m.messageText)
+      } catch {
+        case e: Throwable =>
+          airbrake.notify(e)
+          m.messageText
+      }
     }
 
     participantBasicUsersFuture.map{ participantBasicUsers =>
