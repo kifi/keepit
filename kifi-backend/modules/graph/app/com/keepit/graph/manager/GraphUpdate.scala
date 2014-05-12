@@ -58,6 +58,7 @@ case class SocialUserInfoGraphUpdate(socialUserId: Id[SocialUserInfo], network: 
 
 case object SocialUserInfoGraphUpdate extends GraphUpdateKind[SocialUserInfoGraphUpdate] {
   val code = "social_user_info_graph_update"
+  def apply(sui: SocialUserInfo): SocialUserInfoGraphUpdate = SocialUserInfoGraphUpdate(sui.id.get, sui.networkType, sui.userId, sui.seq)
 }
 
 case class SocialConnectionGraphUpdate(firstSocialUserId: Id[SocialUserInfo], secondSocialUserId: Id[SocialUserInfo], network: SocialNetworkType, state: State[SocialConnection], socialConnectionSeq: SequenceNumber[SocialConnection]) extends GraphUpdate {
@@ -68,6 +69,7 @@ case class SocialConnectionGraphUpdate(firstSocialUserId: Id[SocialUserInfo], se
 
 case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnectionGraphUpdate] {
   val code = "social_connection_graph_update"
+  def apply(connection: IndexableSocialConnection): SocialConnectionGraphUpdate = SocialConnectionGraphUpdate(connection.firstSocialUserId, connection.secondSocialUserId, connection.network, connection.state, connection.seq)
 }
 
 case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
