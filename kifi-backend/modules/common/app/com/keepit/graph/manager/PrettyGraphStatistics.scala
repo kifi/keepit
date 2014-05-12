@@ -41,3 +41,10 @@ object PrettyGraphStatistics {
     }
   }
 }
+
+case class PrettyGraphState(state: Map[String, Long])
+
+object PrettyGraphState {
+  implicit val format = Json.format[PrettyGraphState]
+}
+

@@ -36,6 +36,7 @@ angular.module('kifi.layout.main', [
 
     $scope.clear = function () {
       $scope.search.text = '';
+      performSearch();
     };
 
     function performSearch() {

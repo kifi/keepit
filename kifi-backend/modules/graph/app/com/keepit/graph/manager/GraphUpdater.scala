@@ -6,7 +6,7 @@ import com.keepit.model.{KeepStates, SocialConnectionStates, UserConnectionState
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
-import com.keepit.cortex.models.lda.VersionedLDATopicId
+import com.keepit.cortex.models.lda.LDATopic
 
 trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
@@ -19,7 +19,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case socialUserInfoGraphUpdate: SocialUserInfoGraphUpdate => processSocialUserInfoGraphUpdate(socialUserInfoGraphUpdate)
     case socialConnectionGraphUpdate: SocialConnectionGraphUpdate => processSocialConnectionGraphUpdate(socialConnectionGraphUpdate)
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
-    case ldaUpdate: LDAURITopicGraphUpdate => processLDAUpdate(ldaUpdate)
+    case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
@@ -114,23 +114,23 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     }
   }
 
-  private def processLDAUpdate(update: LDAURITopicGraphUpdate)(implicit writer: GraphWriter) = {
+  private def processLDAUpdate(update: SparseLDAGraphUpdate)(implicit writer: GraphWriter) = {
 
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
       (0 until numTopics).foreach{ i =>
-        val topicId = VersionedLDATopicId(update.uriSeq.version, i)
+        val topicId = LDATopicId(update.modelVersion, LDATopic(i))
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeDataReader)
         writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeDataReader)
       }
     }
 
-    val uriVertexId: VertexDataId[UriReader] = update.uriId
-    removeOldURITopicsIfExists(uriVertexId, update.sparseTopics.dimension)
+    val uriVertexId: VertexDataId[UriReader] = update.uriFeatures.uriId
+    removeOldURITopicsIfExists(uriVertexId, update.uriFeatures.features.dimension)
 
     val uriData = UriData(uriVertexId)
 
-    update.sparseTopics.topics foreach { case (index, score) =>
-      val topicId = VersionedLDATopicId(update.uriSeq.version, index)
+    update.uriFeatures.features.topics foreach { case (topic, score) =>
+      val topicId = LDATopicId(update.modelVersion, topic)
       val topicVertexId: VertexDataId[LDATopicReader] = topicId
       writer.saveVertex(LDATopicData(topicVertexId))
       writer.saveVertex(uriData)

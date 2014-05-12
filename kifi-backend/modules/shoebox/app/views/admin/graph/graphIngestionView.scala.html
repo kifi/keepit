@@ -1,8 +1,7 @@
 @(allInstances: Seq[com.keepit.common.amazon.AmazonInstanceId],
   statistics: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.PrettyGraphStatistics],
-  states: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.GraphUpdaterState]
+  states: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.PrettyGraphState]
 )
-@import com.keepit.graph.manager.GraphUpdateKind
 
 @views.html.admin.admin("Ingestion") {
 
@@ -25,8 +24,8 @@
   <h3>Graph Updater State</h3>
     <table class = "table table-bordered">
       <tr> <th>GraphUpdate</th> @allInstances.map { instanceId => <th>@instanceId</th> } </tr>
-        @com.keepit.graph.manager.GraphUpdateKind.all.map { updateKind: GraphUpdateKind[_ <: com.keepit.graph.manager.GraphUpdate] =>
-        <tr> <td>@updateKind.toString</td> @allInstances.map { instanceId => <td>@states.get(instanceId).map(_.getCurrentSequenceNumber(updateKind))</td> } </tr>
+        @states.values.flatMap(_.state.keySet).toSet.map { updateKind: String =>
+        <tr> <td>@updateKind</td> @allInstances.map { instanceId => <td>@states.get(instanceId).map(_.state.get(updateKind))</td> } </tr>
       }
     </table>
 }

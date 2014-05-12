@@ -12,7 +12,7 @@
             }
         </h3>
         @if(redirectUrl.isEmpty){
-            <a class="kifi-action" href="javascript:window.close();">Close</a>
+            <a class="kifi-action" href="javascript:window.postMessage('close_tab', '*');">Close</a>
         } else {
             <a class="kifi-action" href="@{redirectUrl.get}">Go back</a>
         }

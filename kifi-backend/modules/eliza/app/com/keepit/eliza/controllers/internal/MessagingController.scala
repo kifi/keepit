@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.internal
 
 import com.keepit.eliza._
 import com.keepit.eliza.model._
-import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander}
+import com.keepit.eliza.commanders.{NotificationCommander, MessagingCommander, ElizaEmailCommander}
 import com.keepit.model._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
@@ -137,5 +137,7 @@ class MessagingController @Inject() (
     }
     Ok(Json.toJson(result))
   }
+
+
 }
 
