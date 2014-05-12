@@ -157,8 +157,8 @@ angular.module('kifi.layout.main', [
     $scope.disableBookmarkImport = true;
 
     $scope.allowUpload = function (elem) {
-      var file = elem.files[0];
-      if (file.name.endsWith('.html')) {
+      var file = elem && elem.files && elem.files[0];
+      if (file && file.name.endsWith('.html')) {
         $scope.importFilename = file.name;
         $scope.disableBookmarkImport = false;
         $scope.importFileStatus = '';
