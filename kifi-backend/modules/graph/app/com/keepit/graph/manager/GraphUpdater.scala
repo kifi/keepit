@@ -2,7 +2,7 @@ package com.keepit.graph.manager
 
 import com.keepit.graph.model._
 import com.google.inject.Inject
-import com.keepit.model.{KeepStates, SocialConnectionStates, UserConnectionStates}
+import com.keepit.model.{UserStates, KeepStates, SocialConnectionStates, UserConnectionStates}
 import com.keepit.social.SocialNetworks
 import com.keepit.graph.model.UserData
 import com.keepit.graph.model.FacebookAccountData
@@ -22,8 +22,9 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
   }
 
-  private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = {
-    writer.saveVertex(UserData(update.userId))
+  private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case UserStates.ACTIVE => writer.saveVertex(UserData(update.userId))
+    case _ => writer.removeVertexIfExists(update.userId)
   }
 
   private def processUserConnectionGraphUpdate(update: UserConnectionGraphUpdate)(implicit writer: GraphWriter) = update.state match {
