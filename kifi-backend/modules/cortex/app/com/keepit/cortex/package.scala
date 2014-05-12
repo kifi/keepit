@@ -43,8 +43,9 @@ package object cortex {
     }
   }
 
-  object GraphUpdateConfigs {
-    val LDAVersionForGraphUpdate = ModelVersion[DenseLDA](1)       // doesn't have to sync with cortex lda version
+  object PublishedModels {
+    val denseLDAVersion = ModelVersion[DenseLDA](1)       // doesn't have to sync with cortex lda version
+    val defaultSparsity = 5
   }
 
 }

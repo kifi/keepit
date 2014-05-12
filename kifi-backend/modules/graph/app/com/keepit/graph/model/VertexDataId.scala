@@ -4,7 +4,7 @@ import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
 import play.api.libs.json.{JsNumber, Writes, Reads, Format}
-import com.keepit.cortex.models.lda.VersionedLDATopicId
+import com.keepit.graph.manager.LDATopicId
 
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 
@@ -32,6 +32,6 @@ object VertexDataId {
   implicit def fromKeepId(keepId: Id[Keep]): VertexDataId[KeepReader] = VertexDataId(keepId.id)
   implicit def toKeepId(keepReaderId: VertexDataId[KeepReader]): Id[Keep] = Id(keepReaderId.id)
 
-  implicit def fromVersionedLDATopicId(id: VersionedLDATopicId): VertexDataId[LDATopicReader] = VertexDataId(id.id)
-  implicit def toVersionedLDATopicId(id: VertexDataId[LDATopicReader]): VersionedLDATopicId = VersionedLDATopicId(id.id)
+  implicit def fromLDATopicId(id: LDATopicId): VertexDataId[LDATopicReader] = VertexDataId(id.toLong)
+  implicit def toLDATopicId(id: VertexDataId[LDATopicReader]): LDATopicId = LDATopicId.fromLong(id.id)
 }

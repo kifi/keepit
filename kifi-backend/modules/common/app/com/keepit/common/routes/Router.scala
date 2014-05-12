@@ -7,7 +7,8 @@ import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
-import play.api.libs.json.JsString
+import com.keepit.cortex.core.{StatModel, ModelVersion}
+import com.keepit.cortex.models.lda.DenseLDA
 
 trait Service
 
@@ -33,6 +34,7 @@ object ParamValue {
   implicit def idToParam[T](i: Id[T]) = ParamValue(i.id.toString)
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if(i.nonEmpty) e(i.get) else ParamValue("")
   implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(seqNum.value.toString)
+  implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(modelVersion.version.toString)
 }
 
 abstract class Method(name: String)
@@ -134,11 +136,6 @@ object Shoebox extends Service {
     def getVerifiedAddressOwners() = ServiceRoute(POST, "/internal/shoebox/database/getVerifiedAddressOwners")
     def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
-    def userGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/user")
-    def socialConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialConnection")
-    def socialUserInfoGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/socialUserInfo")
-    def userConnectionGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/userConnection")
-    def keepGraphUpdate() = ServiceRoute(POST, "/internal/shoebox/graph/keep")
     def updateScreenshotsForUri() = ServiceRoute(POST, "/internal/shoebox/screenshots/update")
     def getURIImage() = ServiceRoute(POST, "/internal/shoebox/image/getURIImage")
     def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
@@ -290,7 +287,7 @@ object Cortex extends Service {
     def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
 
-    def graphLDAURIFeatureUpdate() = ServiceRoute(POST, "/internal/cortex/sqsdata/lda/graphLDAURIFeatureUpdate")
+    def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
