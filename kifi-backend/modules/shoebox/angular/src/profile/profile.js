@@ -212,8 +212,8 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfEmailImport', [
-  'profileService', '$window', 'env', 'socialService', 'routeService',
-  function (profileService, $window, env, socialService, routeService) {
+  'profileService', '$window', 'env', 'socialService',
+  function (profileService, $window, env, socialService) {
     return {
       restrict: 'A',
       replace: true,

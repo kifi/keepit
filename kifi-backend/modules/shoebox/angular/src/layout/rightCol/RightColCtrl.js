@@ -58,6 +58,10 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
     };
 
+    $scope.importBookmarkFile = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+    };
+
     $window.addEventListener('message', function (event) {
       if (event.data && event.data.bookmarkCount > 0) {
         $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
