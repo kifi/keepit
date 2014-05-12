@@ -92,9 +92,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   private[slick] def checkTiming(time:Long, operation:String, model: M)(implicit session:RSession):Unit = {
     if (time > 5000) { // tweak
-    val msg = s"DB-$operation (${session.sessionId};${model.getClass.getSimpleName}) takes too long ($time ms); model:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}"
+      val msg = s"DB-$operation (${session.sessionId};${model.getClass.getSimpleName}) takes too long ($time ms); model:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}"
       log.error(msg, new IllegalStateException(msg))
     }
+    session.timeCheck()
   }
 
   def get(id: Id[M])(implicit session: RSession): M = {
