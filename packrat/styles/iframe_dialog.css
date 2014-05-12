@@ -30,7 +30,7 @@
   transition: transform .3s;
   border: 1px solid #e3e5e8;
   border-radius: 5px !important;
-  background: rgb(52, 73, 94);
+  background: #34495e;
   color: #000;
   line-height: 0;
   text-align: center;
@@ -78,14 +78,14 @@
 .kifi-dialog-x:hover:after,
 .kifi-dialog-x:focus:before,
 .kifi-dialog-x:focus:after {
-  background: #8e939a;
+  background: #c1c6cd;
 }
 .kifi-dialog-x:active:before,
 .kifi-dialog-x:active:after {
   background: #fff;
 }
 .kifi-dialog-x:active {
-  background: #d0d4da;
+  background: #485b6e;
 }
 
 
