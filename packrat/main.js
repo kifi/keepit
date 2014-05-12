@@ -980,6 +980,9 @@ api.port.on({
   settings: function(_, __, tab) {
     emitSettings(tab);
   },
+  browser: function (_, respond) {
+    respond(api.browser);
+  },
   save_setting: function(o, respond, tab) {
     if (o.name === 'emails') {
       ajax('POST', '/ext/pref/email/message/' + !!o.value, onSettingCommitted);

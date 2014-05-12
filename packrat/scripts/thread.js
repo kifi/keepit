@@ -38,7 +38,7 @@ panes.thread = function () {
     }
   };
 
-  var $who, $holder;
+  var $who, $holder, browserName;
   return {
     render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
@@ -55,6 +55,9 @@ panes.thread = function () {
         if ($holder) {
           $holder.data('compose').reflectPrefs(prefs);
         }
+      });
+      api.port.emit('browser', function (data) {
+        browserName = data.name;
       });
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
@@ -193,7 +196,8 @@ panes.thread = function () {
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: me
+      user: me,
+      displayedSource: browserName
     }))
     .data('text', text);
     $holder.append($m).scrollToBottom();
