@@ -156,7 +156,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing Bookmarks")
     while (!done) {
-      val bookmarks = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 100) }
+      val bookmarks = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 10) }
       done = bookmarks.isEmpty
 
       db.readWrite{ implicit s =>
