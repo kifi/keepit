@@ -1,39 +1,25 @@
 package com.keepit.eliza.mail
 
-import com.keepit.eliza.model._
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.db.slick.Database
-import com.keepit.common.time._
-import com.keepit.common.strings._
-import com.keepit.model.User
 import com.keepit.common.db.Id
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.strings._
+import com.keepit.common.time._
+import com.keepit.eliza.model._
+import com.keepit.eliza.util.MessageFormatter
 import com.keepit.inject.AppScoped
-
+import com.keepit.model.User
+import com.keepit.shoebox.ShoeboxServiceClient
 
 import com.google.inject.{Inject, ImplementedBy}
 
 import scala.concurrent.duration._
-import scala.util.matching.Regex.Match
 
 import akka.util.Timeout
-
-object MessageLookHereRemover {
-  private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:[^)]*(?:(?<=\\)\)[^)]*)*\)""".r
-
-
-  def apply(text: String): String = {
-    try {
-      lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
-    } catch {
-      case t: java.lang.IllegalArgumentException => text
-    }
-  }
-}
 
 case object SendEmails
 
@@ -81,7 +67,7 @@ class ElizaEmailNotifierActor @Inject() (
     } getOrElse {
       messageRepo.get(thread.id.get, 0).filter(!_.from.isSystem)
     }}.map { message =>
-      ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageLookHereRemover(message.messageText))
+      ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageFormatter.toText(message.messageText))
     } reverse
 
     log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
