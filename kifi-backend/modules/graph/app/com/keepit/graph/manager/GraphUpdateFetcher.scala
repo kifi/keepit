@@ -48,6 +48,7 @@ class GraphUpdateFetcherImpl @Inject() (
         }
       }
 
+      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
     }
   }
 }
