@@ -108,7 +108,7 @@ class ExtPreferenceController @Inject() (
 
   def getPrefs(version: Int) = JsonAction.authenticatedAsync { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val encryptedIp: String = crypt.crypt(ipkey, ip)
+    val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     loadUserPrefs(request.user.id.get) map {prefs =>
       if (version == 1) {
         Ok(Json.arr("prefs", prefs, encryptedIp))
