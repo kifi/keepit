@@ -47,7 +47,7 @@ case class AirbrakeError(
 
   lazy val trimmedMessage = message.map(_.toString.abbreviate(AirbrakeError.MaxMessageSize))
   override def toString(): String = {
-    s"${rootException.toString}\nat \t${rootException.getStackTrace mkString "\nat \t"}"
+    s"${rootException.toString}\nat \t${rootException.getStackTrace.take(AirbrakeError.MaxStackTrace) mkString "\nat \t"}"
   }
 
   private val maxCauseDepth = 5
@@ -58,14 +58,12 @@ case class AirbrakeError(
       exception.printStackTrace()
       throwable
     }
-    else Option(throwable.getCause()).map(c => findRootException(c, depth + 1)).getOrElse(throwable)
+    else Option(throwable.getCause).map(c => findRootException(c, depth + 1)).getOrElse(throwable)
   }
-
-  private val Max8M = 8 * 1024 * 1024
 
   lazy val signature: AirbrakeErrorSignature = {
     val permText: String =
-      causeStacktraceHead(4).getOrElse(message.map(_.take(Max8M)).getOrElse("")) +
+      causeStacktraceHead(4).getOrElse(message.map(_.take(AirbrakeError.Max8M)).getOrElse("")) +
         url.getOrElse("") +
         method.getOrElse("")
     val cleanText = permText.replaceAll("[0-9]", "")
@@ -78,7 +76,7 @@ case class AirbrakeError(
     case Some(t) =>
       causeStacktraceHead(depth, Option(t.getCause)) match {
         case Some(msg) => Some(msg)
-        case None => Some(t.getStackTrace().take(depth).map(e => e.getClassName + e.getLineNumber).mkString(":"))
+        case None => Some(t.getStackTrace.take(depth).map(e => e.getClassName + e.getLineNumber).mkString(":"))
       }
   }
 
@@ -115,7 +113,7 @@ case class AirbrakeError(
       case Some(t) =>
         s"""<span style="color:red; font-size: 13px; font-style: bold;">Cause:</span><br/>
             <span style="color:green; font-size: 16px; font-style: bold;">${t.toString}</span>\n<br/>
-            ${(t.getStackTrace() map formatStackElementHtml mkString "\n<br/> ")}<br/>
+            ${t.getStackTrace.take(AirbrakeError.MaxStackTrace) map formatStackElementHtml mkString "\n<br/> "}<br/>
             ${causeString(Option(t.getCause))}"""
     }
     causeString(Some(exception))
@@ -144,6 +142,9 @@ object AirbrakeError {
   import scala.collection.JavaConverters._
 
   val MaxMessageSize = 10 * 1024 //10KB
+  val Max8M = 8 * 1024 * 1024
+  val MaxStackTrace = 50
+
   def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None): AirbrakeError =
     new AirbrakeError(
           exception = exception,

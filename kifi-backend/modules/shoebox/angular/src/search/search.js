@@ -25,7 +25,7 @@ angular.module('kifi.search', [
       $scope.search.text = $routeParams.q;
     }
 
-    var reportSEarchAnalyticsOnUnload = function() {
+    var reportSearchAnalyticsOnUnload = function() {
       reportSearchAnalytics('unload');
     };
 
@@ -110,11 +110,11 @@ angular.module('kifi.search', [
     };
 
     $scope.$on('$destroy', function () {
-      reportSEarchAnalyticsOnUnload();
-      $window.removeEventListener('beforeunload', reportSEarchAnalyticsOnUnload);
+      reportSearchAnalyticsOnUnload();
+      $window.removeEventListener('beforeunload', reportSearchAnalyticsOnUnload);
     });
 
-    $window.addEventListener('beforeunload', reportSEarchAnalyticsOnUnload);
+    $window.addEventListener('beforeunload', reportSearchAnalyticsOnUnload);
 
     if (!$routeParams.q) {
       // No or blank query
