@@ -12,6 +12,7 @@ GET     /eliza/site/notifications         @com.keepit.eliza.controllers.site.Web
 GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
 POST    /eliza/messages                   @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageAction()
 POST    /eliza/messages/:parentId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
+GET     /eliza/emailPreview/:msgExtId     @com.keepit.eliza.controllers.ext.ExtMessagingController.getEmailPreview(msgExtId: String)
 
 ##########################################
 # Mobile V1
