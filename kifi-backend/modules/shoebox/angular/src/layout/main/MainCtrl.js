@@ -26,14 +26,6 @@ angular.module('kifi.layout.main', [
       }
     };
 
-    $scope.onFocus = function () {
-      $scope.focus = true;
-    };
-
-    $scope.onBlur = function () {
-      $scope.focus = false;
-    };
-
     $scope.clear = function () {
       $scope.search.text = '';
       performSearch();
