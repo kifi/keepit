@@ -10,7 +10,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.sharding.ActiveShardsSpecParser
+import com.keepit.search.sharding.ShardSpecParser
 import com.keepit.search.SearchTestHelper
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
@@ -67,7 +67,7 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
   "FeedCommander" should {
     "work" in {
       running(application) {
-        implicit val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
+        implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse(Some("0,1 / 2")))
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val (users, uris, bms, t0) = setup(client)
 

@@ -20,7 +20,7 @@ import scala.concurrent._
 class MainSearcherTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   private val singleShard = Shard[NormalizedURI](0,1)
-  implicit private val activeShards = ActiveShards(Seq(singleShard))
+  implicit private val activeShards = ActiveShards(Set(singleShard))
 
   "MainSearcher" should {
     "search and categorize using social graph" in {

@@ -11,36 +11,33 @@ case class Shard[T](shardId: Int, numShards: Int) {
   }
 
   def contains(id: Id[T]): Boolean = ((id.id % numShards.toLong) == shardId.toLong)
-//  def contains(id: Long): Boolean = ((id % numShards.toLong) == shardId.toLong)
 }
 
-case class ActiveShards(shards: Seq[Shard[NormalizedURI]]) {
+case class ActiveShards(shards: Set[Shard[NormalizedURI]]) {
   def find(id: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(_.contains(id))
-//  def find(id: Long): Option[Shard] = shards.find(_.contains(id))
 }
 
-class ActiveShardsSpecParser  {
+class ShardSpecParser  {
 
-  private[this] val parser = new ShardsSpecParser[NormalizedURI]
+  private class ParserImpl extends RegexParsers {
 
-  def parse(configValue: Option[String]): ActiveShards = {
-      ActiveShards(configValue.map{ v =>
-      val trimmed = v.trim
-      if (trimmed.length > 0) parser.parseAll(parser.spec, v).get else Seq(Shard[NormalizedURI](0,1))
-      }.getOrElse(Seq(Shard[NormalizedURI](0,1))))
-  }
-}
-
-class ShardsSpecParser[T] extends RegexParsers {
-
-  def spec: Parser[Seq[Shard[T]]] = rep1sep(num, ",") ~ "/" ~ num ^^{
-    case ids ~ "/" ~ numShards => ids.map{ id =>
-       if (numShards <= 0) throw new Exception(s"numShards=$id")
-       if (id < 0 || id >= numShards) throw new Exception(s"shard id $id is out of range [0, $numShards]")
-       Shard[T](id, numShards)
+    def spec[T]: Parser[Set[Shard[T]]] = rep1sep(num, ",") ~ "/" ~ num ^^{
+      case ids ~ "/" ~ numShards => ids.map{ id =>
+        if (numShards <= 0) throw new Exception(s"numShards=$id")
+        if (id < 0 || id >= numShards) throw new Exception(s"shard id $id is out of range [0, $numShards]")
+        Shard[T](id, numShards)
+      }.toSet
     }
+
+    def num: Parser[Int] = """\d+""".r ^^ { _.toInt }
   }
 
-  def num: Parser[Int] = """\d+""".r ^^ { _.toInt }
-}
+  private[this] val parser = new ParserImpl
 
+  def parse[T](configValue: Option[String]): Set[Shard[T]] = {
+    configValue.map{ v =>
+      val trimmed = v.trim
+      if (trimmed.length > 0) parser.parseAll(parser.spec[T], v).get else Set(Shard[T](0,1))
+    }.getOrElse(Set(Shard[T](0,1)))
+  }
+}
