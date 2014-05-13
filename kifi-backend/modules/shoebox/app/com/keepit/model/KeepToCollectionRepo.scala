@@ -6,6 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
@@ -26,6 +27,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
+   airbrake:AirbrakeNotifier,
    collectionsForKeepCache: CollectionsForKeepCache,
    keepRepoProvider: Provider[KeepRepoImpl],
    val db: DataBaseComponent,
@@ -113,7 +115,15 @@ class KeepToCollectionRepoImpl @Inject() (
     var i = 0
     k2c.grouped(50).foreach { kc =>
       i += 1
-      timing(s"k2c.insertAll($i,${k2c.length})") { rows.insertAll(kc: _*) }
+      timing(s"k2c.insertAll($i,${k2c.length})") {
+        try {
+          rows.insertAll(kc: _*)
+        } catch {
+          case e:Exception =>
+            airbrake.notify(s"k2c.insertAll -- exception ${e} while inserting batch#$i (total=${k2c.length})",e)
+            // move on
+        }
+      }
     }
   }
 
