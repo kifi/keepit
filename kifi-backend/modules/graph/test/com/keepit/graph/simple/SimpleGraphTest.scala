@@ -136,26 +136,5 @@ class SimpleGraphTest() extends Specification {
       edgeReader.moveTo(leo, alfred) must throwA[EdgeNotFoundException]
       edgeReader.moveTo(alfred, leo) must throwA[EdgeNotFoundException]
     }
-
-    "be properly serialized and deserialized to Json" in {
-      val json = SimpleGraph.format.writes(graph)
-      val newGraph = SimpleGraph.format.reads(json).get
-      val newGraphReader = newGraph.getNewReader()
-      val newGraphVertexReader = newGraphReader.getNewVertexReader()
-      newGraphVertexReader.moveTo(rearWindow)
-      newGraphVertexReader.kind === UriReader
-      newGraphVertexReader.data.id === rearWindow
-      newGraphVertexReader.moveTo(alfred)
-      newGraphVertexReader.edgeReader.degree === 2
-      newGraphVertexReader.moveTo(leo)
-      newGraphVertexReader.edgeReader.degree === 0
-
-      val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
-
-      newGraphEdgeReader.moveTo(alfred, rearWindow)
-      newGraphEdgeReader.moveTo(alfred, vertigo)
-
-      "All good" === "All good"
-    }
   }
 }
