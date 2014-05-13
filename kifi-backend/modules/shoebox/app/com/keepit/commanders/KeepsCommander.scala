@@ -176,8 +176,8 @@ class KeepsCommander @Inject() (
     import scala.concurrent.duration._
     // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
     scheduler.scheduleOnce(5 minutes) {
-      db.readOnly { implicit s =>
-        try {
+      try {
+        val (keeper, otherKeepers, uri) = db.readOnly { implicit s =>
           val keep = keepRepo.get(keepId)
           //deal only with good standing, fully public keeps and uris
           if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
@@ -193,28 +193,30 @@ class KeepsCommander @Inject() (
           val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
             localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
           }
-          val title = s"${keeper.fullName} also kept your keep"
-          log.info(s"""sending WKMK "$title" or $keeper to $otherKeepers""")
-          val userImageSize = Some(53)
-          keeper.pictureName.map { pictureName =>
-            imageStore.getPictureUrl(userImageSize, keeper, pictureName)
-          } getOrElse {
-            imageStore.getPictureUrl(userImageSize, keeper, "0")
-          } map { userImage =>
-            val pageImageSize = 42
-            val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
-            val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
-            eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
-              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP) onComplete { messageHandle =>
-                messageHandle match {
-                  case Success(id) => log.info(s"""[$id] sent WKMK "$title" or $keeper to ${otherKeepers}""")
-                  case Failure(ex) => log.error(s"""Error sending WKMK "$title" or $keeper to ${otherKeepers}""", ex)
-                }
-            }
-          }
-        } catch {
-          case e: Exception => airbrake.notify(s"on parsing WKMK for user $userId and keep $keepId", e)
+          (keeper, otherKeepers, uri)
         }
+        val title = s"${keeper.fullName} also kept your keep"
+        log.info(s"""[WKMK] "$title" for $keeper to $otherKeepers""")
+        val userImageSize = Some(53)
+        val picName = keeper.pictureName.getOrElse("0")
+        imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
+          log.info(s"""[WKMK] $keeper using image $userImage""")
+          val pageImageSize = 42
+          val pageImage: String = db.readOnly { implicit s =>
+            imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
+          }
+          val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
+          val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
+          val title = uri.title.get.abbreviate(80)
+          eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {
+            case Success(id) => log.info(s"""[WKMK] sent [$id] "$title" or $keeper to $otherKeepers""")
+            case Failure(ex) => log.error(s"""[WKMK] Error sending "$title" for $keeper to $otherKeepers""", ex)
+          }
+        } onFailure {
+          case ex: Throwable => log.error(s"""[WKMK] Error sending "$title" for $keeper with picName $picName to $otherKeepers""", ex)
+        }
+      } catch {
+        case e: Exception => airbrake.notify(s"[WKMK] Error sending for user $userId and keep $keepId", e)
       }
     }
   }
