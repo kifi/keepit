@@ -3,11 +3,11 @@
   z-index: 999999999991;
   right: 12px;
   bottom: 76px;
-  width: 400px;
+  min-width: 400px;
+  text-align: center;
   border: 2px solid #b8c5d2;
   border-radius: 5px !important;
   box-shadow: rgba(0,40,90,.2) 5px 4px 0 2px;
-  padding: 16px 0 24px;
   font-size: 14px;
   line-height: 21px;
   color: #444;
@@ -34,20 +34,17 @@
   transition-timing-function: linear, ease-out;
   transition-duration: .3s;
 }
+.kifi-tile-tooltip-body {
+  display: inline-block;
+  text-align: left;
+  padding: 16px 24px;
+}
 .kifi-tile-tooltip-h {
   width: 100%;
   line-height: 24px;
   font-size: 18px;
   color: #6fa6ef;
   margin-bottom: 18px;
-}
-.kifi-keeper-intro .kifi-tile-tooltip-body {
-  padding-left: 88px;
-}
-.kifi-external-messaging-intro .kifi-tile-tooltip-body {
-  padding: 0 15px;
-}
-.kifi-external-messaging-intro .kifi-tile-tooltip-h {
   text-align: center;
 }
 .kifi-tile-tooltip-ul {

@@ -748,7 +748,7 @@ api.port.on({
     if (prefs) prefs.showKeeperIntro = false;
   },
   stop_showing_external_messaging_intro: function(action) {
-    ajax('POST', '/ext/pref/showExternalMessagingIntro?show=false');
+    ajax('POST', '/ext/pref/showExtMsgIntro?show=false');
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, 'hide_external_messaging_intro');
     });
