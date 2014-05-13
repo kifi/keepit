@@ -284,7 +284,7 @@ class KeepsCommander @Inject() (
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
       val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
       val newK2C  = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
-      timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 100) {
+      timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
         keepToCollectionRepo.insertAll(newK2C.toSeq)
       }
       val activated = existing collect {
@@ -292,7 +292,7 @@ class KeepsCommander @Inject() (
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
-      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 100) {
+      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
         collectionRepo.modelChanged(collection, (newK2C.size + activated.size) > 0)
       }
       val tagged = (activated ++ newK2C).toSet

@@ -38,7 +38,7 @@ package object performance {
     val sw = new Stopwatch(tag)
     val res = f
     val elapsed = sw.stop()
-    if (elapsed > threshold) {
+    if ((elapsed/1000000) > threshold) {
       cb match {
         case Some(c) => c()
         case None => sw.logTime(None)
