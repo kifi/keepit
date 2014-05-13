@@ -1,4 +1,23 @@
 <div class="kf-footer" antiscroll="{ autoHide: false }">
+
+  <div class="kf-help-rank" ng-if="me.totalKeepsClicked > 0" ng-click="openHelpRankHelp()">
+    <div><span class="kf-heart">♥</span> Your Keeps helped friends {{me.totalKeepsClicked}} times </div>
+  </div>
+  <div kf-modal ng-if="data.showHelpRankHelp" show="data.showHelpRankHelp">
+    <div kf-basic-modal-content centered="true" single-action="false">
+      <div class="kf-help-rank-help">
+        <div class="kf-block-top">The vision of Kifi is about people helping people. <br> Here's where you come in:</div>
+        <div class="kf-block"><span class="kf-emph">{{me.uniqueKeepsClicked}}</span> of your public keeps have been clicked on <span class="kf-emph">{{me.totalKeepsClicked}}</span> times by your friends <br> when they searched on Google or Kifi.com</div>
+        <div class="kf-block-bottom">Do you like this feedback?
+          <div class="dialog-buttons">
+            <button ng-click="yesLikeHelpRank()">Yes</button>
+            <button ng-click="noLikeHelpRank()">No</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <h2 class="kf-footer-header">Getting Started with Kifi</h2>
   <ul class="kf-footer-list about-kifi">
     <li>
