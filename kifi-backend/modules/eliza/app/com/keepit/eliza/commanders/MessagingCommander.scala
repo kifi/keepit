@@ -14,7 +14,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicUser, BasicUserLikeEntity}
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
@@ -222,7 +222,36 @@ class MessagingCommander @Inject() (
       }
       (thread, isNew)
     }
+
+
+    //this is code for a special status message used in the client to do the email preview
+    if (!nonUserRecipients.isEmpty) {
+      val message = db.readWrite { implicit session => messageRepo.save(Message(
+        from = MessageSender.System,
+        thread = thread.id.get,
+        threadExtId = thread.externalId,
+        messageText = "",
+        source = source,
+        auxData = Some(Json.arr("add_participants", from.id.toString,
+          userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_)),
+          true
+        )),
+        sentOnUrl = None,
+        sentOnUriId = None
+      ))}
+      val nonUserParticipants : Seq[BasicUserLikeEntity] = nonUserRecipients.map(NonUserParticipant.toBasicNonUser)
+      (new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq))).foreach { userParticipants =>
+        basicMessageCommander.getMessageWithBasicUser(message.externalId, message.createdAt, "", message.source, message.auxData, "", "", None, userParticipants.values.toSeq ++ nonUserParticipants).foreach { augmentedMessage =>
+          thread.participants.map(_.allUsers.foreach { userId =>
+            notificationCommander.sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
+          })
+        }
+      }
+    }
+
+
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt, nUriOpt, Some(isNew))
+
   }
 
 

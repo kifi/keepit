@@ -9,7 +9,7 @@ import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.{Json, JsArray, JsString, JsNumber}
+import play.api.libs.json.{Json, JsArray, JsString, JsNumber, JsBoolean}
 import com.keepit.model.User
 import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import org.joda.time.DateTime
@@ -106,8 +106,13 @@ class MessageFetchingCommander @Inject() (
                   case first :: second :: Nil => first + " and " + second
                   case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
                 }
-                val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
-                (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
+                if (auxData.value.length > 3 && auxData.value(3)==JsBoolean(true)) {
+                  val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} started a discussion with $addedUsersString on this page."
+                  (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers, true))
+                } else {
+                  val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the discussion."
+                  (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
+                }
               })
 
             }

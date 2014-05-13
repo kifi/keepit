@@ -133,7 +133,7 @@ class NotificationCommander @Inject() (
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
           })
         }
-        notifyEmailUsers(thread)
+        emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
       }
     })
   }
@@ -160,7 +160,7 @@ class NotificationCommander @Inject() (
   def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =
     sendToUser(userId, Json.arr("remove_thread", threadExtId.id))
 
-  private def sendToUser(userId: Id[User], data: JsArray) : Unit =
+  def sendToUser(userId: Id[User], data: JsArray) : Unit =
     notificationRouter.sendToUser(userId, data)
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
