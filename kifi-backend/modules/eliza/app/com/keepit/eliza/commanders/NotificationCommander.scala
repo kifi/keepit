@@ -190,7 +190,8 @@ class NotificationCommander @Inject() (
     }
     SafeFuture {
       val notificationAttempts = userIds.map { userId =>
-        Thread.sleep(100)
+        //Stop gap to avoid overwhelming shoebox via heimal
+        Thread.sleep(100) //TODO: Remove this an replace with proper throtteling + queue for heimdal events
         Try {
           val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
           val notifJson = Json.obj(
