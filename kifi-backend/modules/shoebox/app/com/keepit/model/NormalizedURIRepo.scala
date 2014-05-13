@@ -246,7 +246,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     invalidateCache(get(id).copy(restriction = r, seq = newSeq))
   }
 
-  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime) = {
+  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession) = {
     (for {t <- rows if t.id === id} yield t.screenshotUpdatedAt).update(time)
   }
 

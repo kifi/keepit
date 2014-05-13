@@ -194,10 +194,7 @@ class URISummaryCommander @Inject()(
           }
           val successfulCandidates = candidates collect { case Some(candidate) => candidate }
           if (successfulCandidates.length == candidates.length) {
-            db.readWrite { implicit session =>
-              val storedUri = normalizedUriRepo.get(nUriId)
-              normalizedUriRepo.save(storedUri.copy(screenshotUpdatedAt = Some(clock.now)))
-            }
+            db.readWrite { implicit session => normalizedUriRepo.updateScreenshotUpdatedAt(nUriId, clock.now) }
           } else {
             log.error(s"Failed to update screenshots for normalized URI $nUriId}")
           }
