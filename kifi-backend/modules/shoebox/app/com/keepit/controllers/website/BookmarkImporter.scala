@@ -60,7 +60,7 @@ class BookmarkImporter @Inject() (
             case None => keepsCommander.getOrCreateTag(request.userId, "Imported links")(context)
           }
           val tags = tagSet.map { tagStr =>
-            tagStr.trim -> timing(s"uploadBookmarkFile(${request.userId}) -- getOrCreateTag(${tagStr.trim})") { keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }
+            tagStr.trim -> timing(s"uploadBookmarkFile(${request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }
           }.toMap
           val taggedKeeps = parsed.map { case (t, h, tagNames) =>
             val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
