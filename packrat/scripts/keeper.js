@@ -21,7 +21,7 @@ var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 var keeper = keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastCreatedAt;
+  var $slider, lastCreatedAt, keptNow;
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -328,6 +328,13 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
         $slider.remove(), $slider = null;
       }
+      if (keptNow) {
+        api.port.emit('prefs', function (prefs) {
+          if (prefs.showExternalMessagingIntro) {
+            setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
+          }
+        });
+      }
     });
   }
 
@@ -374,6 +381,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how);
+    keptNow = true;
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
@@ -391,6 +399,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function unkeepPage() {
     log('[unkeepPage]', document.URL);
+    keptNow = false;
     api.port.emit('unkeep', withUrls({}));
   }
 
