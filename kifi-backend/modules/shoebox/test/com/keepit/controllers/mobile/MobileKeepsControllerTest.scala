@@ -457,7 +457,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       contentType(result) must beSome("application/json");
 
       val collection = inject[Database].readWrite { implicit session =>
-        val collections = inject[CollectionRepo].getByUser(user.id.get)
+        val collections = inject[CollectionRepo].getUnfortunatelyIncompleteTagsByUser(user.id.get)
         collections.size === 1
         collections.head
       }
