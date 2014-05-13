@@ -606,4 +606,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
   def getUnsubscribeUrlForEmail(email: String): Future[String] = Future.successful("https://kifi.com")
+
+  def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = Future.successful(Seq.empty)
+
+  def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 }
