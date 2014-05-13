@@ -83,10 +83,11 @@ class BookmarkImporter @Inject() (
     val source = title match {
       case Some("Kippt Bookmarks") => Some(KeepSource("Kippt"))
       case Some("Pocket Export") => Some(KeepSource("Pocket"))
+      case Some("Instapaper: Export") => Some(KeepSource("Instapaper"))
       case _ => None
     }
 
-    val links = parsed.select("dt a, ul li a")
+    val links = parsed.select("dt a, li a")
 
     val extracted = links.iterator().map { elem =>
       for {
