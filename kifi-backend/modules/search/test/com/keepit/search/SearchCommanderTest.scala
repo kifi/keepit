@@ -13,7 +13,7 @@ import com.keepit.search.sharding.ShardSpecParser
 
 class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
-  implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse(Some("0,1 / 2")))
+  implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
 
   "SearchCommander" should {
     "generate results in the correct json format" in {

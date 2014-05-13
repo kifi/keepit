@@ -9,7 +9,7 @@ class ShardTest extends Specification {
     def shard(i: Int, n: Int) = Shard[Any](i, n)
     implicit def longToId(i: Long) = Id[Any](i)
 
-    "generate correct indexn name suffix" in {
+    "generate correct index name suffix" in {
       shard(0, 1).indexNameSuffix === ""
       shard(0, 5).indexNameSuffix === "_0_5"
       shard(1, 5).indexNameSuffix === "_1_5"
@@ -36,6 +36,15 @@ class ShardTest extends Specification {
       shard(2, 3).contains(1L) === false
       shard(2, 3).contains(2L) === true
       shard(1, 3).contains(3L) === false
+    }
+
+    "be converted to spec string" in {
+      ShardSpec.toString(Set(shard(0,1))) === "0/1"
+
+      val parser = new ShardSpecParser
+      parser.parse[Any](ShardSpec.toString(Set(shard(0,3), shard(2,3)))) === Set(shard(0,3), shard(2,3))
+
+      ShardSpec.toString(Set()) must throwA[Exception]
     }
   }
 }
