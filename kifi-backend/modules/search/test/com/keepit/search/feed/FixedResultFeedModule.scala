@@ -43,14 +43,14 @@ class FixedResultFeedCommander extends FeedCommander{
 
   private val feeds = Seq(
     Feed(
-      uri = NormalizedURI(id = Some(Id[NormalizedURI](1L)), externalId = ExternalId[NormalizedURI]("abc12345-1234-1234-1234-012345678901"), createdAt = t0, updatedAt = t0, urlHash = UrlHash("h1"), url = "http://kifi.com"),
+      uri = NormalizedURI(id = Some(Id[NormalizedURI](1L)), externalId = ExternalId[NormalizedURI]("abc12345-1234-1234-1234-012345678901"), createdAt = t0, updatedAt = t0, title = Some("kifi"), urlHash = UrlHash("h1"), url = "http://kifi.com"),
       sharingUsers = Seq(basicUsers(0)),
       firstKeptAt = t0,
       totalKeepersSize = 10
     ),
 
     Feed(
-      uri = NormalizedURI(id = Some(Id[NormalizedURI](2L)), createdAt = t1, updatedAt = t1, externalId = ExternalId[NormalizedURI]("abc12345-1234-1234-1234-012345678902"), urlHash = UrlHash("h2"), url = "http://42go.com"),
+      uri = NormalizedURI(id = Some(Id[NormalizedURI](2L)), createdAt = t1, updatedAt = t1, externalId = ExternalId[NormalizedURI]("abc12345-1234-1234-1234-012345678902"), title = Some("42go"), urlHash = UrlHash("h2"), url = "http://42go.com"),
       sharingUsers = basicUsers,
       firstKeptAt = t1,
       totalKeepersSize = 20

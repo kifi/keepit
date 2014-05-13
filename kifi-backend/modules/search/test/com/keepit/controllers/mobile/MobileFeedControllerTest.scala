@@ -19,19 +19,36 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
 
   val expected1 = Json.parse(s"""
     [
-        {
-          "uri": {
-            "id":1,
-            "createdAt":"2014-01-30T21:59:00.000Z",
-            "updatedAt":"2014-01-30T21:59:00.000Z",
-            "externalId":"abc12345-1234-1234-1234-012345678901",
-            "url":"http://kifi.com",
-            "urlHash":"h1",
-            "state":"active",
-            "seq":0
-          },
+      {
+        "title":"kifi",
 
-          "sharingUsers": [
+        "url":"http://kifi.com",
+
+        "sharingUsers":[
+          {
+            "id":"4e5f7b8c-951b-4497-8661-012345678901",
+            "firstName":"u1",
+            "lastName":"fake",
+            "pictureName":"u1.png"
+          }
+        ],
+
+        "firstKeptAt":"2014-01-30T21:59:00.000Z",
+
+        "totalKeeperSize":10
+      }
+   ]
+  """)
+
+
+   val expected2 = Json.parse(s"""
+     [
+        {
+          "title":"kifi",
+
+          "url":"http://kifi.com",
+
+          "sharingUsers":[
             {
               "id":"4e5f7b8c-951b-4497-8661-012345678901",
               "firstName":"u1",
@@ -43,54 +60,16 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
           "firstKeptAt":"2014-01-30T21:59:00.000Z",
 
           "totalKeeperSize":10
-        }
-    ]
-  """)
-
-
-   val expected2 = Json.parse(s"""
-      [
-        {
-          "uri":{
-            "id":1,
-            "createdAt":"2014-01-30T21:59:00.000Z",
-            "updatedAt":"2014-01-30T21:59:00.000Z",
-            "externalId":"abc12345-1234-1234-1234-012345678901",
-            "url":"http://kifi.com",
-            "urlHash":"h1",
-            "state":"active",
-            "seq":0
-          },
-
-          "sharingUsers":[
-            {
-            "id":"4e5f7b8c-951b-4497-8661-012345678901",
-            "firstName":"u1",
-            "lastName":"fake",
-            "pictureName":"u1.png"
-            }
-          ],
-
-          "firstKeptAt":"2014-01-30T21:59:00.000Z",
-
-          "totalKeeperSize":10
         },
 
 
         {
-          "uri":{
-            "id":2,
-            "createdAt":"2014-01-30T22:11:00.000Z",
-            "updatedAt":"2014-01-30T22:11:00.000Z",
-            "externalId":"abc12345-1234-1234-1234-012345678902",
-            "url":"http://42go.com",
-            "urlHash":"h2",
-            "state":"active",
-            "seq":0
-          },
+          "title":"42go",
 
+          "url":"http://42go.com",
 
           "sharingUsers":[
+
             {
               "id":"4e5f7b8c-951b-4497-8661-012345678901",
               "firstName":"u1",
@@ -104,14 +83,14 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
               "lastName":"fake",
               "pictureName":"u2.png"
             }
+
           ],
 
           "firstKeptAt":"2014-01-30T22:11:00.000Z",
 
           "totalKeeperSize":20
         }
-
-       ]
+     ]
    """)
 
   def modules = {
@@ -148,6 +127,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
         result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
+
+        println(Json.parse(contentAsString(result)))
 
         Json.parse(contentAsString(result)) === expected2
       }

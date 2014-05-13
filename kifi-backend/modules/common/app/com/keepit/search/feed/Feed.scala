@@ -23,8 +23,10 @@ object Feed {
 object FeedResult {
   def v1(feeds: Seq[Feed]): JsValue = {
     val jsVals = feeds.map{ feed =>
-        Json.obj(
-        "uri" -> feed.uri,
+      val title = feed.uri.title.getOrElse("No Title")
+      Json.obj(
+        "title" -> title,
+        "url" -> feed.uri.url,
         "sharingUsers" -> feed.sharingUsers,
         "firstKeptAt" -> feed.firstKeptAt,
         "totalKeeperSize" -> feed.totalKeepersSize
