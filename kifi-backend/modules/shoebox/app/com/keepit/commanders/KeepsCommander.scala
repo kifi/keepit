@@ -280,8 +280,8 @@ class KeepsCommander @Inject() (
     } else None
   }
 
-  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
-    db.readWrite { implicit s =>
+  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
+    val result = db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val collection = collectionRepo.get(collectionId)
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
@@ -302,7 +302,11 @@ class KeepsCommander @Inject() (
       val taggingAt = currentDateTime
       tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt))
       tagged
-    } tap { _ => searchClient.updateURIGraph() }
+    }
+    if (updateUriGraph) {
+      searchClient.updateURIGraph()
+    }
+    result
   }
 
   def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
@@ -397,9 +401,11 @@ class KeepsCommander @Inject() (
 
     val keepsByTag = keepsByTagName.map { case (tagName, keeps) =>
       val tag = getOrCreateTag(userId, tagName)
-      addToCollection(tag.id.get, keeps)
+      addToCollection(tag.id.get, keeps, updateUriGraph = false)
       tag -> keeps
     }.toMap
+
+    searchClient.updateURIGraph()
 
     keepsByTag
   }
