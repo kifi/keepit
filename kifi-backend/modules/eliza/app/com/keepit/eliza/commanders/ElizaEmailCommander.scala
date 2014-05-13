@@ -237,7 +237,7 @@ class ElizaEmailCommander @Inject() (
     }
     val protoEmailFuture = assembleEmail(thread, None, Some(msg.createdAt), None, None)
     if (msg.auxData.isDefined) {
-      if (msg.auxData.get.value.length < 3 && msg.auxData.get.value(3)==JsBoolean(true)) {
+      if (msg.auxData.get.value(0)==JsString("start_with_emails")) {
         protoEmailFuture.map(_.initialHtml)
       } else {
         protoEmailFuture.map(_.addedHtml)
