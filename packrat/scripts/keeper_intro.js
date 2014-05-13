@@ -13,7 +13,7 @@ api.port.emit('prefs', function (prefs) {
     var $intro = $(render('html/keeper/tile_tooltip', {
       header: 'Meet your kifi keeper',
       text: 'Use the keeper to:',
-      actions: ['Keep any page', 'Send to any email address or friend'],
+      actions: ['Keep any page', 'Send this page to any email address or friend'],
       tip: 'Try dragging the keeper up and down'
     }))
       .insertAfter(tile)
