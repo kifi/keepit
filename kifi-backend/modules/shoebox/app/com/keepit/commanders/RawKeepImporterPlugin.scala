@@ -68,7 +68,7 @@ private class RawKeepImporterActor @Inject() (
 
   def fetchOldBatch() = {
     db.readOnly { implicit session =>
-      rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(3))
+      rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(20))
     }
   }
 
