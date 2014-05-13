@@ -330,7 +330,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
       if (justKept) {
         api.port.emit('prefs', function (prefs) {
-          if (prefs.showExternalMessagingIntro) {
+          if (prefs.showExtMsgIntro) {
             setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
           }
         });
