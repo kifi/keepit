@@ -13,13 +13,14 @@ import play.api.libs.json.{JsNumber, Json}
 import com.google.inject.Inject
 import scala.util.{Try, Failure, Success}
 import org.jsoup.Jsoup
-import java.io.File
+import java.io.{BufferedWriter, FileWriter, FileOutputStream, File}
 import com.keepit.common.db.Id
 import java.util.UUID
 import com.keepit.heimdal.{HeimdalContextBuilderFactory, HeimdalContextBuilder}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.strings.humanFriendlyToken
+import org.apache.commons.io.FileUtils
 
 class BookmarkImporter @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -78,6 +79,15 @@ class BookmarkImporter @Inject() (
             log.info(s"Successfully processed bookmark file import for ${request.userId}. $keepSize keeps processed, $tagSize tags.")
             Ok(s"""{"done": "kindly let the user know that it is working and may take a sec", "count": $keepSize}""")
           case Failure(oops) =>
+            // todo(Andrew): Remove this soon, or anonymize it. This is here to isolate some issues.
+            val file: File = new File(s"bad-bookmarks-${request.userId}.html")
+            try {
+              FileUtils.copyFile(bookmarks.file, file)
+            } catch {
+              case ex: Throwable =>
+                log.error("[bmFileImport:$id] Tried to write failed file to disk, failed again. Sigh.", ex)
+            }
+
             log.info(s"[bmFileImport:$id] Failure (ex) in ${clock.getMillis()-startMillis}ms")
             log.error(s"Could not import bookmark file for ${request.userId}, had an exception.", oops)
             BadRequest(s"""{"error": "couldnt_complete", "message": "${oops.getMessage}"}""")
