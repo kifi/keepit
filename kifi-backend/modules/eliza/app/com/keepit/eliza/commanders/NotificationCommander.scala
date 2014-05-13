@@ -190,6 +190,7 @@ class NotificationCommander @Inject() (
     }
     SafeFuture {
       val notificationAttempts = userIds.map { userId =>
+        Thread.sleep(100)
         Try {
           val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
           val notifJson = Json.obj(
