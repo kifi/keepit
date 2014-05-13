@@ -47,7 +47,7 @@ class URISummaryCommander @Inject()(
   def getURISummaryForRequest(request: URISummaryRequest): Future[URISummary] = {
     getNormalizedURIForRequest(request) map { nUri =>
       getURISummaryForRequest(request, nUri)
-    } getOrElse (future{URISummary()})
+    } getOrElse Future.successful(URISummary())
   }
 
   private def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
@@ -55,9 +55,9 @@ class URISummaryCommander @Inject()(
     if (!isCompleteSummary(summary, request)) {
       if (!request.silent) {
         val fetchedSummary = fetchSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
-        if (request.waiting) fetchedSummary else future{summary}
-      } else future{summary}
-    } else future{summary}
+        if (request.waiting) fetchedSummary else Future.successful(summary)
+      } else Future.successful(summary)
+    } else Future.successful(summary)
   }
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
@@ -111,7 +111,7 @@ class URISummaryCommander @Inject()(
    */
   private def fetchSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): Future[URISummary] = {
     val embedlyResultFut = if (imageType == ImageType.IMAGE || imageType == ImageType.ANY || withDescription) fetchFromEmbedly(nUri, minSize)
-    else future{None}
+    else Future.successful(None)
     embedlyResultFut flatMap { embedlyResultOpt =>
       val shouldFetchFromPagePeeker =
         (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) &&  // Request accepts screenshots
@@ -123,7 +123,7 @@ class URISummaryCommander @Inject()(
           val description = embedlyResultOpt flatMap { _.description }
           URISummary(imageUrlOpt, title, description)
         }
-      } else future{embedlyResultOpt getOrElse URISummary()}
+      } else Future.successful(embedlyResultOpt getOrElse URISummary())
     }
   }
 
@@ -153,7 +153,7 @@ class URISummaryCommander @Inject()(
           // Persist page info to the database
           updatePageInfo(embedlyInfo.toPageInfo(nUriId))
           if (descriptionOnly) {
-            future{Some(URISummary(None, embedlyInfo.title, embedlyInfo.description))}
+            Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
           } else {
             val images = embedlyInfo.buildImageInfo(nUriId)
             images.find(meetsSizeConstraint(_, minSize)) flatMap { selectedImageInfo =>
@@ -174,10 +174,10 @@ class URISummaryCommander @Inject()(
                   Some(URISummary(imageInfoOpt flatMap { getS3URL(_,nUri) }, embedlyInfo.title, embedlyInfo.description))
                 }
               }
-            } getOrElse future{Some(URISummary(None, embedlyInfo.title, embedlyInfo.description))}
+            } getOrElse Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
           }
-        } getOrElse future{None}
-      } getOrElse future{None}
+        } getOrElse Future.successful(None)
+      } getOrElse Future.successful(None)
     }
   }
 
@@ -201,7 +201,7 @@ class URISummaryCommander @Inject()(
           successfulCandidates find { meetsSizeConstraint(_, minSize) }
         }
       }
-    } getOrElse future{None}
+    } getOrElse Future.successful(None)
   }
 
   /**

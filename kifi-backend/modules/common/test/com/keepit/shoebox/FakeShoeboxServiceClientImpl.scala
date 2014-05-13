@@ -595,11 +595,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
 
-  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
-    Future.successful(())
-  }
+  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = Future.successful(())
+
+  def updateScreenshotsForUriId(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
 
   def getURIImage(nUri: NormalizedURI): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def getUriImageForUriId(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 
