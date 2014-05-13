@@ -67,7 +67,7 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
   "FeedCommander" should {
     "work" in {
       running(application) {
-        implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse(Some("0,1 / 2")))
+        implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val (users, uris, bms, t0) = setup(client)
 

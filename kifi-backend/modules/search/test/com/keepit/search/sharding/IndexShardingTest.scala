@@ -14,7 +14,7 @@ import scala.concurrent._
 
 class IndexShardingTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
-  implicit private val activeShards =  ActiveShards((new ShardSpecParser).parse(Some("0,1/2")))
+  implicit private val activeShards =  ActiveShards((new ShardSpecParser).parse("0,1/2"))
   val emptyFuture = Future.successful(Set[Long]())
 
   "ShardedArticleIndexer" should {
