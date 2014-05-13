@@ -53,7 +53,7 @@ class MainSearcherFactory @Inject() (
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   def apply(
-    shards: Seq[Shard[NormalizedURI]],
+    shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     queryString: String,
     lang1: Lang,
@@ -67,7 +67,7 @@ class MainSearcherFactory @Inject() (
 
     val parser = parserFactory(lang1, lang2, config)
 
-    val searchers = shards.map{ shard =>
+    val searchers = shards.toSeq.map{ shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
       val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
 
@@ -105,7 +105,7 @@ class MainSearcherFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig
   ): MainSearcher = {
-    val searchers = apply(Seq(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
+    val searchers = apply(Set(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
     searchers(0)
   }
 
@@ -159,7 +159,7 @@ class MainSearcherFactory @Inject() (
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
-  def getLangProfileFuture(shards: Seq[Shard[NormalizedURI]], userId: Id[User], limit: Int): Future[Map[Lang, Float]] = consolidateLangProfReq((userId, limit)){ case (userId, limit) =>
+  def getLangProfileFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User], limit: Int): Future[Map[Lang, Float]] = consolidateLangProfReq((userId, limit)){ case (userId, limit) =>
     Future.traverse(shards){ shard =>
       SafeFuture{
         val searcher = getURIGraphSearcher(shard, userId)

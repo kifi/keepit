@@ -28,7 +28,7 @@ object GraphUpdateKind {
   def apply(code: String): GraphUpdateKind[_ <: GraphUpdate] = byCode(code)
 }
 
-case class UserGraphUpdate(userId: Id[User], userSeq: SequenceNumber[User]) extends GraphUpdate {
+case class UserGraphUpdate(userId: Id[User], state: State[User], userSeq: SequenceNumber[User]) extends GraphUpdate {
   type U = UserGraphUpdate
   def kind = UserGraphUpdate
   def seq = kind.seq(userSeq.value)
@@ -36,7 +36,7 @@ case class UserGraphUpdate(userId: Id[User], userSeq: SequenceNumber[User]) exte
 
 case object UserGraphUpdate extends GraphUpdateKind[UserGraphUpdate] {
   val code = "user_graph_update"
-  def apply(user: User): UserGraphUpdate = UserGraphUpdate(user.id.get, user.seq)
+  def apply(user: User): UserGraphUpdate = UserGraphUpdate(user.id.get, user.state, user.seq)
 }
 
 case class UserConnectionGraphUpdate(firstUserId: Id[User], secondUserId: Id[User], state: State[UserConnection], userConnectionSeq: SequenceNumber[UserConnection]) extends GraphUpdate {
@@ -58,6 +58,7 @@ case class SocialUserInfoGraphUpdate(socialUserId: Id[SocialUserInfo], network: 
 
 case object SocialUserInfoGraphUpdate extends GraphUpdateKind[SocialUserInfoGraphUpdate] {
   val code = "social_user_info_graph_update"
+  def apply(sui: SocialUserInfo): SocialUserInfoGraphUpdate = SocialUserInfoGraphUpdate(sui.id.get, sui.networkType, sui.userId, sui.seq)
 }
 
 case class SocialConnectionGraphUpdate(firstSocialUserId: Id[SocialUserInfo], secondSocialUserId: Id[SocialUserInfo], network: SocialNetworkType, state: State[SocialConnection], socialConnectionSeq: SequenceNumber[SocialConnection]) extends GraphUpdate {
@@ -68,6 +69,7 @@ case class SocialConnectionGraphUpdate(firstSocialUserId: Id[SocialUserInfo], se
 
 case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnectionGraphUpdate] {
   val code = "social_connection_graph_update"
+  def apply(connection: IndexableSocialConnection): SocialConnectionGraphUpdate = SocialConnectionGraphUpdate(connection.firstSocialUserId, connection.secondSocialUserId, connection.network, connection.state, connection.seq)
 }
 
 case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
@@ -89,4 +91,15 @@ case class SparseLDAGraphUpdate(modelVersion: ModelVersion[DenseLDA], uriFeature
 
 case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate]{
   val code = "sparse_lda_graph_update"
+}
+
+case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI]) extends GraphUpdate {
+  type U = NormalizedUriGraphUpdate
+  def kind = NormalizedUriGraphUpdate
+  def seq = kind.seq(uriSeq.value)
+}
+
+case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
+  val code = "normalized_uri_graph_update"
+  def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
 }

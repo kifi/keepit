@@ -3,6 +3,8 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import com.keepit.social.SocialNetworkType
+import play.api.libs.json.Json
 
 case class SocialConnection(
   id: Option[Id[SocialConnection]] = None,
@@ -19,3 +21,15 @@ case class SocialConnection(
 }
 
 object SocialConnectionStates extends States[SocialConnection]
+
+case class IndexableSocialConnection(
+  firstSocialUserId: Id[SocialUserInfo],
+  secondSocialUserId: Id[SocialUserInfo],
+  network: SocialNetworkType,
+  state: State[SocialConnection],
+  seq: SequenceNumber[SocialConnection]
+)
+
+object IndexableSocialConnection {
+  implicit val format = Json.format[IndexableSocialConnection]
+}

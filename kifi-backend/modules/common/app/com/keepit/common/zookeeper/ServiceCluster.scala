@@ -3,23 +3,16 @@ package com.keepit.common.zookeeper
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.strings._
 import com.keepit.common.service._
-import com.keepit.common.amazon._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent._
 import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
 
-import play.api.libs.json._
-
 import akka.actor.{Scheduler,Cancellable}
 
-import com.google.inject.{Inject, Singleton, Provider}
-
-import org.apache.zookeeper.CreateMode._
+import com.google.inject.Provider
 
 class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler, forceUpdateTopology: () => Unit) extends Logging {
 
@@ -74,12 +67,13 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, nodeData: String) = try {
     log.info(s"data for node $childNode is $nodeData")
     val remoteService = RemoteService.fromJson(nodeData)
-    if (newInstances.isDefinedAt(childNode)){
-      log.info(s"discovered updated node $childNode: $remoteService, adding to ${newInstances.keys}")
-      newInstances(childNode).setRemoteService(remoteService)
-    } else {
-      log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
-      newInstances(childNode) = new ServiceInstance(childNode, false).setRemoteService(remoteService)
+    newInstances(childNode) = newInstances.get(childNode) match {
+      case Some(instance) =>
+        log.info(s"discovered updated node $childNode: $remoteService, adding to ${newInstances.keys}")
+        new ServiceInstance(childNode, instance.thisInstance, remoteService)
+      case None =>
+        log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
+        new ServiceInstance(childNode, false, remoteService)
     }
   } catch {
     case t: Throwable =>

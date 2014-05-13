@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.realtime.UrbanAirship
 import org.joda.time.DateTime
-import com.keepit.eliza.mail.MessageLookHereRemover
+import com.keepit.eliza.util.MessageFormatter
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
@@ -133,7 +133,7 @@ class NotificationCommander @Inject() (
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
           })
         }
-        notifyEmailUsers(thread)
+        emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
       }
     })
   }
@@ -160,7 +160,7 @@ class NotificationCommander @Inject() (
   def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =
     sendToUser(userId, Json.arr("remove_thread", threadExtId.id))
 
-  private def sendToUser(userId: Id[User], data: JsArray) : Unit =
+  def sendToUser(userId: Id[User], data: JsArray) : Unit =
     notificationRouter.sendToUser(userId, data)
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
@@ -190,6 +190,8 @@ class NotificationCommander @Inject() (
     }
     SafeFuture {
       val notificationAttempts = userIds.map { userId =>
+        //Stop gap to avoid overwhelming shoebox via heimal
+        Thread.sleep(100) //TODO: Remove this an replace with proper throtteling + queue for heimdal events
         Try {
           val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
           val notifJson = Json.obj(
@@ -319,7 +321,7 @@ class NotificationCommander @Inject() (
           case Some(bnu:BasicNonUser) => bnu.firstName.getOrElse(bnu.id) + ": "
           case _ => ""
         }
-        val notifText = MessageLookHereRemover(sender + message.messageText)
+        val notifText = sender + MessageFormatter.toText(message.messageText)
         val sound = if (numMessages > 1) UrbanAirship.MoreMessageNotificationSound else UrbanAirship.DefaultNotificationSound
         val notification = PushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
