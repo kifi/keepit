@@ -14,7 +14,7 @@ import scala.concurrent._
 
 class IndexShardingTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
-  implicit private val activeShards =  (new ActiveShardsSpecParser).parse(Some("0,1/2"))
+  implicit private val activeShards =  ActiveShards((new ShardSpecParser).parse(Some("0,1/2")))
   val emptyFuture = Future.successful(Set[Long]())
 
   "ShardedArticleIndexer" should {
@@ -82,8 +82,8 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
 
             uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet
           }
-          shardedKeeps.map(_.size).sum === keeps.size
-          shardedKeeps.reduce(_ union _) === keeps
+          shardedKeeps.toSeq.map(_.size).sum === keeps.size
+          shardedKeeps.flatten === keeps
         }
 
         (collections zip collKeeps).foreach{ case (collection, collKeeps) =>
@@ -92,8 +92,8 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
             collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet
           }
           val keeps = collKeeps.map(_.uriId).toSet
-          shardedKeeps.map(_.size).sum === keeps.size
-          shardedKeeps.reduce(_ union _) === keeps
+          shardedKeeps.toSeq.map(_.size).sum === keeps.size
+          shardedKeeps.flatten === keeps
         }
       }
       1===1

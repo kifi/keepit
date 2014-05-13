@@ -4,18 +4,16 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
-import com.keepit.search.spellcheck.SpellCorrector
-import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.sharding.ActiveShardsSpecParser
+import com.keepit.search.sharding.ShardSpecParser
 
 class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
-  implicit private val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
+  implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse(Some("0,1 / 2")))
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
