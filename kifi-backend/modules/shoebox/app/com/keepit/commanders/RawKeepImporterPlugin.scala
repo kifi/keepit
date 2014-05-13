@@ -101,11 +101,8 @@ private class RawKeepImporterActor @Inject() (
             "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
           }
           val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-          bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes)(context)
+          bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes, false)(context)
         }
-
-        //the bookmarks list may be very large!
-        searchClient.updateURIGraph()
 
         /* The strategy here is to go through all the keeps, grabbing their tags, and generating a list
          * of keeps per tag. That way applying the tag to the keeps is much more efficient, since
@@ -129,12 +126,15 @@ private class RawKeepImporterActor @Inject() (
 
         tagIdToKeeps.map { case (tagId, keeps) =>
           // Make sure tag actually exists still
-          Try(bookmarksCommanderProvider.get.addToCollection(tagId, keeps)(context)) match {
+          Try(bookmarksCommanderProvider.get.addToCollection(tagId, keeps, false)(context)) match {
             case Success(r) => // yay!
             case Failure(e) =>
               log.info(s"[RawKeepImporterActor] Had problems applying tagId $tagId to ${keeps.length} keeps. Moving along.")
           }
         }
+
+        //the bookmarks list may be very large!
+        searchClient.updateURIGraph()
 
         db.readWriteBatch(successesRawKeep) { case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
