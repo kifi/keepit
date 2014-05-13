@@ -64,8 +64,6 @@ object SimpleGraph {
         val JsArray(Seq(idJson, vertexJson)) = Json.parse(line)
         val vertexId = idJson.as[VertexId]
         val vertex = vertexJson.as[MutableVertex]
-        val expectedVertexId = VertexId(vertex.data.id)(vertex.data.kind)
-        require(vertexId == expectedVertexId, s"Inconsistent VertexId: $vertexId. Expected: $expectedVertexId")
         vertices += (vertexId -> vertex)
       }
     } finally {
