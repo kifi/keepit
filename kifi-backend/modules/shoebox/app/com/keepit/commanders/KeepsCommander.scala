@@ -194,26 +194,25 @@ class KeepsCommander @Inject() (
             localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
           }
           val title = s"${keeper.fullName} also kept your keep"
-          log.info(s"""sending WKMK "$title" or $keeper to $otherKeepers""")
+          log.info(s"""[WKMK] "$title" for $keeper to $otherKeepers""")
           val userImageSize = Some(53)
-          keeper.pictureName.map { pictureName =>
-            imageStore.getPictureUrl(userImageSize, keeper, pictureName)
-          } getOrElse {
-            imageStore.getPictureUrl(userImageSize, keeper, "0")
-          } map { userImage =>
+          val picName = keeper.pictureName.getOrElse("0")
+          imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
+            log.info(s"""[WKMK] $keeper using image $userImage""")
             val pageImageSize = 42
             val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
             val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
-            eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
-              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP) onComplete { messageHandle =>
-                messageHandle match {
-                  case Success(id) => log.info(s"""[$id] sent WKMK "$title" or $keeper to ${otherKeepers}""")
-                  case Failure(ex) => log.error(s"""Error sending WKMK "$title" or $keeper to ${otherKeepers}""", ex)
-                }
+            val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
+            val title = uri.title.get.abbreviate(80)
+            eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {
+              case Success(id) => log.info(s"""[WKMK] sent [$id] "$title" or $keeper to $otherKeepers""")
+              case Failure(ex) => log.error(s"""[WKMK] Error sending "$title" for $keeper to $otherKeepers""", ex)
             }
+          } onFailure {
+            case ex: Throwable => log.error(s"""[WKMK] Error sending "$title" for $keeper with picName $picName to $otherKeepers""", ex)
           }
         } catch {
-          case e: Exception => airbrake.notify(s"on parsing WKMK for user $userId and keep $keepId", e)
+          case e: Exception => airbrake.notify(s"[WKMK] Error sending for user $userId and keep $keepId", e)
         }
       }
     }
