@@ -11,36 +11,39 @@ case class Shard[T](shardId: Int, numShards: Int) {
   }
 
   def contains(id: Id[T]): Boolean = ((id.id % numShards.toLong) == shardId.toLong)
-//  def contains(id: Long): Boolean = ((id % numShards.toLong) == shardId.toLong)
 }
 
-case class ActiveShards(shards: Seq[Shard[NormalizedURI]]) {
+case class ActiveShards(shards: Set[Shard[NormalizedURI]]) {
   def find(id: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(_.contains(id))
-//  def find(id: Long): Option[Shard] = shards.find(_.contains(id))
 }
 
-class ActiveShardsSpecParser  {
+object ShardSpec {
+  def toString(shards: Set[Shard[_]]): String = {
+    if (shards.isEmpty) throw new Exception("no shard specified")
 
-  private[this] val parser = new ShardsSpecParser[NormalizedURI]
+    val numShards = shards.head.numShards
+    if (!shards.forall(_.numShards == numShards)) throw new Exception("inconsistent total number of shards")
 
-  def parse(configValue: Option[String]): ActiveShards = {
-      ActiveShards(configValue.map{ v =>
-      val trimmed = v.trim
-      if (trimmed.length > 0) parser.parseAll(parser.spec, v).get else Seq(Shard[NormalizedURI](0,1))
-      }.getOrElse(Seq(Shard[NormalizedURI](0,1))))
+    s"${shards.map(_.shardId).mkString(",")}/$numShards"
   }
 }
 
-class ShardsSpecParser[T] extends RegexParsers {
+class ShardSpecParser {
 
-  def spec: Parser[Seq[Shard[T]]] = rep1sep(num, ",") ~ "/" ~ num ^^{
-    case ids ~ "/" ~ numShards => ids.map{ id =>
-       if (numShards <= 0) throw new Exception(s"numShards=$id")
-       if (id < 0 || id >= numShards) throw new Exception(s"shard id $id is out of range [0, $numShards]")
-       Shard[T](id, numShards)
+  private class ParserImpl extends RegexParsers {
+
+    def spec[T]: Parser[Set[Shard[T]]] = rep1sep(num, ",") ~ "/" ~ num ^^{
+      case ids ~ "/" ~ numShards => ids.map{ id =>
+        if (numShards <= 0) throw new Exception(s"numShards=$id")
+        if (id < 0 || id >= numShards) throw new Exception(s"shard id $id is out of range [0, $numShards]")
+        Shard[T](id, numShards)
+      }.toSet
     }
+
+    def num: Parser[Int] = """\d+""".r ^^ { _.toInt }
   }
 
-  def num: Parser[Int] = """\d+""".r ^^ { _.toInt }
-}
+  private[this] val parser = new ParserImpl
 
+  def parse[T](spec: String): Set[Shard[T]] = parser.parseAll(parser.spec[T], spec).get
+}

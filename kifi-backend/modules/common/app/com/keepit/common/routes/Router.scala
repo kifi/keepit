@@ -141,6 +141,8 @@ object Shoebox extends Service {
     def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getURISummary")
     def getUnsubscribeUrlForEmail(email: String) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email",email))
+    def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 

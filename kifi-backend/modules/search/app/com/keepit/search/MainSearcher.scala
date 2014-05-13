@@ -25,7 +25,7 @@ import com.keepit.search.util.HitQueue
 import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
-import com.keepit.search.result.ShardSearchResult
+import com.keepit.search.result.PartialSearchResult
 import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
 import com.keepit.search.result.FriendStats
@@ -170,7 +170,7 @@ class MainSearcher(
     (myHits, friendsHits, othersHits, personalizedSearcher)
   }
 
-  def search(): ShardSearchResult = {
+  def search(): PartialSearchResult = {
     val now = currentDateTime
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
@@ -332,7 +332,7 @@ class MainSearcher(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    ShardSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
+    PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
   private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {

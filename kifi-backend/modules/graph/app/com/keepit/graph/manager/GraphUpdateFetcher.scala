@@ -33,9 +33,9 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case UserGraphUpdate => shoebox.getUserIndexable(seq.copy(), fetchSize).imap(_.map(UserGraphUpdate.apply))
 
-      case SocialConnectionGraphUpdate => Future.successful(Seq.empty)
+      case SocialConnectionGraphUpdate => shoebox.getIndexableSocialConnections(seq.copy(), fetchSize).imap(_.map(SocialConnectionGraphUpdate.apply))
 
-      case SocialUserInfoGraphUpdate => Future.successful(Seq.empty)
+      case SocialUserInfoGraphUpdate => shoebox.getIndexableSocialUserInfos(seq.copy(), fetchSize).imap(_.map(SocialUserInfoGraphUpdate.apply))
 
       case UserConnectionGraphUpdate => shoebox.getUserConnectionsChanged(seq.copy(), fetchSize).imap(_.map(UserConnectionGraphUpdate.apply))
 
@@ -48,6 +48,7 @@ class GraphUpdateFetcherImpl @Inject() (
         }
       }
 
+      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
     }
   }
 }

@@ -36,10 +36,7 @@ object ServiceType {
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
   case object ABOOK extends ServiceType("ABOOK", "AB")
-  case object SCRAPER extends ServiceType("SCRAPER", "SC") {
-    override val minInstances  = 1
-    override val warnInstances = 2
-  }
+  case object SCRAPER extends ServiceType("SCRAPER", "SC")
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
   case object SEARCH extends ServiceType("SEARCH", "SR") {
@@ -65,10 +62,7 @@ object ServiceType {
     override val warnInstances = 0
   }
 
-  case object CORTEX extends ServiceType("CORTEX", "CT"){
-    override val minInstances  = 0
-    override val warnInstances = 0
-  }
+  case object CORTEX extends ServiceType("CORTEX", "CT")
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
   lazy val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: Nil

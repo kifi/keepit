@@ -6,7 +6,7 @@ import play.api.test.Helpers._
 import com.keepit.test._
 import com.keepit.model.NormalizedURI
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.sharding.ActiveShardsSpecParser
+import com.keepit.search.sharding.ShardSpecParser
 import com.keepit.search.{MainSearcherFactory, SearchTestHelper}
 
 class URIGraphCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
@@ -14,7 +14,7 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
   "URIGraphCommander" should {
     "work and check authorization" in {
       running(application) {
-        implicit val activeShards: ActiveShards = (new ActiveShardsSpecParser).parse(Some("0,1 / 2"))
+        implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
 
         val (users, uris) = initData(numUsers = 2, numUris = 10)
         val user0_public = (0 until 10).filter(x => x < 5 && x % 2 == 0).map { i => (uris(i), Seq(users(0))) }.toSeq

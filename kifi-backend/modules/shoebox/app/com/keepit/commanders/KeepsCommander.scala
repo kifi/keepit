@@ -26,7 +26,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.store.{S3ImageStore, ImageSize}
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.eliza.model.MessageHandle
+import com.keepit.common.performance._
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -176,8 +176,8 @@ class KeepsCommander @Inject() (
     import scala.concurrent.duration._
     // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
     scheduler.scheduleOnce(5 minutes) {
-      db.readOnly { implicit s =>
-        try {
+      try {
+        val (keeper, otherKeepers, uri) = db.readOnly { implicit s =>
           val keep = keepRepo.get(keepId)
           //deal only with good standing, fully public keeps and uris
           if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
@@ -193,28 +193,30 @@ class KeepsCommander @Inject() (
           val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
             localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
           }
-          val title = s"${keeper.fullName} also kept your keep"
-          log.info(s"""sending WKMK "$title" or $keeper to $otherKeepers""")
-          val userImageSize = Some(53)
-          keeper.pictureName.map { pictureName =>
-            imageStore.getPictureUrl(userImageSize, keeper, pictureName)
-          } getOrElse {
-            imageStore.getPictureUrl(userImageSize, keeper, "0")
-          } map { userImage =>
-            val pageImageSize = 42
-            val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
-            val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
-            eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
-              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP) onComplete { messageHandle =>
-                messageHandle match {
-                  case Success(id) => log.info(s"""[$id] sent WKMK "$title" or $keeper to ${otherKeepers}""")
-                  case Failure(ex) => log.error(s"""Error sending WKMK "$title" or $keeper to ${otherKeepers}""", ex)
-                }
-            }
-          }
-        } catch {
-          case e: Exception => airbrake.notify(s"on parsing WKMK for user $userId and keep $keepId", e)
+          (keeper, otherKeepers, uri)
         }
+        val title = s"${keeper.fullName} also kept your keep"
+        log.info(s"""[WKMK] "$title" for $keeper to $otherKeepers""")
+        val userImageSize = Some(53)
+        val picName = keeper.pictureName.getOrElse("0")
+        imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
+          log.info(s"""[WKMK] $keeper using image $userImage""")
+          val pageImageSize = 42
+          val pageImage: String = db.readOnly { implicit s =>
+            imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
+          }
+          val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
+          val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
+          val title = uri.title.get.abbreviate(80)
+          eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {
+            case Success(id) => log.info(s"""[WKMK] sent [$id] "$title" or $keeper to $otherKeepers""")
+            case Failure(ex) => log.error(s"""[WKMK] Error sending "$title" for $keeper to $otherKeepers""", ex)
+          }
+        } onFailure {
+          case ex: Throwable => log.error(s"""[WKMK] Error sending "$title" for $keeper with picName $picName to $otherKeepers""", ex)
+        }
+      } catch {
+        case e: Exception => airbrake.notify(s"[WKMK] Error sending for user $userId and keep $keepId", e)
       }
     }
   }
@@ -278,22 +280,25 @@ class KeepsCommander @Inject() (
     } else None
   }
 
-  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
-    db.readWrite(attempts = 2) { implicit s =>
+  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
+    db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val collection = collectionRepo.get(collectionId)
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
-      val created = (keepsById.keySet -- existing.map(_.keepId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(keepId = bid, collectionId = collectionId))
+      val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
+      val newK2C  = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
+      timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
+        keepToCollectionRepo.insertAll(newK2C.toSeq)
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
-      collectionRepo.collectionChanged(collectionId, (created.size + activated.size) > 0)
-
-      val tagged = (activated ++ created).toSet
+      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
+        collectionRepo.modelChanged(collection, (newK2C.size + activated.size) > 0)
+      }
+      val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
       tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt))
       tagged

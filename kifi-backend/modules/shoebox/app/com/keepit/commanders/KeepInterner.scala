@@ -141,7 +141,7 @@ class KeepInterner @Inject() (
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource,
                                         mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None) = {
-    val (persisted, failed) = db.readWriteBatch(bms, attempts = 1) { (session, bm) =>
+    val (persisted, failed) = db.readWriteBatch(bms, attempts = 2) { (session, bm) =>
       internUriAndBookmark(bm, userId, source, mutatePrivacy, installationId)(session)
     } map {
       case (bm, res) => bm -> res.flatten

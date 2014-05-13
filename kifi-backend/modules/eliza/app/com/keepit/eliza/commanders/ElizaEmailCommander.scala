@@ -7,6 +7,7 @@ import scala.util.matching.Regex.Match
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.templates.Html
+import play.api.libs.json.JsString
 
 import java.net.URLDecoder
 
@@ -22,7 +23,8 @@ import com.keepit.eliza.model.{
   MessageSender,
   Message,
   MessageRepo,
-  MessageThreadRepo
+  MessageThreadRepo,
+  NonUserParticipant
 }
 import com.keepit.social.NonUserKinds
 import com.keepit.model.{URISummaryRequest, URISummary, User, ImageType}
@@ -40,6 +42,8 @@ import com.keepit.common.mail.{
 }
 import com.keepit.common.time._
 import com.keepit.common.net.URI
+import com.keepit.common.akka.SafeFuture
+
 
 
 class ElizaEmailCommander @Inject() (
@@ -54,7 +58,7 @@ class ElizaEmailCommander @Inject() (
 
   case class CleanedMessage(cleanText: String, lookHereTexts: Seq[String], lookHereImageUrls: Seq[String])
 
-  case class ProtoEmail(html: Html, starterName: String, pageTitle: String)
+  case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
   private def parseMessage(msg: String): CleanedMessage = {
     val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
@@ -78,19 +82,27 @@ class ElizaEmailCommander @Inject() (
 
     val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
 
-    val allUsersFuture : Future[Map[Id[User], User]] = shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap)
+    val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap))
 
-    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap)
+    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
 
-    val uriSummaryFuture : Future[URISummary] = shoebox.getUriSummary(URISummaryRequest(
+    val uriSummarySmallFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.ANY,
       minSize = ImageSize(183, 96),
       withDescription = true,
       waiting = true,
-      silent = false))
+      silent = false)))
 
-    for (allUsers <- allUsersFuture; allUserImageUrls <- allUserImageUrlsFuture; uriSummary <- uriSummaryFuture) yield {
+    val uriSummaryBigFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
+      url = thread.nUrl.get,
+      imageType = ImageType.ANY,
+      minSize = ImageSize(620, 200),
+      withDescription = false,
+      waiting = true,
+      silent = false)))
+
+    for (allUsers <- allUsersFuture; allUserImageUrls <- allUserImageUrlsFuture; uriSummarySmall <- uriSummarySmallFuture; uriSummaryBig <- uriSummaryBigFuture) yield {
 
       val (nuts, starterUserId) = db.readOnly { implicit session =>
         (
@@ -107,17 +119,19 @@ class ElizaEmailCommander @Inject() (
 
       val messages = messageFetchingCommander.getThreadMessages(thread)
 
-      val threadInfo = ThreadEmailInfo(
+      val threadInfoSmall = ThreadEmailInfo(
         pageUrl = thread.nUrl.get,
         pageName = pageName,
-        pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
-        heroImageUrl = uriSummary.imageUrl,
-        pageDescription = uriSummary.description,
+        pageTitle = uriSummarySmall.title.getOrElse(thread.nUrl.get),
+        heroImageUrl = uriSummarySmall.imageUrl,
+        pageDescription = uriSummarySmall.description,
         participants = participants.toSeq,
         conversationStarter = starterUser.firstName + " " + starterUser.lastName,
         unsubUrl = unsubUrl.getOrElse("#"),
         muteUrl = muteUrl.getOrElse("#")
       )
+
+      val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl)
 
       var relevantMessages = messages
       fromTime.map{ dt =>
@@ -143,9 +157,11 @@ class ElizaEmailCommander @Inject() (
       }.reverse
 
       ProtoEmail(
-        views.html.nonUserDigestEmail(threadInfo, threadItems),
+        views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
+        views.html.nonUserInitialEmail(threadInfoBig, threadItems),
+        views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         starterUser.firstName + " " + starterUser.lastName,
-        uriSummary.title.getOrElse(pageName)
+        uriSummarySmall.title.getOrElse(pageName)
       )
     }
   }
@@ -171,7 +187,7 @@ class ElizaEmailCommander @Inject() (
           fromName = Some(protoEmail.starterName + " (via Kifi)"),
           to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
           subject = "Kifi Discussion on " + protoEmail.pageTitle,
-          htmlBody = protoEmail.html.body,
+          htmlBody = if (nut.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body,
           category = ElectronicMailCategory("external_message_test"),
           extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
         ))
@@ -180,6 +196,38 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
+  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+    val nuts = db.readOnly { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
+      nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
+        nut.participant.identifier -> nut
+      }.toMap
+    }
+
+    addedNonUsers.foreach { nup =>
+      require(nup.kind == NonUserKinds.email)
+      val nut = nuts(nup.identifier)
+      if (!nut.muted) {
+        for (
+          unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier);
+          protoEmail <- assembleEmail(thread, nut.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
+        ) {
+          val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
+          shoebox.sendMail(ElectronicMail (
+            from = magicAddress,
+            fromName = Some(protoEmail.starterName + " (via Kifi)"),
+            to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
+            subject = "Kifi Discussion on " + protoEmail.pageTitle,
+            htmlBody = protoEmail.addedHtml.body,
+            category = ElectronicMailCategory("external_message_test"),
+            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
+          ))
+          db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, currentDateTime) }
+        }
+      }
+    }
+  }
+
+
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
     val (msg, thread) = db.readOnly{ implicit session =>
@@ -187,7 +235,18 @@ class ElizaEmailCommander @Inject() (
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
-    assembleEmail(thread, None, Some(msg.createdAt), None, None).map(_.html)
+    val protoEmailFuture = assembleEmail(thread, None, Some(msg.createdAt), None, None)
+    if (msg.auxData.isDefined) {
+      if (msg.auxData.get.value(0)==JsString("start_with_emails")) {
+        protoEmailFuture.map(_.initialHtml)
+      } else {
+        protoEmailFuture.map(_.addedHtml)
+      }
+    } else {
+      protoEmailFuture.map(_.digestHtml)
+    }
+
+
   }
 
 

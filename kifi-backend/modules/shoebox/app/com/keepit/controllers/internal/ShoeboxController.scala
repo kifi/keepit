@@ -2,8 +2,7 @@ package com.keepit.controllers.internal
 
 import com.google.inject.{Provider, Inject}
 import com.keepit.common.controller.ShoeboxServiceController
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -14,7 +13,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
-import com.keepit.search.{ArticleSearchResult, SearchConfigExperiment, SearchConfigExperimentRepo}
+import com.keepit.search.{SearchConfigExperiment, SearchConfigExperimentRepo}
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -53,7 +52,6 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
@@ -706,5 +704,4 @@ class ShoeboxController @Inject() (
       Ok(Json.toJson(url))
     }
   }
-
 }
