@@ -752,7 +752,7 @@ api.port.on({
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, 'hide_external_messaging_intro');
     });
-    if (prefs) prefs.showExternalMessagingIntro = false;
+    if (prefs) prefs.showExtMsgIntro = false;
     mixpanel.track('user_was_notified', {type: source, action: 'click', subaction: action, category: 'extMsgFTUE'});
   },
   track_showing_external_messaging_intro: function() {
