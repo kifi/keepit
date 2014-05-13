@@ -83,7 +83,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       contextBuilder += ("uriId", bookmark.uriId.toString)
       val context = contextBuilder.build
       heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
-      if (bookmark.source != KeepSource.bookmarkImport) {
+      if (!KeepSource.imports.contains(bookmark.source)) {
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
       }
 
