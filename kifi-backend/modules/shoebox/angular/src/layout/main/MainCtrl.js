@@ -184,14 +184,14 @@ angular.module('kifi.layout.main', [
           $scope.disableBookmarkImport = true;
 
           var tooSlowTimer = $timeout(function () {
+            $scope.importFileStatus = 'Looks like we are being really slow uploading your bookmarks... Hang tight.';
             $scope.disableBookmarkImport = false;
-            $scope.importFileStatus = 'Looks like we were too slow uploading your bookmarks. Try again?';
-          }, 50000);
+          }, 20000);
 
           $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot links.';
           $scope.importFilename = '';
 
-          keepService.uploadBookmarkFile(file).then(function (result) {
+          keepService.uploadBookmarkFile(file).then(function success(result) {
             $timeout.cancel(tooSlowTimer);
             $scope.importFileStatus = '';
             if (!result.error) { // success!
@@ -204,6 +204,11 @@ angular.module('kifi.layout.main', [
               $scope.data.showBookmarkFileError = true;
               $scope.modal = 'import_bookmark_error';
             }
+          }, function fail() {
+            $timeout.cancel(tooSlowTimer);
+            $scope.disableBookmarkImport = false;
+            $scope.importFileStatus = 'We may have had problems with your links. Reload the page to see if they\'re coming in. '
+              + 'If not, please contact support so we can fix it.';
           });
         } else {
           $scope.importFileStatus = 'Hm, couldn\'t upload your file. Try picking it again.';
