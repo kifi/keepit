@@ -2,6 +2,8 @@ package com.keepit.graph.simple
 
 import org.specs2.mutable.Specification
 import com.keepit.graph.model._
+import java.io.File
+import org.apache.commons.io.FileUtils
 
 class SimpleGraphTest() extends Specification {
   val graph = SimpleGraph()
@@ -135,6 +137,29 @@ class SimpleGraphTest() extends Specification {
       vertexReader.moveTo(leo)
       edgeReader.moveTo(leo, alfred) must throwA[EdgeNotFoundException]
       edgeReader.moveTo(alfred, leo) must throwA[EdgeNotFoundException]
+    }
+
+    "be properly serialized and deserialized to file" in {
+      val tempFile = FileUtils.getFile(FileUtils.getTempDirectory, "simpleGraphTest")
+      tempFile.deleteOnExit()
+      SimpleGraph.write(graph, tempFile)
+      val newGraph = SimpleGraph.read(tempFile)
+      val newGraphReader = newGraph.getNewReader()
+      val newGraphVertexReader = newGraphReader.getNewVertexReader()
+      newGraphVertexReader.moveTo(rearWindow)
+      newGraphVertexReader.kind === UriReader
+      newGraphVertexReader.data.id === rearWindow
+      newGraphVertexReader.moveTo(alfred)
+      newGraphVertexReader.edgeReader.degree === 2
+      newGraphVertexReader.moveTo(leo)
+      newGraphVertexReader.edgeReader.degree === 0
+
+      val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
+
+      newGraphEdgeReader.moveTo(alfred, rearWindow)
+      newGraphEdgeReader.moveTo(alfred, vertigo)
+
+      "All good" === "All good"
     }
   }
 }
