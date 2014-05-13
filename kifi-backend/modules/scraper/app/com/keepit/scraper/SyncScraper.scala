@@ -132,7 +132,6 @@ class SyncScraper @Inject() (
             scrapedURI.id map { id =>
               shoeboxClient.getUriImageForUriId(id) map { res =>
                 log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
-                res
               }
             }
           }
