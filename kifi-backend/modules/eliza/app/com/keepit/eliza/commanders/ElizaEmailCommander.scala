@@ -42,6 +42,7 @@ import com.keepit.common.mail.{
 }
 import com.keepit.common.time._
 import com.keepit.common.net.URI
+import com.keepit.common.akka.SafeFuture
 
 
 
@@ -81,25 +82,25 @@ class ElizaEmailCommander @Inject() (
 
     val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
 
-    val allUsersFuture : Future[Map[Id[User], User]] = shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap)
+    val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap))
 
-    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap)
+    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
 
-    val uriSummarySmallFuture : Future[URISummary] = shoebox.getUriSummary(URISummaryRequest(
+    val uriSummarySmallFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.ANY,
       minSize = ImageSize(183, 96),
       withDescription = true,
       waiting = true,
-      silent = false))
+      silent = false)))
 
-    val uriSummaryBigFuture : Future[URISummary] = shoebox.getUriSummary(URISummaryRequest(
+    val uriSummaryBigFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.ANY,
       minSize = ImageSize(620, 200),
       withDescription = false,
       waiting = true,
-      silent = false))
+      silent = false)))
 
     for (allUsers <- allUsersFuture; allUserImageUrls <- allUserImageUrlsFuture; uriSummarySmall <- uriSummarySmallFuture; uriSummaryBig <- uriSummaryBigFuture) yield {
 

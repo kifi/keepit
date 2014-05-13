@@ -232,9 +232,8 @@ class MessagingCommander @Inject() (
         threadExtId = thread.externalId,
         messageText = "",
         source = source,
-        auxData = Some(Json.arr("add_participants", from.id.toString,
-          userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_)),
-          true
+        auxData = Some(Json.arr("start_with_emails", from.id.toString,
+          userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
         )),
         sentOnUrl = None,
         sentOnUriId = None
