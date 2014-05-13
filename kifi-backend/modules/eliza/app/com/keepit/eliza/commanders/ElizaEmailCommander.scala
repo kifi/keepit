@@ -7,7 +7,7 @@ import scala.util.matching.Regex.Match
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.templates.Html
-import play.api.libs.json.JsBoolean
+import play.api.libs.json.JsString
 
 import java.net.URLDecoder
 
