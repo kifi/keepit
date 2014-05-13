@@ -45,27 +45,27 @@ object EdgeKind {
   def apply(header: Byte): EdgeKind[_ <: EdgeDataReader] = byHeader(header)
 }
 
-trait EmptyEdgeDataReader extends EdgeDataReader {
-  def kind = EmptyEdgeDataReader
-  type E = EmptyEdgeDataReader
+trait EmptyEdgeReader extends EdgeDataReader {
+  def kind = EmptyEdgeReader
+  type E = EmptyEdgeReader
 }
 
-case object EmptyEdgeDataReader extends EdgeKind[EmptyEdgeDataReader] {
+case object EmptyEdgeReader extends EdgeKind[EmptyEdgeReader] {
   val header = 1.toByte
-  def apply(rawDataReader: RawDataReader): EmptyEdgeDataReader = ???
-  implicit val writes = Writes[EmptyEdgeDataReader](_ => Json.obj())
-  implicit val readsAsEdgeData: Reads[EdgeData[EmptyEdgeDataReader]] = Reads[EdgeData[EmptyEdgeDataReader]](json => json.validate[JsObject].map(_ => EmptyEdgeData))
+  def apply(rawDataReader: RawDataReader): EmptyEdgeReader = ???
+  implicit val writes = Writes[EmptyEdgeReader](_ => Json.obj())
+  implicit val readsAsEdgeData: Reads[EdgeData[EmptyEdgeReader]] = Reads[EdgeData[EmptyEdgeReader]](json => json.validate[JsObject].map(_ => EmptyEdgeData))
 }
 
-trait WeightedEdgeDataReader extends EdgeDataReader {
-  def kind = WeightedEdgeDataReader
-  type E = WeightedEdgeDataReader
+trait WeightedEdgeReader extends EdgeDataReader {
+  def kind = WeightedEdgeReader
+  type E = WeightedEdgeReader
   def getWeight: Float
 }
 
-case object WeightedEdgeDataReader extends EdgeKind[WeightedEdgeDataReader] {
+case object WeightedEdgeReader extends EdgeKind[WeightedEdgeReader] {
   val header = 2.toByte
-  def apply(rawDataReader: RawDataReader): WeightedEdgeDataReader = ???
-  implicit val writes = Writes[WeightedEdgeDataReader](x => JsNumber(x.getWeight))
-  implicit val readsAsEdgeData: Reads[EdgeData[WeightedEdgeDataReader]] = Reads[EdgeData[WeightedEdgeDataReader]](json => json.validate[JsNumber].map{ x => WeightedEdgeData(x.as[Float])})
+  def apply(rawDataReader: RawDataReader): WeightedEdgeReader = ???
+  implicit val writes = Writes[WeightedEdgeReader](x => JsNumber(x.getWeight))
+  implicit val readsAsEdgeData: Reads[EdgeData[WeightedEdgeReader]] = Reads[EdgeData[WeightedEdgeReader]](json => json.validate[JsNumber].map{ x => WeightedEdgeData(x.as[Float])})
 }
