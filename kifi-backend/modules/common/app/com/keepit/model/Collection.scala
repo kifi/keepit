@@ -57,7 +57,7 @@ object SendableTag {
 }
 
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_collections"
   def toKey(): String = userId.toString
 }

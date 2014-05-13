@@ -111,7 +111,7 @@ class KeepsCommander @Inject() (
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
     val keepsWithCollIds = db.readOnly { implicit s =>
-      val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).map(c => c.id.get -> c.externalId).toMap
       keeps.map{ keep =>
         val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
         (keep, collIds)

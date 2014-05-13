@@ -92,7 +92,7 @@ class ExtBookmarksController @Inject() (
 
   def tags() = JsonAction.authenticated { request =>
     val tags = db.readOnly { implicit s =>
-      collectionRepo.getByUser(request.userId)
+      collectionRepo.getUnfortunatelyIncompleteTagsByUser(request.userId)
     }
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }

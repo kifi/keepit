@@ -583,7 +583,7 @@ class ShoeboxController @Inject() (
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
-    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) })) //using cache
+    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
