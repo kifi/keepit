@@ -223,6 +223,15 @@ var formatAuxData = (function () {
         return boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
       }
       return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
+    },
+    start_with_emails: function (actor, added) {
+      if (isMe(actor)) {
+        return 'You started a discussion with ' + boldNamesOf(added) + '.';
+      }
+      if (added.some(isMe)) {
+        return boldNamesOf(meInFront(added)) + ' were invited to a discussion by ' + nameOf(actor) + '.';
+      }
+      return nameOf(actor) + ' started a discussion with ' + boldNamesOf(added) + '.';
     }
   };
 

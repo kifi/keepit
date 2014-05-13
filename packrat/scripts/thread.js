@@ -211,7 +211,8 @@ panes.thread = function () {
   function renderMessage(m) {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
-    if (m.auxData && m.auxData.length >= 3 && m.auxData[0] === 'add_participants') {
+    if (m.auxData && m.auxData.length >= 3 &&
+      (m.auxData[0] === 'add_participants' || m.auxData[0] === 'start_with_emails')) {
       m.hasEmail = m.auxData[2].some(function (o) {return o.kind === 'email'});
     }
     m.formatLocalDate = formatLocalDate;
