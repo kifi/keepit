@@ -747,6 +747,17 @@ api.port.on({
     });
     if (prefs) prefs.showKeeperIntro = false;
   },
+  stop_showing_external_messaging_intro: function(action) {
+    ajax('POST', '/ext/pref/showExtMsgIntro?show=false');
+    api.tabs.each(function (tab) {
+      api.tabs.emit(tab, 'hide_external_messaging_intro');
+    });
+    if (prefs) prefs.showExternalMessagingIntro = false;
+    mixpanel.track('user_was_notified', {type: source, action: 'click', subaction: action, category: 'extMsgFTUE'});
+  },
+  track_showing_external_messaging_intro: function() {
+    mixpanel.track('user_was_notified', {type: source, action: 'open', subaction: action, category: 'extMsgFTUE'});
+  },
   set_show_search_intro: function(show) {
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
     if (prefs) prefs.showSearchIntro = show;
