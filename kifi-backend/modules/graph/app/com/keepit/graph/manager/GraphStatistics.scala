@@ -48,17 +48,17 @@ object GraphStatistics {
   }
 
   def prettify(statistics: GraphStatistics): PrettyGraphStatistics = {
-    val outgoingDegrees = statistics.outgoingDegrees.withDefaultValue(0d)
-    val incomingDegrees = statistics.incomingDegrees.withDefaultValue(0d)
-    val outgoingDegreesByEdgeType = statistics.outgoingDegreesByEdgeType.withDefaultValue(0d)
-    val incomingDegreesByEdgeType = statistics.incomingDegreesByEdgeType.withDefaultValue(0d)
+    val outgoingDegrees = statistics.outgoingDegrees.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val incomingDegrees = statistics.incomingDegrees.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val outgoingDegreesByEdgeType = statistics.outgoingDegreesByEdgeType.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val incomingDegreesByEdgeType = statistics.incomingDegreesByEdgeType.mapValues(deg => f"$deg%.2f").withDefaultValue("")
 
     PrettyGraphStatistics(
       statistics.vertexCounts.map { case (vertexKind, count) =>
-        vertexKind.toString.stripSuffix("Reader") -> (count, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
+        vertexKind.toString.stripSuffix("Reader") -> (count.toString, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
       }.toMap,
       statistics.edgeCounts.map { case (edgeType @ (sourceKind, destinationKind, edgeKind), count) =>
-        (sourceKind.toString.stripSuffix("Reader"), destinationKind.toString.stripSuffix("Reader"), edgeKind.toString.stripSuffix("Reader")) -> (count, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
+        (sourceKind.toString.stripSuffix("Reader"), destinationKind.toString.stripSuffix("Reader"), edgeKind.toString.stripSuffix("Reader")) -> (count.toString, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
       }.toMap
     )
   }
