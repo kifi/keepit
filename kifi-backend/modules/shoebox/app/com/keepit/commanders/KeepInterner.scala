@@ -62,7 +62,7 @@ class KeepInterner @Inject() (
       val total = deduped.size
 
       keepsAbuseMonitor.inspect(userId, total)
-      keptAnalytics.keepImport(userId, clock.now, context, total)
+      keptAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
 
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.

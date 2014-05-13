@@ -99,12 +99,13 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
   }
 
-  def keepImport(userId: Id[User], keptAt: DateTime, existingContext: HeimdalContext, countImported: Int): Unit = {
+  def keepImport(userId: Id[User], keptAt: DateTime, existingContext: HeimdalContext, countImported: Int, source: KeepSource): Unit = {
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "importedBookmarks")
       contextBuilder += ("importedBookmarks", countImported)
+      contextBuilder += ("source", source.value)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, keptAt))
     }
   }
