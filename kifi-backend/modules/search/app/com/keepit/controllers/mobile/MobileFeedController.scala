@@ -12,7 +12,7 @@ class MobileFeedController @Inject()(
 
   def pageV1(pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
-    val feeds = feedCommander.getFeeds(userId, (pageNum + 1) * pageSize).drop(pageNum * pageSize)
+    val feeds = feedCommander.getFeeds(userId, (pageNum + 1) * pageSize).drop(pageNum * pageSize).take(pageSize)
     Ok(FeedResult.v1(feeds))
   }
 }
