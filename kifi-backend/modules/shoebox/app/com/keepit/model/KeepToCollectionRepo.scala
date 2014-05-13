@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
+import com.keepit.common.performance.timing
 
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
@@ -20,6 +21,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int
   def remove(keepId: Id[Keep], collectionId: Id[Collection])(implicit session: RWSession): Unit
   def getOpt(keepId: Id[Keep], collectionId: Id[Collection])(implicit session: RSession): Option[KeepToCollection]
+  def insertAll(k2c:Seq[KeepToCollection])(implicit session:RWSession):Unit
 }
 
 @Singleton
@@ -106,4 +108,13 @@ class KeepToCollectionRepoImpl @Inject() (
 
     res map {r => KeepUriAndTime(r._1, r._2)}
   }
+
+  def insertAll(k2c: Seq[KeepToCollection])(implicit session: RWSession): Unit = {
+    var i = 0
+    k2c.grouped(50).foreach { kc =>
+      i += 1
+      timing(s"k2c.insertAll($i,${k2c.length})") { rows.insertAll(kc: _*) }
+    }
+  }
+
 }

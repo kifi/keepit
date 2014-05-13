@@ -29,6 +29,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
+  def modelChanged(c:Collection, isActive:Boolean = false)(implicit session:RWSession)
   def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
 }
 
@@ -125,6 +126,18 @@ class CollectionRepoImpl @Inject() (
 
       // invalidate count cache
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collectionId))
+    }
+  }
+
+  // caller-supplied model
+  def modelChanged(col:Collection, isNewKeep: Boolean = false)(implicit session: RWSession) {
+    if (isNewKeep) {
+      save(col withLastKeptTo clock.now())
+    } else {
+      (for (c <- rows if c.id === col.id.get) yield c.seq).update(sequence.incrementAndGet())
+
+      // invalidate count cache
+      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(col.id.get))
     }
   }
 

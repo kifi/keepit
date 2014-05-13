@@ -5,6 +5,8 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.concurrent.Future
 import play.api.libs.json._
+import com.keepit.common.performance._
+import com.keepit.common.logging.Logging
 
 
 class TransactionLocalCache[K <: Key[T], T] private(
@@ -13,7 +15,7 @@ class TransactionLocalCache[K <: Key[T], T] private(
   override val outerCache: Option[ObjectCache[K, T]],
   underlying: ObjectCache[K, T],
   serializer: Serializer[T]
-) extends ObjectCache[K, T] {
+) extends ObjectCache[K, T] with Logging {
 
   // outerCache is wrapped in ReadOnlyCacheWrapper to block updates silently
   def this(underlying: ObjectCache[K, T], serializer: Serializer[T]) = this(Duration.Inf, Duration.Inf, Some(new ReadOnlyCacheWrapper(underlying)), underlying, serializer)
@@ -63,7 +65,12 @@ class TransactionLocalCache[K <: Key[T], T] private(
     // all changes made in the transaction are going to be flushed directly to the underlying cache
     txnLocalStore.foreach{ case (key, state) =>
       state match {
-        case LFound(serialized) => underlying.set(key, serializer.reads(serialized))
+        case LFound(serialized) => {
+          val v = timing(s"TLCache-reads($key,$state)", 50) { serializer.reads(serialized) }
+          timing(s"TLCache-writes($key,$state,$v)", 50) {
+            underlying.set(key, v)
+          }
+        }
         case LRemoved() => underlying.remove(key)
         case state => throw new Exception(s"this state ($state) should not be in the cache")
       }
