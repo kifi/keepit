@@ -52,7 +52,7 @@ class ResultMergerTest extends Specification{
   }
 
   val shardSearchResult1 = {
-    ShardSearchResult(
+    PartialSearchResult(
       hits = Seq(detailedSearchHit1, detailedSearchHit2),
       myTotal = 1,
       friendsTotal = 2,
@@ -64,7 +64,7 @@ class ResultMergerTest extends Specification{
   }
 
   val shardSearchResult2 = {
-    ShardSearchResult(
+    PartialSearchResult(
       hits = Seq(detailedSearchHit3),
       myTotal = 0,
       friendsTotal = 1,
@@ -111,14 +111,14 @@ class ResultMergerTest extends Specification{
     List(mergedDetailedSearchHit1, mergedDetailedSearchHit2)
   }
 
-  val expectedMerge = MergedSearchResult(
+  val expectedMerge = PartialSearchResult(
     hits = mergedDetailedSearchHits,
     myTotal = 1,
     friendsTotal = 3,
     othersTotal = 0,
     friendStats = FriendStats(Array(2L, 3L), Array(4.4f, 1.8f)),
-    show = true,
-    svVariance = -1f
+    svVariance = -1f,
+    show = true
   )
 
 
