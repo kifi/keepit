@@ -17,7 +17,7 @@ case class ActiveShards(shards: Set[Shard[NormalizedURI]]) {
   def find(id: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(_.contains(id))
 }
 
-class ShardSpecParser  {
+class ShardSpecParser {
 
   private class ParserImpl extends RegexParsers {
 

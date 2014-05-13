@@ -75,7 +75,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def activeShards(myAmazonInstanceInfo: MyAmazonInstanceInfo): ActiveShards = {
-    ActiveShards((new ShardSpecParser).parse(
+    ActiveShards((new ShardSpecParser).parse[NormalizedURI](
       myAmazonInstanceInfo.info.tags.get("ShardSpec") match {
         case spec @ Some(_) =>
           log.info(s"using the shard spec [${spec.get}] from ec2 tag")

@@ -28,7 +28,6 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
         indexer.update() === uris.size
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
-
         userGraphIndexer.update()
 
         def myBookmarkExternalId = getBookmarkByUriAndUser(uris(0).id.get, users(0).id.get).get.externalId
