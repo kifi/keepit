@@ -55,10 +55,10 @@ object GraphStatistics {
 
     PrettyGraphStatistics(
       statistics.vertexCounts.map { case (vertexKind, count) =>
-        vertexKind.toString -> (count, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
+        vertexKind.toString.stripSuffix("Reader") -> (count, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
       }.toMap,
       statistics.edgeCounts.map { case (edgeType @ (sourceKind, destinationKind, edgeKind), count) =>
-        (sourceKind.toString, destinationKind.toString, edgeKind.toString) -> (count, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
+        (sourceKind.toString.stripSuffix("Reader"), destinationKind.toString.stripSuffix("Reader"), edgeKind.toString.stripSuffix("Reader")) -> (count, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
       }.toMap
     )
   }
