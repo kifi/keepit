@@ -74,7 +74,7 @@ class CollectionRepoImpl @Inject() (
 
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
-      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => r.lastKeptTo.desc).take(500).list
+      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).take(500).list
     }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
