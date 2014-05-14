@@ -12,7 +12,7 @@ import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ShardedArticleIndexer
 
 class SemanticVectorController @Inject()(shards: ActiveShards, shardedArticleIndexer: ShardedArticleIndexer) extends SearchServiceController {
-  val searcher = shardedArticleIndexer.getIndexer(shards.shards.head).getSearcher // TODO: support sharding
+  val searcher = shardedArticleIndexer.getIndexer(shards.local.head).getSearcher // TODO: support sharding
   val analyzer = DefaultAnalyzer.getAnalyzer(DefaultAnalyzer.defaultLang)
   val stemAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang)
 

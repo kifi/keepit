@@ -2,7 +2,7 @@ package com.keepit.graph
 
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{ClientResponse, HttpClient}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.common.routes.Graph
@@ -26,8 +26,18 @@ class GraphServiceClientImpl(
   mode: Mode
 ) extends GraphServiceClient {
 
+  private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
+    val safeCalls = calls.map { call =>
+      call.map(Some(_)).recover { case error: Throwable =>
+        log.error("Failed to complete service call", error)
+        None
+      }
+    }
+    Future.sequence(safeCalls).map(_.flatten)
+  }
+
   def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = {
-    Future.sequence(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
+    getSuccessfulResponses(broadcast(Graph.internal.getGraphStatistics(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
       responses.map { response =>
         response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphStatistics]
       }.toMap
@@ -35,7 +45,7 @@ class GraphServiceClientImpl(
   }
 
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]] = {
-    Future.sequence(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
+    getSuccessfulResponses(broadcast(Graph.internal.getGraphUpdaterState(), includeUnavailable = true, includeSelf = (mode == Mode.Dev))).map { responses =>
       responses.map { response =>
         response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphState]
       }.toMap

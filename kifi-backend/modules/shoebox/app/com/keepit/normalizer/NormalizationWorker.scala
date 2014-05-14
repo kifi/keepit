@@ -39,17 +39,17 @@ class NormalizationWorker @Inject()(
       case Failure(t) =>
         airbrake.notify(s"Caught exception $t while consuming messages from $updateQ",t)
       case Success(messages) =>
-        log.info(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
+        log.debug(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
         for (m <- messages) {
-          log.info(s"[consume] received msg $m")
+          log.debug(s"[consume] received msg $m")
           val task = m.body
           val nuri = db.readOnly { implicit ro =>
             nuriRepo.get(task.uriId)
           }
           val ref = NormalizationReference(nuri, task.isNew)
-          log.info(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
+          log.debug(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
           for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-            log.info(s"[consume] normalizationService.update result: $nuriOpt")
+            log.debug(s"[consume] normalizationService.update result: $nuriOpt")
           }
           m.consume()
         }

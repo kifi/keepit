@@ -16,10 +16,12 @@ import com.keepit.eliza.ElizaServiceClient
 import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
+  def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
     (implicit session: RSession): Option[Collection]
@@ -27,6 +29,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
     (implicit session: RSession): Option[Collection]
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
+  def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def modelChanged(c:Collection, isActive:Boolean = false)(implicit session:RWSession)
@@ -36,6 +39,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 @Singleton
 class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
+  val userCollectionSummariesCache: UserCollectionSummariesCache,
   val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
@@ -62,11 +66,13 @@ class CollectionRepoImpl @Inject() (
 
   override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(collection.userId))
+    userCollectionSummariesCache.remove(UserCollectionSummariesKey(collection.userId))
     bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collection.id.get))
   }
 
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
+    userCollectionSummariesCache.remove(UserCollectionSummariesKey(model.userId))
     model.id map { id =>
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))
     }
@@ -75,6 +81,16 @@ class CollectionRepoImpl @Inject() (
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
       (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).take(500).list
+    }
+
+  def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary] =
+    userCollectionSummariesCache.getOrElse(UserCollectionSummariesKey(userId)) {
+      import StaticQuery.interpolation
+      import scala.collection.JavaConversions._
+      sql"select id, external_id, name from collection where user_id = $userId and state = '#${CollectionStates.ACTIVE}' order by last_kept_to desc, id limit 500".
+        as[(Id[Collection], ExternalId[Collection], String)].list.map { row =>
+          CollectionSummary(row._1, row._2, row._3)
+        }
     }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
@@ -94,6 +110,12 @@ class CollectionRepoImpl @Inject() (
     bookmarkCountForCollectionCache.getOrElse(KeepCountForCollectionKey(collId)) { keepToCollectionRepo.count(collId) }
   }
 
+  def count(userId: Id[User])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+    sql"select count(*) from collection where user_id = $userId".as[Int].first
+  }
+
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int] = {
     val keys = collIds.map(KeepCountForCollectionKey)
     bookmarkCountForCollectionCache.bulkGetOrElse(keys){ missing =>
@@ -105,12 +127,13 @@ class CollectionRepoImpl @Inject() (
     val newModel = model.copy(seq = sequence.incrementAndGet())
     session.onTransactionSuccess {
       Try {
+        val tag = SendableTag.from(model.summary)
         if (model.state == CollectionStates.INACTIVE) {
-          elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", SendableTag.from(model)))
+          elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", tag))
         } else if (model.id == None) {
-          elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", SendableTag.from(model)))
+          elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", tag))
         } else {
-          elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", SendableTag.from(model)))
+          elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", tag))
         }
       }
     }

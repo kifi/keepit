@@ -192,7 +192,7 @@ class UriIntegrityActor @Inject()(
     log.info(s"batch merge uris: ${toMerge.size} pairs of uris to be merged")
 
     if (toMerge.size == 0){
-      log.info("no active changed_uris were founded. Check if we have applied changed_uris generated during urlRenormalization")
+      log.debug("no active changed_uris were founded. Check if we have applied changed_uris generated during urlRenormalization")
       val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
       val applied = db.readOnly{ implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED)}
       if (applied.size == batchSize){   // make sure a full batch of applied ones
@@ -260,7 +260,7 @@ class UriIntegrityActor @Inject()(
   private def fixDuplicateKeeps(): Unit = {
     val seq = centralConfig(FixDuplicateKeepsSeqNumKey) getOrElse SequenceNumber.ZERO
 
-    log.info(s"start deduping keeps: fetching tasks from seqNum ${seq}")
+    log.debug(s"start deduping keeps: fetching tasks from seqNum ${seq}")
     try {
       var dedupedSuccessCount = 0
       val keeps = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
