@@ -35,6 +35,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 @Singleton
 class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
+  val userCollectionSummariesCache: UserCollectionSummariesCache,
   val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,

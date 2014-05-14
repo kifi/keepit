@@ -121,4 +121,14 @@ case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
 class UserCollectionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
+case class UserCollectionSummariesKey(userId: Id[User]) extends Key[Seq[CollectionSummary]] {
+  override val version = 1
+  val namespace = "user_collection_summaries"
+  def toKey(): String = userId.toString
+}
+
+class UserCollectionSummariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserCollectionSummariesKey, Seq[CollectionSummary]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 object CollectionStates extends States[Collection]
+
