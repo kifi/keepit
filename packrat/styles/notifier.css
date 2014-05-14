@@ -111,6 +111,9 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
   text-align: center;
   line-height: 42px;
   font-size: 30px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
 }
 
 #kifi-notify-notice-wrapper .kifi-on-page {
