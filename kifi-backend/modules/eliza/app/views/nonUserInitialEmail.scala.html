@@ -147,7 +147,12 @@
                 <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
               </tr>
               <tr>
-                <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;"><span style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@{threadInfo.participants.mkString(", ")}</span> commented on <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>
+                <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">
+                  <span style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@{threadInfo.conversationStarter}</span>
+                  shared <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> with
+                  <span style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@{threadInfo.participants.mkString(", ")}</span>
+                  using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a>
+                </td>
               </tr>
               <tr>
                 <td height="26"></td>
@@ -289,7 +294,7 @@
                                         <td class="top_space"><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                             <tr>
                                               <td width="14" class="hide">&nbsp;</td>
-                                              <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#ffffff;line-height:18px;">@threadInfo.conversationStarter used Kifi to send  this beauitiful message. <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;text-decoration:underline;">Learn more</a></td>
+                                              <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#ffffff;line-height:18px;">@threadInfo.conversationStarter used Kifi to send  this beautiful message. <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;text-decoration:underline;">Learn more</a></td>
                                             </tr>
                                           </table></td>
                                       </tr>
