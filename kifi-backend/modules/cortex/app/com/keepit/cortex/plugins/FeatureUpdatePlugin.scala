@@ -73,7 +73,6 @@ abstract class FeatureUpdateActor[K, T, M <: StatModel](
 
 trait DataPuller[T] {
   def getSince(lowSeq: SequenceNumber[T], limit: Int): Seq[T]
-  def getBetween(lowSeq: SequenceNumber[T], highSeq: SequenceNumber[T]): Seq[T]
 }
 
 
