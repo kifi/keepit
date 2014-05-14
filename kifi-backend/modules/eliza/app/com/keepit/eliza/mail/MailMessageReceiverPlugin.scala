@@ -108,7 +108,7 @@ class MailDiscussionMessageParser @Inject() (
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
     getPublicId(message) map { publicId =>
-      MailNotificationReply(getTimestamp(message), getText(message).map{ s => MailDiscussionMessageParser.extractMessage(s) }, publicId)
+      MailNotificationReply(getTimestamp(message), getText(message).map(MailDiscussionMessageParser.extractMessage), publicId)
     }
 
   }
