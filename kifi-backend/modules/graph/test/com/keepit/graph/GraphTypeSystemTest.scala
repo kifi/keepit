@@ -1,7 +1,7 @@
 package com.keepit.graph
 
 import org.specs2.mutable.Specification
-import com.keepit.graph.manager.{GraphUpdate, GraphUpdateKind}
+import com.keepit.graph.manager.GraphUpdateKind
 import com.keepit.graph.model.{EdgeKind, EdgeDataReader, VertexKind, VertexDataReader}
 
 class GraphTypeSystemTest extends Specification {
@@ -18,7 +18,6 @@ class GraphTypeSystemTest extends Specification {
     }
 
     "instantiate consistent GraphUpdates" in {
-      GraphUpdate
       GraphUpdateKind.all must not be empty
     }
   }

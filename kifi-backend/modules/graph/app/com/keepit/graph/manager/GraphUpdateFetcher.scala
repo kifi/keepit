@@ -1,55 +1,54 @@
 package com.keepit.graph.manager
 
-import com.kifi.franz.{SQSMessage, SQSQueue}
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.akka.SafeFuture
 import com.keepit.abook.ABookServiceClient
-import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
+import com.keepit.model.{NormalizedURI, UserConnection, User}
+import com.keepit.common.ImmediateMap
+import com.keepit.common.db.SequenceNumber
+import com.keepit.cortex.models.lda.DenseLDA
 
 trait GraphUpdateFetcher {
-  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]]
-  def fetch(currentState: GraphUpdaterState): Unit
+  def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]]
 }
 
 class GraphUpdateFetcherImpl @Inject() (
-  queue: SQSQueue[GraphUpdate],
   shoebox: ShoeboxServiceClient,
   eliza: ElizaServiceClient,
   abook: ABookServiceClient,
   cortex: CortexServiceClient
 ) extends GraphUpdateFetcher with Logging{
-  def nextBatch(maxBatchSize: Int, lockTimeout: FiniteDuration): Future[Seq[SQSMessage[GraphUpdate]]] = {
-    log.info(s"Loading next batch of graph updates from the queue: maxBatchSize=$maxBatchSize, lockTimeout=$lockTimeout")
-    new SafeFuture(queue.nextBatchWithLock(maxBatchSize, lockTimeout))
-  }
-  def fetch(currentState: GraphUpdaterState): Unit = {
-    implicit val state = currentState
-    val queueName = queue.queue
-    GraphUpdateKind.all.foreach {
-      case UserGraphUpdate => shoebox.sendUserGraphUpdate(queueName, seq(UserGraphUpdate))
 
-      case SocialConnectionGraphUpdate => shoebox.sendSocialConnectionGraphUpdate(queueName, seq(SocialConnectionGraphUpdate))
+  def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]] = {
 
-      case SocialUserInfoGraphUpdate => shoebox.sendSocialUserInfoGraphUpdate(queueName, seq(SocialUserInfoGraphUpdate))
+    log.info(s"Fetching up to $fetchSize $kind from sequence number $seq")
 
-      case UserConnectionGraphUpdate => shoebox.sendUserConnectionGraphUpdate(queueName, seq(UserConnectionGraphUpdate))
+    kind match {
 
-      case KeepGraphUpdate => shoebox.sendKeepGraphUpdate(queueName, seq(KeepGraphUpdate))
+      case UserGraphUpdate => shoebox.getUserIndexable(seq.copy(), fetchSize).imap(_.map(UserGraphUpdate.apply))
 
-      case LDAURITopicGraphUpdate => cortex.graphLDAURIFeatureUpdate(queueName, seq(LDAURITopicGraphUpdate))
+      case SocialConnectionGraphUpdate => shoebox.getIndexableSocialConnections(seq.copy(), fetchSize).imap(_.map(SocialConnectionGraphUpdate.apply))
+
+      case SocialUserInfoGraphUpdate => shoebox.getIndexableSocialUserInfos(seq.copy(), fetchSize).imap(_.map(SocialUserInfoGraphUpdate.apply))
+
+      case UserConnectionGraphUpdate => shoebox.getUserConnectionsChanged(seq.copy(), fetchSize).imap(_.map(UserConnectionGraphUpdate.apply))
+
+      case KeepGraphUpdate => shoebox.getBookmarksChanged(seq.copy(), fetchSize).imap(_.map(KeepGraphUpdate.apply))
+
+      case SparseLDAGraphUpdate => {
+        val cortexSeq = CortexSequenceNumber.fromLong[DenseLDA, NormalizedURI](seq.value)
+        cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap { case (modelVersion, uriFeaturesBatch) =>
+          uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
+        }
+      }
+
+      case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
     }
-  }
-
-  private def seq[U <: GraphUpdate](kind: GraphUpdateKind[U])(implicit state: GraphUpdaterState): SequenceNumber[U] = {
-    val sequenceNumber = state.getCurrentSequenceNumber(kind)
-    log.info(s"Requesting $kind from sequence number $sequenceNumber")
-    sequenceNumber
   }
 }

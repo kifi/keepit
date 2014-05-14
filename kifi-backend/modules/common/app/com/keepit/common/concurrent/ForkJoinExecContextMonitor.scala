@@ -25,7 +25,7 @@ class ForkJoinExecContextMonitor @Inject() (
 
   def checkFJContext():Unit = {
     val fj = com.keepit.common.concurrent.ExecutionContext.fjPool
-    log.info(s"[checkFJContext] #queuedSubmission=${fj.getQueuedSubmissionCount} #queuedTasks=${fj.getQueuedTaskCount} fj=${fj}")
+    log.debug(s"[checkFJContext] #queuedSubmission=${fj.getQueuedSubmissionCount} #queuedTasks=${fj.getQueuedTaskCount} fj=${fj}")
     if (fj.getQueuedSubmissionCount > Runtime.getRuntime.availableProcessors * 5) { // todo: tweak; airbrake if this proves useful
       systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG,
         to = Seq(EmailAddresses.RAY),

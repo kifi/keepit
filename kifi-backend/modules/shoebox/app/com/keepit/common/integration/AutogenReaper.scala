@@ -129,7 +129,7 @@ private[integration] class AutogenReaper @Inject() (
           }
           db.readWrite { implicit s =>
             // collections & k2c
-            for (collection <- collectionRepo.getByUser(exp.userId)) {
+            for (collection <- collectionRepo.getUnfortunatelyIncompleteTagsByUser(exp.userId)) {
               for (k2c <- k2cRepo.getByCollection(collection.id.get)) {
                 k2cRepo.save(k2c.inactivate)
               }

@@ -13,14 +13,19 @@ import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
 import com.keepit.search.graph.bookmark.URIGraphCommanderFactory
+import com.google.inject.ImplementedBy
 
+@ImplementedBy(classOf[FeedCommanderImpl])
+trait FeedCommander {
+  def getFeeds(userId: Id[User], limit: Int): Seq[Feed]
+}
 
-class FeedCommander @Inject() (
+class FeedCommanderImpl @Inject() (
   userGraphsSearcherFactory: UserGraphsSearcherFactory,
   uriGraphCommanderFactory: URIGraphCommanderFactory,
   shoeboxClient: ShoeboxServiceClient,
   feedMetaInfoProvider: FeedMetaInfoProvider
-) {
+) extends FeedCommander {
   val feedFilter = new CompositeFeedFilter(new BasicFeedFilter())
 
   private def aggregateAndSort(uriLists: Seq[URIList]): Seq[(Long, Long)] = {

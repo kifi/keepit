@@ -154,6 +154,31 @@ angular.module('kifi.keepService', [
       return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
 
+    function uploadBookmarkFile(file) {
+      var deferred = $q.defer();
+      if (file) {
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+        xhr.upload.addEventListener('progress', function (e) {
+          deferred.notify({'name': 'progress', 'event': e});
+        });
+        xhr.addEventListener('load', function () {
+          deferred.resolve(JSON.parse(xhr.responseText));
+        });
+        xhr.addEventListener('error', function (e) {
+          deferred.reject(e);
+        });
+        xhr.addEventListener('loadend', function (e) {
+          deferred.notify({'name': 'loadend', 'event': e});
+        });
+        xhr.open('POST', routeService.uploadBookmarkFile, true);
+        xhr.send(file);
+      } else {
+        deferred.reject({'error': 'no file'});
+      }
+      return deferred.promise;
+    }
+
     var keepList = new Clutch(function (url, config) {
       $log.log('keepService.getList()', config && config.params);
 
@@ -603,6 +628,8 @@ angular.module('kifi.keepService', [
           return selectedCount + ' Keeps selected';
         }
       },
+
+      uploadBookmarkFile: uploadBookmarkFile,
 
       find: function (query, filter, context) {
         if (end) {

@@ -122,16 +122,13 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
-  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserGraphUpdate]): Future[Unit]
-  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit]
-  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit]
-  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit]
-  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit]
   def getURIImage(nUri: NormalizedURI): Future[Option[String]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUnsubscribeUrlForEmail(email: String): Future[String]
+  def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
+  def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -325,7 +322,7 @@ class ShoeboxServiceClientImpl @Inject() (
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
-      log.info(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
+      log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
       res.json.as[Map[String, Seq[String]]].map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
   }
@@ -690,10 +687,10 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
     val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
-      log.info(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
+      log.debug(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
       None
     } else destinationUrl map { dUrl =>
-      log.info(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
+      log.debug(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
       dUrl
     }
     val payload = JsArray(destUrl match {
@@ -769,7 +766,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
-    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize)).map{ r =>
+    call(Shoebox.internal.getUserConnectionsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
       Json.fromJson[Seq[UserConnection]](r.json).get
     }
   }
@@ -823,31 +820,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserGraphUpdate]): Future[Unit] = {
-    val userUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.userGraphUpdate(), body = userUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit] = {
-    val socialConnectionUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.socialConnectionGraphUpdate(), body = socialConnectionUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit] = {
-    val socialUserInfoUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.socialUserInfoGraphUpdate(), body = socialUserInfoUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
-    val userConnectionUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.userConnectionGraphUpdate(), body = userConnectionUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
-  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit]  = {
-    val keepGraphUpdateRequest = Json.obj("seq" -> seq, "queue" -> queueRef.name)
-    call(Shoebox.internal.keepGraphUpdate(), body = keepGraphUpdateRequest).map { r => assert(r.status == 202); () }
-  }
-
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
     val updateScreenshotsForUriRequest = Json.toJson[NormalizedURI](nUri)
     call(Shoebox.internal.updateScreenshotsForUri(), body = updateScreenshotsForUriRequest).map { r => assert(r.status == 202); () }
@@ -875,6 +847,17 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUnsubscribeUrlForEmail(email: String): Future[String] = {
     call(Shoebox.internal.getUnsubscribeUrlForEmail(email)).map{ r =>
       r.body
+    }
+  }
+
+  def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = {
+    call(Shoebox.internal.getIndexableSocialConnections(seqNum, fetchSize)).map { r =>
+      r.json.as[Seq[IndexableSocialConnection]]
+    }
+  }
+  def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = {
+    call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize)).map { r =>
+      r.json.as[Seq[SocialUserInfo]]
     }
   }
 }

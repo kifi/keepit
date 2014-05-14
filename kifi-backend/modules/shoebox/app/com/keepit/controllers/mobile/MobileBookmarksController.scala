@@ -121,7 +121,7 @@ class MobileBookmarksController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     db.readOnly { implicit s => collectionRepo.getOpt(id) } map { tag =>
       bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.mobile, request.kifiInstallationId)
-      Ok(Json.toJson(SendableTag from tag))
+      Ok(Json.toJson(SendableTag from tag.summary))
     } getOrElse {
       BadRequest(Json.obj("error" -> "noSuchTag"))
     }
@@ -135,7 +135,7 @@ class MobileBookmarksController @Inject() (
   }
 
   private def toJsObject(url: String, uri: NormalizedURI, screenshotUrlOpt: Option[String], imageUrlOpt: Option[String]): JsObject = {
-    log.info(s"[getImageUrl] returning screenshot ${screenshotUrlOpt} and image ${imageUrlOpt}")
+    log.info(s"[getImageUrl] returning screenshot $screenshotUrlOpt and image $imageUrlOpt")
     (screenshotUrlOpt, imageUrlOpt) match {
       case (None, None) =>
         Json.obj("url" -> url, "uriId" -> uri.id.get)

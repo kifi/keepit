@@ -38,6 +38,7 @@ class ExtPreferenceController @Inject() (
     maxResults: Int,
     showKeeperIntro: Boolean,
     showSearchIntro: Boolean,
+    showExtMsgIntro: Boolean,
     showFindFriends: Boolean,
     messagingEmails: Boolean)
 
@@ -47,6 +48,7 @@ class ExtPreferenceController @Inject() (
       (__ \ 'maxResults).write[Int] and
       (__ \ 'showKeeperIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'showSearchIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'showFindFriends).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
     )(unlift(UserPrefs.unapply))
@@ -96,6 +98,11 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
+  def setShowExtMsgIntro(show: Boolean) = JsonAction.authenticated { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
+    Ok(JsNumber(0))
+  }
+
   def setShowFindFriends(show: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showFindFriends.name, show))
     Ok(JsNumber(0))
@@ -108,7 +115,7 @@ class ExtPreferenceController @Inject() (
 
   def getPrefs(version: Int) = JsonAction.authenticatedAsync { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val encryptedIp: String = crypt.crypt(ipkey, ip)
+    val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     loadUserPrefs(request.user.id.get) map {prefs =>
       if (version == 1) {
         Ok(Json.arr("prefs", prefs, encryptedIp))
@@ -155,6 +162,7 @@ class ExtPreferenceController @Inject() (
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals),
         showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals),
+        showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
         showFindFriends = UserValues.showFindFriends.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }

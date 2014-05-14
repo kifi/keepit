@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.realtime.UrbanAirship
 import org.joda.time.DateTime
-import com.keepit.eliza.mail.MessageLookHereRemover
+import com.keepit.eliza.util.MessageFormatter
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
@@ -35,10 +35,8 @@ import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddr
 import com.keepit.common.crypto.PublicIdConfiguration
 import scala.concurrent.duration._
 import com.keepit.common.net.URI
-import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.store.ImageSize
 import scala.util.matching.Regex._
-import java.net.URLDecoder
+
 
 class NotificationCommander @Inject() (
   threadRepo: MessageThreadRepo,
@@ -52,6 +50,7 @@ class NotificationCommander @Inject() (
   urbanAirship: UrbanAirship,
   notificationUpdater: NotificationUpdater,
   basicMessageCommander: MessageFetchingCommander,
+  emailCommander: ElizaEmailCommander,
   implicit val publicIdConfig: PublicIdConfiguration) extends Logging  {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
@@ -73,113 +72,8 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  //temp, just for internal testing. Functionality broken up and moving to it's own commander/plugin once the semantics are finalized (pre ship)
-  def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
-    case class CleanedMessage(cleanText: String, lookHereTexts: Seq[String], lookHereImageUrls: Seq[String])
-
-    def parseMessage(msg: String): CleanedMessage = {
-      val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
-      var textLookHeres = Vector[String]()
-      var imageLookHereUrls = Vector[String]()
-      re.findAllMatchIn(msg).toSeq.toList.foreach { m =>
-        val segments = m.group(3).split('|')
-        val kind = segments.head
-        val payload = URLDecoder.decode(segments.last, "UTF-8")
-        kind match {
-          case "i" => imageLookHereUrls = imageLookHereUrls :+ payload
-          case "r" => textLookHeres = textLookHeres :+ payload
-          case _ => throw new Exception("Unknow look-here type: " + kind)
-        }
-      }
-      CleanedMessage( re.replaceAllIn(msg, (m: Match) => m.group(1)), textLookHeres, imageLookHereUrls)
-    }
-
-    val (nuts, starterUserId) = db.readOnly { implicit session =>
-      (nonUserThreadRepo.getByMessageThreadId(thread.id.get),
-        userThreadRepo.getThreadStarter(thread.id.get)
-      )
-    }
-
-    val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
-
-
-    val allUsersFuture : Future[Map[Id[User], User]] = shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap)
-
-    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap)
-
-    val uriSummaryFuture : Future[URISummary] = shoebox.getUriSummary(URISummaryRequest(
-      url = thread.nUrl.get,
-      imageType = ImageType.ANY,
-      minSize = ImageSize(183, 96),
-      withDescription = true,
-      waiting = true,
-      silent = false))
-
-    for (allUsers <- allUsersFuture; allUserImageUrls <- allUserImageUrlsFuture; uriSummary <- uriSummaryFuture) {
-
-      val starterUser = allUsers(starterUserId)
-
-      val participants = allUsers.values.map{ u => u.fullName } ++ nuts.map{ nut => nut.participant.fullName }
-
-      val pageName = thread.nUrl.flatMap( url => URI.parse(url).toOption.flatMap( uri => uri.host.map(_.name)) ).get
-
-      val messages = basicMessageCommander.getThreadMessages(thread)
-
-      nuts.filterNot(_.muted).foreach{ nut =>
-        require(nut.participant.kind == NonUserKinds.email)
-
-        shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier).map{ unsubUrl =>
-
-          val threadInfo = ThreadEmailInfo(
-            pageUrl = thread.nUrl.get,
-            pageName = pageName,
-            pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
-            heroImageUrl = uriSummary.imageUrl,
-            pageDescription = uriSummary.description,
-            participants = participants.toSeq,
-            conversationStarter = starterUser.firstName + " " + starterUser.lastName,
-            unsubUrl = unsubUrl,
-            muteUrl = "https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token //Todo (Stephen): remove hard coded url with public id
-          )
-
-          var relevantMessages = messages
-          nut.lastNotifiedAt.map { dt =>
-            relevantMessages = relevantMessages.filter{ m =>
-              m.createdAt.isAfter(dt.minusSeconds(2))  //Note (Stephen): Potential race condition here if a message is send right as the email is sent. Needs more thought.
-            }
-          }
-
-          val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
-            val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
-            message.from match {
-              case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), text, lookHereTexts, lookHereImageUrls)
-              case MessageSender.NonUser(nup) => {
-                ExtendedThreadItem(nup.shortName, nup.fullName, None, text, lookHereTexts, Seq.empty)
-              }
-              case _ => throw new Exception("Impossible")
-            }
-          }.reverse
-
-          val body = views.html.nonUserDigestEmail(threadInfo, threadItems).body
-
-          val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
-          shoebox.sendMail(ElectronicMail (
-            from = magicAddress,
-            fromName = Some(starterUser.firstName + " " + starterUser.lastName + " (via Kifi)"),
-            to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-            subject = "Kifi Discussion on " + uriSummary.title.getOrElse(pageName),
-            htmlBody = body,
-            category = ElectronicMailCategory("external_message_test"),
-            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
-          ))
-          db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, currentDateTime) }
-        }
-
-      }
-
-    }
-
-  }
+  //temp, just for internal testing.
+  def notifyEmailUsers(thread: MessageThread): Unit = emailCommander.notifyEmailUsers(thread)
 
   def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
@@ -239,7 +133,7 @@ class NotificationCommander @Inject() (
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
           })
         }
-        notifyEmailUsers(thread)
+        emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
       }
     })
   }
@@ -266,7 +160,7 @@ class NotificationCommander @Inject() (
   def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =
     sendToUser(userId, Json.arr("remove_thread", threadExtId.id))
 
-  private def sendToUser(userId: Id[User], data: JsArray) : Unit =
+  def sendToUser(userId: Id[User], data: JsArray) : Unit =
     notificationRouter.sendToUser(userId, data)
 
   def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) = {
@@ -296,6 +190,8 @@ class NotificationCommander @Inject() (
     }
     SafeFuture {
       val notificationAttempts = userIds.map { userId =>
+        //Stop gap to avoid overwhelming shoebox via heimal
+        Thread.sleep(100) //TODO: Remove this an replace with proper throtteling + queue for heimdal events
         Try {
           val categoryString = NotificationCategory.User.kifiMessageFormattingCategory.get(category) getOrElse "global"
           val notifJson = Json.obj(
@@ -425,7 +321,7 @@ class NotificationCommander @Inject() (
           case Some(bnu:BasicNonUser) => bnu.firstName.getOrElse(bnu.id) + ": "
           case _ => ""
         }
-        val notifText = MessageLookHereRemover(sender + message.messageText)
+        val notifText = sender + MessageFormatter.toText(message.messageText)
         val sound = if (numMessages > 1) UrbanAirship.MoreMessageNotificationSound else UrbanAirship.DefaultNotificationSound
         val notification = PushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)

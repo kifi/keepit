@@ -4,13 +4,18 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.common.strings._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.serializer.BinaryFormat
+import java.io.{ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream}
+import scala.collection.mutable.ListBuffer
+import scala.Some
 
 case class Collection(
   id: Option[Id[Collection]] = None,
@@ -27,6 +32,7 @@ case class Collection(
   def withId(id: Id[Collection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == CollectionStates.ACTIVE
+  def summary: CollectionSummary = CollectionSummary(id.getOrElse(throw new Exception(s"Id for $this is not defined")), externalId, name)
 }
 
 object Collection {
@@ -45,6 +51,57 @@ object Collection {
   val MaxNameLength = 64
 }
 
+case class CollectionSummary(id: Id[Collection], externalId: ExternalId[Collection], name: String)
+
+class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
+  val ExternalIdByteSize = 36
+
+  override def writes(prefix: Byte, collections: Seq[CollectionSummary]): Array[Byte] = {
+    // 60 is an estimate of the size of a single object (and a bit more).
+    // Not sure it would worth it to do an accurate calculation, to be revised
+    val byteStream = new ByteArrayOutputStream(60 * collections.size)
+
+    byteStream.write(prefix)
+    val outStream = new DataOutputStream(byteStream)
+
+    collections foreach { collection =>
+      outStream.writeLong(collection.id.id) //2 bytes
+      outStream.write(collection.externalId.id.getBytes(UTF8)) //ExternalIdByteSize bytes
+      val name = collection.name.getBytes(UTF8)
+      outStream.writeInt(name.size) //1 byte
+      outStream.write(name) //unknown
+    }
+    outStream.writeLong(-1)
+    outStream.close()
+    byteStream.toByteArray
+  }
+
+  override def reads(bytes: Array[Byte], offset: Int, length: Int): Seq[CollectionSummary] = {
+    val inStream = new DataInputStream(new ByteArrayInputStream(bytes, offset, length))
+    val collections = ListBuffer[CollectionSummary]()
+    var idLong = inStream.readLong()
+    while (idLong > -1) {
+      val externalIdBuffer = new Array[Byte](ExternalIdByteSize)
+      assume(ExternalIdByteSize == inStream.read(externalIdBuffer, 0, ExternalIdByteSize), s"didn't read the entire external id into buffer of size $ExternalIdByteSize")
+      val externalIdString = new String(externalIdBuffer, UTF8)
+
+      val nameSize = inStream.readInt
+      val nameBuffer = new Array[Byte](nameSize)
+      assume(nameSize == inStream.read(nameBuffer, 0, nameSize), s"didn't read the entire name into buffer of size $nameSize")
+      val nameString = new String(nameBuffer, UTF8)
+
+      collections.append(CollectionSummary(Id[Collection](idLong), ExternalId[Collection](externalIdString), nameString))
+
+      idLong = inStream.readLong()
+    }
+    collections
+  }
+}
+
+object CollectionSummary {
+  implicit def collectionSummariesFormat = new CollectionSummariesFormat()
+}
+
 case class SendableTag(
   id: ExternalId[Collection],
   name: String)
@@ -53,11 +110,11 @@ object SendableTag {
   private implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val writesSendableTag = Json.writes[SendableTag]
 
-  def from(c: Collection): SendableTag = SendableTag(c.externalId, c.name)
+  def from(c: CollectionSummary): SendableTag = SendableTag(c.externalId, c.name)
 }
 
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_collections"
   def toKey(): String = userId.toString
 }
@@ -65,4 +122,14 @@ case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
 class UserCollectionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
+case class UserCollectionSummariesKey(userId: Id[User]) extends Key[Seq[CollectionSummary]] {
+  override val version = 1
+  val namespace = "user_collection_summaries"
+  def toKey(): String = userId.toString
+}
+
+class UserCollectionSummariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends BinaryCacheImpl[UserCollectionSummariesKey, Seq[CollectionSummary]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 object CollectionStates extends States[Collection]
+

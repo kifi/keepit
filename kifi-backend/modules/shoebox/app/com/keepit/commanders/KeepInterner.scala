@@ -13,12 +13,10 @@ import com.keepit.common.service.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.normalizer.NormalizationCandidate
-import scala.util.Try
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
-import scala.util.Random
-import org.joda.time.DateTime
+import scala.util.{Try, Success, Failure, Random}
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean)
 
@@ -64,7 +62,7 @@ class KeepInterner @Inject() (
       val total = deduped.size
 
       keepsAbuseMonitor.inspect(userId, total)
-      keptAnalytics.keepImport(userId, clock.now, context, total)
+      keptAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
 
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
@@ -100,7 +98,7 @@ class KeepInterner @Inject() (
     }
   }
 
-  def keepAttribution(userId:Id[User], newKeeps:Seq[Keep]):Unit = {
+  def keepAttribution(userId:Id[User], newKeeps: Seq[Keep]):Unit = {
     newKeeps.foreach { keep =>
       db.readWrite { implicit rw =>
         kifiHitCache.get(KifiHitKey(userId, keep.uriId)) match {
@@ -128,21 +126,39 @@ class KeepInterner @Inject() (
     (persistedBookmarksWithUris.map(_.bookmark), failures)
   }
 
-  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None) = {
-    val (persisted, failed) = db.readWriteBatch(bms, attempts = 3) { (session, bm) =>
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
+    db.readWrite { implicit s =>
+      internUriAndBookmark(rawBookmark, userId, source, mutatePrivacy)
+    } map { persistedBookmarksWithUri =>
+      val bookmark = persistedBookmarksWithUri.bookmark
+      if (persistedBookmarksWithUri.isNewKeep) {
+        keptAnalytics.keptPages(userId, Seq(bookmark), context)
+        keepAttribution(userId, Seq(bookmark))
+      }
+      bookmark
+    }
+  }
+
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource,
+                                        mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None) = {
+    val (persisted, failed) = db.readWriteBatch(bms, attempts = 2) { (session, bm) =>
       internUriAndBookmark(bm, userId, source, mutatePrivacy, installationId)(session)
-    }.partition{ case (bm, res) => res.isSuccess }
+    } map {
+      case (bm, res) => bm -> res.flatten
+    } partition {
+      case (bm, res) => res.isSuccess
+    }
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${b.url}") }
+      failed.foreach{ f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}") }
     }
-
-    (persisted.values.map(_.get).flatten.toSeq, failed.keys.toList)
+    val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
+    (persisted.values.map(_.get).toSeq, failedRaws)
   }
 
   val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Option[InternedUriAndKeep] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
@@ -156,18 +172,18 @@ class KeepInterner @Inject() (
       }
 
       val (isNewKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
-      Some(InternedUriAndKeep(bookmark, uri, isNewKeep))
+      Success(InternedUriAndKeep(bookmark, uri, isNewKeep))
     } else {
-      None
+      Failure(new Exception(s"bookmark url is a javascript command: ${rawBookmark.url}"))
     }
   } catch {
-    case e: Exception =>
+    case e: Throwable =>
       //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
       airbrake.notify(AirbrakeError(
         exception = e,
         message = Some(s"Exception while loading one of the bookmarks of user $userId: ${e.getMessage} from: $rawBookmark source: $source"),
         userId = Some(userId)))
-      None
+      Failure(e)
   }
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,

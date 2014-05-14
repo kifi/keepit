@@ -23,7 +23,6 @@ import com.kifi.franz.QueueName
 import com.keepit.graph.manager._
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
-import com.keepit.graph.manager.{UserConnectionGraphUpdate, SocialUserInfoGraphUpdate, SocialConnectionGraphUpdate, UserGraphUpdate}
 import com.keepit.heimdal.SanitizedKifiHit
 
 // code below should be sync with code in ShoeboxController
@@ -596,22 +595,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
 
-  def sendUserGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserGraphUpdate]): Future[Unit] = {
-    Future.successful(())
-  }
-
-  def sendSocialConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialConnectionGraphUpdate]): Future[Unit] = {
-    Future.successful(())
-  }
-
-  def sendSocialUserInfoGraphUpdate(queueRef: QueueName, seq: SequenceNumber[SocialUserInfoGraphUpdate]): Future[Unit] = {
-    Future.successful(())
-  }
-
-  def sendUserConnectionGraphUpdate(queueRef: QueueName, seq: SequenceNumber[UserConnectionGraphUpdate]): Future[Unit] = {
-    Future.successful(())
-  }
-
   def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
     Future.successful(())
   }
@@ -624,7 +607,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUnsubscribeUrlForEmail(email: String): Future[String] = Future.successful("https://kifi.com")
 
-  def sendKeepGraphUpdate(queueRef: QueueName, seq: SequenceNumber[KeepGraphUpdate]): Future[Unit] = {
-    Future.successful(())
-  }
+  def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = Future.successful(Seq.empty)
+
+  def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 }
