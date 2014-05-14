@@ -122,8 +122,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
-  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit]
-  def getURIImage(nUri: NormalizedURI): Future[Option[String]]
+  def updateScreenshotsForUriId(nUriId: Id[NormalizedURI]): Future[Unit]
+  def getUriImageForUriId(nUriId: Id[NormalizedURI]): Future[Option[String]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUnsubscribeUrlForEmail(email: String): Future[String]
@@ -825,9 +825,19 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.updateScreenshotsForUri(), body = updateScreenshotsForUriRequest).map { r => assert(r.status == 202); () }
   }
 
+  def updateScreenshotsForUriId(nUriId: Id[NormalizedURI]): Future[Unit] = {
+    call(Shoebox.internal.updateScreenshotsForUriId(nUriId)).map { r => assert(r.status == 202); () }
+  }
+
   def getURIImage(nUri: NormalizedURI): Future[Option[String]] = {
     val getURIImageRequest = Json.toJson[NormalizedURI](nUri)
     call(Shoebox.internal.getURIImage(), body = getURIImageRequest).map { r =>
+      Json.fromJson[Option[String]](r.json).get
+    }
+  }
+
+  def getUriImageForUriId(nUriId: Id[NormalizedURI]): Future[Option[String]] = {
+    call(Shoebox.internal.getUriImageForUriId(nUriId)).map { r =>
       Json.fromJson[Option[String]](r.json).get
     }
   }

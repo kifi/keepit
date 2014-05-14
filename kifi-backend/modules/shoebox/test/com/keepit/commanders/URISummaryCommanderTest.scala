@@ -40,7 +40,7 @@ object URISummaryCommanderTestDummyValues {
 
 class URISummaryCommanderTestEmbedlyClient extends EmbedlyClient {
   override def embedlyUrl(url: String): String = ???
-  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = future{Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo)}
+  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo))
   override def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]] = ???
 }
 
@@ -50,7 +50,7 @@ class URISummaryCommanderTestPagePeekerClient extends PagePeekerClient {
 }
 
 class URISummaryCommanderTestImageFetcher extends ImageFetcher {
-  override def fetchRawImage(url: String): Future[Option[BufferedImage]] = future{Some(URISummaryCommanderTestDummyValues.dummyBufferedImage)}
+  override def fetchRawImage(url: String): Future[Option[BufferedImage]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyBufferedImage))
 }
 
 case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
