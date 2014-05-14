@@ -24,13 +24,9 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
   }
 
   private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
-    entities.flatMap{ ent =>
-      val key = genFeatureKey(ent)
-      featureStore.get(key, version) match {
-        case Some(rep) => Some(ent, rep)
-        case None => None
-      }
-    }
+    val keys = entities.map{genFeatureKey(_)}
+    val values = featureStore.batchGet(keys, version)
+    (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}
   }
 
   def getSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
