@@ -108,9 +108,17 @@ class MailDiscussionMessageParser @Inject() (
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
     getPublicId(message) map { publicId =>
-      MailNotificationReply(getTimestamp(message), getText(message).map(s => (new Regex(raw"\n[^\n]*((<[\s\S]+@[\s\S]+>)|(\([\s\S]+@[\s\S]+\)))[^\n]*:")).split(s)(0).trim), publicId)
+      MailNotificationReply(getTimestamp(message), getText(message).map{ s => MailDiscussionMessageParser.extractMessage(s) }, publicId)
     }
 
+  }
+}
+
+object MailDiscussionMessageParser {
+  val SIGNATURES = Seq("Sent from my iPhone")
+  def extractMessage(content: String): String = {
+    val mainText = (new Regex(raw"\n[^\n]*((<[\s\S]+@[\s\S]+>)|(\([\s\S]+@[\s\S]+\)))[^\n]*:")).split(content)(0).trim
+    SIGNATURES.foldLeft(mainText)((text, signature) => text.stripSuffix(signature)).trim
   }
 }
 
