@@ -34,6 +34,19 @@ package object performance {
     res
   }
 
+  def timing[A](tag: String, threshold:Long, cb:Option[() => Unit] = None)(f: => A)(implicit logger:Logger):A = {
+    val sw = new Stopwatch(tag)
+    val res = f
+    val elapsed = sw.stop()
+    if ((elapsed/1000000) > threshold) {
+      cb match {
+        case Some(c) => c()
+        case None => sw.logTime(None)
+      }
+    }
+    res
+  }
+
   def timingWithResult[A](tag: String, r:(A => String) = {a:A => a.toString})(f: => A)(implicit logger:Logger): A = {
     val sw = new Stopwatch(tag)
     val res = f

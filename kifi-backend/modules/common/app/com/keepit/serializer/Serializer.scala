@@ -88,7 +88,7 @@ object Serializer {
       case None => "#"
     }
     def reads(obj: Any) = {
-      val rawString =  obj.asInstanceOf[String]
+      val rawString = obj.asInstanceOf[String]
       if (rawString.length==0) Some(rawString)
       else {
         if (rawString(0)=='$') Some(rawString.tail)

@@ -43,7 +43,7 @@ object ResultUtil {
   def toArticleSearchResult(
     res: DecoratedResult,
     last: Option[ExternalId[ArticleSearchResult]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
-    mergedResult: MergedSearchResult,
+    mergedResult: PartialSearchResult,
     millisPassed: Int,
     pageNumber: Int,
     previousHits: Int,
@@ -73,13 +73,3 @@ object ResultUtil {
     )
   }
 }
-
-case class MergedSearchResult(
-  hits: Seq[DetailedSearchHit],
-  myTotal: Int,
-  friendsTotal: Int,
-  othersTotal: Int,
-  friendStats: FriendStats,
-  show: Boolean,
-  svVariance: Float
-)

@@ -17,6 +17,17 @@ case class ActiveShards(shards: Set[Shard[NormalizedURI]]) {
   def find(id: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(_.contains(id))
 }
 
+object ShardSpec {
+  def toString(shards: Set[Shard[_]]): String = {
+    if (shards.isEmpty) throw new Exception("no shard specified")
+
+    val numShards = shards.head.numShards
+    if (!shards.forall(_.numShards == numShards)) throw new Exception("inconsistent total number of shards")
+
+    s"${shards.map(_.shardId).mkString(",")}/$numShards"
+  }
+}
+
 class ShardSpecParser {
 
   private class ParserImpl extends RegexParsers {
@@ -34,10 +45,5 @@ class ShardSpecParser {
 
   private[this] val parser = new ParserImpl
 
-  def parse[T](configValue: Option[String]): Set[Shard[T]] = {
-    configValue.map{ v =>
-      val trimmed = v.trim
-      if (trimmed.length > 0) parser.parseAll(parser.spec[T], v).get else Set(Shard[T](0,1))
-    }.getOrElse(Set(Shard[T](0,1)))
-  }
+  def parse[T](spec: String): Set[Shard[T]] = parser.parseAll(parser.spec[T], spec).get
 }

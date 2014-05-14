@@ -90,23 +90,38 @@ class ServiceDiscoveryImpl(
   def serviceCluster(serviceType: ServiceType): ServiceCluster =
     clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType."))
 
+  /**
+   * We don't want to be too chatty on the logs, it may grow very fast since the method is very hot
+   */
+  private var lastLeaderLogTime = 0L
+
   def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
     }
+    val now = System.currentTimeMillis()
+    val logMe = (now - lastLeaderLogTime) > 30000 //30 sec
+    def logLeader(msg:  => String): Unit = {
+      //best effort, race conditions could happen but we don't want to lock
+      log.info(msg)
+      lastLeaderLogTime = now
+    }
+
     myCluster.leader match {
       case Some(instance) if instance == myInstance.get =>
         require(myCluster.size > 0)
-        log.info(s"I'm the leader! ${myInstance.get}")
-        Statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
+        if (logMe) {
+          logLeader(s"I'm the leader! ${myInstance.get}")
+          Statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
+        }
         return true
       case Some(instance)  =>
         require(myCluster.size > 1)
-        log.info(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
+        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
         return false
       case None =>
-        log.info(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
+        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
         require(myCluster.size == 0)
         return false
     }

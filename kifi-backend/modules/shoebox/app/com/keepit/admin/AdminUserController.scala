@@ -285,7 +285,7 @@ class AdminUserController @Inject() (
           (mark, uri, colls)
       }
     }
-    val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
+    val collections = db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) }
 
     Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch, collections, collectionFilter))
   }
@@ -657,7 +657,7 @@ class AdminUserController @Inject() (
         properties += ("keeps", keeps)
         properties += ("publicKeeps", publicKeeps)
         properties += ("privateKeeps", privateKeeps)
-        properties += ("tags", collectionRepo.getByUser(userId).length)
+        properties += ("tags", collectionRepo.count(userId))
         properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
         properties += ("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value).toSeq)
@@ -830,7 +830,7 @@ class AdminUserController @Inject() (
 
         // URI Graph
         keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
-        collectionRepo.getByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+        collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
 
         // Personal Info
         userSessionRepo.invalidateByUser(userId) // User Session
@@ -844,7 +844,7 @@ class AdminUserController @Inject() (
       val emails = emailRepo.getAllByUser(userId)
       val credentials = userCredRepo.findByUserIdOpt(userId)
       val installations = kifiInstallationRepo.all(userId)
-      val tags = collectionRepo.getByUser(userId)
+      val tags = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
       val keeps = keepRepo.getByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)

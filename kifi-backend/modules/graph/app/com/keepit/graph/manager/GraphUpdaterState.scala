@@ -23,5 +23,8 @@ object GraphUpdaterState {
 
   def empty = GraphUpdaterState(Map.empty)
 
-  def prettify(state: GraphUpdaterState): PrettyGraphState = PrettyGraphState(state.state.map { case (kind, seq) => kind.toString -> seq }.toMap)
+  def prettify(state: GraphUpdaterState): PrettyGraphState = PrettyGraphState(state.state.map {
+    case (SparseLDAGraphUpdate, cortexSeq) => SparseLDAGraphUpdate.toString -> CortexSequenceNumber.fromLong(cortexSeq).toString
+    case (kind, seq) => kind.toString -> seq.toString
+  }.toMap)
 }
