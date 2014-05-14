@@ -139,7 +139,12 @@ img.kifi-message-pic.kifi-self {
 }
 .kifi-message-email-view,
 .kifi-message-email-learn {
+  color: inherit;
   text-decoration: underline;
+}
+.kifi-message-email-view:hover,
+.kifi-message-email-learn:hover {
+  color: #a6b1bb;
 }
 .kifi-message-email-tooltip {
   width: 300px;
@@ -194,10 +199,4 @@ img.kifi-message-pic.kifi-self {
   background-color: #fff;
 }
 
-a.kifi-message-email-view,
-a.kifi-message-email-learn,
-a.kifi-message-email-view:hover,
-a.kifi-message-email-learn:hover {
-  color: inherit;
-}
 
