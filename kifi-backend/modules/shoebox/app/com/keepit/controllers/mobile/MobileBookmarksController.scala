@@ -121,7 +121,7 @@ class MobileBookmarksController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     db.readOnly { implicit s => collectionRepo.getOpt(id) } map { tag =>
       bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.mobile, request.kifiInstallationId)
-      Ok(Json.toJson(SendableTag from tag))
+      Ok(Json.toJson(SendableTag from tag.summary))
     } getOrElse {
       BadRequest(Json.obj("error" -> "noSuchTag"))
     }

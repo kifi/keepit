@@ -53,7 +53,12 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def userCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserCollectionsCache(stats, accessLog, (outerRepo, 1 day))
+    new UserCollectionsCache(stats, accessLog, (outerRepo, 7 day))
+
+  @Singleton
+  @Provides
+  def userCollectionSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserCollectionSummariesCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 7 days))
 
   @Singleton
   @Provides

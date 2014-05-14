@@ -111,7 +111,7 @@ class KeepsCommander @Inject() (
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
     val keepsWithCollIds = db.readOnly { implicit s =>
-      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId).map(c => c.id -> c.externalId).toMap
       keeps.map{ keep =>
         val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
         (keep, collIds)
@@ -126,7 +126,7 @@ class KeepsCommander @Inject() (
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
         FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCounts.getOrElse(keep.id.get, 0))
       }
-      (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
+      (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }
   }
 
