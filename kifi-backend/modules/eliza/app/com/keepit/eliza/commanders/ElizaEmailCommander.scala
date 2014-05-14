@@ -32,6 +32,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.store.ImageSize
 import com.keepit.common.db.slick.Database
+import com.keepit.common.strings._
 import com.keepit.common.mail.{
   ElectronicMail,
   ElectronicMailCategory,
@@ -124,7 +125,7 @@ class ElizaEmailCommander @Inject() (
         pageName = pageName,
         pageTitle = uriSummarySmall.title.getOrElse(thread.nUrl.get),
         heroImageUrl = uriSummarySmall.imageUrl,
-        pageDescription = uriSummarySmall.description,
+        pageDescription = uriSummarySmall.description.map(_.abbreviate(200)),
         participants = participants.toSeq,
         conversationStarter = starterUser.firstName + " " + starterUser.lastName,
         unsubUrl = unsubUrl.getOrElse("#"),
