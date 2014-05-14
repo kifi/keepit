@@ -25,7 +25,7 @@ trait VersionedStore[K, M <: StatModel, V <: Versionable[M]] {
   def -=(key: K, version: ModelVersion[M]): this.type
 
   def batchGet(keys: Seq[K], version: ModelVersion[M]): Seq[Option[V]] = {
-    keys.par.map{ k => get(k, version)}.toArray.toSeq
+    keys.par.map{ k => get(k, version)}.seq
   }
 }
 
