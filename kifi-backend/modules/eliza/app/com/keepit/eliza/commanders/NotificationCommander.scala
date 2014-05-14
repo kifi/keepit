@@ -30,12 +30,8 @@ import com.keepit.eliza.model.UserThread
 import com.keepit.eliza.model.Notification
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser, NonUserKinds}
-import com.keepit.common.mail.{ElectronicMail, ElectronicMailCategory, EmailAddresses, GenericEmailAddress, EmailAddressHolder, PostOffice}
+import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import com.keepit.common.crypto.PublicIdConfiguration
-import scala.concurrent.duration._
-import com.keepit.common.net.URI
-import scala.util.matching.Regex._
 
 
 class NotificationCommander @Inject() (
