@@ -326,7 +326,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = timing(s"sessionFromAuthenticator ${authenticator.identityId.userId}") {
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
-    log.info(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
+    log.debug(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
     val userId = db.readOnly {
       implicit s => socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
     }
@@ -364,7 +364,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def persistSession(newSession: UserSession): UserSession = timing(s"persistSession ${newSession.socialId}") {
     db.readWrite(attempts = 3) { implicit s =>
       val sessionFromCookie = sessionRepo.save(newSession)
-      log.info(s"[save] newSession=$sessionFromCookie")
+      log.debug(s"[save] newSession=$sessionFromCookie")
       sessionFromCookie
     }
   }
@@ -387,14 +387,14 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     val res = externalIdOpt flatMap { externalId =>
       db.readOnly { implicit s =>
         val sess = sessionRepo.getOpt(externalId)
-        log.info(s"[find] sessionRepo.get($externalId)=$sess")
+        log.debug(s"[find] sessionRepo.get($externalId)=$sess")
         sess
       } collect {
         case s if s.isValid =>
           authenticatorFromSession(s)
       }
     }
-    log.info(s"[find] id=$id res=$res")
+    log.debug(s"[find] id=$id res=$res")
     res
   }
 

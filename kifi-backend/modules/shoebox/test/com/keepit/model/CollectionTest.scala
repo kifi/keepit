@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.google.inject.Injector
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.time._
 
 import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
@@ -46,6 +46,21 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
   }
 
   "collections" should {
+    "binary serialization" in {
+      val coll1 = Collection(id = Some(Id[Collection](1)),userId = Id[User](1), name = "Cooking")
+      val coll2 = Collection(id = Some(Id[Collection](2)),userId = Id[User](1), name = "Apparel")
+      val coll3 = Collection(id = Some(Id[Collection](3)),userId = Id[User](1), name = "Scala")
+      val coll4 = Collection(id = Some(Id[Collection](4)),userId = Id[User](1), name = "Java")
+      val collectionSummaries = Seq(coll1.summary, coll2.summary, coll3.summary, coll4.summary)
+      val formatter = new CollectionSummariesFormat()
+      val binary = formatter.writes(Some(collectionSummaries))
+      binary.size === 224
+      val deserialized = formatter.reads(binary).get
+      deserialized(0) === collectionSummaries(0)
+      deserialized(1) === collectionSummaries(1)
+      deserialized(2) === collectionSummaries(2)
+      deserialized(3) === collectionSummaries(3)
+    }
     "allow the keepRepo to query by a specific collection" in {
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
