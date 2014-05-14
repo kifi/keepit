@@ -78,7 +78,7 @@ class ElizaEmailCommander @Inject() (
   }
 
 
-  def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
+  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
 
     val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
 
