@@ -35,7 +35,7 @@ class NormalizationWorker @Inject()(
   }
 
   def consume() = {
-    updateQ.nextBatchWithLock(2, 1 minutes) onComplete {
+    updateQ.nextBatchWithLock(3, 2 minutes) onComplete {
       case Failure(t) =>
         airbrake.notify(s"Caught exception $t while consuming messages from $updateQ",t)
       case Success(messages) =>
@@ -72,7 +72,7 @@ class NormalizationUpdaterPluginImpl @Inject()(
   override def enabled: Boolean = true
   override def onStart() {
     log.info("[onStart] starting NormalizationUpdater ...")
-    scheduleTaskOnLeader(actor.system, 10 seconds, 10 seconds, actor.ref, Consume)
+    scheduleTaskOnAllMachines(actor.system, 60 seconds, 5 seconds, actor.ref, Consume)
   }
 
 }
