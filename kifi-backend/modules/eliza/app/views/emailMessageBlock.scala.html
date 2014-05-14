@@ -1,0 +1,60 @@
+@(imageUrl: Option[String], shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty)
+  <tr>
+    <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td width="14" class="hide">&nbsp;</td>
+                <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <!-- Image -->
+                            <td width="73" valign="top">
+                              @imageUrl.map{ iUrl =>
+                                <img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block; border-radius: 3px;" border="0" />
+                              }.getOrElse{
+                                <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle; border-radius: 3px;">
+                                  @{shortName(0).toUpper}
+                                </div>
+                              }
+                            </td>
+                            <!-- //Image -->
+                            <td width="28">&nbsp;</td>
+                            <!-- Content -->
+                            <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;text-decoration:none;">@fullName</td>
+                                </tr>
+                                <tr>
+                                  <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                </tr>
+                                <tr>
+                                  <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;">“@msg”</td>
+                                </tr>
+                                <tr>
+                                  <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                </tr>
+                              </table></td>
+                            <!-- Content -->
+                          </tr>
+                        </table></td>
+                    </tr>
+                    @lookHereContent.map(emailLookHereBlock(shortName, _))
+                    @lookHereImage.map(emailImageLookHereBlock(shortName, _))
+                    <tr>
+                      <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                    </tr>
+                  </table></td>
+                <td width="20" class="hide">&nbsp;</td>
+              </tr>
+            </table></td>
+        </tr>
+        <tr>
+          <td height="2" bgcolor="#FFFFFF" style="line-height:1px;font-size:1px;">&nbsp;</td>
+        </tr>
+      </table></td>
+  </tr>
