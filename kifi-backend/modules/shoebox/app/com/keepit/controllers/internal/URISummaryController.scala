@@ -16,21 +16,10 @@ class URISummaryController @Inject() (
   normalizedUriRepo: NormalizedURIRepo,
   db: Database) extends ShoeboxServiceController {
 
-  def updateURIScreenshots() = Action(parse.tolerantJson) { request =>
-    val normalizedUri = Json.fromJson[NormalizedURI](request.body).get
-    uriSummaryCommander.updateScreenshots(normalizedUri)
-    Status(202)("0")
-  }
-
   def updateUriScreenshotsForUriId(id: Id[NormalizedURI]) = Action { request =>
     val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
     uriSummaryCommander.updateScreenshots(nUri)
     Status(202)("0")
-  }
-
-  def getURIImage() = Action.async(parse.tolerantJson) { request =>
-    val urlFut = uriSummaryCommander.getURIImage(Json.fromJson[NormalizedURI](request.body).get)
-    urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
 
   def getUriImageForUriId(id: Id[NormalizedURI]) = Action.async { request =>
