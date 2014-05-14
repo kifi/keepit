@@ -322,7 +322,7 @@ class ShoeboxServiceClientImpl @Inject() (
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
-      log.info(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
+      log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
       res.json.as[Map[String, Seq[String]]].map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
   }
@@ -687,10 +687,10 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
     val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
-      log.info(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
+      log.debug(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
       None
     } else destinationUrl map { dUrl =>
-      log.info(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
+      log.debug(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
       dUrl
     }
     val payload = JsArray(destUrl match {

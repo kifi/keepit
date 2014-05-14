@@ -169,7 +169,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
           case uri => uri
         }
-      log.info(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
+      log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
       normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
     }
   }
@@ -198,7 +198,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
-    log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
+    log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
@@ -222,7 +222,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           newUri
         }
       }
-      log.info(s"[internByUri($url)] resUri=$resUri")
+      log.debug(s"[internByUri($url)] resUri=$resUri")
       resUri
     }
   }

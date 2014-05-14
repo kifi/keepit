@@ -201,11 +201,7 @@ class KeepsCommander @Inject() (
         val picName = keeper.pictureName.getOrElse("0")
         imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
           log.info(s"""[WKMK] $keeper using image $userImage""")
-          val pageImageSize = 42
-          val pageImage: String = db.readOnly { implicit s =>
-            imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
-          }
-          val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
+          val bodyHtml = s"""<b>${keeper.fullName}</b> also kept your keep!"""
           val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
           val title = uri.title.get.abbreviate(80)
           eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {
