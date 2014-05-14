@@ -76,12 +76,7 @@ class MessageFetchingCommander @Inject() (
   }
 
   def processParticipantsMessage(jsAdderUserId: String, jsAddedUsers: Seq[JsValue], isInitialMessage: Boolean = false) : Future[(String, JsArray)]= {
-    val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition{ json =>
-      json match {
-        case JsNumber(_) => true
-        case _ => false
-      }
-    }
+    val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition(_.isInstanceOf[JsNumber])
     val addedUsers = addedUsersJson.map(id => Id[User](id.as[Long]))
     val addedNonUsers = addedNonUsersJson.map(_.as[NonUserParticipant])
     val adderUserId = Id[User](jsAdderUserId.toLong)
