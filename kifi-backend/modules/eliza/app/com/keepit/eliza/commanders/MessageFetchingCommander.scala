@@ -91,7 +91,7 @@ class MessageFetchingCommander @Inject() (
       val addedUsersString = addedBasicUsers.map{ bule =>
         bule match {
           case bu: BasicUser => s"${bu.firstName} ${bu.lastName}"
-          case nup: BasicNonUser => s"${nup.firstName.getOrElse("")} ${nup.lastName.getOrElse("")}"
+          case bnu: BasicNonUser => bnu.lastName.map(ln =>  s"${bnu.firstName.get} $ln").getOrElse(bnu.firstName.get)
           case _ => "Kifi User"
         }
       }.toList match {
