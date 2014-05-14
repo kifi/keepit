@@ -8,7 +8,7 @@ case class Id[T](id: Long) { //use "extends AnyVal" at Scala 2.11.0 https://issu
 }
 
 object Id {
-  def format[T]: Format[Id[T]] =
+  implicit def format[T]: Format[Id[T]] =
     Format(__.read[Long].map(Id(_)), new Writes[Id[T]]{ def writes(o: Id[T]) = JsNumber(o.id) })
 
   implicit def queryStringBinder[T](implicit longBinder: QueryStringBindable[Long]): QueryStringBindable[Id[T]] = new QueryStringBindable[Id[T]] {

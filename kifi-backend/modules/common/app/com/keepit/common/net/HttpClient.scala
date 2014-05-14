@@ -23,6 +23,7 @@ import scala.xml._
 import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
 import java.util.Random
+import com.keepit.common.util.TrackingId
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
@@ -287,23 +288,5 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
   def post(body: JsValue) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
   def post(body: NodeSeq) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
   def delete() =            try { startTimer(); wsRequest.delete()   } finally { tracer = new StackTrace() }
-}
-
-object TrackingId {
-  private[this] val rnd = new Random(System.currentTimeMillis)
-  private[this] val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-  def get(): String = {
-    val buf = new Array[Char](5)
-    val len = chars.length
-    var i = 0
-    var value = rnd.nextInt(Int.MaxValue)
-    while (i < 5) {
-      buf(i) = chars.charAt(value % len)
-      value = value / len
-      i += 1
-    }
-    new String(buf)
-  }
 }
 

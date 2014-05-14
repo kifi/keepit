@@ -37,7 +37,7 @@ form > label {
 }
 
 
-span.optout {
+.kifi-action {
   background: #85a4ea;
   border: 0px none rgb(255, 255, 255);
   color: rgb(255, 255, 255);
@@ -52,7 +52,7 @@ span.optout {
   cursor: pointer;
 }
 
-span.optout:active {
+.kifi-action:active {
   background: #75b4da;
 }
 

@@ -18,8 +18,7 @@ var api = api || function () {
         }
         break;
       case 'api:injected':
-        markInjected(msg[1]);
-        requireNext();
+        // markInjected(msg[1]);
         break;
       case 'api:log':
         var enable = msg[1], buf = log.buffer;

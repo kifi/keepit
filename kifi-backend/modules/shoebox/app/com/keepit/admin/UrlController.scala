@@ -169,9 +169,11 @@ class UrlController @Inject() (
   def submitNormalization = AdminHtmlAction.authenticatedAsync { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     val candidateUrl = body("candidateUrl")
+    val verified = body.contains("verified")
     val candidateOpt = body.get("candidateNormalization").collect {
       case normalizationStr: String if normalizationStr.nonEmpty => (Normalization(normalizationStr))
     } orElse SchemeNormalizer.findSchemeNormalization(candidateUrl) map {
+      case normalization if verified => VerifiedCandidate(candidateUrl, normalization)
       case normalization => ScrapedCandidate(candidateUrl, normalization)
     }
 

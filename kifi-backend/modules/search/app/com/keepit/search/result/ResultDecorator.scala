@@ -36,7 +36,7 @@ class ResultDecorator(
   private[this] val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
   private[this] val terms = Highlighter.getQueryTerms(query, analyzer)
 
-  def decorate(result: MergedSearchResult, searchFilter: SearchFilter): DecoratedResult = {
+  def decorate(result: PartialSearchResult, searchFilter: SearchFilter): DecoratedResult = {
     val hits = result.hits
     val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], JsObject]) else {

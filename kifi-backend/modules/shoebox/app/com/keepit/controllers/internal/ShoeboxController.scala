@@ -2,8 +2,7 @@ package com.keepit.controllers.internal
 
 import com.google.inject.{Provider, Inject}
 import com.keepit.common.controller.ShoeboxServiceController
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -14,7 +13,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
-import com.keepit.search.{ArticleSearchResult, SearchConfigExperiment, SearchConfigExperimentRepo}
+import com.keepit.search.{SearchConfigExperiment, SearchConfigExperimentRepo}
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -53,7 +52,6 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: EmailAddressRepo,
@@ -137,15 +135,15 @@ class ShoeboxController @Inject() (
   def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
-    val saved = db.readWrite(attempts = 3) { implicit s =>
+    val saved = db.readWrite(attempts = 1) { implicit s =>
       normUriRepo.save(normalizedUri)
     }
-    log.info(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
+    log.debug(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
-     val saveResult = Try(db.readWrite(attempts = 3) { implicit s =>
+     val saveResult = Try(db.readWrite(attempts = 1) { implicit s =>
        // Handle serialization in session to be transactional.
        val originalNormalizedUri = normUriRepo.get(uriId)
        val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
@@ -181,7 +179,7 @@ class ShoeboxController @Inject() (
     else {
       val uri = uriOpt.get
       val info = infoOpt.get
-      val savedUri = db.readWrite(attempts = 2) { implicit request =>
+      val savedUri = db.readWrite(attempts = 1) { implicit request =>
         val savedUri  = normUriRepo.save(uri)
         val savedInfo = scrapeInfoRepo.save(info)
         if (updateBookmark) {
@@ -201,13 +199,13 @@ class ShoeboxController @Inject() (
     val json = request.body
     val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
     val infoOpt = (json \ "info").asOpt[ScrapeInfo]
-    log.info(s"[scrapeFailed] uri=$uriOpt info=$infoOpt")
+    log.warn(s"[scrapeFailed] uri=$uriOpt info=$infoOpt")
     if (!(uriOpt.isDefined && infoOpt.isDefined)) BadRequest(s"Illegal arguments: arguments($uriOpt, $infoOpt) cannot be null")
     else {
       val (savedUri, savedInfo) = {
         val uri = uriOpt.get
         val info = infoOpt.get
-        db.readWrite(attempts = 2) { implicit request =>
+        db.readWrite(attempts = 1) { implicit request =>
           val uri2 = uri.id match {
             case Some(id) => Some(normUriRepo.get(id))
             case None => normUriRepo.getByUri(uri.url)
@@ -220,7 +218,7 @@ class ShoeboxController @Inject() (
             }
           }
           val savedInfo = scrapeInfoRepo.save(info.withFailure)
-          log.info(s"[scrapeFailed(uri(${uri.id}).url=${uri.url},info(${info.id}).state=${info.state})] time-lapsed:${System.currentTimeMillis - ts} updated: savedUri(${savedUri.id}).state=${savedUri.state}; savedInfo(${savedInfo.id}).state=${savedInfo.state}")
+          log.warn(s"[scrapeFailed(uri(${uri.id}).url=${uri.url},info(${info.id}).state=${info.state})] time-lapsed:${System.currentTimeMillis - ts} updated: savedUri(${savedUri.id}).state=${savedUri.state}; savedInfo(${savedInfo.id}).state=${savedInfo.state}")
           (savedUri, savedInfo)
         }
       }
@@ -231,7 +229,7 @@ class ShoeboxController @Inject() (
   // todo: revisit
   def recordPermanentRedirect() = Action.async(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis
-    log.info(s"[recordPermanentRedirect] body=${request.body}")
+    log.debug(s"[recordPermanentRedirect] body=${request.body}")
     val args = request.body.as[JsArray].value
     require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
     val uri = args(0).as[NormalizedURI]
@@ -262,18 +260,18 @@ class ShoeboxController @Inject() (
       updateFuture.map {
         case Some(update) => {
           val redirectedUri = db.readOnly() { implicit session => normUriRepo.get(uri.id.get) }
-          log.info(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
+          log.debug(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
           redirectedUri
         }
         case None => {
-          log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+          log.warn(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
           uri
         }
       }
     }
 
     val resFuture = resFutureOption getOrElse {
-        log.info(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
+        log.warn(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
         Future.successful(uri)
       }
 
@@ -304,7 +302,7 @@ class ShoeboxController @Inject() (
     val httpProxyOpt = db.readOnly(2, Slave) { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.info(s"[getProxy($url): result=$httpProxyOpt")
+    log.debug(s"[getProxy($url): result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -314,7 +312,7 @@ class ShoeboxController @Inject() (
     val httpProxyOpt = db.readOnly(2, Slave) { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.info(s"[getProxyP] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$httpProxyOpt")
+    log.debug(s"[getProxyP] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -322,7 +320,7 @@ class ShoeboxController @Inject() (
     val res = db.readOnly { implicit s => //using cache
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapable($url, $destinationUrl)] result=$res")
+    log.debug(s"[isUnscrapable($url, $destinationUrl)] result=$res")
     Ok(JsBoolean(res))
   }
 
@@ -335,7 +333,7 @@ class ShoeboxController @Inject() (
     val res = db.readOnly { implicit s => //using cache
       (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
     }
-    log.info(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
+    log.debug(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
     Ok(JsBoolean(res))
   }
 
@@ -374,7 +372,7 @@ class ShoeboxController @Inject() (
   def internNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
-    val uri = db.readWrite(attempts = 2) { implicit s =>  //using cache
+    val uri = db.readWrite(attempts = 1) { implicit s =>  //using cache
       normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
@@ -400,7 +398,7 @@ class ShoeboxController @Inject() (
         scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get))
       }
     }
-    log.info(s"[getScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=$info")
+    log.debug(s"[getScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=$info")
     Ok(Json.toJson(info))
   }
 
@@ -408,7 +406,7 @@ class ShoeboxController @Inject() (
     val imageInfo = db.readOnly { implicit ro =>
       imageInfoRepo.get(id)
     }
-    log.info(s"[getImageInfo($id)] result=$imageInfo")
+    log.debug(s"[getImageInfo($id)] result=$imageInfo")
     Ok(Json.toJson(imageInfo))
   }
 
@@ -416,7 +414,7 @@ class ShoeboxController @Inject() (
     val json = request.body
     val info = json.as[ImageInfo]
     val saved = scraperHelper.saveImageInfo(info)
-    log.info(s"[saveImageInfo] result=$saved")
+    log.debug(s"[saveImageInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -425,7 +423,7 @@ class ShoeboxController @Inject() (
     val info = json.as[PageInfo]
     val toSave = db.readOnly { implicit ro => pageInfoRepo.getByUri(info.uriId) } map { p => info.withId(p.id.get) } getOrElse info
     val saved = scraperHelper.savePageInfo(toSave)
-    log.info(s"[savePageInfo] result=$saved")
+    log.debug(s"[savePageInfo] result=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -436,7 +434,7 @@ class ShoeboxController @Inject() (
     val saved = db.readWrite(attempts = 3) { implicit s =>
       scrapeInfoRepo.save(info)
     }
-    log.info(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
+    log.debug(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -459,7 +457,7 @@ class ShoeboxController @Inject() (
     val bookmarks = db.readOnly(2, Slave) { implicit session =>
       keepRepo.getByUriWithoutTitle(uriId)
     }
-    log.info(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
+    log.debug(s"[getBookmarksByUriWithoutTitle($uriId)] time-lapsed:${System.currentTimeMillis - ts} bookmarks(len=${bookmarks.length}):${bookmarks.mkString}")
     Ok(Json.toJson(bookmarks))
   }
 
@@ -468,7 +466,7 @@ class ShoeboxController @Inject() (
     val bookmarkOpt = db.readOnly(2, Database.Slave) { implicit session => // using cache + Slate database for scanning older keeps
       keepRepo.latestKeep(url)
     }
-    log.info(s"[getLatestKeep($url)] $bookmarkOpt")
+    log.debug(s"[getLatestKeep($url)] $bookmarkOpt")
     Ok(Json.toJson(bookmarkOpt))
   }
 
@@ -477,7 +475,7 @@ class ShoeboxController @Inject() (
     val saved = db.readWrite(attempts = 3) { implicit session =>
       keepRepo.save(bookmark)
     }
-    log.info(s"[saveBookmark] saved=$saved")
+    log.debug(s"[saveBookmark] saved=$saved")
     Ok(Json.toJson(saved))
   }
 
@@ -520,7 +518,7 @@ class ShoeboxController @Inject() (
       userIds.map{userId => userId.id.toString -> emailAddressRepo.getAllByUser(userId).map{_.address}}.toMap
     }
     val json = Json.toJson(emails)
-    log.info(s"json emails for users [$userIds] are $json")
+    log.debug(s"json emails for users [$userIds] are $json")
     Ok(json)
   }
 
@@ -585,7 +583,7 @@ class ShoeboxController @Inject() (
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
-    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) })) //using cache
+    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
@@ -706,5 +704,4 @@ class ShoeboxController @Inject() (
       Ok(Json.toJson(url))
     }
   }
-
 }

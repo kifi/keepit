@@ -10,16 +10,14 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
-import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
-import scala.util.{Try, Success, Failure}
-import scala.annotation.tailrec
+import scala.util.{Success, Failure}
 
 import akka.actor.Scheduler
 
 import play.api.libs.json._
 
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Provider
 
 import org.apache.zookeeper.CreateMode._
 
@@ -92,23 +90,38 @@ class ServiceDiscoveryImpl(
   def serviceCluster(serviceType: ServiceType): ServiceCluster =
     clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType."))
 
+  /**
+   * We don't want to be too chatty on the logs, it may grow very fast since the method is very hot
+   */
+  private var lastLeaderLogTime = 0L
+
   def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
     }
+    val now = System.currentTimeMillis()
+    val logMe = (now - lastLeaderLogTime) > 30000 //30 sec
+    def logLeader(msg:  => String): Unit = {
+      //best effort, race conditions could happen but we don't want to lock
+      log.info(msg)
+      lastLeaderLogTime = now
+    }
+
     myCluster.leader match {
       case Some(instance) if instance == myInstance.get =>
         require(myCluster.size > 0)
-        log.info(s"I'm the leader! ${myInstance.get}")
-        Statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
+        if (logMe) {
+          logLeader(s"I'm the leader! ${myInstance.get}")
+          Statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
+        }
         return true
       case Some(instance)  =>
         require(myCluster.size > 1)
-        log.info(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
+        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
         return false
       case None =>
-        log.info(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
+        if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
         require(myCluster.size == 0)
         return false
     }
@@ -176,7 +189,7 @@ class ServiceDiscoveryImpl(
       }
 
       val myNode = zk.createChild(myCluster.servicePath, myCluster.serviceType.name + "_", RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL)
-      myInstance = Some(new ServiceInstance(myNode, true).setRemoteService(thisRemoteService))
+      myInstance = Some(new ServiceInstance(myNode, true, thisRemoteService))
       myCluster.register(myInstance.get)
       log.info(s"registered as ${myInstance.get}")
       watchServices(zk)
@@ -196,8 +209,8 @@ class ServiceDiscoveryImpl(
         log.info(s"Changing instance status to $newStatus")
         lastStatusChangeTime = System.currentTimeMillis
         myServiceStatus = newStatus
-        instance.setRemoteService(getThisRemoteService)
-        zk.setData(instance.node, RemoteService.toJson(instance.remoteService))
+        myInstance = Some(new ServiceInstance(instance.node, true, getThisRemoteService))
+        zk.setData(myInstance.get.node, RemoteService.toJson(myInstance.get.remoteService))
       }
     }
   }

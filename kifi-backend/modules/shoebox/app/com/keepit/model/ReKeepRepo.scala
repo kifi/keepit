@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 trait ReKeepRepo extends Repo[ReKeep] {
   def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
   def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int]
 }
 
 @Singleton
@@ -41,5 +42,12 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
     (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
+  }
+
+  def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int] = {
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r)
+      .groupBy(_.keepId)
+      .map{ case(kId, rk) => (kId, rk.length)}
+    q.toMap()
   }
 }

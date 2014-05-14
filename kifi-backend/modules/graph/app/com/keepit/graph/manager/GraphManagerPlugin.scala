@@ -1,7 +1,6 @@
 package com.keepit.graph.manager
 
 import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
-import com.kifi.franz.SQSMessage
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import com.keepit.common.logging.Logging
@@ -12,8 +11,8 @@ import com.google.inject.{Singleton, Inject}
 
 sealed trait GraphManagerActorMessage
 object GraphManagerActorMessage {
-  case class UpdateGraph(maxBatchSize: Int, lockTimeout: FiniteDuration) extends GraphManagerActorMessage
-  case class ProcessGraphUpdates(updates: Seq[SQSMessage[GraphUpdate]], maxBatchSize: Int, lockTimeout: FiniteDuration) extends GraphManagerActorMessage
+  case class UpdateGraph(customFetchSizes: Map[GraphUpdateKind[_ <: GraphUpdate], Int], defaultFetchSize: Int) extends GraphManagerActorMessage
+  case class ProcessGraphUpdates[U <: GraphUpdate](updates: Seq[U], kind: GraphUpdateKind[U], fetchSize: Int) extends GraphManagerActorMessage
   case object BackupGraph extends GraphManagerActorMessage
 }
 
@@ -22,26 +21,32 @@ class GraphManagerActor @Inject() (
   graphUpdateFetcher: GraphUpdateFetcher,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
-  private var updating = false
   import GraphManagerActorMessage._
+
+  private var updating = Set[GraphUpdateKind[_ <: GraphUpdate]]()
+
+  private def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], fetchSize: Int): Unit = {
+    val seq = graph.state.getCurrentSequenceNumber(kind)
+    graphUpdateFetcher.fetch(kind, seq, fetchSize).foreach { updates => self ! ProcessGraphUpdates(updates, kind, fetchSize) }
+  }
+
   def receive = {
-    case UpdateGraph(maxBatchSize, lockTimeout) => if (!updating) {
-      graphUpdateFetcher.nextBatch(maxBatchSize, lockTimeout).map { updates =>
-        log.info(s"${updates.length} graph updates were loaded from the queue.")
-        self ! ProcessGraphUpdates(updates, maxBatchSize, lockTimeout)
-      }
-      updating = true
+    case UpdateGraph(customFetchSizes, defaultFetchSize) => (GraphUpdateKind.all -- updating).foreach { kind =>
+      val fetchSize = customFetchSizes.getOrElse(kind, defaultFetchSize)
+      fetch(kind, fetchSize)
+      updating += kind
     }
-    case ProcessGraphUpdates(updates, maxBatchSize, lockTimeout) => {
-      if (updates.isEmpty) { graphUpdateFetcher.fetch(graph.state) }
-      else {
-        graph.update(updates.map(_.body): _*)
-        updates.foreach(_.consume())
-        log.info(s"${updates.length} graph updates were consumed from the queue.")
-        self ! UpdateGraph(maxBatchSize, lockTimeout)
+
+    case ProcessGraphUpdates(updates, kind, fetchSize) => {
+      if (updates.nonEmpty) {
+        graph.update(updates: _*)
+        log.info(s"${updates.length} ${kind}s were ingested.")
       }
-      updating = false
+
+      if (updates.length < fetchSize) { updating -= kind }
+      else { fetch(kind, fetchSize) }
     }
+
     case BackupGraph => graph.backup()
     case m => throw new UnsupportedActorMessage(m)
   }
@@ -56,7 +61,7 @@ class GraphManagerPlugin @Inject() (
 
   override def onStart() {
     log.info(s"starting $this")
-    scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(500, 5 minutes))
+    scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map.empty, 100))
     scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }

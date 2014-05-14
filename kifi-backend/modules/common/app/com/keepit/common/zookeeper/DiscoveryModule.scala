@@ -151,7 +151,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler): ServiceCluster =
     new ServiceCluster(serviceType, airbrake, scheduler, ()=>{}) tap { cluster =>
-      cluster.register(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType)))
+      cluster.register(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true, RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType)))
     }
 
   @Singleton
@@ -160,7 +160,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
     new ServiceDiscovery {
       var state: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def timeSinceLastStatusChange: Long = 0L
-      def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true).setRemoteService(RemoteService(amazonInstanceInfo, ServiceStatus.UP, cluster.serviceType)))
+      def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true, RemoteService(amazonInstanceInfo, ServiceStatus.UP, cluster.serviceType)))
       def thisService: ServiceType = cluster.serviceType
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get

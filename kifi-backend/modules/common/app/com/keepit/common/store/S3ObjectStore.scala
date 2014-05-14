@@ -167,15 +167,12 @@ trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
   }
 
   protected def unpackValue(s3Obj: S3Object): B = {
-      val size  = s3Obj.getObjectMetadata().getContentLength()
-      val dataStream  = s3Obj.getObjectContent()
-      try{
-        decodeValue(IOUtils.toByteArray(dataStream))
-      }
-      finally {
-        dataStream.close()
-      }
-
+    val dataStream = s3Obj.getObjectContent
+    try {
+      decodeValue(IOUtils.toByteArray(dataStream))
+    } finally {
+      dataStream.close()
+    }
   }
 
 }

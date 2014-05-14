@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.google.inject.Injector
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.time._
 
 import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
@@ -46,17 +46,34 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
   }
 
   "collections" should {
+    "binary serialization" in {
+      val coll1 = Collection(id = Some(Id[Collection](1)),userId = Id[User](1), name = "Cooking")
+      val coll2 = Collection(id = Some(Id[Collection](2)),userId = Id[User](1), name = "Apparel")
+      val coll3 = Collection(id = Some(Id[Collection](3)),userId = Id[User](1), name = "Scala")
+      val coll4 = Collection(id = Some(Id[Collection](4)),userId = Id[User](1), name = "Java")
+      val collectionSummaries = Seq(coll1.summary, coll2.summary, coll3.summary, coll4.summary)
+      val formatter = new CollectionSummariesFormat()
+      val binary = formatter.writes(Some(collectionSummaries))
+      binary.size === 224
+      val deserialized = formatter.reads(binary).get
+      deserialized(0) === collectionSummaries(0)
+      deserialized(1) === collectionSummaries(1)
+      deserialized(2) === collectionSummaries(2)
+      deserialized(3) === collectionSummaries(3)
+    }
     "allow the keepRepo to query by a specific collection" in {
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll2.id.get))
         }
         db.readOnly { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
           keepRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
           keepRepo.getByUser(user1.id.get, None, None, 5) must haveLength(2)
           keepRepo.getByUserAndCollection(user1.id.get, coll2.id.get, None, None, 5) must haveLength(1)
@@ -68,7 +85,8 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
@@ -79,7 +97,8 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit s =>
           keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
         }
         db.readWrite { implicit s =>
@@ -97,7 +116,8 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         }
         sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s =>
-            collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           }
         }
       }
@@ -124,7 +144,8 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)

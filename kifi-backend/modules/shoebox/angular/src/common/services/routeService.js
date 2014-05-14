@@ -3,8 +3,8 @@
 angular.module('kifi.routeService', [])
 
 .factory('routeService', [
-  'env',
-  function (env) {
+  '$location', 'env',
+  function ($location, env) {
     function route(url) {
       return env.xhrBase + url;
     }
@@ -24,10 +24,13 @@ angular.module('kifi.routeService', [])
       linkNetwork: function (network) {
         return env.origin + '/link/' + network;
       },
+      uploadBookmarkFile: route('/keeps/file-import'),
       refreshNetworks: env.origin + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
-      importGmail: env.origin + '/importContacts', // wtf, why top level route?
+      importGmail: function () {
+        return env.origin + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
+      },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
       logout: 'https://www.kifi.com/logout',

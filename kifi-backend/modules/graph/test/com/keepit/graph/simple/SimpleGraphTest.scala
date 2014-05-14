@@ -2,6 +2,8 @@ package com.keepit.graph.simple
 
 import org.specs2.mutable.Specification
 import com.keepit.graph.model._
+import java.io.File
+import org.apache.commons.io.FileUtils
 
 class SimpleGraphTest() extends Specification {
   val graph = SimpleGraph()
@@ -48,14 +50,14 @@ class SimpleGraphTest() extends Specification {
       vertexReader.moveTo(alfred)
       vertexReader.edgeReader.degree === 1
       vertexReader.edgeReader.moveToNextEdge()
-      vertexReader.edgeReader.kind === EmptyEdgeDataReader
+      vertexReader.edgeReader.kind === EmptyEdgeReader
       edgeReader.moveTo(alfred, vertigo)
-      edgeReader.kind === EmptyEdgeDataReader
+      edgeReader.kind === EmptyEdgeReader
       vertexReader.moveTo(vertigo)
       vertexReader.edgeReader.degree === 0
 
       graph.readWrite { writer =>
-        writer.removeEdge(alfred, vertigo, EmptyEdgeDataReader)
+        writer.removeEdge(alfred, vertigo, EmptyEdgeReader)
       }
 
       vertexReader.moveTo(alfred)
@@ -137,9 +139,11 @@ class SimpleGraphTest() extends Specification {
       edgeReader.moveTo(alfred, leo) must throwA[EdgeNotFoundException]
     }
 
-    "be properly serialized and deserialized to Json" in {
-      val json = SimpleGraph.format.writes(graph)
-      val newGraph = SimpleGraph.format.reads(json).get
+    "be properly serialized and deserialized to file" in {
+      val tempFile = FileUtils.getFile(FileUtils.getTempDirectory, "simpleGraphTest")
+      tempFile.deleteOnExit()
+      SimpleGraph.write(graph, tempFile)
+      val newGraph = SimpleGraph.read(tempFile)
       val newGraphReader = newGraph.getNewReader()
       val newGraphVertexReader = newGraphReader.getNewVertexReader()
       newGraphVertexReader.moveTo(rearWindow)

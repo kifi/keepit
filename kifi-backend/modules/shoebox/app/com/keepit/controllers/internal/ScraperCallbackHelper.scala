@@ -39,7 +39,7 @@ class ScraperCallbackHelper @Inject()(
   def assignTasks(zkId:Id[ScraperWorker], max:Int):Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", {r:Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}"}) {
     withLock(assignLock) {
       val builder = Seq.newBuilder[ScrapeRequest]
-      val res = db.readWrite(attempts = 2) { implicit rw =>
+      val res = db.readWrite(attempts = 1) { implicit rw =>
         val limit = if (max < 10) max * 2 else max
         val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList(${limit})", {r:Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}"}) { scrapeInfoRepo.getOverdueList(limit) }
         var count = 0
@@ -49,7 +49,7 @@ class ScraperCallbackHelper @Inject()(
             val pageInfoOpt = pageInfoRepo.getByUri(nuri.id.get)
             val proxy = urlPatternRuleRepo.getProxy(nuri.url)
             val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
-            log.info(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
+            log.debug(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
             count += 1
             builder += ScrapeRequest(nuri, savedInfo, pageInfoOpt, proxy)
           } else {

@@ -90,15 +90,15 @@ class ServiceClusterTest extends Specification {
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(new ServiceInstance(Node(basePath, "node_00000001"), false).setRemoteService(remoteService1)) === true
-      cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false).setRemoteService(remoteService2)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000001"), false, remoteService1)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false, remoteService2)) === true
     }
 
     "equal service instances" in {
       val basePath = Node("/fortytwo/services/TEST_MODE")
-      val s1 = new ServiceInstance(Node(basePath, "node_00000001"), false)
-      val s2 = new ServiceInstance(Node(basePath, "node_00000001"), false)
-      val s3 = new ServiceInstance(Node(basePath, "node_00000003"), false)
+      val s1 = new ServiceInstance(Node(basePath, "node_00000001"), false, null)
+      val s2 = new ServiceInstance(Node(basePath, "node_00000001"), false, null)
+      val s3 = new ServiceInstance(Node(basePath, "node_00000003"), false, null)
       s1 === s2
       s1 !== s3
       s2 !== s3
@@ -130,8 +130,8 @@ class ServiceClusterTest extends Specification {
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
 
-      cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false).setRemoteService(remoteService1)) === true
-      cluster.registered(new ServiceInstance(Node(basePath, "node_00000003"), false).setRemoteService(remoteService2)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false, remoteService1)) === true
+      cluster.registered(new ServiceInstance(Node(basePath, "node_00000003"), false, remoteService2)) === true
     }
 
     "RR router" in {

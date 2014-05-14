@@ -22,29 +22,29 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
-  def merge(results: Seq[ShardSearchResult], maxHits: Int): MergedSearchResult = {
+  def merge(results: Seq[PartialSearchResult], maxHits: Int): PartialSearchResult = {
     if (results.size == 1) {
       val head = results.head
-      MergedSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.show, head.svVariance)
+      PartialSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.svVariance, head.show)
     } else {
       val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
       val friendStats = mergeFriendStats(results)
       val hits = mergeHits(results, maxHits)
       val show = results.exists(_.show) // TODO: how to merge the show flag?
 
-      MergedSearchResult(
+      PartialSearchResult(
         hits,
         myTotal,
         friendsTotal,
         othersTotal,
         friendStats,
-        show,
-        -1.0f
+        -1.0f,
+        show
       )
     }
   }
 
-  private def mergeHits(results: Seq[ShardSearchResult], maxHits: Int): Seq[DetailedSearchHit] = {
+  private def mergeHits(results: Seq[PartialSearchResult], maxHits: Int): Seq[DetailedSearchHit] = {
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
     val othersHits = createQueue(maxHits * 5)
@@ -131,7 +131,7 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   @inline private def createQueue(maxHits: Int) = new HitQueue[DetailedSearchHit](maxHits)
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
-  private def mergeTotals(results: Seq[ShardSearchResult]): (Int, Int, Int) = {
+  private def mergeTotals(results: Seq[PartialSearchResult]): (Int, Int, Int) = {
     var myTotal = 0
     var friendsTotal = 0
     var othersTotal = 0
@@ -143,7 +143,7 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     (myTotal, friendsTotal, othersTotal)
   }
 
-  private def mergeFriendStats(results: Seq[ShardSearchResult]): FriendStats = {
+  private def mergeFriendStats(results: Seq[PartialSearchResult]): FriendStats = {
     val jsons = results.map(_.json \ "friendStats")
 
     val idBuf = new ArrayBuffer[Long]

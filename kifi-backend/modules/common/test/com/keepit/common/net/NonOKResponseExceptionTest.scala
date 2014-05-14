@@ -27,7 +27,7 @@ class NonOKResponseExceptionTest extends Specification {
 
     "have short message with ServiceUri" in {
       val remoteService1 = RemoteService(null, ServiceStatus.UP, ServiceType.TEST_MODE)
-      val instance = new ServiceInstance(Node("/node_00000001"), false).setRemoteService(remoteService1)
+      val instance = new ServiceInstance(Node("/node_00000001"), false, remoteService1)
       val exception = NonOKResponseException(
         new ServiceUri(instance, null, -1, "/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean/this/is/the/path/and/it/may/be/very/very/long/so/it/must/be/chopped/a/bit/if/you/know/what/i/mean"),
         FakeClientResponse("short response"),

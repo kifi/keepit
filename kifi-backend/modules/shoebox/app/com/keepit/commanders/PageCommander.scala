@@ -75,7 +75,7 @@ class PageCommander @Inject() (
     val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
-    val shown = nUri.map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
+    val shown = nUri map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
 
     val (keepers, keeps) = keepersFutureOpt.map{ future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
 
@@ -83,7 +83,7 @@ class PageCommander @Inject() (
       nUriStr,
       keep.map { k => if (k.isPrivate) "private" else "public" },
       keep.map(_.externalId),
-      tags.map(SendableTag.from),
+      tags.map { t => SendableTag.from(t.summary) },
       position, neverOnSite, sensitive, shown, keepers, keeps)
   }
 

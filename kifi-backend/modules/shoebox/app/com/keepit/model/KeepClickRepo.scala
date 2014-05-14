@@ -14,6 +14,8 @@ trait KeepClickRepo extends Repo[KeepClick] {
   def getClicksByUUID(uuid:ExternalId[SanitizedKifiHit])(implicit r:RSession):Seq[KeepClick]
   def getByKeepId(keepId:Id[Keep])(implicit r:RSession):Seq[KeepClick]
   def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[KeepClick]
+  def getClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Map[Id[Keep], Int]
+  def getClickCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Map[Id[Keep],Int]
 }
 
 
@@ -51,5 +53,22 @@ class KeepClickRepoImpl @Inject() (
 
   def getClicksByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Seq[KeepClick] = {
     (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).list()
+  }
+
+  def getClickCountsByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r)
+      .groupBy(_.keepId)
+      .map { case (kId, kc) => (kId, kc.length) }
+    q.toMap()
+  }
+
+  def getClickCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]], since:DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
+    if (keepIds.isEmpty) Map.empty[Id[Keep], Int]
+    else {
+      val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.keepId.inSet(keepIds) && r.createdAt >= since)) yield r)
+        .groupBy(_.keepId)
+        .map { case (kId, kc) => (kId, kc.length) }
+      q.toMap()
+    }
   }
 }
