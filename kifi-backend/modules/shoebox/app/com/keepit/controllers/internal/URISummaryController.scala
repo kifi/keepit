@@ -22,7 +22,7 @@ class URISummaryController @Inject() (
     Status(202)("0")
   }
 
-  def updateUriScreenshotsForUriId(id: Id[NormalizedURI]) = Action(parse.tolerantJson) { request =>
+  def updateUriScreenshotsForUriId(id: Id[NormalizedURI]) = Action { request =>
     val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
     uriSummaryCommander.updateScreenshots(nUri)
     Status(202)("0")
@@ -33,7 +33,7 @@ class URISummaryController @Inject() (
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
 
-  def getUriImageForUriId(id: Id[NormalizedURI]) = Action.async(parse.tolerantJson) { request =>
+  def getUriImageForUriId(id: Id[NormalizedURI]) = Action.async { request =>
     val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
     val urlFut = uriSummaryCommander.getURIImage(nUri)
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
