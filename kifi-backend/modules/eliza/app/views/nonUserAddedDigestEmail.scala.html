@@ -1,157 +1,5 @@
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, messages: Seq[com.keepit.eliza.model.ExtendedThreadItem])
 
-  @lookHere(lookerName: String, text: String) = {
-    <tr>
-      <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-          <tr>
-            <td width="102" class="hide">&nbsp;</td>
-            <td bgcolor="#fafafa"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td height="14" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                </tr>
-                <tr>
-                  <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td width="18">&nbsp;</td>
-                        <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                            <tr>
-                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:16px;">@lookerName highlighted this specific part of the page</td>
-                            </tr>
-                            <tr>
-                              <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                            </tr>
-                            <tr>
-                              <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                  <tr>
-                                    <td valign="top" width="35"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-big-quotes.jpg" width="32" height="24" style="display:block;" border="0" /></td>
-                                    <td width="10">&nbsp;</td>
-                                    <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;font-style:italic;line-height:24px;color:#333333;">@text</td>
-                                  </tr>
-                                </table></td>
-                            </tr>
-                            <tr>
-                              <td height="24"></td>
-                            </tr>
-                          </table></td>
-                        <td width="24">&nbsp;</td>
-                      </tr>
-                    </table></td>
-                </tr>
-              </table></td>
-          </tr>
-        </table></td>
-    </tr>
-  }
-
-  @imageLookHere(lookerName: String, link: String) = {
-    <tr>
-      <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-          <tr>
-            <td width="102" class="hide">&nbsp;</td>
-            <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td><table width="360" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper" bgcolor="#fafafa">
-                      <tr>
-                        <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                            <tr>
-                              <td width="28" class="hide">&nbsp;</td>
-                              <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                  <tr>
-                                    <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:16px;">@lookerName highlighted this specific image on the page</td>
-                                  </tr>
-                                  <tr>
-                                    <td height="24"></td>
-                                  </tr>
-                                  <tr>
-                                    <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                        <tr>
-                                          <td width="28" class="hide"></td>
-                                          <td width="240"  align="center"><img src="@link" width="240" style="display:block;" border="0" /></td>
-                                          <td width="64" class="hide"></td>
-                                        </tr>
-                                      </table></td>
-                                  </tr>
-                                  <tr>
-                                    <td height="30"></td>
-                                  </tr>
-                                </table></td>
-                            </tr>
-                          </table></td>
-                      </tr>
-                    </table></td>
-                </tr>
-              </table></td>
-          </tr>
-        </table></td>
-    </tr>
-  }
-
-  @messageBlock(imageUrl: Option[String], shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty) = {
-    <tr>
-      <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-          <tr>
-            <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
-          </tr>
-          <tr>
-            <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td width="14" class="hide">&nbsp;</td>
-                  <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                            <tr>
-                              <!-- Image -->
-                              <td width="73" valign="top">
-                                @imageUrl.map{ iUrl =>
-                                  <img src="https:@imageUrl" width="73" height="73" alt="@shortName" style="display:block; border-radius: 3px;" border="0" />
-                                }.getOrElse{
-                                  <div style="font-family: Arial; font-size: 62px; font-weight: 600; background-color: #DCD6D6; color: #ffffff; width: 73px; height: 73px; text-align: center; vertical-align: middle; border-radius: 3px;">
-                                    @{shortName(0).toUpper}
-                                  </div>
-                                }
-                              </td>
-                              <!-- //Image -->
-                              <td width="28">&nbsp;</td>
-                              <!-- Content -->
-                              <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                  <tr>
-                                    <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;text-decoration:none;">@fullName</td>
-                                  </tr>
-                                  <tr>
-                                    <td height="16" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                  </tr>
-                                  <tr>
-                                    <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;">“@msg”</td>
-                                  </tr>
-                                  <tr>
-                                    <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                                  </tr>
-                                </table></td>
-                              <!-- Content -->
-                            </tr>
-                          </table></td>
-                      </tr>
-                      @lookHereContent.map(lookHere(shortName, _))
-                      @lookHereImage.map(imageLookHere(shortName, _))
-                      <tr>
-                        <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
-                      </tr>
-                    </table></td>
-                  <td width="20" class="hide">&nbsp;</td>
-                </tr>
-              </table></td>
-          </tr>
-          <tr>
-            <td height="2" bgcolor="#FFFFFF" style="line-height:1px;font-size:1px;">&nbsp;</td>
-          </tr>
-        </table></td>
-    </tr>
-  }
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -350,7 +198,7 @@
                                                     }
                                                     <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                         <tr>
-                                                          <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:16px;color:#333333;line-height:18px;">@pageDescription</td>
+                                                          <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;">@pageDescription</td>
                                                         </tr>
                                                         <tr>
                                                           <td height="6" style="line-height:1px;font-size:1px;">&nbsp;</td>
@@ -373,7 +221,7 @@
                                     </table></td>
                                 </tr>
                                 @{messages.map(message =>
-                                  messageBlock(message.imageUrl, message.senderShortName, message.senderFullName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
+                                  emailMessageBlock(message.imageUrl, message.senderShortName, message.senderFullName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
                                 )}
                               </table></td>
                             <td width="2" bgcolor="#f3f3f3"></td>
@@ -444,7 +292,7 @@
                                         <td class="top_space"><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                             <tr>
                                               <td width="14" class="hide">&nbsp;</td>
-                                              <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;">@threadInfo.conversationStarter used Kifi to send  this beauitiful message. <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;text-decoration:underline;">Learn more</a></td>
+                                              <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#ffffff;line-height:18px;">@threadInfo.conversationStarter used Kifi to send  this beauitiful message. <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;text-decoration:underline;">Learn more</a></td>
                                             </tr>
                                           </table></td>
                                       </tr>
