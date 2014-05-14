@@ -96,7 +96,7 @@ class ElizaEmailCommander @Inject() (
 
     val uriSummaryBigFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
-      imageType = ImageType.ANY,
+      imageType = ImageType.IMAGE,
       minSize = ImageSize(620, 200),
       withDescription = false,
       waiting = true,
@@ -131,7 +131,7 @@ class ElizaEmailCommander @Inject() (
         muteUrl = muteUrl.getOrElse("#")
       )
 
-      val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl)
+      val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
 
       var relevantMessages = messages
       fromTime.map{ dt =>
@@ -158,7 +158,7 @@ class ElizaEmailCommander @Inject() (
 
       ProtoEmail(
         views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
-        views.html.nonUserInitialEmail(threadInfoBig, threadItems),
+        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserInitialEmail(threadInfoBig, threadItems) else views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         starterUser.firstName + " " + starterUser.lastName,
         uriSummarySmall.title.getOrElse(pageName)
