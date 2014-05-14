@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
@@ -15,6 +15,7 @@ import play.api.libs.json._
 import com.keepit.serializer.BinaryFormat
 import java.io.{ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream}
 import scala.collection.mutable.ListBuffer
+import scala.Some
 
 case class Collection(
   id: Option[Id[Collection]] = None,
@@ -109,7 +110,7 @@ object SendableTag {
   private implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val writesSendableTag = Json.writes[SendableTag]
 
-  def from(c: Collection): SendableTag = SendableTag(c.externalId, c.name)
+  def from(c: CollectionSummary): SendableTag = SendableTag(c.externalId, c.name)
 }
 
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
@@ -128,7 +129,7 @@ case class UserCollectionSummariesKey(userId: Id[User]) extends Key[Seq[Collecti
 }
 
 class UserCollectionSummariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserCollectionSummariesKey, Seq[CollectionSummary]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+    extends BinaryCacheImpl[UserCollectionSummariesKey, Seq[CollectionSummary]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object CollectionStates extends States[Collection]
 

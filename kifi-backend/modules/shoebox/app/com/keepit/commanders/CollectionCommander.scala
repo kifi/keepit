@@ -5,7 +5,6 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
-import com.keepit.common.time._
 import com.keepit.search.SearchServiceClient
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -18,7 +17,7 @@ case class BasicCollection(id: Option[ExternalId[Collection]], name: String, kee
 object BasicCollection {
   implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val format = Json.format[BasicCollection]
-  def fromCollection(c: Collection, keeps: Option[Int] = None): BasicCollection =
+  def fromCollection(c: CollectionSummary, keeps: Option[Int] = None): BasicCollection =
     BasicCollection(Some(c.externalId), c.name, keeps)
 }
 
@@ -37,9 +36,9 @@ class CollectionCommander @Inject() (
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
     val unsortedCollections = db.readOnly { implicit s =>
-      val colls = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
-      val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id.get).toSet)
-      colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id.get).orElse(Some(0))) }
+      val colls = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId)
+      val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id).toSet)
+      colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id).orElse(Some(0))) }
     }
     log.info(s"Sorting collections for $userId")
     val collections = sort match {
@@ -83,7 +82,7 @@ class CollectionCommander @Inject() (
     userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value =>
       Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
     } getOrElse {
-      val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagsByUser(uid).map(_.externalId)
+      val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
       log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
       userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
       allCollectionIds
@@ -93,7 +92,7 @@ class CollectionCommander @Inject() (
   def setCollectionOrdering(uid: Id[User],
       order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
-    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagsByUser(uid).map(_.externalId)
+    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds
@@ -116,7 +115,7 @@ class CollectionCommander @Inject() (
                 val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
                 updateCollectionOrdering(userId)
                 keptAnalytics.renamedTag(coll, newColl, context)
-                Left(BasicCollection.fromCollection(newColl))
+                Left(BasicCollection.fromCollection(newColl.summary))
               } getOrElse {
                 Right(CollectionSaveFail(s"Tag with name $id not found"))
               }
@@ -124,7 +123,7 @@ class CollectionCommander @Inject() (
               val newColl = collectionRepo.save(Collection(userId = userId, name = name))
               updateCollectionOrdering(userId)
               keptAnalytics.createdTag(newColl, context)
-              Left(BasicCollection.fromCollection(newColl))
+              Left(BasicCollection.fromCollection(newColl.summary))
             }
           } else {
             Right(CollectionSaveFail(s"Tag '$name' already exists"))
