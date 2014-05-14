@@ -100,7 +100,7 @@ class MessageFetchingCommander @Inject() (
         case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
       }
       if (isInitialMessage) {
-        val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} started a discussion with $addedUsersString on this page."
+        val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} started a discussion with $addedUsersString on this page." //ZZZ
         (friendlyMessage, Json.arr("start_with_emails", basicUsers(adderUserId), addedBasicUsers, true))
       } else {
         val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the discussion."
