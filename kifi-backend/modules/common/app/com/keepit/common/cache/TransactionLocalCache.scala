@@ -66,8 +66,8 @@ class TransactionLocalCache[K <: Key[T], T] private(
     txnLocalStore.foreach{ case (key, state) =>
       state match {
         case LFound(serialized) => {
-          val v = timing(s"TLCache-reads($key,$state)", 50) { serializer.reads(serialized) }
-          timing(s"TLCache-writes($key,$state,$v)", 50) {
+          val v = timing(s"TLCache-reads($key,${state.toString.take(500)})", 50) { serializer.reads(serialized) }
+          timing(s"TLCache-writes($key,${state.toString.take(500)},$v)", 50) {
             underlying.set(key, v)
           }
         }
