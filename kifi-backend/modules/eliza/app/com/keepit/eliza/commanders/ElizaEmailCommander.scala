@@ -178,7 +178,7 @@ class ElizaEmailCommander @Inject() (
 
       for (
         unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier);
-        protoEmail <- assembleEmail(thread, nut.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
+        protoEmail <- assembleEmail(thread, None, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
       ) {
 
         val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
