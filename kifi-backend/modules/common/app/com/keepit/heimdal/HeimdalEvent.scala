@@ -7,6 +7,7 @@ import play.api.libs.json._
 import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.common.reflection.CompanionTypeSystem
+import com.keepit.social.NonUserKind
 
 sealed trait HeimdalEvent { self =>
   type E >: self.type <: HeimdalEvent
@@ -50,7 +51,6 @@ case class UserEvent(
 }
 
 case object UserEvent extends HeimdalEventCompanion[UserEvent] {
-  private implicit val idFormat = Id.format[User]
   implicit val format = Json.format[UserEvent]
   implicit val typeCode = "user"
 }
@@ -75,6 +75,23 @@ case class AnonymousEvent(context: HeimdalContext, eventType: EventType, time: D
 case object AnonymousEvent extends HeimdalEventCompanion[AnonymousEvent] {
   implicit val format = Json.format[AnonymousEvent]
   implicit val typeCode = "anonymous"
+}
+
+case class NonUserEvent(
+  identifier: String,
+  kind: NonUserKind,
+  context: HeimdalContext,
+  eventType: EventType,
+  time: DateTime = currentDateTime
+) extends HeimdalEvent {
+  type E = NonUserEvent
+  def companion = NonUserEvent
+  override def toString(): String = s"NonUserEvent[nonUser=$kind|$identifier,type=${eventType.name},time=$time]"
+}
+
+case object NonUserEvent extends HeimdalEventCompanion[NonUserEvent] {
+  implicit val format = Json.format[NonUserEvent]
+  implicit val typeCode = "non_user"
 }
 
 case class EventDescriptor(

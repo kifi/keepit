@@ -15,6 +15,7 @@ import play.api.test.Helpers._
 import play.api.libs.json.{Json}
 import com.keepit.common.db.Id
 import akka.actor.ActorSystem
+import com.keepit.social.NonUserKinds
 
 class EventTrackingTest extends Specification with TestInjector {
 
@@ -32,15 +33,16 @@ class EventTrackingTest extends Specification with TestInjector {
     val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
     val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[TestSystemEventLoggingRepo]
     val anonymousEventRepo = inject[AnonymousEventLoggingRepo].asInstanceOf[TestAnonymousEventLoggingRepo]
+    val nonUserEventRepo = inject[NonUserEventLoggingRepo].asInstanceOf[TestNonUserEventLoggingRepo]
 
-    (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, testContext)
+    (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext)
   }
 
   "Event Tracking Controller" should {
 
     "store correctly" in {
       withInjector(modules: _*) { implicit injector =>
-        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, testContext) = setup()
+        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext) = setup()
         val userEvent: HeimdalEvent = UserEvent(Id(1), testContext, EventType("user_test_event"))
         userEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvent(Json.toJson(userEvent))
@@ -58,21 +60,31 @@ class EventTrackingTest extends Specification with TestInjector {
         eventTrackingController.trackInternalEvent(Json.toJson(anonymousEvent))
         anonymousEventRepo.eventCount() === 1
         anonymousEventRepo.lastEvent.context.data("testField").asInstanceOf[ContextStringData].value === "Yay!"
+
+        val nonUserEvent: HeimdalEvent = NonUserEvent("non_user@join.com", NonUserKinds.email, testContext, EventType("non_user_test_event"))
+        nonUserEventRepo.eventCount() === 0
+        eventTrackingController.trackInternalEvent(Json.toJson(nonUserEvent))
+        nonUserEventRepo.eventCount() === 1
+        nonUserEventRepo.lastEvent.context.data("testField").asInstanceOf[ContextStringData].value === "Yay!"
       }
     }
 
     "store array" in {
       withInjector(modules :_*) { implicit injector =>
-        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, testContext) = setup()
-        val events: Array[HeimdalEvent] = Array( UserEvent(Id(1), testContext, EventType("test_event")),
-                            UserEvent(Id(2), testContext, EventType("user_test_event")),
-                            UserEvent(Id(3), testContext, EventType("user_test_event")),
-                            UserEvent(Id(4), testContext, EventType("user_test_event")),
-                            SystemEvent(testContext, EventType("system_test_event")),
-                            AnonymousEvent(testContext, EventType("anonymous_test_event")))
+        val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext) = setup()
+        val events: Array[HeimdalEvent] = Array(
+          UserEvent(Id(1), testContext, EventType("test_event")),
+          UserEvent(Id(2), testContext, EventType("user_test_event")),
+          UserEvent(Id(3), testContext, EventType("user_test_event")),
+          UserEvent(Id(4), testContext, EventType("user_test_event")),
+          SystemEvent(testContext, EventType("system_test_event")),
+          AnonymousEvent(testContext, EventType("anonymous_test_event")),
+          NonUserEvent("non_user@join.com", NonUserKinds.email, testContext, EventType("non_user_test_event"))
+        )
         userEventRepo.eventCount() === 0
         systemEventRepo.eventCount() === 0
         anonymousEventRepo.eventCount() === 0
+        nonUserEventRepo.eventCount() === 0
         eventTrackingController.trackInternalEvents(Json.toJson(events))
 
         userEventRepo.eventCount() === 4
@@ -86,6 +98,9 @@ class EventTrackingTest extends Specification with TestInjector {
 
         anonymousEventRepo.eventCount() === 1
         anonymousEventRepo.events(0).eventType === EventType("anonymous_test_event")
+
+        nonUserEventRepo.eventCount === 1
+        nonUserEventRepo.events(0).eventType === EventType("non_user_test_event")
       }
     }
 
