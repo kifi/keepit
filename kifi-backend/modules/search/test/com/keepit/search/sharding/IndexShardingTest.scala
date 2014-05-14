@@ -48,7 +48,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
 
         users.foreach{ user =>
           val userId = user.id.get
-          activeShards.shards.foreach{ shard =>
+          activeShards.local.foreach{ shard =>
             val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, None, 1000, SearchFilter.default(), allHitsConfig)
             val uriGraphSearcher = mainSearcher.uriGraphSearcher
             val collectionSearcher = mainSearcher.collectionSearcher
@@ -77,7 +77,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
           }
 
           val keeps = bookmarks.filter( _.userId == userId).map(_.uriId).toSet
-          val shardedKeeps = activeShards.shards.map{ shard =>
+          val shardedKeeps = activeShards.local.map{ shard =>
             val uriGraphSearcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
 
             uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet
@@ -87,7 +87,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         }
 
         (collections zip collKeeps).foreach{ case (collection, collKeeps) =>
-          val shardedKeeps = activeShards.shards.map{ shard =>
+          val shardedKeeps = activeShards.local.map{ shard =>
             val collectionSearcher = CollectionSearcher(collectionGraph.getIndexer(shard))
             collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet
           }
@@ -122,8 +122,8 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         collectionGraph.update()
 
         val originalBookmark = bookmarks.find(_.userId == userId).get
-        val sourceShard = activeShards.shards.find(_.contains(originalBookmark.uriId)).get
-        val targetShard = activeShards.shards.find(! _.contains(originalBookmark.uriId)).get
+        val sourceShard = activeShards.local.find(_.contains(originalBookmark.uriId)).get
+        val targetShard = activeShards.local.find(! _.contains(originalBookmark.uriId)).get
         val targetUri = uris.filter(u => targetShard.contains(u.id.get)).find(u => !bookmarks.exists(k => k.uriId == u.id.get)).get
 
         uriGraph.update()
@@ -133,8 +133,8 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         def getKeepSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getURIGraphSearcher(shard, userId).getUserToUriEdgeSet(userId).size
         def getCollectionSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getCollectionSearcher(shard, userId).getCollectionToUriEdgeSet(collection.id.get).size
 
-        val oldKeepSizes = activeShards.shards.map{ shard => (shard -> getKeepSize(shard)) }.toMap
-        val oldCollSizes = activeShards.shards.map{ shard => (shard -> getCollectionSize(shard)) }.toMap
+        val oldKeepSizes = activeShards.local.map{ shard => (shard -> getKeepSize(shard)) }.toMap
+        val oldCollSizes = activeShards.local.map{ shard => (shard -> getCollectionSize(shard)) }.toMap
 
         // migrate URI
         val Seq(migratedBookmark) = saveBookmarks(originalBookmark.copy(uriId = targetUri.id.get))
@@ -144,10 +144,10 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
         collectionGraph.update()
         mainSearcherFactory.clear() // remove cached searchers
 
-        val newKeepSizes = activeShards.shards.map{ shard => (shard -> getKeepSize(shard)) }.toMap
-        val newCollSizes = activeShards.shards.map{ shard => (shard -> getCollectionSize(shard)) }.toMap
+        val newKeepSizes = activeShards.local.map{ shard => (shard -> getKeepSize(shard)) }.toMap
+        val newCollSizes = activeShards.local.map{ shard => (shard -> getCollectionSize(shard)) }.toMap
 
-        activeShards.shards.foreach{ shard =>
+        activeShards.local.foreach{ shard =>
           val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, None, 1000, SearchFilter.default(), allHitsConfig)
           val uriGraphSearcher = mainSearcher.uriGraphSearcher
           val collectionSearcher = mainSearcher.collectionSearcher
