@@ -53,7 +53,6 @@ object Collection {
 case class CollectionSummary(id: Id[Collection], externalId: ExternalId[Collection], name: String)
 
 class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
-  val ExternalIdByteSize = 36
 
   override def writes(prefix: Byte, collections: Seq[CollectionSummary]): Array[Byte] = {
     // 60 is an estimate of the size of a single object (and a bit more).
@@ -65,10 +64,8 @@ class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
 
     collections foreach { collection =>
       outStream.writeLong(collection.id.id) //2 bytes
-      outStream.write(collection.externalId.id.getBytes(UTF8)) //ExternalIdByteSize bytes
-      val name = collection.name.getBytes(UTF8)
-      outStream.writeInt(name.size) //1 byte
-      outStream.write(name) //unknown
+      outStream.writeUTF(collection.externalId.id)
+      outStream.writeUTF(collection.name)
     }
     outStream.writeLong(-1)
     outStream.close()
@@ -80,14 +77,8 @@ class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
     val collections = ListBuffer[CollectionSummary]()
     var idLong = inStream.readLong()
     while (idLong > -1) {
-      val externalIdBuffer = new Array[Byte](ExternalIdByteSize)
-      assume(ExternalIdByteSize == inStream.read(externalIdBuffer, 0, ExternalIdByteSize), s"didn't read the entire external id into buffer of size $ExternalIdByteSize")
-      val externalIdString = new String(externalIdBuffer, UTF8)
-
-      val nameSize = inStream.readInt
-      val nameBuffer = new Array[Byte](nameSize)
-      assume(nameSize == inStream.read(nameBuffer, 0, nameSize), s"didn't read the entire name into buffer of size $nameSize")
-      val nameString = new String(nameBuffer, UTF8)
+      val externalIdString = inStream.readUTF()
+      val nameString = inStream.readUTF()
 
       collections.append(CollectionSummary(Id[Collection](idLong), ExternalId[Collection](externalIdString), nameString))
 
