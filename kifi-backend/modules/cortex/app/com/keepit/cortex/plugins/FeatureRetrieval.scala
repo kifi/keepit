@@ -29,9 +29,10 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
 
     val start = System.currentTimeMillis
     val values = featureStore.batchGet(keys, version)
-    log.info(s"batch retrieved ${keys.size} objects in ${(System.currentTimeMillis - start)/1000f} seconds")
+    val ret = (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}
 
-    (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}
+    log.info(s"batch retrieved ${ret.size}/${keys.size}  objects in ${(System.currentTimeMillis - start)/1000f} seconds")
+    ret
   }
 
   def getSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
