@@ -103,7 +103,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentMessage(userId: Id[User], message: Message, thread: MessageThread, isActuallyNew: Option[Boolean], existingContext: HeimdalContext) = {
+  def sentMessage(sender: MessageSender, message: Message, thread: MessageThread, isActuallyNew: Option[Boolean], existingContext: HeimdalContext) = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
@@ -120,17 +120,26 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("messageId", message.externalId.id)
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
-      shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
-        contextBuilder += ("isKeep", bookmarkOption.isDefined)
-        val context = contextBuilder.build
-        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
-        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
-        heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
 
-        // Anonymized event with page information
-        anonymise(contextBuilder)
-        bookmarkOption.map(_.url) orElse thread.url foreach contextBuilder.addUrlInfo
-        heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+      sender match {
+        case MessageSender.User(userId) => {
+          shoebox.getBookmarkByUriAndUser(thread.uriId.get, userId).foreach { bookmarkOption =>
+            contextBuilder += ("isKeep", bookmarkOption.isDefined)
+            val context = contextBuilder.build
+            heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
+            heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
+            heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
+
+            // Anonymized event with page information
+            anonymise(contextBuilder)
+            bookmarkOption.map(_.url) orElse thread.url foreach contextBuilder.addUrlInfo
+            heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+          }
+        }
+
+        case MessageSender.NonUser(nonUser) => heimdal.trackEvent(NonUserEvent(nonUser.identifier, nonUser.kind, contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+
+        case MessageSender.System => heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.MESSAGED))
       }
     }
   }
@@ -155,10 +164,9 @@ class MessagingAnalytics @Inject() (
     contextBuilder += ("participantsTotal", userParticipants.size + externalParticipants.size)
     contextBuilder += ("userParticipants", userParticipants.map(_.id))
     contextBuilder += ("userParticipantsTotal", userParticipants.size)
-    // To be activated when external messaging is rolled out
-    // contextBuilder += ("otherParticipants", externalParticipants.map(_.identifier))
-    // contextBuilder += ("otherParticipantsTotal", externalParticipants.size)
-    // contextBuilder += ("otherParticipantsKinds", externalParticipants.map(_.kind.name))
+    contextBuilder += ("otherParticipants", externalParticipants.map(_.identifier))
+    contextBuilder += ("otherParticipantsTotal", externalParticipants.size)
+    contextBuilder += ("otherParticipantsKinds", externalParticipants.map(_.kind.name))
   }
 
   private def anonymise(contextBuilder: HeimdalContextBuilder): Unit =
