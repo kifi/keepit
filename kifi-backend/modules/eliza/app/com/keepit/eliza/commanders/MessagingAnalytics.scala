@@ -88,15 +88,17 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def addedParticipantsToConversation(userId: Id[User], newParticipants: Seq[Id[User]], thread: MessageThread, existingContext: HeimdalContext) = {
+  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, existingContext: HeimdalContext) = {
     val addedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "addedParticipants")
       contextBuilder += ("threadId", thread.externalId.id)
-      contextBuilder += ("newParticipants", newParticipants.map(_.id))
-      contextBuilder += ("participantsAdded", newParticipants.length)
+      if (newUserParticipants.nonEmpty) { contextBuilder += ("newUserParticipants", newUserParticipants.map(_.id)) }
+      if (newNonUserParticipants.nonEmpty) { contextBuilder += ("newNonUserParticipants", newNonUserParticipants.map(_.identifier)) }
+      contextBuilder += ("newParticipantKinds", newUserParticipants.map(_ => "user") ++ newNonUserParticipants.map(_.kind.name))
+      contextBuilder += ("participantsAdded", newNonUserParticipants.length)
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))

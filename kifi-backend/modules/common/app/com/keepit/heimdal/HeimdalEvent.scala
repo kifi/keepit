@@ -86,7 +86,7 @@ case class NonUserEvent(
 ) extends HeimdalEvent {
   type E = NonUserEvent
   def companion = NonUserEvent
-  override def toString(): String = s"NonUserEvent[nonUser=$kind|$identifier,type=${eventType.name},time=$time]"
+  override def toString(): String = s"NonUserEvent[nonUser=$kind::$identifier,type=${eventType.name},time=$time]"
 }
 
 case object NonUserEvent extends HeimdalEventCompanion[NonUserEvent] {
