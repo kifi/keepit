@@ -26,7 +26,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.store.{S3ImageStore, ImageSize}
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.eliza.model.MessageHandle
+import com.keepit.common.performance._
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -111,7 +111,7 @@ class KeepsCommander @Inject() (
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
     val keepsWithCollIds = db.readOnly { implicit s =>
-      val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).map(c => c.id.get -> c.externalId).toMap
       keeps.map{ keep =>
         val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
         (keep, collIds)
@@ -280,26 +280,33 @@ class KeepsCommander @Inject() (
     } else None
   }
 
-  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
-    db.readWrite(attempts = 2) { implicit s =>
+  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
+    val result = db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val collection = collectionRepo.get(collectionId)
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
-      val created = (keepsById.keySet -- existing.map(_.keepId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(keepId = bid, collectionId = collectionId))
+      val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
+      val newK2C  = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
+      timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
+        keepToCollectionRepo.insertAll(newK2C.toSeq)
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
-      collectionRepo.collectionChanged(collectionId, (created.size + activated.size) > 0)
-
-      val tagged = (activated ++ created).toSet
+      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
+        collectionRepo.modelChanged(collection, (newK2C.size + activated.size) > 0)
+      }
+      val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
       tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt))
       tagged
-    } tap { _ => searchClient.updateURIGraph() }
+    }
+    if (updateUriGraph) {
+      searchClient.updateURIGraph()
+    }
+    result
   }
 
   def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
@@ -394,9 +401,11 @@ class KeepsCommander @Inject() (
 
     val keepsByTag = keepsByTagName.map { case (tagName, keeps) =>
       val tag = getOrCreateTag(userId, tagName)
-      addToCollection(tag.id.get, keeps)
+      addToCollection(tag.id.get, keeps, updateUriGraph = false)
       tag -> keeps
     }.toMap
+
+    searchClient.updateURIGraph()
 
     keepsByTag
   }

@@ -241,6 +241,7 @@ class UserCommander @Inject() (
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
+        userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
         userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
       }
       searchClient.warmUpUser(newUser.id.get)

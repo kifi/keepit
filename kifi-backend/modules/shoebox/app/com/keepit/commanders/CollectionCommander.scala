@@ -37,7 +37,7 @@ class CollectionCommander @Inject() (
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
     val unsortedCollections = db.readOnly { implicit s =>
-      val colls = collectionRepo.getByUser(userId)
+      val colls = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
       val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id.get).toSet)
       colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id.get).orElse(Some(0))) }
     }
@@ -83,7 +83,7 @@ class CollectionCommander @Inject() (
     userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value =>
       Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
     } getOrElse {
-      val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
+      val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagsByUser(uid).map(_.externalId)
       log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
       userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
       allCollectionIds
@@ -93,7 +93,7 @@ class CollectionCommander @Inject() (
   def setCollectionOrdering(uid: Id[User],
       order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
-    val allCollectionIds = collectionRepo.getByUser(uid).map(_.externalId)
+    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagsByUser(uid).map(_.externalId)
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds

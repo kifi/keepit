@@ -11,7 +11,7 @@ class GraphAdminController @Inject() (
   graphClient: GraphServiceClient
 ) extends AdminController(actionAuthenticator) {
 
-  def ingestion() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def statistics() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val futureStatistics = graphClient.getGraphStatistics()
     val futureUpdaterStates = graphClient.getGraphUpdaterStates()
     for {
@@ -19,7 +19,7 @@ class GraphAdminController @Inject() (
       updaterStates <- futureUpdaterStates
     } yield {
       val allInstances = (statistics.keySet ++ updaterStates.keySet).toSeq
-      Ok(html.admin.graph.graphIngestionView(allInstances, statistics, updaterStates))
+      Ok(html.admin.graph.graphStatisticsView(allInstances, statistics, updaterStates))
 
     }
   }

@@ -21,6 +21,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.strings.humanFriendlyToken
 import org.apache.commons.io.FileUtils
+import com.keepit.common.performance._
 
 class BookmarkImporter @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -58,7 +59,9 @@ class BookmarkImporter @Inject() (
             case Some(source) => keepsCommander.getOrCreateTag(request.userId, "Imported from " + source.value)(context)
             case None => keepsCommander.getOrCreateTag(request.userId, "Imported links")(context)
           }
-          val tags = tagSet.map { tagStr => tagStr.trim -> keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }.toMap
+          val tags = tagSet.map { tagStr =>
+            tagStr.trim -> timing(s"uploadBookmarkFile(${request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(request.userId, tagStr.trim)(context) }
+          }.toMap
           val taggedKeeps = parsed.map { case (t, h, tagNames) =>
             val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
             (t, h, keepTags)

@@ -19,7 +19,7 @@ import com.keepit.common.logging.Logging
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
+  def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
     (implicit session: RSession): Option[Collection]
@@ -29,6 +29,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
+  def modelChanged(c:Collection, isActive:Boolean = false)(implicit session:RWSession)
   def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
 }
 
@@ -61,8 +62,7 @@ class CollectionRepoImpl @Inject() (
   initTable()
 
   override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
-    userCollectionsCache.set(UserCollectionsKey(collection.userId),
-      (for (c <- rows if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
+    userCollectionsCache.remove(UserCollectionsKey(collection.userId))
     bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collection.id.get))
   }
 
@@ -73,10 +73,10 @@ class CollectionRepoImpl @Inject() (
     }
   }
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
-    (userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
-      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
-    }).sortBy(_.lastKeptTo).reverse
+  def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
+    userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
+      (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).take(500).list
+    }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
@@ -126,6 +126,18 @@ class CollectionRepoImpl @Inject() (
 
       // invalidate count cache
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collectionId))
+    }
+  }
+
+  // caller-supplied model
+  def modelChanged(col:Collection, isNewKeep: Boolean = false)(implicit session: RWSession) {
+    if (isNewKeep) {
+      save(col withLastKeptTo clock.now())
+    } else {
+      (for (c <- rows if c.id === col.id.get) yield c.seq).update(sequence.incrementAndGet())
+
+      // invalidate count cache
+      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(col.id.get))
     }
   }
 
