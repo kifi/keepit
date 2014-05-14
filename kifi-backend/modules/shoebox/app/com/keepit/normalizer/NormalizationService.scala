@@ -44,7 +44,7 @@ class NormalizationServiceImpl @Inject() (
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     val relevantCandidates = getRelevantCandidates(currentReference, candidates)
-    log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
+    log.debug(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
     val futureResult = for {
       betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
       betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
@@ -55,10 +55,10 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = {
-    log.info(s"[processUpdate($currentReference,${candidates.mkString(",")})")
+    log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
     val contentChecks = db.readOnly { implicit session =>
       Try { java.net.URI.create(currentReference.url) } match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
-        case Success(uri) => log.info(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
+        case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
         case Failure(t)   => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
       }
       priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
@@ -154,9 +154,9 @@ class NormalizationServiceImpl @Inject() (
             saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
 
           uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
-          log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
+          log.debug(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
         }
-        log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
+        log.debug(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some(betterReference)
       }
       else {
@@ -176,7 +176,7 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def saveAndLog(uri: NormalizedURI)(implicit session: RWSession) =
-    normalizedURIRepo.save(uri) tap { saved => log.info(s"${saved.id.get}: ${saved.url} saved with ${saved.normalization.get}") }
+    normalizedURIRepo.save(uri) tap { saved => log.debug(s"${saved.id.get}: ${saved.url} saved with ${saved.normalization.get}") }
 
   def processAdditionalUpdates(currentReference: NormalizationReference, betterReferenceOption: Option[NormalizationReference]): Future[Option[NormalizationReference]] = {
     val bestReference = betterReferenceOption getOrElse currentReference
