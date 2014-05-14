@@ -770,7 +770,7 @@ api.port.on({
   },
   import_contacts: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
-    mixpanel.track('user_clicked_pane', {type: source, action: 'clickImportContacts'});
+    mixpanel.track('user_clicked_pane', {type: source, action: 'importGmail', source: 'extension', subsource: 'composeTypeahead'});
   },
   screen_capture: function (data, respond) {
     api.screenshot(function (drawableEl, canvas) {
