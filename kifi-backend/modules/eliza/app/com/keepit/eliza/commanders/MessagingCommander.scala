@@ -238,16 +238,7 @@ class MessagingCommander @Inject() (
         sentOnUrl = None,
         sentOnUriId = None
       ))}
-      val nonUserParticipants : Seq[BasicUserLikeEntity] = nonUserRecipients.map(NonUserParticipant.toBasicNonUser)
-      (new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq))).foreach { userParticipants =>
-        basicMessageCommander.getMessageWithBasicUser(message.externalId, message.createdAt, "", message.source, message.auxData, "", "", None, userParticipants.values.toSeq ++ nonUserParticipants).foreach { augmentedMessage =>
-          thread.participants.map(_.allUsers.foreach { userId =>
-            notificationCommander.sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
-          })
-        }
-      }
     }
-
 
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt, nUriOpt, Some(isNew))
 
