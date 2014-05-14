@@ -114,5 +114,5 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
 }
 
 class DevPagePeekerClient @Inject() extends PagePeekerClient {
-  def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] = future{None}
+  def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] = Future.successful(None)
 }

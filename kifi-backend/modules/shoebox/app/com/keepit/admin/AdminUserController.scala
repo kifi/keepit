@@ -657,7 +657,7 @@ class AdminUserController @Inject() (
         properties += ("keeps", keeps)
         properties += ("publicKeeps", publicKeeps)
         properties += ("privateKeeps", privateKeeps)
-        properties += ("tags", collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).length)
+        properties += ("tags", collectionRepo.count(userId))
         properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
         properties += ("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value).toSeq)

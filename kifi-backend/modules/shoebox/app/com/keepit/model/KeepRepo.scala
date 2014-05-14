@@ -28,6 +28,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
+  def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)]
+  def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber[Keep], fetchSize: Int)(implicit session: RSession): Seq[Keep]
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep]
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
@@ -262,6 +264,22 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
 
     val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.source=${source} and updated_at between ${from} and ${to};"
+    sql.as[Int].first
+  }
+
+  def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)] = {
+    import StaticQuery.interpolation
+
+    val sql = sql"""select source, count(*) from bookmark b
+      where b.state = '#${KeepStates.ACTIVE}' and updated_at between ${from} and ${to}
+      group by b.source;"""
+    sql.as[(KeepSource, Int)].list
+  }
+
+  def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+
+    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.is_private = 1 and b.source=${source} and updated_at between ${from} and ${to};"
     sql.as[Int].first
   }
 

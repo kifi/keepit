@@ -69,7 +69,7 @@ class ExtBookmarksController @Inject() (
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
         bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.keeper, request.kifiInstallationId)
-        Ok(Json.toJson(SendableTag from tag))
+        Ok(Json.toJson(SendableTag from tag.summary))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
       }
@@ -81,7 +81,7 @@ class ExtBookmarksController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
     bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.keeper, request.kifiInstallationId)
-    Ok(Json.toJson(SendableTag from tag))
+    Ok(Json.toJson(SendableTag from tag.summary))
   }
 
   def clearTags() = JsonAction.authenticatedParseJson { request =>
@@ -92,7 +92,7 @@ class ExtBookmarksController @Inject() (
 
   def tags() = JsonAction.authenticated { request =>
     val tags = db.readOnly { implicit s =>
-      collectionRepo.getUnfortunatelyIncompleteTagsByUser(request.userId)
+      collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(request.userId)
     }
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }
@@ -100,7 +100,7 @@ class ExtBookmarksController @Inject() (
   def tagsByUrl() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     val tags = bookmarksCommander.tagsByUrl(url, request.userId)
-    Ok(Json.toJson(tags.map(SendableTag.from)))
+    Ok(Json.toJson(tags.map(t => SendableTag.from(t.summary))))
   }
 
   // deprecated: use unkeep
