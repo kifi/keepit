@@ -753,10 +753,24 @@ api.port.on({
       api.tabs.emit(tab, 'hide_external_messaging_intro');
     });
     if (prefs) prefs.showExtMsgIntro = false;
-    mixpanel.track('user_was_notified', {type: source, action: 'click', subaction: action, category: 'extMsgFTUE'});
+    mixpanel.track('user_was_notified', {
+      type: source,
+      action: 'click',
+      subaction: action,
+      channel: 'kifi',
+      subchannel: 'tooltip',
+      category: 'extMsgFTUE'
+    });
   },
   track_showing_external_messaging_intro: function() {
-    mixpanel.track('user_was_notified', {type: source, action: 'open', subaction: action, category: 'extMsgFTUE'});
+    mixpanel.track('user_was_notified', {
+      type: source,
+      action: 'open',
+      subaction: action,
+      channel: 'kifi',
+      subchannel: 'tooltip',
+      category: 'extMsgFTUE'
+    });
   },
   set_show_search_intro: function(show) {
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
@@ -770,7 +784,12 @@ api.port.on({
   },
   import_contacts: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
-    mixpanel.track('user_clicked_pane', {type: source, action: 'importGmail', source: 'extension', subsource: 'composeTypeahead'});
+    mixpanel.track('user_clicked_pane', {
+      type: source,
+      action: 'importGmail',
+      source: 'extension',
+      subsource: 'composeTypeahead'
+    });
   },
   screen_capture: function (data, respond) {
     api.screenshot(function (drawableEl, canvas) {
