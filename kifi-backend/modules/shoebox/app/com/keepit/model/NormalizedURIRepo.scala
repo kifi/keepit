@@ -36,6 +36,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
+  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession): Unit
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
 }
 
@@ -169,7 +170,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
           case uri => uri
         }
-      log.info(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
+      log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
       normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
     }
   }
@@ -198,7 +199,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
-    log.info(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
+    log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     Statsd.time(key = "normalizedURIRepo.internByUri") {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
@@ -222,7 +223,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           newUri
         }
       }
-      log.info(s"[internByUri($url)] resUri=$resUri")
+      log.debug(s"[internByUri($url)] resUri=$resUri")
       resUri
     }
   }
@@ -243,6 +244,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     val newSeq = sequence.incrementAndGet()
     q.update(r, newSeq)
     invalidateCache(get(id).copy(restriction = r, seq = newSeq))
+  }
+
+  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession) = {
+    (for {t <- rows if t.id === id} yield (t.updatedAt, t.screenshotUpdatedAt)).update((clock.now, time))
   }
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {

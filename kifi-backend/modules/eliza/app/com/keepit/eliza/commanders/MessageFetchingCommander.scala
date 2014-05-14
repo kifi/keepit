@@ -76,12 +76,7 @@ class MessageFetchingCommander @Inject() (
   }
 
   def processParticipantsMessage(jsAdderUserId: String, jsAddedUsers: Seq[JsValue], isInitialMessage: Boolean = false) : Future[(String, JsArray)]= {
-    val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition{ json =>
-      json match {
-        case JsNumber(_) => true
-        case _ => false
-      }
-    }
+    val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition(_.isInstanceOf[JsNumber])
     val addedUsers = addedUsersJson.map(id => Id[User](id.as[Long]))
     val addedNonUsers = addedNonUsersJson.map(_.as[NonUserParticipant])
     val adderUserId = Id[User](jsAdderUserId.toLong)
@@ -91,17 +86,17 @@ class MessageFetchingCommander @Inject() (
       val addedUsersString = addedBasicUsers.map{ bule =>
         bule match {
           case bu: BasicUser => s"${bu.firstName} ${bu.lastName}"
-          case nup: BasicNonUser => s"${nup.firstName} ${nup.lastName}"
+          case bnu: BasicNonUser => bnu.lastName.map(ln =>  s"${bnu.firstName.get} $ln").getOrElse(bnu.firstName.get)
           case _ => "Kifi User"
         }
-      } match {
+      }.toList match {
         case first :: Nil => first
         case first :: second :: Nil => first + " and " + second
         case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
       }
       if (isInitialMessage) {
         val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} started a discussion with $addedUsersString on this page."
-        (friendlyMessage, Json.arr("start_with_emails", basicUsers(adderUserId), addedBasicUsers, true))
+        (friendlyMessage, Json.arr("start_with_emails", basicUsers(adderUserId), addedBasicUsers))
       } else {
         val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the discussion."
         (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))

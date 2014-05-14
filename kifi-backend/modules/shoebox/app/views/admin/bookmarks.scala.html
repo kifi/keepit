@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int, todayImportCount: Int, todayUserCount: Int)
+@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI, Option[ScrapeInfo]))], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], privateKeeperKeepCount: Int, counts: Seq[(String, Int)], total: Int)
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 
@@ -48,17 +48,25 @@
   </div>
 }
 
-@admin(count + " Total Keeps") {
+@admin(overallCount + " Total Keeps") {
 
-    <h2>Showing @bookmarksAndUsers.size (page @{page + 1})</h2>
-    <h4>Keeps in the last 24 hours</h4>
-    <ul>
-      <li>Explicit keeps: @{todayUserCount - todayImportCount}</li>
-      <li>Import keeps: @todayImportCount</li>
-      <li>Total keeps: @todayUserCount</li>
-    </ul>
+  <h2>Showing @bookmarksAndUsers.size (page @{page + 1})</h2>
+  <h4>Keeps in the last 24 hours</h4>
+  <ul>
+    @if(keeperKeepCount.nonEmpty) {
+      <li>Keeper keeps: @keeperKeepCount.get (@privateKeeperKeepCount private)</li>
+    }
+    <li>Counts per source:
+      <ul>
+        @for((source, count) <- counts) {
+          <li>@{source}: @{count}</li>
+        }
+      </ul>
+    </li>
+    <li>Total: @total</li>
+  </ul>
 
-@pagination(page, pageCount)
+  @pagination(page, pageCount)
 
   <table class="table table-bordered" style = "clear: both">
     <tr>

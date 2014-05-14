@@ -53,7 +53,6 @@ object SimpleGraph {
       Json.arr(JsNumber(vertexId.id), Json.toJson(vertex))
     )}
     FileUtils.writeLines(graphFile, lines)
-    graphFile
   }
 
   def read(graphFile: File): SimpleGraph = {

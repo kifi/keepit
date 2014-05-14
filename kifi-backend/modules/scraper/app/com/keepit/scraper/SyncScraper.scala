@@ -66,14 +66,14 @@ class SyncScraper @Inject() (
       pageInfoOpt match {
         case None =>
           // may need marker if embedly fails
-          log.info(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] pageInfo=None; update.")
+          log.debug(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] pageInfo=None; update.")
           true
         case Some(pageInfo) =>
           if (Days.daysBetween(currentDateTime, pageInfo.updatedAt).getDays >= 5) {
-            log.info(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] it's been 5 days; pageInfo=$pageInfo; update.")
+            log.debug(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] it's been 5 days; pageInfo=$pageInfo; update.")
             true
           } else {
-            log.info(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] it's not been 5 days; pageInfo=$pageInfo; skipped.")
+            log.debug(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] it's not been 5 days; pageInfo=$pageInfo; skipped.")
             false
           }
       }
@@ -81,7 +81,7 @@ class SyncScraper @Inject() (
   }
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
-    log.info(s"[processURI] scraping ${uri.url} $info")
+    log.debug(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
     if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
@@ -97,7 +97,7 @@ class SyncScraper @Inject() (
         ) {
           // the article does not need to be reindexed update the scrape schedule, uri is not changed
           helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-          log.info(s"[processURI] (${uri.url}) no change detected")
+          log.debug(s"[processURI] (${uri.url}) no change detected")
           (latestUri, None)
         } else {
           // the article needs to be reindexed
@@ -117,7 +117,7 @@ class SyncScraper @Inject() (
           // Report canonical url
           article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
 
-          log.info(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
+          log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
           def shouldUpdateScreenshot(uri: NormalizedURI) = {
             uri.screenshotUpdatedAt map { update =>
@@ -125,17 +125,18 @@ class SyncScraper @Inject() (
             } getOrElse true
           }
           if(shouldUpdateScreenshot(scrapedURI)) {
-            shoeboxClient.updateScreenshotsForUri(scrapedURI)
+            scrapedURI.id map (shoeboxClient.updateScreenshotsForUriId(_))
           }
 
           if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
-            shoeboxClient.getURIImage(uri) map { res => // todo: updateImage
-              log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
-              res
+            scrapedURI.id map { id =>
+              shoeboxClient.getUriImageForUriId(id) map { res =>
+                log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
+              }
             }
           }
 
-          log.info(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
+          log.debug(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
           (scrapedURI, Some(article))
         }
       case NotScrapable(destinationUrl, redirects) =>
@@ -144,12 +145,12 @@ class SyncScraper @Inject() (
           val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
           helper.syncSaveNormalizedUri(toBeSaved)
         }
-        log.info(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
+        log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
         (unscrapableURI, None)
-      case com.keepit.scraper.NotModified =>
+      case NotModified =>
         // update the scrape schedule, uri is not changed
         helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-        log.info(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
+        log.debug(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
         (latestUri, None)
       case Error(httpStatus, msg) =>
         // store a fallback article in a store map
@@ -192,10 +193,9 @@ class SyncScraper @Inject() (
         case _ => fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
         fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
-      }
     }
   }
 
@@ -213,7 +213,7 @@ class SyncScraper @Inject() (
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
-    log.info(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
+    log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
@@ -250,7 +250,7 @@ class SyncScraper @Inject() (
                   }
                 }
               } else {
-                log.info(s"uri ${normalizedUri} is exempted from sensitive check!")
+                log.debug(s"uri ${normalizedUri} is exempted from sensitive check!")
               }
             }
 
@@ -272,7 +272,7 @@ class SyncScraper @Inject() (
               contentLang = Some(contentLang),
               destinationUrl = fetchStatus.destinationUrl)
             val res = Scraped(article, signature, fetchStatus.redirects)
-            log.info(s"[fetchArticle] result=(Scraped(dstUrl=${fetchStatus.destinationUrl} redirects=${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
+            log.debug(s"[fetchArticle] result=(Scraped(dstUrl=${fetchStatus.destinationUrl} redirects=${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
             res
           }
         case HttpStatus.SC_NOT_MODIFIED =>
@@ -318,7 +318,7 @@ class SyncScraper @Inject() (
         updateRedirectRestriction(uri, redirect)
       }
       case Some(permanentRedirect) if permanentRedirect.isAbsolute => {
-        log.info(s"Found permanent $permanentRedirect for $uri")
+        log.debug(s"Found permanent $permanentRedirect for $uri")
         helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
       }
       case relativePermanentRedirectOption =>

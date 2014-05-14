@@ -111,7 +111,7 @@ class KeepsCommander @Inject() (
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
     val keepsWithCollIds = db.readOnly { implicit s =>
-      val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId).map(c => c.id -> c.externalId).toMap
       keeps.map{ keep =>
         val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
         (keep, collIds)
@@ -126,7 +126,7 @@ class KeepsCommander @Inject() (
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
         FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCounts.getOrElse(keep.id.get, 0))
       }
-      (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
+      (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }
   }
 
@@ -201,11 +201,7 @@ class KeepsCommander @Inject() (
         val picName = keeper.pictureName.getOrElse("0")
         imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
           log.info(s"""[WKMK] $keeper using image $userImage""")
-          val pageImageSize = 42
-          val pageImage: String = db.readOnly { implicit s =>
-            imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
-          }
-          val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
+          val bodyHtml = s"""<b>${keeper.fullName}</b> also kept your keep!"""
           val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
           val title = uri.title.get.abbreviate(80)
           eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {

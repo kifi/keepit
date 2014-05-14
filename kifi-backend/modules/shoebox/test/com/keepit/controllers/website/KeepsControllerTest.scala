@@ -265,9 +265,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val expected = Json.parse(s"""
           {"keeps":0,
            "collections":[
-              {"id":"${externalIdForCollection(user.id.get, "myCollaction3")}","name":"myCollaction3","keeps":0},
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction1")}","name":"myCollaction1","keeps":0},
               {"id":"${externalIdForCollection(user.id.get, "myCollaction2")}","name":"myCollaction2","keeps":0},
-              {"id":"${externalIdForCollection(user.id.get, "myCollaction1")}","name":"myCollaction1","keeps":0}
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction3")}","name":"myCollaction3","keeps":0}
             ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
@@ -338,7 +338,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         contentType(result) must beSome("application/json");
 
         val collection = inject[Database].readWrite { implicit session =>
-          val collections = inject[CollectionRepo].getByUser(user.id.get)
+          val collections = inject[CollectionRepo].getUnfortunatelyIncompleteTagSummariesByUser(user.id.get)
           collections.size === 1
           collections.head
         }

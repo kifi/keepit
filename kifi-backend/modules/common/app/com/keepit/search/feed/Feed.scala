@@ -19,3 +19,19 @@ object Feed {
     (__ \'totalKeepersSize).format[Int]
   )(Feed.apply, unlift(Feed.unapply))
 }
+
+object FeedResult {
+  def v1(feeds: Seq[Feed]): JsValue = {
+    val jsVals = feeds.map{ feed =>
+      val title = feed.uri.title.getOrElse("No Title")
+      Json.obj(
+        "title" -> title,
+        "url" -> feed.uri.url,
+        "sharingUsers" -> feed.sharingUsers,
+        "firstKeptAt" -> feed.firstKeptAt,
+        "totalKeeperSize" -> feed.totalKeepersSize
+      )
+    }
+    JsArray(jsVals)
+  }
+}
