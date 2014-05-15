@@ -13,8 +13,8 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       val updater = new FeatureUpdater[Id[Foo], Foo, FakeModel](
           fooRepresenter, fooFeatStore, commitStore, fakePuller){
-        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.id)
-        def genFeatureKey(foo: Foo) = foo.id
+        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
+        def genFeatureKey(foo: Foo) = foo.id.get
       }
 
       updater.update()
@@ -22,7 +22,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
       val retriever = new FeatureRetrieval[Id[Foo], Foo, FakeModel](
         fooFeatStore, commitStore, fakePuller
       ){
-        def genFeatureKey(foo: Foo) = foo.id
+        def genFeatureKey(foo: Foo) = foo.id.get
       }
 
       val version = fooRepresenter.version
@@ -36,6 +36,44 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
       reps.size === 10
       reps.last._2.vectorize === Array(500f, 500f)
 
+    }
+
+    "tricky retrieval works" in {
+       val (fooRepresenter, fooOddFeatStore, commitStore, fakePuller) = setup2()
+
+      val updater = new FeatureUpdater[Id[Foo], Foo, FakeModel](
+          fooRepresenter, fooOddFeatStore, commitStore, fakePuller){
+        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
+        def genFeatureKey(foo: Foo) = foo.id.get
+      }
+
+      updater.update()
+
+      val retriever = new FeatureRetrieval[Id[Foo], Foo, FakeModel](
+        fooOddFeatStore, commitStore, fakePuller
+      ){
+        def genFeatureKey(foo: Foo) = foo.id.get
+      }
+
+      val version = fooRepresenter.version
+
+      // tricky version is better
+      var reps = retriever.getSince(SequenceNumber[Foo](0), 10, version)
+      reps.size === 4
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 13, 3)
+
+      reps = retriever.trickyGetSince(SequenceNumber[Foo](0), 10, version)
+      reps.size === 10
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 30, 3)
+
+      // exhausted
+      reps = retriever.getSince(SequenceNumber[Foo](450), 100, version)
+      reps.size === 17
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 3)
+
+      reps = retriever.trickyGetSince(SequenceNumber[Foo](450), 100, version)
+      reps.size === 17
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 3)
     }
   }
 }
