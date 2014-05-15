@@ -134,4 +134,13 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
       }
     }
   }
+
+  "Key" should {
+    "escape strings" in {
+      TestJsonCacheKey("foo").toString === "json_test_cache%1#foo"
+      TestJsonCacheKey("foo bar").toString === "json_test_cache%1#foo+bar"
+      TestJsonCacheKey("foo+bar").toString === "json_test_cache%1#foo++bar"
+      TestJsonCacheKey("foo++bar").toString === "json_test_cache%1#foo++++bar"
+    }
+  }
 }
