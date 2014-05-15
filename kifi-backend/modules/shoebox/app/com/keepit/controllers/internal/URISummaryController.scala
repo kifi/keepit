@@ -5,21 +5,26 @@ import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticat
 import com.keepit.commanders.URISummaryCommander
 import play.api.mvc.Action
 import play.api.libs.json.Json
-import com.keepit.model.{URISummaryRequest, NormalizedURI}
+import com.keepit.model.{NormalizedURIRepo, URISummaryRequest, NormalizedURI}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 
 class URISummaryController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  uriSummaryCommander: URISummaryCommander) extends ShoeboxServiceController {
+  uriSummaryCommander: URISummaryCommander,
+  normalizedUriRepo: NormalizedURIRepo,
+  db: Database) extends ShoeboxServiceController {
 
-  def updateURIScreenshots() = Action(parse.tolerantJson) { request =>
-    val normalizedUri = Json.fromJson[NormalizedURI](request.body).get
-    uriSummaryCommander.updateScreenshots(normalizedUri)
+  def updateUriScreenshotsForUriId(id: Id[NormalizedURI]) = Action { request =>
+    val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
+    uriSummaryCommander.updateScreenshots(nUri)
     Status(202)("0")
   }
 
-  def getURIImage() = Action.async(parse.tolerantJson) { request =>
-    val urlFut = uriSummaryCommander.getURIImage(Json.fromJson[NormalizedURI](request.body).get)
+  def getUriImageForUriId(id: Id[NormalizedURI]) = Action.async { request =>
+    val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
+    val urlFut = uriSummaryCommander.getURIImage(nUri)
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
 

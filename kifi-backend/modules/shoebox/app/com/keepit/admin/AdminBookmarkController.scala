@@ -201,7 +201,13 @@ class AdminBookmarksController @Inject() (
       val pageCount: Int = overallCount / PAGE_SIZE + 1
       val keeperKeepCount = counts.filter(_._1 == KeepSource.keeper).headOption.map(_._2)
       val total = counts.map(_._2).sum
-      Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, privateKeeperKeepCount, counts, total))
+      val tweakedCounts = counts.map {
+        case cnt if cnt._1 == KeepSource.bookmarkFileImport => ("Unknown/other file import", cnt._2)
+        case cnt if cnt._1 == KeepSource.bookmarkImport => ("Browser bookmark import", cnt._2)
+        case cnt if cnt._1 == KeepSource.default => ("Default new user keeps", cnt._2)
+        case cnt => (cnt._1.value, cnt._2)
+      }.sortBy(v => -v._2)
+      Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, privateKeeperKeepCount, tweakedCounts, total))
     }
   }
 }
