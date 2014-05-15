@@ -120,6 +120,7 @@ class MessagingAnalytics @Inject() (
 
       contextBuilder += ("threadId", thread.externalId.id)
       contextBuilder += ("messageId", message.externalId.id)
+      message.source.foreach { source => contextBuilder += ("source", source.value) }
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
 
