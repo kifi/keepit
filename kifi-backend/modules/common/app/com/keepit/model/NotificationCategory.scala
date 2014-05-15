@@ -6,6 +6,19 @@ import com.keepit.common.mail.ElectronicMailCategory
 case class NotificationCategory(category: String)
 object NotificationCategory {
   val ALL = NotificationCategory("all")
+
+  object ParentCategory {
+    // Parent Categories used in analytics
+    val fromKifi = User.fromKifi
+    val fromFriends = User.fromFriends ++ NonUser.fromFriends
+    val aboutFriends = User.aboutFriends
+    val parentCategory: Map[NotificationCategory, String] = {
+      Map.empty ++ fromKifi.map(_ -> "fromKifi") ++ fromFriends.map(_ -> "fromFriends") ++ aboutFriends.map(_ -> "aboutFriends")
+    }
+
+    def get(notificationCategory: NotificationCategory): Option[String] = parentCategory.get(notificationCategory)
+  }
+
   object User {
     val ANNOUNCEMENT = NotificationCategory("announcement")
     val WAITLIST = NotificationCategory("waitlist")
@@ -29,8 +42,7 @@ object NotificationCategory {
     val fromKifi = Set(ANNOUNCEMENT, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP, WHO_KEPT_MY_KEEP)
     val fromFriends = Set(INVITATION, MESSAGE, FRIEND_REQUEST, FRIEND_ACCEPTED)
     val aboutFriends = Set(FRIEND_JOINED)
-    val parentCategory: Map[NotificationCategory, String] =
-      Map.empty ++ fromKifi.map(_ -> "fromKifi") ++ fromFriends.map(_ -> "fromFriends") ++ aboutFriends.map(_ -> "aboutFriends")
+
 
     // Formatting Categories used in the extension
     val triggered = Set(FRIEND_ACCEPTED, FRIEND_JOINED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP)
@@ -53,6 +65,9 @@ object NotificationCategory {
     val DISCUSSION_UPDATES = NotificationCategory("discussion_updates")
 
     val all = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION)
+
+    // Formatting Categories used in the extension
+    val fromFriends = Set(INVITATION, DISCUSSION_STARTED, ADDED_TO_DISCUSSION, DISCUSSION_UPDATES)
   }
 
   implicit def toElectronicMailCategory(category: NotificationCategory): ElectronicMailCategory = ElectronicMailCategory(category.category)
