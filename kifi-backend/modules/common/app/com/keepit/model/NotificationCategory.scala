@@ -46,6 +46,15 @@ object NotificationCategory {
     val all = Set(HEALTHCHECK, ADMIN, PLAY, SCRAPER)
   }
 
+  object NonUser {
+    val INVITATION = NotificationCategory("invitation")
+    val DISCUSSION_STARTED = NotificationCategory("discussion_started")
+    val ADDED_TO_DISCUSSION = NotificationCategory("added_to_discussion")
+    val DISCUSSION_UPDATES = NotificationCategory("discussion_updates")
+
+    val all = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION)
+  }
+
   implicit def toElectronicMailCategory(category: NotificationCategory): ElectronicMailCategory = ElectronicMailCategory(category.category)
   implicit def fromElectronicMailCategory(category: ElectronicMailCategory): NotificationCategory = NotificationCategory(category.category)
   implicit val format: Format[NotificationCategory] = Format(

@@ -53,8 +53,8 @@ class EmailOptOutController @Inject() (
           db.readWrite { implicit session =>
             all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, NotificationCategory.ALL) }
               .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.ALL) }
-            invite.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.INVITATION) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.INVITATION) }
+            invite.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.NonUser.INVITATION) }
+              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.NonUser.INVITATION) }
             message.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.MESSAGE) }
               .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.MESSAGE) }
           }

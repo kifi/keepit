@@ -12,10 +12,14 @@ import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import play.api.Plugin
 import com.keepit.model._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.heimdal._
 import com.keepit.common.time._
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.Some
+import com.keepit.common.mail.ProcessOutbox
+import com.keepit.common.mail.ProcessMail
+import com.keepit.social.NonUserKinds
 
 trait MailSenderPlugin {
   def processMail(mail: ElectronicMail)
@@ -112,32 +116,51 @@ private[mail] class MailSenderActor @Inject() (
       }
     }
   }
+  private val notificationsToBeReported = NotificationCategory.User.all ++ NotificationCategory.NonUser.all
+  private def reportEmailNotificationSent(email: ElectronicMail): Unit = {
+    if (notificationsToBeReported.contains(email.category)) {
+      val sentAt = currentDateTime
+      SafeFuture {
+        val contextBuilder =  heimdalContextBuiler()
+        contextBuilder += ("action", "sent")
+        contextBuilder.addEmailInfo(email)
 
-  private def reportEmailNotificationSent(email: ElectronicMail): Unit = if (NotificationCategory.User.all.contains(email.category)) {
-    val sentAt = currentDateTime
-    SafeFuture {
-      val contextBuilder =  heimdalContextBuiler()
-      contextBuilder += ("action", "sent")
-      contextBuilder.addEmailInfo(email)
+        val (to, cc) = db.readOnly { implicit session =>
+          val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address => emailAddressRepo.getByAddress(address.address) match {
+            case Seq.empty => Seq(Right(address.address))
+            case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
+          }}
 
-      val (toUsers, ccUsers) = db.readOnly { implicit session =>
-        val cc = for {
-          address <- email.cc
-          userId <- emailAddressRepo.getByAddress(address.address).map(_.userId)
-        } yield userId
+          val to: Seq[Either[Id[User], String]] = email.to.flatMap { address => emailAddressRepo.getByAddress(address.address) match {
+            case Seq.empty => Seq(Right(address.address))
+            case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
+          }}
 
-        val to = for {
-          address <- email.to
-          userId <- emailAddressRepo.getByAddress(address.address).map(_.userId)
-        } yield userId
+          (to, cc)
+        }
 
-        (to, cc)
+        val toUsers = to.collect { case Left(userId) => userId }
+        val toNonUsers = to.collect { case Right(address) => address }
+
+        val ccUsers = cc.collect { case Left(userId) => userId }
+        val ccNonUsers = cc.collect { case Right(address) => address }
+
+        if (toUsers.nonEmpty) { contextBuilder += ("toUsers", toUsers.map(_.id)) }
+        if (toNonUsers.nonEmpty) { contextBuilder += ("toNonUsers", toNonUsers) }
+
+        if (ccUsers.nonEmpty) { contextBuilder += ("ccUsers", ccUsers.map(_.id)) }
+        if (ccNonUsers.nonEmpty) { contextBuilder += ("ccNonUsers", ccNonUsers) }
+
+        val context = contextBuilder.build
+
+        if (NotificationCategory.User.all.contains(email.category)) {
+          (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
+        }
+
+        if (NotificationCategory.NonUser.all.contains(email.category)) {
+          (toNonUsers ++ ccNonUsers).toSet[String].foreach { address => heimdal.trackEvent(NonUserEvent(address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, sentAt)) }
+        }
       }
-
-      contextBuilder += ("to", toUsers.map(_.id))
-      if (ccUsers.nonEmpty) { contextBuilder += ("cc", ccUsers.map(_.id)) }
-      val context = contextBuilder.build
-      (toUsers ++ ccUsers).toSet[Id[User]].foreach { userId => heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
   }
 }
