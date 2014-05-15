@@ -34,7 +34,7 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread]
 
-  def countThreadsByCreator(creator: Id[User], since: DateTime, distinctRecipients: Boolean)(implicit session: RSession): Int
+  def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddressHolder, Int]
 
 }
 
@@ -143,10 +143,10 @@ class NonUserThreadRepoImpl @Inject() (
     (for (row <- rows if row.accessToken===token) yield row).firstOption
   }
 
-  def countThreadsByCreator(creator: Id[User], since: DateTime, distinctRecipients: Boolean)(implicit session: RSession): Int = {
-    val threads = (for (row <- rows if row.createdBy === creator && row.createdAt > since) yield row.emailAddress)
-    val threadCount = if (distinctRecipients) threads.countDistinct else threads.length
-    threadCount.run
+  def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddressHolder, Int] = {
+    val relevantThreads = (for (row <- rows if row.createdBy === userId && row.createdAt > since) yield row)
+    val recentRecipients = relevantThreads.groupBy(_.emailAddress).map { case (recipient, threads) => (recipient, threads.length) }
+    recentRecipients.run.toMap
   }
 
 }
