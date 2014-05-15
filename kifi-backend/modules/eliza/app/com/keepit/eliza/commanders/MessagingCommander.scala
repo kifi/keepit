@@ -28,6 +28,7 @@ import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
+import scala.util.{Failure, Success}
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -175,9 +176,9 @@ class MessagingCommander @Inject() (
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
     val pimpedParticipants = nonUsers.map {
       case email: NonUserEmailParticipant =>
-        abookServiceClient.getEContactByEmail(userId, email.address.address).map {
-          case Some(eContact) => email.copy(econtactId = eContact.id)
-          case None => email // todo: Wire it up to create contact!
+        abookServiceClient.getOrCreateEContact(userId, email.address.address).map {
+          case Success(eContact) => email.copy(econtactId = eContact.id)
+          case Failure(_) => email
         }
     }
     Future.sequence(pimpedParticipants)
@@ -389,7 +390,13 @@ class MessagingCommander @Inject() (
   }
 
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], addresses: Seq[String], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
-    new SafeFuture(shoebox.getUserIdsByExternalIds(newParticipantsExtIds) map { newParticipantsUserIds =>
+    val newUserParticipantsFuture = constructUserRecipients(newParticipantsExtIds)
+    val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None)))
+
+    val haveBeenAdded = for {
+      newUserParticipants <- newUserParticipantsFuture
+      newNonUserParticipants <- newNonUserParticipantsFuture
+    } yield {
       val resultInfoOpt = db.readWrite{ implicit session =>
 
         val oldThread = threadRepo.get(threadExtId)
@@ -398,9 +405,8 @@ class MessagingCommander @Inject() (
           throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
         }
 
-        val nups = addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None))
-        val actuallyNewUsers = newParticipantsUserIds.filterNot(oldThread.containsUser)
-        val actuallyNewNonUsers = nups.filterNot(oldThread.containsNonUser)
+        val actuallyNewUsers = newUserParticipants.filterNot(oldThread.containsUser)
+        val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
 
         if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
@@ -439,10 +445,10 @@ class MessagingCommander @Inject() (
 
       }
 
-    }, Some("Adding Participants to Thread"))
+    }
+
+    new SafeFuture[Boolean](haveBeenAdded, Some("Adding Participants to Thread"))
   }
-
-
 
   def setRead(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
     val (message: Message, thread: MessageThread) = db.readOnly { implicit session =>
@@ -563,9 +569,12 @@ class MessagingCommander @Inject() (
     context: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
+    val userRecipientsFuture = constructUserRecipients(userExtRecipients)
+    val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
+
     val resFut = for {
-      userRecipients <- constructUserRecipients(userExtRecipients)
-      nonUserRecipients <- constructNonUserRecipients(userId, nonUserRecipients)
+      userRecipients <- userRecipientsFuture
+      nonUserRecipients <- nonUserRecipientsFuture
     } yield {
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
       val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
