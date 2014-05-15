@@ -83,15 +83,21 @@
     padding-left: 42px !important;
     padding-top: 10px !important;
   }
-
   table[class=beStillMyBeatingHeart-left] {
     width: 15% !important;
   }
-
   table[class=beStillMyBeatingHeart-right] {
     width: 85% !important;
   }
-
+  td[class=min_image] {
+    width: 100% !important;
+    height: initial !important;
+  }
+  img[class=min_image] {
+    width: 100% !important;
+    height: initial !important;
+    padding-bottom: 5px !important;
+  }
   }
    @@media only screen and (min-width:480px) and (max-width:599px) {
   table[class=wrapper] {
@@ -142,15 +148,21 @@
     padding-left: 42px !important;
     padding-top: 10px !important;
   }
-
   table[class=beStillMyBeatingHeart-left] {
     width: 15% !important;
   }
-
   table[class=beStillMyBeatingHeart-right] {
     width: 85% !important;
   }
-
+  td[class=min_image] {
+    width: 100% !important;
+    height: initial !important;
+  }
+  img[class=min_image] {
+    width: 100% !important;
+    height: initial !important;
+    padding-bottom: 5px !important;
+  }
   }
   </style>
 </head>
@@ -209,10 +221,15 @@
                                             <tr>
                                               <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                 @threadInfo.pageDescription.map{ pageDescription =>
+                                                @threadInfo.heroImageUrl.map{ heroImageUrl =>
+                                                  <tr>
+                                                    <td class="min_image" style="width: 0px;" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img class="min_image" src="https:@heroImageUrl" style="display:block; width: 0px;" title="Visit @threadInfo.pageName" border="0" /></a></td>
+                                                  </tr>
+                                                }
                                                   <tr>
                                                     @threadInfo.heroImageUrl.map{ heroImageUrl =>
-                                                      <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="183" class="img_1" style="display:block;" border="0" title="Visit @threadInfo.pageName"/></a></td>
-                                                      <td width="18" class="width">&nbsp;</td>
+                                                      <td class="hide" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="183" class="img_1" style="display:block;" border="0" title="Visit @threadInfo.pageName"/></a></td>
+                                                      <td width="18" class="hide">&nbsp;</td>
                                                     }
                                                     <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                         <tr>
