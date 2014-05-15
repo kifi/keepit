@@ -34,7 +34,7 @@ class SharedWsMessagingController @Inject() (
     protected val websocketRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
-    kifInstallationStore: KifInstallationStore,
+    protected val kifInstallationStore: KifInstallationStore,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
