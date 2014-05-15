@@ -10,6 +10,7 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.Future
 
 trait NonUserEventLoggingRepo extends EventRepo[NonUserEvent]
 
@@ -18,11 +19,26 @@ class ProdNonUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: 
   val warnBufferSize = 500
   val maxBufferSize = 10000
 
+  private val augmentors = Seq(NonUserIdentifierAugmentor)
+
   def toBSON(event: NonUserEvent) : BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
   def fromBSON(bson: BSONDocument): NonUserEvent = ???
+
+  override def persist(nonUserEvent: NonUserEvent): Unit =
+    EventAugmentor.safelyAugmentContext(nonUserEvent, augmentors: _*).foreach { augmentedContext =>
+      super.persist(nonUserEvent.copy(context = augmentedContext))
+    }
 }
 
 trait NonUserEventDescriptorRepo extends EventDescriptorRepo[NonUserEvent]
+
+object NonUserIdentifierAugmentor extends EventAugmentor[NonUserEvent] {
+  def isDefinedAt(nonUserEvent: NonUserEvent) = true
+  def apply(nonUserEvent: NonUserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq(
+    "nonUserIdentifier" -> ContextStringData(nonUserEvent.identifier),
+    "nonUserKind" -> ContextStringData(nonUserEvent.kind.name)
+  ))
+}
 
 class ProdNonUserEventDescriptorRepo(val collection: BSONCollection, cache: NonUserEventDescriptorNameCache, protected val airbrake: AirbrakeNotifier) extends ProdEventDescriptorRepo[NonUserEvent] with NonUserEventDescriptorRepo {
   override def upsert(obj: EventDescriptor) = super.upsert(obj) map { _ tap { _ => cache.set(NonUserEventDescriptorNameKey(obj.name), obj) } }

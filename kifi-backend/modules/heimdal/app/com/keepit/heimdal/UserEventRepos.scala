@@ -11,7 +11,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model.{Gender, KifiInstallation, User}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.util.{Failure, Success}
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import com.keepit.common.usersegment.UserSegment
