@@ -15,8 +15,8 @@ var formatMessage = (function () {
   var formatAsHtml =
     processLineBreaksThen.bind(null,
       processKifiSelMarkdownToLinksThen.bind(null,
-        processEmailAddressesThen.bind(null,
-          processUrls.bind(null,
+        processUrlsThen.bind(null,
+          processEmailAddressesThen.bind(null,
             processEmoji)),
         processEmoji));
 
@@ -91,16 +91,21 @@ var formatMessage = (function () {
     }
   }
 
-  function processUrls(process, text) {
+  function processUrlsThen(process, text) {
     var parts = text.split(uriRe);
     for (var i = 1; i < parts.length; i += 3) {
       var uri = parts[i];
       var scheme = parts[i+1];
-      var escapedUri = Mustache.escape(uri);
-      var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
-      parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
-        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" src="' + escapedUrl + '"/>' : escapedUri);
-      parts[i+1] = '</a>';
+      if (scheme || uri.indexOf('/') > 0 || parts[i-1].lastIndexOf('@', parts[i-1].length - 1) <= 0) {
+        var escapedUri = Mustache.escape(uri);
+        var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
+        parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
+          (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" src="' + escapedUrl + '"/>' : escapedUri);
+        parts[i+1] = '</a>';
+      } else {
+        parts[i-1] += uri;
+        parts[i] = parts[i+1] = '';
+      }
     }
     for (i = 0; i < parts.length; i += 3) {
       parts[i] = process(parts[i]);
