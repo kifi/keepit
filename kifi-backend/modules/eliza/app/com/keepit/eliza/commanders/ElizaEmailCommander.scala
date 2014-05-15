@@ -121,7 +121,7 @@ class ElizaEmailCommander @Inject() (
         hostOpt map { host =>
           def nameForSuffixLength(n: Int) = DomainToNameMapper.getName(host.domain.take(n).reverse.mkString("."))
           // Attempts to map more restrictive subdomains first
-          val candidates = (host.domain.length until 2 by -1).toStream map nameForSuffixLength
+          val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
           candidates.collectFirst{case Some(name) => name}.getOrElse(host.name)
         }
       }.getOrElse("")
