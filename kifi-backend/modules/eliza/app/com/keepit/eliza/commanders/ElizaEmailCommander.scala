@@ -44,6 +44,7 @@ import scala.Some
 import com.keepit.eliza.model.ThreadEmailInfo
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.eliza.mail.DomainToNameMapper
 
 
 class ElizaEmailCommander @Inject() (
@@ -115,7 +116,15 @@ class ElizaEmailCommander @Inject() (
 
       val participants = allUsers.values.map{ u => u.fullName } ++ nuts.map{ nut => nut.participant.fullName }
 
-      val pageName = thread.nUrl.flatMap( url => URI.parse(url).toOption.flatMap( uri => uri.host.map(_.name)) ).get
+      val pageName = thread.nUrl.flatMap{ url =>
+        val hostOpt = URI.parse(url).toOption.flatMap(_.host)
+        hostOpt map { host =>
+          def nameForSuffixLength(n: Int) = DomainToNameMapper.getName(host.domain.take(n).reverse.mkString("."))
+          // Attempts to map more restrictive subdomains first
+          val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
+          candidates.collectFirst{case Some(name) => name}.getOrElse(host.name)
+        }
+      }.getOrElse("")
 
       val messages = messageFetchingCommander.getThreadMessages(thread)
 
