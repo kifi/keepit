@@ -149,7 +149,7 @@
               <tr>
                 <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">
                   You were added to a discussion with
-                  <span style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@{threadInfo.participants.mkString(", ")}</span>
+                  @smartEmailParticipantsList(threadInfo.participants)
                   on
                   <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a>
                   using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>
@@ -180,20 +180,20 @@
                                               <td style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;">@threadInfo.pageTitle</td>
                                             </tr>
                                             <tr>
-                                              <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                              <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                             </tr>
                                             <tr>
-                                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:14px;">@threadInfo.pageName</td>
+                                              <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;"><a style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px; text-decoration:none;" href="@threadInfo.pageUrl" target="_blank">@threadInfo.pageName</a></td>
                                             </tr>
                                             <tr>
-                                              <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                              <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                             </tr>
                                             <tr>
                                               <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                                 @threadInfo.pageDescription.map{ pageDescription =>
                                                   <tr>
                                                     @threadInfo.heroImageUrl.map{ heroImageUrl =>
-                                                      <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="183" class="img_1" style="display:block;" border="0" /></a></td>
+                                                      <td class="img_1" width="183" valign="top"><a href="@threadInfo.pageUrl" target="_blank"><img src="https:@heroImageUrl" width="183" class="img_1" style="display:block;" border="0" title="Visit @threadInfo.pageName"/></a></td>
                                                       <td width="18" class="width">&nbsp;</td>
                                                     }
                                                     <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
@@ -201,7 +201,7 @@
                                                           <td class="txt_1" valign="top" style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;">@pageDescription</td>
                                                         </tr>
                                                         <tr>
-                                                          <td height="6" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                                          <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                                         </tr>
                                                         <tr>
                                                           <td class="txt_2" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;"><a href="@threadInfo.pageUrl" class="txt_2" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:14px;text-decoration:underline;">Visit this page</a></td>
@@ -210,6 +210,9 @@
                                                           <td height="22"></td>
                                                         </tr>
                                                       </table></td>
+                                                  </tr>
+                                                  <tr>
+                                                    <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                                   </tr>
                                                 }
                                               </table></td>
@@ -227,9 +230,6 @@
                             <td width="2" bgcolor="#f3f3f3"></td>
                           </tr>
                         </table></td>
-                    </tr>
-                    <tr>
-                      <td height="2" bgcolor="#f3f3f3" style="line-height:1px;font-size:1px;">&nbsp;</td>
                     </tr>
                   </table></td>
               </tr>
@@ -343,7 +343,12 @@
                             <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
                                 <tr>
                                   <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br class="br" />
-                                    View our <a href="https://www.kifi.com/privacy" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>. Click here <a href="@threadInfo.unsubUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a> from friends’ messages like this.<br class="br" />
+                                    View our <a href="https://www.kifi.com/privacy" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>. Click here to
+                                    @threadInfo.unsubUrl.map{ unsubUrl =>
+                                      <a href="unsubUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a>
+                                    }.getOrElse {
+                                      <span style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</span>
+                                    }                                    from friends’ messages like this.<br class="br" />
                                     &copy; 2014 FortyTwo, Inc, All rights reserved.</td>
                                 </tr>
                               </table></td>
