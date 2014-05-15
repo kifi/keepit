@@ -45,6 +45,7 @@ class PlayCacheApi(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTw
 
 case class PlayCacheKey(key: String) extends Key[Any] {
   val namespace = "play_cache"
+  override val version: Int = 2
   def toKey() = key
 }
 

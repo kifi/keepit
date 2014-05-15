@@ -48,7 +48,7 @@ object EmailAddressStates {
 }
 
 case class VerifiedEmailUserIdKey(address: String) extends Key[Id[User]] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_id_by_verified_email"
   def toKey(): String = address
 }
