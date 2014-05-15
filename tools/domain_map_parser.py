@@ -4,9 +4,9 @@ import sys
 import operator
 
 """
-  Text a .tsv file as input, containing site names in the first column and
-  domain names or urls in the second column, and outputs a domain -> name map
-  in Scala format, with duplicates and removed and 'www' stripped off where
+  Takes a .tsv file as input, containing actual site names in the first column
+  and domain names or urls in the second column, and outputs a domain -> name
+  map in Scala format, with duplicates and removed and 'www' stripped off where
   necessary. Entries are sorted alphabetically by site name.
 """
 
