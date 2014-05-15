@@ -47,6 +47,11 @@ import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 
 
+abstract class MessageSegment(val kind: String) //for use in templates since you can't match on type (it seems)
+case class TextLookHereSegment(msgText: String, pageText: String) extends MessageSegment("tlh")
+case class ImageLookHereSegment(msgText: String, imgUrl: String) extends MessageSegment("ilh")
+case class TextSegment(txt: String) extends MessageSegment("txt")
+
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     db: Database,
@@ -57,11 +62,12 @@ class ElizaEmailCommander @Inject() (
     threadRepo: MessageThreadRepo
   ) {
 
-  case class CleanedMessage(cleanText: String, lookHereTexts: Seq[String], lookHereImageUrls: Seq[String])
+
+
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  private def parseMessage(msg: String): CleanedMessage = {
+  private def parseMessage(msg: String): Seq[MessageSegment] = {
     val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
     var textLookHeres = Vector[String]()
     var imageLookHereUrls = Vector[String]()
@@ -74,8 +80,8 @@ class ElizaEmailCommander @Inject() (
         case "r" => textLookHeres = textLookHeres :+ payload
         case _ => throw new Exception("Unknown look-here type: " + kind)
       }
-    }
-    CleanedMessage(re.replaceAllIn(msg, (m: Match) => m.group(1)), textLookHeres, imageLookHereUrls)
+    } //ZZZ not actually correct segments
+    Seq[MessageSegment](TextSegment(re.replaceAllIn(msg, (m: Match) => m.group(1)))) ++ textLookHeres.map(TextLookHereSegment("", _)) ++ imageLookHereUrls.map(ImageLookHereSegment("", _))
   }
 
 
@@ -155,11 +161,11 @@ class ElizaEmailCommander @Inject() (
       }
 
       val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
-        val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
+        val messageSegments = parseMessage(message.messageText)
         message.from match {
-          case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), text, lookHereTexts, lookHereImageUrls)
+          case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
           case MessageSender.NonUser(nup) => {
-            ExtendedThreadItem(nup.shortName, nup.fullName, None, text, lookHereTexts, Seq.empty)
+            ExtendedThreadItem(nup.shortName, nup.fullName, None, messageSegments)
           }
           case _ => throw new Exception("Impossible")
         }
