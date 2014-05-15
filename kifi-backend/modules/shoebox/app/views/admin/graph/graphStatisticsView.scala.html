@@ -15,7 +15,7 @@
     </table>
 
   <h3>Edge Statistics</h3>
-    <p><i>Showing by instance: (edge count, average source outgoing degree, average destination incoming degree)</i></p>
+    <p><i>Showing by instance: (edge count, source average outgoing degree, destination average incoming degree)</i></p>
     <table class = "table table-bordered">
       <tr> <th>Edge</th> @allInstances.map { instanceId => <th>@instanceId</th> } </tr>
       @statistics.values.flatMap(_.edgeStatistics.keySet).toSet.map { edgeType: (String, String, String) => @edgeType match { case (sourceKind, destinationKind, edgeKind) =>

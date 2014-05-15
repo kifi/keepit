@@ -21,11 +21,6 @@ class URIPullerImpl @Inject()(
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
     Await.result(shoebox.getScrapedFullURIs(lowSeq, limit), 5 seconds)
   }
-  def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = {
-    val limit = (highSeq.value - lowSeq.value).toInt
-    val uris = Await.result(shoebox.getScrapedFullURIs(lowSeq, limit), 5 seconds)
-    uris.filter(_.seq <= highSeq)
-  }
 }
 
 abstract class URIFeatureUpdater[M <: StatModel](

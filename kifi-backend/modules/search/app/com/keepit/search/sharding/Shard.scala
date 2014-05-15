@@ -13,8 +13,14 @@ case class Shard[T](shardId: Int, numShards: Int) {
   def contains(id: Id[T]): Boolean = ((id.id % numShards.toLong) == shardId.toLong)
 }
 
-case class ActiveShards(shards: Set[Shard[NormalizedURI]]) {
-  def find(id: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(_.contains(id))
+case class ActiveShards(local: Set[Shard[NormalizedURI]]) {
+  def find(id: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = local.find(_.contains(id))
+
+  lazy val all = {
+    val numShards = local.head.numShards
+    (0 until numShards).map{ i => Shard[NormalizedURI](i, numShards) }.toSet
+  }
+  lazy val remote = all -- local
 }
 
 object ShardSpec {
