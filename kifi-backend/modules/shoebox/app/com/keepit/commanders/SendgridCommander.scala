@@ -65,6 +65,7 @@ class SendgridCommander @Inject() (
       lazy val context = {
         val contextBuilder =  heimdalContextBuilder()
         contextBuilder += ("action", eventType)
+        event.url.foreach { url => contextBuilder += ("clicked", clicked(url)) }
         contextBuilder.addEmailInfo(email)
         contextBuilder.build
       }
@@ -90,5 +91,13 @@ class SendgridCommander @Inject() (
     }
     emailAlert(event, emailOpt)
     sendHeimdalEvent(event, emailOpt)
+  }
+
+  private def clicked(url: String): String = url.toLowerCase match {
+    case kifi if kifi.contains("kifi.com") => url
+    case facebook if facebook.contains("facebook.com/pages/kifi") => "Kifi Facebook Page"
+    case twitter if twitter.contains("twitter.com/kifi") => "Kifi Twitter Page"
+    case linkedin if linkedin.contains("linkedin.com/company/fortytwo") => "Kifi LinkedIn Page"
+    case _ => "External Page"
   }
 }

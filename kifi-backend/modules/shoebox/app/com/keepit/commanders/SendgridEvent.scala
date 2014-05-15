@@ -17,7 +17,9 @@ case class SendgridEvent(
   event: Option[String],
   id: Option[String],
   useragent: Option[String],
-  response: Option[String])
+  response: Option[String],
+  url: Option[String]
+)
 
 object SendgridEvent {
   implicit val sendgridEventReads = (
@@ -29,6 +31,7 @@ object SendgridEvent {
     (__ \ 'event).readNullable[String] and
     (__ \ 'id).readNullable[String] and
     (__ \ 'useragent).readNullable[String] and
-    (__ \ 'response).readNullable[String]
-    )(SendgridEvent.apply _)
+    (__ \ 'response).readNullable[String] and
+    (__ \ 'url).readNullable[String]
+  )(SendgridEvent.apply _)
 }
