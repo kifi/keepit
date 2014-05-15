@@ -71,13 +71,16 @@
     width: 10px !important;
   }
   td[class=txt_1] {
-    font-size: 14px !important;
+    font-size: 18px !important;
+    line-height: 22px !important;
   }
   td[class=txt_2] {
-    font-size: 12px !important;
+    font-size: 15px !important;
+    line-height: 16px !important;
   }
   a[class=txt_2] {
-    font-size: 12px !important;
+    font-size: 15px !important;
+    line-height: 16px !important;
   }
   td[class=aside2] {
     padding-left: 42px !important;
@@ -97,6 +100,27 @@
     width: 100% !important;
     height: initial !important;
     padding-bottom: 5px !important;
+  }
+  td[class=txt_p] {
+    font-size: 16px !important;
+    line-height: 17px !important;
+  }
+  span[class=txt_p]{
+    font-size: 16px !important;
+    line-height: 17px !important;
+  }
+  a[class=txt_p]{
+    font-size: 16px !important;
+    line-height: 17px !important;
+  }
+  td[class=txt_3] {
+    font-size: 15px !important;
+  }
+  span[class=txt_3]{
+    font-size: 15px !important;
+  }
+  a[class=txt_3]{
+    font-size: 15px !important;
   }
   }
    @@media only screen and (min-width:480px) and (max-width:599px) {
@@ -136,13 +160,16 @@
     width: 10px !important;
   }
   td[class=txt_1] {
-    font-size: 14px !important;
+    font-size: 18px !important;
+    line-height: 22px !important;
   }
   td[class=txt_2] {
-    font-size: 12px !important;
+    font-size: 15px !important;
+    line-height: 16px !important;
   }
   a[class=txt_2] {
-    font-size: 12px !important;
+    font-size: 15px !important;
+    line-height: 16px !important;
   }
   td[class=aside2] {
     padding-left: 42px !important;
@@ -163,6 +190,27 @@
     height: initial !important;
     padding-bottom: 5px !important;
   }
+  td[class=txt_p] {
+    font-size: 16px !important;
+    line-height: 17px !important;
+  }
+  span[class=txt_p]{
+    font-size: 16px !important;
+    line-height: 17px !important;
+  }
+  a[class=txt_p]{
+    font-size: 16px !important;
+    line-height: 17px !important;
+  }
+  td[class=txt_3] {
+    font-size: 15px !important;
+  }
+  span[class=txt_3]{
+    font-size: 15px !important;
+  }
+  a[class=txt_3]{
+    font-size: 15px !important;
+  }
   }
   </style>
 </head>
@@ -177,7 +225,7 @@
                 <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
               </tr>
               <tr>
-                <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">@smartEmailParticipantsList(threadInfo.participants, Seq(threadInfo.conversationStarter)) commented on <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>
+                <td class="txt_p" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">@smartEmailParticipantsList(threadInfo.participants, Seq(threadInfo.conversationStarter)) commented on <a class="txt_p" href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> using <a class="txt_p" href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>
               </tr>
               <tr>
                 <td height="26"></td>
@@ -281,7 +329,7 @@
                                       <tr>
                                         <td width="34" valign="top"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-reply-arrow.jpg" width="34" height="20" style="display:block;" border="0" /></td>
                                         <td width="8">&nbsp;</td>
-                                        <td style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">Participate in this discussion simply by replying to this email </td>
+                                        <td class="txt_3" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">Participate in this discussion simply by replying to this email </td>
                                       </tr>
                                     </table></td>
                                 </tr>
@@ -290,11 +338,11 @@
                                 <tr>
                                   <td class="aside2"><table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
                                       <tr>
-                                        <td height="20" valign="middle" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">
+                                        <td class="txt_3" height="20" valign="middle" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">
                                           @threadInfo.muteUrl.map{ muteUrl =>
-                                            <a href="@muteUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</a>
+                                            <a class="txt_3" href="@muteUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</a>
                                           }.getOrElse {
-                                            <span style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</span>
+                                            <span class="txt_3" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</span>
                                           }
                                         </td>
                                       </tr>
