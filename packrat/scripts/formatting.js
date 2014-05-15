@@ -96,16 +96,20 @@ var formatMessage = (function () {
     for (var i = 1; i < parts.length; i += 3) {
       var uri = parts[i];
       var scheme = parts[i+1];
-      if (scheme || uri.indexOf('/') > 0 || parts[i-1].lastIndexOf('@', parts[i-1].length - 1) <= 0) {
-        var escapedUri = Mustache.escape(uri);
-        var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
-        parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
-          (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" src="' + escapedUrl + '"/>' : escapedUri);
-        parts[i+1] = '</a>';
-      } else {
-        parts[i-1] += uri;
-        parts[i] = parts[i+1] = '';
+      if (!scheme && uri.indexOf('/') < 0 || parts[i-1].lastIndexOf('@', parts[i-1].length - 1) > 0) {
+        var ambiguous = parts[i-1] + uri;
+        var ambiguousProcessed = process(ambiguous);
+        if (ambiguousProcessed.lastIndexOf('</a>', ambiguousProcessed.length - 4) > 0) {
+          parts[i] = ambiguousProcessed;
+          parts[i-1] = parts[i+1] = '';
+          continue;
+        }
       }
+      var escapedUri = Mustache.escape(uri);
+      var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
+      parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
+        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" src="' + escapedUrl + '"/>' : escapedUri);
+      parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {
       parts[i] = process(parts[i]);
