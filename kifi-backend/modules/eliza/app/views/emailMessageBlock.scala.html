@@ -1,4 +1,4 @@
-@(imageUrl: Option[String], shortName: String, fullName: String, msg: String, lookHereContent: Seq[String] = Seq.empty, lookHereImage: Seq[String] = Seq.empty)
+@(imageUrl: Option[String], shortName: String, fullName: String, segments: Seq[com.keepit.eliza.commanders.MessageSegment])
   <tr>
     <td bgcolor="#f3f3f3" class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
@@ -32,9 +32,19 @@
                                 <tr>
                                   <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                 </tr>
-                                <tr>
-                                  <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;">“@msg”</td>
-                                </tr>
+                                @for(segment <- segments){
+                                  @if(segment.kind=="txt"){
+                                    <tr>
+                                      <td style="font-family:Georgia, 'Times New Roman', Times, serif;font-size:18px;color:#333333;line-height:24px;">@{segment.asInstanceOf[com.keepit.eliza.commanders.TextSegment].txt}</td>
+                                    </tr>
+                                  }
+                                  @if(segment.kind=="tlh") {
+                                    @emailTextLookHereBlock(shortName, segment.asInstanceOf[com.keepit.eliza.commanders.TextLookHereSegment])
+                                  }
+                                  @if(segment.kind=="ihl"){
+                                    @emailImageLookHereBlock(shortName, segment.asInstanceOf[com.keepit.eliza.commanders.ImageLookHereSegment])
+                                  }
+                                }
                                 <tr>
                                   <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                 </tr>
@@ -43,8 +53,6 @@
                           </tr>
                         </table></td>
                     </tr>
-                    @lookHereContent.map(emailTextLookHereBlock(shortName, _))
-                    @lookHereImage.map(emailImageLookHereBlock(shortName, _))
                     <tr>
                       <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
                     </tr>

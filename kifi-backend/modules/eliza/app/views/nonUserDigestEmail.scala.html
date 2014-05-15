@@ -304,7 +304,7 @@
                                     </table></td>
                                 </tr>
                                 @{messages.map(message =>
-                                  emailMessageBlock(message.imageUrl, message.senderShortName, message.senderFullName, message.messageText, message.textLookHeres, message.imageLookHereUrls)
+                                  emailMessageBlock(message.imageUrl, message.senderShortName, message.senderFullName, message.segments)
                                 )}
                               </table></td>
                             <td width="2" bgcolor="#f3f3f3"></td>
