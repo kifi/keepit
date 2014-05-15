@@ -13,9 +13,12 @@
   names.filterNot(exclude.contains(_))
 }
 
-  @if(filteredNames.length==1) {
-    @preformat(filteredNames.head)
-  } else {
-    @filteredNames.map(preformat(_)).mkString(preformat(", ").body)
+@if(filteredNames.length==1) {
+  @preformat(filteredNames.head)
+} else {
+  @for(name <- filteredNames.dropRight(1)) {
+    @preformat(name + ", ")
   }
+  @preformat(filteredNames.last)
+}
 
