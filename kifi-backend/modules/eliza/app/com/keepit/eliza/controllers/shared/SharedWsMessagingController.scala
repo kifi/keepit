@@ -22,7 +22,6 @@ import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.AccessLog
 import scala.collection.mutable
 
@@ -42,7 +41,6 @@ class SharedWsMessagingController @Inject() (
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
     protected val userExperimentCommander: RemoteUserExperimentCommander,
-    val kifInstallationStore: KifInstallationStore,
     val accessLog: AccessLog,
     val shoutdownListener: WebsocketsShutdownListener
   )
