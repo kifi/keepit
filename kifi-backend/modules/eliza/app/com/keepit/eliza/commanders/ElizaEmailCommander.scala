@@ -128,8 +128,8 @@ class ElizaEmailCommander @Inject() (
         pageDescription = uriSummarySmall.description.map(_.take(190) + "..."),
         participants = participants.toSeq,
         conversationStarter = starterUser.firstName + " " + starterUser.lastName,
-        unsubUrl = unsubUrl.getOrElse("#"),
-        muteUrl = muteUrl.getOrElse("#")
+        unsubUrl = unsubUrl,
+        muteUrl = muteUrl
       )
 
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
