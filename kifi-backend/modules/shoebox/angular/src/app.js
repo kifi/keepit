@@ -36,7 +36,7 @@ angular.module('kifi', [
   'kifi.tags',
   'kifi.keeps',
   'kifi.keep',
-  'kifi.layout.leftCol',
+  'kifi.layout.header',
   'kifi.layout.main',
   'kifi.layout.nav',
   'kifi.layout.rightCol',

@@ -58,13 +58,6 @@ angular.module('kifi.layout.main', [
 
     $scope.undo = undoService;
 
-    var updateHeight = _.throttle(function () {
-      $element.css('height', $window.innerHeight + 'px');
-    }, 100);
-    angular.element($window).resize(updateHeight);
-
-    $timeout(updateHeight);
-
     var messages = {
       0: 'Welcome back!',
       2: 'Bookmark import in progress. Reload the page to update.'
