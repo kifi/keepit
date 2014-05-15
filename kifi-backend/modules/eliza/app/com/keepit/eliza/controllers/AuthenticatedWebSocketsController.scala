@@ -178,8 +178,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
           reportConnect(streamSession, socketInfo, request, connectTimer)
           var startMessages = Seq[JsArray](Json.arr("hi"))
-          getGoldIfUpdateNeeded(streamSession, versionOpt) foreach { gold =>
-            startMessages = startMessages :+ Json.arr("version", gold.toString)
+          if (updateNeeded(streamSession, versionOpt)) {
+            startMessages = startMessages :+ Json.arr("version", "new")
           }
           onConnect(socketInfo)
           (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
@@ -233,22 +233,22 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }.map(_ => endSession(streamSession, socketInfo))
   }
 
-  private def getGoldIfUpdateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Option[KifiExtVersion] = {
-    if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {  // TODO: iPhone, Android
-      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption) flatMap { ver =>
+  private def updateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Boolean = {
+    if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {
+      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption).map { ver =>
         val details = kifInstallationStore.get()
         if (ver < details.gold) {
           log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
-          Some(details.gold)
+          true
         } else if (details.killed.contains(ver)) {
           log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
-          Some(details.gold)
+          true
         } else {
-          None
+          false
         }
-      }
-    } else {
-      None
+      }.getOrElse(true)
+    } else {  // TODO: iPhone, Android
+      false
     }
   }
 
