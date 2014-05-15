@@ -6,19 +6,15 @@ import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import play.api.Plugin
 import com.keepit.model._
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.heimdal._
 import com.keepit.common.time._
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.Some
-import com.keepit.common.mail.ProcessOutbox
-import com.keepit.common.mail.ProcessMail
 import com.keepit.social.NonUserKinds
 
 trait MailSenderPlugin {
@@ -127,12 +123,12 @@ private[mail] class MailSenderActor @Inject() (
 
         val (to, cc) = db.readOnly { implicit session =>
           val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address => emailAddressRepo.getByAddress(address.address) match {
-            case Seq.empty => Seq(Right(address.address))
+            case Seq() => Seq(Right(address.address))
             case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
           }}
 
           val to: Seq[Either[Id[User], String]] = email.to.flatMap { address => emailAddressRepo.getByAddress(address.address) match {
-            case Seq.empty => Seq(Right(address.address))
+            case Seq() => Seq(Right(address.address))
             case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
           }}
 
