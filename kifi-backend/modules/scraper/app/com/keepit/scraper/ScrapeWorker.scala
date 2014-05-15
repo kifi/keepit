@@ -23,8 +23,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 
 
-// straight port from original (local) code
-class SyncScraper @Inject() (
+class ScrapeWorker @Inject() (
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
