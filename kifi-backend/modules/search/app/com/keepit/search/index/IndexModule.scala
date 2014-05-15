@@ -1,7 +1,6 @@
 package com.keepit.search.index
 
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.MyAmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -15,17 +14,14 @@ import com.keepit.search.graph._
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
-import com.keepit.search.index._
 import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
 import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.sharding._
 import com.keepit.search.spellcheck.{SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
 import com.keepit.search.user._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.google.inject.ImplementedBy
 import com.google.inject.{Inject, Provides, Singleton}
 import org.apache.commons.io.FileUtils
-import org.apache.lucene.util.Version
 import java.io.File
 import play.api.Play._
 
@@ -107,7 +103,7 @@ trait IndexModule extends ScalaModule with Logging {
       new ArticleIndexer(dir, articleStore, airbrake)
     }
 
-    val indexShards = activeShards.shards.map{ shard => (shard, articleIndexer(shard)) }
+    val indexShards = activeShards.local.map{ shard => (shard, articleIndexer(shard)) }
     new ShardedArticleIndexer(indexShards.toMap, articleStore, shoeboxClient)
   }
 
@@ -125,7 +121,7 @@ trait IndexModule extends ScalaModule with Logging {
       new URIGraphIndexer(dir, store, airbrake)
     }
 
-    val indexShards = activeShards.shards.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
+    val indexShards = activeShards.local.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
     new ShardedURIGraphIndexer(indexShards.toMap, shoeboxClient)
   }
 
@@ -143,7 +139,7 @@ trait IndexModule extends ScalaModule with Logging {
       new CollectionIndexer(dir, collectionNameIndexer, airbrake)
     }
 
-    val indexShards = activeShards.shards.map{ shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
+    val indexShards = activeShards.local.map{ shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
     new ShardedCollectionIndexer(indexShards.toMap, shoeboxClient)
   }
 

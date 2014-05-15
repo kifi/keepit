@@ -32,6 +32,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.store.ImageSize
 import com.keepit.common.db.slick.Database
+import com.keepit.common.strings._
 import com.keepit.common.mail.{
   ElectronicMail,
   ElectronicMailCategory,
@@ -78,7 +79,7 @@ class ElizaEmailCommander @Inject() (
   }
 
 
-  def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
+  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
 
     val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
 
@@ -96,7 +97,7 @@ class ElizaEmailCommander @Inject() (
 
     val uriSummaryBigFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
-      imageType = ImageType.ANY,
+      imageType = ImageType.IMAGE,
       minSize = ImageSize(620, 200),
       withDescription = false,
       waiting = true,
@@ -124,14 +125,14 @@ class ElizaEmailCommander @Inject() (
         pageName = pageName,
         pageTitle = uriSummarySmall.title.getOrElse(thread.nUrl.get),
         heroImageUrl = uriSummarySmall.imageUrl,
-        pageDescription = uriSummarySmall.description,
+        pageDescription = uriSummarySmall.description.map(_.abbreviate(200)),
         participants = participants.toSeq,
         conversationStarter = starterUser.firstName + " " + starterUser.lastName,
         unsubUrl = unsubUrl.getOrElse("#"),
         muteUrl = muteUrl.getOrElse("#")
       )
 
-      val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl)
+      val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
 
       var relevantMessages = messages
       fromTime.map{ dt =>
@@ -158,7 +159,7 @@ class ElizaEmailCommander @Inject() (
 
       ProtoEmail(
         views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
-        views.html.nonUserInitialEmail(threadInfoBig, threadItems),
+        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserInitialEmail(threadInfoBig, threadItems) else views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         starterUser.firstName + " " + starterUser.lastName,
         uriSummarySmall.title.getOrElse(pageName)
@@ -178,7 +179,7 @@ class ElizaEmailCommander @Inject() (
 
       for (
         unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier);
-        protoEmail <- assembleEmail(thread, nut.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
+        protoEmail <- assembleEmail(thread, None, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
       ) {
 
         val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
