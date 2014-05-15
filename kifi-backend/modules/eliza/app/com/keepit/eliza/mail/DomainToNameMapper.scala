@@ -6,6 +6,9 @@ object DomainToNameMapper {
     domainToName.get(domain)
   }
 
+  /**
+   * Protip: this map can be generated from a TSV file by tools/domain_map_parser.py
+   */
   private val domainToName = Map(
     "360.cn" -> "360 Safeguard",
     "360buy.com" -> "360buy",
