@@ -360,9 +360,8 @@ class MessagingCommander @Inject() (
         }
       }
     }
-    from.asUser.map{ //Todo: Analytics for non users
-      messagingAnalytics.sentMessage(_, message, thread, isNew, context)
-    }
+    messagingAnalytics.sentMessage(from, message, thread, isNew, context)
+
     (thread, message)
   }
 
@@ -435,7 +434,7 @@ class MessagingCommander @Inject() (
         }
 
         notificationCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
-        messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, thread, context)
+        messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
         true
 
       }
