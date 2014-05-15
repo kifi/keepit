@@ -50,11 +50,11 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
   // this makes sure return size == fetchSize whenever there are enough data
   def trickyGetSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
     val buf = ArrayBuffer.empty[(T, FeatureRepresentation[T, M])]
-    var nextBatchSize = fetchSize
+    var nextBatchSize = fetchSize * 2
     var startSeq = lowSeq
     var exhausted = false
     while (buf.size < fetchSize && !exhausted){
-      val feats = getSince(startSeq, fetchSize, version)
+      val feats = getSince(startSeq, nextBatchSize, version)
       if (feats.isEmpty) {
         exhausted = true
       } else {

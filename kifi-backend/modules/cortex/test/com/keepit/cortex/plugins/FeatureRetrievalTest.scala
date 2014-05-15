@@ -59,21 +59,21 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       // tricky version is better
       var reps = retriever.getSince(SequenceNumber[Foo](0), 10, version)
-      reps.size === 5
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 10, 2)
+      reps.size === 4
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 13, 3)
 
       reps = retriever.trickyGetSince(SequenceNumber[Foo](0), 10, version)
       reps.size === 10
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 20, 2)
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 30, 3)
 
       // exhausted
       reps = retriever.getSince(SequenceNumber[Foo](450), 100, version)
-      reps.size === 25
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 2)
+      reps.size === 17
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 3)
 
       reps = retriever.trickyGetSince(SequenceNumber[Foo](450), 100, version)
-      reps.size === 25
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 2)
+      reps.size === 17
+      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 3)
     }
   }
 }

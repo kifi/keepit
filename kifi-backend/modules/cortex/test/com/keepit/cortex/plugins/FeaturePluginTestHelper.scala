@@ -24,9 +24,9 @@ trait FeaturePluginTestHelper {
 
   class FooFeatStore extends VersionedInMemoryStore[Id[Foo], FakeModel, FeatureRepresentation[Foo, FakeModel]]
 
-  class FooOddIdInMemoryStore extends VersionedInMemoryStore[Id[Foo], FakeModel, FeatureRepresentation[Foo, FakeModel]] {
+  class FooModuloIdInMemoryStore extends VersionedInMemoryStore[Id[Foo], FakeModel, FeatureRepresentation[Foo, FakeModel]] {
     override def get(key: Id[Foo], version: ModelVersion[FakeModel]): Option[FeatureRepresentation[Foo, FakeModel]] = {
-      if (key.id.toInt % 2 == 1) super.get(key, version)
+      if (key.id.toInt % 3 == 1) super.get(key, version)
       else None
     }
   }
@@ -54,7 +54,7 @@ trait FeaturePluginTestHelper {
   }
 
   def setup2() = {
-    val fooFeatStore = new FooOddIdInMemoryStore
+    val fooFeatStore = new FooModuloIdInMemoryStore
     val fooRepresenter = new FooFeatureRepresenter
     val commitStore = new InMemoryCommitInfoStore[Foo, FakeModel]
     val fakePuller = new FooDataPuller
