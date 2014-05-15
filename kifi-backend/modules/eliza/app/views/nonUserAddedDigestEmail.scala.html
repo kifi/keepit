@@ -180,7 +180,7 @@
                                               <td style="font-family:Arial, Helvetica, sans-serif;font-size:24px;font-weight:bold;color:#333333;line-height:24px;">@threadInfo.pageTitle</td>
                                             </tr>
                                             <tr>
-                                              <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                              <td height="8" style="line-height:1px;font-size:1px;">&nbsp;</td>
                                             </tr>
                                             <tr>
                                               <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;"><a style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px; text-decoration:none;" href="@threadInfo.pageUrl" target="_blank">@threadInfo.pageName</a></td>
@@ -258,7 +258,13 @@
                                 <tr>
                                   <td class="aside2"><table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
                                       <tr>
-                                        <td height="20" valign="middle" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;"><a href="@threadInfo.muteUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</a></td>
+                                        <td height="20" valign="middle" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">
+                                          @threadInfo.muteUrl.map{ muteUrl =>
+                                            <a href="@muteUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</a>
+                                          }.getOrElse {
+                                            <span style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</span>
+                                          }
+                                        </td>
                                       </tr>
                                     </table></td>
                                 </tr>
@@ -345,7 +351,7 @@
                                   <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br class="br" />
                                     View our <a href="https://www.kifi.com/privacy" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>. Click here to
                                     @threadInfo.unsubUrl.map{ unsubUrl =>
-                                      <a href="unsubUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a>
+                                      <a href="@unsubUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a>
                                     }.getOrElse {
                                       <span style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</span>
                                     }                                    from friends’ messages like this.<br class="br" />
