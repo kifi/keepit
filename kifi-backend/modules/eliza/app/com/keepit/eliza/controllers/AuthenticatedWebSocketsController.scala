@@ -235,7 +235,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   private def updateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Boolean = {
     if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {
-      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption) flatMap { ver =>
+      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption).map { ver =>
         val details = kifInstallationStore.get()
         if (ver < details.gold) {
           log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
@@ -246,7 +246,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         } else {
           false
         }
-      }
+      }.getOrElse(true)
     } else {  // TODO: iPhone, Android
       false
     }
