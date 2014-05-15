@@ -4,8 +4,11 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.{FeatureRepresentation, ModelVersion, StatModel}
 import com.keepit.cortex.store.{CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore}
 import com.keepit.common.logging.Logging
+import scala.collection.mutable.ArrayBuffer
+import com.keepit.common.db.ModelWithSeqNumber
 
-abstract class FeatureRetrieval[K, T, M <: StatModel](
+
+abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
   featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
@@ -42,5 +45,24 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
       val entities = dataPuller.getSince(lowSeq, fetchSize)
       getFeatureForEntities(entities, version)
     }
+  }
+
+  // this makes sure return size == fetchSize whenever there are enough data
+  def trickyGetSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+    val buf = ArrayBuffer.empty[(T, FeatureRepresentation[T, M])]
+    var nextBatchSize = fetchSize
+    var startSeq = lowSeq
+    var exhausted = false
+    while (buf.size < fetchSize && !exhausted){
+      val feats = getSince(startSeq, fetchSize, version)
+      if (feats.isEmpty) {
+        exhausted = true
+      } else {
+        buf.appendAll(feats)
+        startSeq = feats.map{ case (ent, feat) => ent.seq}.max
+        nextBatchSize = ((fetchSize - buf.size) * 2 min fetchSize) max 10             // overfetch
+      }
+    }
+    buf.take(fetchSize)
   }
 }

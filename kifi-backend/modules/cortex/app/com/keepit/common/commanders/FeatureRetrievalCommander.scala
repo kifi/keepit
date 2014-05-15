@@ -14,7 +14,7 @@ class FeatureRetrievalCommander @Inject()(
   ldaURIFeat: LDAURIFeatureRetriever
 ) {
   def getLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA]): Seq[(NormalizedURI, FeatureRepresentation[NormalizedURI, DenseLDA])] = {
-    ldaURIFeat.getSince(lowSeq, fetchSize, version)
+    ldaURIFeat.trickyGetSince(lowSeq, fetchSize, version)
   }
 
   def getSparseLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA], sparsity: Int = PublishedModels.defaultSparsity): Seq[UriSparseLDAFeatures] = {
