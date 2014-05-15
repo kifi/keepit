@@ -11,9 +11,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.allTags.length;
     }, function () {
-      // update antiscroll
-      $scope.refreshScroll();
-
       if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
         keepService.joinTags($scope.keeps, tagService.allTags);
       }
