@@ -149,7 +149,7 @@
               <tr>
                 <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">
                   You were added to a discussion with
-                  <span style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@{threadInfo.participants.mkString(", ")}</span>
+                  @smartEmailParticipantsList(threadInfo.participants)
                   on
                   <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a>
                   using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>

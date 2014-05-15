@@ -147,7 +147,7 @@
                 <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
               </tr>
               <tr>
-                <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;"><span style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@{threadInfo.participants.mkString(", ")}</span> commented on <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>
+                <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">@smartEmailParticipantsList(threadInfo.participants, Seq(threadInfo.conversationStarter)) commented on <a href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> using <a href="https://kifi.com" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a></td>
               </tr>
               <tr>
                 <td height="26"></td>
