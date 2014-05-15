@@ -7,24 +7,15 @@ import com.keepit.common.db.{ExternalId, State}
 import com.keepit.model.{NotificationCategory, User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.RemoteUserExperimentCommander
-
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 
-import akka.actor.ActorSystem
-
 import com.google.inject.Inject
-import com.keepit.common.logging.AccessLog
 import scala.collection.mutable
-import com.keepit.common.store.KifInstallationStore
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -34,18 +25,8 @@ class SharedWsMessagingController @Inject() (
     protected val websocketRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
-    val kifInstallationStore: KifInstallationStore,
     protected val shoebox: ShoeboxServiceClient,
-    protected val impersonateCookie: ImpersonateCookie,
-    protected val actorSystem: ActorSystem,
-    protected val clock: Clock,
-    protected val airbrake: AirbrakeNotifier,
-    protected val heimdal: HeimdalServiceClient,
-    protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    protected val userExperimentCommander: RemoteUserExperimentCommander,
-    val accessLog: AccessLog,
-    val shoutdownListener: WebsocketsShutdownListener
-  )
+    protected val clock: Clock)
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
   protected def onConnect(socket: SocketInfo) : Unit = {

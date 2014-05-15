@@ -1,5 +1,7 @@
 package com.keepit.eliza.controllers
 
+import com.google.inject.Inject
+
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.Id
@@ -55,18 +57,19 @@ case class SocketInfo(
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val shoebox: ShoeboxServiceClient
-  protected val impersonateCookie: ImpersonateCookie
-  protected val actorSystem: ActorSystem
-  protected val clock: Clock
-  protected val airbrake: AirbrakeNotifier
-  protected val heimdal: HeimdalServiceClient
-  protected val heimdalContextBuilder: HeimdalContextBuilderFactory
-  protected val userExperimentCommander: RemoteUserExperimentCommander
-  protected val websocketRouter: WebSocketRouter
-  protected val shoutdownListener: WebsocketsShutdownListener
 
-  val kifInstallationStore: KifInstallationStore
-  val accessLog: AccessLog
+  @Inject() val impersonateCookie: ImpersonateCookie = null
+  @Inject() val actorSystem: ActorSystem = null
+  protected val clock: Clock
+  @Inject() val airbrake: AirbrakeNotifier = null
+  @Inject() val heimdal: HeimdalServiceClient = null
+  @Inject() val heimdalContextBuilder: HeimdalContextBuilderFactory = null
+  @Inject() val userExperimentCommander: RemoteUserExperimentCommander = null
+  protected val websocketRouter: WebSocketRouter
+  @Inject() val shutdownListener: WebsocketsShutdownListener = null
+
+  @Inject() val kifInstallationStore: KifInstallationStore = null
+  @Inject() val accessLog: AccessLog = null
 
   protected def onConnect(socket: SocketInfo) : Unit
   protected def onDisconnect(socket: SocketInfo) : Unit
@@ -162,7 +165,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
     val connectTimer = accessLog.timer(WS_IN)
-    if (shoutdownListener.shuttingDown) {
+    if (shutdownListener.shuttingDown) {
       Future.successful {
         accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
         (Iteratee.ignore, Enumerator(Json.arr("bye", "shutdown")) >>> Enumerator.eof)
