@@ -93,13 +93,5 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.logout = function () {
       profileService.logout();
     };
-
-
-    var updateHeight = _.throttle(function () {
-      $element.css('height', $window.innerHeight + 'px');
-    }, 100);
-    angular.element($window).resize(updateHeight);
-
-    $timeout(updateHeight);
   }
 ]);
