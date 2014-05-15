@@ -196,6 +196,7 @@ class MessagingCommander @Inject() (
       if (isNew){
         nonUserRecipients.foreach { nonUser =>
           nonUserThreadRepo.save(NonUserThread(
+            createdBy = from,
             participant = nonUser,
             threadId = thread.id.get,
             uriId = uriIdOpt,
