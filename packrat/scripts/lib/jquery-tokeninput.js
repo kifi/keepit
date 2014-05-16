@@ -255,11 +255,13 @@
           case KEY.NUMPAD_ENTER:
             if (selectedDropdownItem) {
               handleItemChosen(selectedDropdownItem);
+              return false;
             } else if (this.value) {
               this.value = '';
               handleQueryChange();
+              return false;
             }
-            return false;
+            break;
 
           case KEY.ESC:
             hideDropdown();
