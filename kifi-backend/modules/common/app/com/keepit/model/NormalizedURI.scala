@@ -121,41 +121,7 @@ object NormalizedURIStates extends States[NormalizedURI] {
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val REDIRECTED = State[NormalizedURI]("redirected")
 
-  type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
-
-  val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(REDIRECTED)),
-      (SCRAPED -> Set(INACTIVE, REDIRECTED)),
-      (SCRAPE_FAILED -> Set(INACTIVE, REDIRECTED)),
-      (UNSCRAPABLE -> Set(INACTIVE, REDIRECTED)),
-      (INACTIVE -> Set(ACTIVE, INACTIVE, REDIRECTED)),
-      (REDIRECTED -> Set(ACTIVE, INACTIVE, REDIRECTED)))
-
-  val ADMIN_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set.empty),
-      (SCRAPED -> Set(ACTIVE)),
-      (SCRAPE_FAILED -> Set(ACTIVE)),
-      (UNSCRAPABLE -> Set(ACTIVE)),
-      (INACTIVE -> Set.empty))
-
   val DO_NOT_SCRAPE = Set(INACTIVE, UNSCRAPABLE, REDIRECTED)
-
-  def transitionByAdmin[T](transition: (State[NormalizedURI], Set[State[NormalizedURI]]))(f:State[NormalizedURI]=>T) = {
-    f(validate(transition, ADMIN_TRANSITIONS))
-  }
-
-  def findNextState(transition: (State[NormalizedURI], Set[State[NormalizedURI]])) = validate(transition, ALL_TRANSITIONS)
-
-  private def validate(transition: (State[NormalizedURI], Set[State[NormalizedURI]]), transitions: Transitions): State[NormalizedURI] = {
-    transition match {
-      case (from, to) =>
-        transitions.get(from) match {
-          case Some(possibleStates) =>
-            (possibleStates intersect to).headOption.getOrElse(throw new StateException("invalid transition: %s -> %s".format(from, to)))
-          case None => throw new StateException("no such state: %s".format(from))
-        }
-    }
-  }
 }
 
 case class IndexableUri(
