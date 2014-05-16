@@ -129,6 +129,7 @@ class ElizaEmailNotifierActor @Inject() (
       if (recipient.state == UserStates.ACTIVE || recipient.primaryEmailId.isEmpty) {
         val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
 
+        // todo(martin) unsubscribe/mute links
         val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls).copy(pageUrl = deepUrl)
         val b: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
 

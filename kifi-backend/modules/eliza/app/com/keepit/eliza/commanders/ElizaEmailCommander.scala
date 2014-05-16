@@ -3,7 +3,6 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 
 import scala.concurrent.Future
-import scala.util.matching.Regex.Match
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.templates.Html
@@ -63,21 +62,25 @@ class ElizaEmailCommander @Inject() (
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
+
   private def parseMessage(msg: String): Seq[MessageSegment] = {
     val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
-    var textLookHeres = Vector[String]()
-    var imageLookHereUrls = Vector[String]()
-    re.findAllMatchIn(msg).toList.foreach { m =>
-      val segments = m.group(3).split('|')
-      val kind = segments.head
-      val payload = URLDecoder.decode(segments.last, "UTF-8")
-      kind match {
-        case "i" => imageLookHereUrls = imageLookHereUrls :+ payload
-        case "r" => textLookHeres = textLookHeres :+ payload
-        case _ => throw new Exception("Unknown look-here type: " + kind)
+    val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched + "\t").split("\t").map(_.trim).filter(_.length>0)
+    tokens.map{ token =>
+      re.findFirstMatchIn(token).map { m =>
+        val segments = m.group(3).split('|')
+        val kind = segments.head
+        val payload = URLDecoder.decode(segments.last, "UTF-8")
+        val text = m.group(1)
+        kind match {
+          case "i" => ImageLookHereSegment(text, payload)
+          case "r" => TextLookHereSegment(text, payload)
+          case _ => throw new Exception("Unknown look-here type: " + kind)
+        }
+      } getOrElse {
+        TextSegment(token)
       }
-    } //ZZZ not actually correct segments
-    Seq[MessageSegment](TextSegment(re.replaceAllIn(msg, (m: Match) => m.group(1)))) ++ textLookHeres.map(TextLookHereSegment("", _)) ++ imageLookHereUrls.map(ImageLookHereSegment("", _))
+    }
   }
 
   def getSummarySmall(thread: MessageThread) = {
@@ -193,8 +196,6 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-
-
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
     val nuts = db.readOnly { implicit session =>
       nonUserThreadRepo.getByMessageThreadId(thread.id.get)
@@ -254,8 +255,6 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-
-
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
     val (msg, thread) = db.readOnly{ implicit session =>
       val msg = messageRepo.get(msgExtId)
@@ -275,8 +274,4 @@ class ElizaEmailCommander @Inject() (
 
 
   }
-
-
-
-
 }
