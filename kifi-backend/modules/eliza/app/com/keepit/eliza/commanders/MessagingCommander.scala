@@ -14,7 +14,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUser, BasicUserLikeEntity}
+import com.keepit.social.BasicUser
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
@@ -213,7 +213,7 @@ class MessagingCommander @Inject() (
             uriId = uriIdOpt,
             notifiedCount = 0,
             lastNotifiedAt = None,
-            threadUpdatedAt = Some(thread.createdAt),
+            threadUpdatedByOtherAt = Some(thread.createdAt),
             muted = false
           ))
         }
@@ -308,6 +308,7 @@ class MessagingCommander @Inject() (
     val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
+    val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
 
     val messageWithBasicUser = MessageWithBasicUser(
       message.externalId,
@@ -322,7 +323,7 @@ class MessagingCommander @Inject() (
         case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
         case _ => None
       },
-      participantSet.toSeq.map(id2BasicUser(_)) ++ nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
+      participantSet.toSeq.map(id2BasicUser(_)) ++ basicNonUserParticipants
     )
 
     // send message through websockets immediately
@@ -342,8 +343,7 @@ class MessagingCommander @Inject() (
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers)
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ basicNonUserParticipants)
 
     val usersToNotify = from match {
       case MessageSender.User(id) => thread.allParticipantsExcept(id)
@@ -363,7 +363,7 @@ class MessagingCommander @Inject() (
 
     // update non user threads of non user recipients
 
-    notificationCommander.notifyEmailUsers(thread)
+    notificationCommander.updateNonUserThreads(thread, message)
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
