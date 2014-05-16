@@ -68,7 +68,7 @@ case class NonUserThread(
   uriId: Option[Id[NormalizedURI]],
   notifiedCount: Int,
   lastNotifiedAt: Option[DateTime],
-  threadUpdatedAt: Option[DateTime],
+  threadUpdatedByOtherAt: Option[DateTime],
   muted: Boolean = false,
   state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
   accessToken: ThreadAccessToken = ThreadAccessToken()

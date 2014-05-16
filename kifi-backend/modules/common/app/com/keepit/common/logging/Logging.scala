@@ -3,8 +3,8 @@ package com.keepit.common.logging
 import play.modules.statsd.api.{StatsdClient, Statsd}
 import play.api.Logger
 
-case class LogPrefix(val s:String) extends AnyVal {
-  override def toString = s
+case class LogPrefix(prefix: String) extends AnyVal {
+  override def toString = prefix
 }
 
 object LogPrefix {
@@ -92,11 +92,11 @@ class StatsdWrapper extends StatsdClient {
 
 
 object Logging {
-  implicit class LoggerWithPrefix(val l:Logger) extends AnyVal {
-    def traceP(s:String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) l.trace(s) else l.trace(s"[$prefix] $s")
-    def debugP(s:String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) l.debug(s) else l.debug(s"[$prefix] $s")
-    def infoP(s:String)(implicit prefix:LogPrefix = LogPrefix.EMPTY)  = if (prefix == LogPrefix.EMPTY) l.info(s) else l.info(s"[$prefix] $s")
-    def warnP(s:String)(implicit prefix:LogPrefix = LogPrefix.EMPTY)  = if (prefix == LogPrefix.EMPTY) l.warn(s) else l.warn(s"[$prefix] $s")
-    def errorP(s:String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) l.error(s) else l.error(s"[$prefix] $s")
+  implicit class LoggerWithPrefix(val log: Logger) extends AnyVal {
+    def traceP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.trace(message) else log.trace(s"[$prefix] $message")
+    def debugP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.debug(message) else log.debug(s"[$prefix] $message")
+    def infoP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY)  = if (prefix == LogPrefix.EMPTY) log.info(message) else log.info(s"[$prefix] $message")
+    def warnP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY)  = if (prefix == LogPrefix.EMPTY) log.warn(message) else log.warn(s"[$prefix] $message")
+    def errorP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.error(message) else log.error(s"[$prefix] $message")
   }
 }
