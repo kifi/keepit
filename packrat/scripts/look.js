@@ -18,12 +18,11 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
     e.preventDefault();
     var selector = this.href.substr(11);
     if (selector.lastIndexOf('r|', 0) === 0) {
-      var r = snapshot.findRange(selector);
-      if (r) {
+      var r = snapshot.findRange(selector), rects;
+      if (r && (rects = ranges.getClientRects(r)).length) {
         var sel = window.getSelection();
         sel.removeAllRanges();
 
-        var rects = ranges.getClientRects(r);
         var bounds = ranges.getBoundingClientRect(r, rects);
         var anim = scrollTo(bounds, computeScrollToDuration);
         var $cnv = $('<canvas>').prop({width: bounds.width, height: bounds.height});
