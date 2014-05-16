@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.eliza.model._
 import com.keepit.eliza.util.MessageFormatter
@@ -26,14 +25,21 @@ import scala.concurrent.Future
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.common.concurrent.FutureHelpers
-import scala.Some
 import com.keepit.eliza.model.ThreadEmailInfo
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.eliza.model.UserThread
 import com.keepit.model.DeepLocator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-case object SendEmails
+import ElizaEmailNotifierActor._
+import com.keepit.social.NonUserKinds
+
+object ElizaEmailNotifierActor {
+  case object SendUserEmails
+  case object SendNonUserEmails
+  val MIN_TIME_BETWEEN_NOTIFICATIONS = 15 minutes
+  val RECENT_ACTIVITY_WINDOW = 24 hours
+}
 
 class ElizaEmailNotifierActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -48,17 +54,35 @@ class ElizaEmailNotifierActor @Inject() (
   ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive = {
-    case SendEmails =>
+    case SendUserEmails =>
       val now = clock.now
-      val startTime = now.minusMinutes(15)
+      val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
       val unseenUserThreads = db.readOnly { implicit session =>
-        userThreadRepo.getUserThreadsForEmailing(startTime)
+        userThreadRepo.getUserThreadsForEmailing(lastNotifiedBefore)
       }
       val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
-      log.info(s"[now:$now] [cut:$startTime] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
+      log.info(s"[now:$now] [lastNotifiedBefore:$lastNotifiedBefore] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
       unseenUserThreads.foreach { userThread =>
         sendEmail(userThread)
       }
+
+    case SendNonUserEmails =>
+      val now = clock.now
+      val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
+      val lastUpdatedByOtherAfter = now.minus(RECENT_ACTIVITY_WINDOW.toMillis)
+      val unseenThreads = db.readOnly { implicit session =>
+        nonUserThreadRepo.getNonUserThreadsForEmailing(lastNotifiedBefore, lastUpdatedByOtherAfter).groupBy(_.threadId).map { case (threadId, nonUserThreads) =>
+          threadRepo.get(threadId) -> nonUserThreads
+        }
+      }
+
+      unseenThreads.foreach { case (thread, nonUserThreads) =>
+        nonUserThreads.foreach {
+          case emailParticipantThread if emailParticipantThread.participant.kind == NonUserKinds.email => elizaEmailCommander.notifyEmailParticipant(emailParticipantThread, thread)
+          case unsupportedNonUserThread => airbrake.notify(new UnsupportedOperationException(s"Cannot email non user ${unsupportedNonUserThread.participant}"))
+        }
+      }
+
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -172,10 +196,12 @@ class ElizaEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ElizaEmailNotifierPluginImpl")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendEmails)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendUserEmails)
+    scheduleTaskOnLeader(actor.system, 90 seconds, 2 minutes, actor.ref, SendNonUserEmails)
   }
 
-  override def sendEmails() {
-    actor.ref ! SendEmails
+  def sendEmails() {
+    actor.ref ! SendUserEmails
+    actor.ref ! SendNonUserEmails
   }
 }
