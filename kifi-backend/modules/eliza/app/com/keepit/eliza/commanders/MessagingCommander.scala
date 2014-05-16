@@ -14,7 +14,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUser, BasicUserLikeEntity}
+import com.keepit.social.BasicUser
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
@@ -213,7 +213,7 @@ class MessagingCommander @Inject() (
             uriId = uriIdOpt,
             notifiedCount = 0,
             lastNotifiedAt = None,
-            threadUpdatedAt = Some(thread.createdAt),
+            threadUpdatedByOtherAt = Some(thread.createdAt),
             muted = false
           ))
         }
@@ -308,6 +308,7 @@ class MessagingCommander @Inject() (
     val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds) // todo: remove await
+    val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
 
     val messageWithBasicUser = MessageWithBasicUser(
       message.externalId,
@@ -322,18 +323,21 @@ class MessagingCommander @Inject() (
         case MessageSender.NonUser(nup) => Some(NonUserParticipant.toBasicNonUser(nup))
         case _ => None
       },
-      participantSet.toSeq.map(id2BasicUser(_)) ++ nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
+      participantSet.toSeq.map(id2BasicUser(_)) ++ basicNonUserParticipants
     )
 
+    // send message through websockets immediately
     thread.participants.map(_.allUsers.par.foreach { user =>
       notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
     })
 
+    // update user thread of the sender
     from.asUser.map{ sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
       db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
     }
 
+    // update user threads of user recipients - this somehow depends on the sender's user thread update above
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
       val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
       val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
@@ -345,8 +349,7 @@ class MessagingCommander @Inject() (
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ nonUsers)
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ basicNonUserParticipants)
 
     val usersToNotify = from match {
       case MessageSender.User(id) => thread.allParticipantsExcept(id)
@@ -356,11 +359,13 @@ class MessagingCommander @Inject() (
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-    notificationCommander.notifyEmailUsers(thread)
-
-    from.asUser.map{ id =>
-      notificationCommander.notifySendMessage(id, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+    // update user thread of the sender again, might be deprecated
+    from.asUser.foreach { sender =>
+      notificationCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
+
+    // update non user threads of non user recipients
+    notificationCommander.updateNonUserThreads(thread, message)
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
