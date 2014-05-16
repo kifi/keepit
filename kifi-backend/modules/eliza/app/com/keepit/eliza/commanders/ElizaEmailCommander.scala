@@ -3,8 +3,6 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 
 import scala.concurrent.Future
-import scala.util.matching.Regex.Match
-import scala.util.matching.Regex
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.templates.Html
@@ -47,7 +45,6 @@ import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 
-
 abstract class MessageSegment(val kind: String) //for use in templates since you can't match on type (it seems)
 case class TextLookHereSegment(msgText: String, pageText: String) extends MessageSegment("tlh")
 case class ImageLookHereSegment(msgText: String, imgUrl: String) extends MessageSegment("ilh")
@@ -62,7 +59,6 @@ class ElizaEmailCommander @Inject() (
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo
   ) {
-
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
@@ -87,103 +83,118 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
-
-    val allUserIds : Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
-
-    val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map( s => s.map(u => u.id.get -> u).toMap))
-
-    val allUserImageUrlsFuture : Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map( u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-
-    val uriSummarySmallFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
+  def getSummarySmall(thread: MessageThread) = {
+    new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.ANY,
       minSize = ImageSize(183, 96),
       withDescription = true,
       waiting = true,
       silent = false)))
+  }
 
-    val uriSummaryBigFuture : Future[URISummary] = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
+  def getSummaryBig(thread: MessageThread) = {
+    new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.IMAGE,
       minSize = ImageSize(620, 200),
       withDescription = false,
       waiting = true,
       silent = false)))
+  }
 
-    for (allUsers <- allUsersFuture; allUserImageUrls <- allUserImageUrlsFuture; uriSummarySmall <- uriSummarySmallFuture; uriSummaryBig <- uriSummaryBigFuture) yield {
+  def getThreadEmailInfo(
+    thread: MessageThread,
+    uriSummary: URISummary,
+    allUsers: Map[Id[User], User],
+    allUserImageUrls: Map[Id[User], String],
+    unsubUrl: Option[String] = None,
+    muteUrl: Option[String] = None): ThreadEmailInfo = {
 
-      val (nuts, starterUserId) = db.readOnly { implicit session =>
-        (
-          nonUserThreadRepo.getByMessageThreadId(thread.id.get),
-          userThreadRepo.getThreadStarter(thread.id.get)
-        )
+    val (nuts, starterUserId) = db.readOnly { implicit session => (
+      nonUserThreadRepo.getByMessageThreadId(thread.id.get),
+      userThreadRepo.getThreadStarter(thread.id.get)
+    )}
+
+    val starterUser = allUsers(starterUserId)
+    val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
+
+    val pageName = thread.nUrl.flatMap { url =>
+      val hostOpt = URI.parse(url).toOption.flatMap(_.host)
+      hostOpt map { host =>
+        def nameForSuffixLength(n: Int) = DomainToNameMapper.getName(host.domain.take(n).reverse.mkString("."))
+        // Attempts to map more restrictive subdomains first
+        val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
+        candidates.collectFirst { case Some(name) => name }.getOrElse(host.name)
       }
+    }.getOrElse("")
 
-      val starterUser = allUsers(starterUserId)
+    ThreadEmailInfo(
+      pageUrl = thread.nUrl.get,
+      pageName = pageName,
+      pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
+      heroImageUrl = uriSummary.imageUrl,
+      pageDescription = uriSummary.description.map(_.take(190) + "..."),
+      participants = participants.toSeq,
+      conversationStarter = starterUser.firstName + " " + starterUser.lastName,
+      unsubUrl = unsubUrl,
+      muteUrl = muteUrl
+    )
+  }
 
-      val participants = allUsers.values.map{ u => u.fullName } ++ nuts.map{ nut => nut.participant.fullName }
+  def getExtendedThreadItems(
+    thread: MessageThread,
+    allUsers: Map[Id[User], User],
+    allUserImageUrls: Map[Id[User], String],
+    fromTime: Option[DateTime],
+    toTime: Option[DateTime]): Seq[ExtendedThreadItem] = {
+    val messages = messageFetchingCommander.getThreadMessages(thread)
 
-      val pageName = thread.nUrl.flatMap{ url =>
-        val hostOpt = URI.parse(url).toOption.flatMap(_.host)
-        hostOpt map { host =>
-          def nameForSuffixLength(n: Int) = DomainToNameMapper.getName(host.domain.take(n).reverse.mkString("."))
-          // Attempts to map more restrictive subdomains first
-          val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
-          candidates.collectFirst{case Some(name) => name}.getOrElse(host.name)
+    val relevantMessages = messages.filter{ m =>
+      (fromTime.map{ dt => m.createdAt.isAfter(dt.minusMillis(100)) } getOrElse(true)) &&
+      (toTime.map{ dt => m.createdAt.isBefore(dt.plusMillis(100)) } getOrElse(true))
+    }
+
+    relevantMessages.filterNot(_.from.isSystem).map{ message =>
+      val messageSegments = parseMessage(message.messageText)
+      message.from match {
+        case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
+        case MessageSender.NonUser(nup) => {
+          ExtendedThreadItem(nup.shortName, nup.fullName, None, messageSegments)
         }
-      }.getOrElse("")
+        case _ => throw new Exception("Impossible")
+      }
+    }.reverse
+  }
 
-      val messages = messageFetchingCommander.getThreadMessages(thread)
+  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
 
-      val threadInfoSmall = ThreadEmailInfo(
-        pageUrl = thread.nUrl.get,
-        pageName = pageName,
-        pageTitle = uriSummarySmall.title.getOrElse(thread.nUrl.get),
-        heroImageUrl = uriSummarySmall.imageUrl,
-        pageDescription = uriSummarySmall.description.map(_.take(190) + "..."),
-        participants = participants.toSeq,
-        conversationStarter = starterUser.firstName + " " + starterUser.lastName,
-        unsubUrl = unsubUrl,
-        muteUrl = muteUrl
-      )
+    val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+    val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
+    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
+    val uriSummarySmallFuture = getSummarySmall(thread)
+    val uriSummaryBigFuture = getSummaryBig(thread)
 
+    for {
+      allUsers <- allUsersFuture
+      allUserImageUrls <- allUserImageUrlsFuture
+      uriSummarySmall <- uriSummarySmallFuture
+      uriSummaryBig <- uriSummaryBigFuture
+    } yield {
+      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl)
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
-
-      var relevantMessages = messages
-      fromTime.map{ dt =>
-        relevantMessages = relevantMessages.filter{ m =>
-          m.createdAt.isAfter(dt.minusMillis(100))
-        }
-      }
-      toTime.map{ dt =>
-        relevantMessages = relevantMessages.filter{ m =>
-          m.createdAt.isBefore(dt.plusMillis(100))
-        }
-      }
-
-      val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
-        val messageSegments = parseMessage(message.messageText)
-        message.from match {
-          case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
-          case MessageSender.NonUser(nup) => {
-            ExtendedThreadItem(nup.shortName, nup.fullName, None, messageSegments)
-          }
-          case _ => throw new Exception("Impossible")
-        }
-      }.reverse
+      val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
       ProtoEmail(
         views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
-        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserInitialEmail(threadInfoBig, threadItems) else views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
+        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserInitialEmail(threadInfoBig, threadItems)
+        else views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
-        starterUser.firstName + " " + starterUser.lastName,
-        uriSummarySmall.title.getOrElse(pageName)
+        threadInfoSmall.conversationStarter,
+        uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
       )
     }
   }
-
-
 
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
     val nuts = db.readOnly { implicit session =>
@@ -244,8 +255,6 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-
-
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
     val (msg, thread) = db.readOnly{ implicit session =>
       val msg = messageRepo.get(msgExtId)
@@ -265,8 +274,4 @@ class ElizaEmailCommander @Inject() (
 
 
   }
-
-
-
-
 }
