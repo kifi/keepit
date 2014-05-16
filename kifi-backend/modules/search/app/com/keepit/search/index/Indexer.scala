@@ -291,7 +291,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
         val end = System.currentTimeMillis
         _lastBackup = end
         indexDirectory.asFile().foreach { dir =>
-          Statsd.gauge(Seq("index", dir.getName, "size").mkString("."), FileUtils.sizeOfDirectory(dir))
+          statsd.gauge(Seq("index", dir.getName, "size").mkString("."), FileUtils.sizeOfDirectory(dir))
         }
         log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
       }

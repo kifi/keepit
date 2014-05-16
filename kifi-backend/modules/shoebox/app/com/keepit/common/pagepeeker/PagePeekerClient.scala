@@ -52,7 +52,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
       Option(response.ahcResponse.getHeader("X-PP-Error")) match {
         case Some("True") =>
           log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
-          Statsd.increment(s"screenshot.fetch.fails")
+          statsd.increment(s"screenshot.fetch.fails")
           None
         case _ =>
 
@@ -69,7 +69,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
           val screenshots = resizedImages flatMap { case resizeAttempt =>
             resizeAttempt match {
               case Success((imageStream, size)) =>
-                Statsd.increment(s"screenshot.fetch.successes")
+                statsd.increment(s"screenshot.fetch.successes")
                 val rawImageOpt = try {
                   Option(ImageIO.read(imageStream))
                 } catch {
@@ -85,7 +85,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
                 }
                 rawImageOpt map { rawImage => PagePeekerImage(rawImage, size) }
               case Failure(ex) =>
-                Statsd.increment(s"screenshot.fetch.fails")
+                statsd.increment(s"screenshot.fetch.fails")
                 ex match {
                   case e: java.lang.IllegalArgumentException =>
                     // This happens when the image stream is null, coming from javax.imageio.ImageIO
