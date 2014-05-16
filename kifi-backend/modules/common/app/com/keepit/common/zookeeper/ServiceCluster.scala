@@ -156,8 +156,21 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     }
   }
 
-  private def resetRoutingList() =
+  private def resetRoutingList() = {
     routingList = Vector(instances.values.toSeq: _*)
+    val myRouter = customRouter // copy the pointer for safety
+    if (myRouter != null) myRouter.update(routingList, forceUpdateTopology)
+  }
+
+  @volatile
+  private[this] var customRouter: CustomRouter = null
+
+  def setCustomRouter(myRouter: CustomRouter): Unit = synchronized {
+    myRouter.update(routingList, forceUpdateTopology)
+    customRouter = myRouter
+  }
+
+  def getCustomRouter: CustomRouter = customRouter
 
   def refresh() = forceUpdateTopology()
 }
