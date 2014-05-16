@@ -736,10 +736,6 @@ api.port.on({
     mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
-  set_show_find_friends: function(show) {
-    ajax('POST', '/ext/pref/showFindFriends?show=' + show);
-    if (prefs) prefs.showFindFriends = show;
-  },
   stop_showing_keeper_intro: function() {
     ajax('POST', '/ext/pref/showKeeperIntro?show=false');
     api.tabs.each(function (tab) {
