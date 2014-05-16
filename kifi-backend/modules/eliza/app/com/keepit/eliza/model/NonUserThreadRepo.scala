@@ -97,7 +97,7 @@ class NonUserThreadRepoImpl @Inject() (
     (for (row <- rows if row.econtactId === econtactId) yield row.threadId).list
 
   def getNonUserThreadsForEmailing(before: DateTime)(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- rows if (row.lastNotifiedAt.isNull || row.lastNotifiedAt <= row.threadUpdatedByOtherAt) && row.lastNotifiedAt < before) yield row).list
+    (for (row <- rows if row.lastNotifiedAt.isNull || (row.lastNotifiedAt <= row.threadUpdatedByOtherAt && row.lastNotifiedAt < before && !row.muted)) yield row).list
 
   def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread] =
     (for (row <- rows if row.threadId === messageThreadId) yield row).list
