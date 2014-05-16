@@ -66,7 +66,7 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  def updateNonUserThreads(thread: MessageThread, newMessage: Message): Unit = {
+  def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
     val emailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
     val emailSenderOption = newMessage.from.asNonUser.collect {
       case emailSender: NonUserEmailParticipant => emailSender.address

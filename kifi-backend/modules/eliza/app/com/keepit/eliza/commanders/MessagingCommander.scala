@@ -371,7 +371,7 @@ class MessagingCommander @Inject() (
     }
 
     // update non user threads of non user recipients
-    notificationCommander.updateNonUserThreads(thread, message)
+    notificationCommander.updateEmailParticipantThreads(thread, message)
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
