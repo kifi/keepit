@@ -331,7 +331,13 @@ class MessagingCommander @Inject() (
       notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
     })
 
-    // update user threads of user recipients
+    // update user thread of the sender
+    from.asUser.map{ sender =>
+      setLastSeen(sender, thread.id.get, Some(message.createdAt))
+      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
+    }
+
+    // update user threads of user recipients - this somehow depends on the sender's user thread update above
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
       val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
       val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
@@ -353,16 +359,12 @@ class MessagingCommander @Inject() (
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-    // update user thread of the sender
-    from.asUser.map{ sender =>
-      setLastSeen(sender, thread.id.get, Some(message.createdAt))
-      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
-
+    // update user thread of the sender again, might be deprecated
+    from.asUser.foreach { sender =>
       notificationCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
 
     // update non user threads of non user recipients
-
     notificationCommander.updateNonUserThreads(thread, message)
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
