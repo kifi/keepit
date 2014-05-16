@@ -245,7 +245,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new SyncScraper(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient)
+  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {

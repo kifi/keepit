@@ -105,6 +105,7 @@ class NotificationCommander @Inject() (
 
         newNonUserParticipants.map { nup =>
           val nut = nonUserThreadRepo.save(NonUserThread(
+            createdBy = adderUserId,
             participant = nup,
             threadId = thread.id.get,
             uriId = thread.uriId,

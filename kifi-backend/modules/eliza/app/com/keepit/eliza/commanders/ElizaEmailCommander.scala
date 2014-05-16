@@ -4,6 +4,7 @@ import com.google.inject.Inject
 
 import scala.concurrent.Future
 import scala.util.matching.Regex.Match
+import scala.util.matching.Regex
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.templates.Html
@@ -44,7 +45,13 @@ import scala.Some
 import com.keepit.eliza.model.ThreadEmailInfo
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.eliza.mail.DomainToNameMapper
 
+
+abstract class MessageSegment(val kind: String) //for use in templates since you can't match on type (it seems)
+case class TextLookHereSegment(msgText: String, pageText: String) extends MessageSegment("tlh")
+case class ImageLookHereSegment(msgText: String, imgUrl: String) extends MessageSegment("ilh")
+case class TextSegment(txt: String) extends MessageSegment("txt")
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -56,27 +63,29 @@ class ElizaEmailCommander @Inject() (
     threadRepo: MessageThreadRepo
   ) {
 
-  case class CleanedMessage(cleanText: String, lookHereTexts: Seq[String], lookHereImageUrls: Seq[String])
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  private def parseMessage(msg: String): CleanedMessage = {
+
+  private def parseMessage(msg: String): Seq[MessageSegment] = {
     val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
-    var textLookHeres = Vector[String]()
-    var imageLookHereUrls = Vector[String]()
-    re.findAllMatchIn(msg).toList.foreach { m =>
-      val segments = m.group(3).split('|')
-      val kind = segments.head
-      val payload = URLDecoder.decode(segments.last, "UTF-8")
-      kind match {
-        case "i" => imageLookHereUrls = imageLookHereUrls :+ payload
-        case "r" => textLookHeres = textLookHeres :+ payload
-        case _ => throw new Exception("Unknown look-here type: " + kind)
+    val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
+    tokens.map{ token =>
+      re.findFirstMatchIn(token).map { m =>
+        val segments = m.group(3).split('|')
+        val kind = segments.head
+        val payload = URLDecoder.decode(segments.last, "UTF-8")
+        val text = m.group(1)
+        kind match {
+          case "i" => ImageLookHereSegment(text, payload)
+          case "r" => TextLookHereSegment(text, payload)
+          case _ => throw new Exception("Unknown look-here type: " + kind)
+        }
+      } getOrElse {
+        TextSegment(token)
       }
     }
-    CleanedMessage(re.replaceAllIn(msg, (m: Match) => m.group(1)), textLookHeres, imageLookHereUrls)
   }
-
 
   private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
 
@@ -115,7 +124,15 @@ class ElizaEmailCommander @Inject() (
 
       val participants = allUsers.values.map{ u => u.fullName } ++ nuts.map{ nut => nut.participant.fullName }
 
-      val pageName = thread.nUrl.flatMap( url => URI.parse(url).toOption.flatMap( uri => uri.host.map(_.name)) ).get
+      val pageName = thread.nUrl.flatMap{ url =>
+        val hostOpt = URI.parse(url).toOption.flatMap(_.host)
+        hostOpt map { host =>
+          def nameForSuffixLength(n: Int) = DomainToNameMapper.getName(host.domain.take(n).reverse.mkString("."))
+          // Attempts to map more restrictive subdomains first
+          val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
+          candidates.collectFirst{case Some(name) => name}.getOrElse(host.name)
+        }
+      }.getOrElse("")
 
       val messages = messageFetchingCommander.getThreadMessages(thread)
 
@@ -146,11 +163,11 @@ class ElizaEmailCommander @Inject() (
       }
 
       val threadItems = relevantMessages.filterNot(_.from.isSystem).map{ message =>
-        val CleanedMessage(text, lookHereTexts, lookHereImageUrls) = parseMessage(message.messageText)
+        val messageSegments = parseMessage(message.messageText)
         message.from match {
-          case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), text, lookHereTexts, lookHereImageUrls)
+          case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
           case MessageSender.NonUser(nup) => {
-            ExtendedThreadItem(nup.shortName, nup.fullName, None, text, lookHereTexts, Seq.empty)
+            ExtendedThreadItem(nup.shortName, nup.fullName, None, messageSegments)
           }
           case _ => throw new Exception("Impossible")
         }
