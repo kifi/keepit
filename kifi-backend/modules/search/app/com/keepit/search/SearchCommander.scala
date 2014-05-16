@@ -3,7 +3,7 @@ package com.keepit.search
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.akka.MonitoredAwait
@@ -14,13 +14,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.result.ResultDecorator
-import com.keepit.search.result.DecoratedResult
-import com.keepit.search.result.ResultMerger
-import com.keepit.search.result.ResultUtil
+import com.keepit.search.sharding.{Shard, ActiveShards}
+import com.keepit.search.result._
 import org.apache.lucene.search.{Explanation, Query}
 import com.keepit.search.index.DefaultAnalyzer
+import scala.collection.mutable.ListBuffer
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -39,6 +37,23 @@ trait SearchCommander {
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None) : DecoratedResult
+
+  def searchShards(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    start: Option[String],
+    end: Option[String],
+    tz: Option[String],
+    coll: Option[String],
+    debug: Option[String]) : PartialSearchResult
 
   def explain(
     userId: Id[User],
@@ -93,6 +108,9 @@ class SearchCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
     val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
+
+    var resultFutures = new ListBuffer[Future[PartialSearchResult]]() // TODO: dispatch here
+
     val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
     val resultDecorator = {
@@ -101,15 +119,15 @@ class SearchCommanderImpl @Inject() (
     }
 
     val mergedResult = {
+
       val resultMerger = new ResultMerger(enableTailCutting, config)
 
-      timing.factory
-      val searchers = mainSearcherFactory(shards.shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
-      val future = Future.traverse(searchers){ searcher =>
-        if (debug.isDefined) searcher.debug(debug.get)
+      // do the local part
+      resultFutures += (Promise[PartialSearchResult].complete(
+        Try{ searchShards(shards.local, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug) }
+      ).future)
 
-        SafeFuture{ searcher.search() }
-      }
+      val future = Future.sequence(resultFutures)
 
       timing.search
       val results = monitoredAwait.result(future, 10 seconds, "slow search")
@@ -124,7 +142,7 @@ class SearchCommanderImpl @Inject() (
 
     SafeFuture {
       // stash timing information
-      timing.send()
+      timing.sendTotal()
 
       val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val numPreviousHits = searchFilter.idFilter.size
@@ -158,6 +176,60 @@ class SearchCommanderImpl @Inject() (
     res
   }
 
+  def searchShards(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None,
+    debug: Option[String] = None) : PartialSearchResult = {
+
+    val timing = new SearchTiming
+
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
+    val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
+    val mergedResult = {
+      val resultMerger = new ResultMerger(enableTailCutting, config)
+
+      timing.factory
+
+      val searchers = mainSearcherFactory(shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+      val future = Future.traverse(searchers){ searcher =>
+        if (debug.isDefined) searcher.debug(debug.get)
+
+        SafeFuture{ searcher.search() }
+      }
+
+      timing.search
+      val results = monitoredAwait.result(future, 10 seconds, "slow search")
+      resultMerger.merge(results, maxHits)
+    }
+
+    timing.decoration // search end
+    timing.end
+
+    SafeFuture {
+      // stash timing information
+      timing.send()
+    }
+
+    mergedResult
+  }
+
   //external (from the extension/website)
   def warmUp(userId: Id[User]) {
     SafeFuture {
@@ -174,7 +246,7 @@ class SearchCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val langProfFuture = mainSearcherFactory.getLangProfileFuture(shards.shards, userId, 3)
+    val langProfFuture = mainSearcherFactory.getLangProfileFuture(shards.local, userId, 3)
 
     val acceptLangs = {
       val langs = acceptLangCodes.toSet.flatMap{ code: String =>
@@ -274,7 +346,7 @@ class SearchCommanderImpl @Inject() (
   }
 
   def searchKeeps(userId: Id[User], query: String): Set[Long] = { // for internal use
-    shards.shards.foldLeft(Set.empty[Long]){ (uris, shard) =>
+    shards.local.foldLeft(Set.empty[Long]){ (uris, shard) =>
       val searcher = mainSearcherFactory.bookmarkSearcher(shard, userId)
       uris ++ searcher.search(query, Lang("en"))
     }
@@ -303,7 +375,7 @@ class SearchCommanderImpl @Inject() (
     def decoration: Unit = { t4 = currentDateTime.getMillis }
     def end: Unit = { t5 = currentDateTime.getMillis() }
 
-    def timestamp = t1
+    def timestamp = t1 + 1
 
     def getPreSearchTime = (t2 - t1)
     def getFactoryTime = (t3 - t2)
@@ -314,6 +386,9 @@ class SearchCommanderImpl @Inject() (
     def send(): Unit = {
       Statsd.timing("extSearch.factory", getFactoryTime)
       Statsd.timing("extSearch.searching", getSearchTime)
+    }
+
+    def sendTotal(): Unit = {
       Statsd.timing("extSearch.postSearchTime", getDecorationTime)
       Statsd.timing("extSearch.total", getTotalTime)
       Statsd.increment("extSearch.total")
