@@ -46,8 +46,6 @@ import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 
-case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
-
 abstract class MessageSegment(val kind: String) //for use in templates since you can't match on type (it seems)
 case class TextLookHereSegment(msgText: String, pageText: String) extends MessageSegment("tlh")
 case class ImageLookHereSegment(msgText: String, imgUrl: String) extends MessageSegment("ilh")

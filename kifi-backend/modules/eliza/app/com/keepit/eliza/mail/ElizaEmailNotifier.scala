@@ -89,8 +89,11 @@ class ElizaEmailNotifierActor @Inject() (
       s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
 
     if (threadItems.nonEmpty) {
-      val title  = thread.pageTitle.getOrElse(thread.nUrl.get).abbreviate(50)
-      sendUnreadMessages(thread, userThread.lastSeen, threadItems, otherParticipants.toSeq, userThread.user, title, thread.deepLocator, userThread.notificationUpdatedAt)
+      val now = clock.now
+      val notificationUpdatedAt = userThread.notificationUpdatedAt
+      airbrake.verify(notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"notificationUpdatedAt $notificationUpdatedAt of thread was more then 30min ago. " +
+        s"recipientUserId: $userThread.user, deepLocator: $thread.deepLocator")
+      sendUnreadMessages(thread, userThread.lastSeen, threadItems, otherParticipants.toSeq, userThread.user, thread.deepLocator)
     }
     db.readWrite{ implicit session =>
       userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
@@ -99,12 +102,14 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
 
-  def sendUnreadMessages(thread: MessageThread, lastSeen: Option[DateTime], threadItems: Seq[ThreadItem], otherParticipantIds: Seq[Id[User]],
-                         recipientUserId: Id[User], title: String, deepLocator: DeepLocator,
-                         notificationUpdatedAt: DateTime): Unit = db.readWrite { implicit session =>
-    val now = clock.now
-    airbrake.verify(notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"notificationUpdatedAt $notificationUpdatedAt of thread was more then 30min ago. " +
-      s"recipientUserId: $recipientUserId, deepLocator: $deepLocator")
+  def sendUnreadMessages(
+    thread: MessageThread,
+    lastSeen: Option[DateTime],
+    threadItems: Seq[ThreadItem],
+    otherParticipantIds: Seq[Id[User]],
+    recipientUserId: Id[User],
+    deepLocator: DeepLocator
+  ): Unit = {
     val allUserIds: Seq[Id[User]] = recipientUserId +: otherParticipantIds
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
