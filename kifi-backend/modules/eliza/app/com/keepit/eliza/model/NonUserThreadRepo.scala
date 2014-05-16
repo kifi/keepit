@@ -20,7 +20,7 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]]
 
-  def getNonUserThreadsForEmailing(before: DateTime)(implicit session: RSession): Seq[NonUserThread]
+  def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread]
 
   def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread]
 
@@ -96,8 +96,8 @@ class NonUserThreadRepoImpl @Inject() (
   def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]] =
     (for (row <- rows if row.econtactId === econtactId) yield row.threadId).list
 
-  def getNonUserThreadsForEmailing(before: DateTime)(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- rows if row.lastNotifiedAt.isNull || (row.lastNotifiedAt <= row.threadUpdatedByOtherAt && row.lastNotifiedAt < before && !row.muted)) yield row).list
+  def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread] =
+    (for (row <- rows if row.lastNotifiedAt.isNull || (row.lastNotifiedAt < lastNotifiedBefore && row.threadUpdatedByOtherAt > threadUpdatedByOtherAfter && row.lastNotifiedAt <= row.threadUpdatedByOtherAt && !row.muted)) yield row).list
 
   def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread] =
     (for (row <- rows if row.threadId === messageThreadId) yield row).list
