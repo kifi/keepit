@@ -44,20 +44,24 @@ class ScrapeWorker @Inject() (
     case t: Throwable => {
       log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
       airbrake.notify(t)
-      val latestUriOpt = helper.syncGetNormalizedUri(uri)
-      // update the uri state to SCRAPE_FAILED
-      val savedUriOpt = for (latestUri <- latestUriOpt) yield {
-        if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else {
-          helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-        }
-      }
-      // then update the scrape schedule
-      val savedInfoF = helper.syncSaveScrapeInfo(info.withFailure())
-      (savedUriOpt.getOrElse(uri), None)
+
+      val savedUri = recordScrapeFailed(uri)
+      helper.syncSaveScrapeInfo(info.withFailure())   // then update the scrape schedule
+      (savedUri, None)
     }
   }
 
-  def shouldUpdateImage(uri:NormalizedURI, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
+  private def recordScrapeFailed(uri: NormalizedURI): NormalizedURI = {
+    helper.syncGetNormalizedUri(uri) match {
+      case Some(latestUri) =>
+        if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else {
+          helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+        }
+      case None => uri
+    }
+  }
+
+  private def shouldUpdateImage(uri:NormalizedURI, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
     if (NormalizedURIStates.DO_NOT_SCRAPE.contains(scrapedURI.state)) {
       log.warn(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] DO_NOT_SCRAPE; skipped.")
       false
@@ -79,105 +83,126 @@ class ScrapeWorker @Inject() (
     }
   }
 
+  private def shouldUpdateScreenshot(uri: NormalizedURI) = {
+    uri.screenshotUpdatedAt map { update =>
+      Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays() >= 5
+    } getOrElse true
+  }
+
+  private def needReIndex(latestUri: NormalizedURI, redirectProcessedUri: NormalizedURI, article: Article, signature: Signature, info: ScrapeInfo): Boolean = {
+    def titleChanged = latestUri.title != Option(article.title)
+    def restrictionChanged = latestUri.restriction != redirectProcessedUri.restriction
+    def scrapeFailed = latestUri.state == NormalizedURIStates.SCRAPE_FAILED
+    def activeURI = latestUri.state == NormalizedURIStates.ACTIVE
+    def signatureChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
+
+    titleChanged || restrictionChanged || scrapeFailed || activeURI || signatureChanged
+  }
+
+  private def handleSuccessfulScraped(uri: NormalizedURI, latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): (NormalizedURI, Option[Article]) = {
+    val Scraped(article, signature, redirects) = scraped
+    val updatedUri = processRedirects(latestUri, redirects)
+
+    if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
+      helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+      log.debug(s"[processURI] (${uri.url}) no change detected")
+      (latestUri, None)
+    } else {
+
+      articleStore += (latestUri.id.get -> article)
+      val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+
+      // scrape schedule
+      helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+
+      helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
+        helper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
+      }
+
+      // Report canonical url
+      article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
+
+      log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
+
+      if (shouldUpdateScreenshot(scrapedURI)) {
+        scrapedURI.id map (shoeboxClient.updateScreenshots(_))
+      }
+
+      if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
+        scrapedURI.id map { id =>
+          shoeboxClient.getUriImage(id) map { res =>
+            log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
+          }
+        }
+      }
+
+      log.debug(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
+      (scrapedURI, Some(article))
+
+    }
+  }
+
+  private def handleNotScrapable(uri: NormalizedURI, latestUri: NormalizedURI, notScrapable: NotScrapable, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+    val NotScrapable(destinationUrl, redirects) = notScrapable
+
+    val unscrapableURI = {
+      helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+      val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
+      helper.syncSaveNormalizedUri(toBeSaved)
+    }
+    log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
+    (unscrapableURI, None)
+
+  }
+
+  private def handleNotModified(uri: NormalizedURI, latestUri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+    // update the scrape schedule, uri is not changed
+    helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+    log.debug(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
+    (latestUri, None)
+  }
+
+  private def handlScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+
+    val Error(httpStatus, msg) = error
+    // store a fallback article in a store map
+    val article = Article(
+      id = latestUri.id.get,
+      title = latestUri.title.getOrElse(""),
+      description = None,
+      canonicalUrl = None,
+      alternateUrls = Set.empty,
+      keywords = None,
+      media = None,
+      content = "",
+      scrapedAt = currentDateTime,
+      httpContentType = None,
+      httpOriginalContentCharset = None,
+      state = NormalizedURIStates.SCRAPE_FAILED,
+      message = Option(msg),
+      titleLang = None,
+      contentLang = None,
+      destinationUrl = None)
+    articleStore += (latestUri.id.get -> article)
+    // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
+    val errorURI = {
+      helper.syncSaveScrapeInfo(info.withFailure())
+      helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+    }
+    log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${errorURI.id}, ${errorURI.state}, ${errorURI.url})")
+    (errorURI, None)
+  }
+
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
     log.debug(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
     if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
     else fetchedArticle match {
-      case Scraped(article, signature, redirects) =>
-        val updatedUri = processRedirects(latestUri, redirects)
-
-        // check if document is not changed or does not need to be reindexed
-        if (latestUri.title == Option(article.title) && // title change should always invoke indexing
-          latestUri.restriction == updatedUri.restriction && // restriction change always invoke indexing
-          latestUri.state != NormalizedURIStates.SCRAPE_FAILED && latestUri.state != NormalizedURIStates.ACTIVE &&
-          signature.similarTo(Signature(info.signature)) >= (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
-        ) {
-          // the article does not need to be reindexed update the scrape schedule, uri is not changed
-          helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-          log.debug(s"[processURI] (${uri.url}) no change detected")
-          (latestUri, None)
-        } else {
-          // the article needs to be reindexed
-
-          // store a scraped article in a store map
-          articleStore += (latestUri.id.get -> article)
-
-          // first update the uri state to SCRAPED
-          val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
-
-          // then update the scrape schedule
-          helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
-            helper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
-          }
-
-          // Report canonical url
-          article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
-
-          log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
-
-          def shouldUpdateScreenshot(uri: NormalizedURI) = {
-            uri.screenshotUpdatedAt map { update =>
-              Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays() >= 5
-            } getOrElse true
-          }
-          if(shouldUpdateScreenshot(scrapedURI)) {
-            scrapedURI.id map (shoeboxClient.updateScreenshots(_))
-          }
-
-          if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
-            scrapedURI.id map { id =>
-              shoeboxClient.getUriImage(id) map { res =>
-                log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
-              }
-            }
-          }
-
-          log.debug(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
-          (scrapedURI, Some(article))
-        }
-      case NotScrapable(destinationUrl, redirects) =>
-        val unscrapableURI = {
-          helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
-          helper.syncSaveNormalizedUri(toBeSaved)
-        }
-        log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
-        (unscrapableURI, None)
-      case NotModified =>
-        // update the scrape schedule, uri is not changed
-        helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-        log.debug(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
-        (latestUri, None)
-      case Error(httpStatus, msg) =>
-        // store a fallback article in a store map
-        val article = Article(
-          id = latestUri.id.get,
-          title = latestUri.title.getOrElse(""),
-          description = None,
-          canonicalUrl = None,
-          alternateUrls = Set.empty,
-          keywords = None,
-          media = None,
-          content = "",
-          scrapedAt = currentDateTime,
-          httpContentType = None,
-          httpOriginalContentCharset = None,
-          state = NormalizedURIStates.SCRAPE_FAILED,
-          message = Option(msg),
-          titleLang = None,
-          contentLang = None,
-          destinationUrl = None)
-        articleStore += (latestUri.id.get -> article)
-        // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-        val errorURI = {
-          helper.syncSaveScrapeInfo(info.withFailure())
-          helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-        }
-        log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${errorURI.id}, ${errorURI.state}, ${errorURI.url})")
-        (errorURI, None)
+      case scraped: Scraped => handleSuccessfulScraped(uri, latestUri, scraped, info, pageInfoOpt)
+      case notScrapable: NotScrapable => handleNotScrapable(uri, latestUri, notScrapable, info)
+      case NotModified => handleNotModified(uri, latestUri, info)
+      case error: Error => handlScrapeError(latestUri, error, info)
     }
   }
 
@@ -206,6 +231,23 @@ class ScrapeWorker @Inject() (
       }
     } else {
       None
+    }
+  }
+
+  private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, contentLang: Lang) {
+    isNonSensitive(normalizedUri.url).map { nonSensitive =>
+      if (!nonSensitive) {
+        if (contentLang == Lang("en") && content.size > 100) {
+          val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+          detector.isPorn(content.take(100000)) match {
+            case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+            case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+            case _ =>
+          }
+        }
+      } else {
+        log.debug(s"uri ${normalizedUri} is exempted from sensitive check!")
+      }
     }
   }
 
@@ -238,20 +280,7 @@ class ScrapeWorker @Inject() (
             }
             val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
 
-            isNonSensitive(normalizedUri.url).map { nonSensitive =>
-              if (!nonSensitive) {
-                if (contentLang == Lang("en") && content.size > 100) {
-                  val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-                  detector.isPorn(content.take(100000)) match {
-                    case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
-                    case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
-                    case _ =>
-                  }
-                }
-              } else {
-                log.debug(s"uri ${normalizedUri} is exempted from sensitive check!")
-              }
-            }
+            runPornDetectorIfNecessary(normalizedUri, content, contentLang)
 
             val article: Article = Article(
               id = normalizedUri.id.get,

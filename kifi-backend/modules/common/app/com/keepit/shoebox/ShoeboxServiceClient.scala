@@ -50,6 +50,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
+  def getEmailAddressById(id: Id[EmailAddress]): Future[String]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -87,6 +88,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
+  def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String]
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def kifiHit(clicker: Id[User], hit:SanitizedKifiHit):Future[Unit]
   def getScrapeInfo(uri:NormalizedURI):Future[ScrapeInfo]
@@ -327,6 +329,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getEmailAddressById(id: Id[EmailAddress]): Future[String] = {
+    call(Shoebox.internal.getEmailAddressById(id)).map{ r =>
+      r.json.as[String]
+    }
+  }
+
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
     cacheProvider.searchFriendsCache.get(key) match {
       case Some(friends) => Promise.successful(friends.map(Id[User]).toSet).future
@@ -539,6 +547,16 @@ class ShoeboxServiceClientImpl @Inject() (
       "locator" -> locator.value
     )
     call(Shoebox.internal.createDeepLink, payload)
+  }
+
+  def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String] = {
+    val payload = Json.obj(
+      "locator" -> locator.value,
+      "recipient" -> recipient
+    )
+    call(Shoebox.internal.getDeepUrl, payload).map{ r =>
+      r.json.as[String]
+    }
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
