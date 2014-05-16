@@ -107,8 +107,11 @@ class MailDiscussionMessageParser @Inject() (
   }
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
-    getPublicId(message) map { publicId =>
-      MailNotificationReply(getTimestamp(message), getText(message).map(MailDiscussionMessageParser.extractMessage), publicId)
+    getPublicId(message) flatMap { publicId =>
+      val contents = getText(message).map(MailDiscussionMessageParser.extractMessage)
+      if (contents.nonEmpty) {
+        Some(MailNotificationReply(getTimestamp(message), contents, publicId))
+      } else None
     }
 
   }
