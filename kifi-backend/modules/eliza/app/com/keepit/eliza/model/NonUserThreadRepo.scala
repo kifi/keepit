@@ -62,18 +62,18 @@ class NonUserThreadRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
     def notifiedCount = column[Int]("notified_count", O.NotNull)
     def lastNotifiedAt = column[DateTime]("last_notified_at", O.Nullable)
-    def threadUpdatedAt = column[DateTime]("thread_updated_at", O.Nullable)
+    def threadUpdatedByOtherAt = column[DateTime]("thread_updated_at", O.Nullable)
     def muted = column[Boolean]("muted", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedAt.?, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
+    def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedByOtherAt.?, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
 
     private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddressHolder], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
       val participant = t._5 match {
         case NonUserKinds.email =>
           NonUserEmailParticipant(t._6.get, t._7)
       }
-      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, threadId = t._8, uriId = t._9, notifiedCount = t._10, lastNotifiedAt = t._11, threadUpdatedAt = t._12, muted = t._13, state = t._14, accessToken = t._15)
+      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, threadId = t._8, uriId = t._9, notifiedCount = t._10, lastNotifiedAt = t._11, threadUpdatedByOtherAt = t._12, muted = t._13, state = t._14, accessToken = t._15)
     }
 
     private def objToRow(n: NonUserThread) = {
@@ -81,7 +81,7 @@ class NonUserThreadRepoImpl @Inject() (
         case ep: NonUserEmailParticipant =>
           (ep.kind, Option(ep.address), ep.econtactId)
       }
-      Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedAt, n.muted, n.state, n.accessToken))
+      Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedByOtherAt, n.muted, n.state, n.accessToken))
     }
   }
   def table(tag: Tag) = new NonUserThreadTable(tag)
