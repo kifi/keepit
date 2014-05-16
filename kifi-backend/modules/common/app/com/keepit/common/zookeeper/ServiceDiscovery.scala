@@ -113,7 +113,7 @@ class ServiceDiscoveryImpl(
         require(myCluster.size > 0)
         if (logMe) {
           logLeader(s"I'm the leader! ${myInstance.get}")
-          Statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
+          statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
         }
         return true
       case Some(instance)  =>

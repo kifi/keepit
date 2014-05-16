@@ -83,7 +83,7 @@ class MobileMessagingController @Inject() (
     contextBuilder += ("source", "mobile")
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
-    Statsd.timing(s"messaging.replyMessage", tDiff)
+    statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
