@@ -117,7 +117,7 @@ class MailDiscussionMessageParser @Inject() (
 object MailDiscussionMessageParser {
   val SIGNATURES = Seq("Sent from my iPhone")
   def extractMessage(content: String): String = {
-    val mainText = (new Regex(raw"\n[^\n]*((<[\s\S]+@[\s\S]+>)|(\([\s\S]+@[\s\S]+\)))[^\n]*:")).split(content)(0).trim
+    val mainText = (new Regex(raw"[^\n]*((<[\s\S]+@[\s\S]+>)|(\([\s\S]+@[\s\S]+\)))[^\n]*:")).split(content)(0).trim
     SIGNATURES.foldLeft(mainText)((text, signature) => text.stripSuffix(signature)).trim
   }
 }
