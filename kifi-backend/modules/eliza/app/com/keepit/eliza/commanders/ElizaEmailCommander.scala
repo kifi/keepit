@@ -212,7 +212,7 @@ class ElizaEmailCommander @Inject() (
             from = magicAddress,
             fromName = Some(protoEmail.starterName + " (via Kifi)"),
             to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-            subject = "Kifi Discussion on " + protoEmail.pageTitle,
+            subject = protoEmail.pageTitle,
             htmlBody = protoEmail.addedHtml.body,
             category = NotificationCategory.NonUser.ADDED_TO_DISCUSSION,
             extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
@@ -236,7 +236,7 @@ class ElizaEmailCommander @Inject() (
         from = magicAddress,
         fromName = Some(protoEmail.starterName + " (via Kifi)"),
         to = Seq[EmailAddressHolder](GenericEmailAddress(emailParticipantThread.participant.identifier)),
-        subject = "Kifi Discussion on " + protoEmail.pageTitle,
+        subject = protoEmail.pageTitle,
         htmlBody = if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body,
         category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED,
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
