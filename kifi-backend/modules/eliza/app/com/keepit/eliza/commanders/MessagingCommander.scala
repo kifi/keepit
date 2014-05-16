@@ -204,7 +204,7 @@ class MessagingCommander @Inject() (
     val (thread, isNew) = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
       if (isNew){
-        checkNonUserRateLimits(from, thread, nonUserRecipients)
+        checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
         nonUserRecipients.foreach { nonUser =>
           nonUserThreadRepo.save(NonUserThread(
             createdBy = from,
@@ -418,7 +418,7 @@ class MessagingCommander @Inject() (
 
         val oldThread = threadRepo.get(threadExtId)
 
-        checkNonUserRateLimits(adderUserId, oldThread, newNonUserParticipants)
+        checkEmailParticipantRateLimits(adderUserId, oldThread, newNonUserParticipants)
 
         if (!oldThread.participants.exists(_.contains(adderUserId)) || !oldThread.replyable) {
           throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
@@ -634,34 +634,36 @@ class MessagingCommander @Inject() (
     }
   }
 
-  private def checkNonUserRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {
+  private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {
 
     // Check rate limit for this discussion
-    val distinctNonUsers = nonUsers.map(_.identifier).toSet
-    val existingNonUserParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).map(_.identifier)
-    val updatedNonUserParticipants =  existingNonUserParticipants ++ distinctNonUsers
+    val distinctEmailRecipients = nonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }.toSet
+    val existingEmailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
 
-    if (updatedNonUserParticipants.size > MessagingCommander.MAX_NON_USER_PARTICIPANTS_PER_THREAD) {
+    val totalEmailParticipants =  (existingEmailParticipants ++ distinctEmailRecipients).size
+    val newEmailParticipants = totalEmailParticipants - existingEmailParticipants.size
+
+    if (totalEmailParticipants > MessagingCommander.MAX_NON_USER_PARTICIPANTS_PER_THREAD) {
       throw new ExternalMessagingRateLimitException(MessagingCommander.maxEmailRecipientsPerThreadErrorMessage)
     }
 
-    if (updatedNonUserParticipants.size >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD) {
-      val warning = s"Discussion ${thread.id.get} ${thread.uriId.map("on uri " + _).getOrElse("")} has ${updatedNonUserParticipants.size} non user participants after user $user reached to ${updatedNonUserParticipants.size - existingNonUserParticipants.size} new people."
+    if (totalEmailParticipants >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD && newEmailParticipants > 0) {
+      val warning = s"Discussion ${thread.id.get} ${thread.uriId.map("on uri " + _).getOrElse("")} has ${totalEmailParticipants} non user participants after user $user reached to $newEmailParticipants new people."
       airbrake.notify(new ExternalMessagingRateLimitException(warning))
     }
 
     // Check rate limit for this user
     val since = clock.now.minus(MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW.toMillis)
-    val recentNonUserRecipients = nonUserThreadRepo.getRecentRecipientsByUser(user, since)
-    val emailAddressHolders = nonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
-    val updatedRecentNonUserRecipients = recentNonUserRecipients.keySet ++ emailAddressHolders
+    val recentEmailRecipients = nonUserThreadRepo.getRecentRecipientsByUser(user, since).keySet.map(_.address)
+    val totalRecentEmailRecipients = (recentEmailRecipients ++ distinctEmailRecipients).size
+    val newRecentEmailRecipients = totalRecentEmailRecipients - recentEmailRecipients.size
 
-    if (updatedRecentNonUserRecipients.size > MessagingCommander.MAX_RECENT_NON_USER_RECIPIENTS) {
+    if (totalRecentEmailRecipients > MessagingCommander.MAX_RECENT_NON_USER_RECIPIENTS) {
       throw new ExternalMessagingRateLimitException(MessagingCommander.maxRecentEmailRecipientsErrorMessage)
     }
 
-    if (updatedRecentNonUserRecipients.size > MessagingCommander.WARNING_RECENT_NON_USER_RECIPIENTS) {
-      val warning = s"User $user has reached to ${updatedRecentNonUserRecipients.size} distinct email recipients in the past ${MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW}"
+    if (totalRecentEmailRecipients > MessagingCommander.WARNING_RECENT_NON_USER_RECIPIENTS && newRecentEmailRecipients > 0) {
+      val warning = s"User $user has reached to ${totalRecentEmailRecipients} distinct email recipients in the past ${MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW}"
       throw new ExternalMessagingRateLimitException(warning)
     }
   }
