@@ -129,11 +129,13 @@ class ElizaEmailNotifierActor @Inject() (
       if (recipient.state == UserStates.ACTIVE || recipient.primaryEmailId.isEmpty) {
         val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
 
-        // todo(martin) unsubscribe/mute links
-        val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls).copy(pageUrl = deepUrl)
-        val b: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
+        for {
+          destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
+          unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
+        } yield {
+          val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
+          val b: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
 
-        shoebox.getEmailAddressById(recipient.primaryEmailId.get) map { destinationEmail =>
           val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
           val email = ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("Kifi Notifications"),
