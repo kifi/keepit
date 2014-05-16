@@ -264,6 +264,12 @@ class MessagingCommander @Inject() (
     sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
   }
 
+  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+    log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.thread}")
+    val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread)}
+    sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
+  }
+
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadId)
@@ -398,6 +404,10 @@ class MessagingCommander @Inject() (
 
   def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread] =
     db.readOnly { implicit session => nonUserThreadRepo.getByAccessToken(token) }
+
+  def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread] =
+    db.readOnly { implicit session => userThreadRepo.getByAccessToken(token) }
+
 
   def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
     db.readOnly { implicit session =>

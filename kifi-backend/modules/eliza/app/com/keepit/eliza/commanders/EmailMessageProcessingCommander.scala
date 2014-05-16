@@ -32,18 +32,19 @@ class EmailMessageProcessingCommander @Inject() (
         try {
           result.map { sqsMessage =>
             val message = sqsMessage.body
-            val nutOpt = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(message.token))
-            nutOpt.map { nut =>
-              message.content match {
-                case Some(content: String) => {
-                  val contextBuilder = heimdalContextBuilder()
-                  contextBuilder += ("source", "email")
-                  messagingCommander.sendMessageWithNonUserThread(nut, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
-                }
-                case None => airbrake.notify(s"Could not extract contents of email: token = ${message.token} and timestamp = ${message.timestamp}")
-              }
+            val token = ThreadAccessToken(message.token)
+            // look for associated non user thread
+            val nutOpt = messagingCommander.getNonUserThreadOptByAccessToken(token)
+            nutOpt.map {
+              sendToNonUserThread(message, _)
             } getOrElse {
-              airbrake.notify(s"Invalid Access Token ${message.token}")
+              // look for associated user thread
+              val userThreadOpt = messagingCommander.getUserThreadOptByAccessToken(token)
+              userThreadOpt.map {
+                sendToUserThread(message, _)
+              } getOrElse {
+                airbrake.notify(s"Invalid Access Token ${message.token}")
+              }
             }
             sqsMessage.consume()
           }
@@ -56,6 +57,28 @@ class EmailMessageProcessingCommander @Inject() (
         log.info("RConn: Queue call failed")
         airbrake.notify("Failed reading incoming messages from queue", t)
       }
+    }
+  }
+
+  private def sendToNonUserThread(message: MailNotificationReply, nut: NonUserThread) = {
+    message.content match {
+      case Some(content: String) => {
+        val contextBuilder = heimdalContextBuilder()
+        contextBuilder += ("source", "email")
+        messagingCommander.sendMessageWithNonUserThread(nut, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
+      }
+      case None => airbrake.notify(s"Could not extract contents of email: token = ${message.token} and timestamp = ${message.timestamp}")
+    }
+  }
+
+  private def sendToUserThread(message: MailNotificationReply, userThread: UserThread) = {
+    message.content match {
+      case Some(content: String) => {
+        val contextBuilder = heimdalContextBuilder()
+        contextBuilder += ("source", "email")
+        messagingCommander.sendMessageWithUserThread(userThread, content, Some(MessageSource.EMAIL), None)(contextBuilder.build)
+      }
+      case None => airbrake.notify(s"Could not extract contents of email: token = ${message.token} and timestamp = ${message.timestamp}")
     }
   }
 }

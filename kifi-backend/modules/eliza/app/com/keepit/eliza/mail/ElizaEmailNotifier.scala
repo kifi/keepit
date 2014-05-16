@@ -93,7 +93,7 @@ class ElizaEmailNotifierActor @Inject() (
       val notificationUpdatedAt = userThread.notificationUpdatedAt
       airbrake.verify(notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"notificationUpdatedAt $notificationUpdatedAt of thread was more then 30min ago. " +
         s"recipientUserId: $userThread.user, deepLocator: $thread.deepLocator")
-      sendUnreadMessages(thread, userThread.lastSeen, threadItems, otherParticipants.toSeq, userThread.user, thread.deepLocator)
+      sendUnreadMessages(userThread, thread, userThread.lastSeen, threadItems, otherParticipants.toSeq, userThread.user, thread.deepLocator)
     }
     db.readWrite{ implicit session =>
       userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
@@ -103,6 +103,7 @@ class ElizaEmailNotifierActor @Inject() (
 
 
   def sendUnreadMessages(
+    userThread: UserThread,
     thread: MessageThread,
     lastSeen: Option[DateTime],
     threadItems: Seq[ThreadItem],
@@ -137,11 +138,13 @@ class ElizaEmailNotifierActor @Inject() (
           val b: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
 
           val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
+          val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
           val email = ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS, fromName = Some("Kifi Notifications"),
+            from = magicAddress,
+            fromName = Some("Kifi Notifications"),
             to = Seq(GenericEmailAddress(destinationEmail)),
             subject = s"""New messages on "${threadEmailInfo.pageTitle}" with $authorFirst""",
-            htmlBody = views.html.nonUserAddedDigestEmail(threadEmailInfo, b).body,
+            htmlBody = views.html.userDigestEmail(threadEmailInfo, b).body,
             category = NotificationCategory.User.MESSAGE
           )
           shoebox.sendMail(email)
