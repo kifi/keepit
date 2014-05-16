@@ -220,10 +220,6 @@ var snapshot = function () {
         default: return null;
       }
 
-      // use tab instead of space to terminate unicode escape sequences so that space can always signify
-      // the descendant combinator
-      sel = sel.replace(/ /g, '\t');
-
       // We loosen up the selector slowly because multiple matches is failure.
 
       // 1. Allow a new ancestor to have been inserted in the parent chain.
