@@ -325,15 +325,12 @@ class MessagingCommander @Inject() (
       participantSet.toSeq.map(id2BasicUser(_)) ++ nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
     )
 
+    // send message through websockets immediately
     thread.participants.map(_.allUsers.par.foreach { user =>
       notificationCommander.notifyMessage(user, message.threadExtId, messageWithBasicUser)
     })
 
-    from.asUser.map{ sender =>
-      setLastSeen(sender, thread.id.get, Some(message.createdAt))
-      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
-    }
-
+    // update user threads of user recipients
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnly { implicit session =>
       val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
       val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
@@ -356,11 +353,17 @@ class MessagingCommander @Inject() (
       notificationCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity, getUnreadUnmutedThreadCount(userId))
     }
 
-    notificationCommander.notifyEmailUsers(thread)
+    // update user thread of the sender
+    from.asUser.map{ sender =>
+      setLastSeen(sender, thread.id.get, Some(message.createdAt))
+      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
 
-    from.asUser.map{ id =>
-      notificationCommander.notifySendMessage(id, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+      notificationCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
+
+    // update non user threads of non user recipients
+
+    notificationCommander.notifyEmailUsers(thread)
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
