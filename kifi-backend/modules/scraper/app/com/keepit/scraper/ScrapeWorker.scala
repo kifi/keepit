@@ -23,8 +23,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 
 
-// straight port from original (local) code
-class SyncScraper @Inject() (
+class ScrapeWorker @Inject() (
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
@@ -125,13 +124,14 @@ class SyncScraper @Inject() (
             } getOrElse true
           }
           if(shouldUpdateScreenshot(scrapedURI)) {
-            shoeboxClient.updateScreenshotsForUri(scrapedURI)
+            scrapedURI.id map (shoeboxClient.updateScreenshots(_))
           }
 
           if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
-            shoeboxClient.getURIImage(uri) map { res => // todo: updateImage
-              log.debug(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
-              res
+            scrapedURI.id map { id =>
+              shoeboxClient.getUriImage(id) map { res =>
+                log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
+              }
             }
           }
 

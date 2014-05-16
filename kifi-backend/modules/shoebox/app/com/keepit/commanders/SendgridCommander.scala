@@ -3,11 +3,12 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
-import com.keepit.heimdal.{UserEventTypes, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.heimdal._
 import com.keepit.common.performance.timing
 import com.keepit.model.{NotificationCategory, EmailAddressRepo}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.social.NonUserKinds
 
 class SendgridCommander @Inject() (
   db: Database,
@@ -53,22 +54,30 @@ class SendgridCommander @Inject() (
     }
   }
 
-  private def heimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
+  private def sendHeimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
     timing(s"sendgrid heimdalEvent eventType(${event.event}}) mailId(${event.mailId}}) ") {
     for {
       eventType <- event.event
       address <- event.email
       email <- emailOpt
     } yield {
-      if (NotificationCategory.User.all.contains(email.category)) {
-        val emailAddresses = db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).toSet }(Database.Slave)
-        emailAddresses foreach { emailAddress =>
-          val contextBuilder =  heimdalContextBuilder()
-          contextBuilder += ("action", eventType)
-          contextBuilder.addEmailInfo(email)
-          val userEvent = UserEvent(emailAddress.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED)
-          heimdalClient.trackEvent(userEvent)
-        }
+
+      lazy val context = {
+        val contextBuilder =  heimdalContextBuilder()
+        contextBuilder += ("action", eventType)
+        event.url.foreach { url => contextBuilder += ("clicked", clicked(url)) }
+        contextBuilder.addEmailInfo(email)
+        contextBuilder.build
+      }
+
+      val relevantUsers = if (NotificationCategory.User.all.contains(email.category)) {
+        db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(Database.Slave)
+      } else Set.empty
+
+      if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
+        heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, event.timestamp))
+      } else if (NotificationCategory.NonUser.all.contains(email.category)) {
+        heimdalClient.trackEvent(NonUserEvent(address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
       }
     }
   }
@@ -81,6 +90,14 @@ class SendgridCommander @Inject() (
       } yield mail
     }
     emailAlert(event, emailOpt)
-    heimdalEvent(event, emailOpt)
+    sendHeimdalEvent(event, emailOpt)
+  }
+
+  private def clicked(url: String): String = url.toLowerCase match {
+    case kifi if kifi.contains("kifi.com") => url
+    case facebook if facebook.contains("facebook.com/pages/kifi") => "Kifi Facebook Page"
+    case twitter if twitter.contains("twitter.com/kifi") => "Kifi Twitter Page"
+    case linkedin if linkedin.contains("linkedin.com/company/fortytwo") => "Kifi LinkedIn Page"
+    case _ => "External Page"
   }
 }

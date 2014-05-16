@@ -1,6 +1,6 @@
 package com.keepit.social
 
-import com.keepit.common.cache.{CacheStatistics, JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.model._
@@ -13,6 +13,9 @@ import play.api.libs.json._
 import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
 
 import scala.concurrent.duration.Duration
+import com.keepit.serializer.NoCopyLocalSerializer
+import com.keepit.serializer.NoCopyLocalSerializer
+import scala.Some
 
 trait BasicUserLikeEntity {
   def asBasicUser: Option[BasicUser] = None
@@ -104,8 +107,7 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 }
 
 class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
-
+  extends ImmutableJsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class BasicUserWithUserId(
   userId: Id[User],

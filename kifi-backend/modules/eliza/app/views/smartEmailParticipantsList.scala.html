@@ -1,0 +1,23 @@
+@(names: Seq[String], exclude: Seq[String] =  Seq.empty)
+
+@preformat(name: String) = {
+  @if(name.contains("@")) {
+    <a class="txt_p" href="mailto:@name" style="text-decoration:none; font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@name</a>
+  } else {
+    <span class="txt_p" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@name</span>
+  }
+}
+
+
+@filteredNames() = @{
+  names.filterNot(exclude.contains(_))
+}
+
+@if(filteredNames.length==1) {
+  @preformat(filteredNames.head)
+} else {
+  @for(name <- filteredNames.dropRight(1)) {
+    @preformat(name + ", ")
+  }
+  @preformat(filteredNames.last)
+}

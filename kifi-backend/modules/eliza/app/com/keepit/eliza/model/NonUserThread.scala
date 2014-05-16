@@ -3,7 +3,7 @@ package com.keepit.eliza.model
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{EContact, NormalizedURI}
+import com.keepit.model.{User, EContact, NormalizedURI}
 import play.api.libs.json._
 import com.keepit.common.mail.EmailAddressHolder
 import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind}
@@ -62,6 +62,7 @@ case class NonUserThread(
   id: Option[Id[NonUserThread]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  createdBy: Id[User],
   participant: NonUserParticipant,
   threadId: Id[MessageThread],
   uriId: Option[Id[NormalizedURI]],

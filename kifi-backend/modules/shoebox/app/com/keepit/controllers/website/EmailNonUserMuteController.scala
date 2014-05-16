@@ -26,7 +26,7 @@ class EmailNonUserMuteController @Inject() (
 
   val optOutForm = Form("should-mute" -> optional(text))
   def optOutAction(publicId: String) = Action.async { implicit request =>
-    optOutForm.bindFromRequest.fold(formWithErrors => future{BadRequest}, { shouldMuteInput =>
+    optOutForm.bindFromRequest.fold(formWithErrors => Future.successful(BadRequest), { shouldMuteInput =>
       val shouldMute = shouldMuteInput.getOrElse("false") match {
         case s if s == "true" => true
         case s if s == "false" => false

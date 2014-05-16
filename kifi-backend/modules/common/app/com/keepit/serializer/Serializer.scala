@@ -1,7 +1,8 @@
 package com.keepit.serializer
 
 import play.api.libs.json._
-import java.io.ByteArrayOutputStream
+import com.keepit.common.logging.Logging
+import scala.Option
 
 trait BinaryFormat[T] {
   def writes(value: Option[T]): Array[Byte] = {
@@ -33,6 +34,21 @@ object TraversableFormat {
 trait Serializer[T] {
   def writes(value: Option[T]): Any
   def reads(obj: Any): Option[T]
+}
+
+trait LocalSerializer[T] { // for use with local/in-memory caching
+  def localWrites(value: Option[T]): Any
+  def localReads(obj: Any): Option[T]
+}
+
+case class SafeLocalSerializer[T](serializer:Serializer[T]) extends LocalSerializer[T] {
+  def localWrites(value: Option[T]) = serializer.writes(value)
+  def localReads(obj: Any) = serializer.reads(obj)
+}
+
+case class NoCopyLocalSerializer[T]() extends LocalSerializer[T] with Logging { // works with immutable objects
+  def localWrites(value: Option[T]) = value
+  def localReads(obj: Any): Option[T] = obj.asInstanceOf[Option[T]]
 }
 
 class SerializerException(msg: String) extends Exception(msg)
