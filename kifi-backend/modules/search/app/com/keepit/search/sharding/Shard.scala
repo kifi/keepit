@@ -24,7 +24,7 @@ case class ActiveShards(local: Set[Shard[NormalizedURI]]) {
 }
 
 object ShardSpec {
-  def toString(shards: Set[Shard[_]]): String = {
+  def toString[T](shards: Set[Shard[T]]): String = {
     if (shards.isEmpty) throw new Exception("no shard specified")
 
     val numShards = shards.head.numShards
