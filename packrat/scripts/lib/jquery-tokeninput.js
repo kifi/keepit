@@ -261,7 +261,7 @@
               handleQueryChange();
               return false;
             }
-            return true;
+            break;
 
           case KEY.ESC:
             hideDropdown();
