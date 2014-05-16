@@ -69,7 +69,7 @@ class ElizaEmailCommander @Inject() (
 
   private def parseMessage(msg: String): Seq[MessageSegment] = {
     val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
-    val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched + "\t").split("\t").map(_.trim).filter(_.length>0)
+    val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
     tokens.map{ token =>
       re.findFirstMatchIn(token).map { m =>
         val segments = m.group(3).split('|')
