@@ -9,7 +9,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.time._
 import com.keepit.eliza.model._
-import com.keepit.eliza.util.MessageFormatter
 import com.keepit.inject.AppScoped
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -19,16 +18,13 @@ import com.google.inject.{Inject, ImplementedBy}
 import scala.concurrent.duration._
 
 import akka.util.Timeout
-import org.joda.time.DateTime
 import com.keepit.common.mail._
 import scala.concurrent.{Await, Future}
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.commanders.ElizaEmailCommander
-import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.eliza.model.ThreadEmailInfo
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.eliza.model.UserThread
-import com.keepit.model.DeepLocator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import ElizaEmailNotifierActor._
@@ -62,9 +58,7 @@ class ElizaEmailNotifierActor @Inject() (
       }
       val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
       log.info(s"[now:$now] [lastNotifiedBefore:$lastNotifiedBefore] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
-      unseenUserThreads.foreach { userThread =>
-        sendEmail(userThread)
-      }
+      unseenUserThreads.groupBy(_.thread).values.map(emailUnreadMessagesForMessageThread)
 
     case SendNonUserEmails =>
       val now = clock.now
@@ -86,7 +80,36 @@ class ElizaEmailNotifierActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  private def sendEmail(userThread: UserThread): Unit = {
+  /**
+   * Sends email update to all specified user threads corresponding to the same MessageThread
+   */
+  private def emailUnreadMessagesForMessageThread(userThreads: Seq[UserThread]): Unit = {
+    if (userThreads.isEmpty) return
+    val threadId = userThreads.head.thread
+    require(userThreads.forall(_.thread == threadId)) // All user threads must correspond to the same MessageThread
+
+    val thread = db.readOnly { implicit session => threadRepo.get(threadId) }
+    val allUserIds = thread.participants.map(_.allUsers).getOrElse(Set()).toSeq
+    val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
+      shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
+    )
+    // todo(martin) This is an emergency fix, we must remove these two Await as soon as possible
+    val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
+    val uriSummary = Await.result(elizaEmailCommander.getSummarySmall(thread), 30 seconds)
+    allUsersFuture map { allUsers =>
+      userThreads.foreach{ userThread =>
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
+      }
+    }
+  }
+
+  private def emailUnreadMessagesForUserThread(
+    userThread: UserThread,
+    thread: MessageThread,
+    allUsers: Map[Id[User], User],
+    allUserImageUrls: Map[Id[User], String],
+    uriSummary: URISummary
+  ): Unit = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
     airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
@@ -95,82 +118,49 @@ class ElizaEmailNotifierActor @Inject() (
     airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"Late send of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
 
-    val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
+    val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen, None)
 
-    //everyone exception user who we about to email
-    val otherParticipants: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set()) - userThread.user
-
-    val threadItems: Seq[ThreadItem] =  db.readOnly { implicit session => userThread.lastSeen.map { lastSeen =>
-      messageRepo.getAfter(thread.id.get, lastSeen).filter(!_.from.isSystem)
-    } getOrElse {
-      messageRepo.get(thread.id.get, 0).filter(!_.from.isSystem)
-    }}.map { message =>
-      ThreadItem(message.from.asUser, message.from.asNonUser.map(_.toString), MessageFormatter.toText(message.messageText))
-    } reverse
-
-    if (threadItems.nonEmpty) {
+    if (extendedThreadItems.nonEmpty) {
       log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
         s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
-        s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
-      sendUnreadMessages(userThread, thread, userThread.lastSeen, threadItems, otherParticipants.toSeq, userThread.user, thread.deepLocator)
-    }
-    log.info(s"processed user thread $userThread")
-  }
+        s"with ${extendedThreadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
 
+      val recipientUserId = userThread.user
+      val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
-  private def sendUnreadMessages(
-    userThread: UserThread,
-    thread: MessageThread,
-    lastSeen: Option[DateTime],
-    threadItems: Seq[ThreadItem],
-    otherParticipantIds: Seq[Id[User]],
-    recipientUserId: Id[User],
-    deepLocator: DeepLocator
-  ): Unit = {
-    val allUserIds: Seq[Id[User]] = recipientUserId +: otherParticipantIds
-    val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
-      shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
-    )
-    // todo(martin) This is an emergency fix, we must remove it as soon as possible
-    val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
-    val uriSummary = Await.result(elizaEmailCommander.getSummarySmall(thread), 30 seconds)
-    val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
+      deepUrlFuture map { deepUrl =>
+        //if user is not active, skip it!
+        val recipient = allUsers(recipientUserId)
+        if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
+          val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
 
-    for {
-      allUsers <- allUsersFuture
-      deepUrl <- deepUrlFuture
-    } yield {
-      //if user is not active, skip it!
-      val recipient = allUsers(recipientUserId)
-      if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
-        val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
+          for {
+            destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
+            unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
+          } yield {
+            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
 
-        for {
-          destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
-          unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
-        } yield {
-          val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
-          val b: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
-
-          val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
-          val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
-          val email = ElectronicMail(
-            from = magicAddress,
-            fromName = Some("Kifi Notifications"),
-            to = Seq(GenericEmailAddress(destinationEmail)),
-            subject = s"""New messages on "${threadEmailInfo.pageTitle}" with $authorFirst""",
-            htmlBody = views.html.userDigestEmail(threadEmailInfo, b).body,
-            category = NotificationCategory.User.MESSAGE
-          )
-          shoebox.sendMail(email)
-          db.readWrite{ implicit session =>
-            userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
+            val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
+            val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
+            val email = ElectronicMail(
+              from = magicAddress,
+              fromName = Some("Kifi Notifications"),
+              to = Seq(GenericEmailAddress(destinationEmail)),
+              subject = s"""New messages on "${threadEmailInfo.pageTitle}" with $authorFirst""",
+              htmlBody = views.html.userDigestEmail(threadEmailInfo, extendedThreadItems).body,
+              category = NotificationCategory.User.MESSAGE
+            )
+            shoebox.sendMail(email)
+            db.readWrite{ implicit session =>
+              userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
+            }
           }
+        } else {
+          log.warn(s"user $recipient is not active, not sending emails")
         }
-      } else {
-        log.warn(s"user $recipient is not active, not sending emails")
       }
     }
+    log.info(s"processed user thread $userThread")
   }
 }
 
