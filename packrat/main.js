@@ -750,7 +750,6 @@ api.port.on({
     });
     if (prefs) prefs.showExtMsgIntro = false;
     mixpanel.track('user_was_notified', {
-      type: source,
       action: 'click',
       subaction: action,
       channel: 'kifi',
@@ -760,9 +759,7 @@ api.port.on({
   },
   track_showing_external_messaging_intro: function() {
     mixpanel.track('user_was_notified', {
-      type: source,
       action: 'open',
-      subaction: action,
       channel: 'kifi',
       subchannel: 'tooltip',
       category: 'extMsgFTUE'
@@ -783,7 +780,6 @@ api.port.on({
     mixpanel.track('user_clicked_pane', {
       type: source,
       action: 'importGmail',
-      source: 'extension',
       subsource: 'composeTypeahead'
     });
   },
