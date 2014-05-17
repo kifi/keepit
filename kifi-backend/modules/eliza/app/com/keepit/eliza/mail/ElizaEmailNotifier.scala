@@ -1,7 +1,7 @@
 package com.keepit.eliza.mail
 
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{SlowRunningExecutionContext, SafeFuture, FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -33,6 +33,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import ElizaEmailNotifierActor._
 import com.keepit.social.NonUserKinds
+import com.keepit.common.akka.com.keepit.common.akka.ThrottledExecutionContext.ThrottledExecutionContext
 
 object ElizaEmailNotifierActor {
   case object SendUserEmails
@@ -52,6 +53,8 @@ class ElizaEmailNotifierActor @Inject() (
     elizaEmailCommander: ElizaEmailCommander,
     nonUserThreadRepo: NonUserThreadRepo
   ) extends FortyTwoActor(airbrake) with Logging {
+
+  val throttledExecutionContext = ThrottledExecutionContext(1)
 
   def receive = {
     case SendUserEmails =>
@@ -131,18 +134,21 @@ class ElizaEmailNotifierActor @Inject() (
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
     )
-    val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
+    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))(
+      throttledExecutionContext // Limit the number of concurrent requests
+    )
     val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
     val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
     for {
       allUsers <- allUsersFuture
+      allUserImageUrls <- allUserImageUrlsFuture
       deepUrl <- deepUrlFuture
       uriSummary <- uriSummaryFuture
     } yield {
       //if user is not active, skip it!
       val recipient = allUsers(recipientUserId)
-      if (recipient.state == UserStates.ACTIVE || recipient.primaryEmailId.isEmpty) {
+      if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
         val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
 
         for {
