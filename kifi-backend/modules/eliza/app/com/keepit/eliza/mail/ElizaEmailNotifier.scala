@@ -131,7 +131,13 @@ class ElizaEmailNotifierActor @Inject() (
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
     )
-    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
+    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = allUsersFuture.map { allUsers =>
+      allUsers.mapValues { u =>
+        "//djty7jcqog9qu.cloudfront.net/users/" + u.externalId + "/pics/100/" + u.pictureName.getOrElse("0") + ".jpg"
+      }
+    }//new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
+
+
     val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
     val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
