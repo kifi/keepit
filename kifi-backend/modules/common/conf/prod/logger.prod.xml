@@ -34,7 +34,7 @@
     <appender-ref ref="statsd_log" />
   </appender>
 
-  <logger name="statsd.com.keepit" level="ALL" additivity="false">
+  <logger name="statsd.com.keepit" level="ERROR" additivity="false">
     <appender-ref ref="async_statsd" />
   </logger>
 
