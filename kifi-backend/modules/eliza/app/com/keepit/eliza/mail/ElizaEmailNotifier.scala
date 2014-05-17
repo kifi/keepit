@@ -131,14 +131,14 @@ class ElizaEmailNotifierActor @Inject() (
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
     )
+    // todo(martin) This is an emergency fix, we must remove it as soon as possible
     val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
-    val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
+    val uriSummary = Await.result(elizaEmailCommander.getSummarySmall(thread), 30 seconds)
     val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
     for {
       allUsers <- allUsersFuture
       deepUrl <- deepUrlFuture
-      uriSummary <- uriSummaryFuture
     } yield {
       //if user is not active, skip it!
       val recipient = allUsers(recipientUserId)
