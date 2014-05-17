@@ -155,7 +155,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    Statsd.time(key = "normalizedURIRepo.getByNormalizedUrl") {
+    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl") {
       val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
         (for (t <- rows if t.urlHash === hash) yield t).firstOption
@@ -176,7 +176,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    Statsd.time(key = "normalizedURIRepo.getByUri") {
+    statsd.time(key = "normalizedURIRepo.getByUri") {
       getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
     }
   }
@@ -200,7 +200,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
-    Statsd.time(key = "normalizedURIRepo.internByUri") {
+    statsd.time(key = "normalizedURIRepo.internByUri") {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           session.onTransactionSuccess {

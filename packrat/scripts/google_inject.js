@@ -702,7 +702,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
     hit.scoreText = ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
-    if (hit.tags) {
+    if (hit.tags && hits.tags.length > 0) {
       hit.tags[hit.tags.length - 1].last = true;
     }
 
