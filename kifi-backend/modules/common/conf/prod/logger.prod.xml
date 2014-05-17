@@ -20,6 +20,26 @@
 
   <!-- ================================ -->
 
+  <appender name="statsd_log" class="ch.qos.logback.core.rolling.RollingFileAppender">
+   <file>log/statsd.log</file>
+   <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+     <fileNamePattern>log/statsd.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+   </rollingPolicy>
+   <encoder>
+     <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+   </encoder>
+  </appender>
+
+  <appender name="async_statsd" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="statsd_log" />
+  </appender>
+
+  <logger name="statsd.com.keepit" level="ALL" additivity="false">
+    <appender-ref ref="async_statsd" />
+  </logger>
+
+    <!-- ================================ -->
+
   <appender name="db" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/db.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">

@@ -201,9 +201,9 @@ class KeepsCommander @Inject() (
         val picName = keeper.pictureName.getOrElse("0")
         imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
           log.info(s"""[WKMK] $keeper using image $userImage""")
-          val bodyHtml = s"""<b>${keeper.fullName}</b> also kept your keep!"""
+          val title = s"""Thank you! ${keeper.fullName} also kept your keep"""
           val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
-          val title = uri.title.get.abbreviate(80)
+          val bodyHtml = uri.title.get.abbreviate(80)
           eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {
             case Success(id) => log.info(s"""[WKMK] sent [$id] "$title" or $keeper to $otherKeepers""")
             case Failure(ex) => log.error(s"""[WKMK] Error sending "$title" for $keeper to $otherKeepers""", ex)

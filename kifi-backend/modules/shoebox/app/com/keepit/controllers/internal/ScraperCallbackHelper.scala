@@ -63,7 +63,7 @@ class ScraperCallbackHelper @Inject()(
         log.warn(s"[assignTask($zkId,$max)] 0 tasks assigned") // can be more aggressive
       }
       val limit = res.take(max)
-      Statsd.gauge("scraper.assign", limit.length)
+      statsd.gauge("scraper.assign", limit.length)
       limit
     }
   }

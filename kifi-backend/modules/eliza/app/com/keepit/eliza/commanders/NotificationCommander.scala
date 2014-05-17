@@ -1,9 +1,8 @@
 package com.keepit.eliza.commanders
 
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model.{NotificationCategory, User, URISummaryRequest, URISummary, ImageType}
+import com.keepit.model.{NotificationCategory, User}
 import com.keepit.eliza.model._
-import com.keepit.eliza.model.NonUserThread._
 import com.keepit.common.akka.SafeFuture
 import scala.util.Try
 import play.api.libs.json._
@@ -18,13 +17,12 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import java.nio.{ByteBuffer, CharBuffer}
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.concurrent.{Promise, Future, Await}
+import scala.concurrent.{Promise, Future}
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
 import com.keepit.eliza.model.UserThreadActivity
 import scala.util.Failure
-import scala.Some
 import scala.util.Success
 import com.keepit.eliza.model.UserThread
 import com.keepit.eliza.model.Notification
@@ -68,8 +66,28 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  //temp, just for internal testing.
-  def notifyEmailUsers(thread: MessageThread): Unit = emailCommander.notifyEmailUsers(thread)
+  def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
+    val emailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
+    val emailSenderOption = newMessage.from.asNonUser.collect {
+      case emailSender: NonUserEmailParticipant => emailSender.address
+    }
+    val emailRecipients = emailSenderOption.map(emailParticipants - _).getOrElse(emailParticipants)
+
+    if (emailRecipients.nonEmpty) {
+      db.readWrite { implicit session =>
+        val nonUserThreads = nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+        val recipientThreads = emailSenderOption match {
+          case Some(emailSender) => nonUserThreads.filter(_.participant.identifier != emailSender.address)
+          case None => nonUserThreads
+        }
+        recipientThreads.foreach { recipientThread =>
+          nonUserThreadRepo.save(recipientThread.copy(threadUpdatedByOtherAt = Some(newMessage.createdAt)))
+        }
+      }
+    }
+  }
+
+  def notifyEmailParticipants(thread: MessageThread): Unit = { emailCommander.notifyEmailUsers(thread) }
 
   def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
@@ -111,7 +129,7 @@ class NotificationCommander @Inject() (
             uriId = thread.uriId,
             notifiedCount = 0,
             lastNotifiedAt = None,
-            threadUpdatedAt = Some(thread.createdAt),
+            threadUpdatedByOtherAt = Some(message.createdAt),
             muted = false
           ))
         }

@@ -359,7 +359,6 @@ POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlControl
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
 GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
-GET     /admin/article/index/:state @com.keepit.controllers.admin.AdminArticleIndexerController.indexByState(state: State[NormalizedURI])
 GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
@@ -559,11 +558,12 @@ GET     /internal/shoebox/database/getUsers                            @com.keep
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.internal.ShoeboxController.getUserIdsByExternalIds(ids: String)
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
 POST    /internal/shoebox/database/getBasicUsersNoCache                @com.keepit.controllers.internal.ShoeboxController.getBasicUsersNoCache()
-POST    /internal/shoebox/database/getEmailAddressesForUsers                   @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
+POST    /internal/shoebox/database/getEmailAddressesForUsers           @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
+GET     /internal/shoebox/database/getEmailAddressById                 @com.keepit.controllers.internal.ShoeboxController.getEmailAddressById(id: Id[EmailAddress])
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.internal.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])
-POST    /internal/shoebox/database/getExperimentsByUserIds            @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()
+POST    /internal/shoebox/database/getExperimentsByUserIds             @com.keepit.controllers.internal.ShoeboxController.getExperimentsByUserIds()
 GET     /internal/shoebox/database/getExperimentGenerators             @com.keepit.controllers.internal.ShoeboxController.getExperimentGenerators()
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.internal.ShoeboxDataPipeController.getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI])
 
@@ -593,6 +593,7 @@ GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.c
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
+POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
 POST    /internal/shoebox/database/kifiHit   @com.keepit.controllers.internal.ShoeboxController.kifiHit()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments
