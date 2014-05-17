@@ -148,7 +148,7 @@ class ElizaEmailNotifierActor @Inject() (
     } yield {
       //if user is not active, skip it!
       val recipient = allUsers(recipientUserId)
-      if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
+      if (recipient.state == UserStates.ACTIVE || recipient.primaryEmailId.isEmpty) {
         val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
 
         for {
