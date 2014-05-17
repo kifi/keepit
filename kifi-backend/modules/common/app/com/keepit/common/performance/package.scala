@@ -55,14 +55,4 @@ package object performance {
     sw.logTime(Some(resString))
     res
   }
-
-  def timeWithStatsd[A](tag: String, statsdTag: String)(f: => A)(implicit logger:Logger): A = {
-    val sw = new Stopwatch(tag)
-    val res = f
-    sw.stop()
-    sw.logTime(None)
-    Statsd.increment(statsdTag)
-    Statsd.timing(statsdTag, sw.elapsedTime / 1000000)
-    res
-  }
 }

@@ -12,23 +12,13 @@ import java.net.URLDecoder
 import org.joda.time.DateTime
 
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.eliza.model.{
-  MessageThread,
-  NonUserThreadRepo,
-  UserThreadRepo,
-  MessageSender,
-  Message,
-  MessageRepo,
-  MessageThreadRepo,
-  NonUserParticipant
-}
+import com.keepit.eliza.model._
 import com.keepit.social.NonUserKinds
 import com.keepit.model._
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.store.ImageSize
 import com.keepit.common.db.slick.Database
-import com.keepit.common.strings._
 import com.keepit.common.mail.{
   ElectronicMail,
   EmailAddresses,
@@ -39,9 +29,6 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.eliza.model.ThreadEmailInfo
-import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 
@@ -57,7 +44,8 @@ class ElizaEmailCommander @Inject() (
     userThreadRepo: UserThreadRepo,
     messageFetchingCommander: MessageFetchingCommander,
     messageRepo: MessageRepo,
-    threadRepo: MessageThreadRepo
+    threadRepo: MessageThreadRepo,
+    clock: Clock
   ) {
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
@@ -172,14 +160,13 @@ class ElizaEmailCommander @Inject() (
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummarySmallFuture = getSummarySmall(thread)
     val uriSummaryBigFuture = getSummaryBig(thread)
 
     for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
-      uriSummarySmall <- uriSummarySmallFuture
       uriSummaryBig <- uriSummaryBigFuture
+      uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
     } yield {
       val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl)
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
@@ -200,27 +187,9 @@ class ElizaEmailCommander @Inject() (
     val nuts = db.readOnly { implicit session =>
       nonUserThreadRepo.getByMessageThreadId(thread.id.get)
     }
-
-    nuts.filterNot(_.muted).foreach{ nut =>
-      require(nut.participant.kind == NonUserKinds.email)
-
-      for (
-        unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier);
-        protoEmail <- assembleEmail(thread, None, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
-      ) {
-
-        val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
-        shoebox.sendMail(ElectronicMail (
-          from = magicAddress,
-          fromName = Some(protoEmail.starterName + " (via Kifi)"),
-          to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-          subject = "Kifi Discussion on " + protoEmail.pageTitle,
-          htmlBody = if (nut.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body,
-          category = if (nut.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED,
-          extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
-        ))
-        db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, currentDateTime) }
-      }
+    // Intentionally sequential execution
+    nuts.foldLeft(Future.successful()){ (fut,nut) =>
+      fut.flatMap(_ => notifyEmailParticipant(nut, thread))
     }
   }
 
@@ -231,29 +200,52 @@ class ElizaEmailCommander @Inject() (
       }.toMap
     }
 
-    addedNonUsers.foreach { nup =>
+    // Intentionally sequential execution
+    addedNonUsers.foldLeft(Future.successful()){ (fut,nup) =>
       require(nup.kind == NonUserKinds.email)
       val nut = nuts(nup.identifier)
-      if (!nut.muted) {
+      fut.flatMap { _ => if (!nut.muted) {
         for (
           unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier);
           protoEmail <- assembleEmail(thread, nut.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
-        ) {
+        ) yield {
           val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
           shoebox.sendMail(ElectronicMail (
             from = magicAddress,
             fromName = Some(protoEmail.starterName + " (via Kifi)"),
             to = Seq[EmailAddressHolder](GenericEmailAddress(nut.participant.identifier)),
-            subject = "Kifi Discussion on " + protoEmail.pageTitle,
+            subject = protoEmail.pageTitle,
             htmlBody = protoEmail.addedHtml.body,
             category = NotificationCategory.NonUser.ADDED_TO_DISCUSSION,
             extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
           ))
-          db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, currentDateTime) }
-        }
+          db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, clock.now()) }
+        }} else Future.successful()
       }
     }
   }
+
+  def notifyEmailParticipant(emailParticipantThread: NonUserThread, thread: MessageThread): Future[Unit] = if (!emailParticipantThread.muted) {
+    require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
+    require(emailParticipantThread.threadId == thread.id.get, "MessageThread and NonUserThread do not match.")
+    for (
+      unsubUrl <- shoebox.getUnsubscribeUrlForEmail(emailParticipantThread.participant.identifier);
+      protoEmail <- assembleEmail(thread, None, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + emailParticipantThread.accessToken.token))
+    ) yield {
+
+      val magicAddress = EmailAddresses.discussion(emailParticipantThread.accessToken.token)
+      shoebox.sendMail(ElectronicMail (
+        from = magicAddress,
+        fromName = Some(protoEmail.starterName + " (via Kifi)"),
+        to = Seq[EmailAddressHolder](GenericEmailAddress(emailParticipantThread.participant.identifier)),
+        subject = protoEmail.pageTitle,
+        htmlBody = if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body,
+        category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED,
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
+      ))
+      db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get, clock.now()) }
+    }
+  } else Future.successful()
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
     val (msg, thread) = db.readOnly{ implicit session =>

@@ -199,7 +199,7 @@ class MessagingCommander @Inject() (
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds)} // todo: Remove Await
-    Statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
+    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
@@ -371,7 +371,8 @@ class MessagingCommander @Inject() (
     }
 
     // update non user threads of non user recipients
-    notificationCommander.updateNonUserThreads(thread, message)
+    notificationCommander.updateEmailParticipantThreads(thread, message)
+    if (isNew.exists(identity)) { notificationCommander.notifyEmailParticipants(thread) }
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
@@ -614,7 +615,7 @@ class MessagingCommander @Inject() (
 
       messageThreadFut.map { case (_, messages) =>
         val tDiff = currentDateTime.getMillis - tStart.getMillis
-        Statsd.timing(s"messaging.newMessage", tDiff)
+        statsd.timing(s"messaging.newMessage", tDiff)
         (message, threadInfoOpt, messages)
       }
     }

@@ -83,7 +83,7 @@ class MobileMessagingController @Inject() (
     contextBuilder += ("source", "mobile")
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
-    Statsd.timing(s"messaging.replyMessage", tDiff)
+    statsd.timing(s"messaging.replyMessage", tDiff)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
@@ -161,7 +161,7 @@ class MobileMessagingController @Inject() (
           )
           val msgJson = baseJson ++ (m.user match {
               case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind.name=="email" => Json.obj("userId" -> bnu.toString)
+              case Some(bnu: BasicNonUser) if bnu.kind.name=="email" => Json.obj("userId" -> bnu.id)
               case _ => Json.obj()
           })
 

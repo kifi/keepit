@@ -66,7 +66,7 @@ class NotificationCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  def updateNonUserThreads(thread: MessageThread, newMessage: Message): Unit = {
+  def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
     val emailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
     val emailSenderOption = newMessage.from.asNonUser.collect {
       case emailSender: NonUserEmailParticipant => emailSender.address
@@ -84,9 +84,10 @@ class NotificationCommander @Inject() (
           nonUserThreadRepo.save(recipientThread.copy(threadUpdatedByOtherAt = Some(newMessage.createdAt)))
         }
       }
-      emailCommander.notifyEmailUsers(thread)   //temp, just for internal testing.
     }
   }
+
+  def notifyEmailParticipants(thread: MessageThread): Unit = { emailCommander.notifyEmailUsers(thread) }
 
   def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>

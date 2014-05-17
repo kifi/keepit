@@ -99,7 +99,7 @@ class Database @Inject() (
   def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
     val ro = new ROSession(dbMasterSlave, {
       val handle = resolveDb(dbMasterSlave)
-      Statsd.increment(s"db.read.${handle.masterSlave}")
+      statsd.increment(s"db.read.${handle.masterSlave}")
       sessionProvider.createReadOnlySession(handle.slickDatabase)
     })
     try f(ro) finally ro.close()
@@ -113,14 +113,14 @@ class Database @Inject() (
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readOnly transaction attempt $attempt of $attempts")
-          Statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
+          statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
       }
     }
     readOnly(f)
   }
 
   private def createReadWriteSession = new RWSession({//always master
-    Statsd.increment("db.write.Master")
+    statsd.increment("db.write.Master")
     sessionProvider.createReadWriteSession(db.masterDb)
   })
 
@@ -137,7 +137,7 @@ class Database @Inject() (
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts")
-          Statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
+          statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
       }
     }
     readWrite(f)
