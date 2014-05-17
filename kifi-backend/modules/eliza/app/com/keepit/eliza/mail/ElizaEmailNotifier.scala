@@ -112,10 +112,6 @@ class ElizaEmailNotifierActor @Inject() (
       log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
         s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
         s"with ${threadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
-      val now = clock.now
-      val notificationUpdatedAt = userThread.notificationUpdatedAt
-      airbrake.verify(notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"notificationUpdatedAt $notificationUpdatedAt of thread was more then 30min ago. " +
-        s"recipientUserId: $userThread.user, deepLocator: $thread.deepLocator")
       sendUnreadMessages(userThread, thread, userThread.lastSeen, threadItems, otherParticipants.toSeq, userThread.user, thread.deepLocator)
     }
     log.info(s"processed user thread $userThread")
