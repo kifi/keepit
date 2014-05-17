@@ -12,6 +12,7 @@ import play.api.libs.json.Json
 import akka.actor._
 
 import scala.xml._
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 case class AirbrakeErrorNotice(error: AirbrakeError, selfError: Boolean = false)
 object AirbrakeDeploymentNotice
@@ -103,25 +104,24 @@ class AirbrakeSender @Inject() (
     }
 }
 
-class PagerDutySender @Inject() (httpClient: HttpClient) {
+class PagerDutySender @Inject() (httpClient: HttpClient, serviceDiscovery: ServiceDiscovery) {
 
-  def openIncident(description: String, exception: Throwable, signature: Option[String]=None, moreInfo: Option[String] = None): Unit = {
-    val incidentKey : String = signature.getOrElse(description.take(1000))
+  def openIncident(description: String, exception: Throwable, signature: Option[String] = None, moreInfo: Option[String] = None): Unit = {
+    val incidentKey : String = signature.getOrElse(description)
+    val service = serviceDiscovery.thisService.name
     val moreInfoMessage : String = moreInfo.getOrElse("See Airbrake/Healthcheck for more.")
     val payload = Json.obj(
       "service_key"  -> "7785f2cc14ec44e49ae3bb8186400cc7",
       "event_type"   -> "trigger",
-      "description"  -> description.take(1000),
+      "description"  -> s"[$service] $description".take(1000),
       "incident_key" -> incidentKey,
       "details"      -> Json.obj(
-        "exceptionInfo" -> exception.getMessage(),
+        "exceptionInfo" -> exception.getMessage,
         "moreInfo"      -> moreInfoMessage
       )
     )
     httpClient.postFuture(DirectUrl("https://events.pagerduty.com/generic/2010-04-15/create_event.json"), payload)
   }
-
-
 }
 
 trait AirbrakeNotifier extends Logging {
