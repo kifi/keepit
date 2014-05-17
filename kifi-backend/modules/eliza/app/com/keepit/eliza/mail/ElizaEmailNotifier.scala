@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import org.joda.time.DateTime
 import com.keepit.common.mail._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.common.concurrent.FutureHelpers
@@ -92,7 +92,7 @@ class ElizaEmailNotifierActor @Inject() (
     airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
     airbrake.verify(userThread.unread, s"${userThread.summary} not unread")
     airbrake.verify(!userThread.notificationEmailed, s"${userThread.summary} notification already emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"Late send of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
 
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
@@ -118,7 +118,7 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
 
-  def sendUnreadMessages(
+  private def sendUnreadMessages(
     userThread: UserThread,
     thread: MessageThread,
     lastSeen: Option[DateTime],
@@ -131,13 +131,12 @@ class ElizaEmailNotifierActor @Inject() (
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
     )
-    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
+    val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
     val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
     val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
     for {
       allUsers <- allUsersFuture
-      allUserImageUrls <- allUserImageUrlsFuture
       deepUrl <- deepUrlFuture
       uriSummary <- uriSummaryFuture
     } yield {
