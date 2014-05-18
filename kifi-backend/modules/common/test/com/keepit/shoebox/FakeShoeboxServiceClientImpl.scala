@@ -24,6 +24,7 @@ import com.keepit.graph.manager._
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.model.serialize.UriIdAndSeq
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -424,7 +425,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
-    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
+    val fewerUris = if (fetchSize >= 0) uris.take(fetchSize) else uris
+    Future.successful(fewerUris)
+  }
+
+  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[UriIdAndSeq]] = {
+    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
+    val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
+    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris) map { u => UriIdAndSeq(u.id.get, u.seq)}
     Future.successful(fewerUris)
   }
 
