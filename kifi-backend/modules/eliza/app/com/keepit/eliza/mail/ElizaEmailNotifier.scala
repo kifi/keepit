@@ -132,7 +132,6 @@ class ElizaEmailNotifierActor @Inject() (
         //if user is not active, skip it!
         val recipient = allUsers(recipientUserId)
         if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
-          val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
 
           for {
             destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
@@ -140,13 +139,12 @@ class ElizaEmailNotifierActor @Inject() (
           } yield {
             val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
 
-            val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
             val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
             val email = ElectronicMail(
               from = magicAddress,
               fromName = Some("Kifi Notifications"),
               to = Seq(GenericEmailAddress(destinationEmail)),
-              subject = s"""New messages on "${threadEmailInfo.pageTitle}" with $authorFirst""",
+              subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
               htmlBody = views.html.userDigestEmail(threadEmailInfo, extendedThreadItems).body,
               category = NotificationCategory.User.MESSAGE
             )
