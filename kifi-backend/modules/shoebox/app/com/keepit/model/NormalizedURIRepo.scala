@@ -94,7 +94,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
             and state in ('#${NormalizedURIStates.SCRAPED.value}', '#${NormalizedURIStates.SCRAPE_FAILED.value}', '#${NormalizedURIStates.UNSCRAPABLE.value}')
       limit $limit""".as[(Long, Long)].list.map {
         case (id, seq) => UriIdAndSeq(Id[NormalizedURI](id), SequenceNumber[NormalizedURI](seq))
-      }
+      }.sortBy(_.seq)
   }
 
   override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI] = {
