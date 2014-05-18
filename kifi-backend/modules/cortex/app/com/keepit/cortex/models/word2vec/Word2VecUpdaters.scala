@@ -38,4 +38,6 @@ class Word2VecURIFeatureRetriever @Inject()(
   featureStore: Word2VecURIFeatureStore,
   commitStore: Word2VecURIFeatureCommitStore,
   uriPuller: URIPuller
-) extends FeatureRetrieval(featureStore, commitStore, uriPuller)
+) extends FeatureRetrieval(featureStore, commitStore, uriPuller){
+ override def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get
+}

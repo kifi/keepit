@@ -76,8 +76,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          var fullUris = uriRepo.getByState(NormalizedURIStates.SCRAPED)
-          var uris = uriRepo.getIdAndSeqChanged(SequenceNumber[NormalizedURI](-1), 1000)
+          val fullUris = uriRepo.getByState(NormalizedURIStates.SCRAPED)
+          val uris = uriRepo.getIdAndSeqChanged(SequenceNumber[NormalizedURI](-1), 1000)
           uris.size === 2
           uris(0).id === fullUris(0).id.get
           uris(0).seq === fullUris(0).seq

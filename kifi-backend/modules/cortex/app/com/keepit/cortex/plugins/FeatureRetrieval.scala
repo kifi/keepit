@@ -12,6 +12,7 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
 ) extends Logging{
+  protected def genFeatureKey(datum: T): K
   private def getFeatureStoreSeq(version: ModelVersion[M]): FeatureStoreSequenceNumber[T, M] = {
     val commitKey = CommitInfoKey[T, M](version)
     commitInfoStore.get(commitKey) match {
@@ -24,7 +25,8 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
     featureStore.get(key, version)
   }
 
-  private def getFeatureForEntities(keys: Seq[Id[T]], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+  private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+    val keys = entities.map{genFeatureKey(_)}
     val start = System.currentTimeMillis
     val values = featureStore.batchGet(keys, version)
     val ret = (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}
