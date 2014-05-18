@@ -103,7 +103,7 @@
 .kifi-view-email-dialog-iframe {
   height: 100%;
   border-top: 41px solid transparent;
-  background: #f6f6f6 content-box;
+  background: border-box;
 }
 .kifi-view-email-dialog-title {
   line-height: 41px;
