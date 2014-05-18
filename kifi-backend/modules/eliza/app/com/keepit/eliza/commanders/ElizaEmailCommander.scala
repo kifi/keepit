@@ -168,7 +168,9 @@ class ElizaEmailCommander @Inject() (
       uriSummaryBig <- uriSummaryBigFuture
       uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
     } yield {
-      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl)
+      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl).copy(
+        heroImageUrl = None // todo(martin) because Gmail for Android does not support media queries. Is there a better solution?
+      )
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
