@@ -13,7 +13,7 @@ import com.keepit.cortex.models.lda.DenseLDA
 class FeatureRetrievalCommander @Inject()(
   ldaURIFeat: LDAURIFeatureRetriever
 ) {
-  def getLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA]): Seq[(NormalizedURI, FeatureRepresentation[NormalizedURI, DenseLDA])] = {
+  private def getLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA]): Seq[(NormalizedURI, FeatureRepresentation[NormalizedURI, DenseLDA])] = {
     ldaURIFeat.trickyGetSince(lowSeq, fetchSize, version)
   }
 
