@@ -70,8 +70,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       val uriIdAndSeq = UriIdAndSeq(Id[NormalizedURI](32), SequenceNumber[NormalizedURI](234))
       val bin = ScalaMessagePack.write(uriIdAndSeq)
       val deser = ScalaMessagePack.read[UriIdAndSeq](bin)
-      deser.id === uriIdAndSeq.id
-      deser.seq === uriIdAndSeq.seq
+      deser === uriIdAndSeq
     }
     "get all and serialize" in {
       withDb() { implicit injector =>
@@ -90,10 +89,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           println(s"bin size is ${bin.size}")
           val deserialized = ScalaMessagePack.read[UriIdAndSeqBatch](bin)
           deserialized.batch.size === 2
-          uris(0).id === deserialized.batch(0).id
-          uris(1).id === deserialized.batch(1).id
-          uris(0).seq === deserialized.batch(0).seq
-          uris(1).seq === deserialized.batch(1).seq
+          uris(0) === deserialized.batch(0)
+          uris(1) === deserialized.batch(1)
         }
       }
     }
