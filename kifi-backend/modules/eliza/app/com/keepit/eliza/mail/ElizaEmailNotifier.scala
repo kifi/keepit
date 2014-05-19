@@ -169,7 +169,7 @@ class ElizaEmailNotifierActor @Inject() (
     airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
     airbrake.verify(userThread.unread, s"${userThread.summary} not unread")
     airbrake.verify(!userThread.notificationEmailed, s"${userThread.summary} notification already emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"Late send of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
+    //airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"Late send of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
 
     val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen, None)
