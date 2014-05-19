@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 
 import akka.util.Timeout
 import com.keepit.common.mail._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.eliza.model.ThreadEmailInfo
@@ -60,13 +60,13 @@ class ElizaEmailNotifierActor @Inject() (
       log.info("Attempting to process next user email")
       if (!processing) {
         if (userEmailMessageThreadQueue.isEmpty) {
-          getMessagesToProcess()
+          getUserThreadsToProcess()
         }
         if (userEmailMessageThreadQueue.nonEmpty) {
           val userThreads = userEmailMessageThreadQueue.dequeue()
           log.info(s"userEmailMessageThreadQueue size: ${userEmailMessageThreadQueue.size}")
           processing = true
-          emailUnreadMessagesForMessageThread(userThreads)
+          emailUnreadMessagesForUserThreads(userThreads)
         }
       }
 
@@ -93,7 +93,7 @@ class ElizaEmailNotifierActor @Inject() (
   /**
    * Fetches user threads that need to receive an email update and put them in the queue
    */
-  private def getMessagesToProcess(): Unit = {
+  private def getUserThreadsToProcess(): Unit = {
     val now = clock.now
     val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
     val unseenUserThreads = db.readOnly { implicit session =>
@@ -107,7 +107,7 @@ class ElizaEmailNotifierActor @Inject() (
   /**
    * Sends email update to all specified user threads corresponding to the same MessageThread
    */
-  private def emailUnreadMessagesForMessageThread(userThreads: Seq[UserThread]): Unit = {
+  private def emailUnreadMessagesForUserThreads(userThreads: Seq[UserThread]): Unit = {
     if (userThreads.isEmpty) return
     val threadId = userThreads.head.thread
     require(userThreads.forall(_.thread == threadId)) // All user threads must correspond to the same MessageThread
