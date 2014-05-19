@@ -91,7 +91,6 @@ class Database @Inject() (
         case None =>
           SlickDatabaseWrapper(db.masterDb, Master)
         case Some(handle) =>
-          log.info(s"session using Slave db")
           SlickDatabaseWrapper(handle, Slave)
       }
   }
@@ -99,7 +98,6 @@ class Database @Inject() (
   def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
     val ro = new ROSession(dbMasterSlave, {
       val handle = resolveDb(dbMasterSlave)
-      statsd.increment(s"db.read.${handle.masterSlave}")
       sessionProvider.createReadOnlySession(handle.slickDatabase)
     })
     try f(ro) finally ro.close()
@@ -113,14 +111,13 @@ class Database @Inject() (
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readOnly transaction attempt $attempt of $attempts")
-          statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
+          statsd.increment(s"db.fail.attempt.$attempt.$throwableName", 1)
       }
     }
     readOnly(f)
   }
 
   private def createReadWriteSession = new RWSession({//always master
-    statsd.increment("db.write.Master")
     sessionProvider.createReadWriteSession(db.masterDb)
   })
 
@@ -137,7 +134,7 @@ class Database @Inject() (
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts")
-          statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
+          statsd.increment(s"db.fail.attempt.$attempt.$throwableName", 1)
       }
     }
     readWrite(f)
