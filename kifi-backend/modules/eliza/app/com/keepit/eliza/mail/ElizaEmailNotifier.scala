@@ -80,7 +80,7 @@ class ElizaEmailNotifierActor @Inject() (
             val batch = userThreadBatchQueue.dequeue()
             log.info(s"userThreadBatchQueue size: ${userThreadBatchQueue.size}")
             processing = true
-            emailUnreadMessagesForNextNonUserThreadBatch(batch)
+            emailUnreadMessagesForNonUserThreadBatch(batch)
           })
           tasks.onComplete { result =>
             result match {
@@ -133,7 +133,7 @@ class ElizaEmailNotifierActor @Inject() (
   /**
    * Sends email update to all specified user threads corresponding to the same MessageThread
    */
-  private def emailUnreadMessagesForNextNonUserThreadBatch(batch: UserThreadBatch): Future[Unit] = {
+  private def emailUnreadMessagesForNonUserThreadBatch(batch: UserThreadBatch): Future[Unit] = {
     val userThreads = batch.userThreads
     val threadId = batch.threadId
     val thread = db.readOnly { implicit session => threadRepo.get(threadId) }
