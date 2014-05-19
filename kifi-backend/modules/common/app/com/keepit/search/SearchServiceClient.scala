@@ -95,7 +95,7 @@ class SearchServiceClientImpl(
 
   private lazy val distRouter = {
     val router = new DistributedSearchRouter(this)
-    serviceCluster.setCustomRouter(router)
+    serviceCluster.setCustomRouter(Some(router))
     router
   }
 
