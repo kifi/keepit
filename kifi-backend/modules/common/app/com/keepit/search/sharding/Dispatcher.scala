@@ -84,10 +84,12 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
       // first choose a <shard,instances> pair. there is a single shard per sharding strategy.
       // using the reservoir algorithm
       var candidateShard: Shard[T] = null
-      table.iterator.foreach{ case (shard, instances) =>
-        val size = instances.size
-        i += size
-        if (rnd.nextInt(i) < size) candidateShard = shard
+      table.foreach{ case (shard, instances) =>
+        if (shard.contains(id)) {
+          val size = instances.size
+          i += size
+          if (rnd.nextInt(i) < size) candidateShard = shard
+        }
       }
       if (candidateShard == null) {
         log.error(s"no shard found for id=$id")

@@ -1,10 +1,9 @@
 package com.keepit.search.sharding
 
 import org.specs2.mutable._
+import com.keepit.common.db.Id
 import com.keepit.common.service.{ServiceType, ServiceStatus}
 import com.keepit.common.zookeeper.{RemoteService, Node, ServiceInstance}
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 
 class DispatcherTest extends Specification {
 
@@ -103,6 +102,17 @@ class DispatcherTest extends Specification {
 
       disp.dispatch(allShards, maxShardsPerInstance = 3){ (inst, shards) => 1 } must throwA[DispatchFailedException]
       forceReloadCalled === true
+    }
+
+    "call the instance with a shard contains id" in {
+      var forceReloadCalled = false
+      (0 until 10).foreach{ i =>
+        val disp = Dispatcher[T](allInstances, ()=>{ forceReloadCalled = true })
+        disp.call(Id[T](i)){ inst =>
+          (new ShardedServiceInstance[T](inst)).shards.exists(shard => shard.contains(Id[T](i))) === true
+        }
+      }
+      forceReloadCalled === false
     }
 
     "call forceReload when no instance was found" in {
