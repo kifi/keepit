@@ -39,7 +39,6 @@ object ExperimentType {
   val FAKE = ExperimentType("fake")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
   val NOT_SENSITIVE = ExperimentType("not sensitive")
-  val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val DEMO = ExperimentType("demo")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
@@ -51,8 +50,8 @@ object ExperimentType {
   val IGNORE_VERSION_TIME_TRAVEL = ExperimentType("ignore_version_time_travel")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
-             CAN_CONNECT :: CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-            MOBILE_REDITECT :: HELPRANK :: IGNORE_VERSION_TIME_TRAVEL :: WHO_KEPT_MY_KEEP :: Nil
+    CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
+    MOBILE_REDITECT :: HELPRANK :: IGNORE_VERSION_TIME_TRAVEL :: WHO_KEPT_MY_KEEP :: Nil
 
   val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 
