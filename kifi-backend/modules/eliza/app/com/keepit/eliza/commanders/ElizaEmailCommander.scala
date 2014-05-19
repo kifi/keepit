@@ -54,21 +54,29 @@ class ElizaEmailCommander @Inject() (
 
 
   private def parseMessage(msg: String): Seq[MessageSegment] = {
-    val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
-    val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
-    tokens.map{ token =>
-      re.findFirstMatchIn(token).map { m =>
-        val segments = m.group(3).split('|')
-        val kind = segments.head
-        val payload = URLDecoder.decode(segments.last, "UTF-8")
-        val text = m.group(1)
-        kind match {
-          case "i" => ImageLookHereSegment(text, payload)
-          case "r" => TextLookHereSegment(text, payload)
-          case _ => throw new Exception("Unknown look-here type: " + kind)
+    log.info(s"Parsing message: $msg")
+    try {
+      val re = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
+      val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
+      tokens.map{ token =>
+        re.findFirstMatchIn(token).map { m =>
+          val segments = m.group(3).split('|')
+          val kind = segments.head
+          val payload = URLDecoder.decode(segments.last, "UTF-8")
+          val text = m.group(1)
+          kind match {
+            case "i" => ImageLookHereSegment(text, payload)
+            case "r" => TextLookHereSegment(text, payload)
+            case _ => throw new Exception("Unknown look-here type: " + kind)
+          }
+        } getOrElse {
+          TextSegment(token)
         }
-      } getOrElse {
-        TextSegment(token)
+      }
+    } catch {
+      case t: Throwable => {
+        log.info(s"Exception during parsing: $t")
+        throw t
       }
     }
   }
