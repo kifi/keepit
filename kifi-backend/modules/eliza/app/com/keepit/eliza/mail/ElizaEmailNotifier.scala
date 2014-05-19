@@ -194,13 +194,12 @@ class ElizaEmailNotifierActor @Inject() (
             val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
 
             val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
-            val threadEmailInfoNoImage = threadEmailInfo.copy(heroImageUrl = None) // todo(martin) because Gmail for Android does not support media queries. Is there a better solution?
             val email = ElectronicMail(
               from = magicAddress,
               fromName = Some("Kifi Notifications"),
               to = Seq(GenericEmailAddress(destinationEmail)),
               subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
-              htmlBody = views.html.userDigestEmail(threadEmailInfoNoImage, extendedThreadItems).body,
+              htmlBody = views.html.userDigestEmail(threadEmailInfo, extendedThreadItems).body,
               category = NotificationCategory.User.MESSAGE
             )
             shoebox.sendMail(email)
