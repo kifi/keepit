@@ -34,10 +34,22 @@ import com.keepit.common.concurrent.FutureHelpers
 import scala.util.{Failure, Success}
 
 object ElizaEmailNotifierActor {
-  case object SendNextUserEmail
+  case class SendNextUserEmails(num: Int)
   case object SendNonUserEmails
+  case object EndBatchProcessing
   val MIN_TIME_BETWEEN_NOTIFICATIONS = 15 minutes
   val RECENT_ACTIVITY_WINDOW = 24 hours
+  val MAX_CONCURRENT_TASKS = 1
+}
+
+class UserThreadBatch(val userThreads: Seq[UserThread], val threadId: Id[MessageThread])
+object UserThreadBatch {
+  def apply(userThreads: Seq[UserThread]) = {
+    require(userThreads.nonEmpty)
+    val threadId = userThreads.head.thread
+    require(userThreads.forall(_.thread == threadId)) // All user threads must correspond to the same MessageThread
+    new UserThreadBatch(userThreads, threadId)
+  }
 }
 
 class ElizaEmailNotifierActor @Inject() (
@@ -52,21 +64,31 @@ class ElizaEmailNotifierActor @Inject() (
     nonUserThreadRepo: NonUserThreadRepo
   ) extends FortyTwoActor(airbrake) with Logging {
 
-  private val userEmailMessageThreadQueue = new mutable.Queue[Seq[UserThread]]()
+  private val userThreadBatchQueue = new mutable.Queue[UserThreadBatch]()
   private var processing = false
 
   def receive = {
-    case SendNextUserEmail =>
+    case SendNextUserEmails(num) =>
       log.info("Attempting to process next user email")
       if (!processing) {
-        if (userEmailMessageThreadQueue.isEmpty) {
-          getUserThreadsToProcess()
+        if (userThreadBatchQueue.isEmpty) {
+          val userThreadBatches = getUserThreadsToProcess()
+          userThreadBatches.foreach(userThreadBatchQueue.enqueue(_))
         }
-        if (userEmailMessageThreadQueue.nonEmpty) {
-          val userThreads = userEmailMessageThreadQueue.dequeue()
-          log.info(s"userEmailMessageThreadQueue size: ${userEmailMessageThreadQueue.size}")
-          processing = true
-          emailUnreadMessagesForUserThreads(userThreads)
+        if (userThreadBatchQueue.nonEmpty) {
+          val tasks = Future.sequence((1 to num).map { _ =>
+            val batch = userThreadBatchQueue.dequeue()
+            log.info(s"userThreadBatchQueue size: ${userThreadBatchQueue.size}")
+            processing = true
+            emailUnreadMessagesForNextNonUserThreadBatch(batch)
+          })
+          tasks.onComplete { result =>
+            result match {
+              case Failure(t) => airbrake.notify(s"Failure occured during user thread batch processing", t)
+              case _ =>
+            }
+            self ! EndBatchProcessing
+          }
         }
       }
 
@@ -87,13 +109,17 @@ class ElizaEmailNotifierActor @Inject() (
         }
       }
 
+    case EndBatchProcessing =>
+      processing = false;
+      self ! SendNextUserEmails(MAX_CONCURRENT_TASKS)
+
     case m => throw new UnsupportedActorMessage(m)
   }
 
   /**
    * Fetches user threads that need to receive an email update and put them in the queue
    */
-  private def getUserThreadsToProcess(): Unit = {
+  private def getUserThreadsToProcess(): Seq[UserThreadBatch] = {
     val now = clock.now
     val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
     val unseenUserThreads = db.readOnly { implicit session =>
@@ -101,17 +127,15 @@ class ElizaEmailNotifierActor @Inject() (
     }
     val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
     log.info(s"[now:$now] [lastNotifiedBefore:$lastNotifiedBefore] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
-    unseenUserThreads.groupBy(_.thread).values.foreach(userEmailMessageThreadQueue.enqueue(_))
+    unseenUserThreads.groupBy(_.thread).values.map(UserThreadBatch(_)).toSeq
   }
 
   /**
    * Sends email update to all specified user threads corresponding to the same MessageThread
    */
-  private def emailUnreadMessagesForUserThreads(userThreads: Seq[UserThread]): Unit = {
-    if (userThreads.isEmpty) return
-    val threadId = userThreads.head.thread
-    require(userThreads.forall(_.thread == threadId)) // All user threads must correspond to the same MessageThread
-
+  private def emailUnreadMessagesForNextNonUserThreadBatch(batch: UserThreadBatch): Future[Unit] = {
+    val userThreads = batch.userThreads
+    val threadId = batch.threadId
     val thread = db.readOnly { implicit session => threadRepo.get(threadId) }
     val allUserIds = thread.participants.map(_.allUsers).getOrElse(Set()).toSeq
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
@@ -124,19 +148,12 @@ class ElizaEmailNotifierActor @Inject() (
       allUserImageUrls <- allUserImageUrlsFuture
       uriSummary <- uriSummaryFuture
     } yield (allUsers, allUserImageUrls, uriSummary)
-    threadDataFuture.onComplete { result =>
-      result match {
-        case Success(data) => {
-          val (allUsers, allUserImageUrls, uriSummary) = data
-          // Futures below will be executed concurrently
-          userThreads.foreach{ userThread =>
-            emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
-          }
-        }
-        case Failure(t) => airbrake.notify(s"Failed to fetch data for thread $threadId", t)
+    threadDataFuture.map { data =>
+      val (allUsers, allUserImageUrls, uriSummary) = data
+      // Futures below will be executed concurrently
+      userThreads.foreach{ userThread =>
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
       }
-      processing = false
-      self ! SendNextUserEmail
     }
   }
 
@@ -218,12 +235,12 @@ class ElizaEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ElizaEmailNotifierPluginImpl")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendNextUserEmail)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendNextUserEmails)
     scheduleTaskOnLeader(actor.system, 90 seconds, 2 minutes, actor.ref, SendNonUserEmails)
   }
 
   def sendEmails() {
-    actor.ref ! SendNextUserEmail
+    actor.ref ! SendNextUserEmails
     actor.ref ! SendNonUserEmails
   }
 }
