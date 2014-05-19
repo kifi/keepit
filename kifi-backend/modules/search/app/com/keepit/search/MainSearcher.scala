@@ -121,8 +121,6 @@ class MainSearcher(
     val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
 
     timeLogs.queryParsing = parser.totalParseTime
-    timeLogs.phraseDetection = parser.phraseDetectionTime
-    timeLogs.nlpPhraseDetection = parser.nlpPhraseDetectionTime
 
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
@@ -485,8 +483,6 @@ class SearchTimeLogs(
     var socialGraphInfo: Long = 0,
     var getClickBoost: Long = 0,
     var queryParsing: Long = 0,
-    var phraseDetection: Long = 0,
-    var nlpPhraseDetection: Long = 0,
     var personalizedSearcher: Long = 0,
     var search: Long = 0,
     var processHits: Long = 0,
@@ -495,8 +491,6 @@ class SearchTimeLogs(
   def send(): Unit = {
     statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo, ALWAYS)
     statsd.timing("mainSearch.queryParsing", queryParsing, ALWAYS)
-    statsd.timing("mainSearch.phraseDetection", phraseDetection, ALWAYS)
-    statsd.timing("mainSearch.nlpPhraseDetection", nlpPhraseDetection, ALWAYS)
     statsd.timing("mainSearch.getClickboost", getClickBoost, ALWAYS)
     statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher, ALWAYS)
     statsd.timing("mainSearch.LuceneSearch", search, ALWAYS)
