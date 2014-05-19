@@ -1,7 +1,6 @@
 package com.keepit.common
 
 import com.keepit.common.logging.Logging
-import play.modules.statsd.api.Statsd
 import play.api.Logger
 
 package object performance {

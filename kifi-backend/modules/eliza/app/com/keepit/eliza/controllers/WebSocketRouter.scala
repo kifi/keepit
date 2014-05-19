@@ -8,7 +8,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.eliza.model._
 
 import play.api.libs.json.{JsArray, Json}
-import play.modules.statsd.api.Statsd
 
 import scala.collection.concurrent.TrieMap
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -66,12 +65,12 @@ class WebSocketRouterImpl @Inject() (
         val createdAt = Json.fromJson[DateTime](msg(2) \ "createdAt")(DateTimeJsonFormat).get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
-        statsd.timing(s"websocket.delivery.$tag.message", diff)
+        statsd.timing(s"websocket.delivery.$tag.message", diff, ALWAYS)
       } else if(msg(0).as[String] == "notification") {
         val createdAt = Json.fromJson[DateTime](msg(1) \ "time").get
         val now = currentDateTime
         val diff = now.getMillis - createdAt.getMillis
-        statsd.timing(s"websocket.delivery.$tag.notice", diff)
+        statsd.timing(s"websocket.delivery.$tag.notice", diff, ALWAYS)
       }
     } catch {
       case ex: Throwable => log.warn(s"Error with statsd tacking: $ex")

@@ -1,7 +1,5 @@
 package com.keepit.common.zookeeper
 
-import play.modules.statsd.api.Statsd
-
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
