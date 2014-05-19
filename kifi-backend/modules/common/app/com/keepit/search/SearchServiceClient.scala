@@ -5,13 +5,13 @@ import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{RequestConsolidator, ServiceClient, ServiceType, ServiceUri}
 import com.keepit.common.db.Id
-import com.keepit.common.net.HttpClient
-import com.keepit.common.routes.Search
-import com.keepit.common.routes.Common
+import com.keepit.common.net.{ClientResponse, HttpClient}
+import com.keepit.common.routes.{ServiceRoute, Search, Common}
 import com.keepit.model.{ExperimentType, Collection, NormalizedURI, User}
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
+import com.keepit.search.sharding.{DistributedSearchRouter, Shard}
 import play.api.libs.json._
 import play.api.templates.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -76,6 +76,11 @@ trait SearchServiceClient extends ServiceClient {
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 
   def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]]
+
+  //
+  // Distributed Search
+  //
+  def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
 class SearchServiceClientImpl(
@@ -87,6 +92,12 @@ class SearchServiceClientImpl(
 
   // request consolidation
   private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
+
+  private lazy val distRouter = {
+    val router = new DistributedSearchRouter(this)
+    serviceCluster.setCustomRouter(router)
+    router
+  }
 
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
     // decommissioned
@@ -318,5 +329,14 @@ class SearchServiceClientImpl(
     call(Search.internal.getFeeds(userId, limit)).map{ r =>
       Json.fromJson[Seq[Feed]](r.json).get
     }
+  }
+
+  //
+  // Distributed Search
+  //
+
+  // for DistributedSearchRouter
+  def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
+    callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
 }
