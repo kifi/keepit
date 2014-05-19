@@ -28,7 +28,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
      EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
 
     val exps = Seq( UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
-        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can invite")),
+        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can_connect")),
         UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can message all users")),
         UserExperiment(userId = usersWithId(1).id.get, experimentType = ExperimentType("fake")),
         UserExperiment(userId = usersWithId(2).id.get, experimentType = ExperimentType("admin"))
@@ -193,7 +193,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         query = parser.parseWithUserExperimentConstrains("firstNa", Seq("admin"))
         searcher.search(query.get).seq.size === 2
 
-        query = parser.parseWithUserExperimentConstrains("firstNa", Seq("can invite"))
+        query = parser.parseWithUserExperimentConstrains("firstNa", Seq("can_connect"))
         searcher.search(query.get).seq.size === 3
 
         query = parser.parseWithUserExperimentConstrains("firstNa", Seq("fake"))
