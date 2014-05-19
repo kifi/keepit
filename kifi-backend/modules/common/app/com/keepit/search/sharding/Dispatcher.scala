@@ -44,12 +44,35 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
     shardToInstances
   }
 
-  private[this] var routingTable = invert()
+  private[this] def findSafeSharding(): ArrayBuffer[Set[Shard[T]]] = {
+    val results = new ArrayBuffer[Set[Shard[T]]]
 
-  private[this] def reload(): Unit = synchronized{ routingTable = invert() }
+    instances.flatMap(_.shards.toSeq).groupBy(_.numShards).foreach{ case (numShards, shardSeq) =>
+      val shards = shardSeq.toSet
+      if (shards.size == numShards) {
+        val estimatedCapacity = shardSeq.size / numShards
+        var i = 0
+        while (i < estimatedCapacity) {
+          results += shards
+          i += 1
+        }
+      }
+    }
+
+    results
+  }
+
+  private[this] var routingTable: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]] = invert()
+  private[this] var safeSharding: ArrayBuffer[Set[Shard[T]]] = findSafeSharding()
+
+  private[this] def reload(): Unit = synchronized{
+    routingTable = invert()
+    safeSharding = findSafeSharding()
+  }
 
   private[this] val rnd = new Random()
 
+  // call a single service instance that has a shard for for id
   def call[R](id: Id[T])(body: (ServiceInstance) => R): R = call(id, body, 1, 3)
 
   private def call[R](id: Id[T], body: (ServiceInstance) => R, attempts: Int, maxAttempts: Int): R = {
@@ -91,9 +114,24 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
     }
   }
 
+  // find service instances to cover all shards
+  def dispatch[R](maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
+
+    val sharding = safeSharding // for safety
+
+    if (sharding.length > 0) {
+      // choose one sharding randomly
+      dispatch(sharding(rnd.nextInt(sharding.length)), maxShardsPerInstance)(body)
+    } else {
+      log.error(s"no instance found")
+      forceReload()
+      throw new DispatchFailedException(s"no instance found")
+    }
+  }
+
+  // find service instances to cover the given set of shards
   def dispatch[R](allShards: Set[Shard[T]], maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
-    var results = new ArrayBuffer[R]
-    dispatch(allShards, maxShardsPerInstance, body, results, 1, 3)
+    dispatch(allShards, maxShardsPerInstance, body, new ArrayBuffer[R], 1, 3)
   }
 
   private def dispatch[R](allShards: Set[Shard[T]], maxShardsPerInstance: Int, body: (ServiceInstance, Set[Shard[T]]) => R, results: ArrayBuffer[R], attempts: Int, maxAttempts: Int): Seq[R] = {

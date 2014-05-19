@@ -32,8 +32,8 @@ class DispatcherTest extends Specification {
   val allInstances = smallInstances ++ largeInstances
 
   val insufficientInstances = Vector[ServiceInstance](
-    new ServiceInstance(Node("/g"), false, new TstRemoteService("0,3,6,9/12")),
-    new ServiceInstance(Node("/h"), false, new TstRemoteService("1,4,7,10/12"))
+    new ServiceInstance(Node("/g"), false, new TstRemoteService("0,3,6,9/10")),
+    new ServiceInstance(Node("/h"), false, new TstRemoteService("1,4,7/10"))
   )
 
   val allShards = Set(
@@ -111,6 +111,19 @@ class DispatcherTest extends Specification {
       try{ disp.dispatch(allShards){ (inst, shards) => 1 } } catch { case _: Throwable => }
 
       forceReloadCalled === true
+    }
+
+    "find safe sharding" in {
+      var forceReloadCalled = false
+      val disp = Dispatcher[T](smallInstances ++ insufficientInstances, ()=>{ forceReloadCalled = true })
+      var results = Set.empty[Int]
+
+      (0 until 10).foreach{ i =>
+        disp.dispatch(){ (inst, shards) => results ++= shards.map(_.numShards) }
+      }
+
+      results === Set(12)
+      forceReloadCalled === false
     }
   }
 }

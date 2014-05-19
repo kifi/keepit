@@ -159,7 +159,16 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   private def resetRoutingList() = {
     routingList = Vector(instances.values.toSeq: _*)
     val myRouter = customRouter // copy the pointer for safety
-    if (myRouter != null) myRouter.update(routingList, forceUpdateTopology)
+
+    if (myRouter != null) {
+      try {
+        myRouter.update(routingList, forceUpdateTopology)
+      } catch {
+        case e: Throwable =>
+          log.error("custom router update failed", e)
+          airbrake.get.notify(s"custom router update failed: serviceType=$serviceType customRouter=${customRouter.getClass.getSimpleName}")
+      }
+    }
   }
 
   @volatile
