@@ -29,9 +29,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import ElizaEmailNotifierActor._
 import com.keepit.social.NonUserKinds
+import scala.collection.mutable
+import com.keepit.common.concurrent.FutureHelpers
+import scala.util.{Failure, Success}
 
 object ElizaEmailNotifierActor {
-  case object SendUserEmails
+  case object SendNextUserEmail
   case object SendNonUserEmails
   val MIN_TIME_BETWEEN_NOTIFICATIONS = 15 minutes
   val RECENT_ACTIVITY_WINDOW = 24 hours
@@ -49,16 +52,23 @@ class ElizaEmailNotifierActor @Inject() (
     nonUserThreadRepo: NonUserThreadRepo
   ) extends FortyTwoActor(airbrake) with Logging {
 
+  private val userEmailMessageThreadQueue = new mutable.Queue[Seq[UserThread]]()
+  private var processing = false
+
   def receive = {
-    case SendUserEmails =>
-      val now = clock.now
-      val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
-      val unseenUserThreads = db.readOnly { implicit session =>
-        userThreadRepo.getUserThreadsForEmailing(lastNotifiedBefore)
+    case SendNextUserEmail =>
+      log.info("Attempting to process next user email")
+      if (!processing) {
+        if (userEmailMessageThreadQueue.isEmpty) {
+          getMessagesToProcess()
+        }
+        if (userEmailMessageThreadQueue.nonEmpty) {
+          val userThreads = userEmailMessageThreadQueue.dequeue()
+          log.info(s"userEmailMessageThreadQueue size: ${userEmailMessageThreadQueue.size}")
+          processing = true
+          emailUnreadMessagesForMessageThread(userThreads)
+        }
       }
-      val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
-      log.info(s"[now:$now] [lastNotifiedBefore:$lastNotifiedBefore] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
-      unseenUserThreads.groupBy(_.thread).values.map(emailUnreadMessagesForMessageThread)
 
     case SendNonUserEmails =>
       val now = clock.now
@@ -81,6 +91,20 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
   /**
+   * Fetches user threads that need to receive an email update and put them in the queue
+   */
+  private def getMessagesToProcess(): Unit = {
+    val now = clock.now
+    val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
+    val unseenUserThreads = db.readOnly { implicit session =>
+      userThreadRepo.getUserThreadsForEmailing(lastNotifiedBefore)
+    }
+    val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
+    log.info(s"[now:$now] [lastNotifiedBefore:$lastNotifiedBefore] found ${unseenUserThreads.size} unseenUserThreads, notificationUpdatedAt: ${notificationUpdatedAts.mkString(",")}")
+    unseenUserThreads.groupBy(_.thread).values.foreach(userEmailMessageThreadQueue.enqueue(_))
+  }
+
+  /**
    * Sends email update to all specified user threads corresponding to the same MessageThread
    */
   private def emailUnreadMessagesForMessageThread(userThreads: Seq[UserThread]): Unit = {
@@ -93,13 +117,26 @@ class ElizaEmailNotifierActor @Inject() (
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
     )
-    // todo(martin) This is an emergency fix, we must remove these two Await as soon as possible
-    val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
-    val uriSummary = Await.result(elizaEmailCommander.getSummarySmall(thread), 30 seconds)
-    allUsersFuture map { allUsers =>
-      userThreads.foreach{ userThread =>
-        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
+    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
+    val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
+    val threadDataFuture = for {
+      allUsers <- allUsersFuture
+      allUserImageUrls <- allUserImageUrlsFuture
+      uriSummary <- uriSummaryFuture
+    } yield (allUsers, allUserImageUrls, uriSummary)
+    threadDataFuture.onComplete { result =>
+      result match {
+        case Success(data) => {
+          val (allUsers, allUserImageUrls, uriSummary) = data
+          // Futures below will be executed concurrently
+          userThreads.foreach{ userThread =>
+            emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
+          }
+        }
+        case Failure(t) => airbrake.notify(s"Failed to fetch data for thread $threadId", t)
       }
+      processing = false
+      self ! SendNextUserEmail
     }
   }
 
@@ -109,7 +146,7 @@ class ElizaEmailNotifierActor @Inject() (
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
     uriSummary: URISummary
-  ): Unit = {
+  ): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
     airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
@@ -120,7 +157,7 @@ class ElizaEmailNotifierActor @Inject() (
 
     val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen, None)
 
-    if (extendedThreadItems.nonEmpty) {
+    val fut = if (extendedThreadItems.nonEmpty) {
       log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
         s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
         s"with ${extendedThreadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
@@ -128,7 +165,7 @@ class ElizaEmailNotifierActor @Inject() (
       val recipientUserId = userThread.user
       val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
-      deepUrlFuture map { deepUrl =>
+      deepUrlFuture flatMap { deepUrl =>
         //if user is not active, skip it!
         val recipient = allUsers(recipientUserId)
         if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
@@ -156,10 +193,12 @@ class ElizaEmailNotifierActor @Inject() (
           }
         } else {
           log.warn(s"user $recipient is not active, not sending emails")
+          Future.successful()
         }
       }
-    }
+    } else Future.successful()
     log.info(s"processed user thread $userThread")
+    fut
   }
 }
 
@@ -179,12 +218,12 @@ class ElizaEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ElizaEmailNotifierPluginImpl")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendUserEmails)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendNextUserEmail)
     scheduleTaskOnLeader(actor.system, 90 seconds, 2 minutes, actor.ref, SendNonUserEmails)
   }
 
   def sendEmails() {
-    actor.ref ! SendUserEmails
+    actor.ref ! SendNextUserEmail
     actor.ref ! SendNonUserEmails
   }
 }
