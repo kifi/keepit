@@ -23,7 +23,6 @@ import play.api.mvc.{WebSocket,RequestHeader}
 import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
 import play.api.mvc.WebSocket.FrameFormatter
 import play.api.libs.json.{Json, JsValue}
-import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
@@ -185,7 +184,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
         }
         case None => Future.successful {
-          Statsd.increment(s"websocket.anonymous")
+          statsd.increment(s"websocket.anonymous")
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
           (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
         }
@@ -217,13 +216,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
-        Statsd.time(s"websocket.handler.$action") {
+        statsd.time(s"websocket.handler.$action", ALWAYS) {
           val timer = accessLog.timer(WS_IN)
           val payload = jsArr.value.tail
           try {
             handler(payload)
           } finally {
-            Statsd.increment(s"websocket.handler.$action.$agentFamily")
+            statsd.increment(s"websocket.handler.$action.$agentFamily")
             accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
           }
         }

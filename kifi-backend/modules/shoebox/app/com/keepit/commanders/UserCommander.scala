@@ -47,6 +47,7 @@ import play.api.libs.json.JsSuccess
 import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
+import com.keepit.common.cache.TransactionalCaching
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -120,7 +121,8 @@ class UserCommander @Inject() (
   emailOptOutCommander: EmailOptOutCommander,
   heimdalClient: HeimdalServiceClient,
   fortytwoConfig: FortyTwoConfig,
-  bookmarkClicksRepo: UserBookmarkClicksRepo) extends Logging {
+  bookmarkClicksRepo: UserBookmarkClicksRepo,
+  userImageUrlCache: UserImageUrlCache) extends Logging {
 
 
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
@@ -770,7 +772,10 @@ class UserCommander @Inject() (
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
     val user = db.readOnly { implicit session => userRepo.get(userId) }
-    s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
+    implicit val txn = TransactionalCaching.Implicits.directCacheAccess
+    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
+      s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
+    }
   }
 }
 

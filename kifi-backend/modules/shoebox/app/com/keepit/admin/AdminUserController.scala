@@ -481,7 +481,7 @@ class AdminUserController @Inject() (
   }
 
   def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
-    db.readWrite { implicit request =>
+    db.readWrite { implicit session =>
       val user = userRepo.get(userId)
       userPictureRepo.getByUser(userId).find(_.id.get == pictureId) map { pic =>
         if (pic.state != UserPictureStates.ACTIVE) {

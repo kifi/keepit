@@ -37,15 +37,21 @@ function change(callback, browser, progress, req, loc, flags) {
   callback(getTabIdForBrowser(this, browser), !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT));
 }
 
-function onFocus(win, callback) {
-  for (let id of ['urlbar', 'searchbar']) {
-    win.document.getElementById(id).addEventListener('focus', callback.bind(null, id === 'urlbar' ? 'a' : 's'));
+function onFocus(win, callbacks) {
+  for (let id in callbacks) {
+    var el = win.document.getElementById(id);
+    if (el) {
+      el.addEventListener('focus', callbacks[id]);
+    }
   }
 }
 
-function offFocus(win, callback) {
-  for (let id of ['urlbar', 'searchbar']) {
-    win.document.getElementById(id).removeEventListener('focus', callback);
+function offFocus(win, callbacks) {
+  for (let id in callbacks) {
+    var el = win.document.getElementById(id);
+    if (el) {
+      el.removeEventListener('focus', callbacks[id]);
+    }
   }
 }
 
@@ -65,16 +71,20 @@ exports.onChange = function (callback) {
 };
 
 exports.onFocus = function (callback) {
+  let callbacks = {
+    urlbar: callback.bind(null, 'a'),
+    searchbar: callback.bind(null, 's')
+  };
   for (let win of windows('navigator:browser')) {
-    onFocus(win, callback);
+    onFocus(win, callbacks);
   }
   browserWindows.on('open', function (win) {
-    onFocus(getXpcomWindow(win), callback);
+    onFocus(getXpcomWindow(win), callbacks);
   });
   browserWindows.on('close', function (win) {
     var xpcomWin = getXpcomWindow(win);
     if (xpcomWin) {
-      offFocus(xpcomWin);
+      offFocus(xpcomWin, callbacks);
     }
   });
 };

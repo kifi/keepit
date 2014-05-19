@@ -23,7 +23,7 @@ case class KeepToCollection(
 }
 
 case class CollectionsForKeepKey(keepId: Id[Keep]) extends Key[Seq[Id[Collection]]] {
-  override val version = 2
+  override val version = 3
   val namespace = "collections_for_bookmark"
   def toKey(): String = keepId.toString
 }
