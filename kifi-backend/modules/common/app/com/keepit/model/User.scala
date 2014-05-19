@@ -83,6 +83,15 @@ case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
 class ExternalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[ExternalUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])
 
+case class UserImageUrlCacheKey(userId: Id[User], width: Int) extends Key[String] {
+  override val version = 1
+  val namespace = "user_image_by_width"
+  def toKey(): String = s"$userId#$width"
+}
+
+class UserImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[UserImageUrlCacheKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 object UserStates extends States[User] {
   val PENDING = State[User]("pending")
   val BLOCKED = State[User]("blocked")

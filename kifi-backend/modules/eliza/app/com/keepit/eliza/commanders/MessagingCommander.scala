@@ -21,7 +21,6 @@ import org.joda.time.DateTime
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.modules.statsd.api.Statsd
 
 import scala.Some
 import scala.concurrent.{Promise, Await, Future}
@@ -199,7 +198,7 @@ class MessagingCommander @Inject() (
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds)} // todo: Remove Await
-    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
+    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ALWAYS)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
@@ -615,7 +614,7 @@ class MessagingCommander @Inject() (
 
       messageThreadFut.map { case (_, messages) =>
         val tDiff = currentDateTime.getMillis - tStart.getMillis
-        statsd.timing(s"messaging.newMessage", tDiff)
+        statsd.timing(s"messaging.newMessage", tDiff, ALWAYS)
         (message, threadInfoOpt, messages)
       }
     }

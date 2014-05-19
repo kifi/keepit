@@ -2,6 +2,8 @@ package com.keepit.common.db
 
 import play.api.libs.json._
 import play.api.mvc.{PathBindable, QueryStringBindable}
+import org.msgpack.ScalaMessagePack
+import com.keepit.model.serialize.MsgPackSequenceNumberTemplate
 
 case class SequenceNumber[T](value: Long) extends Ordered[SequenceNumber[T]] {
   def compare(that: SequenceNumber[T]) = value compare that.value
@@ -14,6 +16,7 @@ case class SequenceNumber[T](value: Long) extends Ordered[SequenceNumber[T]] {
 
 
 object SequenceNumber {
+  ScalaMessagePack.messagePack.register(classOf[SequenceNumber[Any]], new MsgPackSequenceNumberTemplate[Any]())
   def ZERO[T] = SequenceNumber[T](0)
   def MinValue[T] = SequenceNumber[T](Long.MinValue)
   implicit def format[T] = new Format[SequenceNumber[T]] {

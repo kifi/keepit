@@ -23,7 +23,6 @@ import play.api.mvc.{WebSocket,RequestHeader}
 import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
 import play.api.mvc.WebSocket.FrameFormatter
 import play.api.libs.json.{Json, JsValue}
-import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
@@ -217,7 +216,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
-        statsd.time(s"websocket.handler.$action") {
+        statsd.time(s"websocket.handler.$action", ALWAYS) {
           val timer = accessLog.timer(WS_IN)
           val payload = jsArr.value.tail
           try {

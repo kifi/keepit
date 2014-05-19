@@ -493,15 +493,15 @@ class SearchTimeLogs(
     var total: Long = 0
 ) extends Logging {
   def send(): Unit = {
-    statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo)
-    statsd.timing("mainSearch.queryParsing", queryParsing)
-    statsd.timing("mainSearch.phraseDetection", phraseDetection)
-    statsd.timing("mainSearch.nlpPhraseDetection", nlpPhraseDetection)
-    statsd.timing("mainSearch.getClickboost", getClickBoost)
-    statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher)
-    statsd.timing("mainSearch.LuceneSearch", search)
-    statsd.timing("mainSearch.processHits", processHits)
-    statsd.timing("mainSearch.total", total)
+    statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo, ALWAYS)
+    statsd.timing("mainSearch.queryParsing", queryParsing, ALWAYS)
+    statsd.timing("mainSearch.phraseDetection", phraseDetection, ALWAYS)
+    statsd.timing("mainSearch.nlpPhraseDetection", nlpPhraseDetection, ALWAYS)
+    statsd.timing("mainSearch.getClickboost", getClickBoost, ALWAYS)
+    statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher, ALWAYS)
+    statsd.timing("mainSearch.LuceneSearch", search, ALWAYS)
+    statsd.timing("mainSearch.processHits", processHits, ALWAYS)
+    statsd.timing("mainSearch.total", total, ALWAYS)
   }
 
   override def toString() = {

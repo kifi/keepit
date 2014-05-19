@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import org.joda.time.DateTime
 import com.keepit.common.mail._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.common.concurrent.FutureHelpers
@@ -92,7 +92,7 @@ class ElizaEmailNotifierActor @Inject() (
     airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
     airbrake.verify(userThread.unread, s"${userThread.summary} not unread")
     airbrake.verify(!userThread.notificationEmailed, s"${userThread.summary} notification already emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"Late send of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
 
     val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread) }
@@ -118,7 +118,7 @@ class ElizaEmailNotifierActor @Inject() (
   }
 
 
-  def sendUnreadMessages(
+  private def sendUnreadMessages(
     userThread: UserThread,
     thread: MessageThread,
     lastSeen: Option[DateTime],
@@ -131,36 +131,34 @@ class ElizaEmailNotifierActor @Inject() (
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)
     )
-    val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
+    // todo(martin) This is an emergency fix, we must remove it as soon as possible
+    val allUserImageUrls: Map[Id[User], String] = allUserIds.map(u => u -> Await.result(shoebox.getUserImageUrl(u, 73), 30 seconds)).toMap
+    val uriSummary = Await.result(elizaEmailCommander.getSummarySmall(thread), 30 seconds)
     val deepUrlFuture: Future[String] = shoebox.getDeepUrl(thread.deepLocator, recipientUserId)
 
     for {
       allUsers <- allUsersFuture
-      allUserImageUrls <- allUserImageUrlsFuture
       deepUrl <- deepUrlFuture
-      uriSummary <- uriSummaryFuture
     } yield {
       //if user is not active, skip it!
       val recipient = allUsers(recipientUserId)
-      if (recipient.state == UserStates.ACTIVE || recipient.primaryEmailId.isEmpty) {
-        val otherParticipants = allUsers.filter(_._1 != recipientUserId).values.toSeq
+      if (recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty) {
 
         for {
           destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
           unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
         } yield {
           val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
-          val b: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
+          val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, lastSeen, None)
 
-          val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
           val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
+          val threadEmailInfoNoImage = threadEmailInfo.copy(heroImageUrl = None) // todo(martin) because Gmail for Android does not support media queries. Is there a better solution?
           val email = ElectronicMail(
             from = magicAddress,
             fromName = Some("Kifi Notifications"),
             to = Seq(GenericEmailAddress(destinationEmail)),
-            subject = s"""New messages on "${threadEmailInfo.pageTitle}" with $authorFirst""",
-            htmlBody = views.html.userDigestEmail(threadEmailInfo, b).body,
+            subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
+            htmlBody = views.html.userDigestEmail(threadEmailInfoNoImage, extendedThreadItems).body,
             category = NotificationCategory.User.MESSAGE
           )
           shoebox.sendMail(email)
