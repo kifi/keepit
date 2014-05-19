@@ -39,7 +39,6 @@ object ExperimentType {
   val FAKE = ExperimentType("fake")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
   val NOT_SENSITIVE = ExperimentType("not sensitive")
-  val CAN_INVITE = ExperimentType("can invite")
   val GMAIL_INVITE = ExperimentType("gmail_invite")
   val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
@@ -52,7 +51,7 @@ object ExperimentType {
   val WHO_KEPT_MY_KEEP = ExperimentType("who_kept_my_keep")
   val IGNORE_VERSION_TIME_TRAVEL = ExperimentType("ignore_version_time_travel")
 
-  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE :: CAN_INVITE :: GMAIL_INVITE ::
+  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE :: GMAIL_INVITE ::
              CAN_CONNECT :: CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
             MOBILE_REDITECT :: HELPRANK :: IGNORE_VERSION_TIME_TRAVEL :: WHO_KEPT_MY_KEEP :: Nil
 
