@@ -75,8 +75,7 @@ class ElizaEmailCommander @Inject() (
       }
     } catch {
       case t: Throwable => {
-        log.info(s"Exception during parsing: $t")
-        throw t
+        throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
       }
     }
   }
