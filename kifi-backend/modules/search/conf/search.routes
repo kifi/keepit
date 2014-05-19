@@ -33,6 +33,7 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 # INTERNAL ROUTES/Search
 ##########################################
 
+POST        /internal/search/searchShards          @com.keepit.controllers.search.SearchController.searchShards()
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
 POST        /internal/search/events/browsed/:userId        @com.keepit.controllers.search.SearchEventController.updateBrowsingHistory(userId: Id[User])
