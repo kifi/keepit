@@ -160,16 +160,17 @@ class ElizaEmailCommander @Inject() (
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummarySmallFuture = getSummarySmall(thread)
     val uriSummaryBigFuture = getSummaryBig(thread)
 
     for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
-      uriSummarySmall <- uriSummarySmallFuture
       uriSummaryBig <- uriSummaryBigFuture
+      uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
     } yield {
-      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl)
+      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl).copy(
+        heroImageUrl = None // todo(martin) because Gmail for Android does not support media queries. Is there a better solution?
+      )
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
@@ -188,7 +189,9 @@ class ElizaEmailCommander @Inject() (
     val nuts = db.readOnly { implicit session =>
       nonUserThreadRepo.getByMessageThreadId(thread.id.get)
     }
-    nuts.foreach{ nut => notifyEmailParticipant(nut, thread)
+    // Intentionally sequential execution
+    nuts.foldLeft(Future.successful()){ (fut,nut) =>
+      fut.flatMap(_ => notifyEmailParticipant(nut, thread))
     }
   }
 
@@ -199,14 +202,15 @@ class ElizaEmailCommander @Inject() (
       }.toMap
     }
 
-    addedNonUsers.foreach { nup =>
+    // Intentionally sequential execution
+    addedNonUsers.foldLeft(Future.successful()){ (fut,nup) =>
       require(nup.kind == NonUserKinds.email)
       val nut = nuts(nup.identifier)
-      if (!nut.muted) {
+      fut.flatMap { _ => if (!nut.muted) {
         for (
           unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nut.participant.identifier);
           protoEmail <- assembleEmail(thread, nut.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token))
-        ) {
+        ) yield {
           val magicAddress = EmailAddresses.discussion(nut.accessToken.token)
           shoebox.sendMail(ElectronicMail (
             from = magicAddress,
@@ -218,18 +222,18 @@ class ElizaEmailCommander @Inject() (
             extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
           ))
           db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nut.id.get, clock.now()) }
-        }
+        }} else Future.successful()
       }
     }
   }
 
-  def notifyEmailParticipant(emailParticipantThread: NonUserThread, thread: MessageThread): Unit = if (!emailParticipantThread.muted) {
+  def notifyEmailParticipant(emailParticipantThread: NonUserThread, thread: MessageThread): Future[Unit] = if (!emailParticipantThread.muted) {
     require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
     require(emailParticipantThread.threadId == thread.id.get, "MessageThread and NonUserThread do not match.")
     for (
       unsubUrl <- shoebox.getUnsubscribeUrlForEmail(emailParticipantThread.participant.identifier);
       protoEmail <- assembleEmail(thread, None, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + emailParticipantThread.accessToken.token))
-    ) {
+    ) yield {
 
       val magicAddress = EmailAddresses.discussion(emailParticipantThread.accessToken.token)
       shoebox.sendMail(ElectronicMail (
@@ -243,7 +247,7 @@ class ElizaEmailCommander @Inject() (
       ))
       db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get, clock.now()) }
     }
-  }
+  } else Future.successful()
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
     val (msg, thread) = db.readOnly{ implicit session =>
