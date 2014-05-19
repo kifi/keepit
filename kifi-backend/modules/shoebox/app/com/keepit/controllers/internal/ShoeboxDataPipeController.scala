@@ -51,14 +51,6 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getChanged(seqNum, includeStates = scrapedStates, limit = fetchSize)
-    }
-    Ok(Json.toJson(uris))
-  }
-
   def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)
