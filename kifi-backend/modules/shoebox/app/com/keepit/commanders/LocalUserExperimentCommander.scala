@@ -6,7 +6,6 @@ import com.keepit.model.{
   User,
   UserExperimentRepo,
   Name,
-  ProbabilityDensity,
   ProbabilisticExperimentGeneratorRepo,
   ProbabilisticExperimentGenerator,
   ProbabilisticExperimentGeneratorAllCache
@@ -24,6 +23,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model.UserExperiment
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.math.ProbabilityDensity
 
 @Singleton //The Singleton is very importatnt here. There is a cache on the object.
 class LocalUserExperimentCommander @Inject() (
