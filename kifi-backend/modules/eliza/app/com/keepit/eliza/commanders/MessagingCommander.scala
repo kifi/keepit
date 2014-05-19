@@ -21,7 +21,6 @@ import org.joda.time.DateTime
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.modules.statsd.api.Statsd
 
 import scala.Some
 import scala.concurrent.{Promise, Await, Future}
@@ -156,7 +155,8 @@ class MessagingCommander @Inject() (
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
     "1714ac86-4ce5-4083-b4c7-bb1e8292c373", // martin
-    "fd187ca1-2921-4c60-a8c0-955065d454ab"  // jared (of the petker variety)
+    "fd187ca1-2921-4c60-a8c0-955065d454ab", // jared (of the petker variety)
+    "07170014-badc-4198-a462-6ba35d2ebb78"  // david
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
@@ -199,7 +199,7 @@ class MessagingCommander @Inject() (
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
     val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds)} // todo: Remove Await
-    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis)
+    statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ALWAYS)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite{ implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
@@ -615,7 +615,7 @@ class MessagingCommander @Inject() (
 
       messageThreadFut.map { case (_, messages) =>
         val tDiff = currentDateTime.getMillis - tStart.getMillis
-        statsd.timing(s"messaging.newMessage", tDiff)
+        statsd.timing(s"messaging.newMessage", tDiff, ALWAYS)
         (message, threadInfoOpt, messages)
       }
     }

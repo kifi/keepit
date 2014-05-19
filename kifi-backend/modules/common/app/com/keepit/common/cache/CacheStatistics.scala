@@ -18,7 +18,6 @@ import play.api.Logger
 import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.modules.statsd.api.Statsd
 
 class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging {
 
@@ -32,7 +31,7 @@ class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging 
     val name = s"$cachePlugin.$namespace"
     incrCount(name, global.hitsMap)
     statsd.increment(s"$name.hits")
-    statsd.timing(s"$name.hits", duration)
+    statsd.timing(s"$name.hits", duration, ONE_IN_THOUSAND)
   }(ExecutionContext.singleThread)
 
   def recordMiss(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
@@ -46,6 +45,6 @@ class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging 
     val name = s"$cachePlugin.$namespace"
     incrCount(s"$name", global.setsMap)
     statsd.increment(s"$name.sets")
-    statsd.timing(s"$name.sets", duration)
+    statsd.timing(s"$name.sets", duration, ONE_IN_THOUSAND)
   }(ExecutionContext.singleThread)
 }

@@ -79,7 +79,7 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           contentAsString(result).contains("""window.location = "http://www.google.com";""") === false
         }
 
-        inject[FakeActionAuthenticator].setUser(niven, Set(ExperimentType.MOBILE_REDITECT))
+        inject[FakeActionAuthenticator].setUser(niven, Set(ExperimentType.MOBILE_REDIRECT))
 
         {
           val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(deepLink.token.value).toString()

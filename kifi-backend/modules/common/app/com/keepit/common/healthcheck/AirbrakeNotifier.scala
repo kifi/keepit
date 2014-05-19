@@ -131,7 +131,7 @@ trait AirbrakeNotifier extends Logging {
     val pass: Boolean = condition
     if (!pass) {
       log.error(s"[condition fail] $message")
-//      notify(message)
+      notify(message)
     }
     pass
   }

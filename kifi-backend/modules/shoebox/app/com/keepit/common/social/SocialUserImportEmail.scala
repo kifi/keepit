@@ -16,7 +16,7 @@ class SocialUserImportEmail @Inject() (
       emails.map { email =>
         if (email.userId != userId) {
           if (email.state == EmailAddressStates.VERIFIED) {
-            throw new IllegalStateException(s"email $email is not associated with user $userId")
+            throw new IllegalStateException(s"email ${email.address} of user ${email.userId} is VERIFIED but not associated with user $userId")
           } else if (email.state == EmailAddressStates.UNVERIFIED) {
             emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
           }

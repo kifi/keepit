@@ -12,6 +12,10 @@ object LogPrefix {
 }
 
 trait Logging {
+  val ALWAYS = 1.0d
+  val ONE_IN_TEN = 0.1d
+  val ONE_IN_HUNDRED = 0.01d
+  val ONE_IN_THOUSAND = 0.001d
   implicit lazy val log = Logger(getClass)
   implicit lazy val statsd = new LoggingStatsdClient(Logger(s"statsd.${getClass.getCanonicalName}"))
 }
@@ -34,8 +38,8 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param value The amount by which to increment the stat. Defaults to 1.
    * @param samplingRate The probability for which to increment. Defaults to 1.
    */
-  override def increment(key: String, value: Long = 1, samplingRate: Double = 1.0): Unit = {
-    log.info(s"[increment] key: $key, value: $value, samplingRate: $samplingRate")
+  override def increment(key: String, value: Long = 1, samplingRate: Double): Unit = {
+    maybeLog(s"[increment] key: $key, value: $value, samplingRate: $samplingRate", samplingRate)
     Statsd.increment(key, value, samplingRate)
   }
 
@@ -46,8 +50,8 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param millis The number of milliseconds the operation took.
    * @param samplingRate The probability for which to increment. Defaults to 1.
    */
-  override def timing(key: String, millis: Long, samplingRate: Double = 1.0): Unit = {
-    log.info(s"[timing] key: $key, millis: $millis, samplingRate: $samplingRate")
+  override def timing(key: String, millis: Long, samplingRate: Double): Unit = {
+    maybeLog(s"[timing] key: $key, millis: $millis, samplingRate: $samplingRate", samplingRate)
     Statsd.timing(key, millis, samplingRate)
   }
 
@@ -59,8 +63,8 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param timed An arbitrary block of code to be timed.
    * @return The result of the timed operation.
    */
-  override def time[T](key: String, samplingRate: Double = 1.0)(timed: => T): T = {
-    log.info(s"[time] key: $key, samplingRate: $samplingRate")
+  override def time[T](key: String, samplingRate: Double)(timed: => T): T = {
+    maybeLog(s"[time] key: $key, samplingRate: $samplingRate", samplingRate)
     Statsd.time(key, samplingRate)(timed)
   }
 
@@ -71,7 +75,7 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param value The value to record for the stat.
    */
   override def gauge(key: String, value: Long): Unit = {
-    log.info(s"[gauge] key: $key, value: $value")
+    maybeLog(s"[gauge] key: $key, value: $value")
     Statsd.gauge(key, value)
   }
 
@@ -82,11 +86,23 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param value The value to record for the stat.
    */
   override def gauge(key: String, value: Long, delta: Boolean): Unit = {
-    log.info(s"[gauge] key: $key, value: $value, delta: $delta")
+    maybeLog(s"[gauge] key: $key, value: $value, delta: $delta")
     Statsd.gauge(key, value, delta)
   }
-}
 
+  /**
+   * Probabilistically calls the {@code log} function. Use a random number call send
+   * function {@code (samplingRate * 10)%} of the time unless samplingRate == 1 then we'll always log.
+   * Means that when sampling, we log at the rate of 1/10 of what we send to the server.
+   * Note: the sampling rate of spitting to the log is the same as sending to statsd but the probability
+   * is calculated separately for each in order to to be intrusive on the current implementation of the client.
+   */
+  private def maybeLog(msg: => String, samplingRate: Double = 1.0) {
+    if (samplingRate >= 1.0 || nextFloat() < (samplingRate / 10)) {
+      log.info(msg)
+    }
+  }
+}
 
 object Logging {
   implicit class LoggerWithPrefix(val log: Logger) extends AnyVal {
