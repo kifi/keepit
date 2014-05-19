@@ -3,14 +3,13 @@ package com.keepit.common.pagepeeker
 import scala.concurrent._
 import play.api.libs.ws.WS
 import com.keepit.common.logging.Logging
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import scala.Some
 import com.keepit.common.store.{ImageUtils, ImageSize}
 import java.awt.image.BufferedImage
-import play.modules.statsd.api.Statsd
 import scala.util.{Failure, Success, Try}
 import javax.imageio.ImageIO
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}

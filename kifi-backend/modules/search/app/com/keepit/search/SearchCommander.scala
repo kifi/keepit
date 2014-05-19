@@ -384,13 +384,13 @@ class SearchCommanderImpl @Inject() (
     def getTotalTime: Long = (t5 - t1)
 
     def send(): Unit = {
-      statsd.timing("extSearch.factory", getFactoryTime)
-      statsd.timing("extSearch.searching", getSearchTime)
+      statsd.timing("extSearch.factory", getFactoryTime, ALWAYS)
+      statsd.timing("extSearch.searching", getSearchTime, ALWAYS)
     }
 
     def sendTotal(): Unit = {
-      statsd.timing("extSearch.postSearchTime", getDecorationTime)
-      statsd.timing("extSearch.total", getTotalTime)
+      statsd.timing("extSearch.postSearchTime", getDecorationTime, ALWAYS)
+      statsd.timing("extSearch.total", getTotalTime, ALWAYS)
       statsd.increment("extSearch.total")
     }
 
