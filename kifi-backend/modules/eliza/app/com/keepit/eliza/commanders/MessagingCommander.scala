@@ -155,7 +155,8 @@ class MessagingCommander @Inject() (
     "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
     "1714ac86-4ce5-4083-b4c7-bb1e8292c373", // martin
-    "fd187ca1-2921-4c60-a8c0-955065d454ab"  // jared (of the petker variety)
+    "fd187ca1-2921-4c60-a8c0-955065d454ab", // jared (of the petker variety)
+    "07170014-badc-4198-a462-6ba35d2ebb78"  // david
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
