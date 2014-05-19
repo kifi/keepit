@@ -38,9 +38,9 @@ class SimpleGraphManager(
       graphDirectory.synchronized {
         graphDirectory.doBackup()
         graphDirectory.asFile.foreach { dir =>
-          Statsd.gauge("graph.directory.size", FileUtils.sizeOfDirectory(dir))
-          Statsd.gauge("graph.heap.running", runningHeapSize)
-          Statsd.gauge("graph.heap.persisting", persistingHeapSize)
+          statsd.gauge("graph.directory.size", FileUtils.sizeOfDirectory(dir))
+          statsd.gauge("graph.heap.running", runningHeapSize)
+          statsd.gauge("graph.heap.persisting", persistingHeapSize)
         }
       }
       val end = System.currentTimeMillis

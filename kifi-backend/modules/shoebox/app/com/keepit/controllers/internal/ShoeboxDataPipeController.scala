@@ -9,6 +9,9 @@ import play.api.mvc.Action
 import com.keepit.model._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
+import org.msgpack.ScalaMessagePack
+import play.api.http.ContentTypes
+import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -48,12 +51,11 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
+  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getChanged(seqNum, includeStates = scrapedStates,  limit = fetchSize)
+      normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)
     }
-    Ok(Json.toJson(uris))
+    Ok(ScalaMessagePack.write(UriIdAndSeqBatch(uris))).as(ContentTypes.BINARY)
   }
 
   def getHighestUriSeq() = Action { request =>

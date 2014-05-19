@@ -109,11 +109,20 @@ case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] 
   def toKey(): String = urlHash.hash
 }
 
+case class NormalizedURIWordCountKey(id: Id[NormalizedURI]) extends Key[Int] {
+  override val version = 1
+  val namespace = "wc_by_uriId"
+  def toKey(): String = id.id.toString
+}
+
 class NormalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 class NormalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+class NormalizedURIWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[NormalizedURIWordCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
@@ -145,3 +154,4 @@ object IndexableUri {
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI])
   )(IndexableUri.apply, unlift(IndexableUri.unapply))
 }
+

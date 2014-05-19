@@ -18,7 +18,6 @@ import play.api.Logger
 import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.modules.statsd.api.Statsd
 
 class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging {
 
@@ -31,21 +30,21 @@ class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging 
   def recordHit(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
     val name = s"$cachePlugin.$namespace"
     incrCount(name, global.hitsMap)
-    Statsd.increment(s"$name.hits")
-    Statsd.timing(s"$name.hits", duration)
+    statsd.increment(s"$name.hits")
+    statsd.timing(s"$name.hits", duration, ONE_IN_THOUSAND)
   }(ExecutionContext.singleThread)
 
   def recordMiss(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
     val name = s"$cachePlugin.$namespace"
     incrCount(s"$name", global.missesMap)
-    Statsd.increment(s"$name.misses")
+    statsd.increment(s"$name.misses")
     cacheLog.warn(s"Cache miss on key $fullKey in $cachePlugin")
   }(ExecutionContext.singleThread)
 
   def recordSet(cachePlugin: String, logAccess: Boolean, namespace: String, fullKey: String, duration: Long): Unit = future {
     val name = s"$cachePlugin.$namespace"
     incrCount(s"$name", global.setsMap)
-    Statsd.increment(s"$name.sets")
-    Statsd.timing(s"$name.sets", duration)
+    statsd.increment(s"$name.sets")
+    statsd.timing(s"$name.sets", duration, ONE_IN_THOUSAND)
   }(ExecutionContext.singleThread)
 }

@@ -46,7 +46,7 @@ class ExtDeepLinkController @Inject() (
     val locator = (req \ "locator").as[String]
     val recipient = Id[User]((req \ "recipient").as[Long])
     val link = db.readOnly { implicit session => deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient) }
-    val url = fortytwoConfig.applicationBaseUrl + "/" + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link.token.value).toString()
+    val url = fortytwoConfig.applicationBaseUrl + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link.token.value).toString()
     Ok(Json.toJson(url))
   }
 
