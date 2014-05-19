@@ -122,6 +122,8 @@ class KeepToCollectionRepoImpl @Inject() (
           case e:Exception =>
             airbrake.notify(s"k2c.insertAll -- exception ${e} while inserting batch#$i (total=${k2c.length})",e)
             // move on
+        } finally {
+          kc.foreach(k => collectionsForKeepCache.remove(CollectionsForKeepKey(k.keepId)))
         }
       }
     }

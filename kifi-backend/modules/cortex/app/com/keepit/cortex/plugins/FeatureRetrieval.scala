@@ -1,11 +1,10 @@
 package com.keepit.cortex.plugins
 
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id, SequenceNumber, ModelWithSeqNumber}
 import com.keepit.cortex.core.{FeatureRepresentation, ModelVersion, StatModel}
 import com.keepit.cortex.store.{CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore}
 import com.keepit.common.logging.Logging
 import scala.collection.mutable.ArrayBuffer
-import com.keepit.common.db.ModelWithSeqNumber
 
 
 abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
@@ -14,7 +13,6 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
   dataPuller: DataPuller[T]
 ) extends Logging{
   protected def genFeatureKey(datum: T): K
-
   private def getFeatureStoreSeq(version: ModelVersion[M]): FeatureStoreSequenceNumber[T, M] = {
     val commitKey = CommitInfoKey[T, M](version)
     commitInfoStore.get(commitKey) match {
@@ -29,7 +27,6 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
 
   private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
     val keys = entities.map{genFeatureKey(_)}
-
     val start = System.currentTimeMillis
     val values = featureStore.batchGet(keys, version)
     val ret = (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}

@@ -9,17 +9,20 @@ import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 import com.keepit.normalizer._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeDeploymentNotice, AirbrakeNotifier}
 import com.keepit.normalizer.NormalizationReference
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._
 import com.keepit.common.aws.AwsConfig
 import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import com.kifi.franz.SQSQueue
+import scala.slick.jdbc.StaticQuery
+import com.keepit.model.serialize.UriIdAndSeq
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -27,6 +30,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq]
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
@@ -55,7 +59,6 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   import db.Driver.simple._
 
-
   private val sequence = db.getSequence[NormalizedURI]("normalized_uri_sequence")
 
   type RepoImpl = NormalizedURITable
@@ -81,6 +84,17 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     val q = (for (f <- rows if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
+  }
+
+  def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq] = {
+    import StaticQuery.interpolation
+    sql"""
+      select id, seq from normalized_uri
+      where seq > ${sequenceNumber.value}
+            and state in ('#${NormalizedURIStates.SCRAPED.value}', '#${NormalizedURIStates.SCRAPE_FAILED.value}', '#${NormalizedURIStates.UNSCRAPABLE.value}')
+      limit $limit""".as[(Long, Long)].list.map {
+        case (id, seq) => UriIdAndSeq(Id[NormalizedURI](id), SequenceNumber[NormalizedURI](seq))
+      }.sortBy(_.seq)
   }
 
   override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI] = {
@@ -155,7 +169,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl") {
+    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ALWAYS) {
       val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
         (for (t <- rows if t.urlHash === hash) yield t).firstOption
@@ -176,7 +190,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByUri") {
+    statsd.time(key = "normalizedURIRepo.getByUri", ALWAYS) {
       getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
     }
   }
@@ -200,7 +214,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
-    statsd.time(key = "normalizedURIRepo.internByUri") {
+    statsd.time(key = "normalizedURIRepo.internByUri", ALWAYS) {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           session.onTransactionSuccess {
@@ -235,7 +249,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (for(t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
-  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = Statsd.time(key = "normalizedURIRepo.prenormalize") {
+  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ALWAYS) {
     normalizationServiceProvider.get.prenormalize(uriString)
   }
 

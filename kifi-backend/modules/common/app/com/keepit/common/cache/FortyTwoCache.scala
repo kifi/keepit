@@ -19,7 +19,6 @@ import play.api.Logger
 import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.modules.statsd.api.Statsd
 import java.util.Random
 
 case class CacheSizeLimitExceededException(msg:String) extends Exception(msg)
