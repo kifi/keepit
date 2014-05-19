@@ -65,7 +65,6 @@ object ApplicationBuild extends Build {
     }
   }
 
-
   val commonDependencies = Seq(
     jdbc, // todo(andrew): move to sqldb when we discover a way to get Play to support multiple play.plugins files.
     cache,
@@ -92,7 +91,8 @@ object ApplicationBuild extends Build {
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
     "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0", // todo(andrew/yasuhiro): remove from common
-    "org.bouncycastle" % "bcprov-jdk15on" % "1.50"
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
+    "org.msgpack" %% "msgpack-scala" % "0.6.8"
   ) map (_.excludeAll(
     ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),

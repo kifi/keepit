@@ -36,6 +36,8 @@ import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
+import org.msgpack.ScalaMessagePack
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -68,7 +70,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
-  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
+  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[UriIdAndSeq]]
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
@@ -500,12 +502,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]] = {
-    call(Shoebox.internal.getScrapedFullURIs(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Seq[NormalizedURI]](r.json).get
+  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[UriIdAndSeq]] = {
+    call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      ScalaMessagePack.read[UriIdAndSeqBatch](r.bytes).batch
     }
   }
-
 
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]] = {
     call(Shoebox.internal.getUserIndexable(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
