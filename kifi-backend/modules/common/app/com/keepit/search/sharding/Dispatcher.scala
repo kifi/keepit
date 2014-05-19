@@ -1,7 +1,6 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.db.Id
-import com.keepit.common.logging.Logging
 import com.keepit.common.zookeeper.ServiceInstance
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -16,12 +15,12 @@ class ShardedServiceInstance[T](val serviceInstance: ServiceInstance) {
 object Dispatcher {
   private[sharding] val shardSpecParser = new ShardSpecParser
 
-  def apply[T](instances: Vector[ServiceInstance], forceReload: ()=>Unit): Dispatcher[T] = {
-    new Dispatcher[T](instances.map(new ShardedServiceInstance[T](_)), forceReload)
+  def apply[T](instances: Vector[ServiceInstance], forceReloadFromZK: ()=>Unit): Dispatcher[T] = {
+    new Dispatcher[T](instances.map(new ShardedServiceInstance[T](_)), forceReloadFromZK)
   }
 }
 
-class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: ()=>Unit) extends Logging {
+class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFromZK: ()=>Unit) {
 
   // invert the instance list to shard->instances map filter unreachable instances out
   private def invert(): Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]] = {
@@ -92,12 +91,11 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
         }
       }
       if (candidateShard == null) {
-        log.error(s"no shard found for id=$id")
         throw new DispatchFailedException(s"no shard found for id=$id")
       } else {
         // now choose an instance
         val instances = table(candidateShard)
-        if (instances.size > 0) instances(rnd.nextInt(instances.size)) else null
+        instances(rnd.nextInt(instances.size))
       }
     }
 
@@ -105,12 +103,11 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
       body(candidate.serviceInstance)
     } else {
       if (attempts < maxAttempts) {
-        // failed to find an instance. there may an unreachable instance. reload shard->instances map and try again
+        // failed to find an instance. there may an unreachable instance. reload routingTable and try again
         reload()
         return call(id, body, attempts + 1, maxAttempts) // retry
       } else {
-        log.error(s"no instance found for id=$id")
-        forceReload()
+        forceReloadFromZK()
         throw new DispatchFailedException(s"no instance found for id=$id")
       }
     }
@@ -125,8 +122,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
       // choose one sharding randomly
       dispatch(sharding(rnd.nextInt(sharding.length)), maxShardsPerInstance)(body)
     } else {
-      log.error(s"no instance found")
-      forceReload()
+      forceReloadFromZK()
       throw new DispatchFailedException(s"no instance found")
     }
   }
@@ -149,18 +145,16 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
             remaining --= shards
           } else {
             if (attempts < maxAttempts) {
-              // failed to find an instance. there may an unreachable instance. reload shard->instances map and try again
+              // failed to find an instance. there may an unreachable instance. reload routingTable and try again
               reload()
               return dispatch(remaining, maxShardsPerInstance, body, results, attempts + 1, maxAttempts) // retry
             } else {
-              log.error(s"no instance found")
-              forceReload()
+              forceReloadFromZK()
               throw new DispatchFailedException(s"no instance found")
             }
           }
         case (None, _) =>
-          log.error("no instance found")
-          forceReload()
+          forceReloadFromZK()
           throw new DispatchFailedException("no instance found")
       }
     }
@@ -175,7 +169,6 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReload: (
           numEntries += instances.size
           (numEntries, instances)
         case None =>
-          log.error(s"shard not found: $shard")
           (numEntries, ArrayBuffer[ShardedServiceInstance[T]]())
       }
     }
