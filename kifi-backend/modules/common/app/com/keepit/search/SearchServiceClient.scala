@@ -27,7 +27,6 @@ import scala.collection.mutable.ListBuffer
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
 
-  def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit
   def warmUpUser(userId: Id[User]): Unit
 
   def updateURIGraph(): Unit
@@ -100,6 +99,8 @@ trait SearchServiceClient extends ServiceClient {
     coll: Option[String],
     debug: Option[String]) : Seq[Future[JsValue]]
 
+  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]) : Seq[Future[Map[Lang, Int]]]
+
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
@@ -117,10 +118,6 @@ class SearchServiceClientImpl(
     val router = new DistributedSearchRouter(this)
     serviceCluster.setCustomRouter(Some(router))
     router
-  }
-
-  def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
-    // decommissioned
   }
 
   def warmUpUser(userId: Id[User]): Unit = {
@@ -393,7 +390,13 @@ class SearchServiceClientImpl(
     if (debug.isDefined)      searchParams += ("debug", debug.get)
     val request = JsObject(searchParams.params)
 
-    distRouter.dispatch(plan, Search.internal.searchShards, request).map{ f => f.map(_.json) }
+    distRouter.dispatch(plan, Search.internal.distSearch, request).map{ f => f.map(_.json) }
+  }
+
+  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]) : Seq[Future[Map[Lang, Int]]] = {
+    distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map{ f =>
+      f.map{ r => r.json.as[Map[String, Int]].map{ case (k, v) => Lang(k) -> v } }
+    }
   }
 
   // for DistributedSearchRouter

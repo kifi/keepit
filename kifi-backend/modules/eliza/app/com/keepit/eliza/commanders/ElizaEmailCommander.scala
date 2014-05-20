@@ -34,10 +34,10 @@ import com.keepit.eliza.mail.DomainToNameMapper
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
 
-abstract class MessageSegment(val kind: String) //for use in templates since you can't match on type (it seems)
-case class TextLookHereSegment(msgText: String, pageText: String) extends MessageSegment("tlh")
-case class ImageLookHereSegment(msgText: String, imgUrl: String) extends MessageSegment("ilh")
-case class TextSegment(txt: String) extends MessageSegment("txt")
+abstract class MessageSegment(val kind: String, val txt: String) //for use in templates since you can't match on type (it seems)
+case class TextLookHereSegment(override val txt: String, pageText: String) extends MessageSegment("tlh", txt)
+case class ImageLookHereSegment(override val txt: String, imgUrl: String) extends MessageSegment("ilh", txt)
+case class TextSegment(override val txt: String) extends MessageSegment("txt", txt)
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -177,9 +177,9 @@ class ElizaEmailCommander @Inject() (
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
       ProtoEmail(
-        views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
-        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
-        else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
+        views.html.next.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
+        /*if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
+        else*/ views.html.next.nonUserEmailImageSmall(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         threadInfoSmall.conversationStarter,
         uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)

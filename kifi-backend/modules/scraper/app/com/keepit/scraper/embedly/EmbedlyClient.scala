@@ -2,26 +2,24 @@ package com.keepit.scraper.embedly
 
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
-
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8
 import com.keepit.model.{ImageInfo, NormalizedURI}
-
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.libs.ws.{Response, WS}
+import com.keepit.common.db.Id
 
 trait EmbedlyClient {
   def embedlyUrl(url: String): String
   def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]]
-  def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]]
+  def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
 }
 
 @Singleton
@@ -31,11 +29,9 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
   override def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
 
-  override def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]] = {
-    getEmbedlyInfo(nUri.url) map {
-      infoOpt => nUri.id flatMap { uriId =>
-        infoOpt.map(_.buildImageInfo(uriId))
-      } getOrElse Seq()
+  override def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = {
+    getEmbedlyInfo(url) map { infoOpt =>
+      infoOpt.map(_.buildImageInfo(uriId)).getOrElse(Seq())
     }
   }
 
@@ -86,5 +82,5 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 class DevEmbedlyClient extends EmbedlyClient {
   override def embedlyUrl(url: String): String = "http://dev.ezkeep.com"
   override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = Future.successful(None)
-  def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]] = Future.successful(Seq())
+  override def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq())
 }

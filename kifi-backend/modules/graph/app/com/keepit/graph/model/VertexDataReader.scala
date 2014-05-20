@@ -47,6 +47,7 @@ sealed trait VertexKind[V <: VertexDataReader] {
 }
 
 object VertexKind {
+  type VertexType = VertexKind[_ <: VertexDataReader]
   val all: Set[VertexKind[_ <: VertexDataReader]] = CompanionTypeSystem[VertexDataReader, VertexKind[_ <: VertexDataReader]]("V")
   private val byHeader: Map[Byte, VertexKind[_ <: VertexDataReader]] = {
     require(all.forall(_.header > 0), "VertexKind headers must be positive.")
