@@ -22,7 +22,7 @@ class WordCountCommanderImpl @Inject()(
   //articleStore: ArticleStore,
   scraperClient: ScraperServiceClient,
   wordCountCache: NormalizedURIWordCountCache
-) extends WordCountCommander with Logging {
+) extends WordCountCommander {
 
   private val WORDS_PER_MINUTE = 250
   private val READ_TIMES = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60)
