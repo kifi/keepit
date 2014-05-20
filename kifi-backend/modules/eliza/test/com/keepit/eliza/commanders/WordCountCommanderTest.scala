@@ -16,6 +16,7 @@ import akka.actor.ActorSystem
 import play.api.test.Helpers.running
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.scraper.FixedResultScraperModule
 
 
 
@@ -44,7 +45,7 @@ class WordCountCommanderTest extends Specification with ApplicationInjector{
 
   "WordCountCommander" should {
     "get word count" in {
-      running(new ElizaApplication(TestScraperServiceClientModule())){
+      running(new ElizaApplication(FixedResultScraperModule())){
         val store = inject[ArticleStore]
         val uids = (1 to 3).map{ i => Id[NormalizedURI](i)}
         val a1 = mkArticle(uids(0), title = "", content = "1 2 3 4 5")
