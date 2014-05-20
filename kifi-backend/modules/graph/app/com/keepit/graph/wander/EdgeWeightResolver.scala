@@ -6,7 +6,7 @@ trait EdgeWeightResolver {
   def weight(source: VertexReader, destination: VertexReader, edge: EdgeReader): Double
 }
 
-class RestrictedDestinationsResolver(authorizedDestinations: Set[VertexKind[_ <: VertexDataReader]]) extends EdgeWeightResolver {
+class RestrictedDestinationResolver(authorizedDestinations: Set[VertexKind[_ <: VertexDataReader]]) extends EdgeWeightResolver {
   def weight(source: VertexReader, destination: VertexReader, edge: EdgeReader): Double = {
     if (!authorizedDestinations.contains(destination.kind)) { 0 }
     else edge.data match {
