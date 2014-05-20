@@ -24,6 +24,7 @@ import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
 import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.common.math.ProbabilityDensity
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 

@@ -11,7 +11,6 @@ import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.logging.Logging
 import java.sql.SQLException
 import play.api.Mode.Mode
-import play.modules.statsd.api.Statsd
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure

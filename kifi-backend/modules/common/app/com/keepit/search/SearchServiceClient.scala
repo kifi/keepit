@@ -5,13 +5,13 @@ import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
 import com.keepit.common.service.{RequestConsolidator, ServiceClient, ServiceType, ServiceUri}
 import com.keepit.common.db.Id
-import com.keepit.common.net.HttpClient
-import com.keepit.common.routes.Search
-import com.keepit.common.routes.Common
+import com.keepit.common.net.{ClientResponse, HttpClient}
+import com.keepit.common.routes.{ServiceRoute, Search, Common}
 import com.keepit.model.{ExperimentType, Collection, NormalizedURI, User}
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
+import com.keepit.search.sharding.{DistributedSearchRouter, Shard}
 import play.api.libs.json._
 import play.api.templates.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,6 +22,7 @@ import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{BasicUser, BasicUserWithUserId}
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
+import scala.collection.mutable.ListBuffer
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -76,6 +77,30 @@ trait SearchServiceClient extends ServiceClient {
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 
   def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]]
+
+  //
+  // Distributed Search
+  //
+  def distSearchPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
+
+  def distSearchPlanRemoteOnly(maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
+
+  def distSearch(
+    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    start: Option[String],
+    end: Option[String],
+    tz: Option[String],
+    coll: Option[String],
+    debug: Option[String]) : Seq[Future[JsValue]]
+
+  def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
 class SearchServiceClientImpl(
@@ -87,6 +112,12 @@ class SearchServiceClientImpl(
 
   // request consolidation
   private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
+
+  private lazy val distRouter = {
+    val router = new DistributedSearchRouter(this)
+    serviceCluster.setCustomRouter(Some(router))
+    router
+  }
 
   def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {
     // decommissioned
@@ -319,4 +350,59 @@ class SearchServiceClientImpl(
       Json.fromJson[Seq[Feed]](r.json).get
     }
   }
+
+  //
+  // Distributed Search
+  //
+  def distSearchPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
+    distRouter.plan(shards, maxShardsPerInstance)
+  }
+
+  def distSearchPlanRemoteOnly(maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
+    distRouter.planRemoteOnly(maxShardsPerInstance)
+  }
+
+  def distSearch(
+    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    start: Option[String],
+    end: Option[String],
+    tz: Option[String],
+    coll: Option[String],
+    debug: Option[String]) : Seq[Future[JsValue]] = {
+
+    var searchParams = new SearchParams(new ListBuffer)
+    // keep the following in sync with SearchController
+    searchParams += ("userId", userId.id)
+    searchParams += ("query", query)
+    searchParams += ("maxHits", maxHits)
+    searchParams += ("lang1", firstLang.lang)
+    if (secondLang.isDefined) searchParams += ("lang2", secondLang.get.lang)
+    if (filter.isDefined)     searchParams += ("filter", filter.get)
+    if (context.isDefined)    searchParams += ("context", context.get)
+    if (start.isDefined)      searchParams +=  ("start", start.get)
+    if (end.isDefined)        searchParams += ("end", end.get)
+    if (tz.isDefined)         searchParams += ("tz", tz.get)
+    if (coll.isDefined)       searchParams += ("coll", coll.get)
+    if (debug.isDefined)      searchParams += ("debug", debug.get)
+    val request = JsObject(searchParams.params)
+
+    distRouter.dispatch(plan, Search.internal.searchShards, request).map{ f => f.map(_.json) }
+  }
+
+  // for DistributedSearchRouter
+  def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
+    callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
+  }
+}
+
+class SearchParams(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
+  def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
+  def +=(name: String, value: Long): Unit   = { params += (name -> JsNumber(value)) }
 }

@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.time.Clock
 import com.keepit.common.db.State
+import com.keepit.common.math.ProbabilityDensity
 
 @ImplementedBy(classOf[ProbabilisticExperimentGeneratorRepoImpl])
 trait ProbabilisticExperimentGeneratorRepo extends Repo[ProbabilisticExperimentGenerator] {

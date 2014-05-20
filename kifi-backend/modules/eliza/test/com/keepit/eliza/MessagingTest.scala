@@ -1,9 +1,7 @@
 package com.keepit.eliza
 
 import org.specs2.mutable._
-
 import com.keepit.common.db.slick._
-
 import com.keepit.common.db.Id
 import com.keepit.inject._
 import com.keepit.test.{DbTestInjector}
@@ -18,21 +16,23 @@ import com.keepit.realtime.{UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModu
 import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
-
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.common.crypto.TestCryptoModule
-
 import com.google.inject.Injector
-
 import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
-
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
+import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.common.store.ElizaDevStoreModule
+import com.keepit.common.aws.AwsModule
+import com.keepit.scraper.FixedResultScraperModule
+import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.ElizaFakeStoreModule
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -49,7 +49,9 @@ class MessagingTest extends Specification with DbTestInjector {
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
-      TestCryptoModule()
+      TestCryptoModule(),
+      TestScraperServiceClientModule(),
+      ElizaFakeStoreModule()
     )
   }
 

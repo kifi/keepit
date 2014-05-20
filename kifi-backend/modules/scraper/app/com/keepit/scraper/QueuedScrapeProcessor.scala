@@ -27,39 +27,6 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
 import com.keepit.shoebox.ShoeboxServiceClient
 
-class TracedRunnable[T](name:String, cb: => T) extends Runnable { // WIP
-
-  val submitTS = System.currentTimeMillis
-  val callTS = new AtomicLong
-  val threadRef = new AtomicReference[Thread]
-  val killCount = new AtomicInteger
-
-  val promise:Promise[T] = Promise[T]()
-  def future:Future[T] = promise.future
-
-  def run = {
-    threadRef.set(Thread.currentThread())
-    callTS.set(System.currentTimeMillis)
-    // add check for long wait
-    val prev = Thread.currentThread.getName
-    Thread.currentThread().setName(name+"##"+prev)
-    try {
-      promise success cb
-    } catch {
-      case t:Throwable => promise failure t
-    } finally {
-      threadRef.set(null)
-      Thread.currentThread().setName(prev)
-    }
-  }
-
-  override def toString = s"[TracedRunnable($name)]"
-}
-
-object TracedRunnable {
-  def apply[T](name:String)(cb: => T) = new TracedRunnable[T](name, cb)
-}
-
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
   def doWork:T
@@ -131,7 +98,8 @@ class QueuedScrapeProcessor @Inject() (
   schedulingProperties: SchedulingProperties,
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
-  shoeboxClient: ShoeboxServiceClient) extends ScrapeProcessor with Logging with ScraperUtils {
+  shoeboxClient: ShoeboxServiceClient,
+  wordCountCache: NormalizedURIWordCountCache) extends ScrapeProcessor with Logging with ScraperUtils {
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 120000 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
@@ -245,7 +213,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient)
+  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {

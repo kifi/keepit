@@ -11,6 +11,7 @@ import play.api.http.Status
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[ImageFetcherImpl])
 trait ImageFetcher {
@@ -18,7 +19,7 @@ trait ImageFetcher {
 }
 
 @Singleton
-class ImageFetcherImpl @Inject() extends ImageFetcher with Logging {
+class ImageFetcherImpl @Inject() (airbrake: AirbrakeNotifier) extends ImageFetcher with Logging {
 
   private def withInputStream[T, I <: java.io.InputStream](is:I)(f:I => T):T = {
     try {
@@ -47,6 +48,11 @@ class ImageFetcherImpl @Inject() extends ImageFetcher with Logging {
         case _ =>
           log.error(s"[fetchRawImage(${url})] Failed to retrieve image. Response: ${resp.statusText}")
           None
+      }
+    } recover {
+      case t: Throwable => {
+        airbrake.notify(s"Error fetching image with url $url", t)
+        None
       }
     }
   }

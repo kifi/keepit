@@ -14,7 +14,7 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
   def id: VertexId = currentVertexId getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid vertex") }
   def data: VertexDataReader = currentVertex.data
   def kind: VertexKind[_ <: VertexDataReader] = data.kind
-  val edgeReader: LocalEdgeReader = new SimpleLocalEdgeReader(this, currentVertex.edges)
+  val edgeReader: OutgoingEdgeReader = new SimpleOutgoingEdgeReader(this, currentVertex.edges)
   def moveTo(vertex: VertexId): Unit = {
     if (!vertices.contains(vertex)) { throw new VertexNotFoundException(vertex) }
     currentVertexId = Some(vertex)
@@ -23,7 +23,7 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit = { moveTo(VertexId(vertex)) }
 }
 
-class SimpleLocalEdgeReader(owner: VertexReader, edges: => Map[VertexId, EdgeDataReader]) extends LocalEdgeReader {
+class SimpleOutgoingEdgeReader(owner: VertexReader, edges: => Map[VertexId, EdgeDataReader]) extends OutgoingEdgeReader {
   private var destinations: Option[Iterator[VertexId]] = None
   private var currentDestination: Option[VertexId] = None
   def source: VertexId = owner.id
