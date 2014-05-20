@@ -27,4 +27,6 @@ object Collisions {
   }
 
   implicit val format = Json.format[Collisions]
+
+  val empty = Collisions(Map.empty, Map.empty, Map.empty)
 }
