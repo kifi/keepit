@@ -1,48 +1,30 @@
 package com.keepit.graph.wander
 
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Inject}
 import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.model._
-import com.keepit.model.{Keep, NormalizedURI, User}
+import com.keepit.model.{NormalizedURI, User}
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.graph.model.VertexKind.VertexType
 
+@Singleton
 class WanderingCommander @Inject() (graph: GraphManager) {
 
-  def exploreFromUser(userId: Id[User], preferUsers: Boolean, preferUris: Boolean, steps: Int, restartProbability: Double): Recommendations = {
-    val startingPoint = VertexId(userId)
-    explore(startingPoint, preferUsers, preferUris, steps, restartProbability)
+  def wander(wanderlust: Wanderlust): Collisions = {
+    val startingPoint = wanderlust.keepId.map(VertexId(_)) orElse wanderlust.uriId.map(VertexId(_)) getOrElse VertexId(wanderlust.userId)
+    val preferredCollisions = getPreferredCollisions(wanderlust)
+    val rawCollisions = doWander(startingPoint, preferredCollisions, wanderlust.steps, wanderlust.restartProbability)
+    getCollisions(rawCollisions)
   }
 
-  def exploreFromUri(uriId: Id[NormalizedURI], preferUsers: Boolean, preferUris: Boolean, steps: Int, restartProbability: Double): Recommendations = {
-    val startingPoint = VertexId(uriId)
-    explore(startingPoint, preferUsers, preferUris, steps, restartProbability)
-  }
-
-  def exploreFromKeep(keepId: Id[Keep], preferUsers: Boolean, preferUris: Boolean, steps: Int, restartProbability: Double): Recommendations = {
-    val startingPoint = VertexId(keepId)
-    explore(startingPoint, preferUsers, preferUris, steps, restartProbability)
-  }
-
-  def exploreFromTag(tagId: Id[User], preferUsers: Boolean, preferUris: Boolean, steps: Int, restartProbability: Double): Recommendations = {
-    val startingPoint = VertexId(tagId)
-    explore(startingPoint, preferUsers, preferUris, steps, restartProbability)
-  }
-
-  private def explore(startingPoint: VertexId, preferUsers: Boolean, preferUris: Boolean, steps: Int, restartProbability: Double): Recommendations = {
-    val preferredOutputs = getPreferredDestinations(preferUsers, preferUris)
-    val destinations = wander(startingPoint, preferredOutputs, steps, restartProbability)
-    getRecommendations(destinations)
-  }
-
-  private def wander(startingPoint: VertexId, preferredDestinations: Set[VertexType], steps: Int, restartProbability: Double): Map[VertexId, Int] = {
+  private def doWander(startingPoint: VertexId, preferredCollisions: Set[VertexType], steps: Int, restartProbability: Double): Map[VertexId, Int] = {
     val journal = new DestinationJournal()
     graph.readOnly { reader =>
       val wanderer = reader.getNewVertexReader()
       val scout = reader.getNewVertexReader()
       val scoutingWanderer = new ScoutingWanderer(wanderer, scout)
-      val teleporter = new UniformTeleporter(Set(startingPoint), preferredDestinations, restartProbability)
+      val teleporter = new UniformTeleporter(Set(startingPoint), preferredCollisions, restartProbability)
       val resolver = new RestrictedDestinationResolver(VertexKind.all)
       scoutingWanderer.wander(steps, teleporter, resolver, journal)
     }
@@ -50,22 +32,22 @@ class WanderingCommander @Inject() (graph: GraphManager) {
     journal.getDestinations()
   }
 
-  private def getRecommendations(destinations: Map[VertexId, Int]): Recommendations = {
+  private def getCollisions(rawCollisions: Map[VertexId, Int]): Collisions = {
     val users = mutable.Map[Id[User], Int]()
     val uris =  mutable.Map[Id[NormalizedURI], Int]()
     val extra = mutable.Map[String, Int]()
-    destinations.foreach {
+    rawCollisions.foreach {
       case (vertexId, count) if vertexId.kind == UserReader => users += VertexDataId.toUserId(vertexId.asId[UserReader]) -> count
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
       case (vertexId, count) => extra += vertexId.toString() -> count
     }
-    Recommendations(users.toMap, uris.toMap, extra.toMap)
+    Collisions(users.toMap, uris.toMap, extra.toMap)
   }
 
-  private def getPreferredDestinations(preferUsers: Boolean, preferUris: Boolean): Set[VertexType] = {
-    val preferredDestinations = mutable.Set[VertexType]()
-    if (preferUsers) preferredDestinations += UserReader
-    if (preferUris) preferredDestinations += UriReader
-    preferredDestinations.toSet
+  private def getPreferredCollisions(wanderlust: Wanderlust): Set[VertexType] = {
+    val preferredCollisions = mutable.Set[VertexType]()
+    if (wanderlust.encourageUserCollisions) preferredCollisions += UserReader
+    if (wanderlust.encourageUriCollisions) preferredCollisions += UriReader
+    preferredCollisions.toSet
   }
 }
