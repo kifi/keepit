@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{
   UserExperimentRepo,
@@ -9,13 +9,13 @@ import com.keepit.model.{
   ExperimentType,
   ProbabilisticExperimentGenerator,
   ProbabilisticExperimentGeneratorRepo,
-  Name,
-  ProbabilityDensity
+  Name
 }
 
 import com.google.inject.Inject
 
 import play.api.libs.json.{JsObject}
+import com.keepit.common.math.ProbabilityDensity
 
 
 case class AdminExperimentInfo(name: String, numUsers: Int, percentage: Float, variations: Seq[(String, Double)])

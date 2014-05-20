@@ -1,7 +1,6 @@
 package com.keepit.search
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
 import scala.concurrent.duration._
 import scala.concurrent.{Future, Promise}
 import scala.util.Try
@@ -12,9 +11,10 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.sharding.{Shard, ActiveShards}
+import com.keepit.search.sharding.{DispatchFailedException, Shard, ActiveShards}
 import com.keepit.search.result._
 import org.apache.lucene.search.{Explanation, Query}
 import com.keepit.search.index.DefaultAnalyzer
@@ -74,6 +74,7 @@ class SearchCommanderImpl @Inject() (
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
   airbrake: AirbrakeNotifier,
+  searchClient: SearchServiceClient,
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait
 ) extends SearchCommander with Logging {
@@ -106,10 +107,27 @@ class SearchCommanderImpl @Inject() (
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
-    // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
+    // build distribution plan
+    val (localShards, dispatchPlan) = {
+      // do distributed search using a remote-only plan when the debug flag has "dist" for now. still experimental
+      if (debug.isDefined && debug.get.indexOf("dist") >= 0) {
+        distributionPlanRemoteOnly(maxShardsPerInstance = 2)
+      } else {
+        (shards.local, Seq()) // TODO: replace this with distributionPlan(shards)
+      }
+    }
 
-    var resultFutures = new ListBuffer[Future[PartialSearchResult]]() // TODO: dispatch here
+    // TODO: use user profile info as a bias
+    val (firstLang, secondLang) = getLangs(userId, query, acceptLangs) // TODO: distributed version of getLang
+
+    var resultFutures = new ListBuffer[Future[PartialSearchResult]]()
+
+    if (dispatchPlan.nonEmpty) {
+      // dispatch query
+      searchClient.distSearch(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, start, end, tz, coll, debug).foreach{ f =>
+        resultFutures += f.map(json => new PartialSearchResult(json))
+      }
+    }
 
     val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
@@ -118,19 +136,21 @@ class SearchCommanderImpl @Inject() (
       new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
     }
 
+    // do the local part
+    if (localShards.nonEmpty) {
+      resultFutures += Promise[PartialSearchResult].complete(
+        Try{
+          searchShards(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug)
+        }
+      ).future
+    }
+
     val mergedResult = {
 
       val resultMerger = new ResultMerger(enableTailCutting, config)
 
-      // do the local part
-      resultFutures += (Promise[PartialSearchResult].complete(
-        Try{ searchShards(shards.local, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug) }
-      ).future)
-
-      val future = Future.sequence(resultFutures)
-
       timing.search
-      val results = monitoredAwait.result(future, 10 seconds, "slow search")
+      val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
       resultMerger.merge(results, maxHits)
     }
 
@@ -174,6 +194,31 @@ class SearchCommanderImpl @Inject() (
     }
 
     res
+  }
+
+  def distributionPlanRemoteOnly(maxShardsPerInstance: Int = Int.MaxValue): (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]) = {
+    // NOTE: Remote-only may actually loop back to the current instance. We don't check it for now.
+    (Set.empty[Shard[NormalizedURI]], searchClient.distSearchPlanRemoteOnly(maxShardsPerInstance))
+  }
+
+  def distributionPlan(shards: ActiveShards, maxShardsPerInstance: Int = Int.MaxValue): (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]) = {
+    try {
+      if (shards.local.size < maxShardsPerInstance) {
+        // The current instance processes a subset of local shards. Remaining shards are processed by remote instances.
+        // It is possible that one of the remote call loops back to the current instance. We don't check it for now.
+        val local = shards.local.take(maxShardsPerInstance)
+        val remote = shards.all -- local
+        (local, if (remote.isEmpty) Seq.empty else searchClient.distSearchPlan(remote, maxShardsPerInstance))
+      } else {
+        (shards.local, if (shards.remote.isEmpty) Seq.empty else searchClient.distSearchPlan(shards.remote, maxShardsPerInstance))
+      }
+    } catch {
+      case e: DispatchFailedException =>
+        log.info("dispatch failed. resorting to remote-only plan.")
+        // fallback to no local plan. This may happen when a new sharding scheme is being deployed
+        distributionPlanRemoteOnly(maxShardsPerInstance)
+      case t: Throwable => throw t
+    }
   }
 
   def searchShards(
