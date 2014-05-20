@@ -2,6 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.keepit.test.TestInjector
 import org.specs2.mutable.Specification
+import com.keepit.eliza.model.{ExtendedThreadItem, ThreadEmailInfo}
 
 class ElizaEmailCommanderTest extends Specification with TestInjector {
 

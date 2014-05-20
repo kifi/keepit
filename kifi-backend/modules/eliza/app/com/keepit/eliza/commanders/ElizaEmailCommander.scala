@@ -177,9 +177,9 @@ class ElizaEmailCommander @Inject() (
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
       ProtoEmail(
-        views.html.next.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
-        /*if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
-        else*/ views.html.next.nonUserEmailImageSmall(threadInfoSmall, threadItems),
+        views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
+        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
+        else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         threadInfoSmall.conversationStarter,
         uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
@@ -299,5 +299,29 @@ object ElizaEmailCommander {
         throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
       }
     }
+  }
+
+  /**
+   * This function is meant to be used from the console, to see how emails look like without deploying to production
+   */
+  def makeDummyEmail(): String = {
+    val threadInfoSmall = ThreadEmailInfo(
+      "http://www.wikipedia.org/aninterstingpage.html",
+      "Wikipedia",
+      "The Interesting Page That Everyone Should Read",
+      true,
+      Some("http:www://example.com/image0.jpg"),
+      Some("a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description "),
+      Seq("joe", "bob", "jack", "theguywithaverylongname"),
+      "bob",
+      Some("http://www.example.com/iwanttounsubscribe.html"),
+      Some("http://www.example.com/iwanttomute.html"),
+      Some(10)
+    )
+    val threadItems = Seq(
+      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),
+      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else")))
+    )
+    views.html.next.nonUserEmailImageSmall(threadInfoSmall, threadItems).body
   }
 }
