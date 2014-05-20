@@ -5,11 +5,12 @@
   height: 100%;
   width: 100%;
   z-index: 999999999993;
-  background-color: rgba(0,0,0,0);
-  transition: background-color 5s linear;
+  background-color: rgba(0,0,0,.85);
+  opacity: 0;
+  transition: opacity .5s linear;
 }
 .kifi-guide-stage.kifi-open {
-  background-color: rgba(0,0,0,.85);
+  opacity: 1;
 }
 .kifi-guide-pages {
   position: absolute;
@@ -17,12 +18,6 @@
   left: 0;
   height: 100%;
   width: 100%;
-  transition: -webkit-transform 5s ease-out;
-  transition: transform 5s ease-out;
-}
-:not(.kifi-open)>.kifi-guide-pages {
-  -webkit-transform: translate3d(0,-360px,0) scale(.5);
-  transform: translate3d(0,-360px,0) scale(.5);
 }
 .kifi-guide-page {
   position: absolute;
@@ -34,8 +29,8 @@
   -moz-box-sizing: border-box;
   padding-top: 10%;
   text-align: center;
-  transition: -webkit-transform 5s ease-out;
-  transition: transform 5s ease-out;
+  transition: -webkit-transform .5s ease-out;
+  transition: transform .5s ease-out;
 }
 [kifi-p='2']>.kifi-guide-page {
   -webkit-transform: translate3d(-100%,0,0);
@@ -147,8 +142,8 @@
   border-radius: 10px;
   background-color: #000;
   color: #fff;
-  transition: -webkit-transform 5s ease-in-out;
-  transition: transform 5s ease-in-out;
+  transition: -webkit-transform .5s ease-in-out;
+  transition: transform .5s ease-in-out;
 }
 :not([kifi-p='1']).kifi-guide-progress {
   -webkit-transform: translate3d(0,400px,0);
