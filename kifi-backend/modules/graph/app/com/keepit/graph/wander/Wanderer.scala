@@ -6,7 +6,7 @@ import com.keepit.common.math.ProbabilityDensity
 import scala.Some
 
 trait Wanderer {
-  def wander(steps: Int, teleport: Teleporter, resolve: EdgeWeightResolver, journal: TravelJournal): Unit
+  def wander(steps: Int, teleporter: Teleporter, resolver: EdgeWeightResolver, journal: TravelJournal): Unit
 }
 
 class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
