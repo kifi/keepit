@@ -302,7 +302,7 @@ object ElizaEmailCommander {
   }
 
   /**
-   * This function is meant to be used from the console, to test email templates without deploying to production
+   * This function is meant to be used from the console, to see how emails look like without deploying to production
    */
   def makeDummyEmail(): String = {
     val threadInfoSmall = ThreadEmailInfo(
