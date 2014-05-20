@@ -8,7 +8,7 @@ case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
   require(density.forall(_._2 >= 0), "Probabilities must be non-negative")
   require(density.map(_._2).sum <= 1, "Probabilities sum up to more than 1")
   val cumulative: Seq[(A, Double)] = { // The order of the density sequence is implied to compute the CDF
-  var cdf = 0.0
+    var cdf = 0.0
     density.map { case (outcome, probability) =>
       cdf += probability
       outcome -> cdf
@@ -20,8 +20,14 @@ case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
 
 object ProbabilityDensity {
   def format[A](implicit outcomeFormat: Format[A]): Format[ProbabilityDensity[A]] = Json.format[JsArray].inmap(
-  { case JsArray(density) => ProbabilityDensity(density.sliding(2, 2).map { case Seq(outcome, JsNumber(probability)) => (outcome.as[A], probability.toDouble)}.toSeq) },
-  { density: ProbabilityDensity[A] => JsArray(density.density.flatMap { case (outcome, probability) => Seq(Json.toJson(outcome), JsNumber(probability)) }) }
+
+    { case JsArray(density) => ProbabilityDensity(
+      density.sliding(2, 2).map { case Seq(outcome, JsNumber(probability)) => (outcome.as[A], probability.toDouble) }.toSeq
+    )},
+
+    { density: ProbabilityDensity[A] => JsArray(
+      density.density.flatMap { case (outcome, probability) => Seq(Json.toJson(outcome), JsNumber(probability)) }
+    )}
   )
 
   def normalized[A](density: Seq[(A, Double)]): ProbabilityDensity[A] = {
