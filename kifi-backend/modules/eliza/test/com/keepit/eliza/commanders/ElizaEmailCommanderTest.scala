@@ -18,13 +18,12 @@ class ElizaEmailCommanderTest extends Specification with TestInjector {
       // TODO: support escaped right brackets in link text, as in commented line below
       // val msg = """check [t[hi\]s](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|f(o\)o) and [t[ha\]t](x-kifi-sel:r|body>div:nth-child(1\)|p.a|0:6|p.b|0:9|b(a\)r)."""
       val msg = """check [t[his](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|f(o\)o) and [t[hat](x-kifi-sel:r|body>div:nth-child(1\)|p.a|0:6|p.b|0:9|b(a\)r)."""
-      val segments = ElizaEmailCommander.parseMessage(msg)
-      segments.length === 5
-      segments(0) === TextSegment("check")                        // TODO: preserve trailing space
-      segments(1) === TextLookHereSegment("t[his", """f(o\)o""")  // TODO: remove '\' before ')'
-      segments(2) === TextSegment("and")                          // TODO: preserve leading and trailing space
-      segments(3) === TextLookHereSegment("t[hat", """b(a\)r""")  // TODO: remove '\' before ')'
-      segments(4) === TextSegment(".")
+      ElizaEmailCommander.parseMessage(msg) === Seq(
+        TextSegment("check"),                        // TODO: preserve trailing space
+        TextLookHereSegment("t[his", """f(o\)o"""),  // TODO: remove '\' before ')'
+        TextSegment("and"),                          // TODO: preserve leading and trailing space
+        TextLookHereSegment("t[hat", """b(a\)r"""),  // TODO: remove '\' before ')'
+        TextSegment("."))
     }
   }
 
