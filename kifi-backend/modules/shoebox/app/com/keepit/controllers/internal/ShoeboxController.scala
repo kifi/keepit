@@ -591,12 +591,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
   }
 
-  def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
-    Ok(Json.toJson(db.readOnly { implicit s => //using cache
-      keepToCollectionRepo.getKeepsInCollection(collectionId) map keepRepo.get
-    }))
-  }
-
   def getUriIdsInCollection(collectionId: Id[Collection]) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
       keepToCollectionRepo.getUriIdsInCollection(collectionId)
