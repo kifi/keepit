@@ -12,6 +12,7 @@ trait ReKeepRepo extends Repo[ReKeep] {
   def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
   def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int]
+  def getReKeeps(keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Seq[ReKeep]]
 }
 
 @Singleton
@@ -49,5 +50,12 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
       .groupBy(_.keepId)
       .map{ case(kId, rk) => (kId, rk.length)}
     q.toMap()
+  }
+
+  def getReKeeps(keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep],Seq[ReKeep]] = {
+    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE && r.keepId.inSet(keepIds))) yield r)
+    q.list().foldLeft(Map.empty[Id[Keep],Seq[ReKeep]]) {(a,c) =>
+      a + (c.keepId -> (a.getOrElse(c.keepId, Seq.empty[ReKeep]) ++ Seq(c)))
+    }
   }
 }
