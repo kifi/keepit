@@ -2,6 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.keepit.test.TestInjector
 import org.specs2.mutable.Specification
+import com.keepit.eliza.model.{ExtendedThreadItem, ThreadEmailInfo}
 
 class ElizaEmailCommanderTest extends Specification with TestInjector {
 
@@ -21,4 +22,31 @@ class ElizaEmailCommanderTest extends Specification with TestInjector {
     }
   }
 
+}
+
+object ElizaEmailCommanderTest {
+
+  /**
+   * This function is meant to be used from the console, to test email templates without deploying to production
+   */
+  def makeDummyEmail(): String = {
+    val threadInfoSmall = ThreadEmailInfo(
+      "http://www.wikipedia.org/aninterstingpage.html",
+      "Wikipedia",
+      "The Interesting Page That Everyone Should Read",
+      true,
+      Some("http:www://example.com/image0.jpg"),
+      Some("a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description "),
+      Seq("joe", "bob", "jack", "theguywithaverylongname"),
+      "bob",
+      Some("http://www.example.com/iwanttounsubscribe.html"),
+      Some("http://www.example.com/iwanttomute.html"),
+      Some(10)
+    )
+    val threadItems = Seq(
+      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),
+      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else")))
+    )
+    views.html.next.nonUserEmailImageSmall(threadInfoSmall, threadItems).body
+  }
 }

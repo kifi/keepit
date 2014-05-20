@@ -177,9 +177,9 @@ class ElizaEmailCommander @Inject() (
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
       ProtoEmail(
-        views.html.next.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
-        /*if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
-        else*/ views.html.next.nonUserEmailImageSmall(threadInfoSmall, threadItems),
+        views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
+        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
+        else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         threadInfoSmall.conversationStarter,
         uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
@@ -300,4 +300,5 @@ object ElizaEmailCommander {
       }
     }
   }
+
 }
