@@ -26,12 +26,16 @@ import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
 import com.keepit.shoebox.ShoeboxServiceClient
+import java.util.{Iterator => JIterator}
 
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
   def doWork:T
 
   val callTS = new AtomicLong
+
+  def hasNotStarted: Boolean = callTS == 0
+
   val isDone = new AtomicBoolean
   val threadRef = new AtomicReference[Thread]
   val killCount = new AtomicInteger
@@ -101,27 +105,27 @@ class QueuedScrapeProcessor @Inject() (
   shoeboxClient: ShoeboxServiceClient,
   wordCountCache: NormalizedURIWordCountCache) extends ScrapeProcessor with Logging with ScraperUtils {
 
+  type ScrapingForkJoinTask = ForkJoinTask[Try[(NormalizedURI, Option[Article])]]
+  type ScrapeQueueIterator = JIterator[WeakReference[(ScrapeCallable, ScrapingForkJoinTask)]]
+
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 120000 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
-  val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
+  val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ScrapingForkJoinTask)]]()
 
   log.info(s"[QScraper.ctr] pool=$fjPool")
 
   private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String] = None) {
     try {
-      for (msg <- msgOpt)
-        log.info(msg)
+      msgOpt.foreach{log.info(_)}
       iter.remove()
     } catch {
-      case t:Throwable =>
-        log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove entry from queue")
+      case t:Throwable => log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove entry from queue")
     }
   }
 
   private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit scraperConfig:ScraperConfig) { // can be removed once things are settled
     try {
-      for (msg <- msgOpt)
-        log.info(msg)
+      msgOpt.foreach{log.info(_)}
       helper.syncSaveNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: UNSCRAPABLE where appropriate
       helper.syncSaveScrapeInfo(sc.info.withFailure) // todo: mark INACTIVE where appropriate
     } catch {
@@ -138,16 +142,14 @@ class QueuedScrapeProcessor @Inject() (
     if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
       serviceDiscovery.thisInstance.map{ inst =>
         if (inst.isHealthy) {
-          asyncHelper.assignTasks(inst.id.id, PULL_MAX).onComplete{ trRequests =>
-            trRequests match {
-              case Failure(t) =>
-                log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
-              case Success(requests) =>
-                log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
-                for (sr <- requests) {
-                  asyncScrape(sr.uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
-                }
-            }
+          asyncHelper.assignTasks(inst.id.id, PULL_MAX).onComplete{
+            case Failure(t) =>
+              log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
+            case Success(requests) =>
+              log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
+              for (sr <- requests) {
+                asyncScrape(sr.uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+              }
           }(ExecutionContext.fj)
         }
       }
@@ -156,6 +158,35 @@ class QueuedScrapeProcessor @Inject() (
 
   import TracedCallable._
   val terminator = new Runnable {
+
+    private def killLongRunningTask(iter: ScrapeQueueIterator, sc: ScrapeCallable, fjTask: ScrapingForkJoinTask, timeRunned: Long) = {
+      log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($timeRunned ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}")
+
+      fjTask.cancel(true)
+      val killCount = sc.killCount.incrementAndGet()
+      doNotScrape(sc, Some(s"[terminator] deactivate LONG ($timeRunned ms) running task: $sc"))(config)
+
+      if (fjTask.isDone) {
+        removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
+      } else if ({ sc.threadRef.get.interrupt; sc.threadRef.get.isInterrupted }) {
+        log.info(s"[terminator] thread ${sc.threadRef.get} is now interrupted")
+        // safeRemove -- later
+      } else { // may consider hard-stop
+        val msg = s"[terminator] (${killCount}) attempts failed to terminate LONG ($timeRunned ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}"
+        log.error(msg)
+        if (killCount % 5 == 0) { // reduce noise
+          airbrake.notify(msg)
+        }
+      }
+    }
+
+    private def killOrWarnLongRunningTask(iter: ScrapeQueueIterator, currTime: Long, sc: ScrapeCallable, fjTask: ScrapingForkJoinTask) = {
+      val runMillis = currTime - sc.callTS.get
+      if (runMillis > LONG_RUNNING_THRESHOLD * 2) killLongRunningTask(iter, sc, fjTask, runMillis)
+      else if (runMillis > LONG_RUNNING_THRESHOLD) log.warn(s"[terminator] potential long ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}")
+      else log.info(s"[terminator] $sc has been running for $runMillis ms")
+    }
+
     def run(): Unit = {
       try {
         log.info(s"[terminator] checking for long-running tasks to kill q.size=${submittedQ.size} fj(#submit)=${fjPool.getQueuedSubmissionCount} fj(#task)=${fjPool.getQueuedTaskCount} ...")
@@ -164,45 +195,19 @@ class QueuedScrapeProcessor @Inject() (
           while (iter.hasNext) {
             val curr = System.currentTimeMillis
             val ref = iter.next
-            ref.get map { case (sc, fjTask) =>
-              if (sc.callTS.get == 0) log.info(s"[terminator] $sc has not yet started")
-              else if (fjTask.isDone) removeRef(iter)
-              else if (sc.trRef.asOpt.isDefined && sc.trRef.get.isFailure) removeRef(iter, Some(s"[terminator] ${sc} isFailure=true; ${sc.trRef.get}; remove from q"))
-              else {
-                val runMillis = curr - sc.callTS.get
-                if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
-                  log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}")
-                  fjTask.cancel(true)
-                  val killCount = sc.killCount.incrementAndGet()
-                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(config)
-                  if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
-                  else {
-                    sc.threadRef.get.interrupt
-                    if (sc.threadRef.get.isInterrupted) {
-                      log.info(s"[terminator] thread ${sc.threadRef.get} is now interrupted")
-                      // safeRemove -- later
-                    } else { // may consider hard-stop
-                      val msg = s"[terminator] (${killCount}) attempts failed to terminate LONG ($runMillis ms) running task: $sc; $fjTask; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}"
-                      log.error(msg)
-                      if (killCount % 5 == 0) { // reduce noise
-                        airbrake.notify(msg)
-                      }
-                    }
-                  }
-                } else if (runMillis > LONG_RUNNING_THRESHOLD) {
-                  log.warn(s"[terminator] potential long ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}")
-                } else {
-                  log.info(s"[terminator] $sc has been running for $runMillis ms")
-                }
-              }
-            } orElse {
-              removeRef(iter) // collected
-              None
+
+            ref.get match {
+              case Some((sc, fjTask)) =>
+                if (sc.hasNotStarted) log.info(s"[terminator] $sc has not yet started")
+                else if (fjTask.isDone) removeRef(iter)
+                else if (sc.trRef.asOpt.isDefined && sc.trRef.get.isFailure) removeRef(iter, Some(s"[terminator] ${sc} isFailure=true; ${sc.trRef.get}; remove from q"))
+                else killOrWarnLongRunningTask(iter, curr, sc, fjTask)
+              case None => removeRef(iter)
             }
           }
         }
       } catch {
-        case t:Throwable => logErr(t, "terminator", submittedQ.toString, true)
+        case t: Throwable => logErr(t, "terminator", submittedQ.toString, true)
       }
     }
   }
