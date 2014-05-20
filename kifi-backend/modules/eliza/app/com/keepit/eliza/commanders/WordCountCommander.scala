@@ -10,18 +10,19 @@ import com.keepit.scraper.ScraperServiceClient
 import com.keepit.search.ArticleStore
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
 
 @ImplementedBy(classOf[WordCountCommanderImpl])
 trait WordCountCommander {
   def getWordCount(id: Id[NormalizedURI], url: String): Future[Int]
-  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Int]
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Option[Int]]
 }
 
 class WordCountCommanderImpl @Inject()(
   //articleStore: ArticleStore,
   scraperClient: ScraperServiceClient,
   wordCountCache: NormalizedURIWordCountCache
-) extends WordCountCommander{
+) extends WordCountCommander {
 
   private val WORDS_PER_MINUTE = 250
   private val READ_TIMES = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60)
@@ -61,10 +62,14 @@ class WordCountCommanderImpl @Inject()(
     }
   }
 
-  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Int] = {
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Option[Int]] = {
     getWordCount(id, url) map { estimate =>
-      val minutes = estimate / WORDS_PER_MINUTE
-      (READ_TIMES map { t => (t, Math.abs(t - minutes)) } min)._1
+      if (estimate <= 0) {
+        None
+      } else {
+        val minutes = estimate / WORDS_PER_MINUTE
+        Some((READ_TIMES map { t => (t, Math.abs(t - minutes)) } min)._1)
+      }
     }
   }
 }
