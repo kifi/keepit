@@ -53,23 +53,29 @@ class ElizaEmailCommander @Inject() (
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
   def getSummarySmall(thread: MessageThread) = {
-    new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
+    val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.ANY,
       minSize = ImageSize(183, 96),
       withDescription = true,
       waiting = true,
       silent = false)))
+    fut.recover {
+      case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}. Exception was: $t")
+    }
   }
 
   def getSummaryBig(thread: MessageThread) = {
-    new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
+    val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
       imageType = ImageType.IMAGE,
       minSize = ImageSize(620, 200),
       withDescription = false,
       waiting = true,
       silent = false)))
+    fut.recover {
+      case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}. Exception was: $t")
+    }
   }
 
   def getThreadEmailInfo(
