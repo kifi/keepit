@@ -52,34 +52,6 @@ class ElizaEmailCommander @Inject() (
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-
-  private def parseMessage(msg: String): Seq[MessageSegment] = {
-    log.info(s"Parsing message: $msg")
-    try {
-      val re = """\[((?:(?:[^\]]*)\\\])*(?:[^\]]*)+)\](\(x-kifi-sel:((?:(?:[^\)]*)\\\))*(?:[^\)]*)+)\))""".r
-      val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
-      tokens.map{ token =>
-        re.findFirstMatchIn(token).map { m =>
-          val segments = m.group(3).split('|')
-          val kind = segments.head
-          val payload = URLDecoder.decode(segments.last, "UTF-8")
-          val text = m.group(1)
-          kind match {
-            case "i" => ImageLookHereSegment(text, payload)
-            case "r" => TextLookHereSegment(text, payload)
-            case _ => throw new Exception("Unknown look-here type: " + kind)
-          }
-        } getOrElse {
-          TextSegment(token)
-        }
-      }
-    } catch {
-      case t: Throwable => {
-        throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
-      }
-    }
-  }
-
   def getSummarySmall(thread: MessageThread) = {
     new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
@@ -153,7 +125,7 @@ class ElizaEmailCommander @Inject() (
     }
 
     relevantMessages.filterNot(_.from.isSystem).map{ message =>
-      val messageSegments = parseMessage(message.messageText)
+      val messageSegments = ElizaEmailCommander.parseMessage(message.messageText)
       message.from match {
         case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
         case MessageSender.NonUser(nup) => {
@@ -273,5 +245,34 @@ class ElizaEmailCommander @Inject() (
     }
 
 
+  }
+}
+
+object ElizaEmailCommander {
+
+  def parseMessage(msg: String): Seq[MessageSegment] = {
+    try {
+      val re = """\[((?:(?:[^\]]*)\\\])*(?:[^\]]*)+)\](\(x-kifi-sel:((?:(?:[^\)]*)\\\))*(?:[^\)]*)+)\))""".r
+      val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
+      tokens.map{ token =>
+        re.findFirstMatchIn(token).map { m =>
+          val segments = m.group(3).split('|')
+          val kind = segments.head
+          val payload = URLDecoder.decode(segments.last, "UTF-8")
+          val text = m.group(1)
+          kind match {
+            case "i" => ImageLookHereSegment(text, payload)
+            case "r" => TextLookHereSegment(text, payload)
+            case _ => throw new Exception("Unknown look-here type: " + kind)
+          }
+        } getOrElse {
+          TextSegment(token)
+        }
+      }
+    } catch {
+      case t: Throwable => {
+        throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
+      }
+    }
   }
 }
