@@ -101,6 +101,13 @@ sed -e "s/\"version\":.*/\"version\": \"$version\",/" \
 IFS="$savedIFS"
 
 if [ "$1" == "package" ]; then
+  cfxver=$(cfx --version)
+  if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
+    echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
+    echo "https://addons.mozilla.org/en-US/developers/builder"
+    exit 1
+  fi
+
   cd out/chrome
   sed -i '' -e 's/http:\/\/dev.ezkeep.com:9000 ws:\/\/dev.ezkeep.com:9000 //' manifest.json
   zip -rDq ../kifi.zip * -x "*/.*"
