@@ -1,0 +1,33 @@
+@(user:User, n:Int, rekeeps:Seq[ReKeep], rkMap:Map[Keep, Seq[Set[User]]])
+
+@admin("My ReKeeps") {
+
+  <ul>
+    <li>The following shows <i>personalized</i> list of keeps and re-keepers</li>
+  </ul>
+
+  <table class="table table-bordered">
+  <th><tr>
+      <td>Id</td>
+      <td>Url</td>
+      @for(i <- 0 until n) {
+        <td>Deg+@i</td>
+      }
+      </tr></th>
+  @for(keep <- rkMap.keys) {
+    <tr>
+      <td>@keep.id.get</td>
+      <td><a href="@keep.url"/>@keep.url</a></td>
+      @for(users <- rkMap(keep)) {
+        <td>
+          <table class="table table-striped table-condensed">
+          @for(u <- users) {
+            <tr><td>@adminHelper.userDisplay(u)</td></tr>
+          }
+          </table>
+        </td>
+      }
+    </tr>
+  }
+  </table>
+}

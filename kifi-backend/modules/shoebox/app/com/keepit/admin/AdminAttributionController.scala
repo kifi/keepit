@@ -8,10 +8,15 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.data._
 import views.html
+import com.keepit.common.db.slick.DBSession.{ROSession, RWSession}
+import scala.collection.mutable
+import com.keepit.commanders.AttributionCommander
+import com.keepit.common.db.slick.Database.Slave
 
 class AdminAttributionController @Inject()(
   actionAuthenticator: ActionAuthenticator,
   db: Database,
+  attributionCmdr: AttributionCommander,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   keepClickRepo: KeepClickRepo,
@@ -77,6 +82,30 @@ class AdminAttributionController @Inject()(
   def keepInfos(userId:Id[User]) = AdminHtmlAction.authenticated { request =>
     val (u, clicks, clickCounts, rekeeps, rekepts, rkCounts) = getKeepInfos(userId)
     Ok(html.admin.myKeepInfos(u, clicks, clickCounts, rekeeps, rekepts, rkCounts))
+  }
+
+  def getReKeepInfos(userId:Id[User], n:Int = 4) = {
+    val u = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.get(userId) }
+    val rekeeps = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+      rekeepRepo.getReKeepsByKeeper(userId)
+    }
+    val users = rekeeps.map { rk =>
+      val userIds: Seq[Set[Id[User]]] = attributionCmdr.getReKeepsByDegree(userId, rk.keepId, 4).map(_._1)
+      val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a,c) => a ++ c }) }
+      db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(rk.keepId) } -> userIds.map( _.map(uId => users(uId)) )
+    }.toMap
+
+    (u, n, rekeeps, users)
+  }
+
+  def reKeepInfos(userId:Id[User]) = AdminHtmlAction.authenticated { request =>
+    val (u, n, rekeeps, users) = getReKeepInfos(userId)
+    Ok(html.admin.myReKeeps(u, n, rekeeps, users))
+  }
+
+  def myReKeeps() = AdminHtmlAction.authenticated { request =>
+    val (u, n, rekeeps, users) = getReKeepInfos(request.userId)
+    Ok(html.admin.myReKeeps(u, n, rekeeps, users))
   }
 
   def myKeepInfos() = AdminHtmlAction.authenticated { request =>
