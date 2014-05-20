@@ -51,8 +51,6 @@ class MainQueryParser(
   var parsedQuery: Option[Query] = None
 
   var totalParseTime: Long = 0L
-  var phraseDetectionTime: Long = 0L
-  var nlpPhraseDetectionTime: Long = 0L
 
   override def parse(queryText: CharSequence): Option[Query] = parse(queryText, Seq[CollectionSearcherWithUser]())
 
@@ -138,12 +136,7 @@ class MainQueryParser(
 
   private def detectPhrases(queryText: CharSequence, lang: Lang): Future[Set[(Int, Int)]] = {
     phraseDetectionConsolidator((queryText, lang)){ _ =>
-      SafeFuture {
-        val tPhraseDetection = System.currentTimeMillis
-        val p = phraseDetector.detectAll(phStemmedTerms)
-        phraseDetectionTime = System.currentTimeMillis - tPhraseDetection
-        p
-      }
+      SafeFuture { phraseDetector.detectAll(phStemmedTerms) }
     }
   }
 }

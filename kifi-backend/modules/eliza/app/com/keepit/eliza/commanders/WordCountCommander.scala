@@ -14,6 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 @ImplementedBy(classOf[WordCountCommanderImpl])
 trait WordCountCommander {
   def getWordCount(id: Id[NormalizedURI], url: String): Future[Int]
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Int]
 }
 
 class WordCountCommanderImpl @Inject()(
@@ -21,6 +22,9 @@ class WordCountCommanderImpl @Inject()(
   scraperClient: ScraperServiceClient,
   wordCountCache: NormalizedURIWordCountCache
 ) extends WordCountCommander{
+
+  private val WORDS_PER_MINUTE = 250
+  private val READ_TIMES = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60)
 
   implicit def toWordCountKey(id: Id[NormalizedURI]): NormalizedURIWordCountKey = NormalizedURIWordCountKey(id)
 
@@ -54,6 +58,13 @@ class WordCountCommanderImpl @Inject()(
     wcOpt match {
       case Some(wc) => Future.successful(wc)
       case None => getFromScraper(id, url)
+    }
+  }
+
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Int] = {
+    getWordCount(id, url) map { estimate =>
+      val minutes = estimate / WORDS_PER_MINUTE
+      (READ_TIMES map { t => (t, Math.abs(t - minutes)) } min)._1
     }
   }
 }

@@ -31,7 +31,6 @@ import ElizaEmailNotifierActor._
 import com.keepit.social.NonUserKinds
 import scala.collection.mutable
 import com.keepit.common.concurrent.FutureHelpers
-import scala.util.{Failure, Success}
 
 object ElizaEmailNotifierActor {
   case class SendNextUserEmails(num: Int)
@@ -77,16 +76,23 @@ class ElizaEmailNotifierActor @Inject() (
         }
         if (userThreadBatchQueue.nonEmpty) {
           val tasks = Future.sequence((1 to num).map { _ =>
-            val batch = userThreadBatchQueue.dequeue()
             log.info(s"userThreadBatchQueue size: ${userThreadBatchQueue.size}")
-            processing = true
-            emailUnreadMessagesForNonUserThreadBatch(batch)
-          })
-          tasks.onComplete { result =>
-            result match {
-              case Failure(t) => airbrake.notify(s"Failure occured during user thread batch processing", t)
-              case _ =>
+            val batch = userThreadBatchQueue.dequeue()
+            // Update records even if sending the email fails (avoid infinite failure loops)
+            // todo(martin) persist failures to database
+            batch.userThreads map { userThread =>
+              db.readWrite{ implicit session =>
+                userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
+              }
             }
+            processing = true
+            val fut = emailUnreadMessagesForNonUserThreadBatch(batch)
+            fut.onFailure {
+              case t: Throwable => airbrake.notify(s"Failure occurred during user thread batch processing: threadId = ${batch.threadId}}", t)
+            }
+            fut
+          })
+          tasks.onComplete { _ =>
             self ! EndBatchProcessing
           }
         }
@@ -143,16 +149,18 @@ class ElizaEmailNotifierActor @Inject() (
     )
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
     val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
+    val readTimeMinutesOptFuture = elizaEmailCommander.readTimeMinutesForMessageThread(thread)
     val threadDataFuture = for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
       uriSummary <- uriSummaryFuture
-    } yield (allUsers, allUserImageUrls, uriSummary)
+      readTimeMinutesOpt <- readTimeMinutesOptFuture
+    } yield (allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt)
     threadDataFuture.map { data =>
-      val (allUsers, allUserImageUrls, uriSummary) = data
+      val (allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt) = data
       // Futures below will be executed concurrently
       userThreads.foreach{ userThread =>
-        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt)
       }
     }
   }
@@ -162,7 +170,8 @@ class ElizaEmailNotifierActor @Inject() (
     thread: MessageThread,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
-    uriSummary: URISummary
+    uriSummary: URISummary,
+    readTimeMinutesOpt: Option[Int]
   ): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
@@ -191,22 +200,18 @@ class ElizaEmailNotifierActor @Inject() (
             destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
             unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
           } yield {
-            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
+            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
 
             val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
-            val threadEmailInfoNoImage = threadEmailInfo.copy(heroImageUrl = None) // todo(martin) because Gmail for Android does not support media queries. Is there a better solution?
             val email = ElectronicMail(
               from = magicAddress,
               fromName = Some("Kifi Notifications"),
               to = Seq(GenericEmailAddress(destinationEmail)),
               subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
-              htmlBody = views.html.userDigestEmail(threadEmailInfoNoImage, extendedThreadItems).body,
+              htmlBody = views.html.userDigestEmail(threadEmailInfo, extendedThreadItems).body,
               category = NotificationCategory.User.MESSAGE
             )
             shoebox.sendMail(email)
-            db.readWrite{ implicit session =>
-              userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
-            }
           }
         } else {
           log.warn(s"user $recipient is not active, not sending emails")
@@ -215,7 +220,7 @@ class ElizaEmailNotifierActor @Inject() (
       }
     } else Future.successful()
     log.info(s"processed user thread $userThread")
-    fut
+    fut map (_ => ())
   }
 }
 
@@ -235,12 +240,12 @@ class ElizaEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ElizaEmailNotifierPluginImpl")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendNextUserEmails)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, SendNextUserEmails(MAX_CONCURRENT_TASKS))
     scheduleTaskOnLeader(actor.system, 90 seconds, 2 minutes, actor.ref, SendNonUserEmails)
   }
 
   def sendEmails() {
-    actor.ref ! SendNextUserEmails
+    actor.ref ! SendNextUserEmails(MAX_CONCURRENT_TASKS)
     actor.ref ! SendNonUserEmails
   }
 }
