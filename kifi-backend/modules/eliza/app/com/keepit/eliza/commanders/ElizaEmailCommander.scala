@@ -208,6 +208,9 @@ class ElizaEmailCommander @Inject() (
   } else Future.successful()
 
   private def safeProcessEmail(messageThread: MessageThread, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
+    // Update records even if sending the email fails (avoid infinite failure loops)
+    // todo(martin) persist failures to database
+    db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nonUserThread.id.get, clock.now()) }
     val protoEmailFut = for {
       unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
       protoEmail <- assembleEmail(messageThread, nonUserThread.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token))
@@ -228,7 +231,6 @@ class ElizaEmailCommander @Inject() (
         }
         case Failure(t) => log.error(s"Failed to notify NonUserThread ${nonUserThread.id} via email: $t")
       }
-      db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nonUserThread.id.get, clock.now()) }
     }
     protoEmailFut map (_ => ())
   }

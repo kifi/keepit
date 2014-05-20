@@ -31,7 +31,6 @@ import ElizaEmailNotifierActor._
 import com.keepit.social.NonUserKinds
 import scala.collection.mutable
 import com.keepit.common.concurrent.FutureHelpers
-import scala.util.{Failure, Success}
 
 object ElizaEmailNotifierActor {
   case class SendNextUserEmails(num: Int)
@@ -77,16 +76,23 @@ class ElizaEmailNotifierActor @Inject() (
         }
         if (userThreadBatchQueue.nonEmpty) {
           val tasks = Future.sequence((1 to num).map { _ =>
-            val batch = userThreadBatchQueue.dequeue()
             log.info(s"userThreadBatchQueue size: ${userThreadBatchQueue.size}")
-            processing = true
-            emailUnreadMessagesForNonUserThreadBatch(batch)
-          })
-          tasks.onComplete { result =>
-            result match {
-              case Failure(t) => airbrake.notify(s"Failure occured during user thread batch processing", t)
-              case _ =>
+            val batch = userThreadBatchQueue.dequeue()
+            // Update records even if sending the email fails (avoid infinite failure loops)
+            // todo(martin) persist failures to database
+            batch.userThreads map { userThread =>
+              db.readWrite{ implicit session =>
+                userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
+              }
             }
+            processing = true
+            val fut = emailUnreadMessagesForNonUserThreadBatch(batch)
+            fut.onFailure {
+              case t: Throwable => airbrake.notify(s"Failure occurred during user thread batch processing: threadId = ${batch.threadId}}", t)
+            }
+            fut
+          })
+          tasks.onComplete { _ =>
             self ! EndBatchProcessing
           }
         }
@@ -203,9 +209,6 @@ class ElizaEmailNotifierActor @Inject() (
               category = NotificationCategory.User.MESSAGE
             )
             shoebox.sendMail(email)
-            db.readWrite{ implicit session =>
-              userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther)
-            }
           }
         } else {
           log.warn(s"user $recipient is not active, not sending emails")
@@ -214,7 +217,7 @@ class ElizaEmailNotifierActor @Inject() (
       }
     } else Future.successful()
     log.info(s"processed user thread $userThread")
-    fut
+    fut map (_ => ())
   }
 }
 
