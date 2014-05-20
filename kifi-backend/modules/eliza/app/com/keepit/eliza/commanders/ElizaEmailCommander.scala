@@ -82,6 +82,7 @@ class ElizaEmailCommander @Inject() (
   def getThreadEmailInfo(
     thread: MessageThread,
     uriSummary: URISummary,
+    isInitialEmail: Boolean,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
     unsubUrl: Option[String] = None,
@@ -110,6 +111,7 @@ class ElizaEmailCommander @Inject() (
       pageUrl = thread.nUrl.get,
       pageName = pageName,
       pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
+      isInitialEmail = isInitialEmail,
       heroImageUrl = uriSummary.imageUrl,
       pageDescription = uriSummary.description.map(_.take(190) + "..."),
       participants = participants.toSeq,
@@ -169,14 +171,15 @@ class ElizaEmailCommander @Inject() (
       uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
       readTimeMinutesOpt <- readTimeMinutesOptFuture
     } yield {
-      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl, readTimeMinutesOpt)
+      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, unsubUrl, muteUrl, readTimeMinutesOpt)
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
+      val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
       ProtoEmail(
-        views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
-        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserInitialEmail(threadInfoBig, threadItems)
-        else views.html.nonUserDigestEmail(threadInfoSmall, threadItems),
+        views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
+        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
+        else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
         views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
         threadInfoSmall.conversationStarter,
         uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)

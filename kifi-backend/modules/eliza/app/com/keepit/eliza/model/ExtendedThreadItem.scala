@@ -6,6 +6,7 @@ case class ThreadEmailInfo(
   pageUrl: String,
   pageName: String,
   pageTitle: String,
+  isInitialEmail: Boolean,
   heroImageUrl: Option[String],
   pageDescription: Option[String],
   participants: Seq[String],

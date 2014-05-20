@@ -200,7 +200,7 @@ class ElizaEmailNotifierActor @Inject() (
             destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
             unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
           } yield {
-            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
+            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, false, allUsers, allUserImageUrls, Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
 
             val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
             val email = ElectronicMail(
