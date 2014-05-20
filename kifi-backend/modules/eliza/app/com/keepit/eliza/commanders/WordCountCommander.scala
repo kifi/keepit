@@ -18,7 +18,7 @@ trait WordCountCommander {
 }
 
 class WordCountCommanderImpl @Inject()(
-  articleStore: ArticleStore,
+  //articleStore: ArticleStore,
   scraperClient: ScraperServiceClient,
   wordCountCache: NormalizedURIWordCountCache
 ) extends WordCountCommander{
@@ -34,13 +34,13 @@ class WordCountCommanderImpl @Inject()(
     wordCountCache.get(id)
   }
 
-  private def getFromArticleStore(id: Id[NormalizedURI]): Option[Int] = {
+  /*private def getFromArticleStore(id: Id[NormalizedURI]): Option[Int] = {
     articleStore.get(id).map{ article =>
       val wc = wordCount(article.content)
       wordCountCache.set(id, wc)
       wc
     }
-  }
+  }*/
 
   private def getFromScraper(id: Id[NormalizedURI], url: String): Future[Int] = {
     scraperClient.getBasicArticle(url, proxy = None, extractor = None).map{ articleOpt =>
@@ -54,7 +54,7 @@ class WordCountCommanderImpl @Inject()(
   }
 
   def getWordCount(id: Id[NormalizedURI], url: String): Future[Int] = {
-    val wcOpt = getFromCache(id) orElse getFromArticleStore(id)
+    val wcOpt = getFromCache(id) //orElse getFromArticleStore(id)
     wcOpt match {
       case Some(wc) => Future.successful(wc)
       case None => getFromScraper(id, url)

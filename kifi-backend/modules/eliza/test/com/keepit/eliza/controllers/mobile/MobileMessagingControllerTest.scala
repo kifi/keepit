@@ -33,6 +33,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.crypto.TestCryptoModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
+import com.keepit.scraper.TestScraperServiceClientModule
 
 class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -50,7 +51,8 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
-      TestCryptoModule()
+      TestCryptoModule(),
+      TestScraperServiceClientModule()
     )
   }
 

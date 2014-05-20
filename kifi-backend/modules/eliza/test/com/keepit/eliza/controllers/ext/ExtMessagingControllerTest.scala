@@ -37,6 +37,7 @@ import play.api.libs.json.{Json, JsObject}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
+import com.keepit.scraper.TestScraperServiceClientModule
 
 class ExtMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -54,7 +55,8 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
-      TestCryptoModule()
+      TestCryptoModule(),
+      TestScraperServiceClientModule()
     )
   }
 
