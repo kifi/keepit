@@ -1,25 +1,22 @@
-package com.keepit.common.embedly
+package com.keepit.scraper.embedly
 
-import com.keepit.model._
-import scala.concurrent._
-import scala.concurrent.Future
-import play.api.http.Status
-import play.api.libs.json._
-import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.db.Id
-import play.api.libs.functional.syntax._
-import play.api.libs.ws.WS
+import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
+
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
-import scala.concurrent.duration._
-import com.google.inject.{ImplementedBy, Singleton, Inject}
+import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.strings.UTF8
+import com.keepit.model.{ImageInfo, NormalizedURI}
+
+import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import java.net.URLEncoder
-import com.keepit.common.strings._
-import play.api.libs.ws.Response
-import scala.Some
-import com.keepit.scraper.embedly.EmbedlyInfo
+import play.api.libs.json.Json
+import play.api.libs.ws.{Response, WS}
 
 trait EmbedlyClient {
   def embedlyUrl(url: String): String

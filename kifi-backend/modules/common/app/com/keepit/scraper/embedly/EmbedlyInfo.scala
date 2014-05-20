@@ -1,4 +1,4 @@
-package com.keepit.common.embedly
+package com.keepit.scraper.embedly
 
 import play.api.libs.functional.syntax._
 import com.keepit.model.PageMediaInfo
