@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 @ImplementedBy(classOf[WordCountCommanderImpl])
 trait WordCountCommander {
   def getWordCount(id: Id[NormalizedURI], url: String): Future[Int]
-  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Int]
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Option[Int]]
 }
 
 class WordCountCommanderImpl @Inject()(
@@ -56,20 +56,20 @@ class WordCountCommanderImpl @Inject()(
 
   def getWordCount(id: Id[NormalizedURI], url: String): Future[Int] = {
     val wcOpt = getFromCache(id) //orElse getFromArticleStore(id)
-    val fut = wcOpt match {
+    wcOpt match {
       case Some(wc) => Future.successful(wc)
       case None => getFromScraper(id, url)
     }
-    fut map { wc =>
-      log.info(s"Word count for article $id is $wc (url: $url)")
-      wc
-    }
   }
 
-  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Int] = {
+  def getReadTimeMinutes(id: Id[NormalizedURI], url: String): Future[Option[Int]] = {
     getWordCount(id, url) map { estimate =>
-      val minutes = estimate / WORDS_PER_MINUTE
-      (READ_TIMES map { t => (t, Math.abs(t - minutes)) } min)._1
+      if (estimate <= 0) {
+        None
+      } else {
+        val minutes = estimate / WORDS_PER_MINUTE
+        Some((READ_TIMES map { t => (t, Math.abs(t - minutes)) } min)._1)
+      }
     }
   }
 }

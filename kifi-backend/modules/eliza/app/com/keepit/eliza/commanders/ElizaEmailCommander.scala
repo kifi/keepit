@@ -150,7 +150,7 @@ class ElizaEmailCommander @Inject() (
       nUrlId <- thread.uriId
       url <- thread.url
     } yield {
-      wordCountCommander.getReadTimeMinutes(nUrlId, url) map (Some(_))
+      wordCountCommander.getReadTimeMinutes(nUrlId, url)
     }) getOrElse Future.successful(None)
   }
 
