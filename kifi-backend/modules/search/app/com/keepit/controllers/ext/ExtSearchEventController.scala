@@ -50,7 +50,11 @@ class ExtSearchEventController @Inject() (
     val time = clock.now()
     val userId = request.userId
     val json = request.body
-    val basicSearchContext = json.as[BasicSearchContext]
+    val basicSearchContext = try {
+      json.as[BasicSearchContext]
+    } catch {
+      case t: Throwable => throw new Exception(s"can't parse BasicSearchContext json: ${json.toString()}", t)
+    }
     val endedWith = (json \ "endedWith").as[String]
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
