@@ -36,6 +36,7 @@ sealed trait EdgeKind[E <: EdgeDataReader] {
 }
 
 object EdgeKind {
+  type EdgeType = EdgeKind[_ <: EdgeDataReader]
   val all: Set[EdgeKind[_ <: EdgeDataReader]] = CompanionTypeSystem[EdgeDataReader, EdgeKind[_ <: EdgeDataReader]]("E")
   private val byHeader: Map[Byte, EdgeKind[_ <: EdgeDataReader]] = {
     require(all.forall(_.header > 0), "EdgeKind headers must be positive.")
