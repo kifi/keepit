@@ -180,7 +180,7 @@ class FixedResultSearchCommander extends SearchCommander {
     results(query)
   }
 
-   def searchShards(
+   def distSearch(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,
@@ -196,6 +196,8 @@ class FixedResultSearchCommander extends SearchCommander {
     tz: Option[String],
     coll: Option[String],
     debug: Option[String]) : PartialSearchResult = ???
+
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???

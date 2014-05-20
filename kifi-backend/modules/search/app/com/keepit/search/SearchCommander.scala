@@ -38,7 +38,7 @@ trait SearchCommander {
     coll: Option[String] = None,
     debug: Option[String] = None) : DecoratedResult
 
-  def searchShards(
+  def distSearch(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,
@@ -53,7 +53,9 @@ trait SearchCommander {
     end: Option[String],
     tz: Option[String],
     coll: Option[String],
-    debug: Option[String]) : PartialSearchResult
+    debug: Option[String]): PartialSearchResult
+
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
 
   def explain(
     userId: Id[User],
@@ -113,12 +115,12 @@ class SearchCommanderImpl @Inject() (
       if (debug.isDefined && debug.get.indexOf("dist") >= 0) {
         distributionPlanRemoteOnly(maxShardsPerInstance = 2)
       } else {
-        (shards.local, Seq()) // TODO: replace this with distributionPlan(shards)
+        distributionPlan(shards)
       }
     }
 
     // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(userId, query, acceptLangs) // TODO: distributed version of getLang
+    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs) // TODO: distributed version of getLang
 
     var resultFutures = new ListBuffer[Future[PartialSearchResult]]()
 
@@ -140,7 +142,7 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += Promise[PartialSearchResult].complete(
         Try{
-          searchShards(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug)
+          distSearch(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug)
         }
       ).future
     }
@@ -221,7 +223,7 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
-  def searchShards(
+  def distSearch(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,
@@ -282,7 +284,13 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
-  private def getLangs(userId: Id[User], query: String, acceptLangCodes: Seq[String]): (Lang, Option[Lang]) = {
+  private def getLangs(
+    localShards: Set[Shard[NormalizedURI]],
+    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    query: String,
+    acceptLangCodes: Seq[String]
+  ): (Lang, Option[Lang]) = {
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
       val eachLangProb = (majorLangProb / numberOfLangs)
@@ -291,7 +299,14 @@ class SearchCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val langProfFuture = mainSearcherFactory.getLangProfileFuture(shards.local, userId, 3)
+    val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
+
+    if (dispatchPlan.nonEmpty) {
+      resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId)
+    }
+    if (localShards.nonEmpty) {
+      resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
+    }
 
     val acceptLangs = {
       val langs = acceptLangCodes.toSet.flatMap{ code: String =>
@@ -310,7 +325,14 @@ class SearchCommanderImpl @Inject() (
       }
     }
 
-    val langProf = monitoredAwait.result(langProfFuture, 10 seconds, "slow getting lang profile")
+    val langProf = {
+      val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
+      val total = freqs.map(_.values.sum).sum.toFloat
+      freqs.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
+        m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f)))
+      }.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(3).toMap // top N with prob > 0.05
+    }
+
     val profLangs = langProf.keySet
 
     var strongCandidates = acceptLangs ++ profLangs
@@ -333,6 +355,10 @@ class SearchCommanderImpl @Inject() (
     } else {
       (secondLang.get, Some(firstLang))
     }
+  }
+
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
+    monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
   private def getSearchFilter(

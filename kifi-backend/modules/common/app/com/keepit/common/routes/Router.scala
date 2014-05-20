@@ -191,7 +191,8 @@ object Search extends Service {
     def updateUserIndex() = ServiceRoute(POST, "/internal/search/user/update")
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
 
-    def searchShards() = ServiceRoute(POST, "/internal/search/searchShards")
+    def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
+    def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
   }
 }
 

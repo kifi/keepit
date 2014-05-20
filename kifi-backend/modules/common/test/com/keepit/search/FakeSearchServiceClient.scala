@@ -14,8 +14,6 @@ import com.keepit.social.BasicUser
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, null) {
 
-  override def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {}
-
   override def updateURIGraph(): Unit = {}
 
   override def reindexURIGraph(): Unit = {}
