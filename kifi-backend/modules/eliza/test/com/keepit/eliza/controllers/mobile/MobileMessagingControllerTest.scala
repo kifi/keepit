@@ -2,24 +2,17 @@ package com.keepit.eliza.controllers.mobile
 
 import com.keepit.test.{ElizaApplication, ElizaApplicationInjector}
 import org.specs2.mutable._
-
 import com.keepit.common.db.slick._
-
 import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceClientImpl}
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.heimdal.HeimdalContext
-
 import com.keepit.common.db.{Id, ExternalId}
-
 import com.keepit.eliza.model._
-
-
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
-
 import akka.actor.ActorSystem
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
@@ -33,6 +26,8 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.crypto.TestCryptoModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
+import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.common.store.ElizaFakeStoreModule
 
 class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -50,7 +45,9 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
-      TestCryptoModule()
+      TestCryptoModule(),
+      TestScraperServiceClientModule(),
+      ElizaFakeStoreModule()
     )
   }
 

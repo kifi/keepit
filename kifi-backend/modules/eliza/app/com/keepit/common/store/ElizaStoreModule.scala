@@ -5,6 +5,9 @@ import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.common.logging.AccessLog
 import play.api.Play.current
 import com.amazonaws.auth.BasicAWSCredentials
+import com.keepit.search.ArticleStore
+import com.keepit.search.S3ArticleStoreImpl
+import com.keepit.search.InMemoryArticleStoreImpl
 
 case class ElizaProdStoreModule() extends StoreModule {
   def configure() {
@@ -15,6 +18,13 @@ case class ElizaProdStoreModule() extends StoreModule {
   @Provides
   def amazonS3Client(basicAWSCredentials: BasicAWSCredentials): AmazonS3 = {
     new AmazonS3Client(basicAWSCredentials)
+  }
+
+  @Singleton
+  @Provides
+  def articleStore(amazonS3Client: AmazonS3, accessLog: AccessLog): ArticleStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.article.bucket").get)
+    new S3ArticleStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
   @Singleton
@@ -37,6 +47,14 @@ case class ElizaDevStoreModule() extends StoreModule {
   def amazonS3Client(basicAWSCredentials: BasicAWSCredentials): AmazonS3 = {
     new AmazonS3Client(basicAWSCredentials)
   }
+
+  @Singleton
+  @Provides
+  def articleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): ArticleStore =
+    whenConfigured("amazon.s3.article.bucket"){
+      val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
+      new S3ArticleStoreImpl(bucketName, amazonS3ClientProvider.get, accessLog)
+  }.getOrElse(new InMemoryArticleStoreImpl())
 
   @Singleton
   @Provides

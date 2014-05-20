@@ -5,7 +5,8 @@ import com.keepit.model._
 import scala.concurrent._
 import com.google.inject.Injector
 import com.keepit.common.store.{S3URIImageStore, FakeS3URIImageStore, ImageSize}
-import com.keepit.common.embedly.{EmbedlyImage, EmbedlyInfo, EmbedlyClient}
+import com.keepit.scraper.embedly._
+import com.keepit.common.embedly.EmbedlyClient
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.Id
 import scala.concurrent.ExecutionContext.Implicits.global

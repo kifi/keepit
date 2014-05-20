@@ -21,9 +21,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
+import com.keepit.common.db.Id
 
 
-class ScrapeWorker @Inject() (
+class ScrapeWorker(
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
   httpFetcher: HttpFetcher,
@@ -32,7 +33,8 @@ class ScrapeWorker @Inject() (
   articleStore: ArticleStore,
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
-  shoeboxClient: ShoeboxServiceClient
+  shoeboxClient: ShoeboxServiceClient,
+  wordCountCache: NormalizedURIWordCountCache
 ) extends Logging {
 
   implicit val myConfig = config
@@ -99,6 +101,18 @@ class ScrapeWorker @Inject() (
     titleChanged || restrictionChanged || scrapeFailed || activeURI || signatureChanged
   }
 
+  private def updateWordCountCache(uriId: Id[NormalizedURI], article: Option[Article]) = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+    val count = article match {
+      case Some(a) => a.content.split(" ").filter(!_.isEmpty).size
+      case None => -1
+    }
+
+    log.info(s"updating wordCount cache for uriId = ${uriId}, word count = ${count}")
+    wordCountCache.set(NormalizedURIWordCountKey(uriId), count)
+  }
+
   private def handleSuccessfulScraped(uri: NormalizedURI, latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): (NormalizedURI, Option[Article]) = {
     val Scraped(article, signature, redirects) = scraped
     val updatedUri = processRedirects(latestUri, redirects)
@@ -110,6 +124,8 @@ class ScrapeWorker @Inject() (
     } else {
 
       articleStore += (latestUri.id.get -> article)
+      updateWordCountCache(latestUri.id.get, Some(article))
+
       val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
 
       // scrape schedule
@@ -151,6 +167,9 @@ class ScrapeWorker @Inject() (
       helper.syncSaveNormalizedUri(toBeSaved)
     }
     log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
+
+    updateWordCountCache(unscrapableURI.id.get, None)
+
     (unscrapableURI, None)
 
   }
@@ -190,6 +209,9 @@ class ScrapeWorker @Inject() (
       helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
     }
     log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${errorURI.id}, ${errorURI.state}, ${errorURI.url})")
+
+    updateWordCountCache(errorURI.id.get, None)
+
     (errorURI, None)
   }
 

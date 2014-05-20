@@ -4,7 +4,7 @@ trait VertexReader {
   def kind: VertexKind[_ <: VertexDataReader]
   def id: VertexId
   def data: VertexDataReader
-  def edgeReader: LocalEdgeReader
+  def edgeReader: OutgoingEdgeReader
 }
 
 trait GlobalVertexReader extends VertexReader {

@@ -39,23 +39,20 @@ object ExperimentType {
   val FAKE = ExperimentType("fake")
   val NO_SEARCH_EXPERIMENTS = ExperimentType("no search experiments")
   val NOT_SENSITIVE = ExperimentType("not sensitive")
-  val CAN_INVITE = ExperimentType("can invite")
-  val GMAIL_INVITE = ExperimentType("gmail_invite")
-  val CAN_CONNECT = ExperimentType("can_connect")
   val CAN_MESSAGE_ALL_USERS = ExperimentType("can message all users")
   val DEMO = ExperimentType("demo")
   val EXTENSION_LOGGING = ExperimentType("extension_logging")
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
   val SHOW_DISCUSSIONS = ExperimentType("show_discussions")
-  val MOBILE_REDITECT = ExperimentType("mobile_redirect")
-  val ANGULAR_SITE = ExperimentType("angular_site")
+  val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
   val HELPRANK = ExperimentType("helprank")
   val WHO_KEPT_MY_KEEP = ExperimentType("who_kept_my_keep")
   val IGNORE_VERSION_TIME_TRAVEL = ExperimentType("ignore_version_time_travel")
+  val GUIDE = ExperimentType("guide")
 
-  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE :: CAN_INVITE :: GMAIL_INVITE ::
-             CAN_CONNECT :: CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-            MOBILE_REDITECT:: ANGULAR_SITE :: HELPRANK :: IGNORE_VERSION_TIME_TRAVEL :: WHO_KEPT_MY_KEEP :: Nil
+  val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
+    CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
+    MOBILE_REDIRECT :: HELPRANK :: WHO_KEPT_MY_KEEP :: IGNORE_VERSION_TIME_TRAVEL :: GUIDE :: Nil
 
   val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 
