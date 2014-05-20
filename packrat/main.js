@@ -1156,6 +1156,11 @@ api.port.on({
     if (!api.isPackaged()) {
       api.mode.toggle();
     }
+  },
+  guide: function (_, respond) {
+    if (me && ~experiments.indexOf('guide')) {
+      respond(null);
+    }
   }
 });
 

@@ -1,7 +1,6 @@
 // @require styles/insulate.css
 // @require styles/iframe_dialog.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/api_iframe.js
 // @require scripts/render.js
 // @require scripts/html/iframe_dialog.js

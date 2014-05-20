@@ -2,7 +2,6 @@
 // @require styles/notifier.css
 // @require scripts/api.js
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/formatting.js
 // @require scripts/title_from_url.js
 // @require scripts/render.js

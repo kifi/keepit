@@ -124,18 +124,19 @@ var tile = tile || function() {  // idempotent for Chrome
       switch (e.keyCode) {
       case 75: // k
         var now = Date.now();
-        if (now - tLastK < 400) return;
-        tLastK = now;
-        if (me === undefined) {  // not yet initialized
-          whenMeKnown.push(onKeyDown.bind(this, e));
-        } else if (!me) {
-          toggleLoginDialog();
-        } else if (tile && tile.dataset.kept) {
-          api.port.emit("unkeep", withUrls({}));
-        } else {
-          api.port.emit("keep", withUrls({title: authoredTitle(), how: "public"}));
+        if (now - tLastK > 400) {
+          tLastK = now;
+          if (me === undefined) {  // not yet initialized
+            whenMeKnown.push(onKeyDown.bind(this, e));
+          } else if (!me) {
+            toggleLoginDialog();
+          } else if (tile && tile.dataset.kept) {
+            api.port.emit('unkeep', withUrls({}));
+          } else {
+            api.port.emit('keep', withUrls({title: authoredTitle(), how: 'public'}));
+          }
+          e.preventDefault();
         }
-        e.preventDefault();
         break;
       case 76: // l
         api.port.emit('toggle_mode');
@@ -150,6 +151,16 @@ var tile = tile || function() {  // idempotent for Chrome
         api.port.emit('unsilence');
         loadAndDo('pane', 'compose', 'key');
         e.preventDefault();
+        break;
+      case 191: // ?
+        if (e.altKey) {
+          api.port.emit('guide', function () {
+            api.require('scripts/guide/step_0.js', function () {
+              guide.step0();
+            });
+          });
+          e.preventDefault();
+        }
         break;
       }
     }

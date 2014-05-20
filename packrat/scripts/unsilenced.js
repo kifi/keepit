@@ -1,7 +1,6 @@
 // @require styles/insulate.css
 // @require styles/keeper/unsilenced.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/html/keeper/unsilenced.js
 

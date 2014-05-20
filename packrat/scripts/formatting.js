@@ -1,4 +1,5 @@
 // @require scripts/emoji.js
+// @require scripts/lib/mustache.js
 
 var formatMessage = (function () {
   'use strict';

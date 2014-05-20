@@ -1,6 +1,5 @@
 // @require styles/keeper/look_link_broken.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/formatting.js
 // @require scripts/render.js
 // @require scripts/prevent_ancestor_scroll.js

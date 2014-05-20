@@ -1,7 +1,6 @@
 // @require styles/insulate.css
 // @require styles/keeper/keeper_intro.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/html/keeper/keeper_intro.js
 

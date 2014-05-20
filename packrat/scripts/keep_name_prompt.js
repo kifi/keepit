@@ -1,6 +1,5 @@
 // @require styles/keeper/keep_name_prompt.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/title_from_url.js
 // @require scripts/html/keeper/keep_name_prompt.js

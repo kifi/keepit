@@ -120,7 +120,7 @@ var pane = pane || function () {  // idempotent for Chrome
 
       var bringSlider = !keeper.showing();
       if (bringSlider) {
-        $pane.append(keeper.create(locator)).appendTo(tile.parentNode);
+        $pane.append(keeper.create(locator)).insertAfter(tile);
       } else {
         keeper.onPaneChange(locator);
         $pane.insertBefore(tile);

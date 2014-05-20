@@ -5,7 +5,6 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
-// @require scripts/lib/mustache.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/html/keeper/keeper.js
