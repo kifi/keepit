@@ -14,6 +14,7 @@ guide.step0 = guide.step0 || function () {
       $stage = $(render('html/guide/step_0', me)).appendTo('body').layout().addClass('kifi-open');
       $pages = $stage.find('.kifi-guide-pages');
       $pages.find('.kifi-guide-next').click(next);
+      $stage.find('.kifi-guide-progress-x').click(hide);
       $(document).data('esc').add(hide);
     }
   }

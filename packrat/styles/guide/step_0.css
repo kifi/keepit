@@ -7,7 +7,7 @@
   z-index: 999999999993;
   background-color: rgba(0,0,0,.85);
   opacity: 0;
-  transition: opacity .5s linear;
+  transition: opacity .34s linear;
 }
 .kifi-guide-stage.kifi-open {
   opacity: 1;
@@ -94,8 +94,9 @@
 }
 .kifi-guide-site-a {
   display: inline-block;
+  position: relative;
   width: 158px;
-  height: 221px;
+  height: 220px;
   background: #fff top/158px 155px no-repeat;
   border-radius: 4px;
   margin: 0 10px;
@@ -108,44 +109,137 @@
 }
 .kifi-guide-site-a:hover,
 .kifi-guide-site-a:focus {
-  color: #969ca1;
+  color: #868b91;
 }
 .kifi-guide-site-a[kifi-n="1"] {
-  background-image: url(chrome-extension://__MSG_@@extension_id__/images/guide/site_1.jpg);
+  background-image: url(/images/guide/site_1.jpg);
 }
 .kifi-guide-site-a[kifi-n="2"] {
-  background-image: url(chrome-extension://__MSG_@@extension_id__/images/guide/site_2.jpg);
+  background-image: url(/images/guide/site_1.jpg);
 }
 .kifi-guide-site-a[kifi-n="3"] {
-  background-image: url(chrome-extension://__MSG_@@extension_id__/images/guide/site_3.jpg);
+  background-image: url(/images/guide/site_1.jpg);
 }
 .kifi-guide-site-a[kifi-n="4"] {
-  background-image: url(chrome-extension://__MSG_@@extension_id__/images/guide/site_4.jpg);
+  background-image: url(/images/guide/site_1.jpg);
 }
 .kifi-guide-site-a::before {
   content: 'Site ' attr(kifi-n);
   display: block;
-  margin: 16px 0 4px;
+  margin: 16px 0 5px;
   color: #444;
   font-family: Georgia, Times, sans-serif !important;
   font-size: 16px;
   font-style: italic;
   -webkit-font-smoothing: antialiased;
 }
+.kifi-guide-site-a:not(:hover):not(:focus)::after {
+  content: ' ';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,.05);
+}
 
 .kifi-guide-progress {
   position: absolute;
   bottom: 10px;
   left: 10px;
-  width: 200px;
   border: 1px solid gray;
   border-radius: 10px;
-  background-color: #000;
+  background-color: #262626;
   color: #fff;
+  overflow: hidden;
   transition: -webkit-transform .5s ease-in-out;
   transition: transform .5s ease-in-out;
 }
-:not([kifi-p='1']).kifi-guide-progress {
+.kifi-guide-stage:not(.kifi-open) .kifi-guide-progress,
+:not([kifi-p='2'])+.kifi-guide-progress {
   -webkit-transform: translate3d(0,400px,0);
   transform: translate3d(0,400px,0);
+}
+.kifi-guide-progress-h {
+  background-color: #000;
+  line-height: 36px;
+  font-size: 14px;
+  font-family: Georgia, Times, sans-serif !important;
+  font-style: italic;
+  font-weight: bold;
+  -webkit-font-smoothing: antialiased;
+  color: #bebebe;
+  text-align: center;
+}
+.kifi-guide-progress-ol {
+  list-style-type: decimal;
+  padding: 10px 18px 16px 48px;
+  font-size: 14px;
+}
+.kifi-guide-progress-li {
+  display: list-item;
+  white-space: nowrap;
+  line-height: 30px;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  color: #686767;
+}
+.kifi-guide-progress-li[kifi-done] {
+  position: relative;
+  color: #bebebe;
+}
+.kifi-guide-progress-li[kifi-done]::after {
+  content: ' ';
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  box-sizing: border-box;
+  width: 110px;
+  height: 1px;
+  border-left: 25px solid #4285F4;
+  background: #565859;
+}
+.kifi-guide-progress-x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+}
+.kifi-guide-progress-x:hover,
+.kifi-guide-progress-x:focus {
+  background-color: #333;
+}
+.kifi-guide-progress-x:active {
+  background-color: #282828;
+}
+.kifi-guide-progress-x::before,
+.kifi-guide-progress-x::after {
+  content: ' ';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 50%;
+  width: 2px;
+  background: #565859;
+  font-size: 0;
+}
+.kifi-guide-progress-x::before {
+  -webkit-transform: translate(-1px) rotate(45deg);
+  transform: translate(-1px) rotate(45deg);
+}
+.kifi-guide-progress-x::after {
+  -webkit-transform: translate(-1px) rotate(-45deg);
+  transform: translate(-1px) rotate(-45deg);
+}
+.kifi-guide-progress-x:hover::before,
+.kifi-guide-progress-x:hover::after,
+.kifi-guide-progress-x:focus::before,
+.kifi-guide-progress-x:focus::after {
+  background: #75797a;
+}
+.kifi-guide-progress-x:active::before,
+.kifi-guide-progress-x:active::after {
+  background: #616465;
 }
