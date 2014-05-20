@@ -68,7 +68,8 @@ object WordCountCommander {
   private val READ_TIMES = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60)
 
   def wordCountToReadTimeMinutes(wc: Int): Option[Int] = {
-    if (wc <= 0) None
-    else Some(READ_TIMES.dropWhile(_ * WORDS_PER_MINUTE < wc).headOption.getOrElse(READ_TIMES.last))
+    if (wc <= 0) return None
+    val estimate = wc.toFloat / WORDS_PER_MINUTE
+    Some(READ_TIMES.dropWhile(_ < estimate).headOption.getOrElse(60))
   }
 }
