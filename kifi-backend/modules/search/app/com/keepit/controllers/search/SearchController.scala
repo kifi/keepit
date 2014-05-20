@@ -87,11 +87,6 @@ class SearchController @Inject()(
     Ok
   }
 
-  def searchKeeps(userId: Id[User], query: String) = Action { request =>
-    val uris = searchCommander.searchKeeps(userId, query)
-    Ok(JsArray(uris.toSeq.map(JsNumber(_))))
-  }
-
   def searchWithConfig() = Action(parse.tolerantJson){ request =>
     val js = request.body
     val userId = Id[User]((js \ "userId").as[Long])

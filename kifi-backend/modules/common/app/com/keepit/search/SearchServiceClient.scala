@@ -47,7 +47,6 @@ trait SearchServiceClient extends ServiceClient {
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
-  def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUserWithUserId]]]
@@ -174,12 +173,6 @@ class SearchServiceClientImpl(
 
   def refreshPhrases(): Unit = {
     broadcast(Search.internal.refreshPhrases())
-  }
-
-  def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = {
-    call(Search.internal.searchKeeps(userId, query)).map {
-      _.json.as[Seq[JsValue]].map(v => Id[NormalizedURI](v.as[Long])).toSet
-    }
   }
 
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {

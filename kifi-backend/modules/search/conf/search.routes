@@ -65,7 +65,6 @@ GET         /internal/search/indexInfo/listAll        @com.keepit.controllers.se
 
 POST        /internal/search/search/users        @com.keepit.controllers.search.SearchController.searchUsers()
 POST        /internal/search/search/userTypeahead        @com.keepit.controllers.search.SearchController.userTypeahead()
-POST        /internal/search/search/keeps        @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
 POST        /internal/search/search/sharingUserInfo/:userId        @com.keepit.controllers.search.SearchController.sharingUserInfo(userId: Id[User])
 GET         /internal/search/search/explainResult        @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.controllers.search.SearchController.searchWithConfig

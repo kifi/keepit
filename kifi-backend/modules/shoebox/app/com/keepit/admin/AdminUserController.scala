@@ -273,12 +273,11 @@ class AdminUserController @Inject() (
       db.readOnly { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
     }
     val filteredBookmarks = db.readOnly { implicit s =>
-      val query = bookmarkSearch.getOrElse("")
+      val query = bookmarkSearch.getOrElse("").toLowerCase()
       (if (query.trim.length == 0) {
         bookmarks
       } else {
-        val uris = Await.result(searchClient.searchKeeps(userId, query), Duration.Inf)
-        bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
+        bookmarks.filter{ case (b, u) => b.title.exists{ t => t.toLowerCase().indexOf(query) >= 0 } }
       }) collect {
         case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
           val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
