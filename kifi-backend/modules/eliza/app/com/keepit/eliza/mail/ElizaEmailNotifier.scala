@@ -149,16 +149,18 @@ class ElizaEmailNotifierActor @Inject() (
     )
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
     val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
+    val readTimeMinutesOptFuture = elizaEmailCommander.readTimeMinutesForMessageThread(thread)
     val threadDataFuture = for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
       uriSummary <- uriSummaryFuture
-    } yield (allUsers, allUserImageUrls, uriSummary)
+      readTimeMinutesOpt <- readTimeMinutesOptFuture
+    } yield (allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt)
     threadDataFuture.map { data =>
-      val (allUsers, allUserImageUrls, uriSummary) = data
+      val (allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt) = data
       // Futures below will be executed concurrently
       userThreads.foreach{ userThread =>
-        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary)
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt)
       }
     }
   }
@@ -168,7 +170,8 @@ class ElizaEmailNotifierActor @Inject() (
     thread: MessageThread,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
-    uriSummary: URISummary
+    uriSummary: URISummary,
+    readTimeMinutesOpt: Option[Int]
   ): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
@@ -197,7 +200,7 @@ class ElizaEmailNotifierActor @Inject() (
             destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
             unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
           } yield {
-            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl)).copy(pageUrl = deepUrl)
+            val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, allUsers, allUserImageUrls, Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
 
             val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
             val email = ElectronicMail(

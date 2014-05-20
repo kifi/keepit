@@ -257,7 +257,9 @@
                                             </tr>
                                             <tr>
                                               <td style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px;">
-                                                <a style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px; text-decoration:none;" href="@threadInfo.pageUrl" target="_blank">@threadInfo.pageName</a>
+                                                <a style="font-family:Arial, Helvetica, sans-serif;font-size:16px;color:#999999;line-height:16px; text-decoration:none;" href="@threadInfo.pageUrl" target="_blank">@threadInfo.pageName @if(threadInfo.readTimeMinutes.nonEmpty){
+                                                  &#x2022; @if(threadInfo.readTimeMinutes.get >= 60) {> 1h} else {@{threadInfo.readTimeMinutes.get}min} read
+                                                }</a>
                                               </td>
                                             </tr>
                                             <tr>

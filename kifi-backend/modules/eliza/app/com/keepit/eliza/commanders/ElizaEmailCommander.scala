@@ -47,6 +47,7 @@ class ElizaEmailCommander @Inject() (
     messageFetchingCommander: MessageFetchingCommander,
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
+    wordCountCommander: WordCountCommander,
     clock: Clock
   ) extends Logging {
 
@@ -84,7 +85,8 @@ class ElizaEmailCommander @Inject() (
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
     unsubUrl: Option[String] = None,
-    muteUrl: Option[String] = None): ThreadEmailInfo = {
+    muteUrl: Option[String] = None,
+    readTimeMinutes: Option[Int] = None): ThreadEmailInfo = {
 
     val (nuts, starterUserId) = db.readOnly { implicit session => (
       nonUserThreadRepo.getByMessageThreadId(thread.id.get),
@@ -113,7 +115,8 @@ class ElizaEmailCommander @Inject() (
       participants = participants.toSeq,
       conversationStarter = starterUser.firstName + " " + starterUser.lastName,
       unsubUrl = unsubUrl,
-      muteUrl = muteUrl
+      muteUrl = muteUrl,
+      readTimeMinutes = readTimeMinutes
     )
   }
 
@@ -142,20 +145,31 @@ class ElizaEmailCommander @Inject() (
     }.reverse
   }
 
+  def readTimeMinutesForMessageThread(thread: MessageThread) = {
+    (for {
+      nUrlId <- thread.uriId
+      url <- thread.url
+    } yield {
+      wordCountCommander.getReadTimeMinutes(nUrlId, url) map (Some(_))
+    }) getOrElse Future.successful(None)
+  }
+
   private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
 
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
     val uriSummaryBigFuture = getSummaryBig(thread)
+    val readTimeMinutesOptFuture = readTimeMinutesForMessageThread(thread)
 
     for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
       uriSummaryBig <- uriSummaryBigFuture
       uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
+      readTimeMinutesOpt <- readTimeMinutesOptFuture
     } yield {
-      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl)
+      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, allUsers, allUserImageUrls, unsubUrl, muteUrl, readTimeMinutesOpt)
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
