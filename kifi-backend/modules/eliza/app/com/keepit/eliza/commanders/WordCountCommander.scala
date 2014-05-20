@@ -10,6 +10,7 @@ import com.keepit.scraper.ScraperServiceClient
 import com.keepit.search.ArticleStore
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.logging.Logging
 
 @ImplementedBy(classOf[WordCountCommanderImpl])
 trait WordCountCommander {
@@ -21,7 +22,7 @@ class WordCountCommanderImpl @Inject()(
   //articleStore: ArticleStore,
   scraperClient: ScraperServiceClient,
   wordCountCache: NormalizedURIWordCountCache
-) extends WordCountCommander{
+) extends WordCountCommander with Logging {
 
   private val WORDS_PER_MINUTE = 250
   private val READ_TIMES = Seq(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60)
@@ -55,9 +56,13 @@ class WordCountCommanderImpl @Inject()(
 
   def getWordCount(id: Id[NormalizedURI], url: String): Future[Int] = {
     val wcOpt = getFromCache(id) //orElse getFromArticleStore(id)
-    wcOpt match {
+    val fut = wcOpt match {
       case Some(wc) => Future.successful(wc)
       case None => getFromScraper(id, url)
+    }
+    fut map { wc =>
+      log.info(s"Word count for article $id is $wc (url: $url)")
+      wc
     }
   }
 
