@@ -22,12 +22,13 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
     case Failure(t)   => throw new IllegalArgumentException(s"SignatureCheck -- failed to parse refUrl=$referenceUrl; Exception=$t; Cause=${t.getCause}", t)
   }
 
-  def isDefinedAt(candidate: NormalizationCandidate) = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
-
-  private def signature(url: String): Future[Option[Signature]] = URI.parse(url).get.host match {
-    case Some(h) if h.name.trim.nonEmpty => scraperPlugin.getSignature(url, None)
-    case _ => throw new IllegalArgumentException(s"url $url has no host!")
+  def isDefinedAt(candidate: NormalizationCandidate) = {
+    val isTrustedSource = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
+    lazy val isJavaUri = Try(java.net.URI.create(candidate.url)).isSuccess
+    isTrustedSource && isJavaUri
   }
+
+  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.getSignature(url, None)
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {
     case None => signature(referenceUrl)

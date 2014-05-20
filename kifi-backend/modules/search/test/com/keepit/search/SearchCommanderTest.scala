@@ -39,6 +39,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
           inject[AirbrakeNotifier],
+          inject[SearchServiceClient],
           inject[ShoeboxServiceClient],
           inject[MonitoredAwait])
 
