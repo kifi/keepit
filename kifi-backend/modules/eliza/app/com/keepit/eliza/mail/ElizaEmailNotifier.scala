@@ -16,6 +16,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.{Inject, ImplementedBy}
 
 import scala.concurrent.duration._
+import org.joda.time.Minutes
 
 import akka.util.Timeout
 import com.keepit.common.mail._
@@ -175,11 +176,16 @@ class ElizaEmailNotifierActor @Inject() (
   ): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
-    airbrake.verify(userThread.replyable, s"${userThread.summary} not replyable")
-    airbrake.verify(userThread.unread, s"${userThread.summary} not unread")
-    airbrake.verify(!userThread.notificationEmailed, s"${userThread.summary} notification already emailed")
-    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)), s"Late send of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
-    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now), s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future")
+    airbrake.verify(userThread.replyable,
+      s"${userThread.summary} not replyable")
+    airbrake.verify(userThread.unread,
+      s"${userThread.summary} not unread")
+    airbrake.verify(!userThread.notificationEmailed,
+      s"${userThread.summary} notification already emailed")
+    airbrake.verify(userThread.notificationUpdatedAt.isAfter(now.minusMinutes(30)),
+      s"Late send (${Minutes.minutesBetween(now, userThread.notificationUpdatedAt)} min) of user thread ${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} ")
+    airbrake.verify(userThread.notificationUpdatedAt.isBefore(now),
+      s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future (${Minutes.minutesBetween(userThread.notificationUpdatedAt, now)} min)")
 
     val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen, None)
 
