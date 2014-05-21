@@ -119,7 +119,7 @@ class UserConnectionCreator @Inject() (
     }.toList.flatten
   }
 
-  def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
+  private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
       network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     log.debug(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
@@ -131,19 +131,26 @@ class UserConnectionCreator @Inject() (
       log.debug(s"existingSocialUserInfoIds = $existingSocialUserInfoIds")
       log.debug(s"size of diff = ${diff.length}")
       diff map { socialId =>
-        val friendSocialUserInfoId = socialRepo.get(socialId, network).id.get
-        log.debug(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
-        socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
-          case Some(c) if c.state != SocialConnectionStates.INACTIVE =>
-            log.info("connection is disabled")
-            socialConnectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
-          case Some(c) =>
-            log.info("connection is already disabled")
-            c
-          case None =>
-            throw new Exception(s"trying to disable old connection: not find connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
+        try {
+          val friendSocialUserInfoId = socialRepo.get(socialId, network).id.get
+          log.debug(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
+          socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
+            case Some(c) if c.state != SocialConnectionStates.INACTIVE =>
+              log.info("connection is disabled")
+              Some(socialConnectionRepo.save(c.withState(SocialConnectionStates.INACTIVE)))
+            case Some(c) =>
+              log.info("connection is already disabled")
+              Some(c)
+            case None =>
+              airbrake.notify(s"trying to disable old connection: not find connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
+              None
+          }
+        } catch {
+          case e: Throwable =>
+            airbrake.notify(s"fail to disable old connection for user $socialUserInfo to his friend $socialId")
+            None
         }
-      }
+      } flatten
     }
   }
 
