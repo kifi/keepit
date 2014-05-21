@@ -40,8 +40,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
 
   override def refreshPhrases(): Unit = {}
 
-  override def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = ???
-
   override def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
 
   override def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = ???
