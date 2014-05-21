@@ -25,12 +25,11 @@ object MessageFormatter {
    */
   def parseMessageSegments(msg: String): Seq[MessageSegment] = {
 
-    def unescape(string: String) = string.replace(raw"\]","]").replace(raw"\)",")")
     def parseSegment(m: Match) = {
       val segments = m.group(3).split('|')
       val kind = segments.head
-      val payload = unescape(URLDecoder.decode(segments.last, "UTF-8"))
-      val text = unescape(m.group(1))
+      val payload = URLDecoder.decode(segments.last, "UTF-8").replace(raw"\)",")")
+      val text = m.group(1).replace(raw"\]","]")
       kind match {
         case "i" => ImageLookHereSegment(text, payload)
         case "r" => TextLookHereSegment(text, payload)
@@ -42,10 +41,10 @@ object MessageFormatter {
       val (position, segments) = lookHereRe.findAllMatchIn(msg).foldLeft((0,Seq[MessageSegment]())){ (acc, m) =>
         val (currPos, seq) = acc
         val lookHereSegment = parseSegment(m)
-        (m.end, if (m.start > currPos) seq :+ TextSegment(unescape(msg.substring(currPos, m.start))) :+ lookHereSegment
+        (m.end, if (m.start > currPos) seq :+ TextSegment(msg.substring(currPos, m.start)) :+ lookHereSegment
         else seq :+ lookHereSegment)
       }
-      val ending = TextSegment(unescape(msg.substring(position)))
+      val ending = TextSegment(msg.substring(position))
       if (ending.txt.length > 0) segments :+ ending else segments
     } catch {
       case t: Throwable => {
