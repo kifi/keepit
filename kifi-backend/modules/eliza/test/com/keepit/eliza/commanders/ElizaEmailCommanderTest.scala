@@ -24,6 +24,15 @@ class ElizaEmailCommanderTest extends Specification with TestInjector {
         TextLookHereSegment("t[ha]t", """b(a)r"""),
         TextSegment("."))
     }
+
+    "parse message text containing two consecutive range look-here links" in {
+      val msg = """check [t[hi\]s](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|f(o\)o)[t[ha\]t](x-kifi-sel:r|body>div:nth-child(1\)|p.a|0:6|p.b|0:9|b(a\)r)."""
+      ElizaEmailCommander.parseMessage(msg) === Seq(
+        TextSegment("check "),
+        TextLookHereSegment("t[hi]s", """f(o)o"""),
+        TextLookHereSegment("t[ha]t", """b(a)r"""),
+        TextSegment("."))
+    }
   }
 
 }
