@@ -17,13 +17,14 @@ import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable
 import com.keepit.common.time._
+import com.keepit.scraper.ScraperServiceClient
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
   imageInfoRepo: ImageInfoRepo,
   pageInfoRepo: PageInfoRepo,
   db: Database,
-  embedlyClient: EmbedlyClient,
+  scraper: ScraperServiceClient,
   pagePeekerClient: PagePeekerClient,
   uriImageStore: S3URIImageStore,
   imageFetcher: ImageFetcher,
@@ -147,7 +148,7 @@ class URISummaryCommander @Inject()(
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0,0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
-    embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+    scraper.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       embedlyInfoOpt map { embedlyInfo =>
         nUri.id map { nUriId =>
           // Persist page info to the database
@@ -233,7 +234,7 @@ class URISummaryCommander @Inject()(
       }
     }
   }
-  
+
   /**
    * Get S3 url for image info
    */
