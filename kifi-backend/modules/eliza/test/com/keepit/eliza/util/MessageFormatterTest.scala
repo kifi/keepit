@@ -105,5 +105,16 @@ class MessageFormatterTest extends Specification {
       val msg = """check this out"""
       MessageFormatter.parseMessageSegments(msg) === Seq(TextSegment("check this out"))
     }
+
+    "parse message text with look here links containing characters requiring tricky escaping" in {
+      // TODO: support '[' in text just before link, as in comment below
+      // TODO: support ')' in text just after link, as in comment below
+      // val msg = """[[()\\(\\)[\]\\[\\]\\\\\\](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|()\\(\\)[\]\\[\\]\\\\\\))"""
+      val msg = """.[()\\(\\)[\]\\[\\\]\\\\\\](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|(\)\\(\\\)[]\\[\\]\\\\\\)."""
+      MessageFormatter.parseMessageSegments(msg) === Seq(
+        TextSegment("."),
+        TextLookHereSegment("""()\(\)[]\[\]\\\""", """()\(\)[]\[\]\\\"""),
+        TextSegment("."))
+    }
   }
 }
