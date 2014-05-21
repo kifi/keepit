@@ -10,7 +10,7 @@ case class TextSegment(override val txt: String) extends MessageSegment("txt", t
 
 object MessageFormatter {
 
-  private[this] val lookHereRe = """\[([^\]]*(?:(?<=\\)\][^\]]*)*)\](\(x-kifi-sel:([^)]*(?:(?<=\\)\)[^)]*)*)\))""".r
+  private[this] val lookHereRe = """\[([^\]]*(?:(?<=(?<!\\)\\)\][^\]]*)*)\](\(x-kifi-sel:([^)]*(?:(?<=(?<!\\)\\)\)[^)]*)*)\))""".r
 
   /**
    * Formats [[com.keepit.eliza.model.Message.messageText]] (in a markdown-based format) as plain text.
@@ -28,8 +28,8 @@ object MessageFormatter {
     def parseSegment(m: Match) = {
       val segments = m.group(3).split('|')
       val kind = segments.head
-      val payload = URLDecoder.decode(segments.last, "UTF-8").replace(raw"\)",")")
-      val text = m.group(1).replace(raw"\]","]")
+      val payload = URLDecoder.decode(segments.last, "UTF-8").replace("""\)""",")").replace("""\\""","""\""")
+      val text = m.group(1).replace("""\]""","]").replace("""\\""","""\""")
       kind match {
         case "i" => ImageLookHereSegment(text, payload)
         case "r" => TextLookHereSegment(text, payload)

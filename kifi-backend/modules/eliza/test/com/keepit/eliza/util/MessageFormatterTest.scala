@@ -79,6 +79,16 @@ class MessageFormatterTest extends Specification {
         TextSegment("."))
     }
 
+    "parse message text containing two range look-here links with escaped backslashes" in {
+      val msg = """check [t\\his\\](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|fo\\o\\) and [t\\hat\\](x-kifi-sel:r|body>div:nth-child(1\)|p.a|0:6|p.b|0:9|ba\\r\\)."""
+      MessageFormatter.parseMessageSegments(msg) === Seq(
+        TextSegment("check "),
+        TextLookHereSegment("""t\his\""", """fo\o\"""),
+        TextSegment(" and "),
+        TextLookHereSegment("""t\hat\""", """ba\r\"""),
+        TextSegment("."))
+    }
+
     "parse message text containing two consecutive range look-here links" in {
       val msg = """check [t[hi\]s](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|f(o\)o)[t[ha\]t](x-kifi-sel:r|body>div:nth-child(1\)|p.a|0:6|p.b|0:9|b(a\)r)."""
       MessageFormatter.parseMessageSegments(msg) === Seq(
