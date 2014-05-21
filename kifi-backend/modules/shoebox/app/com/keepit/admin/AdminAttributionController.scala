@@ -129,10 +129,4 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.keepAttribution(degree, richByDeg))
   }
 
-  // expensive
-  def genReKeepStats() = AdminHtmlAction.authenticated { request =>
-
-    Ok("Generating rekeep stats (slowly)")
-  }
-
 }
