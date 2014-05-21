@@ -37,19 +37,13 @@ object MessageFormatter {
       }
     }
 
-    try {
-      val (position, segments) = lookHereRe.findAllMatchIn(msg).foldLeft((0,Seq[MessageSegment]())){ (acc, m) =>
-        val (currPos, seq) = acc
-        val lookHereSegment = parseSegment(m)
-        (m.end, if (m.start > currPos) seq :+ TextSegment(msg.substring(currPos, m.start)) :+ lookHereSegment
-        else seq :+ lookHereSegment)
-      }
-      val ending = TextSegment(msg.substring(position))
-      if (ending.txt.length > 0) segments :+ ending else segments
-    } catch {
-      case t: Throwable => {
-        throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
-      }
+    val (position, segments) = lookHereRe.findAllMatchIn(msg).foldLeft((0,Seq[MessageSegment]())){ (acc, m) =>
+      val (currPos, seq) = acc
+      val lookHereSegment = parseSegment(m)
+      (m.end, if (m.start > currPos) seq :+ TextSegment(msg.substring(currPos, m.start)) :+ lookHereSegment
+      else seq :+ lookHereSegment)
     }
+    val ending = TextSegment(msg.substring(position))
+    if (ending.txt.length > 0) segments :+ ending else segments
   }
 }
