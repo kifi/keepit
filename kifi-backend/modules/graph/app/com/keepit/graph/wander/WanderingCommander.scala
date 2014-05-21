@@ -12,19 +12,20 @@ import com.keepit.graph.model.VertexKind.VertexType
 class WanderingCommander @Inject() (graph: GraphManager) {
 
   def wander(wanderlust: Wanderlust): Collisions = {
-    val startingPoint = wanderlust.keepId.map(VertexId(_)) orElse wanderlust.uriId.map(VertexId(_)) getOrElse VertexId(wanderlust.userId)
-    val preferredCollisions = getPreferredCollisions(wanderlust)
-    val rawCollisions = doWander(startingPoint, preferredCollisions, wanderlust.steps, wanderlust.restartProbability)
+    val startingVertexKind = VertexKind.apply(wanderlust.startingVertexTypeCode)
+    val startingVertexId = VertexId(startingVertexKind)(wanderlust.startingVertexDataId)
+    val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
+    val rawCollisions = doWander(startingVertexId, preferredCollisions, wanderlust.steps, wanderlust.restartProbability)
     getCollisions(rawCollisions)
   }
 
-  private def doWander(startingPoint: VertexId, preferredCollisions: Set[VertexType], steps: Int, restartProbability: Double): Map[VertexId, Int] = {
+  private def doWander(startingVertexId: VertexId, preferredCollisions: Set[VertexType], steps: Int, restartProbability: Double): Map[VertexId, Int] = {
     val journal = new DestinationJournal()
     graph.readOnly { reader =>
       val wanderer = reader.getNewVertexReader()
       val scout = reader.getNewVertexReader()
       val scoutingWanderer = new ScoutingWanderer(wanderer, scout)
-      val teleporter = new UniformTeleporter(Set(startingPoint), preferredCollisions, restartProbability)
+      val teleporter = new UniformTeleporter(Set(startingVertexId), preferredCollisions, restartProbability)
       val resolver = new RestrictedDestinationResolver(VertexKind.all)
       scoutingWanderer.wander(steps, teleporter, resolver, journal)
     }
@@ -42,12 +43,5 @@ class WanderingCommander @Inject() (graph: GraphManager) {
       case (vertexId, count) => extra += vertexId.toString() -> count
     }
     Collisions(users.toMap, uris.toMap, extra.toMap)
-  }
-
-  private def getPreferredCollisions(wanderlust: Wanderlust): Set[VertexType] = {
-    val preferredCollisions = mutable.Set[VertexType]()
-    if (wanderlust.encourageUserCollisions) preferredCollisions += UserReader
-    if (wanderlust.encourageUriCollisions) preferredCollisions += UriReader
-    preferredCollisions.toSet
   }
 }

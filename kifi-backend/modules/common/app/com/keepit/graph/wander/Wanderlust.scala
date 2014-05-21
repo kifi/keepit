@@ -1,17 +1,15 @@
 package com.keepit.graph.wander
 
 import com.keepit.common.db.Id
-import com.keepit.model.{Keep, NormalizedURI, User}
+import com.keepit.model.{NormalizedURI, User}
 import play.api.libs.json._
 
 case class Wanderlust(
-  userId: Id[User],
-  uriId: Option[Id[NormalizedURI]],
-  keepId: Option[Id[Keep]],
-  encourageUserCollisions: Boolean,
-  encourageUriCollisions: Boolean,
-  steps: Int,
-  restartProbability: Double
+  startingVertexTypeCode: String,
+  startingVertexDataId: Long,
+  preferredCollisions: Set[String],
+  steps: Int = 10000,
+  restartProbability: Double = 0.15
 )
 
 object Wanderlust {
