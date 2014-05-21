@@ -157,9 +157,8 @@ class SearchServiceClientImpl(
     if (uriIds.isEmpty) {
       Promise.successful(Seq[SharingUserInfo]()).future
     } else {
-      log.info("running sharingUserInfo[multi] in distributed mode")
       val route = Search.internal.sharingUserInfo(userId)
-      val plan = distRouter.planRemoteOnly(2)
+      val plan = distRouter.planRemoteOnly()
 
       val result = new ListBuffer[Future[Map[Id[NormalizedURI], SharingUserInfo]]]
       plan.foreach{ case (instance, shards) =>
