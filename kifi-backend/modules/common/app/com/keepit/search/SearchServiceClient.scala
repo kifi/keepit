@@ -148,15 +148,15 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>
-    if(userId.id == 7L) {
+    val futureResponse = if (userId.id == 7L) {
       log.info("running sharingUserInfo[single] in distributed mode")
-      distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
-        Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
-      }
+      distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id)))
     } else {
-      call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
-        Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
-      }
+      call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id)))
+    }
+
+    futureResponse map { r =>
+      Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
     }
   }
 

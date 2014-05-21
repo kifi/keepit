@@ -72,22 +72,22 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   private[this] val rnd = new Random()
 
   // call a single service instance that has a shard for the sharding key
-  def call[R](shardingKey: Id[T])(body: (ServiceInstance) => R): R = call(shardingKey, body, 1, 3)
+  def call[R](shardingKey: Id[T])(body: (ServiceInstance) => R): R = call[R](shardingKey, body, 1, 3)
 
   private def call[R](id: Id[T], body: (ServiceInstance) => R, attempts: Int, maxAttempts: Int): R = {
 
     val table = routingTable // for safety
 
-    var i = 0
     val candidate: ShardedServiceInstance[T] = {
       // first choose a <shard,instances> pair. there is a single shard per sharding strategy.
       // using the reservoir algorithm
+      var numEntries = 0
       var candidateShard: Shard[T] = null
       table.foreach{ case (shard, instances) =>
         if (shard.contains(id)) {
           val size = instances.size
-          i += size
-          if (rnd.nextInt(i) < size) candidateShard = shard
+          numEntries += size
+          if (rnd.nextInt(numEntries) < size) candidateShard = shard
         }
       }
       if (candidateShard == null) {
@@ -105,7 +105,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       if (attempts < maxAttempts) {
         // failed to find an instance. there may an unreachable instance. reload routingTable and try again
         reload()
-        return call(id, body, attempts + 1, maxAttempts) // retry
+        call(id, body, attempts + 1, maxAttempts) // retry
       } else {
         forceReloadFromZK()
         throw new DispatchFailedException(s"no instance found for id=$id")
