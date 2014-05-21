@@ -33,6 +33,7 @@ import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
+import scala.util.matching.Regex.Match
 
 abstract class MessageSegment(val kind: String, val txt: String) //for use in templates since you can't match on type (it seems)
 case class TextLookHereSegment(override val txt: String, pageText: String) extends MessageSegment("tlh", txt)
@@ -279,24 +280,30 @@ class ElizaEmailCommander @Inject() (
 object ElizaEmailCommander {
 
   def parseMessage(msg: String): Seq[MessageSegment] = {
+
+    def unescape(string: String) = string.replace(raw"\]","]").replace(raw"\)",")")
+    def parseSegment(m: Match) = {
+      val segments = m.group(3).split('|')
+      val kind = segments.head
+      val payload = unescape(URLDecoder.decode(segments.last, "UTF-8"))
+      val text = unescape(m.group(1))
+      kind match {
+        case "i" => ImageLookHereSegment(text, payload)
+        case "r" => TextLookHereSegment(text, payload)
+        case _ => throw new Exception("Unknown look-here type: " + kind)
+      }
+    }
+
     try {
       val re = """\[((?:(?:[^\]]*)\\\])*(?:[^\]]*)+)\](\(x-kifi-sel:((?:(?:[^\)]*)\\\))*(?:[^\)]*)+)\))""".r
-      val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
-      tokens.map{ token =>
-        re.findFirstMatchIn(token).map { m =>
-          val segments = m.group(3).split('|')
-          val kind = segments.head
-          val payload = URLDecoder.decode(segments.last, "UTF-8")
-          val text = m.group(1)
-          kind match {
-            case "i" => ImageLookHereSegment(text, payload)
-            case "r" => TextLookHereSegment(text, payload)
-            case _ => throw new Exception("Unknown look-here type: " + kind)
-          }
-        } getOrElse {
-          TextSegment(token)
-        }
+      val (position, segments) = re.findAllMatchIn(msg).foldLeft((0,Seq[MessageSegment]())){ (acc, m) =>
+        val (currPos, seq) = acc
+        val lookHereSegment = parseSegment(m)
+        (m.end, if (m.start > currPos) seq :+ TextSegment(unescape(msg.substring(currPos, m.start))) :+ lookHereSegment
+                else seq :+ lookHereSegment)
       }
+      val ending = TextSegment(unescape(msg.substring(position)))
+      if (ending.txt.length > 0) segments :+ ending else segments
     } catch {
       case t: Throwable => {
         throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
