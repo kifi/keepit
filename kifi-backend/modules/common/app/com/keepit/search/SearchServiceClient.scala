@@ -148,14 +148,7 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>
-    val futureResponse = if (userId.id == 7L) {
-      log.info("running sharingUserInfo[single] in distributed mode")
-      distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id)))
-    } else {
-      call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id)))
-    }
-
-    futureResponse map { r =>
+    distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
       Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
     }
   }
@@ -163,7 +156,7 @@ class SearchServiceClientImpl(
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
     if (uriIds.isEmpty) {
       Promise.successful(Seq[SharingUserInfo]()).future
-    } else if (userId.id == 7L) {
+    } else {
       log.info("running sharingUserInfo[multi] in distributed mode")
       val route = Search.internal.sharingUserInfo(userId)
       val plan = distRouter.planRemoteOnly(2)
@@ -182,10 +175,6 @@ class SearchServiceClientImpl(
       Future.sequence(result).map{ infos =>
         val mapping = infos.reduce(_ ++ _)
         uriIds.map(mapping)
-      }
-    } else {
-      call(Search.internal.sharingUserInfo(userId), Json.toJson(uriIds.map(_.id))) map { r =>
-        Json.fromJson[Seq[SharingUserInfo]](r.json).get
       }
     }
   }
