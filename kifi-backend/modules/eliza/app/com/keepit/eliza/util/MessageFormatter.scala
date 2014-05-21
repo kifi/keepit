@@ -40,6 +40,7 @@ object MessageFormatter {
     val matches = try {
       lookHereRe.findAllMatchIn(msg)
     } catch {
+      // Parsing regexes may sometimes cause stack overflow errors (typically when using alternations)
       case t: StackOverflowError => throw new Exception(s"Exception during parsing of message $msg", t)
     }
     val (position, segments) = matches.foldLeft((0,Seq[MessageSegment]())){ (acc, m) =>
