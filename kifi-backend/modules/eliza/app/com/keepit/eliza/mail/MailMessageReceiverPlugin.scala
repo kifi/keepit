@@ -94,7 +94,7 @@ class MailDiscussionMessageParser @Inject() (
   implicit val publicIdConfiguration: PublicIdConfiguration
   ) extends GenericMailParser {
 
-  private val DiscussionEmail = raw"""^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
+  private val DiscussionEmail = """^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
 
   private def getPublicId(message: Message): Option[String] = {
     message.getAllRecipients.map(getAddr).map {
