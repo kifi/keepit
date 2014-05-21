@@ -82,12 +82,13 @@ main {
 .k-video {
   position: relative;
   z-index: 1;
-  top: 81px;
-  width: 85px;
-  height: 60px;
+  top: 73px;
+  left: -8px;
+  width: 75px;
+  height: 50px;
   border: none;
   opacity: 0;
-  -webkit-transform: scale(2.5);
+  -webkit-transform: scale(1.6,2.6);
 }
 .k-top-bottom {
   position: absolute;

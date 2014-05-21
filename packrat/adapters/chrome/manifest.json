@@ -100,6 +100,9 @@
     "<all_urls>"
   ],
   "web_accessible_resources": [
+    "images/*.gif",
+    "images/*.jpg",
+    "images/*.png",
     "styles/iframes/login.css",
     "scripts/html/iframes/login.js",
     "scripts/iframes/login.js",

@@ -4,7 +4,6 @@ import com.google.inject.Inject
 
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.db._
-import com.keepit.common.strings._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.time._
@@ -23,7 +22,7 @@ import play.api.libs.json._
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.store.{S3ImageStore, ImageSize}
+import com.keepit.common.store.S3ImageStore
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance._
@@ -139,7 +138,6 @@ class KeepsCommander @Inject() (
       case Success(keep) =>
         SafeFuture{
           searchClient.updateURIGraph()
-          notifyWhoKeptMyKeeps(userId, Seq(keep))
         }
         KeepInfo.fromBookmark(keep)
     }
@@ -158,63 +156,8 @@ class KeepsCommander @Inject() (
     }
     SafeFuture{
       searchClient.updateURIGraph()
-      notifyWhoKeptMyKeeps(userId, keeps)
     }
     (keeps.map(KeepInfo.fromBookmark), addedToCollection)
-  }
-
-  /**
-   * This is a very experimental test, needs to be tested and verified with product as there are few concepts here that are
-   * not part of the "regular" flow of kifi, like having unconnected people know about each public keeps etc.
-   * To be explicit, this is an internal only experiment and likely to be removed soon.
-   */
-  private def notifyWhoKeptMyKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = keeps.filterNot(_.isPrivate).filter(_.id.isDefined) foreach { keep =>
-    notifyWhoKeptMyKeep(userId, keep.id.get)
-  }
-
-  private def notifyWhoKeptMyKeep(userId: Id[User], keepId: Id[Keep]): Unit = {
-    import scala.concurrent.duration._
-    // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
-    scheduler.scheduleOnce(5 minutes) {
-      try {
-        val (keeper, otherKeepers, uri) = db.readOnly { implicit s =>
-          val keep = keepRepo.get(keepId)
-          //deal only with good standing, fully public keeps and uris
-          if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
-          val uri = uriRepo.get(keep.uriId)
-          if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
-          val countPublicActiveByUri = keepRepo.countPublicActiveByUri(uri.id.get)
-          //don't mess with keeps that are even a bit popular, has more then four keepers (with the latest keeper). we don't want to create noise, be extra careful
-          val maxKeepers = 5
-          if (countPublicActiveByUri <= 1 || countPublicActiveByUri > maxKeepers) return
-          val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE).filterNot(_.userId == userId)
-          if (otherKeeps.length > (maxKeepers - 1)) return // how did that happen???
-          val keeper = userRepo.get(keep.userId)
-          val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
-            localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
-          }
-          (keeper, otherKeepers, uri)
-        }
-        val title = s"${keeper.fullName} also kept your keep"
-        log.info(s"""[WKMK] "$title" for $keeper to $otherKeepers""")
-        val userImageSize = Some(53)
-        val picName = keeper.pictureName.getOrElse("0")
-        imageStore.getPictureUrl(userImageSize, keeper, picName) map { userImage =>
-          log.info(s"""[WKMK] $keeper using image $userImage""")
-          val title = s"""Thank you! ${keeper.fullName} also kept your keep"""
-          val category = NotificationCategory.User.WHO_KEPT_MY_KEEP
-          val bodyHtml = uri.title.get.abbreviate(80)
-          eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, title, uri.url, userImage, sticky = false, category) onComplete {
-            case Success(id) => log.info(s"""[WKMK] sent [$id] "$title" or $keeper to $otherKeepers""")
-            case Failure(ex) => log.error(s"""[WKMK] Error sending "$title" for $keeper to $otherKeepers""", ex)
-          }
-        } onFailure {
-          case ex: Throwable => log.error(s"""[WKMK] Error sending "$title" for $keeper with picName $picName to $otherKeepers""", ex)
-        }
-      } catch {
-        case e: Exception => airbrake.notify(s"[WKMK] Error sending for user $userId and keep $keepId", e)
-      }
-    }
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
