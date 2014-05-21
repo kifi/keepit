@@ -1,5 +1,6 @@
 package com.keepit.eliza.model
 import com.keepit.eliza.commanders.MessageSegment
+import com.keepit.model.User
 
 
 case class ThreadEmailInfo(
@@ -11,6 +12,7 @@ case class ThreadEmailInfo(
   pageDescription: Option[String],
   participants: Seq[String],
   conversationStarter: String,
+  invitedByUser: Option[User],
   unsubUrl: Option[String],
   muteUrl: Option[String],
   readTimeMinutes: Option[Int])
