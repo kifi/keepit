@@ -21,9 +21,30 @@ class AttributionCommander @Inject() (
   kifiHitCache: KifiHitCache
 ) extends Logging {
 
+  // potentially expensive -- admin only
+  def getUserReKeepsByDegree(keepIds:Set[Id[Keep]], n:Int = 3):Map[Id[Keep], Seq[Set[Id[User]]]] = {
+    require(keepIds.size >= 0 && keepIds.size <= 50, s"getUserReKeepsByDegree() illegal argument keepIds.size=${keepIds.size}")
+    if (keepIds.isEmpty) Map.empty[Id[Keep], Seq[Set[Id[User]]]]
+    else {
+      val keeps = db.readOnly(dbMasterSlave = Slave) { implicit ro => keepIds.map { keepRepo.get } }
+      val userKeeps = keeps.groupBy(_.userId)
+
+      // sequential -- no need to overload shoebox
+      val res = userKeeps.map { case (userId, keeps) =>
+        keeps.toSeq.map { keep =>
+          keep.id.get -> getReKeepsByDegree(userId, keep.id.get, n).map {
+            _._1
+          }
+        }
+      }.flatten.toMap
+      log.info(s"getUserReKeepsByDegree res=$res")
+      res
+    }
+  }
+
   // potentially expensive -- admin only for now; will be called infrequently (cron job) later
   def getReKeepsByDegree(keeperId:Id[User], keepId:Id[Keep], n:Int = 3):Seq[(Set[Id[User]], Set[Id[Keep]])] = {
-    require(n > 1 && n < 5, s"getRKBD($keeperId, $keepId) illegal argument (degree=$n)")
+    require(n > 1 && n < 5, s"getReKeepsByDegree($keeperId, $keepId) illegal argument (degree=$n)")
     val rekeepsByDeg = new Array[Set[Id[Keep]]](n)
     rekeepsByDeg(0) = Set(keepId)
     val usersByDeg = new Array[Set[Id[User]]](n)

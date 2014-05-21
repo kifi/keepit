@@ -331,7 +331,8 @@ GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttribut
 GET     /admin/myKeepInfos           @com.keepit.controllers.admin.AdminAttributionController.myKeepInfos()
 GET     /admin/myReKeeps             @com.keepit.controllers.admin.AdminAttributionController.myReKeeps()
 GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttributionController.keepInfos(id:Id[User])
-GET     /admin/reKeeps/:id             @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
+GET     /admin/reKeeps/:id           @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
+GET     /admin/keepAttribution       @com.keepit.controllers.admin.AdminAttributionController.keepAttribution(degree:Int ?= 3)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
