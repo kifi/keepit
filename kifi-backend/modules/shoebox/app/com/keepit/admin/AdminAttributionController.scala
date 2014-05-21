@@ -121,12 +121,16 @@ class AdminAttributionController @Inject()(
     }
     val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(20).toMap
     val byDeg = attributionCmdr.getUserReKeepsByDegree(filtered.map(_._1).toSet)
-    val userIds = byDeg.map(_._2).flatten.foldLeft(Set.empty[Id[User]]) {(a,c) => a ++ c}
+    val sorted = byDeg.toSeq.sortBy{ case (keepId, usersByDeg) => usersByDeg.flatten.length }(Ordering[Int].reverse)
+    val userIds = sorted.map(_._2).flatten.foldLeft(Set.empty[Id[User]]) {(a,c) => a ++ c}
     val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.toSeq) }
-    val richByDeg = byDeg.map { case(kId, userIdsByDeg) =>
+    val richByDeg = sorted.map{ case(kId, userIdsByDeg) =>
       db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(kId) -> userIdsByDeg.map(_.map(uId => users(uId))) }
     }
-    Ok(html.admin.keepAttribution(degree, richByDeg))
+    val grouped = richByDeg.groupBy(_._1.uriId).map { case (uriId, keepsAndUsers) =>
+      db.readOnly(dbMasterSlave = Slave) { implicit ro => uriRepo.get(uriId) -> keepsAndUsers }
+    }.toSeq.sortBy{ case (uri, keepsAndUsers) => keepsAndUsers.map{_._2.flatten}.length }(Ordering[Int].reverse)
+    Ok(html.admin.keepAttribution(degree, grouped))
   }
 
 }
