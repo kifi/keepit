@@ -11,7 +11,6 @@ import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInf
 import play.api.Play._
 import com.keepit.typeahead.socialusers._
 import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
-import com.keepit.common.embedly.EmbedlyClient
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {

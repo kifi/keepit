@@ -9,7 +9,6 @@ import scala.Some
 import com.keepit.common.store.{S3URIImageStore, ImageSize}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
-import com.keepit.common.embedly.EmbedlyClient
 import com.keepit.common.pagepeeker.PagePeekerClient
 import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
