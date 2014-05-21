@@ -119,6 +119,18 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
       }
     }
 
+    "update user name" in {
+      running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
+        val (user1965, _) = setupSomeUsers()
+        val shoeboxController = inject[ShoeboxController]
+        val result = shoeboxController.updateUserName(user1965.id.get, "Shanee", "Smith")(FakeRequest())
+        status(result) must equalTo(OK);
+        val user = db.readOnly {implicit s => userRepo.get(user1965.id.get)}
+        user.firstName === "Shanee"
+        user.lastName === "Smith"
+      }
+    }
+
     "return phrases changed from the database" in {
       running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
