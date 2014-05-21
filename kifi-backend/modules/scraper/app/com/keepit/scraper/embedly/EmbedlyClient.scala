@@ -35,27 +35,31 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
+  private def parseEmbedlyInfo(resp: Response): Option[EmbedlyInfo] = {
+    parseExtendedEmbedlyInfo(resp).map{ extInfo => EmbedlyInfo.fromExtendedEmbedlyInfo(extInfo)}
+  }
+
+  private def parseExtendedEmbedlyInfo(resp: Response): Option[ExtendedEmbedlyInfo] = {
+    resp.status match {
+      case Status.OK =>
+        val js = Json.parse(resp.body) // resp.json has some issues
+        val extractRespOpt = js.validate[ExtendedEmbedlyInfo].fold(
+          valid = (res => Some(res)),
+          invalid = (e => {
+            log.info(s"Failed to parse JSON: body=${resp.body} errors=${e.toString}")
+            None
+          }))
+        extractRespOpt
+      case _ => None
+    }
+  }
+
   override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = {
     val apiUrl = embedlyUrl(url)
     fetchPageInfoConsolidator(apiUrl) { urlString =>
       fetchWithRetry(apiUrl, 120000) map { resp =>
-        log.info(s"getEmbedlyInfo($url)] resp.status=${resp.statusText} body=${resp.body}")
-        resp.status match {
-          case Status.OK =>
-            val js = Json.parse(resp.body) // resp.json has some issues
-          val extractRespOpt = js.validate[EmbedlyInfo].fold(
-              valid = (res => Some(res)),
-              invalid = (e => {
-                log.info(s"Failed to parse JSON: body=${resp.body} errors=${e.toString}")
-                None
-              })
-            )
-            log.info(s"extractRespOpt=$extractRespOpt")
-            extractRespOpt
-          case _ => // todo(ray): need better handling of error codes
-            log.info(s"ERROR while invoking ($apiUrl): status=${resp.status} body=${resp.body}")
-            None
-        }
+        parseEmbedlyInfo(resp)
+
       } recover { case t:Throwable =>
         log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
         None

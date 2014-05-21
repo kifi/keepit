@@ -81,7 +81,7 @@ object EmbedlyInfo {
     (__ \ 'images).format[Seq[EmbedlyImage]]
     )(EmbedlyInfo.apply _, unlift(EmbedlyInfo.unapply))
 
-   def fromExtendedEmbedlyInfo(extInfo: EmbedlyInfo): EmbedlyInfo = {
+   def fromExtendedEmbedlyInfo(extInfo: ExtendedEmbedlyInfo): EmbedlyInfo = {
      EmbedlyInfo(extInfo.originalUrl, extInfo.url, extInfo.title, extInfo.description, extInfo.content, extInfo.safe, extInfo.lang, extInfo.faviconUrl, extInfo.images)
   }
 }
