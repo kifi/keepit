@@ -33,6 +33,24 @@ class ElizaEmailCommanderTest extends Specification with TestInjector {
         TextLookHereSegment("t[ha]t", """b(a)r"""),
         TextSegment("."))
     }
+
+    "parse message text starting with a range look-here link" in {
+      val msg = """[t[hi\]s](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|f(o\)o)[t[ha\]t](x-kifi-sel:r|body>div:nth-child(1\)|p.a|0:6|p.b|0:9|b(a\)r)some text"""
+      ElizaEmailCommander.parseMessage(msg) === Seq(
+        TextLookHereSegment("t[hi]s", """f(o)o"""),
+        TextLookHereSegment("t[ha]t", """b(a)r"""),
+        TextSegment("some text"))
+    }
+
+    "parse message text containing just a range look-here link" in {
+      val msg = """[t[hi\]s](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|f(o\)o)"""
+      ElizaEmailCommander.parseMessage(msg) === Seq(TextLookHereSegment("t[hi]s", """f(o)o"""))
+    }
+
+    "parse message text containing only text" in {
+      val msg = """check this out"""
+      ElizaEmailCommander.parseMessage(msg) === Seq(TextSegment("check this out"))
+    }
   }
 
 }
