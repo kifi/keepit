@@ -307,12 +307,10 @@ class ShoeboxController @Inject() (
   }
 
   def getProxyP = SafeAsyncAction(parse.tolerantJson) { request =>
-    val ts = System.currentTimeMillis
     val url = request.body.as[String]
     val httpProxyOpt = db.readOnly(2, Slave) { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.debug(s"[getProxyP] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
