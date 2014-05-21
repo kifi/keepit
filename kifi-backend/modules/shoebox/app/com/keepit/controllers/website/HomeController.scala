@@ -135,9 +135,6 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-      // The old site can be delivered with:
-      // Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/index.html").get)) as HTML
-      // Remove this comment once we're happy with Angular for everyone
       Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
     }
   }
@@ -160,10 +157,14 @@ class HomeController @Inject() (
       if (agentOpt.exists(_.isMobile)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-        val agentClass = if (isIphone) "iphone" else ""
-        Ok(views.html.marketing.mobileLanding(false, agentClass))
+        if (isIphone) {
+          Ok(views.html.marketing.iPhoneLanding())
+        } else {
+          val agentClass = if (isIphone) "iphone" else ""
+          Ok(views.html.marketing.mobileLanding(false, agentClass))
+        }
       } else {
-        Ok(views.html.marketing.landing())
+        Ok(views.html.marketing.landingNew())
       }
     }
   }

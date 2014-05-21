@@ -1,0 +1,18 @@
+@(isLoggedIn: Boolean)
+
+    <header id="header">
+
+      <div class="wrap clearfix">
+          <a href="/" class="left" id="logo"><img class="non_mobile" src="http://images-b-prod.s3.amazonaws.com/assets/site/logo.svg"><img class="mobile" src="http://images-b-prod.s3.amazonaws.com/assets/site/logo_mobile.svg"></a>
+            @if(isLoggedIn) {
+            <div class="right">
+              <a href="/" class="button blue_inverted">Home</a>
+            </div>
+            } else {
+            <div class="right">
+              <a href="/login" class="button blue_inverted">Log In</a>
+            </div>
+            }
+        </div>
+
+    </header>
