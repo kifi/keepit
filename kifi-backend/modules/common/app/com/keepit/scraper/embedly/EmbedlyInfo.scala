@@ -11,6 +11,8 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.model.ImageProvider
 import play.api.libs.json._
+import com.keepit.common.time.DateTimeJsonFormat
+import org.joda.time.DateTime
 
 
 
@@ -76,4 +78,51 @@ object EmbedlyInfo {
     (__ \ 'favicon_url).formatNullable[String] and
     (__ \ 'images).format[Seq[EmbedlyImage]]
     )(EmbedlyInfo.apply _, unlift(EmbedlyInfo.unapply))
+
+   def fromExtendedEmbedlyInfo(extInfo: EmbedlyInfo): EmbedlyInfo = {
+     EmbedlyInfo(extInfo.originalUrl, extInfo.url, extInfo.title, extInfo.description, extInfo.content, extInfo.safe, extInfo.lang, extInfo.faviconUrl, extInfo.images)
+  }
+}
+
+case class EmbedlyEntity(count: Int, entity: String)
+case class EmbedlyKeyword(score: Int, keyword: String)
+
+case class ExtendedEmbedlyInfo(
+  uriId: Id[NormalizedURI],
+  originalUrl: String,
+  url: Option[String],
+  title: Option[String],
+  description: Option[String],
+  content: Option[String],
+  safe: Option[Boolean],
+  lang: Option[String],
+  faviconUrl: Option[String],
+  images: Seq[EmbedlyImage],
+  entities: Seq[EmbedlyEntity],
+  keywords: Seq[EmbedlyKeyword],
+  calledEmbedlyAt: DateTime
+)
+
+object ExtendedEmbedlyInfo {
+  val EMPTY = ExtendedEmbedlyInfo(Id[NormalizedURI](-1), "", None, None, None, None, None, None, None, Seq(), Seq(), Seq(), DateTime.now())
+
+  implicit val idFormat = Id.format[NormalizedURI]
+  implicit val entityFormat = Json.format[EmbedlyEntity]
+  implicit val keywordFormat = Json.format[EmbedlyKeyword]
+
+  implicit val format = (
+    (__ \'uriId).format[Id[NormalizedURI]] and
+    (__ \ 'original_url).format[String] and
+    (__ \ 'url).formatNullable[String] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'content).formatNullable[String] and
+    (__ \ 'safe).formatNullable[Boolean] and
+    (__ \ 'language).formatNullable[String] and
+    (__ \ 'favicon_url).formatNullable[String] and
+    (__ \ 'images).format[Seq[EmbedlyImage]] and
+    (__ \'entities).format[Seq[EmbedlyEntity]] and
+    (__ \'keywords).format[Seq[EmbedlyKeyword]] and
+    (__ \ 'calledEmbedlyAt).format[DateTime]
+  )(ExtendedEmbedlyInfo.apply _, unlift(ExtendedEmbedlyInfo.unapply))
 }
