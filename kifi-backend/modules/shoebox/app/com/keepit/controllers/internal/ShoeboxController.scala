@@ -703,4 +703,13 @@ class ShoeboxController @Inject() (
       Ok(Json.toJson(url))
     }
   }
+
+  def updateUserName(userId: Id[User], firstName: String, lastName: String) = Action { request =>
+    db.readWrite { implicit session =>
+      val user = userRepo.get(userId)
+      userRepo.save(user.withName(firstName, lastName))
+    }
+    Ok
+  }
+
 }

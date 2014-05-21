@@ -410,17 +410,17 @@ POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
-GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
+GET     /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
 GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
-GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
-GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
+GET     /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
+GET     /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 
 GET     /admin/users/fixFortyTwoUsers          @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialUsers(readOnly: Boolean ?= true)
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
-POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
+POST    /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 GET     /admin/ripest_fruit @com.keepit.controllers.admin.AdminSocialUserController.ripestFruitView(uid: Long ?= 0, n: Int ?= 0)
@@ -644,6 +644,8 @@ POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
 POST     /internal/shoebox/database/getVerifiedAddressOwners  @com.keepit.controllers.internal.ShoeboxController.getVerifiedAddressOwners()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxController.getAllURLPatternRules()
+
+POST     /internal/shoebox/database/updateUserName   @com.keepit.controllers.internal.ShoeboxController.updateUserName(userId: Id[User], firstName: String, lastName: String)
 
 GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateUriScreenshotsForUriId(id: Id[NormalizedURI])
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
