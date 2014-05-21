@@ -28,22 +28,33 @@ object EdgeDataReader {
 
 sealed trait EdgeKind[E <: EdgeDataReader] {
   implicit def kind: EdgeKind[E] = this
+
+  // Binary Helpers
   implicit def header: Byte
   def apply(rawDataReader: RawDataReader): E
 
+  // Json helpers
+  val code: String = toString.stripSuffix("Reader")
   def writes: Writes[E]
   def readsAsEdgeData: Reads[EdgeData[E]]
 }
 
 object EdgeKind {
   type EdgeType = EdgeKind[_ <: EdgeDataReader]
-  val all: Set[EdgeKind[_ <: EdgeDataReader]] = CompanionTypeSystem[EdgeDataReader, EdgeKind[_ <: EdgeDataReader]]("E")
-  private val byHeader: Map[Byte, EdgeKind[_ <: EdgeDataReader]] = {
+  val all: Set[EdgeType] = CompanionTypeSystem[EdgeDataReader, EdgeKind[_ <: EdgeDataReader]]("E")
+
+  private val byHeader: Map[Byte, EdgeType] = {
     require(all.forall(_.header > 0), "EdgeKind headers must be positive.")
     require(all.size == all.map(_.header).size, "Duplicate EdgeKind headers")
     all.map { edgeKind => edgeKind.header -> edgeKind }.toMap
   }
-  def apply(header: Byte): EdgeKind[_ <: EdgeDataReader] = byHeader(header)
+  def apply(header: Byte): EdgeType = byHeader(header)
+
+  private val byCode: Map[String, EdgeType] = {
+    require(all.size == all.map(_.code).size, "Duplicate EdgeKind codes.")
+    all.map { edgeKind => edgeKind.code -> edgeKind }.toMap
+  }
+  def apply(code: String): EdgeType = byCode(code)
 }
 
 trait EmptyEdgeReader extends EdgeDataReader {
