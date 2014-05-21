@@ -11,12 +11,15 @@ import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.graph.manager.{PrettyGraphState, PrettyGraphStatistics}
 import play.api.Mode
 import play.api.Mode.Mode
+import com.keepit.graph.wander.{Wanderlust, Collisions}
+import play.api.libs.json.Json
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
 
   def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]]
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
+  def wander(wanderlust: Wanderlust): Future[Collisions]
 }
 
 class GraphServiceClientImpl(
@@ -50,5 +53,10 @@ class GraphServiceClientImpl(
         response.request.instance.get.instanceInfo.instanceId -> response.json.as[PrettyGraphState]
       }.toMap
     }
+  }
+
+  def wander(wanderlust: Wanderlust): Future[Collisions] = {
+    val payload = Json.toJson(wanderlust)
+    call(Graph.internal.wander(), payload).map { response => response.json.as[Collisions] }
   }
 }

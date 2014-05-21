@@ -11,6 +11,8 @@ trait Teleporter {
 case class UniformTeleporter(destinations: Set[VertexId], teleportCondition: Set[VertexKind[_ <: VertexDataReader]], teleportProbability: Double) extends Teleporter {
   require(destinations.nonEmpty, "The supplied destination set is empty.")
 
+  private def mayTeleport(wanderer: VertexReader): Boolean = teleportCondition.isEmpty || teleportCondition.contains(wanderer.kind)
+
   private val teleportAlmostSurely = {
     val probability = 1d / destinations.size
     val density = destinations.map { vertexId => vertexId -> probability }.toSeq
@@ -24,8 +26,8 @@ case class UniformTeleporter(destinations: Set[VertexId], teleportCondition: Set
 
   def surely = teleportAlmostSurely.sample(Math.random()).get
 
-  def maybe(position: VertexReader): Option[VertexId] = {
-    if (!teleportCondition.contains(position.kind)) { None }
-    else { teleportMaybe.sample(Math.random()) }
+  def maybe(wanderer: VertexReader): Option[VertexId] = {
+    if (mayTeleport(wanderer)) { teleportMaybe.sample(Math.random()) }
+    else None
   }
 }
