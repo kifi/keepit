@@ -32,9 +32,7 @@ class AttributionCommander @Inject() (
       // sequential -- no need to overload shoebox
       val res = userKeeps.map { case (userId, keeps) =>
         keeps.toSeq.map { keep =>
-          keep.id.get -> getReKeepsByDegree(userId, keep.id.get, n).map {
-            _._1
-          }
+          keep.id.get -> getReKeepsByDegree(userId, keep.id.get, n).map { case (userIdsByDeg, _) => userIdsByDeg }
         }
       }.flatten.toMap
       log.info(s"getUserReKeepsByDegree res=$res")
