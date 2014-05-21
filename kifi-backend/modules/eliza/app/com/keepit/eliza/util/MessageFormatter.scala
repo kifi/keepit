@@ -10,7 +10,7 @@ case class TextSegment(override val txt: String) extends MessageSegment("txt", t
 
 object MessageFormatter {
 
-  private[this] val lookHereRe = """\[([^\]]*(?:(?<=(?:\\\\){0,4}\\)\][^\]]*)*)\](\(x-kifi-sel:([^)]*(?:(?<=(?:\\\\){0,4}\\)\)[^)]*)*)\))""".r
+  private[this] val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
   private[this] val escapedBackslashOrRightBracketRe = """\\([\]\\])""".r
   private[this] val escapedBackslashOrRightParenRe = """\\([\)\\])""".r
 
@@ -28,7 +28,7 @@ object MessageFormatter {
   def parseMessageSegments(msg: String): Seq[MessageSegment] = {
 
     def parseSegment(m: Match) = {
-      val segments = m.group(3).split('|')
+      val segments = m.group(2).split('|')
       val kind = segments.head
       val payload = escapedBackslashOrRightParenRe.replaceAllIn(URLDecoder.decode(segments.last, "UTF-8"), "$1")
       val text = escapedBackslashOrRightBracketRe.replaceAllIn(m.group(1), "$1")
