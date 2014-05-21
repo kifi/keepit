@@ -14,4 +14,3 @@ class S3ArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3,
   extends S3JsonStore[Id[NormalizedURI], Article] with ArticleStore
 
 class InMemoryArticleStoreImpl extends InMemoryObjectStore[Id[NormalizedURI], Article] with ArticleStore
-

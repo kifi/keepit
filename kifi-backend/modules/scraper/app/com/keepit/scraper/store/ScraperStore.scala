@@ -10,6 +10,7 @@ import com.keepit.common.aws.AwsModule
 import com.keepit.common.logging.AccessLog
 import com.keepit.learning.porndetector._
 import com.google.inject.Provider
+import com.keepit.scraper.embedly._
 
 case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -29,6 +30,13 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
     new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
   }
+
+  @Singleton
+  @Provides
+  def embedlyStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EmbedlyStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.embedly.bucket").get)
+    new S3EmbedlyStoreImpl(bucketName, amazonS3Client, accessLog)
+  }
 }
 
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
@@ -42,11 +50,19 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
 
   @Singleton
   @Provides
-  def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) ={
+  def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) = {
     whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
       prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryPornWordLikelihoodStore() {
       override def get(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
     })
+  }
+
+  @Singleton
+  @Provides
+  def embedlyStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): EmbedlyStore = {
+    whenConfigured("amazon.s3.embedly.bucket")(
+      prodStoreModule.embedlyStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryEmbedlyStoreImpl())
   }
 }
