@@ -10,9 +10,9 @@ import com.keepit.model.NormalizedURI
 import play.api.libs.json.Format
 
 
-trait EmbedlyStore extends ObjectStore[Id[NormalizedURI], ExtendedEmbedlyInfo]
+trait EmbedlyStore extends ObjectStore[Id[NormalizedURI], StoredExtendedEmbedlyInfo]
 
-class S3EmbedlyStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[ExtendedEmbedlyInfo] = ExtendedEmbedlyInfo.format)
-  extends S3JsonStore[Id[NormalizedURI], ExtendedEmbedlyInfo] with EmbedlyStore
+class S3EmbedlyStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[StoredExtendedEmbedlyInfo] = StoredExtendedEmbedlyInfo.format)
+  extends S3JsonStore[Id[NormalizedURI], StoredExtendedEmbedlyInfo] with EmbedlyStore
 
-class InMemoryArticleStoreImpl extends InMemoryObjectStore[Id[NormalizedURI], ExtendedEmbedlyInfo] with EmbedlyStore
+class InMemoryArticleStoreImpl extends InMemoryObjectStore[Id[NormalizedURI], StoredExtendedEmbedlyInfo] with EmbedlyStore

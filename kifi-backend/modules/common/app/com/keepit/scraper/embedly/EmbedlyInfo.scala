@@ -36,6 +36,8 @@ object EmbedlyImage {
     )(EmbedlyImage.apply _, unlift(EmbedlyImage.unapply))
 }
 
+// field names must match embedly json field so that js.validate[EmbedlyInfo] works
+
 case class EmbedlyInfo(
   originalUrl:String,
   url:Option[String],
@@ -84,11 +86,11 @@ object EmbedlyInfo {
   }
 }
 
-case class EmbedlyEntity(count: Int, entity: String)
-case class EmbedlyKeyword(score: Int, keyword: String)
+//again, field names matches embedly json for convenient extraction
+case class EmbedlyEntity(count: Int, name: String)
+case class EmbedlyKeyword(score: Int, name: String)
 
 case class ExtendedEmbedlyInfo(
-  uriId: Id[NormalizedURI],
   originalUrl: String,
   url: Option[String],
   title: Option[String],
@@ -99,19 +101,17 @@ case class ExtendedEmbedlyInfo(
   faviconUrl: Option[String],
   images: Seq[EmbedlyImage],
   entities: Seq[EmbedlyEntity],
-  keywords: Seq[EmbedlyKeyword],
-  calledEmbedlyAt: DateTime
+  keywords: Seq[EmbedlyKeyword]
 )
 
 object ExtendedEmbedlyInfo {
-  val EMPTY = ExtendedEmbedlyInfo(Id[NormalizedURI](-1), "", None, None, None, None, None, None, None, Seq(), Seq(), Seq(), DateTime.now())
+  val EMPTY = ExtendedEmbedlyInfo( "", None, None, None, None, None, None, None, Seq(), Seq(), Seq())
 
   implicit val idFormat = Id.format[NormalizedURI]
   implicit val entityFormat = Json.format[EmbedlyEntity]
   implicit val keywordFormat = Json.format[EmbedlyKeyword]
 
   implicit val format = (
-    (__ \'uriId).format[Id[NormalizedURI]] and
     (__ \ 'original_url).format[String] and
     (__ \ 'url).formatNullable[String] and
     (__ \ 'title).formatNullable[String] and
@@ -122,7 +122,21 @@ object ExtendedEmbedlyInfo {
     (__ \ 'favicon_url).formatNullable[String] and
     (__ \ 'images).format[Seq[EmbedlyImage]] and
     (__ \'entities).format[Seq[EmbedlyEntity]] and
-    (__ \'keywords).format[Seq[EmbedlyKeyword]] and
-    (__ \ 'calledEmbedlyAt).format[DateTime]
+    (__ \'keywords).format[Seq[EmbedlyKeyword]]
   )(ExtendedEmbedlyInfo.apply _, unlift(ExtendedEmbedlyInfo.unapply))
+}
+
+case class StoredExtendedEmbedlyInfo(
+  uriId: Id[NormalizedURI],
+  calledEmbedlyAt: DateTime,
+  info: ExtendedEmbedlyInfo
+)
+
+object StoredExtendedEmbedlyInfo {
+  implicit val idFormat = Id.format[NormalizedURI]
+  implicit val format = (
+    (__ \'uriId).format[Id[NormalizedURI]] and
+    (__ \'calledEmbedlyAt).format[DateTime] and
+    (__ \ 'info).format[ExtendedEmbedlyInfo]
+  )(StoredExtendedEmbedlyInfo.apply _, unlift(StoredExtendedEmbedlyInfo.unapply))
 }
