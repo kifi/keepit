@@ -16,7 +16,6 @@ import play.api.data._
 import play.api.data.Forms._
 import views.html
 import scala.util.{Failure, Success, Try}
-import com.keepit.common.embedly.EmbedlyClient
 import com.keepit.commanders.URISummaryCommander
 import com.keepit.scraper.ScraperServiceClient
 
