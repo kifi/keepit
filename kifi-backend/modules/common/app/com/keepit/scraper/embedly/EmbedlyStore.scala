@@ -15,4 +15,4 @@ trait EmbedlyStore extends ObjectStore[Id[NormalizedURI], StoredExtendedEmbedlyI
 class S3EmbedlyStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[StoredExtendedEmbedlyInfo] = StoredExtendedEmbedlyInfo.format)
   extends S3JsonStore[Id[NormalizedURI], StoredExtendedEmbedlyInfo] with EmbedlyStore
 
-class InMemoryArticleStoreImpl extends InMemoryObjectStore[Id[NormalizedURI], StoredExtendedEmbedlyInfo] with EmbedlyStore
+class InMemoryEmbedlyStoreImpl extends InMemoryObjectStore[Id[NormalizedURI], StoredExtendedEmbedlyInfo] with EmbedlyStore
