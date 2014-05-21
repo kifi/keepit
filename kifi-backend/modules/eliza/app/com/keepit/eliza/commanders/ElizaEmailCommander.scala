@@ -33,11 +33,8 @@ import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
-
-abstract class MessageSegment(val kind: String, val txt: String) //for use in templates since you can't match on type (it seems)
-case class TextLookHereSegment(override val txt: String, pageText: String) extends MessageSegment("tlh", txt)
-case class ImageLookHereSegment(override val txt: String, imgUrl: String) extends MessageSegment("ilh", txt)
-case class TextSegment(override val txt: String) extends MessageSegment("txt", txt)
+import scala.util.matching.Regex.Match
+import com.keepit.eliza.util.{MessageFormatter, TextSegment}
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -138,7 +135,7 @@ class ElizaEmailCommander @Inject() (
     }
 
     relevantMessages.filterNot(_.from.isSystem).map{ message =>
-      val messageSegments = ElizaEmailCommander.parseMessage(message.messageText)
+      val messageSegments = MessageFormatter.parseMessageSegments(message.messageText)
       message.from match {
         case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
         case MessageSender.NonUser(nup) => {
@@ -277,32 +274,6 @@ class ElizaEmailCommander @Inject() (
 }
 
 object ElizaEmailCommander {
-
-  def parseMessage(msg: String): Seq[MessageSegment] = {
-    try {
-      val re = """\[((?:(?:[^\]]*)\\\])*(?:[^\]]*)+)\](\(x-kifi-sel:((?:(?:[^\)]*)\\\))*(?:[^\)]*)+)\))""".r
-      val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
-      tokens.map{ token =>
-        re.findFirstMatchIn(token).map { m =>
-          val segments = m.group(3).split('|')
-          val kind = segments.head
-          val payload = URLDecoder.decode(segments.last, "UTF-8")
-          val text = m.group(1)
-          kind match {
-            case "i" => ImageLookHereSegment(text, payload)
-            case "r" => TextLookHereSegment(text, payload)
-            case _ => throw new Exception("Unknown look-here type: " + kind)
-          }
-        } getOrElse {
-          TextSegment(token)
-        }
-      }
-    } catch {
-      case t: Throwable => {
-        throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
-      }
-    }
-  }
 
   /**
    * This function is meant to be used from the console, to see how emails look like without deploying to production
