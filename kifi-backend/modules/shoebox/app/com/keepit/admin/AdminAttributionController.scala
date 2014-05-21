@@ -115,4 +115,18 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.myKeepInfos(u, clicks, clickCounts, rekeeps, rekepts, rkCounts))
   }
 
+  def keepAttribution(degree:Int) = AdminHtmlAction.authenticated { request =>
+    val rkMap = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+      rekeepRepo.getAllDirectReKeepCountsByKeep()
+    }
+    val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(20).toMap
+    val byDeg = attributionCmdr.getUserReKeepsByDegree(filtered.map(_._1).toSet)
+    val userIds = byDeg.map(_._2).flatten.foldLeft(Set.empty[Id[User]]) {(a,c) => a ++ c}
+    val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.toSeq) }
+    val richByDeg = byDeg.map { case(kId, userIdsByDeg) =>
+      db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(kId) -> userIdsByDeg.map(_.map(uId => users(uId))) }
+    }
+    Ok(html.admin.keepAttribution(degree, richByDeg))
+  }
+
 }
