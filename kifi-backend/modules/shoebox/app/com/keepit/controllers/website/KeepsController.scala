@@ -71,6 +71,7 @@ class KeepsController @Inject() (
           urls.map( url => url -> uriRepo.getByUri(url) )
         } map { case uris =>
           val results = uris.map { case (uri, ssOpt) =>
+            log.info(s"Retrieving screenshot url for uri $uri with optional id $ssOpt")
             uri -> (ssOpt.flatMap{uriSummaryCommander.getScreenshotURL(_)}.map(JsString).getOrElse(JsNull): JsValue)
           }
           Ok(Json.obj("urls" -> JsObject(results)))
