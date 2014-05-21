@@ -46,12 +46,11 @@ object ExperimentType {
   val SHOW_DISCUSSIONS = ExperimentType("show_discussions")
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
   val HELPRANK = ExperimentType("helprank")
-  val IGNORE_VERSION_TIME_TRAVEL = ExperimentType("ignore_version_time_travel")
   val GUIDE = ExperimentType("guide")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: HELPRANK :: IGNORE_VERSION_TIME_TRAVEL :: GUIDE :: Nil
+    MOBILE_REDIRECT :: HELPRANK :: GUIDE :: Nil
 
   val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 

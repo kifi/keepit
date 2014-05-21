@@ -1,6 +1,6 @@
 package com.keepit.eliza.model
-import com.keepit.eliza.commanders.MessageSegment
 import com.keepit.model.User
+import com.keepit.eliza.util.MessageSegment
 
 
 case class ThreadEmailInfo(
