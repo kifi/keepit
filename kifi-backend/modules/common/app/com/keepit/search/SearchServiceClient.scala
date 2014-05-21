@@ -148,6 +148,10 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>
+    if(userId.id == 7L) return distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
+      log.info("running in distributed mode")
+      Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
+    }
     call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
       Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
     }
@@ -156,6 +160,23 @@ class SearchServiceClientImpl(
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
     if (uriIds.isEmpty) {
       Promise.successful(Seq[SharingUserInfo]()).future
+    } else if (userId.id == 7L) {
+      log.info("running in distributed mode")
+      val route = Search.internal.sharingUserInfo(userId)
+      val plan = distRouter.planRemoteOnly(2)
+
+      val result = new ListBuffer[Future[Seq[SharingUserInfo]]]
+      plan.foreach{ case (instance, shards) =>
+        val filteredUriIds = uriIds.filter{ id => shards.exists(_.contains(id)) }
+        if (filteredUriIds.nonEmpty) {
+          val future = call(instance, route, Json.toJson(filteredUriIds.map(_.id))) map { r =>
+            Json.fromJson[Seq[SharingUserInfo]](r.json).get
+          }
+          result += future
+        }
+      }
+
+      Future.sequence(result).map(_.flatten)
     } else {
       call(Search.internal.sharingUserInfo(userId), Json.toJson(uriIds.map(_.id))) map { r =>
         Json.fromJson[Seq[SharingUserInfo]](r.json).get
@@ -222,7 +243,7 @@ class SearchServiceClientImpl(
   }
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
-    call(Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
+    distRouter.call(uriId, Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {

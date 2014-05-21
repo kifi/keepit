@@ -71,8 +71,8 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
 
   private[this] val rnd = new Random()
 
-  // call a single service instance that has a shard for for id
-  def call[R](id: Id[T])(body: (ServiceInstance) => R): R = call(id, body, 1, 3)
+  // call a single service instance that has a shard for the sharding key
+  def call[R](shardingKey: Id[T])(body: (ServiceInstance) => R): R = call(shardingKey, body, 1, 3)
 
   private def call[R](id: Id[T], body: (ServiceInstance) => R, attempts: Int, maxAttempts: Int): R = {
 
