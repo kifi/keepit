@@ -117,8 +117,7 @@ class HomeController @Inject() (
     }
     val ua = agentOpt.get.userAgent
     val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-    val agentClass = if (isIphone) "iphone" else ""
-    Ok(views.html.marketing.mobileLanding(false, agentClass))
+    Ok(views.html.marketing.mobileLanding(false, ""))
   }
 
   def home = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
