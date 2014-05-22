@@ -35,6 +35,7 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
+  // tmp solution. later we might remove EmbedlyInfo class all together.
   private def parseEmbedlyInfo(resp: Response): Option[EmbedlyInfo] = {
     parseExtendedEmbedlyInfo(resp).map{ extInfo => EmbedlyInfo.fromExtendedEmbedlyInfo(extInfo)}
   }
