@@ -132,7 +132,7 @@ class AdminAttributionController @Inject()(
       val rkMap = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
         rekeepRepo.getAllDirectReKeepCountsByKeep()
       }
-      val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(20).toMap
+      val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(10).toMap
       val byDeg = attributionCmdr.getUserReKeepsByDegree(filtered.map(_._1).toSet, degree)
       val sorted = byDeg.toSeq.sortBy{ case (keepId, usersByDeg) => usersByDeg.flatten.length }(Ordering[Int].reverse)
       val userIds = sorted.map(_._2).flatten.foldLeft(Set.empty[Id[User]]) {(a,c) => a ++ c}

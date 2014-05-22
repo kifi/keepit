@@ -4,44 +4,37 @@
 
 <ul>
     <li>The following shows a <i>global</i> list of rekeeps</li>
+    <li>See <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.myReKeeps()">MyReeKeeps</a> page for a <i>personalized</i> list of rekeeps</li>
 </ul>
 
 <h2>Popular ReKeeps</h2>
 <table class="table table-bordered table-striped table-responsive table-hover">
     <th><tr>
-        <td>UriId</td>
+        <td >UriId</td>
         <td width="20%">Url</td>
-        <td>ReKeeps</td>
+        @for(i <- 0 until n) {
+          <td>Deg-@i</td>
+        }
     </tr></th>
     @for((uri, keepsAndUsers) <- grouped) {
-    <tr>
-        <td>@uri.id.get</td>
-        <td><a href="@uri.url"/>@uri.url</a></td>
-        <td>
-          <table class="table table-bordered">
-            <tr>
-                @for(i <- 0 until n) {
-                <td>Deg+@i</td>
-                }
-            </tr>
-            @for((keep, usersByDeg) <- keepsAndUsers) {
-              <tr>
-              @for(users <- usersByDeg) {
-                <td>
-                    <table class="table table-condensed">
-                        @for(u <- users) {
-                        <tr><td>@adminHelper.userDisplay(u)</td></tr>
-                        }
-                    </table>
-                </td>
-              }
-              </tr>
+      <tr>
+        <td rowspan="@(keepsAndUsers.length + 1)">@uri.id.get</td>
+        <td rowspan="@(keepsAndUsers.length + 1)"><a href="@uri.url"/>@uri.url</a></td>
+      </tr>
+
+      @for((keep, usersByDeg) <- keepsAndUsers) {
+        <tr>
+            @for(users <- usersByDeg) {
+            <td>
+                <table class="table table-condensed">
+                    @for(u <- users) {
+                      <tr><td>@adminHelper.userDisplay(u)</td></tr>
+                    }
+                </table>
+            </td>
             }
-          </table>
-        </td>
-    </tr>
+        </tr>
+      }
     }
 </table>
-
-
 }
