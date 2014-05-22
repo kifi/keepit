@@ -22,11 +22,13 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
+import com.keepit.search.feed.FeedCommander
 
 class SearchController @Inject()(
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
+    feedCommander: FeedCommander,
     userExperimentCommander: RemoteUserExperimentCommander
   ) extends SearchServiceController {
 
@@ -80,6 +82,14 @@ class SearchController @Inject()(
     Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map{ case (lang, freq) => lang.lang -> freq }))
   }
 
+  def distFeeds() = Action(parse.tolerantJson){ request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val userId = Id[User]((json \ "request").as[Long])
+    val limit = (json \ "limit").as[Int]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    Ok(Json.toJson(feedCommander.distFeeds(shards, userId, limit)))
+  }
 
   //internal (from eliza/shoebox)
   def warmUpUser(userId: Id[User]) = Action { request =>
