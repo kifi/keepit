@@ -143,8 +143,9 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         };
 
         scope.onClickKeep = function (keep, $event) {
-          return; // short circuting, not used yet.
-          if ($event.target.tagName !== 'A') {
+          return keep || $event; // so that jshint doesn't complain
+          // commenting out, not used yet.
+          /*if ($event.target.tagName !== 'A') {
             if ($event.ctrlKey || $event.metaKey) {
               if (scope.isSelected(keep)) {
                 scope.unselect(keep);
@@ -156,7 +157,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             }
           } else if (scope.keepClick) {
             scope.keepClick(keep, $event);
-          }
+          }*/
         };
 
         scope.isScrollDisabled = function () {

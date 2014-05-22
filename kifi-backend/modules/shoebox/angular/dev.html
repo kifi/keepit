@@ -12,9 +12,10 @@
 <body>
   <div class="kf-cols" ng-controller="AppCtrl">
     <header class="kf-header" ng-include="'layout/header/header.tpl.html'"></header>
-    <aside class="kf-col kf-col-left" ng-include="'layout/leftCol/leftCol.tpl.html'">
-    </aside><section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'">
+    <aside class="kf-col kf-sidebar" ng-include="'layout/sidebar/sidebar.tpl.html'">
+    </aside><section class="kf-scrollable-pane"><section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'">
     </section><aside class="kf-col kf-col-right" ng-include="'layout/rightCol/rightCol.tpl.html'"></aside>
+    </section>
   </div>
   <script>
     !function (d, s) {

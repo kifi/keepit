@@ -1,11 +1,15 @@
 'use strict';
 
-angular.module('kifi.layout.header', ['kifi.modal'])
+angular.module('kifi.layout.header', ['kifi.profileService'])
 
 .controller('HeaderCtrl', [
-  '$scope', 'profileService',
-  function ($scope, profileService) {
+  '$scope', '$rootElement', 'profileService',
+  function ($scope, $rootElement, profileService) {
     
+    $scope.toggleMenu = function () {
+      $rootElement.toggleClass('kf-sidebar-active');
+    };
+
     $scope.logout = function () {
       profileService.logout();
     };

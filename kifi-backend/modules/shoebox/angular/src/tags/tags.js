@@ -24,8 +24,8 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 ])
 
 .directive('kfTags', [
-  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'profileService',
-  function ($timeout, $window, $rootScope, $location, util, dom, tagService, profileService) {
+  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService',
+  function ($timeout, $window, $rootScope, $location, util, dom, tagService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,

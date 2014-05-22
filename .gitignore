@@ -96,6 +96,7 @@ kifi-backend/modules/scraper/.cache
 ###############
 workspace.xml
 *.sublime-project
+*.sublime-workspace
 
 # Logs and databases #
 ######################
@@ -142,3 +143,4 @@ patch.diff
 # IDEA #
 ###########
 kifi-backend/modules/shoebox/angular/.idea/*
+

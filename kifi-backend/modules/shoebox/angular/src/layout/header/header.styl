@@ -12,18 +12,50 @@
 .kf-header-left
   float: left
   height: 100%
-  margin-left: 110px
+  margin-left: 30px
   line-height: 62px
   box-sizing: border-box
   text-align: center
+  
+.kf-header-toggle-menu
+.kf-header-left-separator
+.kf-header-profile-picture
+.kf-header-logo
+  vertical-align: middle
+
+.kf-header-toggle-menu
+.kf-header-left-separator
+  display: none
+
+.kf-header-profile-picture
+.kf-header-logo
+  display: inline-block
+  
+.kf-header-toggle-menu
+  cursor: pointer
+  width: 30px
+  padding: 0 13px
+
+.kf-header-left-separator
+  height: 35px
+  border: 1px solid #7d7d7d
+
+.kf-header-profile-picture
+  width: 30px
+  padding: 0 6px 0 13px
 
 .kf-header-logo
-  position: relative
-  top: 9px
-  display: inline-block
   width: 51px
   height: 29px
-  background: url(/img/kifi-logo.png) 0/100%
+  padding-left: 6px
+
+@media (max-width: 900px)
+  .kf-header-toggle-menu
+  .kf-header-left-separator
+    display: inline-block
+
+  .kf-header-left
+    margin-left: 20px
 
 a.kf-header-callout
   position: relative
