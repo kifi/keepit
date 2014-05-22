@@ -77,11 +77,6 @@ a?"1":"0"),e)}}};p.utils=d;"undefined"!=typeof module&&module.exports?module.exp
     }
   });
 
-  document.querySelector('.k-install').addEventListener('click', function (event) {
-    window.location.href = this.href;
-    event.returnValue = false;
-  });
-
   function updateTopHeight() {
     var h = $top.offsetHeight;
     $main.style.paddingTop = h + 'px';
@@ -96,7 +91,7 @@ a?"1":"0"),e)}}};p.utils=d;"undefined"!=typeof module&&module.exports?module.exp
   }
 
   function initIScroll() {
-    scroller = new IScroll(document.body, {probeType: 3, disableMouse: true, disablePointer: true});
+    scroller = new IScroll(document.body, {probeType: 3, disableMouse: true, disablePointer: true, click: true});
     scroller.on('scroll', updateTopPosition);
     scroller.on('scrollEnd', updateTopPosition);
   }
