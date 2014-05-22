@@ -88,7 +88,7 @@ class AttributionCommander @Inject() (
     }
     rekeepCountsF map { rekeepCounts =>
       val rekeepStats = rekeepCounts.map { case ((keepId, uriId), rekeepCount) =>
-        (keepId, uriId) -> (rekeepCount, getReKeepsByDegree(userId, keepId, n).map(_._1).flatten.length - 1)
+        (keepId, uriId) -> (rekeepCount, getReKeepsByDegree(userId, keepId, n).map(_._1).flatten.length - 1) // exclude self
       }
       log.info(s"[updateReKeepStats($userId)] rekeepStats=${rekeepStats.mkString(",")}")
 
