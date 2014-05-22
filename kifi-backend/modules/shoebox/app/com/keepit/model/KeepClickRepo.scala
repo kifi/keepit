@@ -52,7 +52,7 @@ class KeepClickRepoImpl @Inject() (
   }
 
   def getClicksByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Seq[KeepClick] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getClickCountsByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
