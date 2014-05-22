@@ -77,7 +77,7 @@ panes.settings = function () {
     if (this.dataset.val !== val) { // bugzil.la/126379
       this.dataset.val = val;
       var $status = showSpinner(this);
-      api.port.emit('set_max_results', val, succeed.bind(null, $status));
+      api.port.emit('set_max_results', +val, succeed.bind(null, $status));
     }
   }
 
