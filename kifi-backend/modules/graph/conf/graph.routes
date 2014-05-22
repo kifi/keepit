@@ -2,5 +2,6 @@
 POST    /internal/wander              @com.keepit.graph.controllers.internal.GraphController.wander()
 GET     /internal/graph/statistics      @com.keepit.graph.controllers.internal.GraphController.getGraphStatistics()
 GET     /internal/graph/state           @com.keepit.graph.controllers.internal.GraphController.getGraphUpdaterState()
+GET     /internal/graph/kinds           @com.keepit.graph.controllers.internal.GraphController.getGraphKinds()
 
 ->  / common.Routes
