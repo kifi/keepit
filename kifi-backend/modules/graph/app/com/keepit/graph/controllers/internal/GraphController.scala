@@ -8,6 +8,7 @@ import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.graph.wander.{Wanderlust, WanderingCommander}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.graph.model.{EdgeKind, VertexKind, GraphKinds}
 
 class GraphController @Inject() (
   graphManager: GraphManager,
@@ -30,6 +31,12 @@ class GraphController @Inject() (
   def getGraphUpdaterState() = Action { request =>
     val state = graphManager.state
     val json = Json.toJson(GraphUpdaterState.prettify(state))
+    Ok(json)
+  }
+
+  def getGraphKinds() = Action { request =>
+    val graphKinds = GraphKinds(VertexKind.all.map(_.code), EdgeKind.all.map(_.code))
+    val json = Json.toJson(graphKinds)
     Ok(json)
   }
 }

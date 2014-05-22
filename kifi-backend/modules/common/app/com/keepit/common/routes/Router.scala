@@ -303,6 +303,7 @@ object Graph extends Service {
   object internal {
     def getGraphStatistics() = ServiceRoute(GET, "/internal/graph/statistics")
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
+    def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
     def wander() = ServiceRoute(POST, "/internal/graph/wander")
   }
 }

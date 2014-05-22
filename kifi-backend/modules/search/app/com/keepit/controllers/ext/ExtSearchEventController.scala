@@ -25,7 +25,11 @@ class ExtSearchEventController @Inject() (
     val clickedAt = currentDateTime
     val userId = request.userId
     val json = request.body
-    val basicSearchContext = json.as[BasicSearchContext]
+    val basicSearchContext = try {
+      json.as[BasicSearchContext]
+    } catch {
+      case t: Throwable => throw new Exception(s"can't parse BasicSearchContext or user $userId json: ${json.toString()}", t)
+    }
     val resultSource = (json \ "resultSource").as[String]
     val resultPosition = (json \ "resultPosition").as[Int]
     val searchResultUrl = (json \ "resultUrl").as[String]

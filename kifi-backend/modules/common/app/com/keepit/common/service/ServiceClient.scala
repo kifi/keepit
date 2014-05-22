@@ -131,7 +131,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }
 
-  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull, includeUnavailable: Boolean = false, includeSelf: Boolean = true): Seq[Future[ClientResponse]] = {
+  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull, includeUnavailable: Boolean = false, includeSelf: Boolean = false): Seq[Future[ClientResponse]] = {
     urls(call.url, includeUnavailable, includeSelf) map { url =>
       logBroadcast(url, body)
       callUrl(call, url, body)

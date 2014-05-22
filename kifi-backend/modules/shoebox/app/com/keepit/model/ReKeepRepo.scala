@@ -47,11 +47,11 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   }
 
   def getAllReKeepsByKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
