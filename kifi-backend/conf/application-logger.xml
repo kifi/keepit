@@ -18,6 +18,7 @@
   <logger name="com.keepit.access" level="OFF"/>
   <logger name="com.keepit.db" level="OFF"/>
   <logger name="com.keepit.cache" level="OFF"/>
+  <logger name="statsd.com.keepit" level="OFF"/>
 
   <root level="INFO">
     <appender-ref ref="ASYNC" />

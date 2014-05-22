@@ -307,12 +307,10 @@ class ShoeboxController @Inject() (
   }
 
   def getProxyP = SafeAsyncAction(parse.tolerantJson) { request =>
-    val ts = System.currentTimeMillis
     val url = request.body.as[String]
     val httpProxyOpt = db.readOnly(2, Slave) { implicit session =>
       urlPatternRuleRepo.getProxy(url)
     }
-    log.debug(s"[getProxyP] time-lapsed:${System.currentTimeMillis - ts} url=$url result=$httpProxyOpt")
     Ok(Json.toJson(httpProxyOpt))
   }
 
@@ -589,12 +587,6 @@ class ShoeboxController @Inject() (
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
-  }
-
-  def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
-    Ok(Json.toJson(db.readOnly { implicit s => //using cache
-      keepToCollectionRepo.getKeepsInCollection(collectionId) map keepRepo.get
-    }))
   }
 
   def getUriIdsInCollection(collectionId: Id[Collection]) = Action { request =>

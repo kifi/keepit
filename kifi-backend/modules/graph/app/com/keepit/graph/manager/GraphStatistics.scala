@@ -1,8 +1,9 @@
 package com.keepit.graph.manager
 
-import com.keepit.graph.model.{EdgeDataReader, EdgeKind, VertexDataReader, VertexKind}
-import com.keepit.graph.manager.GraphStatistics.{EdgeType, VertexType}
+import com.keepit.graph.model.{EdgeKind, VertexKind}
 import java.util.concurrent.atomic.AtomicLong
+import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.EdgeKind.EdgeType
 
 case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[(VertexType, VertexType, EdgeType), Long]) {
   def outgoingDegrees: Map[VertexType, Double] = {
@@ -31,9 +32,6 @@ case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[
 }
 
 object GraphStatistics {
-  type VertexType = VertexKind[_ <: VertexDataReader]
-  type EdgeType = EdgeKind[_ <: EdgeDataReader]
-
   private val allEdgeKinds: Set[(VertexType, VertexType, EdgeType)] = for {
     sourceKind <- VertexKind.all
     destinationKind <- VertexKind.all
@@ -55,10 +53,10 @@ object GraphStatistics {
 
     PrettyGraphStatistics(
       statistics.vertexCounts.map { case (vertexKind, count) =>
-        vertexKind.toString.stripSuffix("Reader") -> (count.toString, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
+        vertexKind.code -> (count.toString, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
       }.toMap,
       statistics.edgeCounts.map { case (edgeType @ (sourceKind, destinationKind, edgeKind), count) =>
-        (sourceKind.toString.stripSuffix("Reader"), destinationKind.toString.stripSuffix("Reader"), edgeKind.toString.stripSuffix("Reader")) -> (count.toString, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
+        (sourceKind.code, destinationKind.code, edgeKind.code) -> (count.toString, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
       }.toMap
     )
   }

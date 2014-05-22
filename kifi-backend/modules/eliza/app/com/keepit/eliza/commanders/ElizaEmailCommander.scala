@@ -33,11 +33,8 @@ import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
-
-abstract class MessageSegment(val kind: String) //for use in templates since you can't match on type (it seems)
-case class TextLookHereSegment(msgText: String, pageText: String) extends MessageSegment("tlh")
-case class ImageLookHereSegment(msgText: String, imgUrl: String) extends MessageSegment("ilh")
-case class TextSegment(txt: String) extends MessageSegment("txt")
+import scala.util.matching.Regex.Match
+import com.keepit.eliza.util.{MessageFormatter, TextSegment}
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -85,6 +82,7 @@ class ElizaEmailCommander @Inject() (
     isInitialEmail: Boolean,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
+    invitedByUser: Option[User],
     unsubUrl: Option[String] = None,
     muteUrl: Option[String] = None,
     readTimeMinutes: Option[Int] = None): ThreadEmailInfo = {
@@ -116,6 +114,7 @@ class ElizaEmailCommander @Inject() (
       pageDescription = uriSummary.description.map(_.take(190) + "..."),
       participants = participants.toSeq,
       conversationStarter = starterUser.firstName + " " + starterUser.lastName,
+      invitedByUser = invitedByUser,
       unsubUrl = unsubUrl,
       muteUrl = muteUrl,
       readTimeMinutes = readTimeMinutes
@@ -136,7 +135,7 @@ class ElizaEmailCommander @Inject() (
     }
 
     relevantMessages.filterNot(_.from.isSystem).map{ message =>
-      val messageSegments = ElizaEmailCommander.parseMessage(message.messageText)
+      val messageSegments = MessageFormatter.parseMessageSegments(message.messageText)
       message.from match {
         case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
         case MessageSender.NonUser(nup) => {
@@ -156,7 +155,7 @@ class ElizaEmailCommander @Inject() (
     }) getOrElse Future.successful(None)
   }
 
-  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
+  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], invitedByUserId: Option[Id[User]], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
 
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
@@ -171,7 +170,8 @@ class ElizaEmailCommander @Inject() (
       uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
       readTimeMinutesOpt <- readTimeMinutesOptFuture
     } yield {
-      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, unsubUrl, muteUrl, readTimeMinutesOpt)
+      val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
+      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl, readTimeMinutesOpt)
       val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
       val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
       val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
@@ -230,7 +230,7 @@ class ElizaEmailCommander @Inject() (
     db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nonUserThread.id.get, clock.now()) }
     val protoEmailFut = for {
       unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
-      protoEmail <- assembleEmail(messageThread, nonUserThread.lastNotifiedAt, None, Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token))
+      protoEmail <- assembleEmail(messageThread, nonUserThread.lastNotifiedAt, None, Some(nonUserThread.createdBy), Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token))
     } yield protoEmail
     protoEmailFut.onComplete { res =>
       res match {
@@ -258,7 +258,7 @@ class ElizaEmailCommander @Inject() (
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
-    val protoEmailFuture = assembleEmail(thread, None, Some(msg.createdAt), None, None)
+    val protoEmailFuture = assembleEmail(thread, None, Some(msg.createdAt), None, None, None)
     if (msg.auxData.isDefined) {
       if (msg.auxData.get.value(0)==JsString("start_with_emails")) {
         protoEmailFuture.map(_.initialHtml)
@@ -275,29 +275,28 @@ class ElizaEmailCommander @Inject() (
 
 object ElizaEmailCommander {
 
-  def parseMessage(msg: String): Seq[MessageSegment] = {
-    try {
-      val re = """\[((?:(?:[^\]]*)\\\])*(?:[^\]]*)+)\](\(x-kifi-sel:((?:(?:[^\)]*)\\\))*(?:[^\)]*)+)\))""".r
-      val tokens : Seq[String] = re.replaceAllIn(msg.replace("\t", " "), m => "\t" + m.matched.replace(")","\\)") + "\t").split('\t').map(_.trim).filter(_.length>0)
-      tokens.map{ token =>
-        re.findFirstMatchIn(token).map { m =>
-          val segments = m.group(3).split('|')
-          val kind = segments.head
-          val payload = URLDecoder.decode(segments.last, "UTF-8")
-          val text = m.group(1)
-          kind match {
-            case "i" => ImageLookHereSegment(text, payload)
-            case "r" => TextLookHereSegment(text, payload)
-            case _ => throw new Exception("Unknown look-here type: " + kind)
-          }
-        } getOrElse {
-          TextSegment(token)
-        }
-      }
-    } catch {
-      case t: Throwable => {
-        throw new Exception(s"Exception during parsing of message $msg. Exception was $t")
-      }
-    }
+  /**
+   * This function is meant to be used from the console, to see how emails look like without deploying to production
+   */
+  def makeDummyEmail(): String = {
+    val info = ThreadEmailInfo(
+      "http://www.wikipedia.org/aninterstingpage.html",
+      "Wikipedia",
+      "The Interesting Page That Everyone Should Read",
+      true,
+      Some("http:www://example.com/image0.jpg"),
+      Some("a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description "),
+      Seq("joe", "bob", "jack", "theguywithaverylongname"),
+      "bob",
+      None,
+      Some("http://www.example.com/iwanttounsubscribe.html"),
+      Some("http://www.example.com/iwanttomute.html"),
+      Some(10)
+    )
+    val threadItems = Seq(
+      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),
+      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else")))
+    )
+    views.html.next.nonUserEmailImageSmall(info, threadItems).body
   }
 }
