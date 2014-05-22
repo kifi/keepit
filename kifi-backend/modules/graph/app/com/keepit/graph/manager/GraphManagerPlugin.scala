@@ -8,12 +8,14 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Singleton, Inject}
+import scala.util.{Failure, Success}
 
 sealed trait GraphManagerActorMessage
 object GraphManagerActorMessage {
   case class UpdateGraph(customFetchSizes: Map[GraphUpdateKind[_ <: GraphUpdate], Int], defaultFetchSize: Int) extends GraphManagerActorMessage
   case class ProcessGraphUpdates[U <: GraphUpdate](updates: Seq[U], kind: GraphUpdateKind[U], fetchSize: Int) extends GraphManagerActorMessage
   case object BackupGraph extends GraphManagerActorMessage
+  case class CancelUpdate[U <: GraphUpdate](kind: GraphUpdateKind[U])
 }
 
 class GraphManagerActor @Inject() (
@@ -27,7 +29,10 @@ class GraphManagerActor @Inject() (
 
   private def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], fetchSize: Int): Unit = {
     val seq = graph.state.getCurrentSequenceNumber(kind)
-    graphUpdateFetcher.fetch(kind, seq, fetchSize).foreach { updates => self ! ProcessGraphUpdates(updates, kind, fetchSize) }
+    graphUpdateFetcher.fetch(kind, seq, fetchSize).onComplete {
+      case Success(updates) => self ! ProcessGraphUpdates(updates, kind, fetchSize)
+      case Failure(_) => self ! CancelUpdate(kind)
+    }
   }
 
   def receive = {
@@ -47,7 +52,10 @@ class GraphManagerActor @Inject() (
       else { fetch(kind, fetchSize) }
     }
 
+    case CancelUpdate(kind) => updating -= kind
+
     case BackupGraph => graph.backup()
+
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -61,7 +69,7 @@ class GraphManagerPlugin @Inject() (
 
   override def onStart() {
     log.info(s"starting $this")
-    scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map.empty, 100))
+    scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map(SparseLDAGraphUpdate -> 500), 100))
     scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }

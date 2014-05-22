@@ -1,22 +1,27 @@
 package com.keepit.common.cache
 
-import com.keepit.serializer.Serializer
+import com.keepit.serializer.{SafeLocalSerializer, NoCopyLocalSerializer, LocalSerializer, Serializer}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.concurrent.Future
 import play.api.libs.json._
-
+import com.keepit.common.performance._
+import com.keepit.common.logging.Logging
 
 class TransactionLocalCache[K <: Key[T], T] private(
   override val minTTL: Duration,
   override val maxTTL: Duration,
   override val outerCache: Option[ObjectCache[K, T]],
   underlying: ObjectCache[K, T],
-  serializer: Serializer[T]
-) extends ObjectCache[K, T] {
+  serializer: Serializer[T],
+  localSerializerOpt: Option[LocalSerializer[T]]
+) extends ObjectCache[K, T] with Logging {
 
   // outerCache is wrapped in ReadOnlyCacheWrapper to block updates silently
-  def this(underlying: ObjectCache[K, T], serializer: Serializer[T]) = this(Duration.Inf, Duration.Inf, Some(new ReadOnlyCacheWrapper(underlying)), underlying, serializer)
+  def this(underlying: ObjectCache[K, T], serializer: Serializer[T], localSerializerOpt:Option[LocalSerializer[T]]) =
+    this(Duration.Inf, Duration.Inf, Some(new ReadOnlyCacheWrapper(underlying)), underlying, serializer, localSerializerOpt)
+
+  val localSerializer:LocalSerializer[T] = localSerializerOpt.getOrElse(SafeLocalSerializer(serializer))
 
   sealed trait LocalObjectState
   case class LFound(value: Any) extends LocalObjectState
@@ -29,7 +34,7 @@ class TransactionLocalCache[K <: Key[T], T] private(
     txnLocalStore.get(key) match {
       case Some(state) =>
         state match {
-          case LFound(serialized) => Found(serializer.reads(serialized))
+          case LFound(serialized) => Found(localSerializer.localReads(serialized))
           case LNotFound() => NotFound()
           case LRemoved() => Removed()
         }
@@ -38,7 +43,7 @@ class TransactionLocalCache[K <: Key[T], T] private(
   }
 
   protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = {
-    txnLocalStore += (key -> LFound(serializer.writes(valueOpt)))
+    txnLocalStore += (key -> LFound(localSerializer.localWrites(valueOpt)))
   }
 
   protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
@@ -46,7 +51,7 @@ class TransactionLocalCache[K <: Key[T], T] private(
       txnLocalStore.get(key) match {
         case Some(state) =>
           state match {
-            case LFound(serialized) => result + (key -> Found(serializer.reads(serialized)))
+            case LFound(serialized) => result + (key -> Found(localSerializer.localReads(serialized)))
             case LRemoved() => result + (key -> Removed())
             case state => throw new Exception(s"this state ($state) should not be in the cache")
           }
@@ -63,7 +68,14 @@ class TransactionLocalCache[K <: Key[T], T] private(
     // all changes made in the transaction are going to be flushed directly to the underlying cache
     txnLocalStore.foreach{ case (key, state) =>
       state match {
-        case LFound(serialized) => underlying.set(key, serializer.reads(serialized))
+        case LFound(serialized) => {
+          val v = timing(s"TLCache-reads($key,${state.toString.take(500)})", 50) {
+            localSerializer.localReads(serialized)
+          }
+          timing(s"TLCache-writes($key,${state.toString.take(500)},$v)", 50) {
+            underlying.set(key, v)
+          }
+        }
         case LRemoved() => underlying.remove(key)
         case state => throw new Exception(s"this state ($state) should not be in the cache")
       }

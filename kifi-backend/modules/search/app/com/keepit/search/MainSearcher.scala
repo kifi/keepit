@@ -25,7 +25,7 @@ import com.keepit.search.util.HitQueue
 import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
-import com.keepit.search.result.ShardSearchResult
+import com.keepit.search.result.PartialSearchResult
 import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
 import com.keepit.search.result.FriendStats
@@ -121,8 +121,6 @@ class MainSearcher(
     val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future {getNonPersonalizedQueryContextVector(parser)}) else None
 
     timeLogs.queryParsing = parser.totalParseTime
-    timeLogs.phraseDetection = parser.phraseDetectionTime
-    timeLogs.nlpPhraseDetection = parser.nlpPhraseDetectionTime
 
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
@@ -170,7 +168,7 @@ class MainSearcher(
     (myHits, friendsHits, othersHits, personalizedSearcher)
   }
 
-  def search(): ShardSearchResult = {
+  def search(): PartialSearchResult = {
     val now = currentDateTime
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
@@ -332,7 +330,7 @@ class MainSearcher(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    ShardSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
+    PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
   private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
@@ -485,23 +483,19 @@ class SearchTimeLogs(
     var socialGraphInfo: Long = 0,
     var getClickBoost: Long = 0,
     var queryParsing: Long = 0,
-    var phraseDetection: Long = 0,
-    var nlpPhraseDetection: Long = 0,
     var personalizedSearcher: Long = 0,
     var search: Long = 0,
     var processHits: Long = 0,
     var total: Long = 0
-) {
+) extends Logging {
   def send(): Unit = {
-    Statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo)
-    Statsd.timing("mainSearch.queryParsing", queryParsing)
-    Statsd.timing("mainSearch.phraseDetection", phraseDetection)
-    Statsd.timing("mainSearch.nlpPhraseDetection", nlpPhraseDetection)
-    Statsd.timing("mainSearch.getClickboost", getClickBoost)
-    Statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher)
-    Statsd.timing("mainSearch.LuceneSearch", search)
-    Statsd.timing("mainSearch.processHits", processHits)
-    Statsd.timing("mainSearch.total", total)
+    statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo, ALWAYS)
+    statsd.timing("mainSearch.queryParsing", queryParsing, ALWAYS)
+    statsd.timing("mainSearch.getClickboost", getClickBoost, ALWAYS)
+    statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher, ALWAYS)
+    statsd.timing("mainSearch.LuceneSearch", search, ALWAYS)
+    statsd.timing("mainSearch.processHits", processHits, ALWAYS)
+    statsd.timing("mainSearch.total", total, ALWAYS)
   }
 
   override def toString() = {

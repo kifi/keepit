@@ -98,15 +98,21 @@ object NormalizedURI {
 case class UrlHash(hash: String) extends AnyVal
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
-  override val version = 5
+  override val version = 6
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
 
 case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] {
-  override val version = 4
+  override val version = 5
   val namespace = "uri_by_hash"
   def toKey(): String = urlHash.hash
+}
+
+case class NormalizedURIWordCountKey(id: Id[NormalizedURI]) extends Key[Int] {
+  override val version = 1
+  val namespace = "wc_by_uriId"
+  def toKey(): String = id.id.toString
 }
 
 class NormalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
@@ -115,47 +121,16 @@ class NormalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innermost
 class NormalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
+class NormalizedURIWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[NormalizedURIWordCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val REDIRECTED = State[NormalizedURI]("redirected")
 
-  type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
-
-  val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(REDIRECTED)),
-      (SCRAPED -> Set(INACTIVE, REDIRECTED)),
-      (SCRAPE_FAILED -> Set(INACTIVE, REDIRECTED)),
-      (UNSCRAPABLE -> Set(INACTIVE, REDIRECTED)),
-      (INACTIVE -> Set(ACTIVE, INACTIVE, REDIRECTED)),
-      (REDIRECTED -> Set(ACTIVE, INACTIVE, REDIRECTED)))
-
-  val ADMIN_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set.empty),
-      (SCRAPED -> Set(ACTIVE)),
-      (SCRAPE_FAILED -> Set(ACTIVE)),
-      (UNSCRAPABLE -> Set(ACTIVE)),
-      (INACTIVE -> Set.empty))
-
   val DO_NOT_SCRAPE = Set(INACTIVE, UNSCRAPABLE, REDIRECTED)
-
-  def transitionByAdmin[T](transition: (State[NormalizedURI], Set[State[NormalizedURI]]))(f:State[NormalizedURI]=>T) = {
-    f(validate(transition, ADMIN_TRANSITIONS))
-  }
-
-  def findNextState(transition: (State[NormalizedURI], Set[State[NormalizedURI]])) = validate(transition, ALL_TRANSITIONS)
-
-  private def validate(transition: (State[NormalizedURI], Set[State[NormalizedURI]]), transitions: Transitions): State[NormalizedURI] = {
-    transition match {
-      case (from, to) =>
-        transitions.get(from) match {
-          case Some(possibleStates) =>
-            (possibleStates intersect to).headOption.getOrElse(throw new StateException("invalid transition: %s -> %s".format(from, to)))
-          case None => throw new StateException("no such state: %s".format(from))
-        }
-    }
-  }
 }
 
 case class IndexableUri(
@@ -179,3 +154,4 @@ object IndexableUri {
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI])
   )(IndexableUri.apply, unlift(IndexableUri.unapply))
 }
+

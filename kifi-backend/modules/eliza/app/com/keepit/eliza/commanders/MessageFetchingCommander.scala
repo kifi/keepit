@@ -9,7 +9,7 @@ import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.{Json, JsArray, JsString, JsNumber}
+import play.api.libs.json.{Json, JsArray, JsString, JsNumber, JsBoolean, JsValue}
 import com.keepit.model.User
 import com.keepit.social.{BasicUserLikeEntity, BasicUser, BasicNonUser}
 import org.joda.time.DateTime
@@ -75,6 +75,35 @@ class MessageFetchingCommander @Inject() (
     getThreadMessagesWithBasicUser(thread)
   }
 
+  def processParticipantsMessage(jsAdderUserId: String, jsAddedUsers: Seq[JsValue], isInitialMessage: Boolean = false) : Future[(String, JsArray)]= {
+    val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition(_.isInstanceOf[JsNumber])
+    val addedUsers = addedUsersJson.map(id => Id[User](id.as[Long]))
+    val addedNonUsers = addedNonUsersJson.map(_.as[NonUserParticipant])
+    val adderUserId = Id[User](jsAdderUserId.toLong)
+    new SafeFuture(shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
+      val adderUser = basicUsers(adderUserId)
+      val addedBasicUsers = addedUsers.map(u => basicUsers(u)) ++ addedNonUsers.map(NonUserParticipant.toBasicNonUser)
+      val addedUsersString = addedBasicUsers.map{ bule =>
+        bule match {
+          case bu: BasicUser => s"${bu.firstName} ${bu.lastName}"
+          case bnu: BasicNonUser => bnu.lastName.map(ln =>  s"${bnu.firstName.get} $ln").getOrElse(bnu.firstName.get)
+          case _ => "Kifi User"
+        }
+      }.toList match {
+        case first :: Nil => first
+        case first :: second :: Nil => first + " and " + second
+        case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
+      }
+      if (isInitialMessage) {
+        val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} started a discussion with $addedUsersString on this page."
+        (friendlyMessage, Json.arr("start_with_emails", basicUsers(adderUserId), addedBasicUsers))
+      } else {
+        val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the discussion."
+        (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
+      }
+    })
+  }
+
 
   private def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
     if (m.user.isEmpty) {
@@ -82,37 +111,14 @@ class MessageFetchingCommander @Inject() (
         case Some(auxData) =>
           val auxModifiedFuture = auxData.value match {
             case JsString("add_participants") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ => {
-
-              val (addedUsersJson, addedNonUsersJson) = jsAddedUsers.partition{ json =>
-                json match {
-                  case JsNumber(_) => true
-                  case _ => false
-                }
-              }
-              val addedUsers = addedUsersJson.map(id => Id[User](id.as[Long]))
-              val addedNonUsers = addedNonUsersJson.map(_.as[NonUserParticipant])
-              val adderUserId = Id[User](jsAdderUserId.toLong)
-              new SafeFuture(shoebox.getBasicUsers(adderUserId +: addedUsers) map { basicUsers =>
-                val adderUser = basicUsers(adderUserId)
-                val addedBasicUsers = addedUsers.map(u => basicUsers(u)) ++ addedNonUsers.map(NonUserParticipant.toBasicNonUser)
-                val addedUsersString = addedBasicUsers.map{ bule =>
-                  bule match {
-                    case bu: BasicUser => s"${bu.firstName} ${bu.lastName}"
-                    case nup: BasicNonUser => s"${nup.firstName} ${nup.lastName}"
-                    case _ => "Kifi User"
-                  }
-                } match {
-                  case first :: Nil => first
-                  case first :: second :: Nil => first + " and " + second
-                  case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
-                }
-                val friendlyMessage = s"${adderUser.firstName} ${adderUser.lastName} added $addedUsersString to the conversation."
-                (friendlyMessage, Json.arr("add_participants", basicUsers(adderUserId), addedBasicUsers))
-              })
-
+              processParticipantsMessage(jsAdderUserId, jsAddedUsers)
             }
-            case s =>
+            case JsString("start_with_emails") +: JsString(jsAdderUserId) +: JsArray(jsAddedUsers) +: _ => {
+              processParticipantsMessage(jsAdderUserId, jsAddedUsers, true)
+            }
+            case s => {
               Promise.successful(("", Json.arr())).future
+            }
           }
           auxModifiedFuture.map { case (text, aux) =>
             m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))

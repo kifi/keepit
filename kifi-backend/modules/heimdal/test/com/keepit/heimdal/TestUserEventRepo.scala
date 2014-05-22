@@ -32,3 +32,14 @@ class TestAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
 
   override def persist(obj: AnonymousEvent) : Unit = synchronized { events = events :+ obj }
 }
+
+class TestNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
+
+  var events: Vector[NonUserEvent] = Vector()
+
+  def eventCount(): Int = events.length
+
+  def lastEvent(): NonUserEvent = events.head
+
+  override def persist(obj: NonUserEvent) : Unit = synchronized { events = events :+ obj }
+}

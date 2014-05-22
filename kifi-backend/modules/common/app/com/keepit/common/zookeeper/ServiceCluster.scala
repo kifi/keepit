@@ -156,8 +156,29 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     }
   }
 
-  private def resetRoutingList() =
+  private def resetRoutingList() = {
     routingList = Vector(instances.values.toSeq: _*)
+
+    customRouter.foreach{ myRouter =>
+      try {
+        myRouter.update(routingList, forceUpdateTopology)
+      } catch {
+        case e: Throwable =>
+          log.error("custom router update failed", e)
+          airbrake.get.notify(s"custom router update failed: serviceType=$serviceType customRouter=${customRouter.getClass.getSimpleName}")
+      }
+    }
+  }
+
+  @volatile
+  private[this] var customRouter: Option[CustomRouter] = None
+
+  def setCustomRouter(myRouter: Option[CustomRouter]): Unit = synchronized {
+    myRouter.foreach(_.update(routingList, forceUpdateTopology))
+    customRouter = myRouter
+  }
+
+  def getCustomRouter: Option[CustomRouter] = customRouter
 
   def refresh() = forceUpdateTopology()
 }

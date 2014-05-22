@@ -17,7 +17,7 @@ case class AbuseControlModule() extends ScalaModule {
   def keepsAbuseMonitor(keepRepo: KeepRepo, db: Database, airbrake: AirbrakeNotifier): KeepsAbuseMonitor =
     new KeepsAbuseMonitor(
       absoluteWarn = 5000,
-      absoluteError = 20000,
+      absoluteError = 40000,
       keepRepo = keepRepo,
       db = db,
       airbrake = airbrake)

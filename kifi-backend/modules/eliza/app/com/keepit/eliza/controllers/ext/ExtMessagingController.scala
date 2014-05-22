@@ -17,7 +17,6 @@ import com.keepit.common.mail.RemotePostOffice
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json.{Json, JsValue, JsObject}
-import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
@@ -86,7 +85,7 @@ class ExtMessagingController @Inject() (
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
     val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
     val tDiff = currentDateTime.getMillis - tStart.getMillis
-    Statsd.timing(s"messaging.replyMessage", tDiff)
+    statsd.timing(s"messaging.replyMessage", tDiff, ALWAYS)
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 

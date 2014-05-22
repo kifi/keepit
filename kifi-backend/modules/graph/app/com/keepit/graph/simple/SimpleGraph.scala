@@ -3,10 +3,11 @@ package com.keepit.graph.simple
 import scala.collection.concurrent.{Map => ConcurrentMap, TrieMap}
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.graph.model._
-import play.api.libs.json.{JsResult, JsValue, Format}
-import play.api.libs.json.JsArray
+import play.api.libs.json._
 import com.keepit.graph.manager.GraphStatistics
-
+import java.io.File
+import org.apache.commons.io.{LineIterator, FileUtils}
+import scala.collection.JavaConversions._
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
@@ -47,14 +48,26 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 }
 
 object SimpleGraph {
-  implicit val format: Format[SimpleGraph] = new Format[SimpleGraph] {
-    def writes(simpleGraph: SimpleGraph): JsValue = JsArray(simpleGraph.vertices.flatMap { case (vertexId, vertex) => Seq(VertexId.format.writes(vertexId), MutableVertex.format.writes(vertex)) }.toSeq)
-    def reads(json: JsValue): JsResult[SimpleGraph] = json.validate[JsArray].map { jsArray =>
-      val vertices = TrieMap[VertexId, MutableVertex]()
-      vertices ++= jsArray.value.sliding(2,2).map { case Seq(vertexId, vertex) =>
-        vertexId.as[VertexId] -> vertex.as[MutableVertex]
+  def write(graph: SimpleGraph, graphFile: File): Unit = {
+    val lines: Iterable[String] = graph.vertices.map { case (vertexId, vertex) => Json.stringify(
+      Json.arr(JsNumber(vertexId.id), Json.toJson(vertex))
+    )}
+    FileUtils.writeLines(graphFile, lines)
+  }
+
+  def read(graphFile: File): SimpleGraph = {
+    val vertices = TrieMap[VertexId, MutableVertex]()
+    val lineIterator = FileUtils.lineIterator(graphFile)
+    try {
+      lineIterator.foreach { case line =>
+        val JsArray(Seq(idJson, vertexJson)) = Json.parse(line)
+        val vertexId = idJson.as[VertexId]
+        val vertex = vertexJson.as[MutableVertex]
+        vertices += (vertexId -> vertex)
       }
-      SimpleGraph(vertices)
+    } finally {
+      LineIterator.closeQuietly(lineIterator)
     }
+    SimpleGraph(vertices)
   }
 }

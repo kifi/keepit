@@ -9,7 +9,6 @@ import scala.Some
 import com.keepit.common.store.{S3URIImageStore, ImageSize}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
-import com.keepit.common.embedly.EmbedlyClient
 import com.keepit.common.pagepeeker.PagePeekerClient
 import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
@@ -17,13 +16,14 @@ import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable
 import com.keepit.common.time._
+import com.keepit.scraper.ScraperServiceClient
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
   imageInfoRepo: ImageInfoRepo,
   pageInfoRepo: PageInfoRepo,
   db: Database,
-  embedlyClient: EmbedlyClient,
+  scraper: ScraperServiceClient,
   pagePeekerClient: PagePeekerClient,
   uriImageStore: S3URIImageStore,
   imageFetcher: ImageFetcher,
@@ -47,7 +47,7 @@ class URISummaryCommander @Inject()(
   def getURISummaryForRequest(request: URISummaryRequest): Future[URISummary] = {
     getNormalizedURIForRequest(request) map { nUri =>
       getURISummaryForRequest(request, nUri)
-    } getOrElse (future{URISummary()})
+    } getOrElse Future.successful(URISummary())
   }
 
   private def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
@@ -55,9 +55,9 @@ class URISummaryCommander @Inject()(
     if (!isCompleteSummary(summary, request)) {
       if (!request.silent) {
         val fetchedSummary = fetchSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
-        if (request.waiting) fetchedSummary else future{summary}
-      } else future{summary}
-    } else future{summary}
+        if (request.waiting) fetchedSummary else Future.successful(summary)
+      } else Future.successful(summary)
+    } else Future.successful(summary)
   }
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
@@ -111,7 +111,7 @@ class URISummaryCommander @Inject()(
    */
   private def fetchSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): Future[URISummary] = {
     val embedlyResultFut = if (imageType == ImageType.IMAGE || imageType == ImageType.ANY || withDescription) fetchFromEmbedly(nUri, minSize)
-    else future{None}
+    else Future.successful(None)
     embedlyResultFut flatMap { embedlyResultOpt =>
       val shouldFetchFromPagePeeker =
         (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) &&  // Request accepts screenshots
@@ -123,7 +123,7 @@ class URISummaryCommander @Inject()(
           val description = embedlyResultOpt flatMap { _.description }
           URISummary(imageUrlOpt, title, description)
         }
-      } else future{embedlyResultOpt getOrElse URISummary()}
+      } else Future.successful(embedlyResultOpt getOrElse URISummary())
     }
   }
 
@@ -147,13 +147,13 @@ class URISummaryCommander @Inject()(
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0,0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
-    embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+    scraper.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       embedlyInfoOpt map { embedlyInfo =>
         nUri.id map { nUriId =>
           // Persist page info to the database
           updatePageInfo(embedlyInfo.toPageInfo(nUriId))
           if (descriptionOnly) {
-            future{Some(URISummary(None, embedlyInfo.title, embedlyInfo.description))}
+            Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
           } else {
             val images = embedlyInfo.buildImageInfo(nUriId)
             images.find(meetsSizeConstraint(_, minSize)) flatMap { selectedImageInfo =>
@@ -174,10 +174,10 @@ class URISummaryCommander @Inject()(
                   Some(URISummary(imageInfoOpt flatMap { getS3URL(_,nUri) }, embedlyInfo.title, embedlyInfo.description))
                 }
               }
-            } getOrElse future{Some(URISummary(None, embedlyInfo.title, embedlyInfo.description))}
+            } getOrElse Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
           }
-        } getOrElse future{None}
-      } getOrElse future{None}
+        } getOrElse Future.successful(None)
+      } getOrElse Future.successful(None)
     }
   }
 
@@ -194,14 +194,14 @@ class URISummaryCommander @Inject()(
           }
           val successfulCandidates = candidates collect { case Some(candidate) => candidate }
           if (successfulCandidates.length == candidates.length) {
-            db.readWrite { implicit session => normalizedUriRepo.save(nUri.copy(id = nUri.id, screenshotUpdatedAt = Some(clock.now))) }
+            db.readWrite { implicit session => normalizedUriRepo.updateScreenshotUpdatedAt(nUriId, clock.now) }
           } else {
             log.error(s"Failed to update screenshots for normalized URI $nUriId}")
           }
           successfulCandidates find { meetsSizeConstraint(_, minSize) }
         }
       }
-    } getOrElse future{None}
+    } getOrElse Future.successful(None)
   }
 
   /**
@@ -233,7 +233,7 @@ class URISummaryCommander @Inject()(
       }
     }
   }
-  
+
   /**
    * Get S3 url for image info
    */

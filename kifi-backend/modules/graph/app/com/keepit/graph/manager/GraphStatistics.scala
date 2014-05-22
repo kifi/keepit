@@ -1,15 +1,37 @@
 package com.keepit.graph.manager
 
-import com.keepit.graph.model.{EdgeDataReader, EdgeKind, VertexDataReader, VertexKind}
-import com.keepit.graph.manager.GraphStatistics.{EdgeType, VertexType}
+import com.keepit.graph.model.{EdgeKind, VertexKind}
 import java.util.concurrent.atomic.AtomicLong
+import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.EdgeKind.EdgeType
 
-case class GraphStatistics(vertexStatistics: Map[VertexType, Long], edgeStatistics: Map[(VertexType, VertexType, EdgeType), Long])
+case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[(VertexType, VertexType, EdgeType), Long]) {
+  def outgoingDegrees: Map[VertexType, Double] = {
+    val edgeCountsBySource = edgeCounts.groupBy { case ((source, _, _), _) => source }
+    val outgoingDegrees = edgeCountsBySource.map { case (source, outgoingEdgeCounts) =>
+      source -> outgoingEdgeCounts.values.sum.toDouble / vertexCounts(source)
+    }
+    outgoingDegrees.toMap
+  }
+
+  def incomingDegrees: Map[VertexType, Double] = {
+    val edgeCountsByDestination = edgeCounts.groupBy { case ((_, destination, _), _) => destination }
+    val incomingDegrees = edgeCountsByDestination.map { case (destination, incomingEdgeCounts) =>
+      destination -> incomingEdgeCounts.values.sum.toDouble / vertexCounts(destination)
+    }
+    incomingDegrees.toMap
+  }
+
+  def outgoingDegreesByEdgeType: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map { case (edgeType @ (source, _, _), count) =>
+    edgeType -> count.toDouble / vertexCounts(source)
+  }
+
+  def incomingDegreesByEdgeType: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map { case (edgeType @ (_, destination, _), count) =>
+    edgeType -> count.toDouble / vertexCounts(destination)
+  }
+}
 
 object GraphStatistics {
-  type VertexType = VertexKind[_ <: VertexDataReader]
-  type EdgeType = EdgeKind[_ <: EdgeDataReader]
-
   private val allEdgeKinds: Set[(VertexType, VertexType, EdgeType)] = for {
     sourceKind <- VertexKind.all
     destinationKind <- VertexKind.all
@@ -23,10 +45,19 @@ object GraphStatistics {
     GraphStatistics(vertexCounter.mapValues(_.get()).filter(_._2 > 0), edgeCounter.mapValues(_.get()).filter(_._2 > 0))
   }
 
-  def prettify(statistics: GraphStatistics): PrettyGraphStatistics = PrettyGraphStatistics(
-    statistics.vertexStatistics.map { case (vertexKind, count) => (vertexKind.toString -> count) }.toMap,
-    statistics.edgeStatistics.map { case ((sourceKind, destinationKind, edgeKind), count) =>
-      (sourceKind.toString, destinationKind.toString, edgeKind.toString) -> count
-    }.toMap
-  )
+  def prettify(statistics: GraphStatistics): PrettyGraphStatistics = {
+    val outgoingDegrees = statistics.outgoingDegrees.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val incomingDegrees = statistics.incomingDegrees.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val outgoingDegreesByEdgeType = statistics.outgoingDegreesByEdgeType.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val incomingDegreesByEdgeType = statistics.incomingDegreesByEdgeType.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+
+    PrettyGraphStatistics(
+      statistics.vertexCounts.map { case (vertexKind, count) =>
+        vertexKind.code -> (count.toString, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
+      }.toMap,
+      statistics.edgeCounts.map { case (edgeType @ (sourceKind, destinationKind, edgeKind), count) =>
+        (sourceKind.code, destinationKind.code, edgeKind.code) -> (count.toString, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
+      }.toMap
+    )
+  }
 }

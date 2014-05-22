@@ -18,6 +18,7 @@ GET         /m/1/search/users/page        @com.keepit.controllers.mobile.MobileU
 GET         /m/1/search/users/search        @com.keepit.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 POST        /m/1/search/events/clickedSearchResult        @com.keepit.controllers.mobile.MobileSearchEventController.clickedSearchResult()
 POST        /m/1/search/events/searched        @com.keepit.controllers.mobile.MobileSearchEventController.searched()
+GET         /m/1/search/feeds/page              @com.keepit.controllers.mobile.MobileFeedController.pageV1(pageNum: Int, pageSize: Int)
 
 ##########################################
 # Search Website API
@@ -31,6 +32,9 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 ##########################################
 # INTERNAL ROUTES/Search
 ##########################################
+
+POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
+POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
@@ -61,7 +65,6 @@ GET         /internal/search/indexInfo/listAll        @com.keepit.controllers.se
 
 POST        /internal/search/search/users        @com.keepit.controllers.search.SearchController.searchUsers()
 POST        /internal/search/search/userTypeahead        @com.keepit.controllers.search.SearchController.userTypeahead()
-POST        /internal/search/search/keeps        @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
 POST        /internal/search/search/sharingUserInfo/:userId        @com.keepit.controllers.search.SearchController.sharingUserInfo(userId: Id[User])
 GET         /internal/search/search/explainResult        @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.controllers.search.SearchController.searchWithConfig

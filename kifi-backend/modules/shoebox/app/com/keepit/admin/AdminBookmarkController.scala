@@ -185,24 +185,30 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTodayImportedCountFuture = future { timing("load bookmarks import counts from today") { db.readOnly { implicit s =>
-      keepRepo.getCountByTimeAndSource(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now(), KeepSource.bookmarkImport)
+    val bookmarkTodayAllCountsFuture = future { timing("load bookmarks counts from today") { db.readOnly { implicit s =>
+      keepRepo.getAllCountsByTimeAndSource(clock.now().minusDays(1), clock.now())
     }}}
-    val bookmarkTodayOthersCountFuture = future { timing("load bookmarks other counts from today") { db.readOnly { implicit s =>
-      keepRepo.getCountByTime(clock.now().toDateTime(zones.PT).withTimeAtStartOfDay().toDateTime(zones.UTC), clock.now())
+    val privateKeeperKeepCountFuture = future { timing("load private keeper counts from today") { db.readOnly { implicit s =>
+      keepRepo.getPrivateCountByTimeAndSource(clock.now().minusDays(1), clock.now(), KeepSource.keeper)
     }}}
-
 
     for {
       bookmarksAndUsers <- timing("load full bookmarksInfos") { bookmarksInfos() }
-      count <- bookmarkTotalCountFuture
-      todayImportedCount <- bookmarkTodayImportedCountFuture
-      todayOthersCount <- bookmarkTodayOthersCountFuture
+      overallCount <- bookmarkTotalCountFuture
+      counts <- bookmarkTodayAllCountsFuture
+      privateKeeperKeepCount <- privateKeeperKeepCountFuture
     } yield {
-      val pageCount: Int = count / PAGE_SIZE + 1
-      Ok(html.admin.bookmarks(bookmarksAndUsers, page, count, pageCount, todayImportedCount, todayOthersCount))
+      val pageCount: Int = overallCount / PAGE_SIZE + 1
+      val keeperKeepCount = counts.filter(_._1 == KeepSource.keeper).headOption.map(_._2)
+      val total = counts.map(_._2).sum
+      val tweakedCounts = counts.map {
+        case cnt if cnt._1 == KeepSource.bookmarkFileImport => ("Unknown/other file import", cnt._2)
+        case cnt if cnt._1 == KeepSource.bookmarkImport => ("Browser bookmark import", cnt._2)
+        case cnt if cnt._1 == KeepSource.default => ("Default new user keeps", cnt._2)
+        case cnt => (cnt._1.value, cnt._2)
+      }.sortBy(v => -v._2)
+      Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, privateKeeperKeepCount, tweakedCounts, total))
     }
-
   }
 }
 

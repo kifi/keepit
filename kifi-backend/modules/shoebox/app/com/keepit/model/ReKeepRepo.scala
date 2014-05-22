@@ -10,8 +10,14 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
   def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getAllReKeepsByKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
   def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getAllReKeepsByReKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int]
+  def getReKeeps(keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Seq[ReKeep]]
+  def getAllReKeepCountsByUser()(implicit r:RSession):Map[Id[User], Int]
+  def getAllReKeepCountsByURI()(implicit r:RSession):Map[Id[NormalizedURI], Int]
+  def getAllDirectReKeepCountsByKeep()(implicit r:RSession):Map[Id[Keep], Int]
 }
 
 @Singleton
@@ -40,8 +46,16 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
   }
 
+  def getAllReKeepsByKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).list()
+  }
+
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
     (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
+  }
+
+  def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE)) yield r).list()
   }
 
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int] = {
@@ -50,4 +64,33 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
       .map{ case(kId, rk) => (kId, rk.length)}
     q.toMap()
   }
+
+  def getReKeeps(keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep],Seq[ReKeep]] = {
+    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE && r.keepId.inSet(keepIds))) yield r)
+    q.list().foldLeft(Map.empty[Id[Keep],Seq[ReKeep]]) {(a,c) =>
+      a + (c.keepId -> (a.getOrElse(c.keepId, Seq.empty[ReKeep]) ++ Seq(c)))
+    }
+  }
+
+  def getAllReKeepCountsByUser()(implicit r: RSession): Map[Id[User], Int] = {
+    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE)) yield r)
+      .groupBy(_.keeperId)
+      .map{ case(uId, rk) => (uId, rk.length)}
+    q.toMap
+  }
+
+  def getAllReKeepCountsByURI()(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
+    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE)) yield r)
+      .groupBy(_.uriId)
+      .map{ case(uriId, rk) => (uriId, rk.length)}
+    q.toMap
+  }
+
+  def getAllDirectReKeepCountsByKeep()(implicit r: RSession): Map[Id[Keep], Int] = {
+    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE)) yield r)
+      .groupBy(_.keepId)
+      .map{ case(keepId, rk) => (keepId, rk.length)}
+    q.toMap
+  }
+
 }

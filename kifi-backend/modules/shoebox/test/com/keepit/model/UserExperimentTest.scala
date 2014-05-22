@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.db.Id
 import play.api.libs.json.Json
+import com.keepit.common.math.ProbabilityDensity
 
 class UserExperimentTest extends Specification with ShoeboxTestInjector {
 

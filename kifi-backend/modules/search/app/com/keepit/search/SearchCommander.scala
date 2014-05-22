@@ -1,9 +1,8 @@
 package com.keepit.search
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.util.Try
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.akka.MonitoredAwait
@@ -12,15 +11,14 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.result.ResultDecorator
-import com.keepit.search.result.DecoratedResult
-import com.keepit.search.result.ResultMerger
-import com.keepit.search.result.ResultUtil
+import com.keepit.search.sharding.{DispatchFailedException, Shard, ActiveShards}
+import com.keepit.search.result._
 import org.apache.lucene.search.{Explanation, Query}
 import com.keepit.search.index.DefaultAnalyzer
+import scala.collection.mutable.ListBuffer
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -40,6 +38,25 @@ trait SearchCommander {
     coll: Option[String] = None,
     debug: Option[String] = None) : DecoratedResult
 
+  def distSearch(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    start: Option[String],
+    end: Option[String],
+    tz: Option[String],
+    coll: Option[String],
+    debug: Option[String]): PartialSearchResult
+
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
+
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
@@ -49,8 +66,6 @@ trait SearchCommander {
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
 
-  def searchKeeps(userId: Id[User], query: String): Set[Long]
-
   def warmUp(userId: Id[User]): Unit
 }
 
@@ -59,6 +74,7 @@ class SearchCommanderImpl @Inject() (
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
   airbrake: AirbrakeNotifier,
+  searchClient: SearchServiceClient,
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait
 ) extends SearchCommander with Logging {
@@ -91,8 +107,28 @@ class SearchCommanderImpl @Inject() (
     val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
+    // build distribution plan
+    val (localShards, dispatchPlan) = {
+      // do distributed search using a remote-only plan when the debug flag has "dist" for now. still experimental
+      if (debug.isDefined && debug.get.indexOf("dist") >= 0) {
+        distributionPlanRemoteOnly(maxShardsPerInstance = 2)
+      } else {
+        distributionPlan(shards)
+      }
+    }
+
     // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(userId, query, acceptLangs)
+    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs) // TODO: distributed version of getLang
+
+    var resultFutures = new ListBuffer[Future[PartialSearchResult]]()
+
+    if (dispatchPlan.nonEmpty) {
+      // dispatch query
+      searchClient.distSearch(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, start, end, tz, coll, debug).foreach{ f =>
+        resultFutures += f.map(json => new PartialSearchResult(json))
+      }
+    }
+
     val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
     val resultDecorator = {
@@ -100,19 +136,21 @@ class SearchCommanderImpl @Inject() (
       new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
     }
 
+    // do the local part
+    if (localShards.nonEmpty) {
+      resultFutures += Promise[PartialSearchResult].complete(
+        Try{
+          distSearch(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug)
+        }
+      ).future
+    }
+
     val mergedResult = {
+
       val resultMerger = new ResultMerger(enableTailCutting, config)
 
-      timing.factory
-      val searchers = mainSearcherFactory(shards.shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
-      val future = Future.traverse(searchers){ searcher =>
-        if (debug.isDefined) searcher.debug(debug.get)
-
-        SafeFuture{ searcher.search() }
-      }
-
       timing.search
-      val results = monitoredAwait.result(future, 10 seconds, "slow search")
+      val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
       resultMerger.merge(results, maxHits)
     }
 
@@ -124,7 +162,7 @@ class SearchCommanderImpl @Inject() (
 
     SafeFuture {
       // stash timing information
-      timing.send()
+      timing.sendTotal()
 
       val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val numPreviousHits = searchFilter.idFilter.size
@@ -158,6 +196,85 @@ class SearchCommanderImpl @Inject() (
     res
   }
 
+  def distributionPlanRemoteOnly(maxShardsPerInstance: Int = Int.MaxValue): (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]) = {
+    // NOTE: Remote-only may actually loop back to the current instance. We don't check it for now.
+    (Set.empty[Shard[NormalizedURI]], searchClient.distSearchPlanRemoteOnly(maxShardsPerInstance))
+  }
+
+  def distributionPlan(shards: ActiveShards, maxShardsPerInstance: Int = Int.MaxValue): (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]) = {
+    try {
+      if (shards.local.size < maxShardsPerInstance) {
+        // The current instance processes a subset of local shards. Remaining shards are processed by remote instances.
+        // It is possible that one of the remote call loops back to the current instance. We don't check it for now.
+        val local = shards.local.take(maxShardsPerInstance)
+        val remote = shards.all -- local
+        (local, if (remote.isEmpty) Seq.empty else searchClient.distSearchPlan(remote, maxShardsPerInstance))
+      } else {
+        (shards.local, if (shards.remote.isEmpty) Seq.empty else searchClient.distSearchPlan(shards.remote, maxShardsPerInstance))
+      }
+    } catch {
+      case e: DispatchFailedException =>
+        log.info("dispatch failed. resorting to remote-only plan.")
+        // fallback to no local plan. This may happen when a new sharding scheme is being deployed
+        distributionPlanRemoteOnly(maxShardsPerInstance)
+      case t: Throwable => throw t
+    }
+  }
+
+  def distSearch(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None,
+    debug: Option[String] = None) : PartialSearchResult = {
+
+    val timing = new SearchTiming
+
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
+    val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
+    val mergedResult = {
+      val resultMerger = new ResultMerger(enableTailCutting, config)
+
+      timing.factory
+
+      val searchers = mainSearcherFactory(shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+      val future = Future.traverse(searchers){ searcher =>
+        if (debug.isDefined) searcher.debug(debug.get)
+
+        SafeFuture{ searcher.search() }
+      }
+
+      timing.search
+      val results = monitoredAwait.result(future, 10 seconds, "slow search")
+      resultMerger.merge(results, maxHits)
+    }
+
+    timing.decoration // search end
+    timing.end
+
+    SafeFuture {
+      // stash timing information
+      timing.send()
+    }
+
+    mergedResult
+  }
+
   //external (from the extension/website)
   def warmUp(userId: Id[User]) {
     SafeFuture {
@@ -165,7 +282,13 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
-  private def getLangs(userId: Id[User], query: String, acceptLangCodes: Seq[String]): (Lang, Option[Lang]) = {
+  private def getLangs(
+    localShards: Set[Shard[NormalizedURI]],
+    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    query: String,
+    acceptLangCodes: Seq[String]
+  ): (Lang, Option[Lang]) = {
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
       val eachLangProb = (majorLangProb / numberOfLangs)
@@ -174,7 +297,14 @@ class SearchCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val langProfFuture = mainSearcherFactory.getLangProfileFuture(shards.shards, userId, 3)
+    val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
+
+    if (dispatchPlan.nonEmpty) {
+      resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId)
+    }
+    if (localShards.nonEmpty) {
+      resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
+    }
 
     val acceptLangs = {
       val langs = acceptLangCodes.toSet.flatMap{ code: String =>
@@ -193,7 +323,14 @@ class SearchCommanderImpl @Inject() (
       }
     }
 
-    val langProf = monitoredAwait.result(langProfFuture, 10 seconds, "slow getting lang profile")
+    val langProf = {
+      val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
+      val total = freqs.map(_.values.sum).sum.toFloat
+      freqs.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
+        m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f)))
+      }.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(3).toMap // top N with prob > 0.05
+    }
+
     val profLangs = langProf.keySet
 
     var strongCandidates = acceptLangs ++ profLangs
@@ -216,6 +353,10 @@ class SearchCommanderImpl @Inject() (
     } else {
       (secondLang.get, Some(firstLang))
     }
+  }
+
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
+    monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
   private def getSearchFilter(
@@ -273,13 +414,6 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
-  def searchKeeps(userId: Id[User], query: String): Set[Long] = { // for internal use
-    shards.shards.foldLeft(Set.empty[Long]){ (uris, shard) =>
-      val searcher = mainSearcherFactory.bookmarkSearcher(shard, userId)
-      uris ++ searcher.search(query, Lang("en"))
-    }
-  }
-
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
   private[this] def fetchUserDataInBackground(userId: Id[User]): Prefetcher = new Prefetcher(userId)
@@ -303,7 +437,7 @@ class SearchCommanderImpl @Inject() (
     def decoration: Unit = { t4 = currentDateTime.getMillis }
     def end: Unit = { t5 = currentDateTime.getMillis() }
 
-    def timestamp = t1
+    def timestamp = t1 + 1
 
     def getPreSearchTime = (t2 - t1)
     def getFactoryTime = (t3 - t2)
@@ -312,11 +446,14 @@ class SearchCommanderImpl @Inject() (
     def getTotalTime: Long = (t5 - t1)
 
     def send(): Unit = {
-      Statsd.timing("extSearch.factory", getFactoryTime)
-      Statsd.timing("extSearch.searching", getSearchTime)
-      Statsd.timing("extSearch.postSearchTime", getDecorationTime)
-      Statsd.timing("extSearch.total", getTotalTime)
-      Statsd.increment("extSearch.total")
+      statsd.timing("extSearch.factory", getFactoryTime, ALWAYS)
+      statsd.timing("extSearch.searching", getSearchTime, ALWAYS)
+    }
+
+    def sendTotal(): Unit = {
+      statsd.timing("extSearch.postSearchTime", getDecorationTime, ALWAYS)
+      statsd.timing("extSearch.total", getTotalTime, ALWAYS)
+      statsd.increment("extSearch.total")
     }
 
     override def toString = {

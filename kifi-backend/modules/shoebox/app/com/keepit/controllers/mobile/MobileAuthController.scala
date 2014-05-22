@@ -74,7 +74,6 @@ class MobileAuthController @Inject() (
         }
       case Some(active) if active.version.asInstanceOf[KifiIPhoneVersion] > version =>
         val message = s"TIME TRAVEL!!! installation ${active.externalId} for user ${request.userId} has version ${active.version} while we got from client an older version $version"
-        if (!request.experiments.contains(ExperimentType.IGNORE_VERSION_TIME_TRAVEL)) throw new Exception(message)
         db.readWrite { implicit s =>
           log.warn(message)
           (installationRepo.save(active.withVersion(version)), false)

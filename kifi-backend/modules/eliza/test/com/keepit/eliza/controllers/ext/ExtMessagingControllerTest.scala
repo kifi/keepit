@@ -2,9 +2,7 @@ package com.keepit.eliza.controllers.ext
 
 import com.keepit.test.{ElizaApplication, ElizaApplicationInjector}
 import org.specs2.mutable._
-
 import com.keepit.common.db.slick._
-
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
 import com.keepit.inject._
@@ -20,23 +18,22 @@ import com.keepit.realtime.{UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModu
 import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
-
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.common.crypto.TestCryptoModule
-
 import com.google.inject.Injector
-
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.{Json, JsObject}
-
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
+import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.common.store.ElizaDevStoreModule
+import com.keepit.common.store.ElizaFakeStoreModule
 
 class ExtMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -54,7 +51,9 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
-      TestCryptoModule()
+      TestCryptoModule(),
+      TestScraperServiceClientModule(),
+      ElizaFakeStoreModule()
     )
   }
 

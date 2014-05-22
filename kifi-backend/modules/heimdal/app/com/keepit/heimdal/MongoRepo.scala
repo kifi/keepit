@@ -10,6 +10,7 @@ import reactivemongo.bson.BSONDouble
 import reactivemongo.bson.BSONString
 import reactivemongo.api.collections.default.BSONCollection
 import org.joda.time.DateTime
+import com.keepit.common.logging.Logging
 
 //Might want to change this to a custom play one
 import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
@@ -66,7 +67,7 @@ trait MongoRepo[T] {
   }
 }
 
-trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
+trait BufferedMongoRepo[T] extends MongoRepo[T] with Logging { //Convoluted?
   val warnBufferSize: Int
   val maxBufferSize: Int
 
@@ -82,7 +83,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] { //Convoluted?
     } else if (bufferSize.get < warnBufferSize) hasWarned.set(false)
 
     val inflight = bufferSize.incrementAndGet()
-    Statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
+    statsd.gauge(s"monogInsertBuffer.${collection.name}", inflight)
     safeInsert(toBSON(obj)).map{ lastError =>
       bufferSize.decrementAndGet()
       if (lastError.ok==false && (!dropDups || (lastError.code.isDefined && lastError.code.get!=11000))) insert(obj)

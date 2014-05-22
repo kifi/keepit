@@ -8,9 +8,15 @@ import scala.concurrent.Future
 import java.awt.image.BufferedImage
 import play.api.libs.ws.WS
 import play.api.http.Status
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{Access, AccessLog, Logging}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
+import java.security.cert.CertificateExpiredException
+import java.nio.channels.ClosedChannelException
+import java.net.ConnectException
+import org.jboss.netty.channel.ConnectTimeoutException
+import java.security.GeneralSecurityException
 
 @ImplementedBy(classOf[ImageFetcherImpl])
 trait ImageFetcher {
@@ -18,35 +24,52 @@ trait ImageFetcher {
 }
 
 @Singleton
-class ImageFetcherImpl @Inject() extends ImageFetcher with Logging {
+class ImageFetcherImpl @Inject() (
+    airbrake: AirbrakeNotifier,
+    accessLog: AccessLog
+  ) extends ImageFetcher with Logging {
 
-  private def withInputStream[T, I <: java.io.InputStream](is:I)(f:I => T):T = {
+  private def withInputStream[T, I <: java.io.InputStream](is: I)(f: I => T): T = {
     try {
       f(is)
     } finally {
-      if (is != null) is.close
+      if (is != null) is.close()
     }
   }
 
-  private def getBufferedImage(is:InputStream) = Try { ImageUtils.forceRGB(ImageIO.read(is)) }
+  private def getBufferedImage(is: InputStream) = Try { ImageUtils.forceRGB(ImageIO.read(is)) }
 
   override def fetchRawImage(url: String): Future[Option[BufferedImage]] = {
+    val trace = new StackTrace()
+    val timer = accessLog.timer(Access.HTTP_OUT)
     WS.url(url).withRequestTimeout(120000).get map { resp =>
-      log.info(s"[fetchRawImage(${url})] resp=${resp.statusText}")
+      log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
           withInputStream(resp.getAHCResponse.getResponseBodyAsStream) { is =>
             getBufferedImage(is) match {
               case Failure(ex) =>
-                log.error(s"Failed to process image: (${url})")
+                log.error(s"Failed to process image: ($url)")
                 None
               case Success(rawImage) =>
+                timer.done(url = url, statusCode = resp.status)
                 Some(rawImage)
             }
           }
         case _ =>
-          log.error(s"[fetchRawImage(${url})] Failed to retrieve image. Response: ${resp.statusText}")
+          log.error(s"[fetchRawImage($url)] Failed to retrieve image. Response: ${resp.statusText}")
+          timer.done(url = url, statusCode = resp.status, error = resp.statusText)
           None
+      }
+    } recover {
+      case e @ (_ : ConnectTimeoutException | _ : ClosedChannelException | _ : GeneralSecurityException) => {
+        timer.done(url = url, error = e.toString)
+        log.warn(s"Can't connect to $url, next time it may work", trace.withCause(e))
+        None
+      }
+      case t: Throwable => {
+        airbrake.notify(s"Error fetching image with url $url", trace.withCause(t))
+        None
       }
     }
   }

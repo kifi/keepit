@@ -4,9 +4,10 @@ import com.keepit.graph.model._
 import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
 import play.api.libs.json._
 import java.util.concurrent.atomic.AtomicLong
-import com.keepit.graph.manager.GraphStatistics.{EdgeType, VertexType}
 import com.keepit.graph.manager.GraphStatistics
 import com.keepit.common.logging.Logging
+import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.EdgeKind.EdgeType
 
 class MutableVertex(var data: VertexDataReader, val edges: MutableMap[VertexId, EdgeDataReader]) extends Vertex
 

@@ -1,6 +1,20 @@
 package com.keepit.eliza.model
+import com.keepit.model.User
+import com.keepit.eliza.util.MessageSegment
 
 
-case class ThreadEmailInfo(pageUrl: String, pageName: String, pageTitle: String, heroImageUrl: Option[String], pageDescription: Option[String], participants: Seq[String], conversationStarter: String, unsubUrl: String, muteUrl: String)
+case class ThreadEmailInfo(
+  pageUrl: String,
+  pageName: String,
+  pageTitle: String,
+  isInitialEmail: Boolean,
+  heroImageUrl: Option[String],
+  pageDescription: Option[String],
+  participants: Seq[String],
+  conversationStarter: String,
+  invitedByUser: Option[User],
+  unsubUrl: Option[String],
+  muteUrl: Option[String],
+  readTimeMinutes: Option[Int])
 
-case class ExtendedThreadItem(senderShortName: String, senderFullName: String, imageUrl: Option[String], messageText: String, textLookHeres: Seq[String], imageLookHereUrls: Seq[String])
+case class ExtendedThreadItem(senderShortName: String, senderFullName: String, imageUrl: Option[String], segments: Seq[MessageSegment])

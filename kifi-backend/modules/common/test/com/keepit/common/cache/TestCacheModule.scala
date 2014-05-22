@@ -29,7 +29,12 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Singleton
   @Provides
   def userCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserCollectionsCache(stats, accessLog, (outerRepo, 1 day))
+    new UserCollectionsCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userCollectionSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserCollectionSummariesCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -90,6 +95,11 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def externalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new ExternalUserIdCache(stats, accessLog, (outerRepo, 24 hours))
+
+  @Singleton
+  @Provides
+  def userImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserImageUrlCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 10 minute))
 
   @Singleton
   @Provides

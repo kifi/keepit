@@ -19,14 +19,7 @@ import com.keepit.test.{DeprecatedTestRemoteGlobal, DeprecatedTestApplication}
 import java.io.File
 import com.keepit.common.controller.{ScraperServiceController, ShoeboxServiceController, ServiceController}
 import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
-
-case class ScraperTestModule() extends ScraperServiceModule (
-  cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
-  storeModule = ScraperTestStoreModule(),
-  fjMonitorModule = DevForkJoinContextMonitorModule(),
-  scrapeProcessorModule = ProdScraperProcessorModule()
-) with CommonDevModule { }
-
+import com.keepit.scraper.embedly.DevEmbedlyModule
 
 class DeprecatedScraperApplication(global: DeprecatedTestRemoteGlobal)
   extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/scraper/")) {
@@ -42,7 +35,7 @@ class ScraperModuleTest extends Specification with Logging with ApplicationInjec
     } else false
   }
 
-  val global = new DeprecatedTestRemoteGlobal(ScraperTestModule())
+  val global = new DeprecatedTestRemoteGlobal(TestScraperServiceModule())
 
   "Module" should {
     "instantiate controllers" in {

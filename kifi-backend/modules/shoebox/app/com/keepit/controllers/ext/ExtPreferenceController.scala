@@ -38,6 +38,7 @@ class ExtPreferenceController @Inject() (
     maxResults: Int,
     showKeeperIntro: Boolean,
     showSearchIntro: Boolean,
+    showExtMsgIntro: Boolean,
     showFindFriends: Boolean,
     messagingEmails: Boolean)
 
@@ -47,6 +48,7 @@ class ExtPreferenceController @Inject() (
       (__ \ 'maxResults).write[Int] and
       (__ \ 'showKeeperIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'showSearchIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'showFindFriends).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
     )(unlift(UserPrefs.unapply))
@@ -93,6 +95,11 @@ class ExtPreferenceController @Inject() (
 
   def setShowSearchIntro(show: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showSearchIntro.name, show))
+    Ok(JsNumber(0))
+  }
+
+  def setShowExtMsgIntro(show: Boolean) = JsonAction.authenticated { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
     Ok(JsNumber(0))
   }
 
@@ -155,6 +162,7 @@ class ExtPreferenceController @Inject() (
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals),
         showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals),
+        showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
         showFindFriends = UserValues.showFindFriends.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }

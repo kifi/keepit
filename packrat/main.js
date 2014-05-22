@@ -979,7 +979,12 @@ api.port.on({
   },
   save_setting: function(o, respond, tab) {
     if (o.name === 'emails') {
-      ajax('POST', '/ext/pref/email/message/' + !!o.value, onSettingCommitted);
+      ajax('POST', '/ext/pref/email/message/' + o.value, function () {
+        if (prefs) {
+          prefs.messagingEmails = o.value;
+        }
+        onSettingCommitted();
+      });
     } else {
       store('_' + o.name, o.value ? 'y' : 'n');
       onSettingCommitted();

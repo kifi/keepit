@@ -22,9 +22,9 @@ import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
-import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.logging.AccessLog
 import scala.collection.mutable
+import com.keepit.common.store.KifInstallationStore
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -34,6 +34,7 @@ class SharedWsMessagingController @Inject() (
     protected val websocketRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
+    val kifInstallationStore: KifInstallationStore,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -42,7 +43,6 @@ class SharedWsMessagingController @Inject() (
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
     protected val userExperimentCommander: RemoteUserExperimentCommander,
-    val kifInstallationStore: KifInstallationStore,
     val accessLog: AccessLog,
     val shoutdownListener: WebsocketsShutdownListener
   )

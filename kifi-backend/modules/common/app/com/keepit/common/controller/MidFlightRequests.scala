@@ -21,7 +21,7 @@ class MidFlightRequests @Inject() (
   private[this] val lastAlert = new AtomicLong(-1)
 
   private lazy val MaxMidFlightRequests = {
-    val max = myInstanceInfo.get.info.instantTypeInfo.ecu * 7
+    val max = myInstanceInfo.get.info.instantTypeInfo.ecu * 5
     log.info(s"allowing $max mid flight requests before blowing the whistle")
     max
   }
@@ -30,16 +30,17 @@ class MidFlightRequests @Inject() (
     currentRequests.put(rh, System.currentTimeMillis())
     val count = currentRequests.size() //may not be accurate since we're not synchronizing this block, but good enough
     if (count > MaxMidFlightRequests) { //say that more then 30 concurrent request is an issue
-      alert(count)
+      alert(count, rh: RequestHeader)
     }
     count
   }
 
   private val TEN_MINUTES = 600000L
 
-  private def alert(count: Long): Unit = {
+  private def alert(count: Long, rh: RequestHeader): Unit = {
     val now = System.currentTimeMillis()
     val last = lastAlert.get
+    log.warn(s"$count concurrent request. latest: $rh")
     if (now - last > TEN_MINUTES) {
       if (lastAlert.compareAndSet(last, now)) {
         airbrake.get.notify(s"$count concurrent requests: $topRequests")

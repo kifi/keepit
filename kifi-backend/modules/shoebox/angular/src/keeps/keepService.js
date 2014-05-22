@@ -165,6 +165,9 @@ angular.module('kifi.keepService', [
         xhr.addEventListener('load', function () {
           deferred.resolve(JSON.parse(xhr.responseText));
         });
+        xhr.addEventListener('error', function (e) {
+          deferred.reject(e);
+        });
         xhr.addEventListener('loadend', function (e) {
           deferred.notify({'name': 'loadend', 'event': e});
         });

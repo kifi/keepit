@@ -5,8 +5,8 @@ var formatMessage = (function () {
   // tip: debuggex.com helps clarify regexes
   var kifiSelMarkdownToLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
   var kifiSelMarkdownToTextRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
-  var escapedRightParenRe = /\\\)/g;
-  var escapedRightBracketRe = /\\\]/g;
+  var escapedBackslashOrRightParenRe = /\\([\)\\])/g;
+  var escapedBackslashOrRightBracketRe = /\\([\]\\])/g;
   var emailAddrRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)(?:\b|$)/;
   var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;
   var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
@@ -15,8 +15,8 @@ var formatMessage = (function () {
   var formatAsHtml =
     processLineBreaksThen.bind(null,
       processKifiSelMarkdownToLinksThen.bind(null,
-        processEmailAddressesThen.bind(null,
-          processUrls.bind(null,
+        processUrlsThen.bind(null,
+          processEmailAddressesThen.bind(null,
             processEmoji)),
         processEmoji));
 
@@ -52,13 +52,13 @@ var formatMessage = (function () {
   function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
     var parts = text.split(kifiSelMarkdownToLinkRe);
     for (var i = 1; i < parts.length; i += 3) {
-      var selector = parts[i+1].replace(escapedRightParenRe, ')');
+      var selector = parts[i+1].replace(escapedBackslashOrRightParenRe, '$1');
       var titleAttr = '';
       if (selector.lastIndexOf('r|', 0) === 0) {
         titleAttr = ' title="' + Mustache.escape(formatKifiSelRangeText(selector)) + '"';
       }
       parts[i] = '<a href="x-kifi-sel:' + Mustache.escape(selector) + '"' + titleAttr + '>' +
-        processInside(parts[i].replace(escapedRightBracketRe, ']'));
+        processInside(parts[i].replace(escapedBackslashOrRightBracketRe, '$1'));
       parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {
@@ -70,7 +70,7 @@ var formatMessage = (function () {
   function processKifiSelMarkdownToTextThen(process, text) {
     var parts = text.split(kifiSelMarkdownToTextRe);
     for (var i = 1; i < parts.length; i += 2) {
-      parts[i] = parts[i].replace(escapedRightBracketRe, ']');
+      parts[i] = parts[i].replace(escapedBackslashOrRightBracketRe, '$1');
     }
     return process(parts.join(''));
   }
@@ -91,11 +91,20 @@ var formatMessage = (function () {
     }
   }
 
-  function processUrls(process, text) {
+  function processUrlsThen(process, text) {
     var parts = text.split(uriRe);
     for (var i = 1; i < parts.length; i += 3) {
       var uri = parts[i];
       var scheme = parts[i+1];
+      if (!scheme && uri.indexOf('/') < 0 || parts[i-1].lastIndexOf('@', parts[i-1].length - 1) > 0) {
+        var ambiguous = parts[i-1] + uri;
+        var ambiguousProcessed = process(ambiguous);
+        if (ambiguousProcessed.lastIndexOf('</a>', ambiguousProcessed.length - 4) > 0) {
+          parts[i] = ambiguousProcessed;
+          parts[i-1] = parts[i+1] = '';
+          continue;
+        }
+      }
       var escapedUri = Mustache.escape(uri);
       var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
       parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
@@ -176,7 +185,7 @@ function convertDraftToText(html) {
     .replace(/<div\s*[\/]?>/gi, '\n')
     .replace(/<\/div>/gi, '')
     .replace(/<a(?: [\w-]+="[^"]*")*? href="x-kifi-sel:([^"]*)"(?: [\w-]+="[^"]*")*>(.*?)<\/a>/gi, function($0, $1, $2) {
-      return '[' + $2.replace(/\]/g, '\\]') + '](x-kifi-sel:' + $1.replace(/\)/g, '\\)') + ')';
+      return '[' + $2.replace(/([\]\\])/g, '\\$1') + '](x-kifi-sel:' + $1.replace(/([\)\\])/g, '\\$1') + ')';
     });
   html2 = emoji.encode(html2);
   return $('<div>').html(html2).text().trim();

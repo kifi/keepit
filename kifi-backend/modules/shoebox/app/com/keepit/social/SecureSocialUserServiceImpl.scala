@@ -44,14 +44,12 @@ class SecureSocialUserPluginImpl @Inject() (
   clock: Clock)
   extends UserService with SecureSocialUserPlugin with Logging {
 
-  private def reportExceptionsAndTime[T](tag: String)(f: => T): T = timing(tag) {
-    try f catch { case ex: Throwable =>
-      airbrake.notify(ex)
-      throw ex
-    }
+  private def reportExceptions[T](f: => T): T =  try f catch { case ex: Throwable =>
+    airbrake.notify(ex)
+    throw ex
   }
 
-  def find(id: IdentityId): Option[SocialUser] = reportExceptionsAndTime(s"find identity id $id") {
+  def find(id: IdentityId): Option[SocialUser] = reportExceptions {
     db.readOnly { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
@@ -73,12 +71,12 @@ class SecureSocialUserPluginImpl @Inject() (
         log.info(s"No SocialUserInfo found for $id")
         None
       case Some(user) =>
-        log.info(s"User found: $user for $id")
+        log.debug(s"User found: $user for $id")
         user.credentials
     }
   }
 
-  def save(identity: Identity): SocialUser = reportExceptionsAndTime(s"save identity ${identity.identityId}") {
+  def save(identity: Identity): SocialUser = reportExceptions {
     val (userId, socialUser, allowSignup, isComplete) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
     val socialUserInfo = internUser(
@@ -100,9 +98,9 @@ class SecureSocialUserPluginImpl @Inject() (
     @inline def setExp(exp: ExperimentType) {
       val marked = userExperimentCommander.userHasExperiment(userId, exp)
       if (marked)
-        log.info(s"test user $userId is already marked as $exp")
+        log.debug(s"test user $userId is already marked as $exp")
       else {
-        log.info(s"setting test user $userId as $exp")
+        log.debug(s"setting test user $userId as $exp")
         userExperimentCommander.addExperimentForUser(userId, exp)
       }
     }
@@ -156,7 +154,7 @@ class SecureSocialUserPluginImpl @Inject() (
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
     userId: Option[Id[User]], allowSignup: Boolean, isComplete: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
 
-    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
+    log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
     val (suiOpt, existingUserOpt) = db.readOnly { implicit session => (
       socialUserInfoRepo.getOpt(socialId, socialNetworkType),
@@ -267,7 +265,7 @@ class SecureSocialUserPluginImpl @Inject() (
     sui
   }
 
-  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptionsAndTime(s"findByEmailAndProvider $email") {
+  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {
     db.readOnly { implicit s =>
       providerId match {
         case UsernamePasswordProvider.UsernamePassword =>
@@ -326,7 +324,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = timing(s"sessionFromAuthenticator ${authenticator.identityId.userId}") {
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
-    log.info(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
+    log.debug(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
     val userId = db.readOnly {
       implicit s => socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
     }
@@ -364,7 +362,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def persistSession(newSession: UserSession): UserSession = timing(s"persistSession ${newSession.socialId}") {
     db.readWrite(attempts = 3) { implicit s =>
       val sessionFromCookie = sessionRepo.save(newSession)
-      log.info(s"[save] newSession=$sessionFromCookie")
+      log.debug(s"[save] newSession=$sessionFromCookie")
       sessionFromCookie
     }
   }
@@ -387,14 +385,14 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     val res = externalIdOpt flatMap { externalId =>
       db.readOnly { implicit s =>
         val sess = sessionRepo.getOpt(externalId)
-        log.info(s"[find] sessionRepo.get($externalId)=$sess")
+        log.debug(s"[find] sessionRepo.get($externalId)=$sess")
         sess
       } collect {
         case s if s.isValid =>
           authenticatorFromSession(s)
       }
     }
-    log.info(s"[find] id=$id res=$res")
+    log.debug(s"[find] id=$id res=$res")
     res
   }
 

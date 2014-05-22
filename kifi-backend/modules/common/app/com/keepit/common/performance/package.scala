@@ -1,7 +1,6 @@
 package com.keepit.common
 
 import com.keepit.common.logging.Logging
-import play.modules.statsd.api.Statsd
 import play.api.Logger
 
 package object performance {
@@ -34,22 +33,25 @@ package object performance {
     res
   }
 
+  def timing[A](tag: String, threshold:Long, cb:Option[() => Unit] = None)(f: => A)(implicit logger:Logger):A = {
+    val sw = new Stopwatch(tag)
+    val res = f
+    val elapsed = sw.stop()
+    if ((elapsed/1000000) > threshold) {
+      cb match {
+        case Some(c) => c()
+        case None => sw.logTime(None)
+      }
+    }
+    res
+  }
+
   def timingWithResult[A](tag: String, r:(A => String) = {a:A => a.toString})(f: => A)(implicit logger:Logger): A = {
     val sw = new Stopwatch(tag)
     val res = f
     val resString = r(res)
     sw.stop()
     sw.logTime(Some(resString))
-    res
-  }
-
-  def timeWithStatsd[A](tag: String, statsdTag: String)(f: => A)(implicit logger:Logger): A = {
-    val sw = new Stopwatch(tag)
-    val res = f
-    sw.stop()
-    sw.logTime(None)
-    Statsd.increment(statsdTag)
-    Statsd.timing(statsdTag, sw.elapsedTime / 1000000)
     res
   }
 }

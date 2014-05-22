@@ -28,16 +28,6 @@ class AdminArticleIndexerController @Inject()(
     Ok("reindexing started")
   }
 
-  def indexByState(state: State[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
-    transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
-      db.readWrite { implicit s =>
-        normUriRepo.getByState(state).foreach{ uri => normUriRepo.save(uri.withState(newState)) }
-      }
-      searchClient.index()
-      Ok("indexed articles")
-    }
-  }
-
   def getSequenceNumber = AdminJsonAction.authenticatedAsync { implicit request =>
     searchClient.articleIndexerSequenceNumber().map { number =>
       Ok(JsObject(Seq("sequenceNumber" -> JsNumber(number))))

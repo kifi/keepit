@@ -7,15 +7,20 @@ trait EdgeReader {
   def data: EdgeDataReader
 }
 
-trait GlobalEdgeReader extends EdgeReader {
+trait SourceReader { self: EdgeReader =>
   def sourceVertex: VertexReader
+}
+
+trait DestinationReader { self: EdgeReader =>
   def destinationVertex: VertexReader
+}
+
+trait GlobalEdgeReader extends EdgeReader with SourceReader with DestinationReader {
   def moveTo(source: VertexId, destination: VertexId): Unit
   def moveTo[S <: VertexDataReader: VertexKind, D <: VertexDataReader: VertexKind](source: VertexDataId[S], destination: VertexDataId[D]): Unit
 }
 
-trait LocalEdgeReader extends EdgeReader {
-  def sourceVertex: VertexReader
+trait OutgoingEdgeReader extends EdgeReader with SourceReader {
   def degree: Int
   def moveToNextEdge(): Boolean
   def reset(): Unit

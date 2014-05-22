@@ -63,52 +63,51 @@ b){0>a?a=0:a>this.maxPosX&&(a=this.maxPosX);0>b?b=0:b>this.maxPosY&&(b=this.maxP
 a?"1":"0"),e)}}};p.utils=d;"undefined"!=typeof module&&module.exports?module.exports=p:g.IScroll=p})(window,document,Math);
 
 (function () {
-  var scroller, yFixedTop, topIsFixed = false;
+  var scroller, yFixedTop, top = 0;
   var $top = document.querySelector('.k-top');
   var $main = document.querySelector('main');
   updateTopHeight();
-  prependTopTo($main);
 
   setTimeout(initIScroll, 100);
   document.body.addEventListener('orientationchange', function () {
     updateTopHeight();
     if (scroller) {
       scroller.refresh();
-      updateTopPosition(true);
+      updateTopPosition();
     }
   });
 
   function updateTopHeight() {
-    var h = document.body.offsetHeight;
-    $main.style.paddingTop = $top.style.height = h + 'px';
-    yFixedTop = 89 - h;
+    var h = $top.offsetHeight;
+    $main.style.paddingTop = h + 'px';
+    yFixedTop = 92 - h;
   }
 
-  function updateTopPosition(force) {
-    var y = scroller.y << 0;
-    if ((y < yFixedTop) !== topIsFixed) {
-      topIsFixed = !topIsFixed;
-      $top.parentNode.removeChild($top);
-      $top.style.top = topIsFixed ? yFixedTop + 'px' : '';
-      prependTopTo(topIsFixed ? $main.parentNode : $main);
-    } else if (topIsFixed && force === true) {
-      $top.style.top = yFixedTop + 'px';
+  function updateTopPosition() {
+    var newTop = Math.max(yFixedTop, scroller.y | 0);
+    if (newTop !== top) {
+      $top.style.top = (top = newTop) + 'px';
     }
   }
 
-  function prependTopTo($el) {
-    $el.insertBefore($top, $el.firstChild);
-  }
-
   function initIScroll() {
-    scroller = new IScroll(document.body, {probeType: 3, disableMouse: true, disablePointer: true});
+    scroller = new IScroll(document.body, {probeType: 3, disableMouse: true, disablePointer: true, click: true});
     scroller.on('scroll', updateTopPosition);
     scroller.on('scrollEnd', updateTopPosition);
   }
 }());
 
-document.addEventListener('touchmove', function (e) { e.preventDefault() }, false);
-
 setTimeout(function () {
-  document.querySelector('.k-iphone').classList.remove('k-initial');
+  var $phone = document.querySelector('.k-phone');
+  $phone.addEventListener('webkitTransitionEnd', function () {
+    var $iframe = document.createElement('iframe');
+    $iframe.className = 'k-video';
+    $iframe.src = 'https://player.vimeo.com/video/84696926?title=0&byline=0&portrait=0&color=ffffff';
+    $iframe.setAttribute('webkitallowfullscreen', '');
+    $iframe.setAttribute('allowfullscreen', '');
+    var $play = document.getElementsByClassName('k-play')[0];
+    $play.parentNode.insertBefore($iframe, $play.nextSibling);
+    $play.classList.remove('k-t0');
+  });
+  $phone.classList.remove('k-t0');
 }, 100);
