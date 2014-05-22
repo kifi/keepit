@@ -44,6 +44,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
     startSearchServices()
     startABookServices()
     startCortexServices()
+    startGraphServices()
     super.onStart(app)
   }
 }

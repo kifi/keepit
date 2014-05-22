@@ -34,7 +34,7 @@ class GraphServiceClientImpl(
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
       call.map(Some(_)).recover { case error: Throwable =>
-        log.error("Failed to complete service call", error)
+        log.error("Failed to complete service call:", error)
         None
       }
     }
