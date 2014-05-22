@@ -7,7 +7,7 @@ import com.keepit.cortex.models.lda.{LDATopic, DenseLDA}
 
 case class CortexSequenceNumber[M <: StatModel, T](modelVersion: ModelVersion[M], seq: SequenceNumber[T]) {
   def toLong: Long = CortexSequenceNumber.toLong(this)
-  override def toString = modelVersion + "|" + seq
+  override def toString = modelVersion + "::" + seq
 }
 
 object CortexSequenceNumber {
@@ -32,7 +32,7 @@ object CortexSequenceNumber {
 
 case class LDATopicId(version: ModelVersion[DenseLDA], topic: LDATopic)  {
   def toLong: Long = LDATopicId.toLong(this)
-  override def toString = version + "|" + topic
+  override def toString = version + "::" + topic
 }
 
 object LDATopicId {

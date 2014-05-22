@@ -2,7 +2,7 @@ package com.keepit.graph
 
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.net.{ClientResponse, HttpClient}
+import com.keepit.common.net.{CallTimeouts, ClientResponse, HttpClient}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.common.routes.Graph
@@ -30,6 +30,8 @@ class GraphServiceClientImpl(
   val airbrakeNotifier: AirbrakeNotifier,
   mode: Mode
 ) extends GraphServiceClient {
+
+  private val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
@@ -63,6 +65,6 @@ class GraphServiceClientImpl(
 
   def wander(wanderlust: Wanderlust): Future[Collisions] = {
     val payload = Json.toJson(wanderlust)
-    call(Graph.internal.wander(), payload).map { response => response.json.as[Collisions] }
+    call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
   }
 }

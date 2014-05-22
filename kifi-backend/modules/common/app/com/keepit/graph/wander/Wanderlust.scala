@@ -5,9 +5,9 @@ import com.keepit.model.{NormalizedURI, User}
 import play.api.libs.json._
 
 case class Wanderlust(
-  startingVertexTypeCode: String,
+  startingVertexKind: String,
   startingVertexDataId: Long,
-  preferredCollisions: Set[String],
+  preferredCollisions: Set[String] = Set.empty,
   steps: Int = 10000,
   restartProbability: Double = 0.15
 )

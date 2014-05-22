@@ -111,7 +111,7 @@ class MessagingController @Inject() (
 
       userThreads.foreach{ userThread =>
         if (userThread.uriId.isDefined) {
-          nUrls(userThread.thread).foreach{ correctNUrl =>
+          nUrls(userThread.threadId).foreach{ correctNUrl =>
             log.warn(s"Verifying notification on user thread ${userThread.id.get}")
             uriNormalizationUpdater.fixLastNotificationJson(userThread, correctNUrl)
           }

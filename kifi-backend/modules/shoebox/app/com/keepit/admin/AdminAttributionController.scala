@@ -69,42 +69,42 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.rekeeps(t, showImage, page, count, size))
   }
 
-  private def getKeepInfos(userId:Id[User]):(User, Seq[RichKeepClick], Seq[(Id[Keep],Int)], Seq[RichReKeep], Seq[RichReKeep], Seq[(Id[Keep],Int)]) = {
+  private def getKeepInfos(userId:Id[User]):(User, Seq[RichKeepClick], Seq[RichReKeep], Seq[RichReKeep]) = {
     db.readOnly { implicit ro =>
       val u = userRepo.get(userId)
-      val rc = keepClickRepo.getClicksByKeeper(userId) map { c =>
+      val rc = keepClickRepo.getClicksByKeeper(userId).take(10) map { c =>
         RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
       }
-      val counts = keepClickRepo.getClickCountsByKeeper(userId).toSeq
-      val rekeeps = rekeepRepo.getAllReKeepsByKeeper(userId)
+      val rekeeps = rekeepRepo.getAllReKeepsByKeeper(userId).sortBy(_.createdAt)(Ordering[DateTime].reverse).take(10)
       val rk = rekeeps map { k =>
         RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, u, keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
       }
-      val rkr = rekeepRepo.getAllReKeepsByReKeeper(userId) map { k =>
+      val rkr = rekeepRepo.getAllReKeepsByReKeeper(userId).take(10) map { k =>
         RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), u, keepRepo.get(k.srcKeepId), k.attributionFactor)
       }
-      val rkCounts = rekeepRepo.getReKeepCountsByKeeper(userId).toSeq
-      (u, rc, counts, rk, rkr, rkCounts)
+      (u, rc, rk, rkr)
     }
   }
 
   def keepInfos(userId:Id[User]) = AdminHtmlAction.authenticated { request =>
-    val (u, clicks, clickCounts, rekeeps, rekepts, rkCounts) = getKeepInfos(userId)
-    Ok(html.admin.myKeepInfos(u, clicks, clickCounts, rekeeps, rekepts, rkCounts))
+    val (u, clicks, rekeeps, rekepts) = getKeepInfos(userId)
+    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
 
-  val userReKeepsReqConsolidator = new RequestConsolidator[(Id[User], Int), (User, Int, Seq[ReKeep], Map[Keep, Seq[Set[User]]])](ttl = 5 seconds)
+  val userReKeepsReqConsolidator = new RequestConsolidator[(Id[User], Int), (User, Int, Seq[ReKeep], Seq[(Keep, Seq[Set[User]])])](ttl = 5 seconds)
   def getReKeepInfos(userId:Id[User], n:Int = 4) = userReKeepsReqConsolidator(userId, n) { case (userId, n) =>
     SafeFuture {
       val u = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.get(userId) }
       val rekeeps = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
         rekeepRepo.getAllReKeepsByKeeper(userId)
       }
-      val users = rekeeps.map { rk =>
-        val userIds: Seq[Set[Id[User]]] = attributionCmdr.getReKeepsByDegree(userId, rk.keepId, 4).map(_._1)
+      val grouped = rekeeps.groupBy(_.keepId)
+      val sorted = grouped.toSeq.sortBy(_._2.length)(Ordering[Int].reverse).take(20)
+      val users = sorted.map(_._1).map { keepId =>
+        val userIds: Seq[Set[Id[User]]] = attributionCmdr.getReKeepsByDegree(userId, keepId, 4).map(_._1)
         val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a,c) => a ++ c }) }
-        db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(rk.keepId) } -> userIds.map( _.map(uId => users(uId)) )
-      }.toMap
+        db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(keepId) } -> userIds.map( _.map(uId => users(uId)) )
+      }
       (u, n, rekeeps, users)
     }
   }
@@ -122,8 +122,8 @@ class AdminAttributionController @Inject()(
   }
 
   def myKeepInfos() = AdminHtmlAction.authenticated { request =>
-    val (u, clicks, clickCounts, rekeeps, rekepts, rkCounts) = getKeepInfos(request.userId)
-    Ok(html.admin.myKeepInfos(u, clicks, clickCounts, rekeeps, rekepts, rkCounts))
+    val (u, clicks, rekeeps, rekepts) = getKeepInfos(request.userId)
+    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
 
   val topReKeepsReqConsolidator = new RequestConsolidator[Int, Seq[(NormalizedURI, Seq[(Keep, Seq[Set[User]])])]](ttl = 5 seconds)

@@ -12,7 +12,7 @@ import com.keepit.graph.model.VertexKind.VertexType
 class WanderingCommander @Inject() (graph: GraphManager) {
 
   def wander(wanderlust: Wanderlust): Collisions = {
-    val startingVertexKind = VertexKind.apply(wanderlust.startingVertexTypeCode)
+    val startingVertexKind = VertexKind.apply(wanderlust.startingVertexKind)
     val startingVertexId = VertexId(startingVertexKind)(wanderlust.startingVertexDataId)
     val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
     val rawCollisions = doWander(startingVertexId, preferredCollisions, wanderlust.steps, wanderlust.restartProbability)
