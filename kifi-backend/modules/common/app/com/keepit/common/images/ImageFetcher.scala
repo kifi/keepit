@@ -52,13 +52,13 @@ class ImageFetcherImpl @Inject() (
                 log.error(s"Failed to process image: ($url)")
                 None
               case Success(rawImage) =>
-                timer.done(url = url)
+                timer.done(url = url, statusCode = resp.status)
                 Some(rawImage)
             }
           }
         case _ =>
           log.error(s"[fetchRawImage($url)] Failed to retrieve image. Response: ${resp.statusText}")
-          timer.done(url = url, error = resp.statusText)
+          timer.done(url = url, statusCode = resp.status, error = resp.statusText)
           None
       }
     } recover {
