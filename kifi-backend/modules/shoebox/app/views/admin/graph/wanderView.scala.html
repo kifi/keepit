@@ -1,0 +1,69 @@
+@(availableVertexKinds: Seq[String],
+  wanderlust: com.keepit.graph.wander.Wanderlust,
+  timing: Option[scala.util.Try[Long]],
+  users: Seq[(com.keepit.model.User, Int)],
+  uris: Seq[(com.keepit.model.NormalizedURI, Int)],
+  extras: Seq[(String, Int)]
+)
+
+@import scala.util.{Success, Failure}
+
+@views.html.admin.admin("Hopeful Wanderer") {
+
+    <form class="form-inline" action="@com.keepit.controllers.admin.routes.WanderingAdminController.wander()" method = "POST">
+        @availableVertexKinds.map { kind => <input type="hidden" name="availableVertexKinds" value=@kind> }
+        <div class="form-group">
+            <label for="kind">Start from: </label>
+            <select class="input-medium" name="kind">
+                @availableVertexKinds.map { kind => <option value=@kind @if(kind == wanderlust.startingVertexKind) {selected}>@kind }
+            </select>
+            <input class="input-small" type="number" name="id" value=@wanderlust.startingVertexDataId>
+        </div>
+        <div class="form-group">
+            <label for="kind">Preferred Collisions: </label>
+            <select class="input-medium" name="preferredCollisions">
+                <option value="" @if(wanderlust.preferredCollisions.isEmpty) {selected}>I don't care.
+                @availableVertexKinds.map { kind => <option value=@kind @if(wanderlust.preferredCollisions.contains(kind)) {selected}>@kind }
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="steps">Number of Steps: </label>
+            <input class="input-small" type="number" name="steps" min="0" value=@wanderlust.steps>
+        </div>
+        <div class="form-group">
+            <label for="restartProbability">Restart Probability: </label>
+            <input class="input-small" type="number" step="0.01" max="1" min="0" name="restartProbability" value=@wanderlust.restartProbability>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Wander!</button>
+    </form>
+
+    @{timing.map {
+        case Success(timing) => <div class="text-success">You have successfully wandered for {timing} ms.</div>
+        case Failure(ex) => <div class="text-error">{ex}</div>
+    }}
+
+    @if(users.nonEmpty) {
+        <table class = "table table-bordered">
+            <tr><th colspan="3"><h3>People Collisions</h3></th></tr>
+            <tr> <th>User Id</th> <th>Name</th> <th>Score</th> </tr>
+            @users.map { case (user, count) => <tr> <td>@user.id.get</td> <td>@user.fullName</td> <td>@count</td> </tr> }
+        </table>
+    }
+
+    @if(uris.nonEmpty) {
+        <table class = "table table-bordered">
+            <tr><th colspan="3"><h3>Content Collisions</h3></th></tr>
+            <tr> <th>Uri Id</th> <th>Page</th> <th>Score</th> </tr>
+            @uris.map { case (uri, count) => <tr> <td>@uri.id.get</td> <td><a href=@uri.url>@uri.title.getOrElse(uri.url.trim)</a></td> <td>@count</td> </tr> }
+        </table>
+    }
+
+    @if(extras.nonEmpty) {
+        <table class = "table table-bordered">
+            <tr><th colspan="2"><h3>Other Collisions</h3></th></tr>
+            <tr> <th>Vertex</th> <th>Score</th> </tr>
+            @extras.map { case (vertex, count) => <tr> <td>@vertex</td> <td>@count</td> </tr> }
+        </table>
+    }
+}

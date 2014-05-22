@@ -155,7 +155,11 @@ class ElizaEmailCommander @Inject() (
     }) getOrElse Future.successful(None)
   }
 
-  private def assembleEmail(thread: MessageThread, fromTime: Option[DateTime], toTime: Option[DateTime], invitedByUserId: Option[Id[User]], unsubUrl: Option[String], muteUrl: Option[String]): Future[ProtoEmail] = {
+  /**
+   * Fetches all information that is common to all emails sent relative to a specific MessageThread.
+   * This function should be called as few times as possible
+   */
+  def getThreadEmailData(thread: MessageThread): Future[ThreadEmailData] = {
 
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
@@ -170,68 +174,80 @@ class ElizaEmailCommander @Inject() (
       uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
       readTimeMinutesOpt <- readTimeMinutesOptFuture
     } yield {
-      val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
-      val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl, readTimeMinutesOpt)
-      val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
-      val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
-      val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
-
-      ProtoEmail(
-        views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
-        if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
-        else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
-        views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
-        threadInfoSmall.conversationStarter,
-        uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
-      )
+      ThreadEmailData(thread, allUserIds, allUsers, allUserImageUrls, uriSummaryBig, uriSummarySmall, readTimeMinutesOpt)
     }
   }
 
+  private def assembleEmail(threadEmailData: ThreadEmailData, fromTime: Option[DateTime], toTime: Option[DateTime], invitedByUserId: Option[Id[User]], unsubUrl: Option[String], muteUrl: Option[String]): ProtoEmail = {
+    val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummaryBig, uriSummarySmall, readTimeMinutesOpt) = threadEmailData
+    val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
+    val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl, readTimeMinutesOpt)
+    val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
+    val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
+    val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
+
+    ProtoEmail(
+      views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
+      if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
+      else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
+      views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
+      threadInfoSmall.conversationStarter,
+      uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
+    )
+  }
+
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
-    val nuts = db.readOnly { implicit session =>
-      nonUserThreadRepo.getByMessageThreadId(thread.id.get)
-    }
-    // Intentionally sequential execution
-    nuts.foldLeft(Future.successful()){ (fut,nut) =>
-      fut.flatMap(_ => notifyEmailParticipant(nut, thread))
+    getThreadEmailData(thread) map { threadEmailData =>
+      val nuts = db.readOnly { implicit session =>
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+      }
+      // Intentionally sequential execution
+      nuts.foldLeft(Future.successful()){ (fut,nut) =>
+        fut.flatMap(_ => notifyEmailParticipant(nut, threadEmailData))
+      }
     }
   }
 
   def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
-    val nuts = db.readOnly { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
-      nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
-        nut.participant.identifier -> nut
-      }.toMap
-    }
-
-    // Intentionally sequential execution
-    addedNonUsers.foldLeft(Future.successful()){ (fut,nup) =>
-      require(nup.kind == NonUserKinds.email)
-      val nut = nuts(nup.identifier)
-      fut.flatMap { _ =>
+    getThreadEmailData(thread) map { threadEmailData =>
+      val nuts = db.readOnly { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
+          nut.participant.identifier -> nut
+        }.toMap
+      }
+      addedNonUsers.map{ nup =>
+        require(nup.kind == NonUserKinds.email)
+        val nut = nuts(nup.identifier)
         if (!nut.muted) {
-          safeProcessEmail(thread, nut, _.addedHtml.body, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
+          safeProcessEmail(threadEmailData, nut, _.addedHtml.body, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
         } else Future.successful()
       }
     }
   }
 
-  def notifyEmailParticipant(emailParticipantThread: NonUserThread, thread: MessageThread): Future[Unit] = if (!emailParticipantThread.muted) {
+  def notifyEmailParticipant(emailParticipantThread: NonUserThread, threadEmailData: ThreadEmailData): Future[Unit] = if (!emailParticipantThread.muted) {
     require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
-    require(emailParticipantThread.threadId == thread.id.get, "MessageThread and NonUserThread do not match.")
+    require(emailParticipantThread.threadId == threadEmailData.thread.id.get, "MessageThread and NonUserThread do not match.")
     val category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED
     val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body
-    safeProcessEmail(thread, emailParticipantThread, htmlBodyMaker, category)
+    safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
   } else Future.successful()
 
-  private def safeProcessEmail(messageThread: MessageThread, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
+  private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
     // Update records even if sending the email fails (avoid infinite failure loops)
     // todo(martin) persist failures to database
     db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nonUserThread.id.get, clock.now()) }
-    val protoEmailFut = for {
-      unsubUrl <- shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
-      protoEmail <- assembleEmail(messageThread, nonUserThread.lastNotifiedAt, None, Some(nonUserThread.createdBy), Some(unsubUrl), Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token))
-    } yield protoEmail
+    val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
+    val protoEmailFut = unsubUrlFut map { unsubUrl =>
+      assembleEmail(
+        threadEmailData,
+        nonUserThread.lastNotifiedAt,
+        None,
+        Some(nonUserThread.createdBy),
+        Some(unsubUrl),
+        Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token)
+      )
+    }
     protoEmailFut.onComplete { res =>
       res match {
         case Success(protoEmail) => {
@@ -258,7 +274,7 @@ class ElizaEmailCommander @Inject() (
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
-    val protoEmailFuture = assembleEmail(thread, None, Some(msg.createdAt), None, None, None)
+    val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, Some(msg.createdAt), None, None, None) }
     if (msg.auxData.isDefined) {
       if (msg.auxData.get.value(0)==JsString("start_with_emails")) {
         protoEmailFuture.map(_.initialHtml)
