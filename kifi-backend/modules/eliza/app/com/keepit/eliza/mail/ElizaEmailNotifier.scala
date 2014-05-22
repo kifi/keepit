@@ -214,7 +214,7 @@ class ElizaEmailNotifierActor @Inject() (
               fromName = Some("Kifi Notifications"),
               to = Seq(GenericEmailAddress(destinationEmail)),
               subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
-              htmlBody = views.html.userDigestEmail(threadEmailInfo, extendedThreadItems).body,
+              htmlBody = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, true, false, true).body,
               category = NotificationCategory.User.MESSAGE
             )
             shoebox.sendMail(email)
