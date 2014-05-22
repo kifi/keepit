@@ -217,8 +217,7 @@ class ScrapeWorker(
   }
 
   private def callEmbedly(uri: NormalizedURI): Unit = {
-    println("\n\n====================\n calling embedly commander")
-    embedlyCommander.fetchEmbedlyInfoIfNecessary(uri.id.get, uri.url)
+    embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {

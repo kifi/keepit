@@ -12,8 +12,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @ImplementedBy(classOf[EmbedlyCommanderImpl])
 trait EmbedlyCommander {
-  def getEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]]
-  def fetchEmbedlyInfoIfNecessary(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]]
+  def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[ExtendedEmbedlyInfo]
+  def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]]
 }
 
 class EmbedlyCommanderImpl @Inject()(
@@ -22,15 +22,8 @@ class EmbedlyCommanderImpl @Inject()(
   clock: Clock
 ) extends EmbedlyCommander {
 
-  def getEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]] = {
-    getStoredEmbedlyInfo(id) match {
-      case Some(storedInfo) => Future.successful(Some(storedInfo.info))
-      case _ => fetchAndPersistEmbedlyInfo(id, url)
-    }
-  }
-
-  private def getStoredEmbedlyInfo(id: Id[NormalizedURI]): Option[StoredExtendedEmbedlyInfo] = {
-    embedlyStore.get(id)
+  override def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[ExtendedEmbedlyInfo] = {
+    embedlyStore.get(id) map {_.info}
   }
 
   private def needToCallEmbedly(info: StoredExtendedEmbedlyInfo): Boolean = {
@@ -48,8 +41,8 @@ class EmbedlyCommanderImpl @Inject()(
     }
   }
 
-  def fetchEmbedlyInfoIfNecessary(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]] = {
-    getStoredEmbedlyInfo(id) match {
+  override def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]] = {
+    embedlyStore.get(id) match {
       case Some(storedInfo) if (! needToCallEmbedly(storedInfo)) => Future.successful(Some(storedInfo.info))
       case _ => fetchAndPersistEmbedlyInfo(id, url)
     }
