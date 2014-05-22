@@ -34,7 +34,7 @@ import com.keepit.eliza.mail.DomainToNameMapper
 import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
 import scala.util.matching.Regex.Match
-import com.keepit.eliza.util.{MessageFormatter, TextSegment}
+import com.keepit.eliza.util.{TextLookHereSegment, MessageFormatter, TextSegment, ImageLookHereSegment}
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -187,10 +187,10 @@ class ElizaEmailCommander @Inject() (
     val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
     ProtoEmail(
-      views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
-      if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
-      else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
-      views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
+      views.html.discussionEmail(threadInfoSmallDigest, threadItems, false, false, true),
+      if (uriSummaryBig.imageUrl.isDefined) views.html.discussionEmail(threadInfoBig, threadItems, false, false, false)
+      else views.html.discussionEmail(threadInfoSmall, threadItems, false, false, true),
+      views.html.discussionEmail(threadInfoSmall, threadItems, false, true, true),
       threadInfoSmall.conversationStarter,
       uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
     )
@@ -294,25 +294,25 @@ object ElizaEmailCommander {
   /**
    * This function is meant to be used from the console, to see how emails look like without deploying to production
    */
-  def makeDummyEmail(): String = {
+  def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean, withImage: Boolean = true): String = {
     val info = ThreadEmailInfo(
       "http://www.wikipedia.org/aninterstingpage.html",
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
       true,
-      Some("http:www://example.com/image0.jpg"),
+      if (withImage) Some("//www.hdwallpapersfullhd.net/wp-content/uploads/2014/05/Wallpapers.jpg") else None,
       Some("a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description "),
-      Seq("joe", "bob", "jack", "theguywithaverylongname"),
-      "bob",
+      Seq("joe", "bob", "jack", "theguywithaverylongname thatisreallyreallylong"),
+      "theguywithaverylongname thatisreallyreallylong",
       None,
       Some("http://www.example.com/iwanttounsubscribe.html"),
       Some("http://www.example.com/iwanttomute.html"),
       Some(10)
     )
     val threadItems = Seq(
-      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),
-      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else")))
+      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextLookHereSegment("look here", "Many people think that the love of another person can make them happy. In my opinion this is the biggest misconception we have about love. Yes, we hope that someone will love us back, and yes one might argue that a relationship has to have reciprocation but your joy and happiness will come from the love you give not receive."), TextSegment("Then something else"), ImageLookHereSegment("another one", "http://assets-s3.rollingstone.com/assets/images/album_review/1c26f0f04b4f46e335971adb04a50d71d3555e48.jpg"))),
+      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"), ImageLookHereSegment("cool image", "http://www.hdwallpapersfullhd.net/wp-content/uploads/2014/05/Wallpapers.jpg")))
     )
-    views.html.next.nonUserEmailImageSmall(info, threadItems).body
+    views.html.discussionEmail(info, threadItems, isUser, isAdded, isSmall).body
   }
 }
