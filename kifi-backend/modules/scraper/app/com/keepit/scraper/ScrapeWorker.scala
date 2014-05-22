@@ -22,7 +22,7 @@ import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import com.keepit.common.db.Id
-
+import com.keepit.scraper.embedly.EmbedlyCommander
 
 class ScrapeWorker(
   airbrake: AirbrakeNotifier,
@@ -34,7 +34,8 @@ class ScrapeWorker(
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient,
-  wordCountCache: NormalizedURIWordCountCache
+  wordCountCache: NormalizedURIWordCountCache,
+  embedlyCommander: EmbedlyCommander
 ) extends Logging {
 
   implicit val myConfig = config
@@ -215,10 +216,17 @@ class ScrapeWorker(
     (errorURI, None)
   }
 
+  private def callEmbedly(uri: NormalizedURI): Unit = {
+    println("\n\n====================\n calling embedly commander")
+    embedlyCommander.fetchEmbedlyInfoIfNecessary(uri.id.get, uri.url)
+  }
+
   private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
     log.debug(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
+    callEmbedly(latestUri)
+
     if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
     else fetchedArticle match {
       case scraped: Scraped => handleSuccessfulScraped(uri, latestUri, scraped, info, pageInfoOpt)
