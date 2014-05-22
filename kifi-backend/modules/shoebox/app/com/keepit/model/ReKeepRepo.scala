@@ -6,6 +6,8 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.google.inject.{Singleton, ImplementedBy, Inject}
 import org.joda.time.DateTime
+import scala.slick.jdbc.{StaticQuery => Q}
+import Q.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
@@ -18,6 +20,7 @@ trait ReKeepRepo extends Repo[ReKeep] {
   def getAllReKeepCountsByUser()(implicit r:RSession):Map[Id[User], Int]
   def getAllReKeepCountsByURI()(implicit r:RSession):Map[Id[NormalizedURI], Int]
   def getAllDirectReKeepCountsByKeep()(implicit r:RSession):Map[Id[Keep], Int]
+  def getAllKeepers()(implicit r:RSession):Seq[Id[User]]
 }
 
 @Singleton
@@ -91,6 +94,10 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
       .groupBy(_.keepId)
       .map{ case(keepId, rk) => (keepId, rk.length)}
     q.toMap
+  }
+
+  def getAllKeepers()(implicit r: RSession): Seq[Id[User]] = {
+    sql"select distinct keeper_id from rekeep".as[Id[User]].list()
   }
 
 }

@@ -27,7 +27,10 @@ class UserBookmarkClicksRepoImpl @Inject()(
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def selfClicks = column[Int]("self_clicks", O.NotNull)
     def otherClicks = column[Int]("other_clicks", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, uriId, selfClicks, otherClicks) <> ((UserBookmarkClicks.apply _).tupled, UserBookmarkClicks.unapply _)
+    def rekeepCount = column[Int]("rekeep_count", O.NotNull)
+    def rekeepTotalCount = column[Int]("rekeep_total_count", O.NotNull)
+    def rekeepDegree = column[Int]("rekeep_degree", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, userId, uriId, selfClicks, otherClicks, rekeepCount, rekeepTotalCount, rekeepDegree) <> ((UserBookmarkClicks.apply _).tupled, UserBookmarkClicks.unapply _)
   }
 
   def table(tag: Tag) = new UserBookmarkClicksTable(tag)

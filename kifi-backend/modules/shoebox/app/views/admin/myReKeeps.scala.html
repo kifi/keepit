@@ -1,4 +1,4 @@
-@(user:User, n:Int, rekeeps:Seq[ReKeep], rekeepsByDeg:Seq[(Keep, Seq[Set[User]])])
+@(user:User, n:Int, rekeepsByDeg:Seq[(Keep, Int, Int, Seq[Set[User]])])
 
 @admin("My ReKeeps") {
 
@@ -10,15 +10,19 @@
   <table class="table table-bordered">
   <th><tr>
       <td>Id</td>
-      <td>Url</td>
+      <td width="20%">Url</td>
+      <td>Direct#</td>
+      <td>Total#</td>
       @for(i <- 0 until n) {
         <td>Deg+@i</td>
       }
       </tr></th>
-  @for((keep, usersByDeg) <- rekeepsByDeg) {
+  @for((keep, directCount, totalCount, usersByDeg) <- rekeepsByDeg) {
     <tr>
       <td>@keep.id.get</td>
       <td><a href="@keep.url"/>@keep.url</a></td>
+      <td>@directCount</td>
+      <td>@totalCount</td>
       @for(users <- usersByDeg) {
         <td>
           <table class="table table-striped table-condensed">
