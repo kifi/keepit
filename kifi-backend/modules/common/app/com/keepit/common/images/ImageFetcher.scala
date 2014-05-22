@@ -13,6 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
 import java.security.cert.CertificateExpiredException
+import java.nio.channels.ClosedChannelException
 
 @ImplementedBy(classOf[ImageFetcherImpl])
 trait ImageFetcher {
@@ -52,6 +53,10 @@ class ImageFetcherImpl @Inject() (airbrake: AirbrakeNotifier) extends ImageFetch
           None
       }
     } recover {
+      case cce: ClosedChannelException => {
+        log.warn(s"Security concern when fetching image with url $url, there's nothing we can do about server closing on us, next time it may work", trace.withCause(cce))
+        None
+      }
       case cee: CertificateExpiredException => {
         log.warn(s"Security concern when fetching image with url $url, since we don't trust the site we'll ignore its content", trace.withCause(cee))
         None
