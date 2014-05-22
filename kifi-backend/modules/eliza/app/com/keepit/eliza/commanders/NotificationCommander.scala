@@ -112,7 +112,7 @@ class NotificationCommander @Inject() (
           userThreadRepo.save(UserThread(
             id = None,
             user = pUserId,
-            thread = thread.id.get,
+            threadId = thread.id.get,
             uriId = thread.uriId,
             lastSeen = None,
             unread = true,
@@ -228,7 +228,7 @@ class NotificationCommander @Inject() (
             userThreadRepo.save(UserThread(
               id = None,
               user = userId,
-              thread = thread.id.get,
+              threadId = thread.id.get,
               uriId = None,
               lastSeen = None,
               unread = true,
