@@ -159,8 +159,13 @@ object KeepSource {
   val email = KeepSource("email")
   val default = KeepSource("default")
   val unknown = KeepSource("unknown")
+  val kippt = KeepSource("Kippt")
+  val pocket = KeepSource("Pocket")
+  val instapaper = KeepSource("Instapaper")
 
-  val valid = Set(keeper, bookmarkImport, site, mobile, email, default)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper)
+
+  val imports = Set(bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport)
 
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper

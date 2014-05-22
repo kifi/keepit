@@ -6,7 +6,7 @@ import java.io.File
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{JsNumber, Json}
 import com.keepit.common.logging.Logging
-import play.modules.statsd.api.Statsd
+import com.keepit.common.time._
 
 trait SimpleGraphDirectory extends GraphDirectory with BackedUpDirectory {
   def load(): (SimpleGraph, GraphUpdaterState)
@@ -45,20 +45,16 @@ class ArchivedSimpleGraphDirectory(dir: File, protected val tempDir: File, prote
   }
 
   private def persistGraph(graph: SimpleGraph): File = {
-    val json = SimpleGraph.format.writes(graph)
-    val tempGraphFile = new File(tempDir, "graph_" + graph.hashCode())
-    FileUtils.writeStringToFile(tempGraphFile, Json.stringify(json))
+    val tempGraphFile = new File(tempDir, "graph_" + currentDateTime.getMillis)
+    SimpleGraph.write(graph, tempGraphFile)
     tempGraphFile
   }
 
-  private def loadGraph(graphFile: File): SimpleGraph = {
-    val json = Json.parse(FileUtils.readFileToString(graphFile))
-    SimpleGraph.format.reads(json).get
-  }
+  private def loadGraph(graphFile: File): SimpleGraph = SimpleGraph.read(graphFile)
 
   private def persistState(state: GraphUpdaterState): File = {
     val json = GraphUpdaterState.format.writes(state)
-    val tempStateFile = new File(tempDir, "state_" + state.hashCode())
+    val tempStateFile = new File(tempDir, "state_" + currentDateTime.getMillis)
     FileUtils.writeStringToFile(tempStateFile, Json.stringify(json))
     tempStateFile
   }
@@ -76,7 +72,7 @@ class ArchivedSimpleGraphDirectory(dir: File, protected val tempDir: File, prote
 
   private def persistChecksum(graphFile: File, stateFile: File): File = {
     val checksum = computeChecksum(graphFile, stateFile)
-    val tempChecksumFile = new File(tempDir, "checksum_" + checksum.hashCode())
+    val tempChecksumFile = new File(tempDir, "checksum_" + currentDateTime.getMillis)
     FileUtils.writeStringToFile(tempChecksumFile, Json.stringify(JsNumber(checksum)))
     tempChecksumFile
   }

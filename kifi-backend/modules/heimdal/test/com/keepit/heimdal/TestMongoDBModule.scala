@@ -15,4 +15,7 @@ case class TestMongoModule() extends MongoModule {
 
   @Provides @Singleton
   def anonymousEventLoggingRepo: AnonymousEventLoggingRepo = new TestAnonymousEventLoggingRepo
+
+  @Provides @Singleton
+  def nonUserEventLoggingRepo: NonUserEventLoggingRepo = new TestNonUserEventLoggingRepo
 }

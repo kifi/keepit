@@ -49,20 +49,20 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
 
   def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
 
-    val articleIndexers = activeShards.shards.map{ shard =>
+    val articleIndexers = activeShards.local.map{ shard =>
       val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
     val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[ShoeboxServiceClient])
 
-    val uriGraphIndexers = activeShards.shards.map{ shard =>
+    val uriGraphIndexers = activeShards.local.map{ shard =>
       val bookmarkStore = new BookmarkStore(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectory, bookmarkStore, inject[AirbrakeNotifier])
       (shard -> uriGraphIndexer)
     }
     val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])
 
-    val collectionIndexers = activeShards.shards.map{ shard =>
+    val collectionIndexers = activeShards.local.map{ shard =>
       val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, collectionNameIndexer, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)

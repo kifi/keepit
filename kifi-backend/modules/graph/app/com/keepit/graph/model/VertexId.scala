@@ -8,13 +8,13 @@ case class InvalidVertexIdException[V <: VertexDataReader](vertexId: VertexId, e
 
 case class VertexId(id: Long) extends AnyVal {
   def asId[V <: VertexDataReader](implicit kind: VertexKind[V]): VertexDataId[V] = {
-    if (code != kind.header) { throw InvalidVertexIdException(this, kind) }
+    if (header != kind.header) { throw InvalidVertexIdException(this, kind) }
     VertexDataId[V](dataId)
   }
   def asIdOpt[V <: VertexDataReader](implicit kind: VertexKind[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
-  def kind: VertexKind[_ <: VertexDataReader] = VertexKind(code)
-  override def toString() =  kind + "|" + dataId
-  private def code: Byte = (id >> VertexId.dataIdSpace).toByte
+  def kind: VertexKind[_ <: VertexDataReader] = VertexKind(header)
+  override def toString() =  kind.code + "|" + dataId
+  private def header: Byte = (id >> VertexId.dataIdSpace).toByte
   private def dataId: Long = id & VertexId.maxVertexDataId
 }
 
@@ -29,6 +29,8 @@ object VertexId {
     require(kind.header.toLong <= maxHeader, s"Header ${kind.header} is too large")
     VertexId((kind.header.toLong << dataIdSpace) | id.id)
   }
+
+  def apply[V <: VertexDataReader](kind: VertexKind[V])(id: Long): VertexId = VertexId(kind.id(id))(kind)
 
   implicit val format: Format[VertexId] = Format(Reads.of[Long].map(VertexId(_)), Writes(id => JsNumber(id.id)))
 }

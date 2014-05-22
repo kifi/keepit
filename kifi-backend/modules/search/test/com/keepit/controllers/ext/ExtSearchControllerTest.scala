@@ -179,8 +179,26 @@ class FixedResultSearchCommander extends SearchCommander {
     results(query)
   }
 
+  def distSearch(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    start: Option[String],
+    end: Option[String],
+    tz: Option[String],
+    coll: Option[String],
+    debug: Option[String]) : PartialSearchResult = ???
+
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
+
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???
-  def searchKeeps(userId: Id[User], query: String): Set[Long] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }

@@ -67,7 +67,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def markRead(userId: Id[User], threadId: Id[MessageThread], msg: Message)(implicit session: RWSession): Unit
 
-  def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread]
+  def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession) : Seq[UserThread]
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[Message]])(implicit session: RWSession) : Unit
 
@@ -95,6 +95,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
 
+  def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
 }
 
 /**
@@ -306,8 +307,8 @@ class UserThreadRepoImpl @Inject() (
       .update((message.id.get, false, message.createdAt, clock.now()))
   }
 
-  def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
-    (for (row <- rows if row.replyable && row.unread && !row.notificationEmailed && row.notificationUpdatedAt < before) yield row).list
+  def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession) : Seq[UserThread] = {
+    (for (row <- rows if row.replyable && row.unread && !row.notificationEmailed && row.notificationUpdatedAt < lastNotifiedBefore) yield row).list
   }
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession) : Unit = {
@@ -375,4 +376,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.thread===threadId && row.started===true) yield row.user).first
   }
 
+  def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread] = {
+    (for (row <- rows if row.accessToken===token) yield row).firstOption
+  }
 }

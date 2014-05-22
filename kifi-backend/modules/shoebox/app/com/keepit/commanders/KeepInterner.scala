@@ -62,7 +62,7 @@ class KeepInterner @Inject() (
       val total = deduped.size
 
       keepsAbuseMonitor.inspect(userId, total)
-      keptAnalytics.keepImport(userId, clock.now, context, total)
+      keptAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
 
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
@@ -151,7 +151,7 @@ class KeepInterner @Inject() (
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      bms.foreach{ b => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${b.url}") }
+      failed.foreach{ f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}") }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
     (persisted.values.map(_.get).toSeq, failedRaws)
@@ -177,7 +177,7 @@ class KeepInterner @Inject() (
       Failure(new Exception(s"bookmark url is a javascript command: ${rawBookmark.url}"))
     }
   } catch {
-    case e: Exception =>
+    case e: Throwable =>
       //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
       airbrake.notify(AirbrakeError(
         exception = e,

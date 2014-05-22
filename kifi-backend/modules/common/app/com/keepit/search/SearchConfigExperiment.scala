@@ -11,7 +11,8 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.model.{ProbabilityDensity, ProbabilisticExperimentGenerator, Name, ExperimentType}
+import com.keepit.model.{ProbabilisticExperimentGenerator, Name, ExperimentType}
+import com.keepit.common.math.ProbabilityDensity
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,

@@ -4,7 +4,6 @@ import com.google.inject.Inject
 
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.db._
-import com.keepit.common.strings._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.time._
@@ -23,10 +22,10 @@ import play.api.libs.json._
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.store.{S3ImageStore, ImageSize}
+import com.keepit.common.store.S3ImageStore
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.eliza.model.MessageHandle
+import com.keepit.common.performance._
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
@@ -111,7 +110,7 @@ class KeepsCommander @Inject() (
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
     val keepsWithCollIds = db.readOnly { implicit s =>
-      val collIdToExternalId = collectionRepo.getByUser(userId).map(c => c.id.get -> c.externalId).toMap
+      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId).map(c => c.id -> c.externalId).toMap
       keeps.map{ keep =>
         val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
         (keep, collIds)
@@ -126,7 +125,7 @@ class KeepsCommander @Inject() (
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
         FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCounts.getOrElse(keep.id.get, 0))
       }
-      (collectionOpt.map(BasicCollection fromCollection _), keepsInfo)
+      (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }
   }
 
@@ -139,7 +138,6 @@ class KeepsCommander @Inject() (
       case Success(keep) =>
         SafeFuture{
           searchClient.updateURIGraph()
-          notifyWhoKeptMyKeeps(userId, Seq(keep))
         }
         KeepInfo.fromBookmark(keep)
     }
@@ -158,65 +156,8 @@ class KeepsCommander @Inject() (
     }
     SafeFuture{
       searchClient.updateURIGraph()
-      notifyWhoKeptMyKeeps(userId, keeps)
     }
     (keeps.map(KeepInfo.fromBookmark), addedToCollection)
-  }
-
-  /**
-   * This is a very experimental test, needs to be tested and verified with product as there are few concepts here that are
-   * not part of the "regular" flow of kifi, like having unconnected people know about each public keeps etc.
-   * To be explicit, this is an internal only experiment and likely to be removed soon.
-   */
-  private def notifyWhoKeptMyKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = keeps.filterNot(_.isPrivate).filter(_.id.isDefined) foreach { keep =>
-    notifyWhoKeptMyKeep(userId, keep.id.get)
-  }
-
-  private def notifyWhoKeptMyKeep(userId: Id[User], keepId: Id[Keep]): Unit = {
-    import scala.concurrent.duration._
-    // Give the user 5 minutes to change the keep privacy settings or un-keep it and let the scraper and porn detector do their thing
-    scheduler.scheduleOnce(5 minutes) {
-      db.readOnly { implicit s =>
-        try {
-          val keep = keepRepo.get(keepId)
-          //deal only with good standing, fully public keeps and uris
-          if (keep.isPrivate || keep.state != KeepStates.ACTIVE) return
-          val uri = uriRepo.get(keep.uriId)
-          if (uri.restriction.isDefined || uri.state != NormalizedURIStates.SCRAPED || uri.title.isEmpty || uri.title.get.isEmpty) return
-          val countPublicActiveByUri = keepRepo.countPublicActiveByUri(uri.id.get)
-          //don't mess with keeps that are even a bit popular, has more then four keepers (with the latest keeper). we don't want to create noise, be extra careful
-          val maxKeepers = 5
-          if (countPublicActiveByUri <= 1 || countPublicActiveByUri > maxKeepers) return
-          val otherKeeps = keepRepo.getByUri(keep.uriId).filterNot(_.isPrivate).filter(_.state == KeepStates.ACTIVE).filterNot(_.userId == userId)
-          if (otherKeeps.length > (maxKeepers - 1)) return // how did that happen???
-          val keeper = userRepo.get(keep.userId)
-          val otherKeepers = otherKeeps.map(_.userId).toSet.filter { id =>
-            localUserExperimentCommander.userHasExperiment(id, ExperimentType.WHO_KEPT_MY_KEEP)
-          }
-          val title = s"${keeper.fullName} also kept your keep"
-          log.info(s"""sending WKMK "$title" or $keeper to $otherKeepers""")
-          val userImageSize = Some(53)
-          keeper.pictureName.map { pictureName =>
-            imageStore.getPictureUrl(userImageSize, keeper, pictureName)
-          } getOrElse {
-            imageStore.getPictureUrl(userImageSize, keeper, "0")
-          } map { userImage =>
-            val pageImageSize = 42
-            val pageImage: String = imageRepo.getByUriWithSize(uri.id.get, ImageSize(pageImageSize, pageImageSize)).headOption.map(_.url).flatten.getOrElse("")
-            val bodyHtml = s"""<img src="$pageImage" style="float:left" width="$pageImageSize" height="$pageImageSize"/><b>${keeper.fullName}</b> also kept "${uri.title.getOrElse(uri.url)}"."""
-            eliza.sendGlobalNotification(otherKeepers, title, bodyHtml, uri.title.get.abbreviate(80), uri.url, userImage,
-              sticky = false, NotificationCategory.User.WHO_KEPT_MY_KEEP) onComplete { messageHandle =>
-                messageHandle match {
-                  case Success(id) => log.info(s"""[$id] sent WKMK "$title" or $keeper to ${otherKeepers}""")
-                  case Failure(ex) => log.error(s"""Error sending WKMK "$title" or $keeper to ${otherKeepers}""", ex)
-                }
-            }
-          }
-        } catch {
-          case e: Exception => airbrake.notify(s"on parsing WKMK for user $userId and keep $keepId", e)
-        }
-      }
-    }
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
@@ -278,26 +219,33 @@ class KeepsCommander @Inject() (
     } else None
   }
 
-  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
-    db.readWrite(attempts = 2) { implicit s =>
+  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
+    val result = db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val collection = collectionRepo.get(collectionId)
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
-      val created = (keepsById.keySet -- existing.map(_.keepId)) map { bid =>
-        keepToCollectionRepo.save(KeepToCollection(keepId = bid, collectionId = collectionId))
+      val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
+      val newK2C  = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
+      timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
+        keepToCollectionRepo.insertAll(newK2C.toSeq)
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
       }
 
-      collectionRepo.collectionChanged(collectionId, (created.size + activated.size) > 0)
-
-      val tagged = (activated ++ created).toSet
+      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
+        collectionRepo.modelChanged(collection, (newK2C.size + activated.size) > 0)
+      }
+      val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
       tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt))
       tagged
-    } tap { _ => searchClient.updateURIGraph() }
+    }
+    if (updateUriGraph) {
+      searchClient.updateURIGraph()
+    }
+    result
   }
 
   def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection] = {
@@ -392,9 +340,11 @@ class KeepsCommander @Inject() (
 
     val keepsByTag = keepsByTagName.map { case (tagName, keeps) =>
       val tag = getOrCreateTag(userId, tagName)
-      addToCollection(tag.id.get, keeps)
+      addToCollection(tag.id.get, keeps, updateUriGraph = false)
       tag -> keeps
     }.toMap
+
+    searchClient.updateURIGraph()
 
     keepsByTag
   }

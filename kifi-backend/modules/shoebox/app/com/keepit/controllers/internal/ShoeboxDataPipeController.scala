@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.keepit.common.db.slick.Database.Slave
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.SequenceNumber
 import play.api.libs.json.{JsNumber, JsObject, JsArray, Json}
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
@@ -9,6 +9,9 @@ import play.api.mvc.Action
 import com.keepit.model._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
+import org.msgpack.ScalaMessagePack
+import play.api.http.ContentTypes
+import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -19,7 +22,9 @@ class ShoeboxDataPipeController @Inject() (
     changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo,
     userConnRepo: UserConnectionRepo,
-    searchFriendRepo: SearchFriendRepo
+    searchFriendRepo: SearchFriendRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    socialUserInfoRepo: SocialUserInfoRepo
   ) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
@@ -46,12 +51,11 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
+  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getChanged(seqNum, includeStates = scrapedStates,  limit = fetchSize)
+      normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)
     }
-    Ok(Json.toJson(uris))
+    Ok(ScalaMessagePack.write(UriIdAndSeqBatch(uris))).as(ContentTypes.BINARY)
   }
 
   def getHighestUriSeq() = Action { request =>
@@ -112,5 +116,21 @@ class ShoeboxDataPipeController @Inject() (
       searchFriendRepo.getSearchFriendsChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(changes))
+  }
+
+  def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = Action { request =>
+    val indexableSocialConnections = db.readOnly(2, Slave) { implicit session =>
+      socialConnectionRepo.getConnAndNetworkBySeqNumber(seqNum, fetchSize).map { case (firstUserId, secondUserId, state, seq, networkType) =>
+        IndexableSocialConnection(firstUserId, secondUserId, networkType, state, seq)
+      }
+    }
+    val json = Json.toJson(indexableSocialConnections)
+    Ok(json)
+  }
+
+  def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = Action { request =>
+    val socialUserInfos = db.readOnly(2, Slave) { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
+    val json = Json.toJson(socialUserInfos)
+    Ok(json)
   }
 }

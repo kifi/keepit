@@ -47,13 +47,13 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI],Id[User]), URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
-  private[this] val consolidateLangProfReq = new RequestConsolidator[(Id[User], Int), Map[Lang, Float]](180 seconds)
+  private[this] val consolidateLangFreqsReq = new RequestConsolidator[Id[User], Map[Lang, Int]](180 seconds)
   private[this] val consolidateConfigReq = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
 
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   def apply(
-    shards: Seq[Shard[NormalizedURI]],
+    shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     queryString: String,
     lang1: Lang,
@@ -67,7 +67,7 @@ class MainSearcherFactory @Inject() (
 
     val parser = parserFactory(lang1, lang2, config)
 
-    val searchers = shards.map{ shard =>
+    val searchers = shards.toSeq.map{ shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
       val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
 
@@ -105,7 +105,7 @@ class MainSearcherFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig
   ): MainSearcher = {
-    val searchers = apply(Seq(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
+    val searchers = apply(Set(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
     searchers(0)
   }
 
@@ -153,27 +153,15 @@ class MainSearcherFactory @Inject() (
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
 
-  def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphSearcher = getURIGraphSearcher(shard, userId)
-    new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
-  }
-
-  def getLangProfileFuture(shards: Seq[Shard[NormalizedURI]], userId: Id[User], limit: Int): Future[Map[Lang, Float]] = consolidateLangProfReq((userId, limit)){ case (userId, limit) =>
+  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Future[Map[Lang, Int]] = consolidateLangFreqsReq(userId){ case userId =>
     Future.traverse(shards){ shard =>
       SafeFuture{
         val searcher = getURIGraphSearcher(shard, userId)
         searcher.getLangProfile()
       }
     }.map{ results =>
-      val total = results.map(_.values.sum).sum.toFloat
-      if (total > 0) {
-        val newProf = results.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
-          m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f)))
-        }
-        newProf.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(limit).toMap // top N with prob > 0.05
-      } else {
-        Map()
+      results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()){ case (m, (lang, count)) =>
+        m + (lang -> (count + m.getOrElse(lang, 0)))
       }
     }
   }

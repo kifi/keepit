@@ -41,19 +41,28 @@ sealed trait VertexKind[V <: VertexDataReader] {
   def id(id: Long): VertexDataId[V] = VertexDataId[V](id)
 
   // Json helpers
-  implicit def idFormat: Format[VertexDataId[V]] = VertexDataId.format[V]
+  val code: String = toString.stripSuffix("Reader")
+  implicit val idFormat: Format[VertexDataId[V]] = VertexDataId.format[V]
   def writes: Writes[V]
   def readsAsVertexData: Reads[VertexData[V]]
 }
 
 object VertexKind {
-  val all: Set[VertexKind[_ <: VertexDataReader]] = CompanionTypeSystem[VertexDataReader, VertexKind[_ <: VertexDataReader]]("V")
-  private val byHeader: Map[Byte, VertexKind[_ <: VertexDataReader]] = {
+  type VertexType = VertexKind[_ <: VertexDataReader]
+  val all: Set[VertexType] = CompanionTypeSystem[VertexDataReader, VertexKind[_ <: VertexDataReader]]("V")
+
+  private val byHeader: Map[Byte, VertexType] = {
     require(all.forall(_.header > 0), "VertexKind headers must be positive.")
     require(all.size == all.map(_.header).size, "Duplicate VertexKind headers.")
     all.map { vertexKind => vertexKind.header -> vertexKind }.toMap
   }
-  def apply(header: Byte): VertexKind[_ <: VertexDataReader] = byHeader(header)
+  def apply(header: Byte): VertexType = byHeader(header)
+
+  private val byCode: Map[String, VertexType] = {
+    require(all.size == all.map(_.code).size, "Duplicate VertexKind codes.")
+    all.map { vertexKind => vertexKind.code -> vertexKind }.toMap
+  }
+  def apply(code: String): VertexType = byCode(code)
 }
 
 trait UserReader extends VertexDataReader {

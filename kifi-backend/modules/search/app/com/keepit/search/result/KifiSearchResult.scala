@@ -93,7 +93,7 @@ object KifiSearchHit extends Logging {
   }
 }
 
-class ShardSearchResult(val json: JsValue) extends AnyVal {
+class PartialSearchResult(val json: JsValue) extends AnyVal {
   def hits: Seq[DetailedSearchHit] = (json \ "hits").as[JsArray] match {
     case JsArray(hits) => hits.map{ json => new DetailedSearchHit(json.as[JsObject]) }
     case _ => Seq.empty
@@ -106,7 +106,7 @@ class ShardSearchResult(val json: JsValue) extends AnyVal {
   def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
 
-object ShardSearchResult extends Logging {
+object PartialSearchResult extends Logging {
   def apply(
     hits: Seq[DetailedSearchHit],
     myTotal: Int,
@@ -115,9 +115,9 @@ object ShardSearchResult extends Logging {
     friendStats: FriendStats,
     svVariance: Float, // TODO: remove
     show: Boolean // TODO: remove
-  ): ShardSearchResult = {
+  ): PartialSearchResult = {
     try {
-      new ShardSearchResult(JsObject(List(
+      new PartialSearchResult(JsObject(List(
         "hits" -> JsArray(hits.map(_.json)),
         "myTotal" -> JsNumber(myTotal),
         "friendsTotal" -> JsNumber(friendsTotal),
@@ -128,12 +128,12 @@ object ShardSearchResult extends Logging {
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize ShardSearchResult [hits=$hits][myTotal=$myTotal][friendsTotal=$friendsTotal][othersTotal=$othersTotal][friendStats=$friendStats]", e)
+        log.error(s"can't serialize PartialSearchResult [hits=$hits][myTotal=$myTotal][friendsTotal=$friendsTotal][othersTotal=$othersTotal][friendStats=$friendStats]", e)
         throw e
     }
   }
   lazy val empty = {
-    new ShardSearchResult(JsObject(List(
+    new PartialSearchResult(JsObject(List(
       "hits" -> JsArray(),
       "mayHaveMore" -> JsBoolean(false),
       "myTotal" -> JsNumber(0),

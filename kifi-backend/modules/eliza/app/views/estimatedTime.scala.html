@@ -1,0 +1,5 @@
+@(readTimeMinutes: Option[Int])
+
+@if(readTimeMinutes.nonEmpty){
+  &#x2022; @if(readTimeMinutes.get >= 60) {> 1h} else {@{readTimeMinutes.get} min} read
+}

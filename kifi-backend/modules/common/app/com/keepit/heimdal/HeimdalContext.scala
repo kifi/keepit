@@ -175,7 +175,7 @@ class HeimdalContextBuilder {
   def addNotificationCategory(category: NotificationCategory): Unit = {
     val camelledCategory = category.category.toLowerCase.split("_") match { case Array(h, q @ _*)  => h + q.map(_.capitalize).mkString }
     this += ("category", camelledCategory)
-    NotificationCategory.User.parentCategory.get(category).foreach { parentCategory => this += ("parentCategory", parentCategory) }
+    NotificationCategory.ParentCategory.get(category).foreach { parentCategory => this += ("parentCategory", parentCategory) }
   }
 
   def anonymise(toBeRemoved: String*): Unit = {

@@ -273,19 +273,18 @@ class AdminUserController @Inject() (
       db.readOnly { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
     }
     val filteredBookmarks = db.readOnly { implicit s =>
-      val query = bookmarkSearch.getOrElse("")
+      val query = bookmarkSearch.getOrElse("").toLowerCase()
       (if (query.trim.length == 0) {
         bookmarks
       } else {
-        val uris = Await.result(searchClient.searchKeeps(userId, query), Duration.Inf)
-        bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
+        bookmarks.filter{ case (b, u) => b.title.exists{ t => t.toLowerCase().indexOf(query) >= 0 } }
       }) collect {
         case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
           val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
           (mark, uri, colls)
       }
     }
-    val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
+    val collections = db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) }
 
     Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch, collections, collectionFilter))
   }
@@ -481,7 +480,7 @@ class AdminUserController @Inject() (
   }
 
   def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
-    db.readWrite { implicit request =>
+    db.readWrite { implicit session =>
       val user = userRepo.get(userId)
       userPictureRepo.getByUser(userId).find(_.id.get == pictureId) map { pic =>
         if (pic.state != UserPictureStates.ACTIVE) {
@@ -657,7 +656,7 @@ class AdminUserController @Inject() (
         properties += ("keeps", keeps)
         properties += ("publicKeeps", publicKeeps)
         properties += ("privateKeeps", privateKeeps)
-        properties += ("tags", collectionRepo.getByUser(userId).length)
+        properties += ("tags", collectionRepo.count(userId))
         properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
         properties += ("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value).toSeq)
@@ -830,7 +829,7 @@ class AdminUserController @Inject() (
 
         // URI Graph
         keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
-        collectionRepo.getByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+        collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
 
         // Personal Info
         userSessionRepo.invalidateByUser(userId) // User Session
@@ -844,7 +843,7 @@ class AdminUserController @Inject() (
       val emails = emailRepo.getAllByUser(userId)
       val credentials = userCredRepo.findByUserIdOpt(userId)
       val installations = kifiInstallationRepo.all(userId)
-      val tags = collectionRepo.getByUser(userId)
+      val tags = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
       val keeps = keepRepo.getByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)

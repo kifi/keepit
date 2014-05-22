@@ -138,7 +138,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   val enforcer = new Runnable {
     def run():Unit = {
       try {
-        log.info(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
+        log.debug(s"[enforcer] checking for long running fetch requests ... q.size=${q.size}")
         if (!q.isEmpty) {
           val iter = q.iterator
           while (iter.hasNext) {
@@ -157,7 +157,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
                   log.warn(msg)
                   ft.htpGet.abort() // inform scraper
                   ft.killCount.incrementAndGet()
-                  log.info(s"[enforcer] ${ft.htpGet.getURI} isAborted=${ft.htpGet.isAborted}")
+                  log.debug(s"[enforcer] ${ft.htpGet.getURI} isAborted=${ft.htpGet.isAborted}")
                   if (!ft.htpGet.isAborted) {
                     log.warn(s"[enforcer] failed to abort long ($runMillis ms) fetch task $ft; calling interrupt ...")
                     ft.thread.interrupt
@@ -174,7 +174,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
                 } else if (runMillis > LONG_RUNNING_THRESHOLD) {
                   log.warn(s"[enforcer] potential long ($runMillis ms) running task: $ft; stackTrace=${ft.thread.getStackTrace.mkString("|")}")
                 } else {
-                  log.info(s"[enforcer] $ft has been running for $runMillis ms")
+                  log.debug(s"[enforcer] $ft has been running for $runMillis ms")
                 }
               }
             } orElse {
@@ -197,7 +197,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   val scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory {
     def newThread(r: Runnable): Thread = {
       val thread = new Thread(r, "HttpFetcher-Enforcer")
-      log.info(s"[HttpFetcher] $thread created")
+      log.debug(s"[HttpFetcher] $thread created")
       thread
     }
   })

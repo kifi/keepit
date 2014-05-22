@@ -9,12 +9,11 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{AccessLog, Logging}
 import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.{SocialUserInfo, SocialUserInfoRepo, User, UserRepo, UserValueRepo}
-import com.keepit.model.{UserPicture, UserPictureRepo, UserPictureSource, UserPictureSources, UserPictureStates}
+import com.keepit.model._
 import com.keepit.social.{BasicUser, SocialNetworks}
 
 import org.apache.commons.lang3.RandomStringUtils
@@ -30,6 +29,7 @@ import javax.imageio.ImageIO
 
 import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success, Try}
+import com.keepit.model.UserPictureSource
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)

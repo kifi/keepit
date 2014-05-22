@@ -23,7 +23,6 @@ import play.api.mvc.{WebSocket,RequestHeader}
 import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
 import play.api.mvc.WebSocket.FrameFormatter
 import play.api.libs.json.{Json, JsValue}
-import play.modules.statsd.api.Statsd
 
 import akka.actor.ActorSystem
 
@@ -178,14 +177,14 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
           reportConnect(streamSession, socketInfo, request, connectTimer)
           var startMessages = Seq[JsArray](Json.arr("hi"))
-          getGoldIfUpdateNeeded(streamSession, versionOpt) foreach { gold =>
-            startMessages = startMessages :+ Json.arr("version", gold.toString)
+          if (updateNeeded(streamSession, versionOpt)) {
+            startMessages = startMessages :+ Json.arr("version", "new")
           }
           onConnect(socketInfo)
           (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
         }
         case None => Future.successful {
-          Statsd.increment(s"websocket.anonymous")
+          statsd.increment(s"websocket.anonymous")
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
           (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
         }
@@ -217,13 +216,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
-        Statsd.time(s"websocket.handler.$action") {
+        statsd.time(s"websocket.handler.$action", ALWAYS) {
           val timer = accessLog.timer(WS_IN)
           val payload = jsArr.value.tail
           try {
             handler(payload)
           } finally {
-            Statsd.increment(s"websocket.handler.$action.$agentFamily")
+            statsd.increment(s"websocket.handler.$action.$agentFamily")
             accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
           }
         }
@@ -233,22 +232,22 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }.map(_ => endSession(streamSession, socketInfo))
   }
 
-  private def getGoldIfUpdateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Option[KifiExtVersion] = {
-    if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {  // TODO: iPhone, Android
-      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption) flatMap { ver =>
+  private def updateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Boolean = {
+    if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {
+      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption).map { ver =>
         val details = kifInstallationStore.get()
         if (ver < details.gold) {
           log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
-          Some(details.gold)
+          true
         } else if (details.killed.contains(ver)) {
           log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
-          Some(details.gold)
+          true
         } else {
-          None
+          false
         }
-      }
-    } else {
-      None
+      }.getOrElse(true)
+    } else {  // TODO: iPhone, Android
+      false
     }
   }
 

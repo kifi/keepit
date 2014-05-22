@@ -1,9 +1,7 @@
 package com.keepit.controllers.mobile
 
 import org.specs2.mutable.Specification
-
 import net.codingwell.scalaguice.ScalaModule
-
 import com.keepit.normalizer._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -22,7 +20,6 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks}
 import com.keepit.test.ShoeboxApplication
-
 import play.api.libs.json.{JsObject, Json, JsArray, JsString}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
@@ -31,7 +28,6 @@ import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
 import com.keepit.abook.TestABookServiceClientModule
-
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
@@ -41,12 +37,12 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
-
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.scraper.TestScraperServiceClientModule
 
 class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -58,7 +54,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
-    FakeExternalServiceModule()
+    FakeExternalServiceModule(),
+    TestScraperServiceClientModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
@@ -457,7 +454,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       contentType(result) must beSome("application/json");
 
       val collection = inject[Database].readWrite { implicit session =>
-        val collections = inject[CollectionRepo].getByUser(user.id.get)
+        val collections = inject[CollectionRepo].getUnfortunatelyIncompleteTagSummariesByUser(user.id.get)
         collections.size === 1
         collections.head
       }
@@ -495,9 +492,9 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         val expected = Json.parse(s"""
           {"keeps":0,
            "collections":[
-              {"id":"${externalIdForCollection(user.id.get, "myCollaction3")}","name":"myCollaction3","keeps":0},
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction1")}","name":"myCollaction1","keeps":0},
               {"id":"${externalIdForCollection(user.id.get, "myCollaction2")}","name":"myCollaction2","keeps":0},
-              {"id":"${externalIdForCollection(user.id.get, "myCollaction1")}","name":"myCollaction1","keeps":0}
+              {"id":"${externalIdForCollection(user.id.get, "myCollaction3")}","name":"myCollaction3","keeps":0}
             ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)

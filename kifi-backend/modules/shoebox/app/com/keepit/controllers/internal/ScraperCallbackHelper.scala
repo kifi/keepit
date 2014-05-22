@@ -49,7 +49,7 @@ class ScraperCallbackHelper @Inject()(
             val pageInfoOpt = pageInfoRepo.getByUri(nuri.id.get)
             val proxy = urlPatternRuleRepo.getProxy(nuri.url)
             val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
-            log.info(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
+            log.debug(s"[assignTasks($zkId,$max)] #${count} assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
             count += 1
             builder += ScrapeRequest(nuri, savedInfo, pageInfoOpt, proxy)
           } else {
@@ -63,7 +63,7 @@ class ScraperCallbackHelper @Inject()(
         log.warn(s"[assignTask($zkId,$max)] 0 tasks assigned") // can be more aggressive
       }
       val limit = res.take(max)
-      Statsd.gauge("scraper.assign", limit.length)
+      statsd.gauge("scraper.assign", limit.length)
       limit
     }
   }

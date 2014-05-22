@@ -18,7 +18,20 @@
     "default_title": "Kifi"
   },
   "background": {
-    "page": "main.html"
+    "scripts": [
+      "airbrake.min.js",
+      "meta.js",
+      "deps.js",
+      "listeners.js",
+      "api.js",
+      "rwsocket.js",
+      "socket_commander.js",
+      "threadlist.js",
+      "main.js",
+      "lzstring.min.js",
+      "scorefilter.js",
+      "friend_search_cache.js"
+    ]
   },
   "content_scripts": [
     {
@@ -100,6 +113,9 @@
     "<all_urls>"
   ],
   "web_accessible_resources": [
+    "images/*.gif",
+    "images/*.jpg",
+    "images/*.png",
     "styles/iframes/login.css",
     "scripts/html/iframes/login.js",
     "scripts/iframes/login.js",

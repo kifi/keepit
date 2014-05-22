@@ -3,14 +3,13 @@ package com.keepit.common.pagepeeker
 import scala.concurrent._
 import play.api.libs.ws.WS
 import com.keepit.common.logging.Logging
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import scala.Some
 import com.keepit.common.store.{ImageUtils, ImageSize}
 import java.awt.image.BufferedImage
-import play.modules.statsd.api.Statsd
 import scala.util.{Failure, Success, Try}
 import javax.imageio.ImageIO
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
@@ -52,7 +51,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
       Option(response.ahcResponse.getHeader("X-PP-Error")) match {
         case Some("True") =>
           log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
-          Statsd.increment(s"screenshot.fetch.fails")
+          statsd.increment(s"screenshot.fetch.fails")
           None
         case _ =>
 
@@ -69,7 +68,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
           val screenshots = resizedImages flatMap { case resizeAttempt =>
             resizeAttempt match {
               case Success((imageStream, size)) =>
-                Statsd.increment(s"screenshot.fetch.successes")
+                statsd.increment(s"screenshot.fetch.successes")
                 val rawImageOpt = try {
                   Option(ImageIO.read(imageStream))
                 } catch {
@@ -85,7 +84,7 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
                 }
                 rawImageOpt map { rawImage => PagePeekerImage(rawImage, size) }
               case Failure(ex) =>
-                Statsd.increment(s"screenshot.fetch.fails")
+                statsd.increment(s"screenshot.fetch.fails")
                 ex match {
                   case e: java.lang.IllegalArgumentException =>
                     // This happens when the image stream is null, coming from javax.imageio.ImageIO
@@ -114,5 +113,5 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
 }
 
 class DevPagePeekerClient @Inject() extends PagePeekerClient {
-  def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] = future{None}
+  def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] = Future.successful(None)
 }

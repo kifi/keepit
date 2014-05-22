@@ -10,6 +10,7 @@ import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.store.StoreModule
 import com.keepit.common.queue.SimpleQueueModule
+import com.keepit.scraper.ProdScraperServiceClientModule
 
 abstract class ElizaModule(
   // Common Functional Modules
@@ -23,6 +24,7 @@ abstract class ElizaModule(
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
+  val scraperServiceClientModule = ProdScraperServiceClientModule()
 
   val secureSocialModule = RemoteSecureSocialModule()
   val elizaSlickModule = ElizaSlickModule()

@@ -6,7 +6,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.ActiveExperimentsCache
-import com.keepit.heimdal.{AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache}
+import com.keepit.heimdal.{NonUserEventDescriptorNameCache, AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache}
 import com.keepit.common.usersegment.UserSegmentCache
 
 case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
@@ -73,6 +73,11 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def userImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserImageUrlCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 10 minute))
+
+  @Singleton
+  @Provides
   def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserExperimentCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
@@ -115,6 +120,11 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   def anonymousEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AnonymousEventDescriptorNameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Provides
+  @Singleton
+  def nonUserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new NonUserEventDescriptorNameCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Provides
   @Singleton

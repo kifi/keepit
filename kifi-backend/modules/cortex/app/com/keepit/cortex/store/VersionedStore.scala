@@ -23,6 +23,10 @@ trait VersionedStore[K, M <: StatModel, V <: Versionable[M]] {
   def +=(key: K, version: ModelVersion[M], value: V): this.type
 
   def -=(key: K, version: ModelVersion[M]): this.type
+
+  def batchGet(keys: Seq[K], version: ModelVersion[M]): Seq[Option[V]] = {
+    keys.par.map{ k => get(k, version)}.seq
+  }
 }
 
 trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with S3ObjectStore[VersionedStoreKey[K, M], V]{

@@ -1,16 +1,18 @@
 package com.keepit.cortex.plugins
 
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id, SequenceNumber, ModelWithSeqNumber}
 import com.keepit.cortex.core.{FeatureRepresentation, ModelVersion, StatModel}
 import com.keepit.cortex.store.{CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore}
+import com.keepit.common.logging.Logging
+import scala.collection.mutable.ArrayBuffer
 
-abstract class FeatureRetrieval[K, T, M <: StatModel](
+
+abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
   featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
-){
+) extends Logging{
   protected def genFeatureKey(datum: T): K
-
   private def getFeatureStoreSeq(version: ModelVersion[M]): FeatureStoreSequenceNumber[T, M] = {
     val commitKey = CommitInfoKey[T, M](version)
     commitInfoStore.get(commitKey) match {
@@ -24,13 +26,13 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
   }
 
   private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
-    entities.flatMap{ ent =>
-      val key = genFeatureKey(ent)
-      featureStore.get(key, version) match {
-        case Some(rep) => Some(ent, rep)
-        case None => None
-      }
-    }
+    val keys = entities.map{genFeatureKey(_)}
+    val start = System.currentTimeMillis
+    val values = featureStore.batchGet(keys, version)
+    val ret = (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}
+
+    log.info(s"batch retrieved ${ret.size}/${keys.size}  objects in ${(System.currentTimeMillis - start)/1000f} seconds")
+    ret
   }
 
   def getSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
@@ -42,10 +44,22 @@ abstract class FeatureRetrieval[K, T, M <: StatModel](
     }
   }
 
-  def getBetween(lowSeq: SequenceNumber[T], highSeq: SequenceNumber[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
-    val featSeq = getFeatureStoreSeq(version)
-    val highSeqCap = SequenceNumber[T](highSeq.value min featSeq.value)
-    val entities = dataPuller.getBetween(lowSeq, highSeqCap)
-    getFeatureForEntities(entities, version)
+  // this makes sure return size == fetchSize whenever there are enough data
+  def trickyGetSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+    val buf = ArrayBuffer.empty[(T, FeatureRepresentation[T, M])]
+    var nextBatchSize = fetchSize * 2
+    var startSeq = lowSeq
+    var exhausted = false
+    while (buf.size < fetchSize && !exhausted){
+      val feats = getSince(startSeq, nextBatchSize, version)
+      if (feats.isEmpty) {
+        exhausted = true
+      } else {
+        buf.appendAll(feats)
+        startSeq = feats.map{ case (ent, feat) => ent.seq}.max
+        nextBatchSize = ((fetchSize - buf.size) * 2 min fetchSize) max 10             // overfetch
+      }
+    }
+    buf.take(fetchSize)
   }
 }

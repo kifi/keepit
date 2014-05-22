@@ -7,18 +7,19 @@ import com.keepit.model._
 import com.keepit.common.db.Id
 
 import play.api.mvc.{SimpleResult, Action, Request}
-import play.api.libs.json.JsObject
+import play.api.libs.json.{Json, JsString, JsObject}
 import com.keepit.common.net.UserAgent
 import scala.Some
 import com.keepit.model.DeepLink
-import play.api.libs.json.JsObject
 import com.keepit.model.DeepLocator
+import com.keepit.inject.FortyTwoConfig
 
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   deepLinkRepo: DeepLinkRepo,
-  normalizedURIRepo: NormalizedURIRepo)
+  normalizedURIRepo: NormalizedURIRepo,
+  fortytwoConfig: FortyTwoConfig)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def createDeepLink() = Action(parse.tolerantJson) { request =>
@@ -38,6 +39,15 @@ class ExtDeepLinkController @Inject() (
       )
     )}
     Ok("")
+  }
+
+  def getDeepUrl() = Action(parse.tolerantJson) { request =>
+    val req = request.body.asInstanceOf[JsObject]
+    val locator = (req \ "locator").as[String]
+    val recipient = Id[User]((req \ "recipient").as[Long])
+    val link = db.readOnly { implicit session => deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient) }
+    val url = fortytwoConfig.applicationBaseUrl + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link.token.value).toString()
+    Ok(Json.toJson(url))
   }
 
   private def mobileCheck(request: Request[_]) = {

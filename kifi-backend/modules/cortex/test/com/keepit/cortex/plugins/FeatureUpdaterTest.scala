@@ -23,8 +23,8 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper{
 
       val updater = new FeatureUpdater[Id[Foo], Foo, FakeModel](
           fooRepresenter, fooFeatStore, commitStore, fakePuller){
-        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.id)
-        def genFeatureKey(foo: Foo) = foo.id
+        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
+        def genFeatureKey(foo: Foo) = foo.id.get
       }
 
       updater.commitInfo() === None
@@ -39,8 +39,8 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper{
       // as if we restart server. should continue with last seqNum
       val updater2 = new FeatureUpdater[Id[Foo], Foo, FakeModel](
           fooRepresenter, fooFeatStore, commitStore, fakePuller){
-        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.id)
-        def genFeatureKey(foo: Foo) = foo.id
+        def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
+        def genFeatureKey(foo: Foo) = foo.id.get
       }
 
       info = updater2.commitInfo().get

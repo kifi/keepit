@@ -29,7 +29,7 @@ class AdminURIGraphController @Inject()(
       db.readWrite { implicit s => group.foreach(keepRepo.save) }
     }
 
-    val collections = db.readOnly(implicit s => collectionRepo.getByUser(userId))
+    val collections = db.readOnly(implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId))
     collections.grouped(1000).foreach{group =>
       db.readWrite( implicit s => group.foreach(collectionRepo.save))
     }

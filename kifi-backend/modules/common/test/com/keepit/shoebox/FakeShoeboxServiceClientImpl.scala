@@ -24,6 +24,7 @@ import com.keepit.graph.manager._
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.model.serialize.UriIdAndSeq
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -369,6 +370,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(m)
   }
 
+  def getEmailAddressById(id: Id[EmailAddress]): Future[String] = ???
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
@@ -420,10 +422,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
-  def getScrapedFullURIs(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
+  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[UriIdAndSeq]] = {
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
-    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
+    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris) map { u => UriIdAndSeq(u.id.get, u.seq)}
     Future.successful(fewerUris)
   }
 
@@ -506,6 +508,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def logEvent(userId: Id[User], event: JsObject) = {}
 
   def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
+
+  def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String] = ???
 
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
 
@@ -595,15 +599,17 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
 
-  def updateScreenshotsForUri(nUri: NormalizedURI): Future[Unit] = {
-    Future.successful(())
-  }
+  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
 
-  def getURIImage(nUri: NormalizedURI): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
-
-  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
+  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
+
   def getUnsubscribeUrlForEmail(email: String): Future[String] = Future.successful("https://kifi.com")
+
+  def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = Future.successful(Seq.empty)
+
+  def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 }
