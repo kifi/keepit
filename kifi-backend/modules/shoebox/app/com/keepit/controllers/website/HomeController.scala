@@ -117,8 +117,12 @@ class HomeController @Inject() (
     }
     val ua = agentOpt.get.userAgent
     val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-    val agentClass = if (isIphone) "iphone" else ""
-    Ok(views.html.marketing.mobileLanding(false, agentClass))
+    if (isIphone) {
+      Ok(views.html.marketing.iPhoneLanding())
+    } else {
+      Ok(views.html.marketing.mobileLanding(false, ""))
+
+    }
   }
 
   def home = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
@@ -160,8 +164,7 @@ class HomeController @Inject() (
         if (isIphone) {
           Ok(views.html.marketing.iPhoneLanding())
         } else {
-          val agentClass = if (isIphone) "iphone" else ""
-          Ok(views.html.marketing.mobileLanding(false, agentClass))
+          Ok(views.html.marketing.mobileLanding(false, ""))
         }
       } else {
         Ok(views.html.marketing.landingNew())
