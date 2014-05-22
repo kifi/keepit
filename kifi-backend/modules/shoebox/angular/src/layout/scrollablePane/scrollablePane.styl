@@ -1,0 +1,13 @@
+.kf-scrollable-pane
+  width: calc(100% - 270px)
+  padding-left: 270px
+
+@media (max-width: 900px)
+  .kf-scrollable-pane
+    width: 100%
+    padding-left: 0
+    -webkit-transition: padding-left linear 0.15s;
+    transition: padding-left linear 0.15s;
+
+    &.kf-srollable-pane-pushed-right
+      padding-left: 270px

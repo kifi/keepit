@@ -1,0 +1,16 @@
+.kf-sidebar
+  position: fixed
+  width: 270px
+  background: #fff
+
+.kf-sidebar-inner
+  background: #eff2f7
+
+@media only screen and (max-width: 900px)
+  .kf-sidebar
+    left: -270px
+    -webkit-transition: left linear 0.15s;
+    transition: left linear 0.15s;
+  
+    &.kf-sidebar-active
+      left: 0

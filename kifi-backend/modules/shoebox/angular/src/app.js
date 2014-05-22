@@ -39,6 +39,8 @@ angular.module('kifi', [
   'kifi.layout.header',
   'kifi.layout.main',
   'kifi.layout.nav',
+  'kifi.layout.sidebar',
+  'kifi.layout.scrollablePane',
   'kifi.layout.rightCol',
   'kifi.undo',
   'kifi.addKeeps',
