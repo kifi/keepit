@@ -29,7 +29,7 @@ class AttributionCommander @Inject() (
   implicit val execCtx = fj
 
   // potentially expensive -- admin only
-  def getUserReKeepsByDegree(keepIds:Set[Id[Keep]], n:Int = 3):Map[Id[Keep], Seq[Set[Id[User]]]] = timing(s"getUserReKeepsByDegree(#keeps=${keepIds.size},$n)") {
+  def getUserReKeepsByDegree(keepIds:Set[Id[Keep]], n:Int = 3): Map[Id[Keep], Seq[Set[Id[User]]]] = timing(s"getUserReKeepsByDegree(#keeps=${keepIds.size},$n)") {
     require(keepIds.size >= 0 && keepIds.size <= 50, s"getUserReKeepsByDegree() illegal argument keepIds.size=${keepIds.size}")
     if (keepIds.isEmpty) Map.empty[Id[Keep], Seq[Set[Id[User]]]]
     else {
@@ -48,7 +48,7 @@ class AttributionCommander @Inject() (
   }
 
   // potentially expensive -- admin only for now; will be called infrequently (cron job) later
-  def getReKeepsByDegree(keeperId:Id[User], keepId:Id[Keep], n:Int = 3):Seq[(Set[Id[User]], Set[Id[Keep]])] = timing(s"getReKeepsByDegree($keeperId,$keepId,$n)") {
+  def getReKeepsByDegree(keeperId:Id[User], keepId:Id[Keep], n:Int = 3): Seq[(Set[Id[User]], Set[Id[Keep]])] = timing(s"getReKeepsByDegree($keeperId,$keepId,$n)") {
     require(n > 1 && n < 5, s"getReKeepsByDegree($keeperId, $keepId) illegal argument (degree=$n)")
     val rekeepsByDeg = new Array[Set[Id[Keep]]](n)
     rekeepsByDeg(0) = Set(keepId)
@@ -80,7 +80,7 @@ class AttributionCommander @Inject() (
     usersByDeg zip rekeepsByDeg
   }
 
-  def updateReKeepStats(userId:Id[User], n:Int = 3):Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
+  def updateReKeepStats(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
     val rekeepCountsF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
         (keepId, rekeeps.head.uriId) -> rekeeps.length
@@ -109,7 +109,7 @@ class AttributionCommander @Inject() (
     }
   }
 
-  def updateAllReKeepStats(n:Int = 3):Future[Int] = { // expensive -- admin only
+  def updateAllReKeepStats(n:Int = 3): Future[Int] = { // expensive -- admin only
     val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getAllKeepers()
     }
