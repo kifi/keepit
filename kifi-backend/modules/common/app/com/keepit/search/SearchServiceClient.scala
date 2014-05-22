@@ -47,7 +47,6 @@ trait SearchServiceClient extends ServiceClient {
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
-  def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUserWithUserId]]]
@@ -149,7 +148,7 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) { case (userId, uriId) =>
-    call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
+    distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
       Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
     }
   }
@@ -158,8 +157,23 @@ class SearchServiceClientImpl(
     if (uriIds.isEmpty) {
       Promise.successful(Seq[SharingUserInfo]()).future
     } else {
-      call(Search.internal.sharingUserInfo(userId), Json.toJson(uriIds.map(_.id))) map { r =>
-        Json.fromJson[Seq[SharingUserInfo]](r.json).get
+      val route = Search.internal.sharingUserInfo(userId)
+      val plan = distRouter.planRemoteOnly()
+
+      val result = new ListBuffer[Future[Map[Id[NormalizedURI], SharingUserInfo]]]
+      plan.foreach{ case (instance, shards) =>
+        val filteredUriIds = uriIds.filter{ id => shards.exists(_.contains(id)) }
+        if (filteredUriIds.nonEmpty) {
+          val future = call(instance, route, Json.toJson(filteredUriIds.map(_.id))) map { r =>
+            (filteredUriIds zip Json.fromJson[Seq[SharingUserInfo]](r.json).get).toMap
+          }
+          result += future
+        }
+      }
+
+      Future.sequence(result).map{ infos =>
+        val mapping = infos.reduce(_ ++ _)
+        uriIds.map(mapping)
       }
     }
   }
@@ -174,12 +188,6 @@ class SearchServiceClientImpl(
 
   def refreshPhrases(): Unit = {
     broadcast(Search.internal.refreshPhrases())
-  }
-
-  def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = {
-    call(Search.internal.searchKeeps(userId, query)).map {
-      _.json.as[Seq[JsValue]].map(v => Id[NormalizedURI](v.as[Long])).toSet
-    }
   }
 
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = {
@@ -229,7 +237,8 @@ class SearchServiceClientImpl(
   }
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
-    call(Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
+    log.info("running explain in distributed mode")
+    distRouter.call(uriId, Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {

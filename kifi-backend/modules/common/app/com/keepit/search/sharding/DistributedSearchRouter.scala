@@ -35,8 +35,8 @@ class DistributedSearchRouter(client: SearchServiceClient) extends CustomRouter 
     }
   }
 
-  def call[R](uriId: Id[T], url: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = {
-    dispatcher.call(uriId){
+  def call(uriId: Id[T], url: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = {
+    dispatcher.call[Future[ClientResponse]](uriId){
       instance => client.call(instance, url, body)
     }
   }

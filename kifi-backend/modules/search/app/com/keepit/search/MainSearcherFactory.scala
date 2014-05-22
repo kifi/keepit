@@ -153,12 +153,6 @@ class MainSearcherFactory @Inject() (
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
 
-  def bookmarkSearcher(shard: Shard[NormalizedURI], userId: Id[User]) = {
-    val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
-    val uriGraphSearcher = getURIGraphSearcher(shard, userId)
-    new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
-  }
-
   def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Future[Map[Lang, Int]] = consolidateLangFreqsReq(userId){ case userId =>
     Future.traverse(shards){ shard =>
       SafeFuture{

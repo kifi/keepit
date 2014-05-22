@@ -11,9 +11,14 @@ import views.html
 import com.keepit.common.db.slick.DBSession.{ROSession, RWSession}
 import scala.collection.mutable
 import com.keepit.commanders.AttributionCommander
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.{DBMasterSlave, Slave}
 import org.joda.time.DateTime
 import com.keepit.common.time._
+import scala.concurrent.duration._
+import com.keepit.common.service.RequestConsolidator
+import scala.concurrent.Future
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext.fj
 
 class AdminAttributionController @Inject()(
   actionAuthenticator: ActionAuthenticator,
@@ -27,6 +32,8 @@ class AdminAttributionController @Inject()(
   pageInfoRepo: PageInfoRepo,
   imageInfoRepo: ImageInfoRepo
 ) extends AdminController(actionAuthenticator) {
+
+  implicit val execCtx = fj
 
   def keepClicksView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnly { implicit ro =>
@@ -86,33 +93,65 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.myKeepInfos(u, clicks, clickCounts, rekeeps, rekepts, rkCounts))
   }
 
-  def getReKeepInfos(userId:Id[User], n:Int = 4) = {
-    val u = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.get(userId) }
-    val rekeeps = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
-      rekeepRepo.getAllReKeepsByKeeper(userId)
+  val userReKeepsReqConsolidator = new RequestConsolidator[(Id[User], Int), (User, Int, Seq[ReKeep], Map[Keep, Seq[Set[User]]])](ttl = 5 seconds)
+  def getReKeepInfos(userId:Id[User], n:Int = 4) = userReKeepsReqConsolidator(userId, n) { case (userId, n) =>
+    SafeFuture {
+      val u = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.get(userId) }
+      val rekeeps = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+        rekeepRepo.getAllReKeepsByKeeper(userId)
+      }
+      val users = rekeeps.map { rk =>
+        val userIds: Seq[Set[Id[User]]] = attributionCmdr.getReKeepsByDegree(userId, rk.keepId, 4).map(_._1)
+        val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a,c) => a ++ c }) }
+        db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(rk.keepId) } -> userIds.map( _.map(uId => users(uId)) )
+      }.toMap
+      (u, n, rekeeps, users)
     }
-    val users = rekeeps.map { rk =>
-      val userIds: Seq[Set[Id[User]]] = attributionCmdr.getReKeepsByDegree(userId, rk.keepId, 4).map(_._1)
-      val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a,c) => a ++ c }) }
-      db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(rk.keepId) } -> userIds.map( _.map(uId => users(uId)) )
-    }.toMap
-
-    (u, n, rekeeps, users)
   }
 
-  def reKeepInfos(userId:Id[User]) = AdminHtmlAction.authenticated { request =>
-    val (u, n, rekeeps, users) = getReKeepInfos(userId)
-    Ok(html.admin.myReKeeps(u, n, rekeeps, users))
+  def reKeepInfos(userId:Id[User]) = AdminHtmlAction.authenticatedAsync { request =>
+    getReKeepInfos(userId) map { case(u, n, rekeeps, users) =>
+      Ok(html.admin.myReKeeps(u, n, rekeeps, users))
+    }
   }
 
-  def myReKeeps() = AdminHtmlAction.authenticated { request =>
-    val (u, n, rekeeps, users) = getReKeepInfos(request.userId)
-    Ok(html.admin.myReKeeps(u, n, rekeeps, users))
+  def myReKeeps() = AdminHtmlAction.authenticatedAsync { request =>
+    getReKeepInfos(request.userId) map { case (u, n, rekeeps, users) =>
+      Ok(html.admin.myReKeeps(u, n, rekeeps, users))
+    }
   }
 
   def myKeepInfos() = AdminHtmlAction.authenticated { request =>
     val (u, clicks, clickCounts, rekeeps, rekepts, rkCounts) = getKeepInfos(request.userId)
     Ok(html.admin.myKeepInfos(u, clicks, clickCounts, rekeeps, rekepts, rkCounts))
+  }
+
+  val topReKeepsReqConsolidator = new RequestConsolidator[Int, Seq[(NormalizedURI, Seq[(Keep, Seq[Set[User]])])]](ttl = 5 seconds)
+  def getTopReKeeps(degree:Int) = topReKeepsReqConsolidator(degree) { degree =>
+    SafeFuture {
+      val rkMap = db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+        rekeepRepo.getAllDirectReKeepCountsByKeep()
+      }
+      val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(10).toMap
+      val byDeg = attributionCmdr.getUserReKeepsByDegree(filtered.map(_._1).toSet, degree)
+      val sorted = byDeg.toSeq.sortBy{ case (keepId, usersByDeg) => usersByDeg.flatten.length }(Ordering[Int].reverse)
+      val userIds = sorted.map(_._2).flatten.foldLeft(Set.empty[Id[User]]) {(a,c) => a ++ c}
+      val users = db.readOnly(dbMasterSlave = Slave) { implicit ro => userRepo.getUsers(userIds.toSeq) }
+      val richByDeg = sorted.map{ case(kId, userIdsByDeg) =>
+        db.readOnly(dbMasterSlave = Slave) { implicit ro => keepRepo.get(kId) -> userIdsByDeg.map(_.map(uId => users(uId))) }
+      }
+      val grouped = richByDeg.groupBy(_._1.uriId).map { case (uriId, keepsAndUsers) =>
+        db.readOnly(dbMasterSlave = Slave) { implicit ro => uriRepo.get(uriId) -> keepsAndUsers }
+      }.toSeq.sortBy{ case (uri, keepsAndUsers) => keepsAndUsers.map{_._2.flatten}.length }(Ordering[Int].reverse)
+      log.info(s"getTopReKeeps($degree)=$grouped")
+      grouped
+    }
+  }
+
+  def keepAttribution(degree:Int) = AdminHtmlAction.authenticatedAsync { request =>
+    getTopReKeeps(degree) map { grouped =>
+      Ok(html.admin.keepAttribution(degree, grouped))
+    }
   }
 
 }

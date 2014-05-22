@@ -6,7 +6,6 @@ import scala.concurrent._
 import com.google.inject.Injector
 import com.keepit.common.store.{S3URIImageStore, FakeS3URIImageStore, ImageSize}
 import com.keepit.scraper.embedly._
-import com.keepit.common.embedly.EmbedlyClient
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.Id
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,6 +17,11 @@ import org.specs2.matcher.MatchResult
 import scala.Some
 import com.keepit.common.pagepeeker.PagePeekerImage
 import scala.util.{Success, Try}
+import akka.actor.Scheduler
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.scraper.FakeScraperServiceClientImpl
+import com.keepit.scraper.ScraperServiceClient
+import com.google.inject.{Singleton, Provides}
 
 object URISummaryCommanderTestDummyValues {
   val dummyImage = ImageInfo(
@@ -39,12 +43,6 @@ object URISummaryCommanderTestDummyValues {
   val dummyBufferedImage = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_RGB)
 }
 
-class URISummaryCommanderTestEmbedlyClient extends EmbedlyClient {
-  override def embedlyUrl(url: String): String = ???
-  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo))
-  override def getImageInfos(nUri: NormalizedURI): Future[Seq[ImageInfo]] = ???
-}
-
 class URISummaryCommanderTestPagePeekerClient extends PagePeekerClient {
   override def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] =
     future{Some(Seq(PagePeekerImage(URISummaryCommanderTestDummyValues.dummyBufferedImage, ImageSize(1000, 1000))))}
@@ -58,6 +56,10 @@ case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
   def storeImage(info: ImageInfo, rawImage: BufferedImage, nUri: NormalizedURI): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
   def getDefaultScreenshotURL(nUri: NormalizedURI): Option[String] = Some(FakeS3URIImageStore.placeholderScreenshotURL)
   def getImageURL(imageInfo: ImageInfo, nUri: NormalizedURI): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
+}
+
+case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
+  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo))
 }
 
 class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
@@ -125,10 +127,15 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
   case class URISummaryCommanderTestModule() extends ScalaModule {
     def configure() {
-      bind[EmbedlyClient].to[URISummaryCommanderTestEmbedlyClient]
       bind[PagePeekerClient].to[URISummaryCommanderTestPagePeekerClient]
       bind[ImageFetcher].to[URISummaryCommanderTestImageFetcher]
       bind[S3URIImageStore].to[URISummaryCommanderTestS3URIImageStore]
+    }
+
+    @Singleton
+    @Provides
+    def scraperClient(): ScraperServiceClient = {
+      MockScraperServiceClient(null, null)
     }
   }
 

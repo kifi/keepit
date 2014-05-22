@@ -84,7 +84,6 @@ object Shoebox extends Service {
     def sendMailToUser() = ServiceRoute(POST, "/internal/shoebox/database/sendMailToUser")
     def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedCollections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def getBookmarksInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksInCollection", Param("collectionId", collectionId))
     def getUriIdsInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getUriIdsInCollection", Param("collectionId", collectionId))
     def getCollectionsByUser(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getCollectionsByUser", Param("userId", userId))
     def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
@@ -304,6 +303,8 @@ object Graph extends Service {
   object internal {
     def getGraphStatistics() = ServiceRoute(GET, "/internal/graph/statistics")
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
+    def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
+    def wander() = ServiceRoute(POST, "/internal/graph/wander")
   }
 }
 

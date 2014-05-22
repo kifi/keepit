@@ -18,7 +18,20 @@
     "default_title": "Kifi"
   },
   "background": {
-    "page": "main.html"
+    "scripts": [
+      "airbrake.min.js",
+      "meta.js",
+      "deps.js",
+      "listeners.js",
+      "api.js",
+      "rwsocket.js",
+      "socket_commander.js",
+      "threadlist.js",
+      "main.js",
+      "lzstring.min.js",
+      "scorefilter.js",
+      "friend_search_cache.js"
+    ]
   },
   "content_scripts": [
     {
