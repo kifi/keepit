@@ -84,7 +84,6 @@ object Shoebox extends Service {
     def sendMailToUser() = ServiceRoute(POST, "/internal/shoebox/database/sendMailToUser")
     def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedCollections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def getBookmarksInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getBookmarksInCollection", Param("collectionId", collectionId))
     def getUriIdsInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getUriIdsInCollection", Param("collectionId", collectionId))
     def getCollectionsByUser(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getCollectionsByUser", Param("userId", userId))
     def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
@@ -191,7 +190,8 @@ object Search extends Service {
     def updateUserIndex() = ServiceRoute(POST, "/internal/search/user/update")
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
 
-    def searchShards() = ServiceRoute(POST, "/internal/search/searchShards")
+    def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
+    def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
   }
 }
 
@@ -275,6 +275,8 @@ object Scraper extends Service {
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
     def detectPorn() = ServiceRoute(POST, s"/internal/scraper/pornDetector/detectPorn")
     def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
+    def getEmbedlyImageInfos() = ServiceRoute(POST, s"/internal/scraper/embedly/imageInfos")
+    def getEmbedlyInfo() = ServiceRoute(POST, s"/internal/scraper/embedly/embedlyInfo")
   }
 }
 
@@ -301,6 +303,8 @@ object Graph extends Service {
   object internal {
     def getGraphStatistics() = ServiceRoute(GET, "/internal/graph/statistics")
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
+    def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
+    def wander() = ServiceRoute(POST, "/internal/graph/wander")
   }
 }
 

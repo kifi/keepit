@@ -62,7 +62,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]]
-  def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Keep]]
   def getUriIdsInCollection(id: Id[Collection]): Future[Seq[KeepUriAndTime]]
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int): Future[Seq[Collection]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
@@ -411,12 +410,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Keep]] = {
-    call(Shoebox.internal.getBookmarksInCollection(collectionId), callTimeouts = longTimeout) map { r =>
-      Json.fromJson[Seq[Keep]](r.json).get
-    }
-  }
-
   def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
     call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = longTimeout) map { r =>
       Json.fromJson[Seq[KeepUriAndTime]](r.json).get
@@ -694,7 +687,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getProxyP(url:String):Future[Option[HttpProxy]] = {
-    call(Shoebox.internal.getProxyP, Json.toJson(url)).map { r =>
+    call(Shoebox.internal.getProxyP, Json.toJson(url), callTimeouts = longTimeout).map { r =>
       if (r.json == null) None else r.json.asOpt[HttpProxy]
     }
   }

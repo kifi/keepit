@@ -16,14 +16,14 @@ import play.api.data._
 import play.api.data.Forms._
 import views.html
 import scala.util.{Failure, Success, Try}
-import com.keepit.common.embedly.EmbedlyClient
 import com.keepit.commanders.URISummaryCommander
+import com.keepit.scraper.ScraperServiceClient
 
 class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   uriSummaryCommander: URISummaryCommander,
   uriImageCommander: URISummaryCommander,
-  embedlyClient: EmbedlyClient,
+  scraper: ScraperServiceClient,
   db: Database,
   keepRepo: KeepRepo,
   pageInfoRepo: PageInfoRepo,
@@ -77,7 +77,7 @@ class AdminScreenshotController @Inject() (
       }
     } match {
       case Success(uri) =>
-        embedlyClient.getImageInfos(uri) map { infos =>
+        scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
           Ok(html.admin.imagesForUri(uri, uriSummaryCommander.getScreenshotURL(uri), infos))
         }
       case Failure(t) =>
@@ -116,7 +116,7 @@ class AdminScreenshotController @Inject() (
     val resOpt = urlOpt map { url =>
       val images = db.readOnly { implicit ro => uriRepo.getByUri(url) } match {
         case Some(uri) =>
-          embedlyClient.getImageInfos(uri) map { infos =>
+          scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
             infos.map { Json.toJson(_) }
           }
         case None => Future.successful(Seq.empty[JsValue])
@@ -137,7 +137,7 @@ class AdminScreenshotController @Inject() (
         val imgRes = uris map { case (url, uriOpt) =>
           uriOpt match {
             case Some(uri) =>
-            val jsF = embedlyClient.getImageInfos(uri) map { infos =>
+            val jsF = scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
               Json.obj("url" -> url, "images" -> Json.toJson(infos))
             }
             jsF

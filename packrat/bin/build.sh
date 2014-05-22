@@ -47,7 +47,9 @@ for d in $(find styles -type d); do
 done
 for f in $(find styles -name '*.css' -not -name 'insulate.css' -not -path 'styles/iframes/*'); do
   # repeat the first class name that occurs in each selector outside of parentheses since repetition is not allowed within :not(...)
-  sed -E -e 's/ *\/\*.*\*\/$//g' -e '/^[^@]*[,{]$/ s/(^|[^(])(\.[a-zA-Z0-9_-]*)/\1\2\2\2/' $f | tee "out/chrome/$f" > "out/firefox/data/$f"
+  css=$(sed -E -e 's/ *\/\*.*\*\/$//g' -e '/^[^@]*[,{]$/ s/(^|[^(])(\.[a-zA-Z0-9_-]*)/\1\2\2\2/' $f)
+  echo "${css//\/images\//chrome-extension://__MSG_@@extension_id__/images/}" > "out/chrome/$f"
+  echo "${css//\/images\//resource://kifi-at-42go-dot-com/kifi-beta/data/images/}" > "out/firefox/data/$f"
 done
 for f in $(find styles -name 'insulate.css' -or -path 'styles/iframes/*'); do
   cp $f "out/chrome/$f"
@@ -101,6 +103,13 @@ sed -e "s/\"version\":.*/\"version\": \"$version\",/" \
 IFS="$savedIFS"
 
 if [ "$1" == "package" ]; then
+  cfxver=$(cfx --version)
+  if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
+    echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
+    echo "https://addons.mozilla.org/en-US/developers/builder"
+    exit 1
+  fi
+
   cd out/chrome
   sed -i '' -e 's/http:\/\/dev.ezkeep.com:9000 ws:\/\/dev.ezkeep.com:9000 //' manifest.json
   zip -rDq ../kifi.zip * -x "*/.*"

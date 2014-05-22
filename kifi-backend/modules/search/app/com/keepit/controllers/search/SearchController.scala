@@ -30,7 +30,7 @@ class SearchController @Inject()(
     userExperimentCommander: RemoteUserExperimentCommander
   ) extends SearchServiceController {
 
-  def searchShards() = Action(parse.tolerantJson){ request =>
+  def distSearch() = Action(parse.tolerantJson){ request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -52,7 +52,7 @@ class SearchController @Inject()(
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    val result = searchCommander.searchShards(
+    val result = searchCommander.distSearch(
       shards,
       id,
       Lang(lang1),
@@ -72,15 +72,19 @@ class SearchController @Inject()(
     Ok(result.json)
   }
 
+  def distLangFreqs() = Action(parse.tolerantJson){ request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val userId = Id[User]((json \ "request").as[Long])
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map{ case (lang, freq) => lang.lang -> freq }))
+  }
+
+
   //internal (from eliza/shoebox)
   def warmUpUser(userId: Id[User]) = Action { request =>
     searchCommander.warmUp(userId)
     Ok
-  }
-
-  def searchKeeps(userId: Id[User], query: String) = Action { request =>
-    val uris = searchCommander.searchKeeps(userId, query)
-    Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 
   def searchWithConfig() = Action(parse.tolerantJson){ request =>

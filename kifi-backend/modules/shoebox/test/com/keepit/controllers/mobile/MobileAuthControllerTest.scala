@@ -109,28 +109,6 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
           installationRepo.all().head.version.toString === "1.2.4"
         }
       }
-      //Time travel!!!
-      {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.0", "installation" -> existing.externalId.toString))
-        val result = route(request).get
-        status(result) must throwA[Exception]
-        db.readWrite {implicit s =>
-          installationRepo.count === 1
-          installationRepo.all().head.version.toString === "1.2.4"
-        }
-      }
-      //Time travel is ok...
-      {
-        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.IGNORE_VERSION_TIME_TRAVEL))
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.0", "installation" -> existing.externalId.toString))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
-        db.readWrite {implicit s =>
-          installationRepo.count === 1
-          installationRepo.all().head.version.toString === "1.2.0"
-        }
-      }
       {
         val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
         val result = route(request).get

@@ -8,7 +8,7 @@ trait TravelJournal {
   def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeKind[_ <: EdgeDataReader]): Unit
 }
 
-class DestinationJournal {
+class DestinationJournal extends TravelJournal {
   private val reached = mutable.Map[VertexId, Int]().withDefaultValue(0)
 
   def onTeleportation(source: VertexReader, destination: VertexReader) = {

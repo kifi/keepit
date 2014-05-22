@@ -14,8 +14,6 @@ import com.keepit.social.BasicUser
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, null) {
 
-  override def updateBrowsingHistory(userId: Id[User], uriIds: Id[NormalizedURI]*): Unit = {}
-
   override def updateURIGraph(): Unit = {}
 
   override def reindexURIGraph(): Unit = {}
@@ -41,8 +39,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, 
   override def refreshSearcher(): Unit = {}
 
   override def refreshPhrases(): Unit = {}
-
-  override def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = ???
 
   override def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
 

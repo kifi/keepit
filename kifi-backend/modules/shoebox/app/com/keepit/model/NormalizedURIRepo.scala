@@ -261,7 +261,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession) = {
-    (for {t <- rows if t.id === id} yield (t.updatedAt, t.screenshotUpdatedAt)).update((clock.now, time))
+    val updateTime = clock.now
+    (for {t <- rows if t.id === id} yield (t.updatedAt, t.screenshotUpdatedAt)).update((updateTime, time))
+    invalidateCache(get(id).copy(updatedAt = updateTime, screenshotUpdatedAt = Some(time)))
   }
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {

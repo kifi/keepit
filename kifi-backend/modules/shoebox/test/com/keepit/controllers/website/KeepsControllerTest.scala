@@ -1,9 +1,7 @@
 package com.keepit.controllers.website
 
 import org.specs2.mutable.Specification
-
 import net.codingwell.scalaguice.ScalaModule
-
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.commanders.KeepInfo._
@@ -24,7 +22,6 @@ import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugi
 import com.keepit.test.ShoeboxApplication
 import scala.concurrent.Await
 import scala.concurrent.duration._
-
 import play.api.libs.json.{JsObject, Json, JsArray, JsString}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
@@ -33,7 +30,6 @@ import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
 import org.joda.time.DateTime
-
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
@@ -44,6 +40,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
 import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.scraper.TestScraperServiceClientModule
 
 class KeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -55,7 +52,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
-    FakeExternalServiceModule()
+    FakeExternalServiceModule(),
+    TestScraperServiceClientModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
