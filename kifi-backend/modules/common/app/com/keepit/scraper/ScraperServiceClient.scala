@@ -22,7 +22,7 @@ import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.amazon.AmazonInstanceInfo
 import org.joda.time.DateTime
 import akka.actor.Scheduler
-import com.keepit.scraper.embedly.EmbedlyInfo
+import com.keepit.scraper.embedly.ExtendedEmbedlyInfo
 
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
@@ -130,7 +130,7 @@ trait ScraperServiceClient extends ServiceClient {
   def detectPorn(query: String): Future[Map[String, Float]]
   def whitelist(words: String): Future[String]
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
-  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
+  def getEmbedlyInfo(url: String): Future[Option[ExtendedEmbedlyInfo]]
 }
 
 class ScraperServiceClientImpl @Inject() (
@@ -206,10 +206,10 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = {
+  def getEmbedlyInfo(url: String): Future[Option[ExtendedEmbedlyInfo]] = {
     val payload = Json.obj("url" -> url)
     call(Scraper.internal.getEmbedlyInfo, payload).map{ r =>
-      Json.fromJson[Option[EmbedlyInfo]](r.json).get
+      Json.fromJson[Option[ExtendedEmbedlyInfo]](r.json).get
     }
   }
 }
@@ -244,5 +244,5 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
 
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = ???
 
-  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = ???
+  def getEmbedlyInfo(url: String): Future[Option[ExtendedEmbedlyInfo]] = ???
 }
