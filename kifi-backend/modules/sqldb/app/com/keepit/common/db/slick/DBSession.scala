@@ -12,9 +12,10 @@ import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType, ResultSetHoldabili
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
 import com.keepit.common.util.TrackingId
+import com.keepit.macros.CodeLocation
 
 object DBSession {
-  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session) extends Session with Logging with TransactionalCaching {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session, location: CodeLocation) extends Session with Logging with TransactionalCaching {
     def database = _session.database
     private var open = false
     private var doRollback = false
@@ -50,7 +51,7 @@ object DBSession {
     def close(): Unit = if (open) {
       session.close()
       val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
+      dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name\tlocation:${location.location}")
       timeCheck()
     }
 
@@ -115,9 +116,9 @@ object DBSession {
         _session.forParameters(rsType, rsConcurrency, rsHoldability)
   }
 
-  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session) extends SessionWrapper(name, masterSlave, roSession)
-  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session) extends RSession("RO", masterSlave, roSession)
-  class RWSession(rwSession: => Session) extends RSession("RW", Database.Master, rwSession) //RWSession is always reading from master
+  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session, location: CodeLocation) extends SessionWrapper(name, masterSlave, roSession, location)
+  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session, location: CodeLocation) extends RSession("RO", masterSlave, roSession, location)
+  class RWSession(rwSession: => Session, location: CodeLocation) extends RSession("RW", Database.Master, rwSession, location) //RWSession is always reading from master
 //
 //  implicit def roToSession(roSession: ROSession): Session = roSession.session
 //  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session

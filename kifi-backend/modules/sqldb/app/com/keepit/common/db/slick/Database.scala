@@ -9,6 +9,7 @@ import scala.util.DynamicVariable
 import com.google.inject.{Singleton, ImplementedBy, Inject}
 import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.logging.Logging
+import com.keepit.macros.CodeLocation
 import java.sql.SQLException
 import play.api.Mode.Mode
 import scala.util.Try
@@ -75,12 +76,12 @@ class Database @Inject() (
     DatabaseSessionLock.inSession.withValue(true) { f }
   }
 
-  def readOnlyAsync[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master): Future[T] = future { readOnly(dbMasterSlave)(f) }
-  def readOnlyAsync[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): Future[T] = future { readOnly(dbMasterSlave)(f) }
-  def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
-  def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
+  def readOnlyAsync[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master, location: CodeLocation): Future[T] = future { readOnly(dbMasterSlave)(f) }
+  def readOnlyAsync[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T)(implicit location: CodeLocation): Future[T] = future { readOnly(dbMasterSlave)(f) }
+  def readWriteAsync[T](f: RWSession => T)(implicit location: CodeLocation): Future[T] = future { readWrite(f) }
+  def readWriteAsync[T](attempts: Int)(f: RWSession => T)(implicit location: CodeLocation): Future[T] = future { readWrite(attempts)(f) }
 
-  def readOnly[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master): T = readOnly(dbMasterSlave)(f)
+  def readOnly[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master, location: CodeLocation): T = readOnly(dbMasterSlave)(f)
 
   private def resolveDb(dbMasterSlave: DBMasterSlave) = dbMasterSlave match {
     case Master =>
@@ -94,15 +95,15 @@ class Database @Inject() (
       }
   }
 
-  def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
+  def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T)(implicit location: CodeLocation): T = enteringSession {
     val ro = new ROSession(dbMasterSlave, {
       val handle = resolveDb(dbMasterSlave)
       sessionProvider.createReadOnlySession(handle.slickDatabase)
-    })
+    }, location)
     try f(ro) finally ro.close()
   }
 
-  def readOnly[T](attempts: Int, dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession { // retry by default with implicit override?
+  def readOnly[T](attempts: Int, dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T)(implicit location: CodeLocation): T = enteringSession { // retry by default with implicit override?
     1 to attempts - 1 foreach { attempt =>
       try {
         return readOnly(f)
@@ -116,19 +117,19 @@ class Database @Inject() (
     readOnly(f)
   }
 
-  private def createReadWriteSession = new RWSession({//always master
+  private def createReadWriteSession(location: CodeLocation) = new RWSession({//always master
     sessionProvider.createReadWriteSession(db.masterDb)
-  })
+  }, location)
 
-  def readWrite[T](f: RWSession => T): T = enteringSession {
-    val rw = createReadWriteSession
+  def readWrite[T](f: RWSession => T)(implicit location: CodeLocation): T = enteringSession {
+    val rw = createReadWriteSession(location)
     try rw.withTransaction { f(rw) } finally rw.close()
   }
 
-  def readWrite[T](attempts: Int)(f: RWSession => T): T = {
+  def readWrite[T](attempts: Int)(f: RWSession => T)(implicit location: CodeLocation): T = {
     1 to attempts - 1 foreach { attempt =>
       try {
-        return readWrite(f)
+        return readWrite(f)(location)
       } catch {
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
@@ -136,27 +137,27 @@ class Database @Inject() (
           statsd.increment(s"db.fail.attempt.$attempt.$throwableName", 1)
       }
     }
-    readWrite(f)
+    readWrite(f)(location)
   }
 
   private[this] val READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL = 500
 
 
-  def readWriteSeq[D, T](batch: Seq[D], transaction: (RWSession, D) => T, collector: (D, T) => Unit): Unit = {
+  def readWriteSeq[D, T](batch: Seq[D], transaction: (RWSession, D) => T, collector: (D, T) => Unit)(implicit location: CodeLocation): Unit = {
     batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foreach{ chunk =>
-      val rw = createReadWriteSession
+      val rw = createReadWriteSession(location)
       try {
         chunk.foreach{ item => collector(item, rw.withTransaction{ transaction(rw, item) }) }
       } finally { rw.close() }
     }
   }
 
-  def readWriteBatch[D, T](batch: Seq[D])(f: (RWSession, D) => T): Map[D, Try[T]] = {
+  def readWriteBatch[D, T](batch: Seq[D])(f: (RWSession, D) => T)(implicit location: CodeLocation): Map[D, Try[T]] = {
     var successCnt = 0
     var failure: Failure[T] = null
 
     val results = batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foldLeft(Map.empty[D, Try[T]]){ (results, chunk) =>
-      val rw = createReadWriteSession
+      val rw = createReadWriteSession(location)
       try {
         results ++ chunk.map{ item =>
           val oneResult = if (failure == null) {
@@ -175,11 +176,11 @@ class Database @Inject() (
     results
   }
 
-  def readWriteBatch[D, T](batch: Seq[D], attempts: Int)(f: (RWSession, D) => T): Map[D, Try[T]] = {
+  def readWriteBatch[D, T](batch: Seq[D], attempts: Int)(f: (RWSession, D) => T)(implicit location: CodeLocation): Map[D, Try[T]] = {
     var results = Map.empty[D, Try[T]]
     var pending = batch
     1 to attempts - 1 foreach { attempt =>
-      val partialResults = readWriteBatch(pending)(f)
+      val partialResults = readWriteBatch(pending)(f)(location)
       results ++= partialResults
       pending = batch.filter{ d =>
         results(d) match {
@@ -190,7 +191,7 @@ class Database @Inject() (
       }.toSeq
       if (pending.isEmpty) return results
     }
-    val partialResults = readWriteBatch(pending)(f)
+    val partialResults = readWriteBatch(pending)(f)(location)
     results ++ partialResults
   }
 }
