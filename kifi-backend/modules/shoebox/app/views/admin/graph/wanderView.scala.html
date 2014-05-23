@@ -2,6 +2,7 @@
   wanderlust: com.keepit.graph.wander.Wanderlust,
   timing: Option[scala.util.Try[Long]],
   users: Seq[(com.keepit.model.User, Int)],
+  socialUsers: Seq[(com.keepit.model.SocialUserInfo, Int)],
   uris: Seq[(com.keepit.model.NormalizedURI, Int)],
   extras: Seq[(String, Int)]
 )
@@ -27,6 +28,10 @@
             </select>
         </div>
         <div class="form-group">
+            <label for="allowTrivialCollisions">Allow Trivial Collisions: </label>
+            <input type="checkbox" name="allowTrivialCollisions" @if(wanderlust.allowTrivialCollisions) {checked} >
+        </div>
+        <div class="form-group">
             <label for="steps">Number of Steps: </label>
             <input class="input-small" type="number" name="steps" min="0" value=@wanderlust.steps>
         </div>
@@ -43,19 +48,27 @@
         case Failure(ex) => <div class="text-error">{ex}</div>
     }}
 
-    @if(users.nonEmpty) {
-        <table class = "table table-bordered">
-            <tr><th colspan="3"><h3>People Collisions</h3></th></tr>
-            <tr> <th>User Id</th> <th>Name</th> <th>Score</th> </tr>
-            @users.map { case (user, count) => <tr> <td>@user.id.get</td> <td>@user.fullName</td> <td>@count</td> </tr> }
-        </table>
-    }
-
     @if(uris.nonEmpty) {
         <table class = "table table-bordered">
             <tr><th colspan="3"><h3>Content Collisions</h3></th></tr>
             <tr> <th>Uri Id</th> <th>Page</th> <th>Score</th> </tr>
             @uris.map { case (uri, count) => <tr> <td>@uri.id.get</td> <td><a href=@uri.url>@uri.title.getOrElse(uri.url.trim)</a></td> <td>@count</td> </tr> }
+        </table>
+    }
+
+    @if(users.nonEmpty) {
+        <table class = "table table-bordered">
+            <tr><th colspan="3"><h3>Kifi User Collisions</h3></th></tr>
+            <tr> <th>User Id</th> <th>Name</th> <th>Score</th> </tr>
+            @users.map { case (user, count) => <tr> <td>@user.id.get</td> <td>@user.fullName</td> <td>@count</td> </tr> }
+        </table>
+    }
+
+    @if(socialUsers.nonEmpty) {
+        <table class = "table table-bordered">
+            <tr><th colspan="4"><h3>Facebook / LinkedIn Collisions</h3></th></tr>
+            <tr> <th>SocialUserInfoId</th> <th>Network</th> <th>Name</th> <th>Score</th> </tr>
+            @socialUsers.map { case (socialUser, count) => <tr> <td>@socialUser.id.get</td> <td>@socialUser.networkType</td> <td>@socialUser.fullName</td> <td>@count</td> </tr> }
         </table>
     }
 
