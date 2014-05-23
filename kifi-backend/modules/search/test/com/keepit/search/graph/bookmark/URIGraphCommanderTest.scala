@@ -5,16 +5,17 @@ import com.keepit.common.db.Id
 import play.api.test.Helpers._
 import com.keepit.test._
 import com.keepit.model.NormalizedURI
+import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ActiveShards
-import com.keepit.search.sharding.ShardSpecParser
-import com.keepit.search.{MainSearcherFactory, SearchTestHelper}
+import com.keepit.search.SearchTestHelper
 
 class URIGraphCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   "URIGraphCommander" should {
     "work and check authorization" in {
       running(application) {
-        implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
+        val shards = Seq(Shard[NormalizedURI](0, 2), Shard[NormalizedURI](1, 2))
+        implicit val activeShards: ActiveShards = ActiveShards(shards.toSet)
 
         val (users, uris) = initData(numUsers = 2, numUris = 10)
         val user0_public = (0 until 10).filter(x => x < 5 && x % 2 == 0).map { i => (uris(i), Seq(users(0))) }.toSeq
@@ -34,9 +35,8 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
         val uriGraphCommanderFactory = new URIGraphCommanderFactory(mainSearcherFactory)
         val uriGraphCommander = uriGraphCommanderFactory(users(0).id.get)
         val uriGraphCommander1 = uriGraphCommanderFactory(users(1).id.get)
-        val u0list = uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false)
-        val u1list = uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false)
-        val shards = uriGraphCommander.getIndexShards
+        val u0list = shards.map{ shard => (shard -> uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false, shard = shard)) }.toMap
+        val u1list = shards.map{ shard => (shard -> uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false, shard = shard)) }.toMap
         shards.size == 2
         shards(0).contains(Id[NormalizedURI](1)) === false
         shards(0).contains(Id[NormalizedURI](2)) === true
@@ -50,7 +50,7 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
         u1list(shards(1)).publicList === None
         u1list(shards(1)).privateList.get.ids.size === 0
 
-        uriGraphCommander1.getUserUriList(users(0).id.get, publicOnly = false) should throwAn[NotAuthorizedURIGraphQueryException]
+        shards.map{ shard => uriGraphCommander1.getUserUriList(users(0).id.get, publicOnly = false, shard = shard) } should throwAn[NotAuthorizedURIGraphQueryException]
       }
     }
   }
