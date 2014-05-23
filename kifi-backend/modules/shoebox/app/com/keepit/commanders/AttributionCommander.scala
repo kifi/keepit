@@ -117,7 +117,7 @@ class AttributionCommander @Inject() (
     keepersF flatMap { keepers =>
       val futures = keepers.map { keeper =>
         () => updateReKeepStats(keeper, n)
-      }.toList
+      }
       FutureHelpers.sequentialExec(futures)
     }
   }
