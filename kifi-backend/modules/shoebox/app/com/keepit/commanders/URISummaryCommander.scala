@@ -148,7 +148,6 @@ class URISummaryCommander @Inject()(
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
-    println("\n\n\n====================================\n\n\n ha ha ha")
     scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
   }
 
