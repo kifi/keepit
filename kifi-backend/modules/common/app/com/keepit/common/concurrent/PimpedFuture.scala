@@ -49,7 +49,6 @@ object PimpMyFuture {
 }
 
 object FutureHelpers {
-  import PimpMyFuture._
 
   def map[A,B](in: Map[A,Future[B]]): Future[Map[A,B]] = {
     val seq = in.map{ case (key, fut) =>
@@ -64,6 +63,15 @@ object FutureHelpers {
   }
 
 
+  // generic (make few assumptions) but a bit more work for clients
+  def sequentialExec[T](futures:Seq[() => Future[T]]): Future[Seq[T]] = {
+    if (futures.isEmpty) Future.successful(List.empty)
+    else {
+      futures.head.apply.flatMap { h =>
+        sequentialExec(futures.tail) map { t => h +: t }
+      }
+    }
+  }
 
 }
 

@@ -13,6 +13,7 @@ import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext._
 import scala.Some
 import com.keepit.model.UserBookmarkClicks
+import com.keepit.common.concurrent.FutureHelpers
 
 class AttributionCommander @Inject() (
   db:Database,
@@ -82,7 +83,7 @@ class AttributionCommander @Inject() (
 
   def updateReKeepStats(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
     val rekeepCountsF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
-      rekeepRepo.getReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
+      rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
         (keepId, rekeeps.head.uriId) -> rekeeps.length
       }
     }
@@ -109,24 +110,15 @@ class AttributionCommander @Inject() (
     }
   }
 
-  def sequentialExec[T](futures:List[() => Future[T]]): Future[List[T]] = { // experimental -- generic (does not require special context) but a bit more work for clients
-    if (futures.isEmpty) Future.successful(List.empty)
-    else {
-      futures.head.apply.flatMap { h =>
-        sequentialExec(futures.tail) map { t => h :: t }
-      }
-    }
-  }
-
-  def updateAllReKeepStats(n:Int = 3): Future[List[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
+  def updateAllReKeepStats(n:Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getAllKeepers()
     }
     keepersF flatMap { keepers =>
       val futures = keepers.map { keeper =>
         () => updateReKeepStats(keeper, n)
-      }.toList
-      sequentialExec(futures)
+      }
+      FutureHelpers.sequentialExec(futures)
     }
   }
 
