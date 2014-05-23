@@ -13,6 +13,7 @@ class EmailOptOutCommander @Inject() (optoutSecret: OptoutSecret) {
   def generateOptOutToken(emailAddress: EmailAddressHolder) = {
     crypt.crypt(key, emailAddress.address)
   }
+
   def getEmailFromOptOutToken(optOutToken: String): Try[EmailAddressHolder] = {
     crypt.decrypt(key, optOutToken).map(GenericEmailAddress(_))
   }
