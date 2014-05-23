@@ -236,13 +236,13 @@ class ElizaEmailCommander @Inject() (
       safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
     }
     result.onSuccess { case _ =>
-      db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get, clock.now()) }
+      db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get) }
     }
     result
   }
 
   private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
-    val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
+    val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier)
     val protoEmailFut = unsubUrlFut map { unsubUrl =>
       assembleEmail(
         threadEmailData,
