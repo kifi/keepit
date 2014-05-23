@@ -53,8 +53,7 @@ class FeedCommanderImpl @Inject() (
 
   def getFeeds(userId: Id[User], limit: Int): Seq[Feed] = {
 
-    // for testing userId 7 uses remote-only plan
-    val (localShards, dispatchPlan) = if (userId.id == 7) distributionPlanRemoteOnly(maxShardsPerInstance = 2) else distributionPlan(shards)
+    val (localShards, dispatchPlan) = distributionPlan(shards)
 
     var resultFutures = new ListBuffer[Future[Seq[Feed]]]()
 
