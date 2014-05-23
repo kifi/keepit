@@ -5,14 +5,17 @@ import scala.collection.mutable
 import com.keepit.common.math.ProbabilityDensity
 import scala.Some
 import com.keepit.graph.model.EdgeKind.EdgeType
+import com.keepit.common.logging.Logging
+import com.keepit.common.time._
 
 trait Wanderer {
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeWeightResolver, journal: TravelJournal): Unit
 }
 
-class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
+class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends Logging {
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeWeightResolver, journal: TravelJournal): Unit = {
+    val start = currentDateTime
     val probabilityCache = mutable.Map[VertexId, ProbabilityDensity[(VertexId, EdgeType)]]()
     wanderer.moveTo(teleporter.surely)
     var step = 0
@@ -28,6 +31,8 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
       }
       step += 1
     }
+    val end = currentDateTime
+    log.info(s"Wandered for $steps steps during ${end.getMillis - start.getMillis} ms.")
   }
 
   private def teleportTo(destination: VertexId, journal: TravelJournal): Unit = {
