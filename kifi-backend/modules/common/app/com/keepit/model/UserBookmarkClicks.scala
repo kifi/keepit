@@ -19,7 +19,10 @@ case class UserBookmarkClicks(
   userId: Id[User],
   uriId: Id[NormalizedURI],
   selfClicks: Int,          // clicked by self
-  otherClicks: Int          // clicked by other user
+  otherClicks: Int,         // clicked by other user
+  rekeepCount: Int = 0,
+  rekeepTotalCount: Int = 0,
+  rekeepDegree: Int = 0
 ) extends Model[UserBookmarkClicks] {
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withId(id: Id[UserBookmarkClicks]) = this.copy(id = Some(id))
