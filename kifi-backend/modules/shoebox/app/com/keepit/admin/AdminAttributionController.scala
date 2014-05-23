@@ -181,7 +181,7 @@ class AdminAttributionController @Inject()(
   def updateUsersReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Seq[Id[User]]](request.body).asOpt map { userIds =>
       attributionCmdr.updateUsersReKeepStats(userIds) map { saved =>
-        Ok(s"Updated ${saved.length} bookmarkClick entries for ${saved.length} users")
+        Ok(s"Updated bookmarkClick table for ${saved.length} users")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
