@@ -24,11 +24,19 @@ class ElizaNonUserEmailNotifierActor @Inject() (
 
   protected def emailUnreadMessagesForParticipantThreadBatch(batch: ParticipantThreadBatch[NonUserThread]): Future[Unit] = {
     val thread = db.readOnly { implicit session => threadRepo.get(batch.threadId) }
-    elizaEmailCommander.getThreadEmailData(thread) map { threadEmailData =>
-      batch.participantThreads.foreach {
-        case emailParticipantThread if emailParticipantThread.participant.kind == NonUserKinds.email => elizaEmailCommander.notifyEmailParticipant(emailParticipantThread, threadEmailData)
-        case unsupportedNonUserThread => airbrake.notify(new UnsupportedOperationException(s"Cannot email non user ${unsupportedNonUserThread.participant}"))
+    elizaEmailCommander.getThreadEmailData(thread) flatMap { threadEmailData =>
+      val notificationFutures = batch.participantThreads.map {
+        case emailParticipantThread if emailParticipantThread.participant.kind == NonUserKinds.email => {
+          elizaEmailCommander.notifyEmailParticipant(emailParticipantThread, threadEmailData).recover{
+            case _ => ()
+          }
+        }
+        case unsupportedNonUserThread => {
+          airbrake.notify(new UnsupportedOperationException(s"Cannot email non user ${unsupportedNonUserThread.participant}"))
+          Future.successful()
+        }
       }
+      Future.sequence(notificationFutures).map(_ => ())
     }
   }
 
