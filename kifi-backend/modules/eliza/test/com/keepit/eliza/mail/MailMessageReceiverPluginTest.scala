@@ -1,11 +1,20 @@
 package com.keepit.eliza.mail
 
-import com.keepit.test.TestInjector
+import com.keepit.test.ElizaTestInjector
 import org.specs2.mutable.Specification
+import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.eliza.TestElizaExternalEmailModule
 
-class MailMessageReceiverPluginTest extends Specification with TestInjector {
+class MailMessageReceiverPluginTest extends Specification with ElizaTestInjector {
 
   "MailDiscussionMessageParser" should {
+    "be successfully instantiated" in {
+      withDb(TestCryptoModule(), TestElizaExternalEmailModule()) { implicit injector =>
+        inject[MailDiscussionMessageParser]
+        1 === 1
+      }
+    }
+
     "parse email contents" in {
       val email1 =
         """

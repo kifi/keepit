@@ -81,7 +81,7 @@ class AttributionCommander @Inject() (
     usersByDeg zip rekeepsByDeg
   }
 
-  def updateReKeepStats(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
+  def updateUserReKeepStatus(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
     val rekeepCountsF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
         (keepId, rekeeps.head.uriId) -> rekeeps.length
@@ -110,15 +110,19 @@ class AttributionCommander @Inject() (
     }
   }
 
+  def updateUsersReKeepStats(keepers:Seq[Id[User]], n:Int = 3):Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
+    val futures = keepers.map { keeper =>
+      () => updateUserReKeepStatus(keeper, n)
+    }
+    FutureHelpers.sequentialExec(futures)
+  }
+
   def updateAllReKeepStats(n:Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getAllKeepers()
     }
     keepersF flatMap { keepers =>
-      val futures = keepers.map { keeper =>
-        () => updateReKeepStats(keeper, n)
-      }
-      FutureHelpers.sequentialExec(futures)
+      updateUsersReKeepStats(keepers)
     }
   }
 

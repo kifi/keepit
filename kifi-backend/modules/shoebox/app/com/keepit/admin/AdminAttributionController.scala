@@ -164,22 +164,31 @@ class AdminAttributionController @Inject()(
   }
 
   def updateReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
-    attributionCmdr.updateReKeepStats(request.userId) map { saved =>
+    attributionCmdr.updateUserReKeepStatus(request.userId) map { saved =>
       Ok(s"Updated ${saved.length} bookmarkClick entries for ${request.userId}")
     }
   }
 
   def updateUserReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Id[User]](request.body).asOpt map { userId =>
-      attributionCmdr.updateReKeepStats(userId) map { saved =>
+      attributionCmdr.updateUserReKeepStatus(userId) map { saved =>
         Ok(s"Updated ${saved.length} bookmarkClick entries for ${userId}")
+      }
+    } getOrElse Future.successful(BadRequest(s"Illegal argument"))
+  }
+
+
+  def updateUsersReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
+    Json.fromJson[Seq[Id[User]]](request.body).asOpt map { userIds =>
+      attributionCmdr.updateUsersReKeepStats(userIds) map { saved =>
+        Ok(s"Updated bookmarkClick table for ${saved.length} users")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateAllReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
     attributionCmdr.updateAllReKeepStats() map { saved =>
-      Ok(s"Updated bookmarkClicks table for $saved users")
+      Ok(s"Updated bookmarkClicks table for ${saved.length} users")
     }
   }
 
