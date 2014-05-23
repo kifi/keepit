@@ -57,7 +57,7 @@ class ElizaEmailCommander @Inject() (
       waiting = true,
       silent = false)))
     fut.recover {
-      case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}. Exception was: $t")
+      case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}", t)
     }
   }
 
@@ -70,7 +70,7 @@ class ElizaEmailCommander @Inject() (
       waiting = true,
       silent = false)))
     fut.recover {
-      case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}. Exception was: $t")
+      case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}", t)
     }
   }
 
