@@ -14,8 +14,6 @@ import play.api.libs.json._
 import com.keepit.common.time.DateTimeJsonFormat
 import org.joda.time.DateTime
 
-
-
 case class EmbedlyImage(
   url:String,
   caption:Option[String] = None,
@@ -38,16 +36,22 @@ object EmbedlyImage {
 
 // field names must match embedly json field so that js.validate[EmbedlyInfo] works
 
-case class EmbedlyInfo(
-  originalUrl:String,
-  url:Option[String],
-  title:Option[String],
-  description:Option[String],
-  content:Option[String],
-  safe:Option[Boolean],
-  lang:Option[String],
-  faviconUrl:Option[String],
-  images:Seq[EmbedlyImage]) extends PageGenericInfo with PageSafetyInfo with PageMediaInfo {
+case class EmbedlyEntity(count: Int, name: String)
+case class EmbedlyKeyword(score: Int, name: String)
+
+case class ExtendedEmbedlyInfo(
+  originalUrl: String,
+  url: Option[String],
+  title: Option[String],
+  description: Option[String],
+  content: Option[String],
+  safe: Option[Boolean],
+  lang: Option[String],
+  faviconUrl: Option[String],
+  images: Seq[EmbedlyImage],
+  entities: Seq[EmbedlyEntity],
+  keywords: Seq[EmbedlyKeyword]
+){
   implicit def toPageInfo(nuriId:Id[NormalizedURI]):PageInfo =
     PageInfo(
       id = None,
@@ -65,44 +69,6 @@ case class EmbedlyInfo(
     }
   }
 }
-
-object EmbedlyInfo {
-  val EMPTY = EmbedlyInfo("", None, None, None, None, None, None, None, Seq.empty[EmbedlyImage])
-
-  implicit val format = (
-    (__ \ 'original_url).format[String] and
-    (__ \ 'url).formatNullable[String] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'description).formatNullable[String] and
-    (__ \ 'content).formatNullable[String] and
-    (__ \ 'safe).formatNullable[Boolean] and
-    (__ \ 'language).formatNullable[String] and
-    (__ \ 'favicon_url).formatNullable[String] and
-    (__ \ 'images).format[Seq[EmbedlyImage]]
-    )(EmbedlyInfo.apply _, unlift(EmbedlyInfo.unapply))
-
-   def fromExtendedEmbedlyInfo(extInfo: ExtendedEmbedlyInfo): EmbedlyInfo = {
-     EmbedlyInfo(extInfo.originalUrl, extInfo.url, extInfo.title, extInfo.description, extInfo.content, extInfo.safe, extInfo.lang, extInfo.faviconUrl, extInfo.images)
-  }
-}
-
-//again, field names matches embedly json for convenient extraction
-case class EmbedlyEntity(count: Int, name: String)
-case class EmbedlyKeyword(score: Int, name: String)
-
-case class ExtendedEmbedlyInfo(
-  originalUrl: String,
-  url: Option[String],
-  title: Option[String],
-  description: Option[String],
-  content: Option[String],
-  safe: Option[Boolean],
-  lang: Option[String],
-  faviconUrl: Option[String],
-  images: Seq[EmbedlyImage],
-  entities: Seq[EmbedlyEntity],
-  keywords: Seq[EmbedlyKeyword]
-)
 
 object ExtendedEmbedlyInfo {
   val EMPTY = ExtendedEmbedlyInfo( "", None, None, None, None, None, None, None, Seq(), Seq(), Seq())

@@ -16,11 +16,15 @@ import com.keepit.common.db.ExternalId
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json.Json.JsValueWrapper
+import com.keepit.common.concurrent.ExecutionContext.fj
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
   implicit val system = ActorSystem("test")
+  implicit val execCtx = fj
 
   def modules = FakeKeepImportsModule() :: FakeScrapeSchedulerModule() :: Nil
 
@@ -276,6 +280,20 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         kbd1(0) === Set(keeps1(1).id.get)
         kbd1(1) === Set(keeps3(0).id.get)
         kbd1(2) === Set(keeps4(0).id.get)
+
+        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u1.id.get, keeps1(1).uriId) } === None
+        val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
+        bc1.nonEmpty === true
+        bc1.length === 1
+        bc1(0).rekeepCount === 1
+        bc1(0).rekeepTotalCount === 2
+
+        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u2.id.get, keeps2(0).uriId) } === None
+        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u3.id.get, keeps3(0).uriId) } === None
+
+        val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
+        bc3(0).rekeepCount === 1
+        bc3(0).rekeepTotalCount === 1
       }
     }
 

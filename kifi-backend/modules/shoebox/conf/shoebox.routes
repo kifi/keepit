@@ -334,6 +334,11 @@ GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttribut
 GET     /admin/reKeeps/:id           @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
 GET     /admin/keepAttribution       @com.keepit.controllers.admin.AdminAttributionController.keepAttribution(degree:Int ?= 3)
 
+POST    /admin/reKeepStats/update       @com.keepit.controllers.admin.AdminAttributionController.updateReKeepStats
+POST    /admin/reKeepStats/user/update  @com.keepit.controllers.admin.AdminAttributionController.updateUserReKeepStats
+POST    /admin/reKeepStats/users/update @com.keepit.controllers.admin.AdminAttributionController.updateUsersReKeepStats
+POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttributionController.updateAllReKeepStats
+
 GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
@@ -531,6 +536,8 @@ POST    /admin/cortex/lda/wordTopic                        @com.keepit.controlle
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 
 GET     /admin/graph/statistics                             @com.keepit.controllers.admin.GraphAdminController.statistics
+GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
+POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 
 ##########################################
 # Common Healthcheck / service routes

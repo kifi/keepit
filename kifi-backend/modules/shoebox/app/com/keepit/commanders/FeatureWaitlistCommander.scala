@@ -6,6 +6,7 @@ import com.keepit.model.{NotificationCategory, FeatureWaitlistEntry, FeatureWait
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, GenericEmailAddress, EmailAddresses}
+import com.keepit.commanders.emails.EmailOptOutCommander
 
 class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWaitlistRepo, postOffice: LocalPostOffice, emailOptOutCommander: EmailOptOutCommander) {
 

@@ -105,15 +105,19 @@ class OrphanCleaner @Inject() (
       val renormalizedURLs = db.readOnly{ implicit s => renormalizedURLRepo.getChangesSince(seq, 10) } // get applied changes
       done = renormalizedURLs.isEmpty
 
-      db.readWrite{ implicit s =>
-        renormalizedURLs.foreach{ renormalizedURL =>
-          val (turnedActive, fixedScrapeInfo) = checkIntegrity(renormalizedURL.oldUriId, readOnly)
+      db.readWriteSeq[RenormalizedURL, (Boolean, Boolean)](
+        renormalizedURLs,
+        transaction = {
+          (s, renormalizedURL) => checkIntegrity(renormalizedURL.oldUriId, readOnly)(s)
+        },
+        collector = { (renormalizedURL, result) =>
+          val (turnedActive, fixedScrapeInfo) = result
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = renormalizedURL.seq
         }
-      }
+      )
       if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq) // update high watermark
     }
 
@@ -132,15 +136,19 @@ class OrphanCleaner @Inject() (
       val changedURIs = db.readOnly{ implicit s => changedURIRepo.getChangesSince(seq, 10) } // get applied changes
       done = changedURIs.isEmpty
 
-      db.readWrite{ implicit s =>
-        changedURIs.foreach{ changedUri =>
-          val (turnedActive, fixedScrapeInfo) = checkIntegrity(changedUri.oldUriId, readOnly)
+      db.readWriteSeq[ChangedURI, (Boolean, Boolean)](
+        changedURIs,
+        transaction = { (s, changedUri) =>
+          checkIntegrity(changedUri.oldUriId, readOnly)(s)
+        },
+        collector = { (changedUri, result) =>
+          val (turnedActive, fixedScrapeInfo) = result
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = changedUri.seq
         }
-      }
+      )
       if (!done && !readOnly) centralConfig.update(changedURISeqKey, seq) // update high watermark
     }
 
@@ -159,19 +167,23 @@ class OrphanCleaner @Inject() (
       val bookmarks = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 10) }
       done = bookmarks.isEmpty
 
-      db.readWrite{ implicit s =>
-        bookmarks.foreach { case bookmark =>
-          val (turnedActive, fixedScrapeInfo) = bookmark.state match {
-            case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
-            case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
-            case KeepStates.DUPLICATE => checkIntegrity(bookmark.uriId, readOnly)
+      db.readWriteSeq[Keep, (Boolean, Boolean)](
+        bookmarks,
+        transaction = { (s, bookmark) =>
+          bookmark.state match {
+            case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)(s)
+            case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)(s)
+            case KeepStates.DUPLICATE => checkIntegrity(bookmark.uriId, readOnly)(s)
           }
+        },
+        collector = { (bookmark, result) =>
+          val (turnedActive, fixedScrapeInfo) = result
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = bookmark.seq
         }
-      }
+      )
       if (!done && !readOnly) centralConfig.update(bookmarkSeqKey, seq) // update high watermark
     }
 
@@ -191,15 +203,19 @@ class OrphanCleaner @Inject() (
       val normalizedURIs = db.readOnly{ implicit s => nuriRepo.getChanged(seq, Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED), 10) }
       done = normalizedURIs.isEmpty
 
-      db.readWrite{ implicit s =>
-        normalizedURIs.foreach{ uri =>
-          val (turnedActive, fixedScrapeInfo) = checkIntegrity(uri.id.get, readOnly)
+      db.readWriteSeq[NormalizedURI, (Boolean, Boolean)](
+        normalizedURIs,
+        transaction = { (s, uri) =>
+          checkIntegrity(uri.id.get, readOnly)(s)
+        },
+        collector = { (uri, result) =>
+          val (turnedActive, fixedScrapeInfo) = result
           if (turnedActive) numUrisChangedToActive += 1
           if (fixedScrapeInfo) numScrapeInfoCreated += 1
           numProcessed += 1
           seq = uri.seq
         }
-      }
+      )
       if (numProcessed % 1000 == 0) {
         logProgress(seq.value, numProcessed, numUrisChangedToActive, numScrapeInfoCreated, readOnly)
       }

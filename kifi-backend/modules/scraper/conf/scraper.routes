@@ -7,11 +7,11 @@ POST    /internal/scraper/getSignature                  @com.keepit.scraper.Scra
 POST    /internal/scraper/asyncScrapeWithInfo           @com.keepit.scraper.ScraperController.asyncScrapeWithInfo
 POST    /internal/scraper/asyncScrapeWithRequest        @com.keepit.scraper.ScraperController.asyncScrapeWithRequest
 GET     /internal/scraper/getPornDetectorModel          @com.keepit.controllers.scraper.PornDetectorController.getModel
-POST    /internal/scraper/pornDetector/detectPorn      @com.keepit.controllers.scraper.PornDetectorController.detect
-POST    /internal/scraper/pornDetector/whitelist       @com.keepit.controllers.scraper.PornDetectorController.whitelist
+POST    /internal/scraper/pornDetector/detectPorn       @com.keepit.controllers.scraper.PornDetectorController.detect
+POST    /internal/scraper/pornDetector/whitelist        @com.keepit.controllers.scraper.PornDetectorController.whitelist
 POST    /internal/scraper/embedly/embedlyInfo           @com.keepit.controllers.scraper.EmbedlyController.getImbedlyInfo
 POST    /internal/scraper/embedly/imageInfos            @com.keepit.controllers.scraper.EmbedlyController.getImageInfos
-
+POST    /internal/scraper/uriSummary/embedly            @com.keepit.controllers.scraper.URISummaryController.getURISummaryFromEmbedly
 
 ->  / common.Routes
 

@@ -141,6 +141,16 @@ class Database @Inject() (
 
   private[this] val READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL = 500
 
+
+  def readWriteSeq[D, T](batch: Seq[D], transaction: (RWSession, D) => T, collector: (D, T) => Unit): Unit = {
+    batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foreach{ chunk =>
+      val rw = createReadWriteSession
+      try {
+        chunk.foreach{ item => collector(item, rw.withTransaction{ transaction(rw, item) }) }
+      } finally { rw.close() }
+    }
+  }
+
   def readWriteBatch[D, T](batch: Seq[D])(f: (RWSession, D) => T): Map[D, Try[T]] = {
     var successCnt = 0
     var failure: Failure[T] = null
@@ -161,7 +171,7 @@ class Database @Inject() (
         }
       } finally { rw.close() }
     }
-    if (failure != null) log.warn(s"Failed ({fail.exception.getClass.getSimpleName}) readWrite transaction, processed ${successCnt} out of ${batch.size}")
+    if (failure != null) log.warn(s"Failed (${failure.exception.getClass.getSimpleName}) readWrite transaction, processed ${successCnt} out of ${batch.size}")
     results
   }
 

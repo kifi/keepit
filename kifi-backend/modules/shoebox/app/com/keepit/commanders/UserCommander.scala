@@ -48,6 +48,7 @@ import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
+import com.keepit.commanders.emails.EmailOptOutCommander
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
