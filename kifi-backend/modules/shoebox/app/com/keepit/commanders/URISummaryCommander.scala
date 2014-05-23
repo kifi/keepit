@@ -223,7 +223,7 @@ class URISummaryCommander @Inject()(
   private def updatePageInfo(info: PageInfo) = {
     db.readWrite { implicit session =>
       pageInfoRepo.getByUri(info.uriId) match {
-        case Some(storedInfo) => db.readWrite { implicit session => pageInfoRepo.save(info.copy(id = storedInfo.id)) }
+        case Some(storedInfo) => pageInfoRepo.save(info.copy(id = storedInfo.id))
         case _ => pageInfoRepo.save(info)
       }
     }
