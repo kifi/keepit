@@ -13,13 +13,5 @@ class EmbedlyTest extends Specification {
       extEmbInfo.keywords.map{ key => (key.score, key.name)}.take(3) === Seq((120, "oneplus"), (66, "devices"), (53, "nexus"))
       extEmbInfo.entities.map{ ent => (ent.count, ent.name)}.take(2) === Seq((4, "Google"), (1, "RAM"))
     }
-
-    "backward compatible" in {
-      val extInfo = ExtendedEmbedlyInfo.EMPTY.copy(url = Option("abc"), keywords = Seq(EmbedlyKeyword(1, "key")))
-      val js = Json.toJson(extInfo)
-      val info = js.as[EmbedlyInfo]
-      EmbedlyInfo.fromExtendedEmbedlyInfo(extInfo) === info
-      info.url === Some("abc")
-    }
   }
 }
