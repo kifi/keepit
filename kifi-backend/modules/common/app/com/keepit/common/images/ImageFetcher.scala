@@ -17,6 +17,7 @@ import java.nio.channels.ClosedChannelException
 import java.net.ConnectException
 import org.jboss.netty.channel.ConnectTimeoutException
 import java.security.GeneralSecurityException
+import java.io.IOException
 
 @ImplementedBy(classOf[ImageFetcherImpl])
 trait ImageFetcher {
@@ -62,7 +63,11 @@ class ImageFetcherImpl @Inject() (
           None
       }
     } recover {
-      case e @ (_ : ConnectTimeoutException | _ : ClosedChannelException | _ : GeneralSecurityException) => {
+      case e @ (
+        _ : ConnectTimeoutException |
+        _ : ClosedChannelException |
+        _ : GeneralSecurityException |
+        _ : IOException) => {
         timer.done(url = url, error = e.toString)
         log.warn(s"Can't connect to $url, next time it may work", trace.withCause(e))
         None
