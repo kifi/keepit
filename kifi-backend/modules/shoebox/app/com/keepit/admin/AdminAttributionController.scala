@@ -19,6 +19,7 @@ import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext.fj
+import play.api.libs.json.Json
 
 class AdminAttributionController @Inject()(
   actionAuthenticator: ActionAuthenticator,
@@ -166,6 +167,14 @@ class AdminAttributionController @Inject()(
     attributionCmdr.updateReKeepStats(request.userId) map { saved =>
       Ok(s"Updated ${saved.length} bookmarkClick entries for ${request.userId}")
     }
+  }
+
+  def updateUserReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
+    Json.fromJson[Id[User]](request.body).asOpt map { userId =>
+      attributionCmdr.updateReKeepStats(userId) map { saved =>
+        Ok(s"Updated ${saved.length} bookmarkClick entries for ${userId}")
+      }
+    } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateAllReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>

@@ -109,15 +109,24 @@ class AttributionCommander @Inject() (
     }
   }
 
-  def updateAllReKeepStats(n:Int = 3): Future[Int] = { // expensive -- admin only
+  def sequentialExec[T](futures:List[() => Future[T]]): Future[List[T]] = { // experimental -- generic (does not require special context) but a bit more work for clients
+    if (futures.isEmpty) Future.successful(List.empty)
+    else {
+      futures.head.apply.flatMap { h =>
+        sequentialExec(futures.tail) map { t => h :: t }
+      }
+    }
+  }
+
+  def updateAllReKeepStats(n:Int = 3): Future[List[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getAllKeepers()
     }
-    keepersF map { keepers =>
-      keepers.foreach { keeper => // sequential
-        updateReKeepStats(keeper, n)
-      }
-      keepers.length
+    keepersF flatMap { keepers =>
+      val futures = keepers.map { keeper =>
+        () => updateReKeepStats(keeper, n)
+      }.toList
+      sequentialExec(futures)
     }
   }
 
