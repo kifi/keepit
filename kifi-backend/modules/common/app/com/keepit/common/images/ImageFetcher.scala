@@ -65,7 +65,6 @@ class ImageFetcherImpl @Inject() (
     } recover {
       case e @ (
         _ : ConnectTimeoutException |
-        _ : ClosedChannelException |
         _ : GeneralSecurityException |
         _ : IOException) => {
         timer.done(url = url, error = e.toString)
