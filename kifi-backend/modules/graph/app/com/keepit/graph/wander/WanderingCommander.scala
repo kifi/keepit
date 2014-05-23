@@ -19,25 +19,29 @@ class WanderingCommander @Inject() (graph: GraphManager) {
     getCollisions(rawCollisions)
   }
 
-  private def doWander(startingVertexId: VertexId, preferredCollisions: Set[VertexType], steps: Int, restartProbability: Double): Map[VertexId, Int] = {
-    val journal = new DestinationJournal()
+  private def doWander(startingVertexId: VertexId, preferredCollisions: Set[VertexType], steps: Int, restartProbability: Double): TeleportationJournal = {
+    val journal = new TeleportationJournal()
+    val teleporter = UniformTeleporter(Set(startingVertexId), restartProbability) { wanderer =>
+      wanderer.id != startingVertexId && (preferredCollisions.isEmpty || preferredCollisions.contains(wanderer.kind))
+    }
+    val resolver = RestrictedDestinationResolver { case (source, destination, edge) =>
+      !journal.getLastVisited().exists(_ == destination.id)
+    }
+
     graph.readOnly { reader =>
       val wanderer = reader.getNewVertexReader()
       val scout = reader.getNewVertexReader()
       val scoutingWanderer = new ScoutingWanderer(wanderer, scout)
-      val teleporter = new UniformTeleporter(Set(startingVertexId), preferredCollisions, restartProbability)
-      val resolver = new RestrictedDestinationResolver(VertexKind.all)
       scoutingWanderer.wander(steps, teleporter, resolver, journal)
     }
-
-    journal.getDestinations()
+    journal
   }
 
-  private def getCollisions(rawCollisions: Map[VertexId, Int]): Collisions = {
+  private def getCollisions(journal: TeleportationJournal): Collisions = {
     val users = mutable.Map[Id[User], Int]()
     val uris =  mutable.Map[Id[NormalizedURI], Int]()
     val extra = mutable.Map[String, Int]()
-    rawCollisions.foreach {
+    journal.getTeleportations().foreach {
       case (vertexId, count) if vertexId.kind == UserReader => users += VertexDataId.toUserId(vertexId.asId[UserReader]) -> count
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
       case (vertexId, count) => extra += vertexId.toString() -> count
