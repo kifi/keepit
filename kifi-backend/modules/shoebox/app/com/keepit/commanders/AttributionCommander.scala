@@ -109,7 +109,7 @@ class AttributionCommander @Inject() (
     }
   }
 
-  def sequentialExec[T](futures:List[() => Future[T]]):Future[List[T]] = { // experimental -- generic (does not require special context) but a bit more work for clients
+  def sequentialExec[T](futures:List[() => Future[T]]): Future[List[T]] = { // experimental -- generic (does not require special context) but a bit more work for clients
     if (futures.isEmpty) Future.successful(List.empty)
     else {
       futures.head.apply.flatMap { h =>
