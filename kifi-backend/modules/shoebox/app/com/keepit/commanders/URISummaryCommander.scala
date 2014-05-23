@@ -143,41 +143,54 @@ class URISummaryCommander @Inject()(
     else uriImageStore.getDefaultScreenshotURL(nUri)
   }
 
+  private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
+    val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
+    (smallImages, imgsInfo.drop(smallImages.size).headOption)
+  }
+
+  private def fetchAndInternImage(uri: NormalizedURI, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
+    imageInfo.url match {
+      case Some(imageUrl) => imageFetcher.fetchRawImage(imageUrl).map{ rawImageOpt =>
+        rawImageOpt flatMap { rawImage => internImage(imageInfo, rawImage, uri) }
+      }
+      case None => Future.successful(None)
+    }
+  }
+
   /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
-  private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0,0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
+  private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
+
     scraper.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
-      embedlyInfoOpt map { embedlyInfo =>
-        nUri.id map { nUriId =>
-          // Persist page info to the database
-          updatePageInfo(embedlyInfo.toPageInfo(nUriId))
-          if (descriptionOnly) {
-            Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
-          } else {
-            val images = embedlyInfo.buildImageInfo(nUriId)
-            images.find(meetsSizeConstraint(_, minSize)) flatMap { selectedImageInfo =>
-              // Intern images that have higher priority than the selected image
-              images.takeWhile(!meetsSizeConstraint(_, minSize)) map { imageInfo =>
-                imageInfo.url map { imageUrl =>
-                  imageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
-                    rawImageOpt map { rawImage => internImage(imageInfo, rawImage, nUri) }
-                  }
-                }
+
+      val summary = for {
+        nUriId <- nUri.id
+        embedlyInfo <- embedlyInfoOpt
+      } yield {
+
+        updatePageInfo(embedlyInfo.toPageInfo(nUriId))
+
+        if (descriptionOnly) {
+          Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
+        } else {
+          val images = embedlyInfo.buildImageInfo(nUriId)
+          val (smallImages, selectedImageOpt) = partitionImages(images, minSize)
+
+          smallImages.foreach { fetchAndInternImage(nUri, _) }
+
+          selectedImageOpt match {
+            case None => Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
+            case Some(image) =>
+              fetchAndInternImage(nUri, image) map { imageInfoOpt =>
+                Some(URISummary(imageInfoOpt flatMap { getS3URL(_, nUri) }, embedlyInfo.title, embedlyInfo.description))
               }
-              // Intern and return selected image (and page description)
-              selectedImageInfo.url map { imageUrl =>
-                imageFetcher.fetchRawImage(imageUrl) map { rawImageOpt =>
-                  val imageInfoOpt = rawImageOpt flatMap { rawImage =>
-                    internImage(selectedImageInfo, rawImage, nUri)
-                  }
-                  Some(URISummary(imageInfoOpt flatMap { getS3URL(_,nUri) }, embedlyInfo.title, embedlyInfo.description))
-                }
-              }
-            } getOrElse Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
           }
-        } getOrElse Future.successful(None)
-      } getOrElse Future.successful(None)
+        }
+      }
+
+      summary getOrElse Future.successful(None)
+
     }
   }
 
