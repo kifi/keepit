@@ -25,4 +25,8 @@ case class ScraperTestStoreModule() extends StoreModule() {
   @Provides
   def embedlyStore(): EmbedlyStore = new InMemoryEmbedlyStoreImpl()
 
+  @Singleton
+  @Provides
+  def uriImageStore: S3URIImageStore = FakeS3URIImageStore()
+
 }

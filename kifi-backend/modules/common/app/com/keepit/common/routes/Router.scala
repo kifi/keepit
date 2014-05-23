@@ -278,6 +278,7 @@ object Scraper extends Service {
     def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
     def getEmbedlyImageInfos() = ServiceRoute(POST, s"/internal/scraper/embedly/imageInfos")
     def getEmbedlyInfo() = ServiceRoute(POST, s"/internal/scraper/embedly/embedlyInfo")
+    def getURISummaryFromEmbedly() = ServiceRoute(POST, s"/internal/scraper/uriSummary/embedly")
   }
 }
 
