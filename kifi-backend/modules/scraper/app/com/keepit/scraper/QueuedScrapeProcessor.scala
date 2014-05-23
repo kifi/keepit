@@ -27,6 +27,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
 import com.keepit.shoebox.ShoeboxServiceClient
 import java.util.{Iterator => JIterator}
+import com.keepit.scraper.embedly.EmbedlyCommander
 
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
@@ -100,7 +101,8 @@ class QueuedScrapeProcessor @Inject() (
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient,
-  wordCountCache: NormalizedURIWordCountCache) extends ScrapeProcessor with Logging with ScraperUtils {
+  wordCountCache: NormalizedURIWordCountCache,
+  embedlyCommander: EmbedlyCommander) extends ScrapeProcessor with Logging with ScraperUtils {
 
   type ScrapingForkJoinTask = ForkJoinTask[Try[(NormalizedURI, Option[Article])]]
   type ScrapeQueueIterator = JIterator[WeakReference[(ScrapeCallable, ScrapingForkJoinTask)]]
@@ -220,7 +222,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache)
+  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, embedlyCommander)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
