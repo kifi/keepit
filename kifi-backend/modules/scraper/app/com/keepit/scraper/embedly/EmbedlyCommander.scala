@@ -12,8 +12,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @ImplementedBy(classOf[EmbedlyCommanderImpl])
 trait EmbedlyCommander {
-  def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[ExtendedEmbedlyInfo]
-  def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]]
+  def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[EmbedlyInfo]
+  def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[EmbedlyInfo]]
 }
 
 class EmbedlyCommanderImpl @Inject()(
@@ -22,26 +22,26 @@ class EmbedlyCommanderImpl @Inject()(
   clock: Clock
 ) extends EmbedlyCommander {
 
-  override def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[ExtendedEmbedlyInfo] = {
+  override def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[EmbedlyInfo] = {
     embedlyStore.get(id) map {_.info}
   }
 
-  private def needToCallEmbedly(info: StoredExtendedEmbedlyInfo): Boolean = {
+  private def needToCallEmbedly(info: StoredEmbedlyInfo): Boolean = {
     info.calledEmbedlyAt.plusMonths(6).getMillis < clock.now().getMillis
   }
 
-  private def fetchAndPersistEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]] = {
-    val infoFut = embedlyClient.getExtendedEmbedlyInfo(url)
+  private def fetchAndPersistEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[EmbedlyInfo]] = {
+    val infoFut = embedlyClient.getEmbedlyInfo(url)
     infoFut.map{ infoOpt =>
       infoOpt.foreach{ info =>
-        val storedInfo = StoredExtendedEmbedlyInfo(uriId = id, info = info, calledEmbedlyAt = clock.now())
+        val storedInfo = StoredEmbedlyInfo(uriId = id, info = info, calledEmbedlyAt = clock.now())
         embedlyStore.+=(id, storedInfo)
       }
       infoOpt
     }
   }
 
-  override def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[ExtendedEmbedlyInfo]] = {
+  override def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[EmbedlyInfo]] = {
     embedlyStore.get(id) match {
       case Some(storedInfo) if (! needToCallEmbedly(storedInfo)) => Future.successful(Some(storedInfo.info))
       case _ => fetchAndPersistEmbedlyInfo(id, url)

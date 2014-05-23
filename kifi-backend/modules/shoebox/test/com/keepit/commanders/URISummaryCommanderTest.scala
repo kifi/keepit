@@ -37,7 +37,7 @@ object URISummaryCommanderTestDummyValues {
   val dummyEmbedlyImageUrl = "http://www.testimg.com/thedummyembedlyimage.jpg"
   val dummyPagePeekerImageUrl = "http://www.testimg.com/thedummypagepeekerscreenshot.jpg"
   private val embedlyImage = EmbedlyImage(dummyEmbedlyImageUrl, None, Some(200), Some(100), Some(4242))
-  val dummyEmbedlyInfo = ExtendedEmbedlyInfo.EMPTY.copy(images = Seq(embedlyImage))
+  val dummyEmbedlyInfo = EmbedlyInfo.EMPTY.copy(images = Seq(embedlyImage))
   val dummyPagePeekerImage = dummyImage.copy(provider = Some(ImageProvider.PAGEPEEKER), url = Some(dummyPagePeekerImageUrl))
 
   val dummyBufferedImage = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_RGB)
@@ -59,7 +59,7 @@ case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
-  override def getEmbedlyInfo(url: String): Future[Option[ExtendedEmbedlyInfo]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo))
+  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyInfo))
   override def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
     val embedlyInfo = URISummaryCommanderTestDummyValues.dummyEmbedlyInfo
     val summary = Some(URISummary(Some(URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl), embedlyInfo.title, embedlyInfo.description))
