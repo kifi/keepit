@@ -85,10 +85,14 @@ class SearchController @Inject()(
   def distFeeds() = Action(parse.tolerantJson){ request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
-    val userId = Id[User]((json \ "request").as[Long])
-    val limit = (json \ "limit").as[Int]
+    val searchRequest = (json \ "request")
+
+    // keep the following in sync with SearchServiceClientImpl
+    val userId = (searchRequest \ "userId").as[Long]
+    val limit  = (searchRequest \ "limit").as[Int]
+
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(feedCommander.distFeeds(shards, userId, limit)))
+    Ok(Json.toJson(feedCommander.distFeeds(shards, Id[User](userId), limit)))
   }
 
   //internal (from eliza/shoebox)
