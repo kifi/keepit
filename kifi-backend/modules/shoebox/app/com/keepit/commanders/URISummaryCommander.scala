@@ -143,55 +143,12 @@ class URISummaryCommander @Inject()(
     else uriImageStore.getDefaultScreenshotURL(nUri)
   }
 
-  private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
-    val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
-    (smallImages, imgsInfo.drop(smallImages.size).headOption)
-  }
-
-  private def fetchAndInternImage(uri: NormalizedURI, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
-    imageInfo.url match {
-      case Some(imageUrl) => imageFetcher.fetchRawImage(imageUrl).map{ rawImageOpt =>
-        rawImageOpt flatMap { rawImage => internImage(imageInfo, rawImage, uri) }
-      }
-      case None => Future.successful(None)
-    }
-  }
 
   /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
-
-    scraper.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
-
-      val summary = for {
-        nUriId <- nUri.id
-        embedlyInfo <- embedlyInfoOpt
-      } yield {
-
-        updatePageInfo(embedlyInfo.toPageInfo(nUriId))
-
-        if (descriptionOnly) {
-          Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
-        } else {
-          val images = embedlyInfo.buildImageInfo(nUriId)
-          val (smallImages, selectedImageOpt) = partitionImages(images, minSize)
-
-          smallImages.foreach { fetchAndInternImage(nUri, _) }
-
-          selectedImageOpt match {
-            case None => Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
-            case Some(image) =>
-              fetchAndInternImage(nUri, image) map { imageInfoOpt =>
-                Some(URISummary(imageInfoOpt flatMap { getS3URL(_, nUri) }, embedlyInfo.title, embedlyInfo.description))
-              }
-          }
-        }
-      }
-
-      summary getOrElse Future.successful(None)
-
-    }
+    scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
   }
 
   /**
@@ -215,18 +172,6 @@ class URISummaryCommander @Inject()(
         }
       }
     } getOrElse Future.successful(None)
-  }
-
-  /**
-   * Updates database with page info
-   */
-  private def updatePageInfo(info: PageInfo) = {
-    db.readWrite { implicit session =>
-      pageInfoRepo.getByUri(info.uriId) match {
-        case Some(storedInfo) => pageInfoRepo.save(info.copy(id = storedInfo.id))
-        case _ => pageInfoRepo.save(info)
-      }
-    }
   }
 
   /**
