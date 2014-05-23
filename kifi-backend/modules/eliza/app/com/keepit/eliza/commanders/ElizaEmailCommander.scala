@@ -185,10 +185,10 @@ class ElizaEmailCommander @Inject() (
     val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
     ProtoEmail(
-      views.html.nonUserEmailImageSmall(threadInfoSmallDigest, threadItems),
-      if (uriSummaryBig.imageUrl.isDefined) views.html.nonUserEmailImageBig(threadInfoBig, threadItems)
-      else views.html.nonUserEmailImageSmall(threadInfoSmall, threadItems),
-      views.html.nonUserAddedDigestEmail(threadInfoSmall, threadItems),
+      views.html.discussionEmail(threadInfoSmallDigest, threadItems, false, false, true),
+      if (uriSummaryBig.imageUrl.isDefined) views.html.discussionEmail(threadInfoBig, threadItems, false, false, false)
+      else views.html.discussionEmail(threadInfoSmall, threadItems, false, false, true),
+      views.html.discussionEmail(threadInfoSmall, threadItems, false, true, true),
       threadInfoSmall.conversationStarter,
       uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
     )
@@ -298,7 +298,7 @@ object ElizaEmailCommander {
   /**
    * This function is meant to be used from the console, to see how emails look like without deploying to production
    */
-  def makeDummyEmail(): String = {
+  def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean): String = {
     val info = ThreadEmailInfo(
       "http://www.wikipedia.org/aninterstingpage.html",
       "Wikipedia",
@@ -317,6 +317,6 @@ object ElizaEmailCommander {
       new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),
       new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else")))
     )
-    views.html.next.nonUserEmailImageSmall(info, threadItems).body
+    views.html.discussionEmail(info, threadItems, isUser, isAdded, isSmall).body
   }
 }

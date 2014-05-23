@@ -7,6 +7,8 @@ import play.api.Play._
 import java.io.File
 import com.keepit.learning.porndetector.InMemoryPornWordLikelihoodStore
 import com.keepit.learning.porndetector.PornWordLikelihoodStore
+import com.keepit.scraper.embedly.EmbedlyStore
+import com.keepit.scraper.embedly.InMemoryEmbedlyStoreImpl
 
 case class ScraperTestStoreModule() extends StoreModule() {
   def configure() {}
@@ -18,5 +20,9 @@ case class ScraperTestStoreModule() extends StoreModule() {
   @Singleton
   @Provides
   def bayesPornDetectorStore(): PornWordLikelihoodStore = new FakePornWordLikelihoodStore()
+
+  @Singleton
+  @Provides
+  def embedlyStore(): EmbedlyStore = new InMemoryEmbedlyStoreImpl()
 
 }
