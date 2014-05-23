@@ -64,12 +64,15 @@ class ElizaUserEmailNotifierActor @Inject() (
       uriSummary <- uriSummaryFuture
       readTimeMinutesOpt <- readTimeMinutesOptFuture
     } yield (allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt)
-    threadDataFuture.map { data =>
+    threadDataFuture.flatMap { data =>
       val (allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt) = data
       // Futures below will be executed concurrently
-      userThreads.foreach{ userThread =>
-        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt)
+      val notificationFutures = userThreads.map{ userThread =>
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary, readTimeMinutesOpt).recover{
+          case _ => ()
+        }
       }
+      Future.sequence(notificationFutures).map(_ => ())
     }
   }
 
