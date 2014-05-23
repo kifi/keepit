@@ -14,7 +14,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
 import java.security.cert.CertificateExpiredException
 import java.nio.channels.ClosedChannelException
-import java.net.ConnectException
+import java.net.{URISyntaxException, URI, ConnectException}
 import org.jboss.netty.channel.ConnectTimeoutException
 import java.security.GeneralSecurityException
 import java.io.IOException
@@ -43,6 +43,15 @@ class ImageFetcherImpl @Inject() (
   override def fetchRawImage(url: String): Future[Option[BufferedImage]] = {
     val trace = new StackTrace()
     val timer = accessLog.timer(Access.HTTP_OUT)
+    try {
+      URI.create(url)
+    } catch {
+      case e @ (
+        _ : URISyntaxException |
+        _ : IllegalArgumentException) =>
+        log.error(s"Url [$url] parsing error, ignoring image", e)
+        Future.successful(None)//just ignore
+    }
     WS.url(url).withRequestTimeout(120000).get map { resp =>
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
