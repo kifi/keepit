@@ -1,4 +1,4 @@
-package com.keepit.commanders
+package com.keepit.commanders.emails
 
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.google.inject.Inject
