@@ -258,6 +258,7 @@ class ElizaEmailCommander @Inject() (
             to = Seq[EmailAddressHolder](GenericEmailAddress(nonUserThread.participant.identifier)),
             subject = protoEmail.pageTitle,
             htmlBody = htmlBodyMaker(protoEmail),
+            textBody = Some("Sorry, this email can only be viewed in HTML format."),
             category = category,
             extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
           ))
