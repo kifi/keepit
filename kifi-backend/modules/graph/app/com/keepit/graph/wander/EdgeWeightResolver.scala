@@ -6,11 +6,11 @@ trait EdgeWeightResolver {
   def weight(source: VertexReader, destination: VertexReader, edge: EdgeReader): Double
 }
 
-class RestrictedDestinationResolver(authorizedDestinations: Set[VertexKind[_ <: VertexDataReader]]) extends EdgeWeightResolver {
+case class RestrictedDestinationResolver(mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean) extends EdgeWeightResolver {
   def weight(source: VertexReader, destination: VertexReader, edge: EdgeReader): Double = {
-    if (!authorizedDestinations.contains(destination.kind)) { 0 }
+    if (!mayTraverse(source, destination, edge)) { 0 }
     else edge.data match {
-      case _: EmptyEdgeReader => 1
+      case _: EmptyEdgeReader => 1.0 / destination.edgeReader.degree
       case weightedEdge: WeightedEdgeReader => weightedEdge.getWeight
     }
   }
