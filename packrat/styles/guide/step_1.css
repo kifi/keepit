@@ -1,0 +1,54 @@
+.kifi-guide-stage {
+  position: fixed;
+  bottom: 60px;
+  right: 10px;
+  height: 260px;
+  width: 640px;
+  z-index: 999999999993;
+  opacity: 0;
+  transition: opacity .3s linear;
+  text-align: center;
+}
+.kifi-guide-stage.kifi-open {
+  opacity: 1;
+}
+.kifi-guide-h1 {
+  margin: 12px 0;
+  line-height: 48px;
+  font-size: 26px;
+  font-family: Georgia,Times,serif !important;
+  font-weight: bold;
+  font-style: italic;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-h1+.kifi-guide-h1 {
+  margin-top: -20px;
+}
+.kifi-guide-p {
+  line-height: 24px;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-em {
+  color: #f38283;
+}
+.kifi-guide-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.kifi-guide-arrow-shaft {
+  fill: none;
+  stroke: #f99;
+  stroke-dasharray: .01 9;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.kifi-guide-arrow-head {
+  stroke: none;
+  fill: #f99;
+}
