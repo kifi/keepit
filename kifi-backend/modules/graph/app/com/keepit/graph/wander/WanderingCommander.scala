@@ -16,7 +16,7 @@ class WanderingCommander @Inject() (graph: GraphManager) {
     val startingVertexKind = VertexKind.apply(wanderlust.startingVertexKind)
     val startingVertexId = VertexId(startingVertexKind)(wanderlust.startingVertexDataId)
     val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
-    val forbiddenCollisions = if (wanderlust.allowFirstDegreeCollisions) Set(startingVertexId) else getFirstDegreeConnections(startingVertexId) + startingVertexId
+    val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.allowTrivialCollisions)
     val journal = new TeleportationJournal()
     val teleporter = UniformTeleporter(Set(startingVertexId), wanderlust.restartProbability) { wanderer =>
       !forbiddenCollisions.contains(wanderer.id) && (preferredCollisions.isEmpty || preferredCollisions.contains(wanderer.kind))
@@ -50,13 +50,25 @@ class WanderingCommander @Inject() (graph: GraphManager) {
     Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
   }
 
-  private def getFirstDegreeConnections(vertexId: VertexId): Set[VertexId] = graph.readOnly { reader =>
-    val vertexReader = reader.getNewVertexReader()
+  private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId,  neighborKinds: Set[VertexType]): Set[VertexId] = {
     vertexReader.moveTo(vertexId)
-    val firstDegreeDestinations = mutable.Set[VertexId]()
+    val neighbors = mutable.Set[VertexId]()
     while (vertexReader.edgeReader.moveToNextEdge()) {
-      firstDegreeDestinations += vertexReader.edgeReader.destination
+      val neighbor = vertexReader.edgeReader.destination
+      if (neighborKinds.contains(neighbor.kind)) { neighbors += neighbor }
     }
-    firstDegreeDestinations.toSet
+    neighbors.toSet
+  }
+
+  private def getForbiddenCollisions(startingVertexId: VertexId, allowTrivialCollisions: Boolean): Set[VertexId] = {
+    if (allowTrivialCollisions) { Set(startingVertexId) }
+    else graph.readOnly { reader =>
+      val vertexReader = reader.getNewVertexReader()
+      val firstDegree = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
+      val forbiddenUris = if (startingVertexId.kind != UserReader) Set.empty else {
+        firstDegree.collect { case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader)) }.flatten
+      }
+      firstDegree ++ forbiddenUris
+    }
   }
 }
