@@ -31,7 +31,7 @@ class GraphServiceClientImpl(
   mode: Mode
 ) extends GraphServiceClient {
 
-  private val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   private def getSuccessfulResponses(calls: Seq[Future[ClientResponse]]): Future[Seq[ClientResponse]] = {
     val safeCalls = calls.map { call =>
