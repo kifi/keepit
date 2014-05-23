@@ -11,7 +11,7 @@ import play.api.http.Status
 import com.keepit.common.logging.{Access, AccessLog, Logging}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{StackTrace}
 import java.security.cert.CertificateExpiredException
 import java.nio.channels.ClosedChannelException
 import java.net.ConnectException
@@ -25,7 +25,6 @@ trait ImageFetcher {
 
 @Singleton
 class ImageFetcherImpl @Inject() (
-    airbrake: AirbrakeNotifier,
     accessLog: AccessLog
   ) extends ImageFetcher with Logging {
 
@@ -68,7 +67,7 @@ class ImageFetcherImpl @Inject() (
         None
       }
       case t: Throwable => {
-        airbrake.notify(s"Error fetching image with url $url", trace.withCause(t))
+        log.error(s"Error fetching image with url $url", trace.withCause(t))
         None
       }
     }
