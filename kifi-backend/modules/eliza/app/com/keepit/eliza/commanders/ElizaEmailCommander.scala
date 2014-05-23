@@ -31,10 +31,8 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
 import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
-import scala.util.{Failure, Success}
 import com.keepit.common.logging.Logging
-import scala.util.matching.Regex.Match
-import com.keepit.eliza.util.{TextLookHereSegment, MessageFormatter, TextSegment, ImageLookHereSegment}
+import com.keepit.eliza.util.{MessageFormatter, TextSegment}
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -196,15 +194,19 @@ class ElizaEmailCommander @Inject() (
     )
   }
 
-  def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+  def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(_.allNonUsers.nonEmpty)) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnly { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
+
       // Intentionally sequential execution
-      nuts.foldLeft(Future.successful()){ (fut,nut) =>
-        fut.flatMap(_ => notifyEmailParticipant(nut, threadEmailData))
+
+      def notify(toBeNotified: Seq[NonUserThread]): Unit = toBeNotified match {
+        case Seq() => // done
+        case Seq(nut, moreNuts @ _*) => notifyEmailParticipant(nut, threadEmailData) onComplete { _ => notify(moreNuts) }
       }
+      notify(nuts)
     }
   }
 
@@ -225,18 +227,21 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  def notifyEmailParticipant(emailParticipantThread: NonUserThread, threadEmailData: ThreadEmailData): Future[Unit] = if (!emailParticipantThread.muted) {
-    require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
-    require(emailParticipantThread.threadId == threadEmailData.thread.id.get, "MessageThread and NonUserThread do not match.")
-    val category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED
-    val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body
-    safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
-  } else Future.successful()
+  def notifyEmailParticipant(emailParticipantThread: NonUserThread, threadEmailData: ThreadEmailData): Future[Unit] = {
+    val result = if (emailParticipantThread.muted) Future.successful() else {
+      require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
+      require(emailParticipantThread.threadId == threadEmailData.thread.id.get, "MessageThread and NonUserThread do not match.")
+      val category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED
+      val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body
+      safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
+    }
+    result.onSuccess { case _ =>
+      db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get, clock.now()) }
+    }
+    result
+  }
 
   private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
-    // Update records even if sending the email fails (avoid infinite failure loops)
-    // todo(martin) persist failures to database
-    db.readWrite{ implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(nonUserThread.id.get, clock.now()) }
     val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
     val protoEmailFut = unsubUrlFut map { unsubUrl =>
       assembleEmail(
@@ -248,25 +253,23 @@ class ElizaEmailCommander @Inject() (
         Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token)
       )
     }
-    protoEmailFut.onComplete { res =>
-      res match {
-        case Success(protoEmail) => {
-          val magicAddress = EmailAddresses.discussion(nonUserThread.accessToken.token)
-          shoebox.sendMail(ElectronicMail (
-            from = magicAddress,
-            fromName = Some(protoEmail.starterName + " (via Kifi)"),
-            to = Seq[EmailAddressHolder](GenericEmailAddress(nonUserThread.participant.identifier)),
-            subject = protoEmail.pageTitle,
-            htmlBody = htmlBodyMaker(protoEmail),
-            textBody = Some("Sorry, this email can only be viewed in HTML format."),
-            category = category,
-            extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
-          ))
-        }
-        case Failure(t) => log.error(s"Failed to notify NonUserThread ${nonUserThread.id} via email: $t")
+
+    protoEmailFut.flatMap { protoEmail =>
+      val magicAddress = EmailAddresses.discussion(nonUserThread.accessToken.token)
+      val email = ElectronicMail (
+        from = magicAddress,
+        fromName = Some(protoEmail.starterName + " (via Kifi)"),
+        to = Seq[EmailAddressHolder](GenericEmailAddress(nonUserThread.participant.identifier)),
+        subject = protoEmail.pageTitle,
+        htmlBody = htmlBodyMaker(protoEmail),
+        category = category,
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
+      )
+      shoebox.sendMail(email) map {
+        case true => // all good
+        case false => throw new Exception("Shoebox was unable to parse and send the email.")
       }
     }
-    protoEmailFut map (_ => ())
   }
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
@@ -295,24 +298,24 @@ object ElizaEmailCommander {
   /**
    * This function is meant to be used from the console, to see how emails look like without deploying to production
    */
-  def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean, withImage: Boolean = true): String = {
+  def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean): String = {
     val info = ThreadEmailInfo(
       "http://www.wikipedia.org/aninterstingpage.html",
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
       true,
-      if (withImage) Some("//www.hdwallpapersfullhd.net/wp-content/uploads/2014/05/Wallpapers.jpg") else None,
+      Some("http:www://example.com/image0.jpg"),
       Some("a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description a cool description "),
-      Seq("joe", "bob", "jack", "theguywithaverylongname thatisreallyreallylong"),
-      "theguywithaverylongname thatisreallyreallylong",
+      Seq("joe", "bob", "jack", "theguywithaverylongname"),
+      "bob",
       None,
       Some("http://www.example.com/iwanttounsubscribe.html"),
       Some("http://www.example.com/iwanttomute.html"),
       Some(10)
     )
     val threadItems = Seq(
-      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextLookHereSegment("look here", "Many people think that the love of another person can make them happy. In my opinion this is the biggest misconception we have about love. Yes, we hope that someone will love us back, and yes one might argue that a relationship has to have reciprocation but your joy and happiness will come from the love you give not receive."), TextSegment("Then something else"), ImageLookHereSegment("another one", "http://assets-s3.rollingstone.com/assets/images/album_review/1c26f0f04b4f46e335971adb04a50d71d3555e48.jpg"))),
-      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"), ImageLookHereSegment("cool image", "http://www.hdwallpapersfullhd.net/wp-content/uploads/2014/05/Wallpapers.jpg")))
+      new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),
+      new ExtendedThreadItem("jack", "Jack Jack", Some("http:www://example.com/image2.png"), Seq(TextSegment("I say something"), TextSegment("Then something else")))
     )
     views.html.discussionEmail(info, threadItems, isUser, isAdded, isSmall).body
   }
