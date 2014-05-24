@@ -79,7 +79,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
       val forbiddenUris = if (startingVertexId.kind != UserReader) Set.empty else {
         firstDegree.collect { case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader)) }.flatten
       }
-      firstDegree ++ forbiddenUris
+      firstDegree ++ forbiddenUris + startingVertexId
     }
 
     val end = clock.now()
