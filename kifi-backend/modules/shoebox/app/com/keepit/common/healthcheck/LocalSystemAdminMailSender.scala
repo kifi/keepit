@@ -27,7 +27,7 @@ class LocalSystemAdminMailSender @Inject() (
             airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
             notifiedError = true
           }
-          db.readWrite(postOffice.sendMail(email.copy(subject = s"[AWS SES FAIL] email.subject"))(_))
+          db.readWrite(postOffice.sendMail(email.copy(subject = s"[AWS SES FAIL] ${email.subject}"))(_))
       }
     case _ => log.info(s"skip sending email: $email")
   }
