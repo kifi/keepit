@@ -56,6 +56,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
       case (vertexId, count) if vertexId.kind == LinkedInAccountReader => socialUsers += VertexDataId.fromLinkedInAccountIdtoSocialUserId(vertexId.asId[LinkedInAccountReader]) -> count
       case (vertexId, count) => extra += vertexId.toString() -> count
     }
+    log.info(s"Collisions found: ${users.size} users, ${socialUsers.size} social users, ${uris.size} uris, ${extra.size} more.")
     Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
   }
 
