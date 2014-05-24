@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 
 @Singleton
 class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {
