@@ -29,7 +29,7 @@ class RemoteSystemAdminMailSender @Inject() (
             airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
             notifiedError = true
           }
-          postOffice.queueMail(email.copy(subject = s"[AWS SES FAIL] email.subject"))
+          postOffice.queueMail(email.copy(subject = s"[AWS SES FAIL] ${email.subject}"))
       }
     case _ =>
       log.info(s"skip sending email: $email")
