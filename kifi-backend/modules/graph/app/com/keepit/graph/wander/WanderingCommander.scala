@@ -28,7 +28,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     val journal = new TeleportationJournal()
 
     val resolver = RestrictedDestinationResolver { case (source, destination, edge) =>
-      !journal.getLastVisited().exists(_ == destination.id)
+      source.edgeReader.degree == 1 || !journal.getLastVisited().exists(_ == destination.id)
     }
 
     val start = clock.now()
