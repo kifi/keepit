@@ -18,7 +18,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
     val startingVertexKind = VertexKind.apply(wanderlust.startingVertexKind)
     val startingVertexId = VertexId(startingVertexKind)(wanderlust.startingVertexDataId)
-    val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.allowTrivialCollisions)
+    val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.avoidTrivialCollisions)
     val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
 
     val teleporter = UniformTeleporter(Set(startingVertexId), wanderlust.restartProbability) { wanderer =>
@@ -72,9 +72,9 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     neighbors.toSet
   }
 
-  private def getForbiddenCollisions(startingVertexId: VertexId, allowTrivialCollisions: Boolean): Set[VertexId] = {
+  private def getForbiddenCollisions(startingVertexId: VertexId, avoidTrivialCollisions: Boolean): Set[VertexId] = {
     val start = clock.now()
-    val forbiddenCollisions = if (allowTrivialCollisions) { Set(startingVertexId) }
+    val forbiddenCollisions = if (!avoidTrivialCollisions) { Set(startingVertexId) }
     else graph.readOnly { reader =>
       val vertexReader = reader.getNewVertexReader()
       val firstDegree = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
