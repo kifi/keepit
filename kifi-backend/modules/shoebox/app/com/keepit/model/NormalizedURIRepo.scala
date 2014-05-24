@@ -236,6 +236,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
                   (for (t <- rows if t.urlHash === candidate.urlHash) yield t).firstOption match {
                     case None => throw new Exception(s"could not find existing url $candidate in the db", sqlException)
                     case Some(fromDb) =>
+                      log.warn(s"recovered url $fromDb from the db via urlHash")
                       //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
                       deleteCache(fromDb)
                       fromDb
