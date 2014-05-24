@@ -48,17 +48,16 @@ class ExtDeepLinkController @Inject() (
     val req = request.body.asInstanceOf[JsObject]
     val locator = (req \ "locator").as[String]
     val recipient = Id[User]((req \ "recipient").as[Long])
-    val linkOpt = db.readOnly { implicit session =>
+    val link = db.readOnly { implicit session =>
       try {
-        Some(deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient))
+        deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient).token.value
       } catch {
         case e: NoSuchElementException =>
           airbrake.notify(s"Error retrieving deep url for locator: $locator and recipient $recipient", e)
-          None
+          ""
       }
     }
-    val linkValue = linkOpt.map(_.token.value).getOrElse("")
-    val url = fortytwoConfig.applicationBaseUrl + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(linkValue).toString()
+    val url = fortytwoConfig.applicationBaseUrl + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link).toString()
     Ok(Json.toJson(url))
   }
 
