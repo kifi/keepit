@@ -49,14 +49,16 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     val uris =  mutable.Map[Id[NormalizedURI], Int]()
     val extra = mutable.Map[String, Int]()
 
-    journal.getTeleportations().foreach {
+    val collisions = journal.getTeleportations()
+    log.info(s"Collisions found: ${collisions.groupBy(_._1.kind).mapValues(_.size).mkString(", ")}")
+
+    collisions collect {
       case (vertexId, count) if vertexId.kind == UserReader => users += VertexDataId.toUserId(vertexId.asId[UserReader]) -> count
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
       case (vertexId, count) if vertexId.kind == FacebookAccountReader => socialUsers += VertexDataId.fromFacebookAccountIdtoSocialUserId(vertexId.asId[FacebookAccountReader]) -> count
       case (vertexId, count) if vertexId.kind == LinkedInAccountReader => socialUsers += VertexDataId.fromLinkedInAccountIdtoSocialUserId(vertexId.asId[LinkedInAccountReader]) -> count
       case (vertexId, count) => extra += vertexId.toString() -> count
     }
-    log.info(s"Collisions found: ${users.size} users, ${socialUsers.size} social users, ${uris.size} uris, ${extra.size} more.")
     Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
   }
 
@@ -83,7 +85,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     }
 
     val end = clock.now()
-    log.info(s"Resolved forbidden collisions in ${end.getMillis - start.getMillis}ms: $forbiddenCollisions")
+    log.info(s"Resolved ${forbiddenCollisions.size} forbidden collisions in ${end.getMillis - start.getMillis} ms.")
     forbiddenCollisions
   }
 }
