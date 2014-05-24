@@ -41,11 +41,11 @@ class WanderingAdminController @Inject() (
         val startingVertexKind = body("kind").head
         val startingVertexDataId = body("id").head.toLong
         val preferredCollisions = availableVertexKinds.toSet intersect body("preferredCollisions").toSet
-        val allowTrivialCollisions = body.contains("allowTrivialCollisions")
+        val avoidTrivialCollisions = body.contains("avoidTrivialCollisions")
         val steps = body("steps").head.toInt
         val restartProbability = body("restartProbability").head.toDouble
 
-        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, allowTrivialCollisions, steps, restartProbability)
+        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability)
 
         val promisedResult = Promise[SimpleResult]()
 

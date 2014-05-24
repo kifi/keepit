@@ -8,7 +8,7 @@ case class Wanderlust(
   startingVertexKind: String,
   startingVertexDataId: Long,
   preferredCollisions: Set[String] = Set.empty,
-  allowTrivialCollisions: Boolean = false,
+  avoidTrivialCollisions: Boolean = true,
   steps: Int = 10000,
   restartProbability: Double = 0.15
 )
