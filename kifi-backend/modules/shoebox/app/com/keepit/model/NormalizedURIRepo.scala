@@ -20,6 +20,7 @@ import scala.util.{Failure, Success, Try}
 import com.kifi.franz.SQSQueue
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
+import java.sql.SQLException
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -122,6 +123,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (for(f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
+    log.info(s"about to persist $uri")
     val num = sequence.incrementAndGet()
     val uriWithSeq = uri.copy(seq = num)
 
@@ -225,11 +227,18 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
               airbrake.notify(s"prenormalizedUrl [$prenormalizedUrl] already in cache [$cached] skipping save")
               cached
             case None =>
+              val candidate = NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization)
               val newUri = try {
-                save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
+                save(candidate)
               } catch {
+                case sqlException: SQLException =>
+                  log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
+                  (for (t <- rows if t.urlHash === candidate.urlHash) yield t).firstOption match {
+                    case None => throw new Exception(s"could not find existing url $candidate in the db", sqlException)
+                    case Some(fromDb) => fromDb
+                  }
                 case t: Throwable =>
-                  throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}}]""", t)
+                  throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
               }
               urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
               session.onTransactionSuccess{
