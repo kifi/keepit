@@ -42,7 +42,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     }
     val end = clock.now()
     log.info(s"Wandered for ${wanderlust.steps} steps during ${end.getMillis - start.getMillis} ms.")
-    log.info(s"Vertices visited: ${journal.getVisited().mkString.mkString(", ")}")
+    log.info(s"Vertices visited: ${journal.getVisited().mkString(", ")}")
     getCollisions(journal)
   }
 
