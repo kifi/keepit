@@ -78,7 +78,7 @@ class ScraperURISummaryCommanderImpl @Inject()(
   }
 
   override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-      embedlyClient.getExtendedEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+      embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
 
       val summary = for {
         nUriId <- nUri.id

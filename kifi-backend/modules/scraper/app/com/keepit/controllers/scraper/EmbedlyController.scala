@@ -17,7 +17,7 @@ extends ScraperServiceController{
 
   def getImbedlyInfo() = Action.async(parse.tolerantJson){ request =>
     val url = (request.body \ "url").as[String]
-    val infoFut = embedly.getExtendedEmbedlyInfo(url)
+    val infoFut = embedly.getEmbedlyInfo(url)
     infoFut.map{ infoOpt =>
       Ok(Json.toJson(infoOpt))
     }
