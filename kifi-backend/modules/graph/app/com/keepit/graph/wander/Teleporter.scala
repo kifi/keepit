@@ -8,7 +8,7 @@ trait Teleporter {
   def maybe(wanderer: VertexReader): Option[VertexId]
 }
 
-case class UniformTeleporter(destinations: Set[VertexId], teleportProbability: Double)(mayTeleport: VertexReader => Boolean) extends Teleporter {
+case class UniformTeleporter(destinations: Set[VertexId])(mayTeleport: VertexReader => Double) extends Teleporter {
   require(destinations.nonEmpty, "The supplied destination set is empty.")
 
   private val teleportAlmostSurely = {
@@ -17,15 +17,10 @@ case class UniformTeleporter(destinations: Set[VertexId], teleportProbability: D
     ProbabilityDensity(density)
   }
 
-  private val teleportMaybe =  {
-    val density = teleportAlmostSurely.density.map { case (destination, probability) => destination -> probability * teleportProbability }
-    ProbabilityDensity(density)
-  }
-
   def surely = teleportAlmostSurely.sample(Math.random()).get
 
   def maybe(wanderer: VertexReader): Option[VertexId] = {
-    if (mayTeleport(wanderer)) { teleportMaybe.sample(Math.random()) }
+    if (mayTeleport(wanderer) > Math.random()) { teleportAlmostSurely.sample(Math.random()) }
     else None
   }
 }
