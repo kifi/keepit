@@ -235,7 +235,8 @@ class ElizaEmailCommander @Inject() (
       val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body
       safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
     }
-    result.onSuccess { case _ =>
+    // todo(martin) replace with onSuccess when we have better error handling
+    result.onComplete { _ =>
       db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get) }
     }
     result
