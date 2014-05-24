@@ -236,7 +236,7 @@ class ElizaEmailCommander @Inject() (
       safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
     }
     // todo(martin) replace with onSuccess when we have better error handling
-    result.onComplete { case _ =>
+    result.onComplete { _ =>
       db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get) }
     }
     result
