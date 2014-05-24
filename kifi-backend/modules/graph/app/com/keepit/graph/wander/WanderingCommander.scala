@@ -7,30 +7,39 @@ import com.keepit.model.{SocialUserInfo, NormalizedURI, User}
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.common.logging.Logging
+import com.keepit.common.time.Clock
 
 @Singleton
-class WanderingCommander @Inject() (graph: GraphManager) {
+class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {
 
   def wander(wanderlust: Wanderlust): Collisions = {
+    log.info(s"Preparing to wander: $wanderlust")
 
     val startingVertexKind = VertexKind.apply(wanderlust.startingVertexKind)
     val startingVertexId = VertexId(startingVertexKind)(wanderlust.startingVertexDataId)
-    val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
     val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.allowTrivialCollisions)
-    val journal = new TeleportationJournal()
+    val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
+
     val teleporter = UniformTeleporter(Set(startingVertexId), wanderlust.restartProbability) { wanderer =>
       !forbiddenCollisions.contains(wanderer.id) && (preferredCollisions.isEmpty || preferredCollisions.contains(wanderer.kind))
     }
+
+    val journal = new TeleportationJournal()
+
     val resolver = RestrictedDestinationResolver { case (source, destination, edge) =>
       !journal.getLastVisited().exists(_ == destination.id)
     }
 
+    val start = clock.now()
     graph.readOnly { reader =>
       val wanderer = reader.getNewVertexReader()
       val scout = reader.getNewVertexReader()
       val scoutingWanderer = new ScoutingWanderer(wanderer, scout)
       scoutingWanderer.wander(wanderlust.steps, teleporter, resolver, journal)
     }
+    val end = clock.now()
+    log.info(s"Wandered for ${wanderlust.steps} steps during ${end.getMillis - start.getMillis} ms.")
     getCollisions(journal)
   }
 
@@ -61,7 +70,8 @@ class WanderingCommander @Inject() (graph: GraphManager) {
   }
 
   private def getForbiddenCollisions(startingVertexId: VertexId, allowTrivialCollisions: Boolean): Set[VertexId] = {
-    if (allowTrivialCollisions) { Set(startingVertexId) }
+    val start = clock.now()
+    val forbiddenCollisions = if (allowTrivialCollisions) { Set(startingVertexId) }
     else graph.readOnly { reader =>
       val vertexReader = reader.getNewVertexReader()
       val firstDegree = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
@@ -70,5 +80,9 @@ class WanderingCommander @Inject() (graph: GraphManager) {
       }
       firstDegree ++ forbiddenUris
     }
+
+    val end = clock.now()
+    log.info(s"Resolved forbidden collisions in ${end.getMillis - start.getMillis}ms: $forbiddenCollisions")
+    forbiddenCollisions
   }
 }
