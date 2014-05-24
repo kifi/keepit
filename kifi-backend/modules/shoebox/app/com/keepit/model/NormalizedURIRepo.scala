@@ -13,13 +13,10 @@ import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeDeploymentNotice, AirbrakeNotifier}
-import com.keepit.normalizer.NormalizationReference
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._
-import com.keepit.common.aws.AwsConfig
 import scala.util.{Failure, Success, Try}
-import scala.util.Try
 import com.kifi.franz.SQSQueue
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
@@ -223,12 +220,23 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           uri
         case Success(Right(prenormalizedUrl)) => {
           val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
-          val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
-          urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          session.onTransactionSuccess{
-            updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
+          urlHashCache.get(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(prenormalizedUrl))) match {
+            case Some(cached) =>
+              airbrake.notify(s"prenormalizedUrl [$prenormalizedUrl] already in cache [$cached] skipping save")
+              cached
+            case None =>
+              val newUri = try {
+                save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
+              } catch {
+                case t: Throwable =>
+                  throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}}]""", t)
+              }
+              urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
+              session.onTransactionSuccess{
+                updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
+              }
+              newUri
           }
-          newUri
         }
         case Failure(ex) => {
           val newUri = save(NormalizedURI.withHash(normalizedUrl = url, normalization = None))
