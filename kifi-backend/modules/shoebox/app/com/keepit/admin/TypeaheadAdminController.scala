@@ -40,7 +40,7 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def refreshPrefixFilter(filterType:String) = AdminHtmlAction.authenticatedParseJsonAsync { request =>
+  def refreshPrefixFilter(filterType:String) = AdminHtmlAction.authenticatedAsync { request =>
     invokeByFilterType(filterType, { _.refresh(request.userId).map(_ => Unit) }) map { _ =>
       Ok(s"PrefixFilter ($filterType) for ${request.userId} has been refreshed")
     }
