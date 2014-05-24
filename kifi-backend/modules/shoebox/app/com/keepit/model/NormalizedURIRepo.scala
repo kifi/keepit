@@ -235,7 +235,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
                   log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
                   (for (t <- rows if t.urlHash === candidate.urlHash) yield t).firstOption match {
                     case None => throw new Exception(s"could not find existing url $candidate in the db", sqlException)
-                    case Some(fromDb) => fromDb
+                    case Some(fromDb) =>
+                      //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
+                      deleteCache(fromDb)
+                      fromDb
                   }
                 case t: Throwable =>
                   throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
