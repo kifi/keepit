@@ -85,7 +85,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     }
 
     val end = clock.now()
-    log.info(s"Resolved ${forbiddenCollisions.size} forbidden collisions in ${end.getMillis - start.getMillis} ms.")
+    log.info(s"Resolved forbidden collisions in ${end.getMillis - start.getMillis} ms: ${forbiddenCollisions.groupBy(_.kind).mapValues(_.size).mkString(", ")}")
     forbiddenCollisions
   }
 }
