@@ -21,8 +21,10 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.avoidTrivialCollisions)
     val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
 
-    val teleporter = UniformTeleporter(Set(startingVertexId), wanderlust.restartProbability) { wanderer =>
-      !forbiddenCollisions.contains(wanderer.id) && (preferredCollisions.isEmpty || preferredCollisions.contains(wanderer.kind))
+    val teleporter = UniformTeleporter(Set(startingVertexId)) { wanderer =>
+      if (forbiddenCollisions.contains(wanderer.id)) 0
+      else if (preferredCollisions.isEmpty || preferredCollisions.contains(wanderer.kind)) wanderlust.restartProbability
+      else wanderlust.restartProbability / 2
     }
 
     val journal = new TeleportationJournal()
