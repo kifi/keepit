@@ -30,12 +30,6 @@ this.tagbox = (function ($, win) {
 		Q = win.Q,
 		_ = win._;
 
-	function log(name) {
-		var args = Array.prototype.slice.call(arguments);
-		args[0] = '[tagbox.' + name + ']';
-		return win.log.apply(win, args);
-	}
-
 	function indexOfTag(tags, tagId) {
 		for (var i = 0, len = tags.length; i < len; i++) {
 			if (tags[i].id === tagId) {
@@ -100,7 +94,7 @@ this.tagbox = (function ($, win) {
 			var tagbox = win.tagbox,
 				tag = o.tag,
 				tagId = tag && tag.id;
-			log('tag_change', o.op, tag);
+			log('[tag_change]', o.op, tag);
 			switch (o.op) {
 			case 'create':
 				addTag(win.tags, tag);
@@ -187,7 +181,7 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		init: function (trigger) {
-			log('init', trigger);
+			log('[init]', trigger);
 			this.active = true;
 			this.initTagBox();
 			this.initSuggest();
@@ -316,7 +310,7 @@ this.tagbox = (function ($, win) {
 		})(),
 
 		handleEsc: function () {
-			log('esc');
+			log('[handleEsc]');
 
 			if (this.currentSuggestion) {
 				this.navigateTo(null, 'esc');
@@ -339,18 +333,11 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for suggestion list
 		 */
 		initSuggest: function () {
-			log('initSuggest.start');
-
-			var $suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
-			this.$suggest = $suggest;
-
-			$suggest.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
-			$suggest.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this));
-			$suggest.on('mouseover', this.onMouseoverSuggestion.bind(this));
-
-			log('initSuggest.end');
-
-			return $suggest;
+			log('[initSuggest]');
+			return this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner')
+				.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this))
+				.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this))
+				.on('mouseover', this.onMouseoverSuggestion.bind(this));
 		},
 
 		/**
@@ -359,20 +346,9 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for tag list
 		 */
 		initTagList: function () {
-			log('initTagList.start');
-
-			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner');
-			this.$tagList = $tagList;
-
-			this.$tagbox.on('click', '.kifi-tagbox-tag-name', function () {
-				log('navigate');
-			});
-
-			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
-
-			log('initTagList.end');
-
-			return $tagList;
+			log('[initTagList]');
+			return this.$tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner')
+				.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
 		},
 
 		/**
@@ -389,7 +365,7 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		initTags: function () {
-			log('initTags.start');
+			log('[initTags]');
 			this.requestTags()
 				.then(this.onFetchTags.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
@@ -404,11 +380,10 @@ this.tagbox = (function ($, win) {
 					throw err;
 				}.bind(this))
 				.fail(this.logError.bind(this));
-			log('initTags.end');
 		},
 
 		initScroll: function () {
-			log('initScroll.start');
+			log('[initScroll]');
 
 			var $suggestWrapper = this.$tagbox.find('.kifi-tagbox-suggest');
 			this.$suggestWrapper = $suggestWrapper;
@@ -424,12 +399,10 @@ this.tagbox = (function ($, win) {
 
 			var winResizeListener = this.winResizeListener = this.updateScroll.bind(this);
 			$(win).on('resize.kifi-tagbox-suggest', winResizeListener);
-
-			log('initScroll.end');
 		},
 
 		updateScroll: function () {
-			log('updateScroll');
+			log('[updateScroll]');
 
 			if (this.active) {
 				this.$tagListWrapper.data('antiscroll').refresh();
@@ -444,7 +417,7 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		destroy: function (trigger) {
-			log('destroy', trigger);
+			log('[destroy]', trigger);
 			if (this.active) {
 				this.active = false;
 
@@ -724,8 +697,7 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Given an input string to match against,
-		 * it rerenders tag suggestions.
+		 * Given an input string to match against, rerenders tag suggestions.
 		 *
 		 * @param {string} text - An input string to match against
 		 */
@@ -734,21 +706,17 @@ this.tagbox = (function ($, win) {
 				return;
 			}
 
-			//log('suggest', text);
-
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTagsByText(text, tags);
 
-			var html = this.renderTagSuggestionsHtml(tags),
-				$suggest = this.$suggest;
-			$suggest.html(html);
+			this.$suggest.html(this.renderTagSuggestionsHtml(tags));
 
 			if (text.trim() && this.indexOfTagByName(text) === -1) {
-				$suggest.append(this.renderNewTagSuggestionHtml(text));
+				this.$suggest.append(this.renderNewTagSuggestionHtml(text));
 			}
 
-			this.updateSuggestedClass();
+			this.toggleClass('kifi-suggested', text || this.$suggest.children().length);
 			this.updateScroll();
 
 			this.navigateTo('first', 'suggest');
@@ -759,10 +727,8 @@ this.tagbox = (function ($, win) {
 		 */
 		updateTagList: function () {
 			if (this.active) {
-				var tags = this.getAddedTags(),
-					html = tags.map(this.renderTagHtml, this).join('');
-				this.$tagList.html(html);
-
+				var tags = this.getAddedTags();
+				this.$tagList.html(tags.map(this.renderTagHtml, this).join(''));
 				this.toggleClass('kifi-tagged', tags.length);
 			}
 		},
@@ -820,12 +786,12 @@ this.tagbox = (function ($, win) {
 			name = tagNameToString(name);
 
 			if (this.indexOfTagByName(name) !== -1) {
-				log('createTag', 'tag already exists', name);
+				log('[createTag]', 'tag already exists', name);
 				return null;
 			}
 
 			if (this.isTagBusy(name)) {
-				log('createTag', 'tag is already being created', name);
+				log('[createTag]', 'tag is already being created', name);
 				return null;
 			}
 
@@ -836,7 +802,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, name));
 
-			log('createTag', trigger, name);
+			log('[createTag]', trigger, name);
 
 			return deferred;
 		},
@@ -854,12 +820,12 @@ this.tagbox = (function ($, win) {
 		addTagById: function (tagId, $suggestion, trigger) {
 			var $el = this.getTag$ById(tagId);
 			if ($el.length) {
-				log('addTagById', 'tag already added', tagId);
+				log('[addTagById]', 'tag already added', tagId);
 				return null;
 			}
 
 			if (this.isTagBusy(tagId)) {
-				log('addTagById', 'tag is already being added', tagId);
+				log('[addTagById]', 'tag is already being added', tagId);
 				return null;
 			}
 
@@ -873,7 +839,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 
-			log('addTag', {
+			log('[addTagById]', {
 				trigger: trigger,
 				name: this.getTagNameById(tagId),
 				input: this.getInputValue()
@@ -894,12 +860,12 @@ this.tagbox = (function ($, win) {
 		removeTagById: function (tagId, trigger) {
 			var $el = this.getTag$ById(tagId);
 			if (!$el.length) {
-				log('removeTagById', 'tag is not added', tagId);
+				log('[removeTagById]', 'tag is not added', tagId);
 				return null;
 			}
 
 			if (this.isTagBusy(tagId)) {
-				log('removeTagById', 'tag is already being removed', tagId);
+				log('[removeTagById]', 'tag is already being removed', tagId);
 				return null;
 			}
 
@@ -910,7 +876,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 
-			log('removeTag', trigger, tagId);
+			log('[removeTag]', trigger, tagId);
 
 			return deferred;
 		},
@@ -989,13 +955,6 @@ this.tagbox = (function ($, win) {
 		 */
 		updateTaggedClass: function () {
 			return this.toggleClass('kifi-tagged', this.$tagList.children().length);
-		},
-
-		/**
-		 * Updates (add/remove) 'kifi-suggested' class of the tagbox.
-		 */
-		updateSuggestedClass: function () {
-			return this.toggleClass('kifi-suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
 		updateTagName: function (tag) {
@@ -1157,7 +1116,7 @@ this.tagbox = (function ($, win) {
 		 *   }]
 		 */
 		onFetchTags: function (tags) {
-			log('onFetchTags', tags);
+			log('[onFetchTags]', tags);
 			this.setTags(tags.all);
 			this.rebuildTagsAdded(tags.page);
 			return arguments;
@@ -1241,7 +1200,7 @@ this.tagbox = (function ($, win) {
 		 *   }
 		 */
 		onAddResponse: function (tag) {
-			log('onAddResponse', tag);
+			log('[onAddResponse]', tag);
 
 			var tagId = tag.id;
 
@@ -1262,7 +1221,7 @@ this.tagbox = (function ($, win) {
 		 *   Response: {}
 		 */
 		onRemoveResponse: function (tagId, response) {
-			log('onRemoveResponse', response);
+			log('[onRemoveResponse]', response);
 
 			return this.removeTag$ById(tagId);
 		},
@@ -1277,7 +1236,7 @@ this.tagbox = (function ($, win) {
 		 *   Response: {}
 		 */
 		onClearTagsResponse: function () {
-			log('onClearTagsResponse');
+			log('[onClearTagsResponse]');
 
 			this.clearTags$();
 			this.tagsAdded = {};
@@ -1540,7 +1499,7 @@ this.tagbox = (function ($, win) {
 				.then(this.onClearTagsResponse.bind(this))
 				.fail(this.logError.bind(this));
 
-			log('clearTags', trigger);
+			log('[clearTags]', trigger);
 
 			return deferred;
 		},
