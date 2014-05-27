@@ -11,9 +11,9 @@ import Q.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
-  def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
-  def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByReKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int]
   def getReKeeps(keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Seq[ReKeep]]
