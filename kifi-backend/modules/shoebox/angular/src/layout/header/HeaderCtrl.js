@@ -10,6 +10,9 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
       $rootElement.toggleClass('kf-sidebar-active');
     };
 
+    $scope.me = profileService.me;
+    profileService.getMe();
+
     $scope.logout = function () {
       profileService.logout();
     };
