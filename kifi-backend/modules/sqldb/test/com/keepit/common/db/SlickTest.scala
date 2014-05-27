@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 import com.keepit.inject._
+import com.keepit.macros.Location
 import scala.slick.lifted._
 import scala.slick.driver.H2Driver.Implicit._
 import scala.slick.driver._
@@ -96,7 +97,7 @@ class SlickTest extends Specification with DbTestInjector {
 
         inject[Database].readOnly{ implicit session =>
           repo.count(session) === 2
-        }(Database.Slave)
+        }(Database.Slave, Location.capture)
       }
     }
 

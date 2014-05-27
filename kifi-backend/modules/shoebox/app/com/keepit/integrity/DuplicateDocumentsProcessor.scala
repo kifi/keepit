@@ -5,6 +5,7 @@ import com.google.inject.Singleton
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.model.DuplicateDocument
 import com.keepit.model.DuplicateDocumentRepo
 import com.keepit.model.DuplicateDocumentStates
@@ -16,7 +17,7 @@ class DuplicateDocumentsProcessor @Inject()(
   db: Database,
   duplicateDocumentRepo: DuplicateDocumentRepo,
   uriIntegrityPlugin: UriIntegrityPlugin
-){
+) extends Logging {
 
   def mergeUris(old: Id[NormalizedURI], intoNew: Id[NormalizedURI]) = {
       uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = old, newUri = intoNew))
