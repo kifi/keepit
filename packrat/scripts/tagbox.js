@@ -49,8 +49,7 @@ this.tagbox = (function ($, win) {
 			index = indexOfTag(tags, tagId);
 		if (index === -1) {
 			tags.push(tag);
-		}
-		else if (tag.name) {
+		} else if (tag.name) {
 			tags[index].name = tag.name;
 		}
 		return index;
@@ -72,7 +71,7 @@ this.tagbox = (function ($, win) {
 	api.port.on({
 		tags: function (tags) {
 			var tagbox = win.tagbox;
-			tagbox.tags = tags || [];
+			tagbox.tags = tags;
 			tagbox.updateTagList();
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
@@ -187,10 +186,11 @@ this.tagbox = (function ($, win) {
 			this.initSuggest();
 			this.initTagList();
 			this.initInput();
-			this.initCloseIcon();
-			this.initClearAll();
+			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this, 'X'));
+			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
 			this.initTags();
 			this.onShow.dispatch();
+			win.setTimeout(this.focusInput.bind(this), 1);
 		},
 
 		/**
@@ -234,80 +234,52 @@ this.tagbox = (function ($, win) {
 		 * Add event listeners to the input element.
 		 */
 		initInput: function () {
-			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-			this.$input = $inputbox.find('input.kifi-tagbox-input');
+			this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
+			this.$input = this.$tagbox.find('.kifi-tagbox-input')
+				.on('focus', function () {
+					$(this).closest('.kifi-tagbox-input-box').addClass('kifi-focus');
+				})
+				.on('blur', function () {
+					$(this).closest('.kifi-tagbox-input-box').removeClass('kifi-focus');
+				})
+				.on('input', _.debounce(function (e) {
+					if (!this.active) {
+						return;
+					}
+					var text = e.target.value.trim();
+					if (text !== this.text) {
+						this.text = text;
+						this.$inputbox.toggleClass('kifi-empty', !text);
+						this.suggest(text);
+					}
+				}.bind(this), 1))
+				.on('keydown', function onKeydown(e) {
+					if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
+						return;
+					}
 
-			this.addInputEvents();
-			win.setTimeout(this.focusInput.bind(this), 1);
+					switch (e.which) {
+					case 38: // up
+						this.navigate('up');
+						e.preventDefault();
+						break;
+					case 40: // down
+						this.navigate('down');
+						e.preventDefault();
+						break;
+					case 13: // enter
+					case 9: // tab
+						this.select(null, 'key:' + (e.which === 9 ? 'tab' : 'enter'));
+						this.setInputValue();
+						e.preventDefault();
+						break;
+					}
+				}.bind(this));
 		},
 
 		focusInput: function () {
 			return this.$input && this.$input.focus();
 		},
-
-		/**
-		 * Add event listeners to the input element.
-		 * This is called inside {@link initInput}
-		 *
-		 * @see initInput
-		 */
-		addInputEvents: (function () {
-			function onFocus() {
-				$(this).closest('.kifi-tagbox-input-box').addClass('kifi-focus');
-			}
-
-			function onBlur() {
-				$(this).closest('.kifi-tagbox-input-box').removeClass('kifi-focus');
-			}
-
-			var KEY_UP = 38,
-				KEY_DOWN = 40,
-				KEY_ENTER = 13,
-				KEY_TAB = 9;
-
-			function onInput(e) {
-				if (!this.active) {
-					return;
-				}
-				var text = e.target.value.trim();
-				if (text !== this.text) {
-					this.text = text;
-					this.$inputbox.toggleClass('kifi-empty', !text);
-					this.suggest(text);
-				}
-			}
-
-			function onKeydown(e) {
-				if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
-					return;
-				}
-
-				switch (e.which) {
-				case KEY_UP:
-					this.navigate('up');
-					e.preventDefault();
-					break;
-				case KEY_DOWN:
-					this.navigate('down');
-					e.preventDefault();
-					break;
-				case KEY_ENTER:
-				case KEY_TAB:
-					this.select(null, 'key:' + (e.which === KEY_ENTER ? 'enter' : 'tab'));
-					this.setInputValue();
-					e.preventDefault();
-					break;
-				}
-			}
-
-			return function () {
-				var $input = this.$input;
-				$input.on('focus', onFocus);
-				$input.on('blur', onBlur);
-				$input.on('input', _.debounce(onInput.bind(this), 1));
-				$input.on('keydown', onKeydown.bind(this));
-			};
-		})(),
 
 		handleEsc: function () {
 			log('[handleEsc]');
@@ -318,13 +290,6 @@ this.tagbox = (function ($, win) {
 				this.hide('key:esc');
 			}
 			return false;
-		},
-
-		/**
-		 * Add a close event listener to close button.
-		 */
-		initCloseIcon: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this, 'X'));
 		},
 
 		/**
@@ -349,13 +314,6 @@ this.tagbox = (function ($, win) {
 			log('[initTagList]');
 			return this.$tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner')
 				.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
-		},
-
-		/**
-		 * Add a clear event listener to clear button.
-		 */
-		initClearAll: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
 		},
 
 		/**
