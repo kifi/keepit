@@ -6,7 +6,7 @@ import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.model._
 import com.keepit.common.db.Id
-import com.keepit.typeahead.TypeaheadHit
+import com.keepit.typeahead.{PrefixFilter, Typeahead, TypeaheadHit}
 import views.html
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.abook.ABookServiceClient
@@ -31,29 +31,31 @@ class TypeaheadAdminController @Inject() (
     Ok(html.admin.typeahead(request.user))
   }
 
-  def refreshPrefixFilter(userId:Id[User]) = AdminHtmlAction.authenticatedAsync { request =>
-    val abookF  = econtactTypeahead.refresh(userId)
-    val socialF = socialUserTypeahead.refresh(userId)
-    val kifiF   = kifiUserTypeahead.refresh(userId)
-    for {
-      socialRes <- socialF
-      kifiRes   <- kifiF
-      abookRes  <- abookF
-    } yield {
-      Ok(s"PrefixFilters for $userId has been refreshed")
+  private def invokeByFilterType[T](filterType:String, f:Typeahead[_,_] => Future[T]):Future[T] = {
+    filterType.trim match {
+      case "contact" => f(econtactTypeahead)
+      case "social"  => f(socialUserTypeahead) // may breakdown further into FB, LNKD ...
+      case "kifi"    => f(kifiUserTypeahead)
+      case _ => throw new IllegalArgumentException(s"Does not recognize filter type $filterType")
     }
   }
 
-  def refreshPrefixFiltersByIds() = AdminHtmlAction.authenticatedAsync(parse.json) { request =>
-    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
-    val userIds = jsArray.value map { x => Id[User](x.as[Long]) }
-    val abookF = econtactTypeahead.refreshByIds(userIds) // remote
-    for {
-      socialRes <- socialUserTypeahead.refreshByIds(userIds)
-      kifiRes   <- kifiUserTypeahead.refreshByIds(userIds)
-      abookRes  <- abookF
-    } yield {
-      Ok(s"PrefixFilters for #${userIds.length} updated; ${userIds.take(50).mkString(",")}")
+  def refreshPrefixFilter(filterType:String) = AdminHtmlAction.authenticatedAsync { request =>
+    invokeByFilterType(filterType, { _.refresh(request.userId).map(_ => Unit) }) map { _ =>
+      Ok(s"PrefixFilter ($filterType) for ${request.userId} has been refreshed")
+    }
+  }
+
+  def refreshPrefixFiltersByIds(filterType:String) = AdminHtmlAction.authenticatedParseJsonAsync { request =>
+    val userIds = (request.body).as[Seq[Id[User]]]
+    invokeByFilterType(filterType, { _.refreshByIds(userIds)}) map { u =>
+      Ok(s"PrefixFilter ($filterType) for ${userIds.length} users ${userIds.take(50).mkString(",")} updated")
+    }
+  }
+
+  def refreshAll(filterType:String) = AdminHtmlAction.authenticatedAsync { request =>
+    invokeByFilterType(filterType, { _.refreshAll() }) map { res =>
+      Ok(s"All ($filterType) PrefixFilters updated for all users")
     }
   }
 
@@ -64,21 +66,10 @@ class TypeaheadAdminController @Inject() (
       kifiRes   <- kifiUserTypeahead.refreshAll()
       abookRes  <- abookF
     } yield {
-      Ok(s"All PrefixFilters updated")
+      Ok(s"All PrefixFilters updated for all users")
     }
   }
 
-  def refreshAll(filterType:String) = AdminHtmlAction.authenticatedAsync { request =>
-    val resF = filterType.trim match {
-      case "contact" => econtactTypeahead.refreshAll()
-      case "social"  => socialUserTypeahead.refreshAll() // may breakdown further into FB, LNKD ...
-      case "kifi"    => kifiUserTypeahead.refreshAll()
-      case _ => Promise[Unit].future
-    }
-    resF map { res =>
-      Ok(s"All PrefixFilters updated for $filterType")
-    }
-  }
 
   def userSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[User]

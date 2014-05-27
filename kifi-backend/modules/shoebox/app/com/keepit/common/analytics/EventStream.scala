@@ -10,6 +10,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.model._
@@ -24,7 +25,7 @@ import play.api.libs.json._
 @Singleton
 class EventStream @Inject() (
     actor: ActorInstance[EventStreamActor],
-    eventWriter: EventWriter) {
+    eventWriter: EventWriter) extends Logging {
   implicit val timeout = Timeout(1 second)
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {

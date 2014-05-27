@@ -12,7 +12,6 @@
 // @require scripts/html/keeper/tag-new.js
 // @require scripts/html/keeper/tagbox-tag.js
 // @require styles/keeper/tagbox.css
-// @require styles/animate-custom.css
 
 /**
  * ---------------
@@ -210,11 +209,6 @@ this.tagbox = (function ($, win) {
 			function onClick(e) {
 				if (!this.contains(e.target)) {
 					e.closedTagbox = true;
-					/*
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          */
 					this.hide('outside');
 				}
 			}
@@ -326,8 +320,7 @@ this.tagbox = (function ($, win) {
 
 			if (this.currentSuggestion) {
 				this.navigateTo(null, 'esc');
-			}
-			else {
+			} else {
 				this.hide('key:esc');
 			}
 			return false;
@@ -402,7 +395,7 @@ this.tagbox = (function ($, win) {
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.moveKeeperToBottom.bind(this))
-				.then(this.setLoaded.bind(this, false))
+				.then(this.startShow.bind(this))
 				.then(this.initScroll.bind(this))
 				.then(this.$input.triggerHandler.bind(this.$input, 'input'))
 				.then(this.focusInput.bind(this))
@@ -721,12 +714,10 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Removes 'kifi-loading' class of the root element.
-		 *
-		 * @return {jQuery} A jQuery object for the root element
+		 * Starts the animation that shows the tagbox.
 		 */
-		setLoaded: function () {
-			this.removeClass('kifi-loading');
+		startShow: function () {
+			this.addClass('kifi-in');
 			if (win.pane) {
 				win.pane.shade();
 			}
@@ -1582,7 +1573,12 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		hide: function (trigger) {
-			this.destroy(trigger);
+			var self = this;
+			this.$tagbox.on('transitionend', function (e) {
+				if (e.target === this) {
+					self.destroy(trigger);
+				}
+			}).removeClass('kifi-in');
 		},
 
 		/**
@@ -1594,8 +1590,7 @@ this.tagbox = (function ($, win) {
 		toggle: function ($slider, trigger) {
 			if (this.active) {
 				this.hide(trigger);
-			}
-			else {
+			} else {
 				this.show($slider, trigger);
 			}
 		},

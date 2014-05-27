@@ -34,7 +34,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
           ))
           userThreadRepo.save(UserThread(
             user = user1,
-            thread = thread1.id.get,
+            threadId = thread1.id.get,
             uriId = None,
             lastSeen = None,
             lastMsgFromOther = None,
@@ -65,7 +65,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
           ))
           userThreadRepo.save(UserThread(
             user = user1,
-            thread = thread1.id.get,
+            threadId = thread1.id.get,
             uriId = None,
             lastSeen = None,
             lastMsgFromOther = None,
@@ -91,7 +91,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
           ))
           userThreadRepo.save(UserThread(
             user = user1,
-            thread = thread1.id.get,
+            threadId = thread1.id.get,
             uriId = None,
             lastSeen = None,
             lastMsgFromOther = None,

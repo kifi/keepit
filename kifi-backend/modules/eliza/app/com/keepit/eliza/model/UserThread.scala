@@ -20,7 +20,7 @@ case class UserThread(
     createdAt: DateTime = currentDateTime,
     updateAt: DateTime = currentDateTime,
     user: Id[User],
-    thread: Id[MessageThread],
+    threadId: Id[MessageThread],
     uriId: Option[Id[NormalizedURI]],
     lastSeen: Option[DateTime],
     unread: Boolean = false,
@@ -35,12 +35,12 @@ case class UserThread(
     started: Boolean = false, //Whether or not this thread was started by this user
     accessToken: ThreadAccessToken = ThreadAccessToken()
   )
-  extends Model[UserThread] {
+  extends Model[UserThread] with ParticipantThread {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
 
-  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $thread, " +
+  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
 }

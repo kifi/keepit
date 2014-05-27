@@ -13,25 +13,28 @@ import scala.Some
 import com.keepit.model.DeepLink
 import com.keepit.model.DeepLocator
 import com.keepit.inject.FortyTwoConfig
+import java.util.NoSuchElementException
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   deepLinkRepo: DeepLinkRepo,
   normalizedURIRepo: NormalizedURIRepo,
-  fortytwoConfig: FortyTwoConfig)
+  fortytwoConfig: FortyTwoConfig,
+  airbrake: AirbrakeNotifier)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def createDeepLink() = Action(parse.tolerantJson) { request =>
     val req = request.body.asInstanceOf[JsObject]
-    val initiator = Id[User]((req \ "initiator").as[Long])
+    val initiator = (req \ "initiator").asOpt[Long].map(Id[User](_))
     val recipient = Id[User]((req \ "recipient").as[Long])
     val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
     val locator = (req \ "locator").as[String]
 
     db.readWrite{ implicit session => deepLinkRepo.save(
       DeepLink(
-        initiatorUserId = Some(initiator),
+        initiatorUserId = initiator,
         recipientUserId = Some(recipient),
         uriId = Some(uriId),
         urlId = None,
@@ -45,8 +48,16 @@ class ExtDeepLinkController @Inject() (
     val req = request.body.asInstanceOf[JsObject]
     val locator = (req \ "locator").as[String]
     val recipient = Id[User]((req \ "recipient").as[Long])
-    val link = db.readOnly { implicit session => deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient) }
-    val url = fortytwoConfig.applicationBaseUrl + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link.token.value).toString()
+    val link = db.readOnly { implicit session =>
+      try {
+        deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient).token.value
+      } catch {
+        case e: NoSuchElementException =>
+          airbrake.notify(s"Error retrieving deep url for locator: $locator and recipient $recipient", e)
+          ""
+      }
+    }
+    val url = fortytwoConfig.applicationBaseUrl + com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link).toString()
     Ok(Json.toJson(url))
   }
 

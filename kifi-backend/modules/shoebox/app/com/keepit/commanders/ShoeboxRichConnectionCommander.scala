@@ -4,6 +4,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.common.queue._
 import com.keepit.model._
 import com.keepit.common.db.slick.{RepoModification, Database}
+import com.keepit.common.logging.Logging
 
 import com.kifi.franz.SQSQueue
 
@@ -30,7 +31,7 @@ class ShoeboxRichConnectionCommander @Inject() (
     systemValueRepo: SystemValueRepo,
     db: Database,
     serviceDiscovery: ServiceDiscovery
-) extends RemoteRichConnectionCommander(abook, queue) {
+) extends RemoteRichConnectionCommander(abook, queue) with Logging {
 
   private val sqsSocialConnectionSeq = Name[SequenceNumber[SocialConnection]]("sqs_social_connection")
   private val sqsUserConnectionSeq = Name[SequenceNumber[UserConnection]]("sqs_user_connection")

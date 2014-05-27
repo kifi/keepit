@@ -5,9 +5,15 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance._
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.common.db.slick.Database.Slave
+import scala.concurrent.Future
+import com.keepit.common.concurrent.ExecutionContext._
+import scala.Some
+import com.keepit.model.UserBookmarkClicks
+import com.keepit.common.concurrent.FutureHelpers
 
 class AttributionCommander @Inject() (
   db:Database,
@@ -21,8 +27,10 @@ class AttributionCommander @Inject() (
   kifiHitCache: KifiHitCache
 ) extends Logging {
 
+  implicit val execCtx = fj
+
   // potentially expensive -- admin only
-  def getUserReKeepsByDegree(keepIds:Set[Id[Keep]], n:Int = 3):Map[Id[Keep], Seq[Set[Id[User]]]] = {
+  def getUserReKeepsByDegree(keepIds:Set[Id[Keep]], n:Int = 3): Map[Id[Keep], Seq[Set[Id[User]]]] = timing(s"getUserReKeepsByDegree(#keeps=${keepIds.size},$n)") {
     require(keepIds.size >= 0 && keepIds.size <= 50, s"getUserReKeepsByDegree() illegal argument keepIds.size=${keepIds.size}")
     if (keepIds.isEmpty) Map.empty[Id[Keep], Seq[Set[Id[User]]]]
     else {
@@ -41,7 +49,7 @@ class AttributionCommander @Inject() (
   }
 
   // potentially expensive -- admin only for now; will be called infrequently (cron job) later
-  def getReKeepsByDegree(keeperId:Id[User], keepId:Id[Keep], n:Int = 3):Seq[(Set[Id[User]], Set[Id[Keep]])] = {
+  def getReKeepsByDegree(keeperId:Id[User], keepId:Id[Keep], n:Int = 3): Seq[(Set[Id[User]], Set[Id[Keep]])] = timing(s"getReKeepsByDegree($keeperId,$keepId,$n)") {
     require(n > 1 && n < 5, s"getReKeepsByDegree($keeperId, $keepId) illegal argument (degree=$n)")
     val rekeepsByDeg = new Array[Set[Id[Keep]]](n)
     rekeepsByDeg(0) = Set(keepId)
@@ -71,6 +79,51 @@ class AttributionCommander @Inject() (
     }
 
     usersByDeg zip rekeepsByDeg
+  }
+
+  def updateUserReKeepStatus(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
+    val rekeepCountsF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
+      rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
+        (keepId, rekeeps.head.uriId) -> rekeeps.length
+      }
+    }
+    rekeepCountsF map { rekeepCounts =>
+      val rekeepStats = rekeepCounts.map { case ((keepId, uriId), rekeepCount) =>
+        (keepId, uriId) -> (rekeepCount, getReKeepsByDegree(userId, keepId, n).map(_._1).flatten.length - 1) // exclude self
+      }
+      log.info(s"[updateReKeepStats($userId)] rekeepStats=${rekeepStats.mkString(",")}")
+
+      val res = db.readWrite { implicit rw =>
+        rekeepStats.map{ case ((keepId, uriId), (rkCount, aggCount)) =>
+          userBookmarkClicksRepo.getByUserUri(userId, uriId) match {
+            case None =>
+              log.error(s"[updateReKeepStats($userId)] couldn't find bookmarkClick entry for $uriId")
+              userBookmarkClicksRepo.save(UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0, rekeepCount = rkCount, rekeepTotalCount = aggCount, rekeepDegree = n))
+            case Some(bookmarkClick) =>
+              userBookmarkClicksRepo.save(bookmarkClick.copy(rekeepCount = rkCount, rekeepTotalCount = aggCount, rekeepDegree = n))
+          }
+        }.toSeq
+      }
+
+      log.info(s"[updateReKeepStats($userId)] updated #${res.length} bookmarkClick entries: ${res.mkString(",")}")
+      res
+    }
+  }
+
+  def updateUsersReKeepStats(keepers:Seq[Id[User]], n:Int = 3):Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
+    val futures = keepers.map { keeper =>
+      () => updateUserReKeepStatus(keeper, n)
+    }
+    FutureHelpers.sequentialExec(futures)
+  }
+
+  def updateAllReKeepStats(n:Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
+    val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
+      rekeepRepo.getAllKeepers()
+    }
+    keepersF flatMap { keepers =>
+      updateUsersReKeepStats(keepers)
+    }
   }
 
 }

@@ -1,15 +1,6 @@
 @(user:User)
 
 @admin("Typeahead Search", stylesheets=List("admin_user")) {
-    <h2>Refresh Filter</h2>
-    <br/>
-    <form class="form-inline" method="get" action="@com.keepit.controllers.admin.routes.TypeaheadAdminController.refreshPrefixFilter(user.id.get)">
-        <div class="form-group">
-            UserId:<input type="number" name="userId" value="@user.id.get">
-            <input type="submit" name="refresh value="Refresh!">
-        </div>
-    </form>
-    <br/>
 
     <h2>Prefix Search</h2>
     <br/>

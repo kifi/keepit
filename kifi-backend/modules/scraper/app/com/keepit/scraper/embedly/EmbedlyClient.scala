@@ -18,7 +18,7 @@ import com.keepit.common.db.Id
 
 trait EmbedlyClient {
   def embedlyUrl(url: String): String
-  def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]]
+  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
   def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
 }
 
@@ -35,16 +35,13 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
-  // tmp solution. later we might remove EmbedlyInfo class all together.
-  private def parseEmbedlyInfo(resp: Response): Option[EmbedlyInfo] = {
-    parseExtendedEmbedlyInfo(resp).map{ extInfo => EmbedlyInfo.fromExtendedEmbedlyInfo(extInfo)}
-  }
 
-  private def parseExtendedEmbedlyInfo(resp: Response): Option[ExtendedEmbedlyInfo] = {
+
+  private def parseEmbedlyInfo(resp: Response): Option[EmbedlyInfo] = {
     resp.status match {
       case Status.OK =>
         val js = Json.parse(resp.body) // resp.json has some issues
-        val extractRespOpt = js.validate[ExtendedEmbedlyInfo].fold(
+        val extractRespOpt = js.validate[EmbedlyInfo].fold(
           valid = (res => Some(res)),
           invalid = (e => {
             log.info(s"Failed to parse JSON: body=${resp.body} errors=${e.toString}")
@@ -55,12 +52,11 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
-  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = {
+  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = {
     val apiUrl = embedlyUrl(url)
-    fetchPageInfoConsolidator(apiUrl) { urlString =>
+    fetchExtendedInfoConsolidater(apiUrl) { urlString =>
       fetchWithRetry(apiUrl, 120000) map { resp =>
         parseEmbedlyInfo(resp)
-
       } recover { case t:Throwable =>
         log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
         None
@@ -68,7 +64,7 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
-  private val fetchPageInfoConsolidator = new RequestConsolidator[String,Option[EmbedlyInfo]](2 minutes)
+  private val fetchExtendedInfoConsolidater = new RequestConsolidator[String,Option[EmbedlyInfo]](2 minutes)
 
   private def fetchWithRetry(url:String, timeout:Int):Future[Response] = {
     val count = new AtomicInteger()
@@ -86,6 +82,6 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
 class DevEmbedlyClient extends EmbedlyClient {
   override def embedlyUrl(url: String): String = "http://dev.ezkeep.com"
-  override def getEmbedlyInfo(url:String):Future[Option[EmbedlyInfo]] = Future.successful(None)
+  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = ???
   override def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq())
 }

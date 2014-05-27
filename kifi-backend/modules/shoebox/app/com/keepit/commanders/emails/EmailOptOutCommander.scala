@@ -1,4 +1,4 @@
-package com.keepit.commanders
+package com.keepit.commanders.emails
 
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.google.inject.Inject
@@ -13,6 +13,7 @@ class EmailOptOutCommander @Inject() (optoutSecret: OptoutSecret) {
   def generateOptOutToken(emailAddress: EmailAddressHolder) = {
     crypt.crypt(key, emailAddress.address)
   }
+
   def getEmailFromOptOutToken(optOutToken: String): Try[EmailAddressHolder] = {
     crypt.decrypt(key, optOutToken).map(GenericEmailAddress(_))
   }

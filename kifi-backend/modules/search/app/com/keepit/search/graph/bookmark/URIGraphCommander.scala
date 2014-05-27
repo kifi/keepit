@@ -20,8 +20,6 @@ class URIGraphCommanderFactory @Inject()(mainSearcherFactory: MainSearcherFactor
 
 trait URIGraphCommander{
   val requestingUser: RequestingUser
-  def getIndexShards: Seq[Shard[NormalizedURI]]
-  def getUserUriList(userId: Id[User], publicOnly: Boolean): Map[Shard[NormalizedURI], UserURIList]
   def getUserUriList(userId: Id[User], publicOnly: Boolean, shard: Shard[NormalizedURI]): UserURIList
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList]
   def getSharingUserInfo(uriId: Id[NormalizedURI], shard: Shard[NormalizedURI]): SharingUserInfo
@@ -32,19 +30,11 @@ class URIGraphCommanderImpl(
   val mainSearcherFactory: MainSearcherFactory
 ) extends URIGraphCommander {
 
-  private[this] val indexShards = mainSearcherFactory.getIndexShards
-
-  def getIndexShards: Seq[Shard[NormalizedURI]] = indexShards
-
   private def getURIGraphSearcher(shard: Shard[NormalizedURI]) = mainSearcherFactory.getURIGraphSearcher(shard, requestingUser.userId)
 
   private def getURIList(userId: Id[User], publicOnly: Boolean, searcher: URIGraphSearcher): UserURIList = {
     val edgeSet = searcher.getUserToUriEdgeSet(userId, publicOnly)
     UserURIList(edgeSet.getPublicList, edgeSet.getPrivateList)
-  }
-
-  def getUserUriList(userId: Id[User], publicOnly: Boolean): Map[Shard[NormalizedURI], UserURIList] = {
-    indexShards.map{ shard => shard -> getUserUriList(userId, publicOnly, shard) }.toMap
   }
 
   def getUserUriList(userId: Id[User], publicOnly: Boolean, shard: Shard[NormalizedURI]): UserURIList = {
