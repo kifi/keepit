@@ -4,13 +4,13 @@ import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController
 import play.api.mvc._
 import com.keepit.model._
 import com.keepit.common.db.slick._
-import com.keepit.commanders.EmailOptOutCommander
 import com.google.inject.Inject
 import com.keepit.common.mail.GenericEmailAddress
 import scala.util.{Success, Failure}
 import play.api.data.Form
 import play.api.data.Forms.{tuple, text, optional}
 import com.keepit.social.SecureSocialClientIds
+import com.keepit.commanders.emails.EmailOptOutCommander
 
 class EmailOptOutController @Inject() (
   db: Database,
@@ -26,7 +26,7 @@ class EmailOptOutController @Inject() (
     email match {
       case Success(addr) =>
         val opts = db.readOnly { implicit session =>
-          emailOptOutRepo.getByEmailAddress(addr).collect { case c => c.category }
+          emailOptOutRepo.getByEmailAddress(addr).collect { case c => NotificationCategory(c.category.category) }
         }
 
         Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg"), secureSocialClientIds))

@@ -13,6 +13,10 @@ import com.keepit.common.logging.Logging
 case class TestMailModule() extends MailModule {
   def configure() {}
 
+  @Singleton
+  @Provides
+  override def optoutSecret: OptoutSecret = OptoutSecret("""&some1sec\re#t2str;in''g3that4we5use6for7te%sting""")
+
   @Provides
   @Singleton
   def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {

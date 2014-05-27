@@ -220,7 +220,7 @@ class MessagingCommander @Inject() (
         userParticipants.foreach { userId =>
           userThreadRepo.save(UserThread(
             user = userId,
-            thread = thread.id.get,
+            threadId = thread.id.get,
             uriId = uriIdOpt,
             lastSeen = None,
             lastMsgFromOther = None,
@@ -265,8 +265,8 @@ class MessagingCommander @Inject() (
   }
 
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
-    log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.thread}")
-    val thread = db.readOnly { implicit session => threadRepo.get(userThread.thread)}
+    log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.threadId}")
+    val thread = db.readOnly { implicit session => threadRepo.get(userThread.threadId)}
     sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
   }
 
@@ -682,4 +682,3 @@ class MessagingCommander @Inject() (
 }
 
 class ExternalMessagingRateLimitException(message: String) extends Throwable(message)
-

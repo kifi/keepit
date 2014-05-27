@@ -7,9 +7,10 @@ import com.keepit.common.db.Id
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.logging.Logging
 
 @Singleton
-class WTICommander @Inject() (richSocialConnectionRepo: RichSocialConnectionRepo, db: Database) {
+class WTICommander @Inject() (richSocialConnectionRepo: RichSocialConnectionRepo, db: Database) extends Logging {
 
   def ripestFruit(userId: Id[User], howMany: Int): Seq[Id[SocialUserInfo]] = db.readOnly { implicit session => richSocialConnectionRepo.dedupedWTIForUser(userId, howMany) }
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]) = db.readOnly { implicit session => richSocialConnectionRepo.countInvitationsSent(userId, friend) }

@@ -29,7 +29,7 @@ import com.keepit.common.performance._
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
-case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = 0)
+case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = -1, rekeepCount:Int = -1)
 
 class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
   def writes(info: FullKeepInfo) = Json.obj(
@@ -41,6 +41,7 @@ class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo]
     "others" -> info.others,
     "keepers" -> info.users,
     "clickCount" -> info.clickCount,
+    "rekeepCount" -> info.rekeepCount,
     "collections" -> info.collections.map(_.id)
   )
 }
@@ -96,7 +97,7 @@ class KeepsCommander @Inject() (
  ) extends Logging {
 
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    val (keeps, collectionOpt, clickCounts) = db.readOnly { implicit s =>
+    val (keeps, collectionOpt, clickCount, rekeepCount) = db.readOnly { implicit s =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
@@ -104,8 +105,10 @@ class KeepsCommander @Inject() (
         case None =>
           keepRepo.getByUser(userId, before, after, count)
       }
-      val clickCounts = keepClicksRepo.getClickCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
-      (keeps, collectionOpt, clickCounts)
+      val helpRankEnabled = localUserExperimentCommander.getExperimentsByUser(userId).contains(ExperimentType.HELPRANK)
+      val clickCount = if (helpRankEnabled) keepClicksRepo.getClickCountByKeeper(userId) else -1
+      val rekeepCount = if (helpRankEnabled) rekeepRepo.getReKeepCountByKeeper(userId) else -1
+      (keeps, collectionOpt, clickCount, rekeepCount)
     }
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
 
@@ -123,7 +126,7 @@ class KeepsCommander @Inject() (
       }
       val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCounts.getOrElse(keep.id.get, 0))
+        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
       }
       (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }

@@ -1,12 +1,8 @@
 package com.keepit.search.feed
 
-import org.joda.time.DateTime
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.social.BasicUser
-import com.keepit.common.time._
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.db.ExternalId
@@ -14,6 +10,7 @@ import com.keepit.model.User
 import com.keepit.model.UrlHash
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
+import com.keepit.search.sharding.Shard
 
 
 case class FixedResultFeedModule() extends ScalaModule{
@@ -59,4 +56,5 @@ class FixedResultFeedCommander extends FeedCommander{
 
   def getFeeds(userId: Id[User], limit: Int): Seq[Feed] = feeds
 
+  def distFeeds(shards: Set[Shard[NormalizedURI]], userId: Id[User], limit: Int): Seq[Feed] = ???
 }

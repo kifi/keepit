@@ -154,4 +154,3 @@ object IndexableUri {
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI])
   )(IndexableUri.apply, unlift(IndexableUri.unapply))
 }
-

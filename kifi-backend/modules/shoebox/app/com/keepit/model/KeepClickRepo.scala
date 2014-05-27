@@ -13,9 +13,10 @@ import com.keepit.heimdal.SanitizedKifiHit
 trait KeepClickRepo extends Repo[KeepClick] {
   def getClicksByUUID(uuid:ExternalId[SanitizedKifiHit])(implicit r:RSession):Seq[KeepClick]
   def getByKeepId(keepId:Id[Keep])(implicit r:RSession):Seq[KeepClick]
-  def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[KeepClick]
-  def getClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Map[Id[Keep], Int]
-  def getClickCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Map[Id[Keep],Int]
+  def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[KeepClick]
+  def getClickCountByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Int
+  def getClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Map[Id[Keep], Int]
+  def getClickCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Map[Id[Keep],Int]
 }
 
 
@@ -52,7 +53,11 @@ class KeepClickRepoImpl @Inject() (
   }
 
   def getClicksByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Seq[KeepClick] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
+  }
+
+  def getClickCountByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Int = {
+    (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r).length.run
   }
 
   def getClickCountsByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {

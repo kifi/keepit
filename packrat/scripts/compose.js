@@ -115,7 +115,7 @@ var initCompose = (function() {
   .handleLookClicks();
 
   if ($t.length) {
-    initFriendSearch($t, 'composePane', function includeSelf(numTokens) {
+    initFriendSearch($t, 'composePane', [], function includeSelf(numTokens) {
       return numTokens === 0;
     }, {
       placeholder: 'To',
