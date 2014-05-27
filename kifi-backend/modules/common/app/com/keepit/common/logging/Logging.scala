@@ -3,7 +3,6 @@ package com.keepit.common.logging
 import com.keepit.macros.Location
 import play.modules.statsd.api.{StatsdClientCake, StatsdClient, Statsd}
 import play.api.Logger
-import scala.reflect.ClassTag
 
 case class LogPrefix(prefix: String) extends AnyVal {
   override def toString = prefix
