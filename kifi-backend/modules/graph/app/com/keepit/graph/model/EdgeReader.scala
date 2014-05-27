@@ -1,5 +1,8 @@
 package com.keepit.graph.model
 
+import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.EdgeKind.EdgeType
+
 trait EdgeReader {
   def kind: EdgeKind[_ <: EdgeDataReader]
   def source: VertexId
@@ -21,6 +24,8 @@ trait GlobalEdgeReader extends EdgeReader with SourceReader with DestinationRead
 }
 
 trait OutgoingEdgeReader extends EdgeReader with SourceReader {
+  def moveToNextComponent(): Boolean = ???
+  def component: (VertexType, EdgeType) = ???
   def degree: Int
   def moveToNextEdge(): Boolean
   def reset(): Unit
