@@ -1,12 +1,15 @@
 // @require styles/keeper/message_participants.css
 // @require styles/keeper/compose.css
 // @require scripts/html/keeper/message_participants.js
-// @require scripts/html/keeper/message_participant.js
+// @require scripts/html/keeper/message_participant_email.js
+// @require scripts/html/keeper/message_participant_user.js
 // @require scripts/html/keeper/message_participant_icon.js
-// @require scripts/html/keeper/message_avatar.js
+// @require scripts/html/keeper/message_avatar_email.js
+// @require scripts/html/keeper/message_avatar_user.js
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/formatting.js
 // @require scripts/friend_search.js
 // @require scripts/render.js
 // @require scripts/util.js
@@ -143,7 +146,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			var $input = this.$input;
 			if (!$input) {
 				$input = this.$input = this.get$('.kifi-message-participant-dialog-input');
-				initFriendSearch($input, 'threadPane', api.noop, {
+				initFriendSearch($input, 'threadPane', this.getParticipants(), api.noop, {
 					placeholder: 'Type a name...',
 					onAdd: function () {
 						this.getAddDialog().addClass('kifi-non-empty');
@@ -283,7 +286,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * @return {string} html for a single avatar
 		 */
 		renderAvatar: function (user) {
-			return win.render('html/keeper/message_avatar', user);
+			formatParticipant(user);
+			if (user.kind === 'email') {
+				return win.render('html/keeper/message_avatar_email', user);
+			} else {
+				return win.render('html/keeper/message_avatar_user', user);
+			}
 		},
 
 		/**
@@ -301,7 +309,12 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * @return {string} html for a participant list item
 		 */
 		renderParticipant: function (user) {
-			return win.render('html/keeper/message_participant', user);
+			formatParticipant(user);
+			if (user.kind === 'email') {
+				return win.render('html/keeper/message_participant_email', user);
+			} else {
+				return win.render('html/keeper/message_participant_user', user);
+			}
 		},
 
 		/**

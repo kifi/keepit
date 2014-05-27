@@ -119,7 +119,11 @@
     "styles/iframes/login.css",
     "scripts/html/iframes/login.js",
     "scripts/iframes/login.js",
+    "styles/iframes/view_email.css",
+    "scripts/html/iframes/view_email.js",
+    "scripts/iframes/view_email.js",
     "scripts/iframes/lib/jquery.js",
-    "scripts/iframes/lib/jquery-ui-position.js"
+    "scripts/iframes/lib/jquery-ui-position.js",
+    "images/spinner_32.gif"
   ]
 }

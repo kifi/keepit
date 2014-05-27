@@ -43,4 +43,3 @@ class TeleportationJournal extends TravelJournal {
   def getLastVisited(): Option[VertexId] = lastVisited
   def getVisited(): Map[VertexType, Int] = visited.toMap
 }
-

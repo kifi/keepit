@@ -71,7 +71,7 @@ object UserValues {
   val showKeeperIntro = UserValueBooleanHandler("ext_show_keeper_intro", false)
   val showSearchIntro = UserValueBooleanHandler("ext_show_search_intro", false)
   val showExtMsgIntro = UserValueBooleanHandler("ext_show_ext_msg_intro", true)
-  val showFindFriends = UserValueBooleanHandler("ext_show_find_friends", false)
+  val showFindFriends = UserValueBooleanHandler("ext_show_find_friends", false)  // TODO: delete after all users have extensions w/external messaging
 
   val UserInitPrefs: Seq[String] = Seq(lookHereMode, enterToSend, maxResults, showKeeperIntro, showSearchIntro, showExtMsgIntro, showFindFriends).map(_.name)
 

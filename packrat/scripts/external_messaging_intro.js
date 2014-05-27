@@ -6,18 +6,20 @@
 // @require scripts/html/keeper/tile_tooltip.js
 
 api.port.emit('prefs', function (prefs) {
-  if (prefs.showKeeperIntro && document.hasFocus() && !window.keeper) {
+  if (prefs.showExtMsgIntro && document.hasFocus()) {
     var handlers = {
-      hide_keeper_intro: hide.bind(null, null)
+      hide_external_messaging_intro: hide.bind(null, null)
     };
     var $intro = $(render('html/keeper/tile_tooltip', {
-      header: 'Meet your kifi keeper',
-      text: 'Use the keeper to:',
-      actions: ['Keep any page', 'Send this page to any email address or friend'],
-      tip: 'Try dragging the keeper up and down'
+      header: 'Email this page to anyone',
+      text: 'Did you know you can share this page in a beautiful way?',
+      actions: ['Send beautifully formatted page to any email address',
+        'Recipients can join the discussion by replying via email'],
+      tip: 'Make life easier by <a class="kifi-tile-tooltip-import-contacts" href="javascript:">importing your Gmail contacts</a>'
     }))
       .insertAfter(tile)
       .on('click', '.kifi-tile-tooltip-x', onClickX)
+      .on('click', '.kifi-tile-tooltip-import-contacts', onClickImport)
       .each(function () {this.offsetHeight})  // force layout
       .addClass('kifi-showing');
     document.addEventListener('keydown', onKeyDown, true);
@@ -25,20 +27,25 @@ api.port.emit('prefs', function (prefs) {
     api.port.on(handlers);
     api.onEnd.push(hide);
     window.hideKeeperCallout = hide;
+    api.port.emit('track_showing_external_messaging_intro');
   }
 
   function onClickX(e) {
-    api.port.emit('stop_showing_keeper_intro');
-    hide(e);
+    hide(e, 'close');
+  }
+
+  function onClickImport(e) {
+    api.port.emit('import_contacts', 'external_messaging_intro_tooltip');
+    hide(e, 'importGmail');
   }
 
   function onKeyDown(e) {
     if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-      hide(e);
+      hide(e, 'close');
     }
   }
 
-  function hide(e) {
+  function hide(e, action) {
     document.removeEventListener('keydown', onKeyDown, true);
     if (tile) tile.removeEventListener('mouseover', hide, true);
     api.port.off(handlers);
@@ -49,6 +56,7 @@ api.port.emit('prefs', function (prefs) {
       if (e) {
         e.preventDefault();
       }
+      api.port.emit('stop_showing_external_messaging_intro', action);
     }
   }
 });
