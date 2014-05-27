@@ -1,7 +1,9 @@
 package com.keepit.common.logging
 
+import com.keepit.macros.Location
 import play.modules.statsd.api.{StatsdClientCake, StatsdClient, Statsd}
 import play.api.Logger
+import scala.reflect.ClassTag
 
 case class LogPrefix(prefix: String) extends AnyVal {
   override def toString = prefix
@@ -18,6 +20,8 @@ trait Logging {
   val ONE_IN_THOUSAND = 0.001d
   implicit lazy val log = Logger(getClass)
   implicit lazy val statsd = new LoggingStatsdClient(Logger(s"statsd.${getClass.getCanonicalName}"))
+
+  implicit def captureLocation: Location = macro Location.locationMacro
 }
 
 /**

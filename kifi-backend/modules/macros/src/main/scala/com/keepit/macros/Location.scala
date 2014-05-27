@@ -3,18 +3,18 @@ package com.keepit.macros
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
-class CodeLocation(val location: String)
+class Location(val location: String)
 
-object CodeLocationMacro {
+object Location {
 
-  implicit def getCodeLocation: CodeLocation = macro getCodeLocationImpl
+  implicit def capture: Location = macro Location.locationMacro
 
-  def getCodeLocationImpl(x: Context): x.Expr[CodeLocation] = {
+  def locationMacro(x: Context): x.Expr[Location] = {
     import x.universe._
     val className = Option(x.enclosingClass).map(_.symbol.toString).getOrElse("")
     val methodName = Option(x.enclosingMethod).map(_.symbol.toString).getOrElse("")
     val line = x.enclosingPosition.line
-    val position = s"[${className}][${methodName}]:${line}"
-    reify(new CodeLocation(x.literal(position).splice))
+    val where = s"[${className}][${methodName}]:${line}"
+    reify(new Location(x.literal(where).splice))
   }
 }

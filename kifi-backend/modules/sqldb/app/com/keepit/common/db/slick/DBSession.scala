@@ -12,10 +12,10 @@ import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType, ResultSetHoldabili
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
 import com.keepit.common.util.TrackingId
-import com.keepit.macros.CodeLocation
+import com.keepit.macros.Location
 
 object DBSession {
-  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session, location: CodeLocation) extends Session with Logging with TransactionalCaching {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
     def database = _session.database
     private var open = false
     private var doRollback = false
@@ -116,9 +116,9 @@ object DBSession {
         _session.forParameters(rsType, rsConcurrency, rsHoldability)
   }
 
-  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session, location: CodeLocation) extends SessionWrapper(name, masterSlave, roSession, location)
-  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session, location: CodeLocation) extends RSession("RO", masterSlave, roSession, location)
-  class RWSession(rwSession: => Session, location: CodeLocation) extends RSession("RW", Database.Master, rwSession, location) //RWSession is always reading from master
+  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session, location: Location) extends SessionWrapper(name, masterSlave, roSession, location)
+  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session, location: Location) extends RSession("RO", masterSlave, roSession, location)
+  class RWSession(rwSession: => Session, location: Location) extends RSession("RW", Database.Master, rwSession, location) //RWSession is always reading from master
 //
 //  implicit def roToSession(roSession: ROSession): Session = roSession.session
 //  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
