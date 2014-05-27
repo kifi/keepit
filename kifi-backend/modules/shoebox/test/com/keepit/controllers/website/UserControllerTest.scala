@@ -76,7 +76,9 @@ class UserControllerTest extends Specification with ApplicationInjector {
               "notAuthed":[],
               "experiments":["admin"],
               "uniqueKeepsClicked":0,
-              "totalKeepsClicked":0
+              "totalKeepsClicked":0,
+              "clickCount":-1,
+              "rekeepCount":-1
             }
           """)
 
