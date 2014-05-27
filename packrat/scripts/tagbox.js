@@ -445,6 +445,7 @@ this.tagbox = (function ($, win) {
 					this.onDocClick = null;
 				}
 
+				this.text = null;
 				this.$slider = null;
 				this.tags = [];
 				this.tagsAdded = {};
