@@ -13,8 +13,8 @@ import com.keepit.heimdal.SanitizedKifiHit
 trait KeepClickRepo extends Repo[KeepClick] {
   def getClicksByUUID(uuid:ExternalId[SanitizedKifiHit])(implicit r:RSession):Seq[KeepClick]
   def getByKeepId(keepId:Id[Keep])(implicit r:RSession):Seq[KeepClick]
-  def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[KeepClick]
-  def getClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Map[Id[Keep], Int]
+  def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[KeepClick]
+  def getClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Map[Id[Keep], Int]
   def getClickCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Map[Id[Keep],Int]
 }
 
