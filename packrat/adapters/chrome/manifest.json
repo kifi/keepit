@@ -1,7 +1,7 @@
 {
   "name": "kifi",
   "short_name": "kifi",
-  "description": "Search like normal, find like never before",
+  "description": "Never lose the pages that matter to you most",
   "version": "see build.properties",
   "manifest_version": 2,
   "minimum_chrome_version": "32",
