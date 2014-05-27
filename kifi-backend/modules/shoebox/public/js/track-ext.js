@@ -14,16 +14,27 @@
 	var DEFAULT_SOURCE_VALUE = 'body';
 
 	var Tracker = win.Tracker = {
-		trackClick: function (el) {
+		trackClick: function (el, event) {
 			try {
 				var $el = $(el),
 					trackAction = getDataFromAncestors($el, 'trackAction');
 				if (trackAction) {
-					track(getClickEventName(), {
-						type: getType(),
-						action: trackAction,
-						source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
-					});
+					if (el.tagName === 'A') {
+						event.preventDefault();
+						track(getClickEventName(), {
+							type: getType(),
+							action: trackAction,
+							source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
+						}, function () {
+							win.location = el.href;
+						});
+					} else {
+						track(getClickEventName(), {
+							type: getType(),
+							action: trackAction,
+							source: getDataFromAncestors($el, 'trackSource', DEFAULT_SOURCE_VALUE)
+						});
+					}
 				}
 			}
 			catch (e) {
@@ -35,8 +46,8 @@
 	};
 
 	// on clicking on links, track click event
-	$(document).on('click', 'a[href], *[data-track-click], *[data-track-action]', function () {
-		Tracker.trackClick(this);
+	$(document).on('click', 'a[href], *[data-track-click], *[data-track-action]', function (event) {
+		Tracker.trackClick(this, event);
 	});
 
 
@@ -72,9 +83,16 @@
 		return data;
 	}
 
-	function track(name, data) {
+	function track(name, data, cb) {
+		if (!cb) {
+			cb = $.noop;
+		}
 		data = addDefaultValues(data);
-		return mixpanel.track(name, data);
+		win.setTimeout(function () {
+			cb();
+		}, 1000);
+
+		return mixpanel.track(name, data, cb);
 	}
 
 })(this);
