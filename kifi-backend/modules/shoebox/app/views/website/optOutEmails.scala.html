@@ -1,4 +1,4 @@
-@(email: String, opts: Seq[com.keepit.common.mail.ElectronicMailCategory], msg: Option[String], secureSocialClientIds: com.keepit.social.SecureSocialClientIds)
+@(email: String, opts: Seq[NotificationCategory], msg: Option[String], secureSocialClientIds: com.keepit.social.SecureSocialClientIds)
 
 @import com.keepit.model.NotificationCategory
 @invite = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.INVITATION) }

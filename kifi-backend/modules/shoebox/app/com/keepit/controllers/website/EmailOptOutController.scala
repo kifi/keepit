@@ -26,7 +26,7 @@ class EmailOptOutController @Inject() (
     email match {
       case Success(addr) =>
         val opts = db.readOnly { implicit session =>
-          emailOptOutRepo.getByEmailAddress(addr).collect { case c => c.category }
+          emailOptOutRepo.getByEmailAddress(addr).collect { case c => NotificationCategory(c.category.category) }
         }
 
         Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg"), secureSocialClientIds))
