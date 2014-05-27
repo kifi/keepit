@@ -105,8 +105,9 @@ class KeepsCommander @Inject() (
         case None =>
           keepRepo.getByUser(userId, before, after, count)
       }
-      val clickCount = keepClicksRepo.getClickCountByKeeper(userId)
-      val rekeepCount = rekeepRepo.getReKeepCountByKeeper(userId)
+      val helpRankEnabled = localUserExperimentCommander.getExperimentsByUser(userId).contains(ExperimentType.HELPRANK)
+      val clickCount = if (helpRankEnabled) keepClicksRepo.getClickCountByKeeper(userId) else -1
+      val rekeepCount = if (helpRankEnabled) rekeepRepo.getReKeepCountByKeeper(userId) else -1
       (keeps, collectionOpt, clickCount, rekeepCount)
     }
     val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
