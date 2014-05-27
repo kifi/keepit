@@ -4,6 +4,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import scala.Some
 import com.keepit.search.MultiHashFilter
@@ -18,7 +19,7 @@ class SliderHistoryRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     val browsingCache: SliderHistoryUserIdCache)
-  extends DbRepo[SliderHistory] with SliderHistoryRepo {
+  extends DbRepo[SliderHistory] with SliderHistoryRepo with Logging {
 
   import db.Driver.simple._
 
@@ -61,7 +62,7 @@ trait SliderHistoryTracker {
   def getMultiHashFilter(userId: Id[User]): MultiHashFilter[SliderHistory]
 }
 
-class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) extends SliderHistoryTracker {
+class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) extends SliderHistoryTracker with Logging {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = {
     val filter = getMultiHashFilter(userId)

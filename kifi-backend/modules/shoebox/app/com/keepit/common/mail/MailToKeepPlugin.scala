@@ -149,7 +149,7 @@ class MailToKeepMessageParser @Inject() (
     db: Database,
     emailAddressRepo: EmailAddressRepo,
     userRepo: UserRepo
-  ) extends GenericMailParser {
+  ) extends GenericMailParser with Logging {
 
   private val Url = """(?i)(?<![@.])\b(https?://)?(([a-z0-9\-]+\.)+[a-z]{2,3}(/\S*)?)\b""".r
 

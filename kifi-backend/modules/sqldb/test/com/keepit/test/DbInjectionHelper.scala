@@ -6,6 +6,7 @@ import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.TestDbInfo
+import com.keepit.macros.Location
 import com.google.inject.{Injector, Module}
 import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType}
 import scala.slick.driver.JdbcDriver.simple.{Database => SlickDatabase, _}
@@ -50,7 +51,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
     val s = db.masterDb.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
     try {
       s.withTransaction {
-        f(new RWSession(s))
+        f(new RWSession(s, Location.capture))
       }
     } finally s.close()
   }

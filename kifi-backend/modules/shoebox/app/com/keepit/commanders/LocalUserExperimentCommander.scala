@@ -24,6 +24,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model.UserExperiment
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.logging.Logging
 
 @Singleton //The Singleton is very importatnt here. There is a cache on the object.
 class LocalUserExperimentCommander @Inject() (
@@ -34,7 +35,7 @@ class LocalUserExperimentCommander @Inject() (
     protected val monitoredAwait: MonitoredAwait,
     protected val airbrake: AirbrakeNotifier
   )
-  extends UserExperimentCommander  {
+  extends UserExperimentCommander with Logging {
 
   def getExperimentGenerators() : Future[Seq[ProbabilisticExperimentGenerator]] = Future {
     db.readOnly { implicit session => generatorRepo.allActive() }

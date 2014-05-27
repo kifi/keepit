@@ -349,6 +349,12 @@ exports.tabs = {
       exports.tabs.open(url);
     }
   },
+  close: function(tabId) {
+    var tab = tabsById[tabId];
+    if (tab) {
+      tab.close();
+    }
+  },
   each: function(callback) {
     for each (let page in pages) {
       if (httpRe.test(page.url)) callback(page);

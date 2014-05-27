@@ -23,7 +23,7 @@
       <label>
         <input type="checkbox" name="invite" value="true" @if(invite){checked}> Invitations to join Kifi from friends
       </label>
-      <input type="hidden" name="all" value="if(all){true}else{false}" id="can-recieve-emails">
+      <input type="hidden" name="all" value="@if(all){true}else{false}" id="can-recieve-emails">
 
       <span class="kifi-action" id="update">Update email preferences</span>
       <span class="kifi-action" id="all">Opt-out of all emails</span>
