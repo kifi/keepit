@@ -29,7 +29,7 @@ import com.keepit.common.performance._
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
-case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = 0, rekeepCount:Int = 0)
+case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = -1, rekeepCount:Int = -1)
 
 class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
   def writes(info: FullKeepInfo) = Json.obj(
@@ -126,7 +126,7 @@ class KeepsCommander @Inject() (
       }
       val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
         val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others, clickCount, rekeepCount)
+        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
       }
       (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }
