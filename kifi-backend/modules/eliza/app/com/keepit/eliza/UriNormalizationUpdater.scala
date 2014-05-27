@@ -82,7 +82,7 @@ class UriNormalizationUpdater @Inject() (
     }
     userThread.lastMsgFromOther.foreach { msgId =>
       db.readWrite{ implicit session =>
-        userThreadRepo.updateLastNotificationForMessage(userThread.user, userThread.thread, msgId, newJson)
+        userThreadRepo.updateLastNotificationForMessage(userThread.user, userThread.threadId, msgId, newJson)
       }
     }
   }

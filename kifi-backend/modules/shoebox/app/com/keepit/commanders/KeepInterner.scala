@@ -161,7 +161,11 @@ class KeepInterner @Inject() (
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
-      val uri = uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+      val uri = try {
+        uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+      } catch {
+        case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
+      }
       if (uri.state == ACTIVE || uri.state == INACTIVE) {
         val date = source match {
           case KeepSource.bookmarkImport => currentDateTime.plus(Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY))

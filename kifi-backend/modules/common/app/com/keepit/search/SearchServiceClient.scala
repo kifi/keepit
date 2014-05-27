@@ -79,9 +79,9 @@ trait SearchServiceClient extends ServiceClient {
   //
   // Distributed Search
   //
-  def distSearchPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
+  def distPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
 
-  def distSearchPlanRemoteOnly(maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
+  def distPlanRemoteOnly(maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
 
   def distSearch(
     plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
@@ -99,6 +99,8 @@ trait SearchServiceClient extends ServiceClient {
     debug: Option[String]) : Seq[Future[JsValue]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]) : Seq[Future[Map[Lang, Int]]]
+
+  def distFeeds(shards: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], limit: Int): Seq[Future[Seq[Feed]]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
@@ -360,11 +362,11 @@ class SearchServiceClientImpl(
   //
   // Distributed Search
   //
-  def distSearchPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
+  def distPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
     distRouter.plan(shards, maxShardsPerInstance)
   }
 
-  def distSearchPlanRemoteOnly(maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
+  def distPlanRemoteOnly(maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
     distRouter.planRemoteOnly(maxShardsPerInstance)
   }
 
@@ -383,21 +385,21 @@ class SearchServiceClientImpl(
     coll: Option[String],
     debug: Option[String]) : Seq[Future[JsValue]] = {
 
-    var searchParams = new SearchParams(new ListBuffer)
+    var builder = new SearchRequestBuilder(new ListBuffer)
     // keep the following in sync with SearchController
-    searchParams += ("userId", userId.id)
-    searchParams += ("query", query)
-    searchParams += ("maxHits", maxHits)
-    searchParams += ("lang1", firstLang.lang)
-    if (secondLang.isDefined) searchParams += ("lang2", secondLang.get.lang)
-    if (filter.isDefined)     searchParams += ("filter", filter.get)
-    if (context.isDefined)    searchParams += ("context", context.get)
-    if (start.isDefined)      searchParams +=  ("start", start.get)
-    if (end.isDefined)        searchParams += ("end", end.get)
-    if (tz.isDefined)         searchParams += ("tz", tz.get)
-    if (coll.isDefined)       searchParams += ("coll", coll.get)
-    if (debug.isDefined)      searchParams += ("debug", debug.get)
-    val request = JsObject(searchParams.params)
+    builder += ("userId", userId.id)
+    builder += ("query", query)
+    builder += ("maxHits", maxHits)
+    builder += ("lang1", firstLang.lang)
+    if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
+    if (filter.isDefined)     builder += ("filter", filter.get)
+    if (context.isDefined)    builder += ("context", context.get)
+    if (start.isDefined)      builder +=  ("start", start.get)
+    if (end.isDefined)        builder += ("end", end.get)
+    if (tz.isDefined)         builder += ("tz", tz.get)
+    if (coll.isDefined)       builder += ("coll", coll.get)
+    if (debug.isDefined)      builder += ("debug", debug.get)
+    val request = builder.build
 
     distRouter.dispatch(plan, Search.internal.distSearch, request).map{ f => f.map(_.json) }
   }
@@ -408,13 +410,25 @@ class SearchServiceClientImpl(
     }
   }
 
+  def distFeeds(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], limit: Int): Seq[Future[Seq[Feed]]] = {
+    var builder = new SearchRequestBuilder(new ListBuffer)
+    // keep the following in sync with SearchController
+    builder += ("userId", userId.id)
+    builder += ("limit", limit)
+    val request = builder.build
+
+    distRouter.dispatch(plan, Search.internal.distFeeds, request).map{ f => f.map(_.json.as[Seq[Feed]]) }
+  }
+
   // for DistributedSearchRouter
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
 }
 
-class SearchParams(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
+class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit   = { params += (name -> JsNumber(value)) }
+
+  def build: JsObject = JsObject(params)
 }

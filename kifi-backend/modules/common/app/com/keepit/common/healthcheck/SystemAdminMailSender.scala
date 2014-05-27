@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{Singleton, Inject, ImplementedBy}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{AmazonSimpleMailProvider, RemotePostOffice, ElectronicMail}
 import play.api.Mode._
@@ -10,11 +10,14 @@ trait SystemAdminMailSender extends Logging {
   def sendMail(email: ElectronicMail): Unit
 }
 
+@Singleton
 class RemoteSystemAdminMailSender @Inject() (
     postOffice: RemotePostOffice,
     amazonSimpleMailProvider: AmazonSimpleMailProvider,
     airbreak: AirbrakeNotifier,
     playMode: Mode) extends SystemAdminMailSender {
+
+  var notifiedError = false
 
   def sendMail(email: ElectronicMail): Unit = playMode match {
     case Prod =>
@@ -22,8 +25,11 @@ class RemoteSystemAdminMailSender @Inject() (
         amazonSimpleMailProvider.sendMail(email)
       } catch {
         case t: Throwable =>
-          airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
-          postOffice.queueMail(email)
+          if (!notifiedError) {
+            airbreak.notify(s"could not send email using amazon mail service, using sendgrid", t)
+            notifiedError = true
+          }
+          postOffice.queueMail(email.copy(subject = s"[AWS SES FAIL] ${email.subject}"))
       }
     case _ =>
       log.info(s"skip sending email: $email")

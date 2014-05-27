@@ -192,6 +192,7 @@ object Search extends Service {
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
+    def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
   }
 }
 
@@ -277,6 +278,7 @@ object Scraper extends Service {
     def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
     def getEmbedlyImageInfos() = ServiceRoute(POST, s"/internal/scraper/embedly/imageInfos")
     def getEmbedlyInfo() = ServiceRoute(POST, s"/internal/scraper/embedly/embedlyInfo")
+    def getURISummaryFromEmbedly() = ServiceRoute(POST, s"/internal/scraper/uriSummary/embedly")
   }
 }
 

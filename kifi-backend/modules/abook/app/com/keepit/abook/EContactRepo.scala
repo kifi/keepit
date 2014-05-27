@@ -167,11 +167,17 @@ class EContactRepoImpl @Inject() (
   def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact] = Try {
     if (userId == null || email == null) throw new IllegalArgumentException("userId and email cannot be null")
 
-    val parsedResult = EmailParser.parseAll(EmailParser.email, email)
-    if (!parsedResult.successful) throw new IllegalArgumentException(s"Invalid email: $email")
+    // Parsing "email-like" expressions containing a name, such as "Douglas Adams <doug@kifi.com>"
+    val emailWithNameRe = """\s*([^\s<][^<]*[^\s<])\s+<(.*)>""".r
+    val (address, emailName) = emailWithNameRe.findFirstMatchIn(email) map { m =>
+      (m.group(2), Some(name.getOrElse(m.group(1))))
+    } getOrElse (email, name)
+
+    val parsedResult = EmailParser.parseAll(EmailParser.email, address)
+    if (!parsedResult.successful) throw new IllegalArgumentException(s"Invalid email: $address")
 
     val parsedEmail = parsedResult.get
-    val c = EContact(userId = userId, email = parsedEmail.toString, name = name, firstName = firstName, lastName = lastName)
+    val c = EContact(userId = userId, email = parsedEmail.toString, name = emailName, firstName = firstName, lastName = lastName)
     insertOnDupUpdate(userId, c) // todo: optimize (if needed)
     val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
     cOpt match {
@@ -179,7 +185,7 @@ class EContactRepoImpl @Inject() (
         invalidateCache(e)
         e
       }
-      case None => throw new IllegalStateException(s"Failed to retrieve econtact for $email")
+      case None => throw new IllegalStateException(s"Failed to retrieve econtact for $address")
     }
   }
 

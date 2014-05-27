@@ -26,6 +26,7 @@ import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.fjPool
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.scraper.embedly.EmbedlyCommander
 
 abstract class TracedCallable[T](val submitTS:Long = System.currentTimeMillis) extends Callable[Try[T]] {
 
@@ -99,18 +100,20 @@ class QueuedScrapeProcessor @Inject() (
   pornDetectorFactory: PornDetectorFactory,
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient,
-  wordCountCache: NormalizedURIWordCountCache) extends ScrapeProcessor with Logging with ScraperUtils {
+  wordCountCache: NormalizedURIWordCountCache,
+  embedlyCommander: EmbedlyCommander) extends ScrapeProcessor with Logging with ScraperUtils {
+
+  type ScrapingForkJoinTask = ForkJoinTask[Try[(NormalizedURI, Option[Article])]]
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 120000 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
-  val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ForkJoinTask[Try[(NormalizedURI, Option[Article])]])]]()
+  val submittedQ = new ConcurrentLinkedQueue[WeakReference[(ScrapeCallable, ScrapingForkJoinTask)]]()
 
   log.info(s"[QScraper.ctr] pool=$fjPool")
 
   private def removeRef(iter:java.util.Iterator[_], msgOpt:Option[String] = None) {
     try {
-      for (msg <- msgOpt)
-        log.info(msg)
+      msgOpt.foreach{log.info(_)}
       iter.remove()
     } catch {
       case t:Throwable =>
@@ -120,8 +123,7 @@ class QueuedScrapeProcessor @Inject() (
 
   private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit scraperConfig:ScraperConfig) { // can be removed once things are settled
     try {
-      for (msg <- msgOpt)
-        log.info(msg)
+      msgOpt.foreach{log.info(_)}
       helper.syncSaveNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: UNSCRAPABLE where appropriate
       helper.syncSaveScrapeInfo(sc.info.withFailure) // todo: mark INACTIVE where appropriate
     } catch {
@@ -133,21 +135,19 @@ class QueuedScrapeProcessor @Inject() (
   val PULL_MAX = NUM_CORES * config.pullMultiplier
   val PULL_THRESHOLD = config.queueConfig.pullThreshold.getOrElse(NUM_CORES / 2)
 
-  override def pull():Unit = {
+  override def pull(): Unit = {
     log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${PULL_THRESHOLD}")
     if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
-      serviceDiscovery.thisInstance.map{ inst =>
+      serviceDiscovery.thisInstance.map { inst =>
         if (inst.isHealthy) {
-          asyncHelper.assignTasks(inst.id.id, PULL_MAX).onComplete{ trRequests =>
-            trRequests match {
-              case Failure(t) =>
-                log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
-              case Success(requests) =>
-                log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
-                for (sr <- requests) {
-                  asyncScrape(sr.uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
-                }
-            }
+          asyncHelper.assignTasks(inst.id.id, PULL_MAX).onComplete {
+            case Failure(t) =>
+              log.error(s"[puller(${inst.id.id})] Caught exception ${t} while pulling for tasks", t) // move along
+            case Success(requests) =>
+              log.info(s"[puller(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
+              for (sr <- requests) {
+                asyncScrape(sr.uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+              }
           }(ExecutionContext.fj)
         }
       }
@@ -213,7 +213,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache)
+  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, embedlyCommander)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
