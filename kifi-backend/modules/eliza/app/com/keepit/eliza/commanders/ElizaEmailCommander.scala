@@ -247,7 +247,7 @@ class ElizaEmailCommander @Inject() (
     val protoEmailFut = unsubUrlFut map { unsubUrl =>
       assembleEmail(
         threadEmailData,
-        nonUserThread.lastNotifiedAt,
+        None,
         None,
         Some(nonUserThread.createdBy),
         Some(unsubUrl),
@@ -279,7 +279,7 @@ class ElizaEmailCommander @Inject() (
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
-    val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, Some(msg.createdAt), None, None, None) }
+    val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, None, None, None, None) }
     if (msg.auxData.isDefined) {
       if (msg.auxData.get.value(0)==JsString("start_with_emails")) {
         protoEmailFuture.map(_.initialHtml)
