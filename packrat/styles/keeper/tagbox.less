@@ -1,9 +1,4 @@
-/*
- * Clear fix
- */
 .kifi-group {
-  zoom: 1; /* For IE 6/7 (trigger hasLayout) */
-
   &::before, &::after {
     content: "";
     display: table;
@@ -40,6 +35,14 @@
   font-weight: normal;
   -webkit-font-smoothing: antialiased;
   text-align: left;
+  opacity: 0;
+  -webkit-transform-origin: right bottom;
+  transform-origin: right bottom;
+  -webkit-transform: scale(.1);
+  transform: scale(.1);
+  transition: opacity linear, -webkit-transform ease-in;
+  transition: opacity linear, transform ease-in;
+  transition-duration: .16s;
 
   html[kifi-with-pane] & {
     bottom: 54px;
@@ -47,6 +50,14 @@
     border-bottom: 0;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
+  }
+
+  &.kifi-in {
+    opacity: 1;
+    -webkit-transform: none;
+    transform: none;
+    transition-timing-function: ease-out;
+    transition-duration: .24s;
   }
 
   &.kifi-suggested {
@@ -85,18 +96,6 @@
 
   .kifi-tagbox-loading {
     display: none;
-  }
-
-  &.kifi-loading {
-    display: none;
-
-    .kifi-tagbox-empty, .kifi-tagbox-tagged, .kifi-tagbox-suggest {
-      display: none;
-    }
-
-    .kifi-tagbox-loading {
-display: block;
-    }
   }
 }
 
