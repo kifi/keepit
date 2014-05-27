@@ -3,14 +3,14 @@
     <header id="header">
 
       <div class="wrap clearfix">
-          <a href="/" class="left" id="logo"><img class="non_mobile" src="//djty7jcqog9qu.cloudfront.net/assets/site/logo.svg"><img class="mobile" src="//djty7jcqog9qu.cloudfront.net/assets/site/logo_mobile.svg"></a>
+          <a href="/" class="left" id="logo" data-track-action="clickLogo"><img class="non_mobile" src="//djty7jcqog9qu.cloudfront.net/assets/site/logo.svg"><img class="mobile" src="//djty7jcqog9qu.cloudfront.net/assets/site/logo_mobile.svg"></a>
             @if(isLoggedIn) {
             <div class="right">
               <a href="/" class="button blue_inverted">Home</a>
             </div>
             } else {
             <div class="right">
-              <a href="/login" class="button blue_inverted">Log In</a>
+              <a href="/login" class="button blue_inverted" data-track-action="clickLogIn">Log In</a>
             </div>
             }
         </div>
