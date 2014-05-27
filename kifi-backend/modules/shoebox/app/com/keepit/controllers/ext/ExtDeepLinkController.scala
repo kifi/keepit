@@ -27,14 +27,14 @@ class ExtDeepLinkController @Inject() (
 
   def createDeepLink() = Action(parse.tolerantJson) { request =>
     val req = request.body.asInstanceOf[JsObject]
-    val initiator = Id[User]((req \ "initiator").as[Long])
+    val initiator = (req \ "initiator").asOpt[Long].map(Id[User](_))
     val recipient = Id[User]((req \ "recipient").as[Long])
     val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
     val locator = (req \ "locator").as[String]
 
     db.readWrite{ implicit session => deepLinkRepo.save(
       DeepLink(
-        initiatorUserId = Some(initiator),
+        initiatorUserId = initiator,
         recipientUserId = Some(recipient),
         uriId = Some(uriId),
         urlId = None,
