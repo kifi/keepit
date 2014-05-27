@@ -151,6 +151,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
               "others":1,
               "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
               "clickCount":0,
+              "rekeepCount":0,
               "collections":[]},
             {
               "id":"${bookmark1.externalId.toString}",
@@ -161,6 +162,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
               "others":-1,
               "keepers":[],
               "clickCount":0,
+              "rekeepCount":0,
               "collections":[]}
           ]}
         """)
@@ -230,6 +232,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
                 "others":-1,
                 "keepers":[],
                 "clickCount":0,
+                "rekeepCount":0,
                 "collections":[]
               }
             ]
