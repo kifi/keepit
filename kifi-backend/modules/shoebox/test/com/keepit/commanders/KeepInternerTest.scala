@@ -207,6 +207,11 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           counts2.get(keeps2(1).id.get) === None
           counts2.get(keeps2(2).id.get) === None
 
+          keepClickRepo.getClickCountByKeeper(u1.id.get) === ck1.size
+          keepClickRepo.getClickCountByKeeper(u2.id.get) === ck2.size
+          keepClickRepo.getClickCountByKeeper(u3.id.get) === keepClickRepo.getClicksByKeeper(u3.id.get).length
+          keepClickRepo.getClickCountByKeeper(u4.id.get) === keepClickRepo.getClicksByKeeper(u4.id.get).length
+
           val cm1 = keepClickRepo.getClickCountsByKeepIds(u1.id.get, keeps1.map(_.id.get).toSet)
           println(s"cm1=${cm1.mkString(",")}")
           cm1.get(keeps1(0).id.get) === Some(1)
@@ -268,6 +273,11 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rkc2.get(keeps2(0).id.get) === Some(1)
           rkc2.get(keeps2(1).id.get) === None
           rkc2.get(keeps2(2).id.get) === None
+
+          rekeepRepo.getReKeepCountByKeeper(u1.id.get) === rkc1.valuesIterator.foldLeft(0) {(a,c) => a + c}
+          rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) {(a,c) => a + c}
+          rekeepRepo.getReKeepCountByKeeper(u3.id.get) === 1
+          rekeepRepo.getReKeepCountByKeeper(u4.id.get) === 0
         }
 
         val attrCmdr = inject[AttributionCommander]
