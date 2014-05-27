@@ -1,5 +1,6 @@
 // @require styles/insulate.css
 // @require styles/notifier.css
+// @require styles/keeper/participant_colors.css
 // @require scripts/api.js
 // @require scripts/lib/jquery.js
 // @require scripts/formatting.js
@@ -23,12 +24,20 @@ var notifier = function () {
       case 'message':
         this.hide(o.thread);
         o.author = o.author || o.participants[0];
+        var title = o.firstName !== "" ? o.author.firstName + ' ' + o.author.lastName : o.id;
+        formatParticipant(o.author);
+        if (o.author.kind === "email") {
+          var iconElement = '<div class="kifi-notify-email-icon kifi-participant-background-' + o.author.color + '">' + o.author.initial + '</div>'
+        } else {
+          var image = cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName;
+        }
         add({
-          title: o.author.firstName + ' ' + o.author.lastName,
+          title: title,
           subtitle: 'Sent you a new Kifi Message',
           contentHtml: o.text,
           link: o.title || formatTitleFromUrl(o.url),
-          image: cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName,
+          image: image,
+          iconElement: iconElement,
           sticky: false,
           showForMs: 60000,
           onClick: $.proxy(onClickMessage, null, o.url, o.locator),
@@ -73,16 +82,23 @@ var notifier = function () {
     if (!$wrap.length) {
       $wrap = $('<kifi id="kifi-notify-notice-wrapper" class="kifi-root">').appendTo($('body')[0] || 'html');
     }
-
+    var imageHtml;
+    if (params.image) {
+      imageHtml = '<img src="' + params.image + '" class="kifi-notify-image"/>';
+    } else if (params.iconElement) {
+      imageHtml = params.iconElement;
+    } else {
+      imageHtml = '';
+    }
     var $item = $(render('html/notify_box', {
       formatSnippet: formatMessage.snippet,
       title: params.title,
       subtitle: params.subtitle,
       contentHtml: params.contentHtml,
       triggered: params.triggered,
-      image: params.image ? '<img src="' + params.image + '" class="kifi-notify-image"/>' : '',
+      image: imageHtml,
       popupClass: '',
-      innerClass: params.image ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
+      innerClass: imageHtml ? 'kifi-notify-with-image' : 'kifi-notify-without-image',
       link: params.link,
       threadId: params.threadId
     }))

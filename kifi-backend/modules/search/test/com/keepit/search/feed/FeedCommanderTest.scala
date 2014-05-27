@@ -1,23 +1,21 @@
 package com.keepit.search.feed
 
 import org.specs2.mutable._
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.test.Helpers._
-import com.keepit.inject._
 import com.keepit.test._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ShardSpecParser
-import com.keepit.search.SearchTestHelper
+import com.keepit.search.{SearchServiceClient, SearchTestHelper}
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.search.graph.bookmark._
-import com.keepit.search.graph.bookmark.RequestingUser
 import scala.Some
-import com.keepit.search.sharding.ActiveShards
 
 
 class FeedCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
@@ -68,8 +66,10 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
     "work" in {
       running(application) {
         implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
-        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        val (users, uris, bms, t0) = setup(client)
+        val shoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val searchClient = inject[SearchServiceClient]
+        val monitoredAwait = inject[MonitoredAwait]
+        val (users, uris, bms, t0) = setup(shoeboxClient)
 
         val store = mkStore(uris)
         val (shardedUriGraphIndexer, _, _, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
@@ -77,8 +77,8 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
         userGraphIndexer.update()
 
         val uriGraphCommanderFactory = new URIGraphCommanderFactory(mainSearcherFactory)
-        val metaProvider = new FeedMetaInfoProvider(client)
-        val feedCommander = new FeedCommanderImpl(userGraphsSearcherFactory, uriGraphCommanderFactory, client, metaProvider)
+        val metaProvider = new FeedMetaInfoProvider(shoeboxClient)
+        val feedCommander = new FeedCommanderImpl(activeShards, userGraphsSearcherFactory, uriGraphCommanderFactory, searchClient, shoeboxClient, metaProvider, monitoredAwait)
 
         val feeds = feedCommander.getFeeds(users(0).id.get, 10)
         feeds.size === 2

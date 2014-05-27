@@ -507,7 +507,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def logEvent(userId: Id[User], event: JsObject) = {}
 
-  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
+  def createDeepLink(initiator: Option[Id[User]], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String] = ???
 

@@ -177,8 +177,5 @@ class MainSearcherFactory @Inject() (
     }
   }
 
-
-  def getIndexShards(): Seq[Shard[NormalizedURI]] = shardedArticleIndexer.indexShards.keys.toSeq
-
   def getSpellCorrector(): SpellCorrector = spellCorrector
 }

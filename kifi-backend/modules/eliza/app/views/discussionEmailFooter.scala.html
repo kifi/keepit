@@ -1,0 +1,122 @@
+@(conversationStarter: String, muteUrlOpt: Option[String], unsubUrlOpt: Option[String], isUser: Boolean)
+
+<tr>
+  <td height="34"></td>
+</tr>
+<tr>
+  <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td width="20" class="hide">&nbsp;</td>
+        <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+              <td width="410" class="clear_both"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td width="34" valign="top"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-reply-arrow.jpg" width="34" height="20" style="display:block;" border="0" /></td>
+                          <td width="8">&nbsp;</td>
+                          <td style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">Participate in this discussion simply by replying to this email </td>
+                        </tr>
+                      </table>
+                </td>
+                @if(!isUser) {
+                  <td width="48" class="hide">&nbsp;</td>
+                  <td width="146" class="clear_both">
+                    <table width="146" border="0" cellspacing="0" cellpadding="0" align="right" class="wrapper">
+                      <tr>
+                        <td class="aside2"><table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                            <tr>
+                              <td height="20" valign="middle" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;">
+                                @muteUrlOpt.map{ muteUrl =>
+                                  <a href="@muteUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</a>
+                                }.getOrElse {
+                                  <span style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#999999;line-height:18px;text-decoration:underline;">Mute this conversation</span>
+                                }
+                              </td>
+                            </tr>
+                          </table></td>
+                      </tr>
+                  </table></td>
+                }
+            </tr>
+          </table></td>
+      </tr>
+    </table></td>
+</tr>
+@if(!isUser) {
+  <tr>
+    <td height="34" class="fix_height"></td>
+  </tr>
+  <tr>
+    <td bgcolor="#333333"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td height="18" style="line-height:1px;font-size:1px;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td width="40" class="hide">&nbsp;</td>
+                <td width="20">&nbsp;</td>
+                <td valign="top" width="524"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td width="23" align="center" valign="middle"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-heart.png" width="23" height="21" style="display:block;" border="0" /></td>
+                       <td width="14" height="21">&nbsp;</td>
+                                  <td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;">@conversationStarter used kifi to send this message. <a href="https://www.kifi.com/?utm_source=extmsg" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;line-height:18px;text-decoration:underline;">Learn more</a></td>
+
+                    </tr>
+                  </table></td>
+                <td width="20">&nbsp;</td>
+                  <td width="20" class="hide">&nbsp;</td>
+              </tr>
+            </table></td>
+        </tr>
+        <tr>
+          <td height="18" style="line-height:1px;font-size:1px;">&nbsp;</td>
+        </tr>
+      </table></td>
+  </tr>
+}
+<tr>
+  <td height="32"></td>
+</tr>
+<tr>
+  <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td width="10" class="hide">&nbsp;</td>
+      <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td><table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+            <tr>
+              <td width="350" class="clear_both" valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:22px;"><a href="https://www.kifi.com/?utm_source=extmsg" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Kifi</a> &ldquo;connecting you to the things that matter&rdquo;<br />
+                    Follow us on <a href="https://twitter.com/Kifi" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Twitter</a> &nbsp;<a href="https://www.facebook.com/pages/Kifi/534872986523643" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Facebook</a></td>
+                </tr>
+              </table></td>
+              <td width="143" class="clear_both">&nbsp;</td>
+              <td width="111" align="center" valign="top" class="clear_both"><a href="https://itunes.apple.com/us/app/kifi/id740232575" target="_blank"><img src="https://djty7jcqog9qu.cloudfront.net/assets/email-app-store-badge.jpg" alt="Available on the App Store" width="111" height="43" style="display:block;" border="0" /></a></td>
+            </tr>
+          </table></td>
+        </tr>
+        <tr>
+          <td height="24"></td>
+        </tr>
+        <tr>
+          <td valign="top"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+              <td class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:12px;color:#333333;line-height:22px;">Sent by kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br class="br" />
+                View our <a href="https://www.kifi.com/privacy?utm_source=extmsg" target="_blank" style="color:#85a4ea;text-decoration:underline;">privacy policy</a>. Click to @unsubUrlOpt.map{ unsubUrl =>
+                  <a href="@unsubUrl" target="_blank" style="color:#85a4ea;text-decoration:underline;">unsubscribe</a>
+                }.getOrElse {
+                  <span style="color:#85a4ea;text-decoration:underline;">unsubscribe</span>
+                } from friends’ messages like this.<br class="br" />
+                &copy; 2014 FortyTwo, Inc, All rights reserved.</td>
+            </tr>
+          </table></td>
+        </tr>
+        <tr>
+          <td height="30"></td>
+        </tr>
+      </table></td>
+      <td width="10" class="hide">&nbsp;</td>
+    </tr>
+  </table></td>
+</tr>

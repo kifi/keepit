@@ -88,7 +88,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
-  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
+  def createDeepLink(initiator: Option[Id[User]], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String]
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def kifiHit(clicker: Id[User], hit:SanitizedKifiHit):Future[Unit]
@@ -532,7 +532,7 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.logEvent, payload)
   }
 
-  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {
+  def createDeepLink(initiator: Option[Id[User]], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {
     implicit val userFormatter = Id.format[User]
     implicit val uriFormatter = Id.format[NormalizedURI]
     val payload = Json.obj(

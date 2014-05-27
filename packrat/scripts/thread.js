@@ -1,7 +1,11 @@
 // @require styles/keeper/thread.css
 // @require styles/keeper/compose.css
+// @require styles/keeper/participant_colors.css
 // @require scripts/html/keeper/messages.js
-// @require scripts/html/keeper/message.js
+// @require scripts/html/keeper/message_aux.js
+// @require scripts/html/keeper/message_discussion.js
+// @require scripts/html/keeper/message_tip.js
+// @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/formatting.js
@@ -34,7 +38,7 @@ panes.thread = function () {
     }
   };
 
-  var $who, $holder;
+  var $who, $holder, browserName;
   return {
     render: function ($paneBox, locator) {
       var threadId = locator.split('/')[2];
@@ -51,6 +55,9 @@ panes.thread = function () {
         if ($holder) {
           $holder.data('compose').reflectPrefs(prefs);
         }
+      });
+      api.port.emit('browser', function (data) {
+        browserName = data.name;
       });
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
@@ -78,6 +85,15 @@ panes.thread = function () {
     var $holder = $tall.find('.kifi-scroll-inner')
       .preventAncestorScroll()
       .handleLookClicks()
+      .hoverfu('.kifi-message-email-learn', function (configureHover) {
+        var link = this;
+        render('html/keeper/message_email_tooltip', function (html) {
+          configureHover(html, {
+            mustHoverFor: 1e9, click: 'toggle',
+            position: {my: 'right+50 bottom-10', at: 'center top', of: link, collision: 'none'}
+          });
+        });
+      })
       .data({threadId: threadId, compose: compose});
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
@@ -180,7 +196,8 @@ panes.thread = function () {
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
-      user: me
+      user: me,
+      displayedSource: browserName
     }))
     .data('text', text);
     $holder.append($m).scrollToBottom();
@@ -190,7 +207,7 @@ panes.thread = function () {
     setTimeout(function() {
       if (!$m.attr('data-id') && !$m.data('error')) {
         $m.find('time').hide();
-        $m.find('.kifi-message-status').text('sending…')
+        $m.find('.kifi-message-status').text('sending…');
       }
     }, 1000);
   }
@@ -198,10 +215,33 @@ panes.thread = function () {
   function renderMessage(m) {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
+    if (m.auxData && m.auxData.length >= 3 &&
+      (m.auxData[0] === 'add_participants' || m.auxData[0] === 'start_with_emails')) {
+      m.hasEmail = m.auxData[2].some(function (o) {return o.kind === 'email'});
+    }
     m.formatLocalDate = formatLocalDate;
-    m.isLoggedInUser = m.user && m.user.id === me.id;
-    return $(render('html/keeper/message', m))
-      .find('time').timeago().end()[0];
+    m.sender = m.user;
+    m.isLoggedInUser = m.sender && m.sender.id === me.id;
+    formatParticipant(m.sender);
+    if (m.source && m.source !== "server") {
+      m.displayedSource = m.source;
+    }
+    var templates = {
+      messageTip: 'message_tip'
+    };
+    if (m.auxData && m.auxData.length) {
+      var $rendered = $(render('html/keeper/message_aux', m, templates))
+        .on('click', '.kifi-message-email-view', function() {
+          api.require('scripts/iframe_dialog.js', function() {
+            api.port.emit('auth_info', function (info) {
+              iframeDialog.toggle('viewEmail', info.origin, {msgId: m.id});
+            });
+          });
+        });
+    } else {
+      var $rendered = $(render('html/keeper/message_discussion', m, templates));
+    }
+    return $rendered.find('time').timeago().end()[0];
   }
 
   function handleReplyError($reply, status, originalText, threadId) {

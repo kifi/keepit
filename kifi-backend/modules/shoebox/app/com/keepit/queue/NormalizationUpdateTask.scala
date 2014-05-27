@@ -15,4 +15,3 @@ object NormalizationUpdateTask {
       (__ \ 'candidates).format[Seq[NormalizationCandidate]]
     )(NormalizationUpdateTask.apply _, unlift(NormalizationUpdateTask.unapply))
 }
-

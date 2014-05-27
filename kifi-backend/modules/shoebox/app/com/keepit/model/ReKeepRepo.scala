@@ -6,6 +6,8 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.google.inject.{Singleton, ImplementedBy, Inject}
 import org.joda.time.DateTime
+import scala.slick.jdbc.{StaticQuery => Q}
+import Q.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
@@ -18,6 +20,7 @@ trait ReKeepRepo extends Repo[ReKeep] {
   def getAllReKeepCountsByUser()(implicit r:RSession):Map[Id[User], Int]
   def getAllReKeepCountsByURI()(implicit r:RSession):Map[Id[NormalizedURI], Int]
   def getAllDirectReKeepCountsByKeep()(implicit r:RSession):Map[Id[Keep], Int]
+  def getAllKeepers()(implicit r:RSession):Seq[Id[User]]
 }
 
 @Singleton
@@ -47,11 +50,11 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   }
 
   def getAllReKeepsByKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
@@ -91,6 +94,10 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
       .groupBy(_.keepId)
       .map{ case(keepId, rk) => (keepId, rk.length)}
     q.toMap
+  }
+
+  def getAllKeepers()(implicit r: RSession): Seq[Id[User]] = {
+    sql"select distinct keeper_id from rekeep".as[Id[User]].list()
   }
 
 }

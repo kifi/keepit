@@ -112,7 +112,7 @@ class NotificationCommander @Inject() (
           userThreadRepo.save(UserThread(
             id = None,
             user = pUserId,
-            thread = thread.id.get,
+            threadId = thread.id.get,
             uriId = thread.uriId,
             lastSeen = None,
             unread = true,
@@ -228,7 +228,7 @@ class NotificationCommander @Inject() (
             userThreadRepo.save(UserThread(
               id = None,
               user = userId,
-              thread = thread.id.get,
+              threadId = thread.id.get,
               uriId = None,
               lastSeen = None,
               unread = true,
@@ -323,9 +323,7 @@ class NotificationCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
-      message.from.asUser.map(
-        shoebox.createDeepLink(_, userId, thread.uriId.get, thread.deepLocator)
-      )
+      shoebox.createDeepLink(message.from.asUser, userId, thread.uriId.get, thread.deepLocator)
 
       notificationRouter.sendToUser(userId, Json.arr("notification", notifJson))
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
@@ -409,9 +407,7 @@ class NotificationCommander @Inject() (
       }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, false)
-      message.from.asUser.map(
-        shoebox.createDeepLink(_, userId, thread.uriId.get, thread.deepLocator)
-      )
+      shoebox.createDeepLink(message.from.asUser, userId, thread.uriId.get, thread.deepLocator)
 
       notifJson
     })

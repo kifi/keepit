@@ -177,6 +177,36 @@ function formatLocalDate() {
   }
 }
 
+function formatParticipant(participant) {
+  participant.isUser = !participant.kind || participant.kind === 'user';
+  participant.isEmail = participant.kind === 'email';
+  if (participant.isEmail) {
+    participant.initial = participant.id[0].toUpperCase();
+    // generate hashcode for background color
+    var hash = 0, i, chr, len;
+    for (i = 0, len = participant.id.length; i < len; i++) {
+      chr = participant.id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    var numColors = 4;
+    switch (((hash%numColors)+numColors)%numColors) {
+      case 0:
+        participant.color = 'red';
+        break;
+      case 1:
+        participant.color = 'orange';
+        break;
+      case 2:
+        participant.color = 'green';
+        break;
+      case 3:
+        participant.color = 'purple';
+        break;
+    }
+  }
+}
+
 function convertDraftToText(html) {
  'use strict';
   var html2 = html
@@ -203,6 +233,15 @@ var formatAuxData = (function () {
         return boldNamesOf(meInFront(added)) + ' were added by ' + nameOf(actor) + '.';
       }
       return nameOf(actor) + ' added ' + boldNamesOf(added) + '.';
+    },
+    start_with_emails: function (actor, added) {
+      if (isMe(actor)) {
+        return 'You started a discussion with ' + boldNamesOf(added) + '.';
+      }
+      if (added.some(isMe)) {
+        return boldNamesOf(meInFront(added)) + ' were invited to a discussion by ' + nameOf(actor) + '.';
+      }
+      return nameOf(actor) + ' started a discussion with ' + boldNamesOf(added) + '.';
     }
   };
 
@@ -220,7 +259,11 @@ var formatAuxData = (function () {
   }
 
   function nameOf(user) {
-    return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+    if (user.kind === "email") {
+      return Mustache.escape(user.id);
+    } else {
+      return isMe(user) ? 'You' : Mustache.escape(user.firstName + ' ' + user.lastName);
+    }
   }
 
   function boldNamesOf(users) {

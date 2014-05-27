@@ -13,16 +13,14 @@ import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeDeploymentNotice, AirbrakeNotifier}
-import com.keepit.normalizer.NormalizationReference
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._
-import com.keepit.common.aws.AwsConfig
 import scala.util.{Failure, Success, Try}
-import scala.util.Try
 import com.kifi.franz.SQSQueue
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
+import java.sql.SQLException
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -125,6 +123,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (for(f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
+    log.info(s"about to persist $uri")
     val num = sequence.incrementAndGet()
     val uriWithSeq = uri.copy(seq = num)
 
@@ -223,12 +222,34 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           uri
         case Success(Right(prenormalizedUrl)) => {
           val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
-          val newUri = save(NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization))
-          urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          session.onTransactionSuccess{
-            updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
+          urlHashCache.get(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(prenormalizedUrl))) match {
+            case Some(cached) =>
+              airbrake.notify(s"prenormalizedUrl [$prenormalizedUrl] already in cache [$cached] skipping save")
+              cached
+            case None =>
+              val candidate = NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization)
+              val newUri = try {
+                save(candidate)
+              } catch {
+                case sqlException: SQLException =>
+                  log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
+                  (for (t <- rows if t.urlHash === candidate.urlHash) yield t).firstOption match {
+                    case None => throw new Exception(s"could not find existing url $candidate in the db", sqlException)
+                    case Some(fromDb) =>
+                      log.warn(s"recovered url $fromDb from the db via urlHash")
+                      //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
+                      deleteCache(fromDb)
+                      fromDb
+                  }
+                case t: Throwable =>
+                  throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
+              }
+              urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
+              session.onTransactionSuccess{
+                updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
+              }
+              newUri
           }
-          newUri
         }
         case Failure(ex) => {
           val newUri = save(NormalizedURI.withHash(normalizedUrl = url, normalization = None))

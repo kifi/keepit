@@ -20,7 +20,7 @@ var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 var keeper = keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastCreatedAt;
+  var $slider, lastCreatedAt, justKept;
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -256,7 +256,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var $a = $(this);
       var tip = {
         i: ['Message Box (' + CO_KEY + '+Shift+O)', 'Open your Message Box<br/>and see your messages.'],
-        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to friends<br/>and start a discussion.']
+        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
@@ -327,6 +327,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
         $slider.remove(), $slider = null;
       }
+      if (justKept) {
+        api.port.emit('prefs', function (prefs) {
+          if (prefs.showExtMsgIntro) {
+            setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
+          }
+        });
+        justKept = false;
+      }
     });
   }
 
@@ -373,6 +381,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function keepPage(how, suppressNamePrompt) {
     log('[keepPage]', how);
+    justKept = true;
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how}));
     if (!title && !suppressNamePrompt) {
@@ -390,6 +399,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function unkeepPage() {
     log('[unkeepPage]', document.URL);
+    justKept = false;
     api.port.emit('unkeep', withUrls({}));
   }
 

@@ -1,9 +1,9 @@
 // @require styles/insulate.css
-// @require styles/iframe_dialog.css
+// @require styles/login_dialog.css
+// @require styles/view_email_dialog.css
 // @require scripts/lib/jquery.js
 // @require scripts/api_iframe.js
 // @require scripts/render.js
-// @require scripts/html/iframe_dialog.js
 
 var iframeDialog = function () {
   'use strict';
@@ -11,10 +11,17 @@ var iframeDialog = function () {
     login: {
       height: 372,
       width: 660,
-      templatePath: 'html/iframe_dialog',
+      templatePath: 'html/login_dialog',
       styles: ['styles/iframes/login.css'],
       scripts: ['scripts/iframes/login.js', 'scripts/html/iframes/login.js', 'scripts/iframes/lib/jquery.js'],
       onMessage: onLoginMessage
+    },
+    viewEmail: {
+      height: 660,
+      width: 660,
+      templatePath: 'html/view_email_dialog',
+      styles: ['styles/iframes/view_email.css'],
+      scripts: ['scripts/iframes/view_email.js', 'scripts/html/iframes/view_email.js']
     }
   };
   var $dialog;
@@ -41,35 +48,37 @@ var iframeDialog = function () {
   function show(name, origin, data) {
     var config = configs[name];
     if (config) {
-      $dialog = buildAndShow(config, origin, data).data({name: name, origin: origin});
-      document.addEventListener('keydown', onKeyDown, true);
-      window.addEventListener('message', config.onMessage);
+      buildAndShow(config, origin, data, name)
     }
   }
 
-  function buildAndShow(config, origin, data) {
-    var $d = $(render(config.templatePath, {
-      logo: api.url('images/kifi_logo.png'),
-      iframeSrc: origin + '/blank.html#' + Object.keys(data).reduce(function (f, k) {return (f ? f + '&' : '') + k + '=' + data[k]}, '')
-    }));
-    $d.find('.kifi-dialog-box').css({
-      height: config.height,
-      width: config.width,
-      margin: (-.2 * config.height) + 'px 0 0 ' + (-.5 * config.width) + 'px'});
+  function buildAndShow(config, origin, data, name) {
+    api.require('scripts/' + config.templatePath + '.js', function () {
+      $dialog = $(render(config.templatePath, {
+        logo: api.url('images/kifi_logo.png'),
+        iframeSrc: origin + '/blank.html#' + Object.keys(data).reduce(function (f, k) {return (f ? f + '&' : '') + k + '=' + data[k]}, '')
+      }));
+      $dialog.find('.kifi-dialog-box').css({
+        height: config.height,
+        width: config.width,
+        margin: (-.2 * config.height) + 'px 0 0 ' + (-.5 * config.width) + 'px'});
 
-    $d.find('iframe').one('load', function () {
-      api.pwnIframe(this, config.styles, config.scripts);
-    });
+      $dialog.find('iframe').one('load', function () {
+        api.pwnIframe(this, config.styles, config.scripts);
+      });
 
-    $d.appendTo('body').each(function () {this.clientHeight}).addClass('kifi-show')
-    .on('click', function (e) {
-      var $t = $(e.target);
-      if ($t.hasClass('kifi-dialog-x') || !$t.closest('.kifi-dialog-box').length) {
-        hide();
-      }
-      return false;
+      $dialog.appendTo('body').each(function () {this.clientHeight}).addClass('kifi-show')
+      .on('click', function (e) {
+        var $t = $(e.target);
+        if ($t.hasClass('kifi-dialog-x') || !$t.closest('.kifi-dialog-box').length) {
+          hide();
+        }
+        return false;
+      });
+      $dialog.data({name: name, origin: origin});
+      document.addEventListener('keydown', onKeyDown, true);
+      window.addEventListener('message', config.onMessage);
     });
-    return $d;
   }
 
   function hide() {
