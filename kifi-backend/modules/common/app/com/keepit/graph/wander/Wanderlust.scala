@@ -9,7 +9,7 @@ case class Wanderlust(
   startingVertexDataId: Long,
   preferredCollisions: Set[String] = Set.empty,
   avoidTrivialCollisions: Boolean = true,
-  steps: Int = 10000,
+  steps: Int = 100000,
   restartProbability: Double = 0.15
 )
 
