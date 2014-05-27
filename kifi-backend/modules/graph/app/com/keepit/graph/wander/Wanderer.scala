@@ -14,7 +14,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeWeightResolver, journal: TravelJournal): Unit = {
     val probabilityCache = mutable.Map[VertexId, ProbabilityDensity[(VertexId, EdgeType)]]()
-    wanderer.moveTo(teleporter.surely)
+    teleportTo(teleporter.surely, journal, isStart = true)
     var step = 0
     while (step < steps) {
       teleporter.maybe(wanderer) match {
@@ -22,17 +22,20 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
         case None => {
           assessOutgoingEdges(resolver, probabilityCache).sample(Math.random()) match {
             case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
-            case None => teleportTo(teleporter.surely, journal)
+            case None => teleportTo(teleporter.surely, journal, isDeadend = true)
           }
         }
       }
       step += 1
     }
+    journal.onComplete(wanderer)
   }
 
-  private def teleportTo(destination: VertexId, journal: TravelJournal): Unit = {
+  private def teleportTo(destination: VertexId, journal: TravelJournal, isDeadend: Boolean = false, isStart: Boolean = false): Unit = {
     scout.moveTo(destination)
-    journal.onTeleportation(wanderer, scout)
+    if (isStart) journal.onStart(scout)
+    else if (isDeadend) journal.onDeadend(wanderer, scout)
+    else journal.onTeleportation(wanderer, scout)
     wanderer.moveTo(destination)
   }
 

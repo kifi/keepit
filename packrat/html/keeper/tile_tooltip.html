@@ -1,0 +1,16 @@
+<kifi class="kifi-tile-tooltip kifi-root">
+  <a class="kifi-tile-tooltip-x" href="javascript:"></a>
+  <div class="kifi-tile-tooltip-body">
+    <div class="kifi-tile-tooltip-h">{{header}}</div>
+    {{text}}
+    <div class="kifi-tile-tooltip-ul">
+      {{#actions}}
+        <div class="kifi-tile-tooltip-li">{{.}}</div>
+      {{/actions}}
+    </div>
+    {{#tip}}
+      <div class="kifi-tile-tooltip-tip">{{{tip}}}</div>
+    {{/tip}}
+  </div>
+  <div class="kifi-tile-tooltip-tri-shadow"></div>
+</kifi>

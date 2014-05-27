@@ -3,29 +3,49 @@
 // @require scripts/render.js
 
 var initFriendSearch = (function () {
+  var searchCallbacks = {};
 
   api.onEnd.push(function () {
     log('[friendSearch:onEnd]');
     $('.kifi-ti-dropdown').remove();
   });
 
-  return function ($in, inviteSource, includeSelf, options) {
-    $in.tokenInput(search.bind(null, includeSelf), $.extend({
+  api.port.on({
+    contacts: function (o) {
+      var withResults = searchCallbacks[o.searchId];
+      if (withResults) {
+        delete searchCallbacks[o.searchId];
+        if (o.refresh) {
+          var results = o.friends.concat(o.contacts);
+        } else {
+          var results = o.contacts;
+        }
+        withResults(results.concat(['tip']), false, o.error, o.refresh);
+      }
+    }
+  });
+
+  return function ($in, source, participants, includeSelf, options) {
+    $in.tokenInput(search.bind(null, participants, includeSelf), $.extend({
       resultsLimit: 4,
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
       classForRoots: 'kifi-root',
       formatResult: formatResult,
-      onSelect: onSelect.bind(null, $in, inviteSource)
+      onSelect: onSelect.bind(null, $in, source)
     }, options));
     $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   };
 
-  function search(includeSelf, numTokens, query, withResults) {
-    api.port.emit('search_friends', {q: query, n: 4, includeSelf: includeSelf(numTokens)}, function (results) {
-      results.push('tip');
-      withResults(results);
+  function search(participants, includeSelf, numTokens, query, withResults) {
+    api.port.emit('search_friends', {q: query, n: 4, participants: participants, includeSelf: includeSelf(numTokens)}, function (o) {
+      if (o.results.length || !o.searchId) {  // wait for more if none yet
+        withResults(o.results.concat(o.searchId ? [] : ['tip']), !!o.searchId);
+      }
+      if (o.searchId) {
+        searchCallbacks[o.searchId] = withResults;
+      }
     });
   }
 
@@ -36,8 +56,25 @@ var initFriendSearch = (function () {
       appendParts(html, res.parts);
       html.push('</li>');
       return html.join('');
+    } else if (res.email) {
+      var html = [];
+      if (res.isNew) {
+        html.push('<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-new-email">');
+      } else {
+        html.push('<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">')
+      }
+      if (res.nameParts) {
+        html.push('<div class="kifi-ti-dropdown-contact-name">');
+        appendParts(html, res.nameParts);
+        html.push('</div><div class="kifi-ti-dropdown-contact-sub">');
+      } else {
+        html.push('<div class="kifi-ti-dropdown-contact-name">');
+      }
+      appendParts(html, res.emailParts);
+      html.push('</div></li>');
+      return html.join('');
     } else if (res === 'tip') {
-      return '<li class="kifi-ti-dropdown-tip"><span class="kifi-ti-dropdown-tip-invite">Invite friends</span> to message them on Kifi</li>';
+      return '<li class="kifi-ti-dropdown-tip">Import Gmail contacts to message them on Kifi</li>';
     }
   }
 
@@ -51,9 +88,11 @@ var initFriendSearch = (function () {
     }
   }
 
-  function onSelect($in, inviteSource, res, el) {
-    if (res === 'tip') {
-      api.port.emit('invite_friends', inviteSource);
+  function onSelect($in, source, res, el) {
+    if (!res.pictureName && !res.email) {
+      if (res === 'tip') {
+        api.port.emit('import_contacts', source);
+      }
       return false;
     }
   }

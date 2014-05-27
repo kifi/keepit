@@ -13,6 +13,7 @@ import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext._
 import scala.Some
 import com.keepit.model.UserBookmarkClicks
+import com.keepit.common.concurrent.FutureHelpers
 
 class AttributionCommander @Inject() (
   db:Database,
@@ -80,9 +81,9 @@ class AttributionCommander @Inject() (
     usersByDeg zip rekeepsByDeg
   }
 
-  def updateReKeepStats(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
+  def updateUserReKeepStatus(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
     val rekeepCountsF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
-      rekeepRepo.getReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
+      rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
         (keepId, rekeeps.head.uriId) -> rekeeps.length
       }
     }
@@ -109,15 +110,19 @@ class AttributionCommander @Inject() (
     }
   }
 
-  def updateAllReKeepStats(n:Int = 3): Future[Int] = { // expensive -- admin only
+  def updateUsersReKeepStats(keepers:Seq[Id[User]], n:Int = 3):Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
+    val futures = keepers.map { keeper =>
+      () => updateUserReKeepStatus(keeper, n)
+    }
+    FutureHelpers.sequentialExec(futures)
+  }
+
+  def updateAllReKeepStats(n:Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
       rekeepRepo.getAllKeepers()
     }
-    keepersF map { keepers =>
-      keepers.foreach { keeper => // sequential
-        updateReKeepStats(keeper, n)
-      }
-      keepers.length
+    keepersF flatMap { keepers =>
+      updateUsersReKeepStats(keepers)
     }
   }
 

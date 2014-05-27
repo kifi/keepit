@@ -18,6 +18,7 @@ class WanderingAdminController @Inject() (
   graphClient: GraphServiceClient,
   db: Database,
   userRepo: UserRepo,
+  socialUserRepo: SocialUserInfoRepo,
   uriRepo: NormalizedURIRepo,
   clock: Clock
 ) extends AdminController(actionAuthenticator) {
@@ -29,7 +30,7 @@ class WanderingAdminController @Inject() (
           val availableVertexKinds = (graphKinds.vertexKinds -- Set("Thread", "Tag")).toSeq.sorted
           val userVertexType = availableVertexKinds.find(_.toLowerCase.startsWith("user")).get
           val wanderlust = Wanderlust(userVertexType, request.userId.id)
-          Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, None, Seq.empty, Seq.empty, Seq.empty))
+          Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, None, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
         }
       }
 
@@ -40,23 +41,28 @@ class WanderingAdminController @Inject() (
         val startingVertexKind = body("kind").head
         val startingVertexDataId = body("id").head.toLong
         val preferredCollisions = availableVertexKinds.toSet intersect body("preferredCollisions").toSet
+        val avoidTrivialCollisions = body.contains("avoidTrivialCollisions")
         val steps = body("steps").head.toInt
         val restartProbability = body("restartProbability").head.toDouble
 
-        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, steps, restartProbability)
+        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability)
 
         val promisedResult = Promise[SimpleResult]()
 
         graphClient.wander(wanderlust).onComplete {
 
           case Failure(ex) => {
-            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Failure(ex)), Seq.empty, Seq.empty, Seq.empty))
+            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Failure(ex)), Seq.empty, Seq.empty, Seq.empty, Seq.empty))
             promisedResult.success(view)
           }
 
           case Success(collisions) => {
             val sortedUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
               collisions.users.map { case (userId, count) => userRepo.get(userId) -> count }
+            }.toSeq.sortBy(- _._2)
+
+            val sortedSocialUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+              collisions.socialUsers.map { case (socialUserInfoId, count) => socialUserRepo.get(socialUserInfoId) -> count }
             }.toSeq.sortBy(- _._2)
 
             val sortedUris = db.readOnly(dbMasterSlave = Slave) { implicit session =>
@@ -68,7 +74,7 @@ class WanderingAdminController @Inject() (
             val end = clock.now()
             val timing = end.getMillis - start.getMillis
 
-            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Success(timing)), sortedUsers, sortedUris, sortedExtras))
+            val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Success(timing)), sortedUsers, sortedSocialUsers, sortedUris, sortedExtras))
             promisedResult.success(view)
           }
         }

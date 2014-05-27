@@ -37,6 +37,14 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.embedly.bucket").get)
     new S3EmbedlyStoreImpl(bucketName, amazonS3Client, accessLog)
   }
+
+  @Singleton
+  @Provides
+  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
+    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
+  }
+
+
 }
 
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
@@ -64,5 +72,11 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
     whenConfigured("amazon.s3.embedly.bucket")(
       prodStoreModule.embedlyStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryEmbedlyStoreImpl())
+  }
+
+  @Singleton
+  @Provides
+  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
+    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
   }
 }

@@ -57,7 +57,7 @@ class ElizaEmailCommander @Inject() (
       waiting = true,
       silent = false)))
     fut.recover {
-      case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}. Exception was: $t")
+      case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}", t)
     }
   }
 
@@ -70,7 +70,7 @@ class ElizaEmailCommander @Inject() (
       waiting = true,
       silent = false)))
     fut.recover {
-      case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}. Exception was: $t")
+      case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}", t)
     }
   }
 
@@ -235,14 +235,15 @@ class ElizaEmailCommander @Inject() (
       val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body
       safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
     }
-    result.onSuccess { case _ =>
-      db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get, clock.now()) }
+    // todo(martin) replace with onSuccess when we have better error handling
+    result.onComplete { _ =>
+      db.readWrite { implicit session => nonUserThreadRepo.setLastNotifiedAndIncCount(emailParticipantThread.id.get) }
     }
     result
   }
 
   private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
-    val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier);
+    val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier)
     val protoEmailFut = unsubUrlFut map { unsubUrl =>
       assembleEmail(
         threadEmailData,

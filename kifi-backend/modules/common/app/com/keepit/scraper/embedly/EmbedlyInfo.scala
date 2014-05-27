@@ -39,7 +39,7 @@ object EmbedlyImage {
 case class EmbedlyEntity(count: Int, name: String)
 case class EmbedlyKeyword(score: Int, name: String)
 
-case class ExtendedEmbedlyInfo(
+case class EmbedlyInfo(
   originalUrl: String,
   url: Option[String],
   title: Option[String],
@@ -70,8 +70,8 @@ case class ExtendedEmbedlyInfo(
   }
 }
 
-object ExtendedEmbedlyInfo {
-  val EMPTY = ExtendedEmbedlyInfo( "", None, None, None, None, None, None, None, Seq(), Seq(), Seq())
+object EmbedlyInfo {
+  val EMPTY = EmbedlyInfo( "", None, None, None, None, None, None, None, Seq(), Seq(), Seq())
 
   implicit val idFormat = Id.format[NormalizedURI]
   implicit val entityFormat = Json.format[EmbedlyEntity]
@@ -89,20 +89,20 @@ object ExtendedEmbedlyInfo {
     (__ \ 'images).format[Seq[EmbedlyImage]] and
     (__ \'entities).format[Seq[EmbedlyEntity]] and
     (__ \'keywords).format[Seq[EmbedlyKeyword]]
-  )(ExtendedEmbedlyInfo.apply _, unlift(ExtendedEmbedlyInfo.unapply))
+  )(EmbedlyInfo.apply _, unlift(EmbedlyInfo.unapply))
 }
 
-case class StoredExtendedEmbedlyInfo(
+case class StoredEmbedlyInfo(
   uriId: Id[NormalizedURI],
   calledEmbedlyAt: DateTime,
-  info: ExtendedEmbedlyInfo
+  info: EmbedlyInfo
 )
 
-object StoredExtendedEmbedlyInfo {
+object StoredEmbedlyInfo {
   implicit val idFormat = Id.format[NormalizedURI]
   implicit val format = (
     (__ \'uriId).format[Id[NormalizedURI]] and
     (__ \'calledEmbedlyAt).format[DateTime] and
-    (__ \ 'info).format[ExtendedEmbedlyInfo]
-  )(StoredExtendedEmbedlyInfo.apply _, unlift(StoredExtendedEmbedlyInfo.unapply))
+    (__ \ 'info).format[EmbedlyInfo]
+  )(StoredEmbedlyInfo.apply _, unlift(StoredEmbedlyInfo.unapply))
 }

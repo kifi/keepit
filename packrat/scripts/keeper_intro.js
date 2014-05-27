@@ -1,18 +1,23 @@
 // @require styles/insulate.css
-// @require styles/keeper/keeper_intro.css
+// @require styles/keeper/tile_tooltip.css
 // @require scripts/lib/jquery.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
-// @require scripts/html/keeper/keeper_intro.js
+// @require scripts/html/keeper/tile_tooltip.js
 
 api.port.emit('prefs', function (prefs) {
   if (prefs.showKeeperIntro && document.hasFocus() && !window.keeper) {
     var handlers = {
       hide_keeper_intro: hide.bind(null, null)
     };
-    var $intro = $(render('html/keeper/keeper_intro'))
+    var $intro = $(render('html/keeper/tile_tooltip', {
+      header: 'Meet your kifi keeper',
+      text: 'Use the keeper to:',
+      actions: ['Keep any page', 'Send this page to any email address or friend'],
+      tip: 'Try dragging the keeper up and down'
+    }))
       .insertAfter(tile)
-      .on('click', '.kifi-keeper-intro-x', onClickX)
+      .on('click', '.kifi-tile-tooltip-x', onClickX)
       .each(function () {this.offsetHeight})  // force layout
       .addClass('kifi-showing');
     document.addEventListener('keydown', onKeyDown, true);

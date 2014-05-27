@@ -30,7 +30,7 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean
 
-  def setLastNotifiedAndIncCount(nut: Id[NonUserThread], dt: DateTime)(implicit session: RWSession): Unit
+  def setLastNotifiedAndIncCount(nut: Id[NonUserThread])(implicit session: RWSession): Unit
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread]
 
@@ -97,7 +97,7 @@ class NonUserThreadRepoImpl @Inject() (
     (for (row <- rows if row.econtactId === econtactId) yield row.threadId).list
 
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- rows if row.lastNotifiedAt.isNull || (row.lastNotifiedAt < lastNotifiedBefore && row.threadUpdatedByOtherAt > threadUpdatedByOtherAfter && row.lastNotifiedAt <= row.threadUpdatedByOtherAt && !row.muted)) yield row).list
+    (for (row <- rows if row.lastNotifiedAt.isNull || (row.lastNotifiedAt < lastNotifiedBefore && row.threadUpdatedByOtherAt > threadUpdatedByOtherAfter && row.lastNotifiedAt < row.threadUpdatedByOtherAt && !row.muted)) yield row).list
 
   def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread] =
     (for (row <- rows if row.threadId === messageThreadId) yield row).list
@@ -131,12 +131,12 @@ class NonUserThreadRepoImpl @Inject() (
     }.toOption
   }
 
-  def setLastNotifiedAndIncCount(nut: Id[NonUserThread], dt: DateTime)(implicit session: RWSession): Unit = {
+  def setLastNotifiedAndIncCount(nut: Id[NonUserThread])(implicit session: RWSession): Unit = {
+    val time = clock.now()
     sqlu"""UPDATE non_user_thread
-      SET notified_count = notified_count+1
+      SET notified_count = notified_count+1, last_notified_at = $time, updated_at = $time
       WHERE id = $nut
     """.execute()
-    (for (row <- rows if row.id===nut) yield (row.lastNotifiedAt, row.updatedAt)).update(dt, currentDateTime)
   }
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread] = {

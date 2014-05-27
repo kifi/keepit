@@ -621,6 +621,9 @@ var api = (function createApi() {
           api.tabs.open(url);
         }
       },
+      close: function(tabId) {
+        chrome.tabs.remove(tabId);
+      },
       each: function(callback) {
         for (var id in pages) {
           var page = pages[id];

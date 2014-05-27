@@ -8,7 +8,7 @@ import com.keepit.model.User
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.logging.{LogPrefix, Logging}
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{FutureHelpers, ExecutionContext}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable.ArrayBuffer
 import Logging.LoggerWithPrefix
@@ -140,20 +140,20 @@ trait Typeahead[E, I] extends Logging {
     implicit val fj = ExecutionContext.fj
 
     log.infoP(s"begin re-indexing users ...")
-    val grouped = userIds.grouped(100)
-    val resF = grouped.zipWithIndex.map { case (batch, i) =>
+    val grouped = userIds.grouped(50).toSeq
+    val groupedF = grouped.zipWithIndex.map { case (batch, i) =>
       log.infoP(s"begin re-indexing for batch $i/${grouped.length} ...")
       val futures = batch.map { userId =>
-        refresh(userId).map { filter =>
+        () => refresh(userId).map { filter =>
           log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
         }
       }
-      Future.sequence(futures).map{ _ =>
+      () => FutureHelpers.sequentialExec(futures).map{ res =>
         log.infoP(s"done with re-indexing for batch $i/${grouped.length}")
       }
     }
-    Future.sequence(resF).map{ u =>
-      log.infoP(s"done with re-indexing.")
+    FutureHelpers.sequentialExec(groupedF).map{ u =>
+      log.infoP(s"done with re-indexing all ${userIds.length} users.")
     }
   }
 

@@ -7,6 +7,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, GenericEmailAddress, EmailAddresses}
 import com.keepit.common.logging.Logging
+import com.keepit.commanders.emails.EmailOptOutCommander
 
 class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWaitlistRepo, postOffice: LocalPostOffice, emailOptOutCommander: EmailOptOutCommander) extends Logging {
 
