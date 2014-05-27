@@ -35,8 +35,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$document', '$log',
-  function (keepService, $document, $log) {
+  'keepService', '$document', '$log', '$window',
+  function (keepService, $document, $log, $window) {
 
     return {
       restrict: 'A',
@@ -45,7 +45,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         keepsLoading: '=',
         keepsHasMore: '=',
         keepClick: '=',
-        scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
       },
@@ -164,10 +163,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
           return scope.scrollDisabled;
         };
 
-        if (scope.scrollDistance == null) {
-          scope.scrollDistance = '100%';
-        }
-
         scope.getDraggedKeepsElement = function () {
           var ellipsis = element.find('.kf-shadow-keep-ellipsis');
           var ellipsisCounter = element.find('.kf-shadow-keep-ellipsis-counter');
@@ -191,6 +186,15 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         var shadowDraggedKeeps = element.find('.kf-shadow-dragged-keeps');
         shadowDraggedKeeps.css({top: 0, width: element.find('.kf-my-keeps')[0].offsetWidth + 'px'});
+
+        angular.element($window).on('scroll', function () {
+          var scrollMargin = $window.innerHeight;
+          var totalHeight = $document[0].documentElement.scrollHeight;
+          if (!scope.scrollDisabled &&
+            $window.pageYOffset + $window.innerHeight + scrollMargin > totalHeight) {
+            scope.scrollNext();
+          }
+        });
       }
     };
   }
