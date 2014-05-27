@@ -8,6 +8,7 @@ import com.keepit.cortex.plugins._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.Id
+import scala.concurrent.duration._
 
 @Singleton
 class Word2VecURIFeatureUpdater @Inject()(
@@ -31,7 +32,10 @@ class Word2VecURIFeatureUpdatePluginImpl @Inject()(
   actor: ActorInstance[Word2VecURIFeatureUpdateActor],
   discovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends BaseFeatureUpdatePlugin[Id[NormalizedURI], NormalizedURI, Word2Vec](actor, discovery) with Word2VecURIFeatureUpdatePlugin
+) extends BaseFeatureUpdatePlugin[Id[NormalizedURI], NormalizedURI, Word2Vec](actor, discovery) with Word2VecURIFeatureUpdatePlugin {
+  override val startTime: FiniteDuration = 45 seconds
+  override val updateFrequency: FiniteDuration = 2 minutes
+}
 
 @Singleton
 class Word2VecURIFeatureRetriever @Inject()(
