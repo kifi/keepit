@@ -31,7 +31,6 @@ angular.module('kifi', [
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
-  'kifi.profileCard',
   'kifi.profileService',
   'kifi.tags',
   'kifi.keeps',
