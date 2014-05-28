@@ -126,7 +126,10 @@ if [ "$1" == "package" ]; then
   if [ "$2" == "deploy" ]; then
     echo -e "\nDeploying Firefox extension to kifi.com"
     echo "Uploading to S3..."
-    aws s3 cp out/kifi-beta.xpi s3://kifi-bin/ext/firefox/
+    #aws s3 cp out/kifi-beta.xpi s3://kifi-bin/ext/firefox/
+    aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-beta.xpi \
+      --content-type 'application/x-xpinstall' --body out/kifi-beta.xpi \
+      --cache-control 'no-cache, no-store' --expires 'Fri, 01 Jan 2010 00:00:00 GMT'
     aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-beta.update.rdf \
       --content-type 'application/rdf+xml' --body out/kifi-beta.update.rdf \
       --cache-control 'no-cache, no-store' --expires 'Fri, 01 Jan 2010 00:00:00 GMT'
