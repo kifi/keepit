@@ -151,6 +151,23 @@ class UrlController @Inject() (
     Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
   }
 
+  def urlRenormalizeConsole() = AdminHtmlAction.authenticated{ request =>
+    Ok(html.admin.urlRenormalization())
+  }
+
+  def urlRenormalizeConsoleSubmit() = AdminHtmlAction.authenticated{ request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val regex = body.get("regex").get
+    val urlSelection = body.get("urlSelection").get
+    val mode = body.get("mode").get
+
+    println(s"\n\n=====================\n\n\nregex = ${regex}, urlSelection = ${urlSelection}, mode = ${mode}")
+
+    Ok("list of urls")
+
+  }
+
+
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
