@@ -2,12 +2,10 @@
 
   <h2 class="kf-footer-header"><img class="kf-footer-help-rank-icon" src="img/placeholder-icon.png"></img><span class="kf-footer-help-rank-header">Your help rank</span></h2>
 
-  <table class="kf-footer-help-rank-item" ng-if="me.totalKeepsClicked > 0" ng-click="openHelpRankHelp()">
-    <tr>
-      <td><div class="kf-footer-help-rank-number">{{me.totalKeepsClicked}}</div></td>
-      <td><div class="kf-footer-help-rank-description">You helped {{me.totalKeepsClicked}} people discover new things in the last week</div></td>
-      </tr>
-  </table>
+  <div class="kf-footer-help-rank-item" ng-if="me.totalKeepsClicked > 0" ng-click="openHelpRankHelp()">
+      <div class="kf-footer-help-rank-number">{{me.totalKeepsClicked}}</div>
+      <div class="kf-footer-help-rank-description">You helped {{me.totalKeepsClicked}} people discover new things in the last week</div>
+  </div>
   <div kf-modal ng-if="data.showHelpRankHelp" show="data.showHelpRankHelp">
     <div kf-basic-modal-content centered="true" single-action="false">
       <div class="kf-help-rank-help">
