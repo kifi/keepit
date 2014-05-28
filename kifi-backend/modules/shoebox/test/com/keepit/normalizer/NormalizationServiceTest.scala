@@ -21,11 +21,11 @@ import com.keepit.shoebox.FakeKeepImportsModule
 class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
-    case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = Signature("whatever"))
-    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = Signature("17558679"))
-    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = Signature("some content"))
-    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = Signature("some content"))
-    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062",  signature = Signature("136123062"))
+    case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = Signature(Seq("whatever")))
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = Signature(Seq("17558679")))
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")))
+    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")))
+    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062",  signature = Signature(Seq("136123062")))
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
