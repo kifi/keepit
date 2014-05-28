@@ -223,13 +223,13 @@ exports.requestUpdateCheck = function () {
   log('[requestUpdateCheck]');
   if (addon) {
     var appVer = Cc['@mozilla.org/xre/app-info;1'].getService(Ci.nsIXULAppInfo).version;
-    var compareVersions = Cc['@mozilla.org/xpcom/version-comparator;1'].getService(Ci.nsIVersionComparator);
+    var versions = Cc['@mozilla.org/xpcom/version-comparator;1'].getService(Ci.nsIVersionComparator);
     addon.findUpdates({
         onCompatibilityUpdateAvailable: exports.noop,
         onNoCompatibilityUpdateAvailable: exports.noop,
         onUpdateAvailable: function (addon, install) {
           log('[onUpdateAvailable]', self.version, '=>', install.version, install.state);
-          if (compareVersions(self.version, install.version) < 0) {
+          if (versions.compare(self.version, install.version) < 0) {
             var listener = {
               onNewInstall: exports.noop,
               onDownloadStarted: exports.noop,
@@ -248,7 +248,7 @@ exports.requestUpdateCheck = function () {
           }
           function onDownloadEnded(install) {
             log('[onDownloadEnded]', self.version, '=>', install.version, install.state);
-            if (compareVersions(self.version, install.version) >= 0) {
+            if (versions.compare(self.version, install.version) >= 0) {
               install.cancel();
             }
           }
