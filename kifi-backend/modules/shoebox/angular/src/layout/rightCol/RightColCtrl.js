@@ -3,9 +3,31 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics) {
     $scope.data = $scope.data || {};
+    $scope.me = profileService.me;
+
+    $scope.openHelpRankHelp = function () {
+      $scope.data.showHelpRankHelp = true;
+      $analytics.eventTrack('user_viewed_page', {
+        'type': 'HelpRankHelp'
+      });
+    };
+
+    $scope.yesLikeHelpRank = function () {
+      $scope.data.showHelpRankHelp = false;
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'yesLikeHelpRank'
+      });
+    };
+
+    $scope.noLikeHelpRank = function () {
+      $scope.data.showHelpRankHelp = false;
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'noLikeHelpRank'
+      });
+    };
 
     $scope.installInProgress = function () {
       return installService.installInProgress;
@@ -71,13 +93,5 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.logout = function () {
       profileService.logout();
     };
-
-
-    var updateHeight = _.throttle(function () {
-      $element.css('height', $window.innerHeight + 'px');
-    }, 100);
-    angular.element($window).resize(updateHeight);
-
-    $timeout(updateHeight);
   }
 ]);

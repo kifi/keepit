@@ -25,12 +25,12 @@ angular.module('kifi.search', [
       $scope.search.text = $routeParams.q;
     }
 
-    var reportSearchAnalyticsOnUnload = function() {
+    var reportSearchAnalyticsOnUnload = function () {
       reportSearchAnalytics('unload');
     };
 
     //either "unload" or "refinement"
-    var reportSearchAnalytics = function(endedWith) {
+    var reportSearchAnalytics = function (endedWith) {
       var url = routeService.searchedAnalytics;
       var lastSearchContext = keepService.lastSearchContext();
       if (lastSearchContext && lastSearchContext.query) {

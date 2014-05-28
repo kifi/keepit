@@ -11,16 +11,13 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.allTags.length;
     }, function () {
-      // update antiscroll
-      $scope.refreshScroll();
-
       if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
         keepService.joinTags($scope.keeps, tagService.allTags);
       }
     });
 
     $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
-      var draggedKeeps = keepService.getSelected();
+      var draggedKeeps = [];//keepService.getSelected();
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
@@ -38,8 +35,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$document', '$log',
-  function (keepService, $document, $log) {
+  'keepService', '$document', '$log', '$window',
+  function (keepService, $document, $log, $window) {
 
     return {
       restrict: 'A',
@@ -48,7 +45,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         keepsLoading: '=',
         keepsHasMore: '=',
         keepClick: '=',
-        scrollDistance: '=',
         scrollDisabled: '=',
         scrollNext: '&'
       },
@@ -59,7 +55,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.select = keepService.select;
         scope.unselect = keepService.unselect;
         scope.toggleSelect = keepService.toggleSelect;
-        scope.isSelected = keepService.isSelected;
         scope.preview = keepService.preview;
         scope.togglePreview = keepService.togglePreview;
         scope.isPreviewed = keepService.isPreviewed;
@@ -147,7 +142,9 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         };
 
         scope.onClickKeep = function (keep, $event) {
-          if ($event.target.tagName !== 'A') {
+          return keep || $event; // so that jshint doesn't complain
+          // commenting out, not used yet.
+          /*if ($event.target.tagName !== 'A') {
             if ($event.ctrlKey || $event.metaKey) {
               if (scope.isSelected(keep)) {
                 scope.unselect(keep);
@@ -159,16 +156,12 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             }
           } else if (scope.keepClick) {
             scope.keepClick(keep, $event);
-          }
+          }*/
         };
 
         scope.isScrollDisabled = function () {
           return scope.scrollDisabled;
         };
-
-        if (scope.scrollDistance == null) {
-          scope.scrollDistance = '100%';
-        }
 
         scope.getDraggedKeepsElement = function () {
           var ellipsis = element.find('.kf-shadow-keep-ellipsis');
@@ -193,6 +186,15 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         var shadowDraggedKeeps = element.find('.kf-shadow-dragged-keeps');
         shadowDraggedKeeps.css({top: 0, width: element.find('.kf-my-keeps')[0].offsetWidth + 'px'});
+
+        angular.element($window).on('scroll', function () {
+          var scrollMargin = $window.innerHeight;
+          var totalHeight = $document[0].documentElement.scrollHeight;
+          if (!scope.scrollDisabled &&
+            $window.pageYOffset + $window.innerHeight + scrollMargin > totalHeight) {
+            scope.scrollNext();
+          }
+        });
       }
     };
   }
