@@ -3,7 +3,6 @@ package com.keepit.common.store
 import com.google.inject.{Singleton, Provides}
 import com.keepit.typeahead.socialusers.{InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore}
 import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, EContactTypeaheadStore}
-import com.keepit.common.store.FakeS3ImageStore
 
 case class ShoeboxFakeStoreModule() extends FakeStoreModule {
 
