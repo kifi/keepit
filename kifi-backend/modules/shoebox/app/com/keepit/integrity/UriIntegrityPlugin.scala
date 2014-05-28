@@ -140,51 +140,78 @@ class UriIntegrityActor @Inject()(
    * NOTE: We have 1-1 mapping from entities to url, the only exception (as of writing) is normalizedUri-url mapping, which is 1 to n.
    * A migration from uriA to uriB is (almost) equivalent to N url to uriB migrations, where the N urls are currently associated with uriA.
    */
-  private def handleURIMigration(change: ChangedURI)(implicit session: RWSession): Unit = {
+  private def handleURIMigration(change: ChangedURI): Unit = {
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) {
-      if (oldUriId == newUriId) changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+      if (oldUriId == newUriId) {
+        db.readWrite{ implicit s =>
+          changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.INACTIVE)))
+        }
+      }
     } else {
-      val oldUri = uriRepo.get(oldUriId)
-      uriRepo.get(newUriId) match {
-        case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED => uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
-        case _ =>
+      db.readWrite{ implicit s =>
+        uriRepo.get(newUriId) match {
+          case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED =>
+            uriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
+          case _ =>
+        }
       }
 
-      val urls = urlRepo.getByNormUri(oldUriId)
-      urls.foreach{ url =>
-        handleURLMigrationNoBookmarks(url, newUriId)
+      val urls = db.readWrite{ implicit s =>
+        urlRepo.getByNormUri(oldUriId)
+      }
+      db.readWriteSeq(urls){ (s, url) =>
+        handleURLMigrationNoBookmarks(url, newUriId)(s)
       }
 
-      uriRepo.getByRedirection(oldUri.id.get).foreach{ uri =>
-        uriRepo.save(uri.withRedirect(newUriId, currentDateTime))
+      // fix up redirections
+      val previouslyRedirectedUris = db.readWrite{ implicit s =>
+        uriRepo.getByRedirection(oldUriId)
       }
-      uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
+      db.readWriteSeq(previouslyRedirectedUris){ (s, uri) =>
+        uriRepo.save(uri.withRedirect(newUriId, currentDateTime))(s)
+      }
+      db.readWrite{ implicit s =>
+        val oldUri = uriRepo.get(oldUriId)
+        uriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
+      }
 
       // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
-      val bms = keepRepo.getByUri(oldUriId, excludeState = None)
-      handleBookmarks(bms)
+      val bms = db.readWrite{ implicit s =>
+        keepRepo.getByUri(oldUriId, excludeState = None)
+      }
+      // process keeps for each user
+      bms.groupBy(_.userId).foreach{ case (_, keeps) =>
+        db.readWrite{ implicit s => handleBookmarks(keeps) }
+      }
 
-      changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
+      db.readWrite{ implicit s =>
+        changedUriRepo.saveWithoutIncreSeqnum((change.withState(ChangedURIStates.APPLIED)))
+      }
     }
   }
 
   /**
    * url now pointing to a new uri, any entity related to that url should update its uri reference.
    */
-  private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    handleURLMigrationNoBookmarks(url, newUriId)
-    val bms = keepRepo.getByUrlId(url.id.get)
-    handleBookmarks(bms)
+  private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI]): Unit = {
+    db.readWrite{ implicit s => handleURLMigrationNoBookmarks(url, newUriId) }
+
+    val bms = db.readWrite{ implicit s => keepRepo.getByUrlId(url.id.get) }
+
+    // process keeps for each user
+    bms.groupBy(_.userId).foreach{ case (_, keeps) =>
+      db.readWrite{ implicit s => handleBookmarks(keeps) }
+    }
   }
 
   private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-      log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
+    log.info(s"migrating url ${url.id} to new uri: ${newUriId}")
 
-      val oldUriId = url.normalizedUriId
-      urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-      val newUri = uriRepo.get(newUriId)
-      if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
+    val oldUriId = url.normalizedUriId
+    urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
+    val newUri = uriRepo.get(newUriId)
+    if (newUri.redirect.isDefined) uriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
   }
 
   private def batchURIMigration(batchSize: Int): Int = {
@@ -204,7 +231,7 @@ class UriIntegrityActor @Inject()(
 
     toMerge.map{ change =>
       try{
-        db.readWrite{ implicit s => handleURIMigration(change) }
+        handleURIMigration(change)
       } catch {
         case e: Exception => {
           airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache",e)
@@ -296,7 +323,7 @@ class UriIntegrityActor @Inject()(
   def receive = {
     case BatchURIMigration(batchSize) => Future.successful(batchURIMigration(batchSize)) pipeTo sender
     case URIMigration(oldUri, newUri) => db.readWrite{ implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) }   // process later
-    case URLMigration(url, newUri) => db.readWrite{ implicit s => handleURLMigration(url, newUri)}
+    case URLMigration(url, newUri) => handleURLMigration(url, newUri)
     case BatchURLMigration(batchSize) => batchURLMigration(batchSize)
     case FixDuplicateKeeps() => fixDuplicateKeeps()
     case m => throw new UnsupportedActorMessage(m)
