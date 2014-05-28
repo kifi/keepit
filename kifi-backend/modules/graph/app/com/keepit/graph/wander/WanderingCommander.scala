@@ -68,9 +68,11 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
   private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId,  neighborKinds: Set[VertexType]): Set[VertexId] = {
     vertexReader.moveTo(vertexId)
     val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.edgeReader.moveToNextEdge()) {
-      val neighbor = vertexReader.edgeReader.destination
-      if (neighborKinds.contains(neighbor.kind)) { neighbors += neighbor }
+    while (vertexReader.edgeReader.moveToNextComponent()) {
+      val (destinationKind, _) = vertexReader.edgeReader.component
+      if (neighborKinds.contains(destinationKind)) {
+        while (vertexReader.edgeReader.moveToNextEdge()) { neighbors += vertexReader.edgeReader.destination }
+      }
     }
     neighbors.toSet
   }
