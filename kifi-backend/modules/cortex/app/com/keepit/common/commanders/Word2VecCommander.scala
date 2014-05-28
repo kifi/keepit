@@ -3,7 +3,7 @@ package com.keepit.common.commanders
 import com.google.inject.{Inject, Singleton}
 import com.keepit.cortex.models.word2vec._
 import com.keepit.cortex.utils.MatrixUtils.cosineDistance
-import com.keepit.cortex.utils.TextUtils.TextNormalizer
+import com.keepit.cortex.utils.TextUtils.TextTokenizer
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
@@ -38,8 +38,8 @@ class Word2VecCommander @Inject()(
   }
 
   def getDoc2VecResult(text: String): Option[Doc2VecResult] = {
-    val normedText = TextNormalizer.LowerCaseNormalizer.normalize(text)
-    doc2vec.sampleBest(normedText, numTry = 6, normalize = true)
+    val tokens = TextTokenizer.LowerCaseTokenizer.tokenize(text)
+    doc2vec.sampleBest(tokens, numTry = 6, normalize = true)
   }
 
   def similarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]): Option[Float] = {
