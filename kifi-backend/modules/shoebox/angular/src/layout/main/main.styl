@@ -1,10 +1,20 @@
 .kf-main
   min-width: 454px
   width: calc(100% - 310px)
-  background: #fff
 
+@media only screen and (max-width: 900px)
+  .kf-main
+    -webkit-transition: width sidebarTransitionDuration;
+    transition: width sidebarTransitionDuration;
+
+  .kf-sidebar-active .kf-main
+    width: calc(100% - 270px)
+
+.kf-main
+  
   &>.kf-col-inner
     border-left: 1px solid #dbdee3
+    border-right: 1px solid #dbdee3
     box-sizing: border-box
 
 .kf-main-head
@@ -22,8 +32,6 @@
   font-size: 27px
   line-height: 32px
   font-weight: 300
-  font-smoothing: antialiased
-  color: #67829c
 
 .kf-subtitle
   position: relative
@@ -76,7 +84,7 @@
 
 .kf-query-wrap
   position: relative
-  padding: 10px 0 12px 20px
+  padding: 10px 20px 12px
   white-space: nowrap
   z-index: 1
 
