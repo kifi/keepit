@@ -6,6 +6,7 @@ import com.keepit.cortex.core._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
+import com.keepit.cortex.utils.TextUtils.TextTokenizer
 
 case class Word2VecWordRepresenter(val version: ModelVersion[Word2Vec], word2vec: Word2Vec) extends HashMapWordRepresenter[Word2Vec](word2vec.dimension, word2vec.mapper)
 
@@ -19,7 +20,7 @@ case class Word2VecDocRepresenter @Inject()(
   private val doc2vec = new Doc2Vec(word2vec.mapper, word2vec.dimension)
 
   override def apply(doc: Document): Option[FeatureRepresentation[Document, Word2Vec]] = {
-    doc2vec.sampleBest(doc.tokens.mkString(" "), numTry = 6).map{ res =>
+    doc2vec.sampleBest(doc.tokens, numTry = 6).map{ res =>
       FloatVecFeature[Document, Word2Vec](res.vec)
     }
   }
@@ -33,7 +34,7 @@ case class Word2VecURIRepresenter @Inject()(
   override def isDefinedAt(article: Article): Boolean = article.contentLang == Some(Lang("en"))
 
   override def toDocument(article: Article): Document = {
-    Document(article.content.toLowerCase.split(" "))    // TODO(yingjie): Lucene tokenize
+    Document(TextTokenizer.LowerCaseTokenizer.tokenize(article.content))    // TODO(yingjie): Lucene tokenize
   }
 }
 
