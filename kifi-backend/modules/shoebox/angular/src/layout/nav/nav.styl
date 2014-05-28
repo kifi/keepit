@@ -1,10 +1,9 @@
 .kf-nav-group-name
-  font-size: 19px
+  font-size: 14px
   line-height: 36px
-  color: #67829c
+  color: textDarkColor
   font-weight: 400
   font-smoothing: antialiased
-  padding: 0 0 0 39px
 
 .kf-nav-item
   position: relative
@@ -13,19 +12,15 @@
   line-height: 41px
   user-select: none
 
+  &.active
+    .kf-nav-count
+      color: countColor
+    .kf-nav-name
+      color: textDarkColor
+
 .kf-nav-link
   display: block
-  padding: 0 6px 0 40px
-
-  &.kf-nav-link
-    color: #818692
-
-  &:hover
-    background-color: #e9ecf2
-
-  .kf-nav-item.active &
-    color: #556179
-    background-color: #e3e6ee
+  color: #818692
 
 a.kf-nav-link-btn
   color: #fff
@@ -46,7 +41,6 @@ a.kf-nav-link-btn
 .kf-nav-invite a.kf-nav-link-btn:hover
   background-color: lighten(#70A6F0, 10%)
 
-
 .kf-nav-invite.active a.kf-nav-link-btn
   background: url("../img/find-friends@2x.png") 27px / 14% no-repeat, #E3E6ED
   padding: 13px 42px 13px 63px
@@ -55,24 +49,20 @@ a.kf-nav-link-btn
 a.kf-nav-link-btn:hover
   background-color: #75aefb
 
+.kf-nav-name
+  color: textGreyColor
+
 .kf-nav-count
   float: right
   margin: 10px 0 0
-  border: 1px solid #b8c5d2
-  border-radius: 10.5px
-  background: #eff2f7
-  color: #628196
   font-size: 12px
   line-height: 20px
   height: 19px
   padding: 0 12px
+  color: countGreyColor
 
   &.empty
     display: none
-
-  .kf-nav-item.active &
-    color: #fff
-    background: #b8c5d2
 
 .kf-nav-badge
   position: absolute
@@ -118,3 +108,4 @@ a.kf-nav-link-btn:hover
 
   .kf-nav-friends.active &
     background-position: -42px 8px
+

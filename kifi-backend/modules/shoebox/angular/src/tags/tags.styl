@@ -12,27 +12,38 @@ nav-item()
     margin-top: 15px
 
 .kf-tag-input-box
-  nav-item()
   cursor: text
-  background: #fff
-  white-space: nowrap
+  border-radius: 12px
+  border-style: none
+  background: #eeeeee
   transition: background-color .16s
+  width: 100%
+  height: 24px
 
   input
-    width: 100%
+    white-space: nowrap
+    float: left
     margin: 0
     border: 0
-    padding: 0
-    padding-left: 22px
-    padding-right: 23px
+    padding: 4px 15px 0
     background-color: transparent
-    color: inherit
+    color: textDarkGrey
     font: inherit
     line-height: 1.35
-    background-image: url(../img/tag-icon-blue.png)
-    background-repeat: no-repeat
-    background-size: auto 16px
     box-sizing: border-box
+
+::-webkit-input-placeholder
+  color: #aaaaaa
+  font-style: italic
+:-moz-placeholder
+  color: #aaaaaa
+  font-style: italic
+::-moz-placeholder
+  color: #aaaaaa
+  font-style: italic
+:-ms-input-placeholder
+  color: #aaaaaa
+  font-style: italic
 
 .kf-tag-input-clear
   position: absolute
