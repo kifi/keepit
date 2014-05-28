@@ -15,8 +15,8 @@
 
       <h3>People you may want to add to Kifi</h3>
 
-      <div class="kf-connection-card-container" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
-        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" refresh-scroll="refreshScroll" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
+      <div class="kf-connection-card-container">
+        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
         <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
