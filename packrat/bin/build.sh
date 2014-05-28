@@ -127,7 +127,9 @@ if [ "$1" == "package" ]; then
     echo -e "\nDeploying Firefox extension to kifi.com"
     echo "Uploading to S3..."
     aws s3 cp out/kifi-beta.xpi s3://kifi-bin/ext/firefox/
-    aws s3 cp out/kifi-beta.update.rdf s3://kifi-bin/ext/firefox/
+    aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-beta.update.rdf \
+      --content-type 'application/rdf+xml' --body out/kifi-beta.update.rdf \
+      --cache-control 'no-cache, no-store' --expires 'Fri, 01 Jan 2010 00:00:00 GMT'
     echo "Done."
 
     echo -e "\n!! Please upload kifi.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"
