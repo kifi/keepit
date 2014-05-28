@@ -56,11 +56,11 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     ProbabilityDensity.normalized(componentWeights).sample(Math.random())
   }
 
-  private def sampleDestination(component: (VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[VertexId] = {
+  private def sampleDestination(component: (VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
     val (destinationKind, edgeKind) = component
     val key = (wanderer.id, destinationKind, edgeKind)
     val probability = cache getOrElseUpdate (key, computeDestinationProbability(component, resolver))
-    probability.sample(Math.random())
+    probability.sample(Math.random()).map { destination => (destination, edgeKind) }
   }
 
   private def computeDestinationProbability(component: (VertexType, EdgeType), resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
