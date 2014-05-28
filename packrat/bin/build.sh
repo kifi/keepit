@@ -49,7 +49,7 @@ for f in $(find styles -name '*.css' -not -name 'insulate.css' -not -path 'style
   # repeat the first class name that occurs in each selector outside of parentheses since repetition is not allowed within :not(...)
   css=$(sed -E -e 's/ *\/\*.*\*\/$//g' -e '/^[^@]*[,{]$/ s/(^|[^(])(\.[a-zA-Z0-9_-]*)/\1\2\2\2/' $f)
   echo "${css//\/images\//chrome-extension://__MSG_@@extension_id__/images/}" > "out/chrome/$f"
-  echo "${css//\/images\//resource://kifi-at-42go-dot-com/kifi-beta/data/images/}" > "out/firefox/data/$f"
+  echo "${css//\/images\//resource://kifi-at-42go-dot-com/kifi/data/images/}" > "out/firefox/data/$f"
 done
 for f in $(find styles -name 'insulate.css' -or -path 'styles/iframes/*'); do
   cp $f "out/chrome/$f"
@@ -117,8 +117,8 @@ if [ "$1" == "package" ]; then
 
   cd out
   cfx xpi --pkgdir=firefox \
-    --update-link=https://kifi-bin.s3-us-west-1.amazonaws.com/ext/firefox/kifi-beta.xpi \
-    --update-url=https://kifi-bin.s3-us-west-1.amazonaws.com/ext/firefox/kifi-beta.update.rdf > /dev/null
+    --update-link=https://www.kifi.com/assets/plugins/kifi.xpi \
+    --update-url=https://www.kifi.com/assets/plugins/kifi.update.rdf > /dev/null
   cd - > /dev/null
 
   find out -d 1
@@ -126,13 +126,13 @@ if [ "$1" == "package" ]; then
   if [ "$2" == "deploy" ]; then
     echo -e "\nDeploying Firefox extension to kifi.com"
     echo "Uploading to S3..."
-    #aws s3 cp out/kifi-beta.xpi s3://kifi-bin/ext/firefox/
-    aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-beta.xpi \
-      --content-type 'application/x-xpinstall' --body out/kifi-beta.xpi \
-      --cache-control 'no-cache, no-store' --expires 'Fri, 01 Jan 2010 00:00:00 GMT'
-    aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-beta.update.rdf \
-      --content-type 'application/rdf+xml' --body out/kifi-beta.update.rdf \
-      --cache-control 'no-cache, no-store' --expires 'Fri, 01 Jan 2010 00:00:00 GMT'
+    #aws s3 cp out/kifi.xpi s3://kifi-bin/ext/firefox/
+    aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi.xpi \
+      --content-type 'application/x-xpinstall' --body out/kifi.xpi \
+      --cache-control 'no-cache, no-store'
+    aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi.update.rdf \
+      --content-type 'application/rdf+xml' --body out/kifi.update.rdf \
+      --cache-control 'no-cache, no-store'
     echo "Done."
 
     echo -e "\n!! Please upload kifi.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard"
