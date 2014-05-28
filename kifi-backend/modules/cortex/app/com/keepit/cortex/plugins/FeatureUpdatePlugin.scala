@@ -27,6 +27,8 @@ import com.keepit.common.logging.Logging
 
 
 trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin{
+  val startTime: FiniteDuration = 30 seconds
+  val updateFrequency: FiniteDuration = 2 minutes
   def update(): Unit
 }
 
@@ -47,7 +49,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
 
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 2 minutes, actor.ref, Update)
+    scheduleTaskOnLeader(actor.system, startTime, updateFrequency, actor.ref, Update)
   }
 
   override def onStop() {
