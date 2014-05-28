@@ -5,6 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.cortex.utils.MatrixUtils
 import com.keepit.cortex.nlp.POSTagger
 import com.keepit.common.logging.Logging
+import com.keepit.cortex.utils.TextUtils.TextTokenizer
 
 case class Doc2VecResult(vec: Array[Float], keywords: Array[String], bagOfWords: Array[String])
 
@@ -85,8 +86,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     (rwords.toArray, r, rscore)
   }
 
-  def cluster(text: String): (Vectors, ArrayOfWords) = {
-    val tokens = text.toLowerCase().split(" ").toList
+  def cluster(tokens: Seq[String]): (Vectors, ArrayOfWords) = {
     val shuffled = Random.shuffle(tokens).toArray
     val (ws, vecs) = genVecs(shuffled)
     val crp = new CRPImpl()
@@ -138,14 +138,14 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     (c.toArray, cw.toArray)
   }
 
-  def getRepresentatives(text: String): (Vectors, ArrayOfWords) = {
-    val (c, cw) = cluster(text)
+  def getRepresentatives(tokens: Seq[String]): (Vectors, ArrayOfWords) = {
+    val (c, cw) = cluster(tokens)
     val (c2, cw2) = filterAndRankClusters(c, cw)
     (c2, cw2)
   }
 
-  def getDocVecAndKeyWords(text: String): Option[Doc2VecResult] = {
-    val (c, cw) = getRepresentatives(text)
+  def getDocVecAndKeyWords(tokens: Seq[String]): Option[Doc2VecResult] = {
+    val (c, cw) = getRepresentatives(tokens)
     if (c.isEmpty) None
     else {
       val docVec = new Array[Float](dim)
@@ -169,11 +169,11 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     }
   }
 
-  def sampleBest(text: String, numTry: Int = 5, normalize: Boolean = true, parallel: Boolean = true): Option[Doc2VecResult] = {
+  def sampleBest(tokens: Seq[String], numTry: Int = 5, normalize: Boolean = true, parallel: Boolean = true): Option[Doc2VecResult] = {
     val samples = if (parallel) {
-      (0 until numTry).par.flatMap{ i => getDocVecAndKeyWords(text) }.toArray
+      (0 until numTry).par.flatMap{ i => getDocVecAndKeyWords(tokens) }.toArray
     } else {
-      (0 until numTry).flatMap{ i => getDocVecAndKeyWords(text) }.toArray
+      (0 until numTry).flatMap{ i => getDocVecAndKeyWords(tokens) }.toArray
     }
 
     if (samples.isEmpty) return None
