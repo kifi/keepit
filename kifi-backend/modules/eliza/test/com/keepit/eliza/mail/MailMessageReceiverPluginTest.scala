@@ -94,6 +94,37 @@ class MailMessageReceiverPluginTest extends Specification with ElizaTestInjector
           |
         """.stripMargin
 
+      val outlookEmail =
+        """
+          |Great! (my first email from outlook.com)
+          |
+          |From: discuss+43c8e5ab65a74268b7fbee31ce11ffd1@kifi.com
+          |To: arandomguy@outlook.com
+          |Subject: Stylus - expressive=2C robust=2C feature-rich CSS preprocessor
+          |Date: Wed=2C 28 May 2014 20:22:34 +0000
+          |
+          |=0A=
+          |=0A=
+          |=0A=
+          |=0A=
+          |=0A=
+          |  =0A=
+          |  =0A=
+          |  =0A=
+          |  kifi=0A=
+        """.stripMargin
+
+      val zimbraEmail =
+        """
+          |Testing Zimbra webmail
+          |
+          |----- Original Message -----
+          |From: "Marvin Adams (via Kifi)" <discuss+c7958e8b69564b519f7e8237b0529348@kifi.com>
+          |To: marvinadams@stanford.edu
+          |Sent: Wednesday, May 28, 2014 1:40:09 PM
+          |Subject: user-select
+        """.stripMargin
+
       MailDiscussionMessageParser.extractMessage(email1) ===
         """Testing
           |Testing sdlkfjslkdfjslfdjs.
@@ -110,6 +141,10 @@ class MailMessageReceiverPluginTest extends Specification with ElizaTestInjector
           |another language""".stripMargin
 
       MailDiscussionMessageParser.extractMessage(email3) === "Replying to the test"
+
+      MailDiscussionMessageParser.extractMessage(outlookEmail) === "Great! (my first email from outlook.com)"
+
+      MailDiscussionMessageParser.extractMessage(zimbraEmail) === "Testing Zimbra webmail"
     }
   }
 

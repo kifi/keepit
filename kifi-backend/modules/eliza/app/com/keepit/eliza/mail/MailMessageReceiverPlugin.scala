@@ -119,8 +119,17 @@ class MailDiscussionMessageParser @Inject() (
 
 object MailDiscussionMessageParser {
   val SIGNATURES = Seq("Sent from my iPhone")
+  val EXTRACTORS = Seq(
+    raw"<[\s\S]+@[\s\S]+>[^\n]*:",               // Gmail (US)
+    raw"\([\s\S]+@[\s\S]+\)[^\n]*:",             // Gmail (other cases)
+    raw"From:[\s\S]+@[\s\S]+To:[\s\S]+@[\s\S]+", // Outlook (US)
+    raw"----- Original Message -----"            // Zimbra
+  )
   def extractMessage(content: String): String = {
-    val mainText = (new Regex(raw"[^\n]*((<[\s\S]+@[\s\S]+>)|(\([\s\S]+@[\s\S]+\)))[^\n]*:")).split(content)(0).trim
+    val mainText = EXTRACTORS.foldLeft(content){ (extracted, extractor) =>
+      val newExtracted = (new Regex(raw"[^\n]*$extractor")).split(content)(0).trim
+      if (newExtracted.length < extracted.length) newExtracted else extracted
+    }
     SIGNATURES.foldLeft(mainText)((text, signature) => text.stripSuffix(signature)).trim
   }
 }
