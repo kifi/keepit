@@ -44,7 +44,7 @@ class NormalizationServiceImpl @Inject() (
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     val relevantCandidates = getRelevantCandidates(currentReference, candidates)
-    log.debug(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
+    log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
     val futureResult = for {
       betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
       betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
