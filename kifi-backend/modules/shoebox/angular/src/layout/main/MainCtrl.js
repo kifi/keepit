@@ -26,14 +26,6 @@ angular.module('kifi.layout.main', [
       }
     };
 
-    $scope.onFocus = function () {
-      $scope.focus = true;
-    };
-
-    $scope.onBlur = function () {
-      $scope.focus = false;
-    };
-
     $scope.clear = function () {
       $scope.search.text = '';
       performSearch();
@@ -65,13 +57,6 @@ angular.module('kifi.layout.main', [
     });
 
     $scope.undo = undoService;
-
-    var updateHeight = _.throttle(function () {
-      $element.css('height', $window.innerHeight + 'px');
-    }, 100);
-    angular.element($window).resize(updateHeight);
-
-    $timeout(updateHeight);
 
     var messages = {
       0: 'Welcome back!',
@@ -169,8 +154,8 @@ angular.module('kifi.layout.main', [
       }
     };
 
-    $scope.openExportPopup = function($event) {
-      var url = angular.element($event.target)[0].href;
+    $scope.openExportPopup = function ($event) {
+      var url = $event.target.href;
       $window.open(url, '', 'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=no,width=1000,height=500');
       $event.preventDefault();
       return false;
@@ -207,8 +192,8 @@ angular.module('kifi.layout.main', [
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
             $scope.disableBookmarkImport = false;
-            $scope.importFileStatus = 'We may have had problems with your links. Reload the page to see if they’re coming in. '
-              + 'If not, please contact support so we can fix it.';
+            $scope.importFileStatus = 'We may have had problems with your links. Reload the page to see if they’re coming in. ' +
+              'If not, please contact support so we can fix it.';
           });
         } else {
           $scope.importFileStatus = 'Hm, couldn’t upload your file. Try picking it again.';
