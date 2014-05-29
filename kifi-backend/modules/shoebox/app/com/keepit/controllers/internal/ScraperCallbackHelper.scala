@@ -9,7 +9,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{timing,timingWithResult}
 import java.util.concurrent.locks.ReentrantLock
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import play.modules.statsd.api.Statsd
 
 
 @Singleton
@@ -26,6 +25,7 @@ class ScraperCallbackHelper @Inject()(
   private val assignLock    = new ReentrantLock()
   private val pageInfoLock  = new ReentrantLock()
   private val imageInfoLock = new ReentrantLock()
+  private val normalizedUriLock = new ReentrantLock()
 
   def withLock[T](lock:ReentrantLock)(f: => T) = {
     try {
@@ -84,4 +84,11 @@ class ScraperCallbackHelper @Inject()(
     }
   }
 
+  def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
+    withLock(normalizedUriLock) {
+      db.readWrite(attempts = 1) { implicit s =>
+        normUriRepo.save(normalizedUri)
+      }
+    }
+  }
 }
