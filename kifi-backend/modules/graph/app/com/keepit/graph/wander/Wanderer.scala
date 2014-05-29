@@ -5,22 +5,23 @@ import scala.collection.mutable
 import com.keepit.common.math.ProbabilityDensity
 import scala.Some
 import com.keepit.graph.model.EdgeKind.EdgeType
+import com.keepit.graph.model.VertexKind.VertexType
 
 trait Wanderer {
-  def wander(steps: Int, teleporter: Teleporter, resolver: EdgeWeightResolver, journal: TravelJournal): Unit
+  def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit
 }
 
 class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
 
-  def wander(steps: Int, teleporter: Teleporter, resolver: EdgeWeightResolver, journal: TravelJournal): Unit = {
-    val probabilityCache = mutable.Map[VertexId, ProbabilityDensity[(VertexId, EdgeType)]]()
+  def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
+    val probabilityCache = mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]()
     teleportTo(teleporter.surely, journal, isStart = true)
     var step = 0
     while (step < steps) {
       teleporter.maybe(wanderer) match {
         case Some(newStart) => teleportTo(newStart, journal)
         case None => {
-          assessOutgoingEdges(resolver, probabilityCache).sample(Math.random()) match {
+          sampleComponent(resolver).flatMap(sampleDestination(_, resolver, probabilityCache)) match {
             case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
             case None => teleportTo(teleporter.surely, journal, isDeadend = true)
           }
@@ -45,17 +46,35 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     wanderer.moveTo(destination)
   }
 
-  private def assessOutgoingEdges(resolver: EdgeWeightResolver, cache: mutable.Map[VertexId, ProbabilityDensity[(VertexId, EdgeType)]]): ProbabilityDensity[(VertexId, EdgeType)] = {
-    cache getOrElseUpdate (wanderer.id, {
-      var weights = mutable.MutableList[((VertexId, EdgeKind[_ <:EdgeDataReader]), Double)]()
-      while (weights.length < wanderer.edgeReader.degree) {
-        wanderer.edgeReader.moveToNextEdge()
-        val destination = wanderer.edgeReader.destination
-        scout.moveTo(destination)
-        val weight = resolver.weight(wanderer, scout, wanderer.edgeReader)
-        weights += ((destination, wanderer.edgeReader.kind) -> weight)
+  private def sampleComponent(resolver: EdgeResolver): Option[(VertexType, EdgeType)] = {
+    val componentWeights = mutable.MutableList[((VertexType, EdgeType), Double)]()
+    while (wanderer.edgeReader.moveToNextComponent()) {
+      val (destinationKind, edgeKind) = wanderer.edgeReader.component
+      val weight = resolver.weightComponent(wanderer.kind, destinationKind, edgeKind)
+      componentWeights += (destinationKind, edgeKind) -> weight
+    }
+    ProbabilityDensity.normalized(componentWeights).sample(Math.random())
+  }
+
+  private def sampleDestination(component: (VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
+    val (destinationKind, edgeKind) = component
+    val key = (wanderer.id, destinationKind, edgeKind)
+    val probability = cache getOrElseUpdate (key, computeDestinationProbability(component, resolver))
+    probability.sample(Math.random()).map { destination => (destination, edgeKind) }
+  }
+
+  private def computeDestinationProbability(component: (VertexType, EdgeType), resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
+    val edgeWeights = mutable.MutableList[(VertexId, Double)]()
+    while (wanderer.edgeReader.moveToNextComponent()) {
+      if (wanderer.edgeReader.component == component) {
+        while (wanderer.edgeReader.moveToNextEdge()) {
+          val destination = wanderer.edgeReader.destination
+          scout.moveTo(destination)
+          val weight = resolver.weightEdge(wanderer, scout, wanderer.edgeReader)
+          edgeWeights += (destination -> weight)
+        }
       }
-      ProbabilityDensity.normalized(weights)
-    })
+    }
+    ProbabilityDensity.normalized(edgeWeights)
   }
 }

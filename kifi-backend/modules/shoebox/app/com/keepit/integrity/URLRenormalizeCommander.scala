@@ -13,6 +13,16 @@ import com.keepit.common.zookeeper.CentralConfig
 import scala.collection.mutable
 import com.keepit.common.logging.Logging
 
+case class DomainOrURLRegex(domainRegex: Option[String] = None, urlRegex: Option[String] = None){
+
+  assume((domainRegex.isDefined && urlRegex.isDefined) == false)
+
+  def isDefined: Boolean = !isEmpty
+  def isEmpty: Boolean = domainRegex.isEmpty && urlRegex.isEmpty
+  def isDomainRegex: Boolean = domainRegex.isDefined
+  def isUrlRegex: Boolean = urlRegex.isDefined
+}
+
 class URLRenormalizeCommander @Inject()(
   db: Database,
   airbrake: AirbrakeNotifier,
@@ -24,17 +34,17 @@ class URLRenormalizeCommander @Inject()(
   centralConfig: CentralConfig
 ) extends Logging{
 
-  def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = {
+  def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, regex: DomainOrURLRegex = DomainOrURLRegex(None, None)) = {
 
     def getUrlList() = {
       val urls = db.readOnly { implicit s =>
-        domainRegex match {
-          case Some(regex) => urlRepo.getByDomainRegex(regex)
-          case None => urlRepo.all
-        }
+        if (regex.isEmpty) urlRepo.all
+        else if (regex.isDomainRegex) urlRepo.getByDomainRegex(regex.domainRegex.get)
+        else if (regex.isUrlRegex) urlRepo.getByURLRegex(regex.urlRegex.get)
+        else Seq()
       }.sortBy(_.id.get.id)
 
-      val lastId = if (domainRegex.isDefined) 0L else { centralConfig(RenormalizationCheckKey) getOrElse 0L }
+      val lastId = if (regex.isDefined) 0L else { centralConfig(RenormalizationCheckKey) getOrElse 0L }
       urls.filter(_.id.get.id > lastId).filter(_.state == URLStates.ACTIVE)
     }
 
@@ -54,7 +64,7 @@ class URLRenormalizeCommander @Inject()(
 
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
-      val msg = s"domainRegex = ${domainRegex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
+      val msg = s"regex = ${regex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
       systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     }
@@ -103,7 +113,7 @@ class URLRenormalizeCommander @Inject()(
     val batchUrls = batch[URL](urls, batchSize = 25)     // avoid long DB write lock.
 
     val originalRef =       // all active urls pointing to a uri initially
-    if (clearSeq && domainRegex.isEmpty){
+    if (clearSeq && regex.isEmpty){
       // we already got all urls
       urls.map{ url => (url.id.get, url.normalizedUriId)}.groupBy(_._2).map{ case (uriId, group) => (uriId, group.map{_._1}.toSet)}
     } else{
@@ -141,7 +151,7 @@ class URLRenormalizeCommander @Inject()(
           }
         }
       }
-      if (domainRegex.isEmpty && !readOnly) urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
+      if (regex.isEmpty && !readOnly) urls.lastOption.map{ url => centralConfig.update(RenormalizationCheckKey, url.id.get.id)}     // We assume id's are already sorted ( in getUrlList() )
     }
 
     db.readWrite{ implicit s =>

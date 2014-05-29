@@ -4,7 +4,7 @@ import org.specs2.mutable.SpecificationLike
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{BasicArticle, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{Signature, BasicArticle, FakeScrapeSchedulerModule}
 import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
@@ -21,11 +21,11 @@ import com.keepit.shoebox.FakeKeepImportsModule
 class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
-    case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever")
-    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679")
-    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content")
-    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content")
-    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062")
+    case ("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = Signature(Seq("whatever")))
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = Signature(Seq("17558679")))
+    case ("http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")))
+    case ("http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")))
+    case ("http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062",  signature = Signature(Seq("136123062")))
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {

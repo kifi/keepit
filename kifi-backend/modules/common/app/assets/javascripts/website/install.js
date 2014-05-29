@@ -41,7 +41,7 @@ $(function() {
     $("#firefox-install").show();
     $("#firefox-install").click(function() {
       $(this).text("Installing...");
-      document.location = "https://www.kifi.com/assets/plugins/kifi-beta.xpi";
+      document.location = "https://www.kifi.com/assets/plugins/kifi.xpi";
     });
   }
 });

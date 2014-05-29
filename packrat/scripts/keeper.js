@@ -284,6 +284,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       });
     }, 400, true));
+
+    $(tile).on('mousedown click keydown keypress keyup', function (e) {
+      e.stopPropagation();
+    });
   }
 
   function showSlider(trigger) {
