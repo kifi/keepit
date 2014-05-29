@@ -1,0 +1,18 @@
+<div class="kf-keep-tags">
+  <ul class="keep-tag-list">
+    <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in keep.tagList">
+      <a class="kf-keep-tag-link" href="/tag/{{tag.id}}">{{tag.name}}</a>
+      <a class="keep-tag-x" href="javascript:" ng-click="removeTag(tag)">×</a>
+    </li>
+    <li class="keep-tag-new">
+      <span kf-tag-suggestions>
+        <input focus-when="shouldGiveFocus" class="keep-tag-input" type="text" placeholder="tag name" ng-model="tagFilter.name" ng-keydown="onKeydown($event)" ng-blur="hideAddTagDropdown()">
+        <ul class="page-coll-opts">
+          <li class="page-coll-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-mousedown="addTag(tag, keep)" ng-bind-html="tag.prettyHtml" ng-mouseover="highlightTag(tag)"></li>
+          <li class="page-coll-opt" ng-if="isAddTagShown()" ng-mousedown="createAndAddTag(keep)" ng-class="{ current: isTagHighlighted(null) }" ng-mouseover="highlightTag(null)">{{tagFilter.name}}<span class="new-label">{{newTagLabel}}</span></li>
+        </ul>
+        <span class="page-coll-opt-hidden"></span>
+      </span>
+    </li>
+  </ul>
+</div>
