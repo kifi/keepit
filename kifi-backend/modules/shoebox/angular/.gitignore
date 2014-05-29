@@ -1,8 +1,4 @@
-/dist/kifi.css
-/dist/kifi.js
-/dist/kifi-tpl.js
-/dist/lib.css
-/dist/lib.js
+/dist
 /lib/
 /node_modules
 /.angular.sublime-workspace

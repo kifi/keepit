@@ -55,9 +55,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.select = keepService.select;
         scope.unselect = keepService.unselect;
         scope.toggleSelect = keepService.toggleSelect;
-        scope.preview = keepService.preview;
-        scope.togglePreview = keepService.togglePreview;
-        scope.isPreviewed = keepService.isPreviewed;
 
         var antiscroll = element.find('.antiscroll-inner');
         var wrapper = element.find('.keeps-wrapper');
@@ -94,25 +91,19 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             /* jshint maxcomplexity: false */
             switch (e.which) {
               case 13: // enter
-                var p = keepService.getHighlighted();
-                keepService.togglePreview(p);
+                //var p = keepService.getHighlighted();
+                //keepService.togglePreview(p);
                 captured = true;
-                break;
-              case 27: // esc
-                if (keepService.isDetailOpen()) {
-                  keepService.clearState();
-                  captured = true;
-                }
                 break;
               case 38: // up
               case 75: // k
-                keepService.previewPrev();
+                //keepService.previewPrev();
                 bringCardIntoViewUp();
                 captured = true;
                 break;
               case 40: // down
               case 74: // j
-                keepService.previewNext();
+                //keepService.previewNext();
                 bringCardIntoViewDown();
                 captured = true;
                 break;
