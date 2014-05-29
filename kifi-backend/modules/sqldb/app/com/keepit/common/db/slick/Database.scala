@@ -144,7 +144,7 @@ class Database @Inject() (
 
   def readWriteSeq[D, T](batch: Seq[D])(f: (RWSession, D) => T)(implicit location: Location): Unit = {
     def sink(a: D, b: T): Unit = {}
-    readWriteSeq(batch, sink)(f)
+    readWriteSeq(batch, sink)(f)(location)
   }
 
   def readWriteSeq[D, T](batch: Seq[D], collector: (D, T) => Unit)(f: (RWSession, D) => T)(implicit location: Location): Unit = {
