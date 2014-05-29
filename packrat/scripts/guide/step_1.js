@@ -15,7 +15,7 @@ guide.step1 = guide.step1 || function () {
     {lit: '.kifi-tile-card', pad: [20, 40]},
     {lit: '.kifi-keep-card', pad: [0, 44], req: [0]},
     {lit: '.kifi-keep-card', pad: [0, 44], req: [0], arrow: '.kifi-kept-tag,.kifi-keep-tag'},
-    {lit: '.kifi-tagbox', pad: [0, 10, 20], req: [0, 2]}];
+    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], req: [0, 2]}];
   var handlers = {
     kept: complete.bind(null, 2),
     add_tag: complete.bind(null, 4)
@@ -68,7 +68,7 @@ guide.step1 = guide.step1 || function () {
     }
   }
 
-  function updateSpotlightPosition(el, r) {
+  function updateSpotlightPosition(el, r, ms) {
     var stepIdx = completed, pIdx = stepIdx;
     var step = steps[stepIdx], p = step;
     var lit = document.querySelector(step.lit);
@@ -90,36 +90,48 @@ guide.step1 = guide.step1 || function () {
           y: r.top - p.pad[0],
           w: r.width + p.pad[1] * 2,
           h: r.height + p.pad[0] + p.pad[p.pad.length > 2 ? 2 : 0]
-        }, {opacity: 1});
+        }, {opacity: 1, ms: ms});
     } else {
       return hide();
     }
   }
 
-  function onTileChildChange() {
+  function onTileChildChange(records) {
+    log('[onTileChildChange]', completed, records);
     if (completed < 1) {
       if (tile.querySelector(steps[1].lit)) {
         completed = 1;
       }
-    } else if (completed < 3) {
+    } else if (completed < 4) {
+      // TODO: check records for addition of .kifi-tagbox node instead
       var tagbox = tile.querySelector(steps[3].lit);
       if (tagbox) {
         completed = 3;
-        var onChange = _.debounce(onTagboxChange.bind(tagbox), 5, true);
-        tagboxObserver = new MutationObserver(onChange);
+        var onTagboxChangeDebounced = _.debounce(onTagboxChange.bind(tagbox), 20, true);
+        tagboxObserver = new MutationObserver(onTagboxChangeDebounced);
         tagboxObserver.observe(tagbox, {attributes: true});
-        $(tagbox).on('transitionend', onChange);
+        onTagboxChangeDebounced();
         return;
       }
+      // TODO: disconnect and release tagboxObserver if .kifi-tagbox element removed
     }
     updateSpotlightPosition();
   }
 
-  function onTagboxChange() {
-    var r = this.getBoundingClientRect(), cs = window.getComputedStyle(this);
-    var w = parseFloat(cs.width) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-    var h = parseFloat(cs.height) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-    updateSpotlightPosition(this, {left: r.right - w, top: r.bottom - h, width: w, height: h});
+  function onTagboxChange(records) {
+    if (this.classList.contains('kifi-in')) {
+      var cs = window.getComputedStyle(this);
+      var w = parseFloat(cs.width) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+      var h = parseFloat(cs.height) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+      var dur = cs.transitionDuration.split(',')[0];
+      var ms = (~dur.indexOf('ms') ? 1 : 1000) * parseFloat(dur);  // TODO: check whether a transition is in effect before using ms
+      var r = this.getBoundingClientRect();
+      log('[onTagboxChange]', records, w, 'x', h, 'right:', r.right, 'bottom:', r.bottom, 'ms:', ms);
+      updateSpotlightPosition(this, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
+    } else {
+      log('[onTagboxChange]', records);
+      updateSpotlightPosition();
+    }
   }
 
   function wholeWindow() {
