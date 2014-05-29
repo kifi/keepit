@@ -6,6 +6,7 @@ import com.keepit.common.math.ProbabilityDensity
 import scala.Some
 import com.keepit.graph.model.EdgeKind.EdgeType
 import com.keepit.graph.model.VertexKind.VertexType
+import play.api.Logger
 
 trait Wanderer {
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit
@@ -13,7 +14,10 @@ trait Wanderer {
 
 class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
 
+  lazy val log = Logger("wanderer")
+
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
+    log.info(s"Wandering for $steps steps")
     val probabilityCache = mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]()
     teleportTo(teleporter.surely, journal, isStart = true)
     var step = 0
@@ -29,19 +33,30 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
       }
       step += 1
     }
+    log.info(s"[Complete] ${wanderer.id}")
     journal.onComplete(wanderer)
   }
 
   private def teleportTo(destination: VertexId, journal: TravelJournal, isDeadend: Boolean = false, isStart: Boolean = false): Unit = {
     scout.moveTo(destination)
-    if (isStart) journal.onStart(scout)
-    else if (isDeadend) journal.onDeadend(wanderer, scout)
-    else journal.onTeleportation(wanderer, scout)
+    if (isStart) {
+      log.info(s"[Start] $destination")
+      journal.onStart(scout)
+    }
+    else if (isDeadend) {
+      log.info(s"[Deadend] ${wanderer.id} --> ${scout.id}")
+      journal.onDeadend(wanderer, scout)
+    }
+    else {
+      log.info(s"[Teleportation] ${wanderer.id} --> ${scout.id}")
+      journal.onTeleportation(wanderer, scout)
+    }
     wanderer.moveTo(destination)
   }
 
   private def traverseTo(destination: VertexId, edgeKind: EdgeType, journal: TravelJournal): Unit = {
     scout.moveTo(destination)
+    log.info(s"[Traverse] ${wanderer.id} --${edgeKind.code}-> ${scout.id}")
     journal.onEdgeTraversal(wanderer, scout, edgeKind)
     wanderer.moveTo(destination)
   }
