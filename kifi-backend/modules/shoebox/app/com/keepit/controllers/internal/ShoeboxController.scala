@@ -135,28 +135,26 @@ class ShoeboxController @Inject() (
   def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
-    val saved = db.readWrite(attempts = 1) { implicit s =>
-      normUriRepo.save(normalizedUri)
-    }
+    val saved = scraperHelper.saveNormalizedURI(normalizedUri)
     log.debug(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
-     val saveResult = Try(db.readWrite(attempts = 1) { implicit s =>
-       // Handle serialization in session to be transactional.
-       val originalNormalizedUri = normUriRepo.get(uriId)
-       val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
-       val newNormalizedUriResult = Json.fromJson[NormalizedURI](originalJson ++ request.body.as[JsObject])
+    val saveResult = Try {
+      // Handle serialization in session to be transactional.
+      val originalNormalizedUri = db.readOnly{ implicit s => normUriRepo.get(uriId) }
+      val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
+      val newNormalizedUriResult = Json.fromJson[NormalizedURI](originalJson ++ request.body.as[JsObject])
 
-       newNormalizedUriResult.fold({ invalid =>
-         log.error(s"Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}")
-         airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update: $invalid. See logs for more.")
-         None
-       }, { normalizedUri =>
-         Some(normUriRepo.save(normalizedUri))
-       }).nonEmpty
-    })
+      newNormalizedUriResult.fold({ invalid =>
+        log.error(s"Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}")
+        airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update: $invalid. See logs for more.")
+        None
+      }, { normalizedUri =>
+        Some(scraperHelper.saveNormalizedURI(normalizedUri))
+      }).nonEmpty
+    }
     saveResult match {
       case Success(res) =>
         Ok(Json.toJson(res))
@@ -165,7 +163,6 @@ class ShoeboxController @Inject() (
         airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update", ex)
         Ok(Json.toJson(false))
     }
-
   }
 
   def scraped() = SafeAsyncAction(parse.tolerantJson) { request =>
