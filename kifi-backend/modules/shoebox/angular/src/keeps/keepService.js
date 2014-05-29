@@ -22,11 +22,8 @@ angular.module('kifi.keepService', [
       selected = {},
       before = null,
       end = false,
-      previewed = null,
-      selectedIdx,
+      selectedIdx = 0,
       limit = 30,
-      isDetailOpen = false,
-      singleKeepBeingPreviewed = false,
       previewUrls = {},
       doc = $document[0],
       screenshotDebouncePromise = false;
@@ -206,86 +203,9 @@ angular.module('kifi.keepService', [
         return lastSearchContext;
       },
 
-      isDetailOpen: function () {
-        return isDetailOpen;
-      },
-
-      isSingleKeep: function () {
-        return singleKeepBeingPreviewed;
-      },
-
-      getPreviewed: function () {
-        return previewed || null;
-      },
-
-      isPreviewed: function (keep) {
-        return !!previewed && previewed === keep;
-      },
-
       getHighlighted: function () {
         return list[selectedIdx];
       },
-
-      preview: function (keep) {
-        if (keep == null) {
-          api.clearState();
-        } else {
-          singleKeepBeingPreviewed = true;
-          isDetailOpen = true;
-        }
-        var detectedIdx = keepIdx(keep);
-        selectedIdx = detectedIdx >= 0 ? detectedIdx : selectedIdx || 0;
-        previewed = keep;
-        api.getChatter(previewed);
-
-        $analytics.eventTrack('user_clicked_page', {
-          'action': 'preview',
-          'selectedIdx': selectedIdx
-        });
-
-        return keep;
-      },
-
-      togglePreview: function (keep) {
-        if (api.isPreviewed(keep) && _.size(selected) > 1) {
-          previewed = null;
-          isDetailOpen = true;
-          singleKeepBeingPreviewed = false;
-          return null;
-        }
-        else if (api.isPreviewed(keep)) {
-          return api.clearState();
-        }
-        return api.preview(keep);
-      },
-
-      previewNext: _.throttle(function () {
-        selectedIdx = selectedIdx || 0;
-        var toPreview;
-        if (list.length - 1 > selectedIdx) {
-          toPreview = list[selectedIdx + 1];
-          selectedIdx++;
-        } else {
-          toPreview = list[0];
-          selectedIdx = 0;
-        }
-        api.togglePreview(toPreview);
-      }, 150),
-
-      previewPrev: _.throttle(function () {
-        selectedIdx = selectedIdx || 0;
-        var toPreview;
-        if (selectedIdx > 0) {
-          toPreview = list[selectedIdx - 1];
-          selectedIdx--;
-        } else {
-          toPreview = list[0];
-          selectedIdx = 0;
-        }
-        if (!api.isPreviewed(toPreview)) {
-          api.togglePreview(toPreview);
-        }
-      }, 150),
 
       isSelected: function (keep) {
         return keep && keep.id && !!selected[keep.id];
@@ -294,15 +214,7 @@ angular.module('kifi.keepService', [
       select: function (keep) {
         var id = keep.id;
         if (id) {
-          isDetailOpen = true;
           selected[id] = keep;
-          if (_.size(selected) === 1) {
-            api.preview(keep);
-          }
-          else {
-            previewed = null;
-            singleKeepBeingPreviewed = false;
-          }
           selectedIdx = keepIdx(keep);
           return true;
         }
@@ -313,20 +225,7 @@ angular.module('kifi.keepService', [
         var id = keep.id;
         if (id) {
           delete selected[id];
-          var countSelected = _.size(selected);
-          if (countSelected === 0 && isDetailOpen === true) {
-            api.preview(keep);
-            selectedIdx = keepIdx(keep);
-          }
-          else if (countSelected === 1 && isDetailOpen === true) {
-            var first = api.getFirstSelected();
-            selectedIdx = keepIdx(first);
-            api.preview(first);
-          }
-          else {
-            previewed = null;
-            singleKeepBeingPreviewed = false;
-          }
+          selectedIdx = keepIdx(keep);
           return true;
         }
         return false;
@@ -334,11 +233,7 @@ angular.module('kifi.keepService', [
 
       toggleSelect: function (keep) {
         if (keep === undefined) {
-          if (previewed) {
-            return api.toggleSelect(previewed);
-          } else if (selectedIdx >= 0) {
-            return api.toggleSelect(list[selectedIdx]);
-          }
+          return api.toggleSelect(list[selectedIdx]);
         } else if (api.isSelected(keep)) {
           return api.unselect(keep);
         } else if (keep) {
@@ -365,32 +260,10 @@ angular.module('kifi.keepService', [
           map[keep.id] = true;
           return map;
         }, {});
-        if (list.length === 0) {
-          api.clearState();
-        }
-        else if (list.length === 1) {
-          api.preview(list[0]);
-        }
-        else {
-          previewed = null;
-          isDetailOpen = true;
-          singleKeepBeingPreviewed = false;
-        }
       },
 
       unselectAll: function () {
         selected = {};
-        api.clearState();
-      },
-
-      clearState: function () {
-        isDetailOpen = false;
-        $timeout(function () {
-          if (isDetailOpen === false) {
-            previewed = null;
-            singleKeepBeingPreviewed = false;
-          }
-        }, 400);
       },
 
       isSelectedAll: function () {
@@ -570,9 +443,6 @@ angular.module('kifi.keepService', [
           _.forEach(keeps, function (keep) {
             keep.unkept = true;
             keep.isMyBookmark = false;
-            if (previewed === keep) {
-              api.togglePreview(keep);
-            }
             if (api.isSelected(keep)) {
               api.unselect(keep);
             }
