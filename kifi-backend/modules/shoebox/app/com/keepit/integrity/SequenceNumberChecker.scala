@@ -23,7 +23,7 @@ class ElizaSequenceNumberChecker @Inject() (
   airbrake: AirbrakeNotifier
 ) extends SequenceNumberChecker with Logging {
 
-  private val threshold = 100
+  private val threshold = 500
   val service = ServiceType.ELIZA
 
   def check(): Unit = {
