@@ -14,7 +14,7 @@ trait Wanderer {
 
 class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
 
-  lazy val log = Logger("wanderer")
+  lazy val log = Logger("com.keepit.wanderer")
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
     log.info(s"Wandering for $steps steps")
