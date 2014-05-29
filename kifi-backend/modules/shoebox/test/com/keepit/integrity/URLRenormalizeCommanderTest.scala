@@ -38,7 +38,7 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
           (uri0, uri1, url0, url1, url2, url3)
         }
 
-        commander.doRenormalize(readOnly = false, clearSeq = false, domainRegex = None)
+        commander.doRenormalize(readOnly = false, clearSeq = false, regex = DomainOrURLRegex(None, None))
         db.readOnly{ implicit s =>
           changedUriRepo.all().size === 1
           val changedUri = changedUriRepo.all().head

@@ -50,7 +50,7 @@ class UrlController @Inject() (
   def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
     Future {
       try {
-        urlRenormalizeCommander.doRenormalize(readOnly, clearSeq, domainRegex)
+        urlRenormalizeCommander.doRenormalize(readOnly, clearSeq, regex = DomainOrURLRegex(domainRegex = domainRegex))
       } catch {
         case ex: Throwable => airbrake.notify(ex)
       }
