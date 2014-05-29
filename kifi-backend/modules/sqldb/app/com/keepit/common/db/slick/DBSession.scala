@@ -47,11 +47,16 @@ object DBSession {
     override def resultSetConcurrency = session.resultSetConcurrency
     override def resultSetHoldability = session.resultSetHoldability
 
-    def close(): Unit = if (open) {
-      session.close()
-      val time = System.currentTimeMillis - startTime
-      dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
-      timeCheck()
+    def close(): Unit = synchronized {
+      if (open) {
+        session.close()
+        val time = System.currentTimeMillis - startTime
+        dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name")
+        timeCheck()
+        open = false
+      } else {
+        log.warn("Tried to close connection multiple times") // todo(andrew): Remove, swap out with exception
+      }
     }
 
     def rollback() { doRollback = true }
