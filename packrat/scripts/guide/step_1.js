@@ -10,36 +10,36 @@
 
 var guide = guide || {};
 guide.step1 = guide.step1 || function () {
-  var $stage, $steps, spotlight, tileObserver, tagboxObserver, completed;
+  var $stage, $p, $steps, spotlight, tileObserver, keeperObserver, tagboxObserver, stepIdx, pIdx;
   var steps = [
-    {lit: '.kifi-tile-card', pad: [20, 40]},
-    {lit: '.kifi-keep-card', pad: [0, 44], req: [0]},
-    {lit: '.kifi-keep-card', pad: [0, 44], req: [0], arrow: '.kifi-kept-tag,.kifi-keep-tag'},
-    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], req: [0, 2]}];
+    {lit: '.kifi-tile-card', pad: [20, 40], arrow: {}},
+    {lit: '.kifi-keep-card', pad: [10, 44], arrow: {}, req: [0]},
+    {lit: '.kifi-keep-card', pad: [10, 44], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', rot: 45}, req: [0]},
+    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], arrow: {sel: '.kifi-tagbox-suggestion', rot: 90}, req: [0, 2]}];
   var handlers = {
-    kept: complete.bind(null, 2),
-    add_tag: complete.bind(null, 4)
+    kept: animateIntoPlace.bind(null, 2),
+    add_tag: animateIntoPlace.bind(null, 4)
   };
 
   return show;
 
   function show() {
     if (!$stage) {
-      completed = 0;
       tileObserver = new MutationObserver(onTileChildChange);
       tileObserver.observe(tile, {childList: true});
       api.port.on(handlers);
 
       spotlight = new Spotlight(wholeWindow(), {opacity: 0});
       $stage = $(render('html/guide/step_1', me));
+      $p = $stage.find('.kifi-guide-p');
       $steps = $(render('html/guide/steps', {showing: true}));
-      var ms = updateSpotlightPosition();
+      var ms = animateIntoPlace(0);
       $stage.css('transition-delay', Math.max(0, ms - 200) + 'ms');
       $steps.appendTo('body');
       $stage.appendTo('body').layout().addClass('kifi-open');
       $steps.find('.kifi-guide-steps-x').click(hide);
       $(document).data('esc').add(hide);
-      $(window).on('resize', updateSpotlightPosition);
+      $(window).on('resize.guideStep1', animateIntoPlace.bind(null, null, null, null, 1));
     }
   }
 
@@ -49,76 +49,71 @@ guide.step1 = guide.step1 || function () {
       $steps.one('transitionend', remove).removeClass('kifi-showing');
       var ms = spotlight.animateTo(wholeWindow(), {opacity: 0, detach: true});
       tileObserver.disconnect();
+      if (keeperObserver) keeperObserver.disconnect();
       if (tagboxObserver) tagboxObserver.disconnect();
       api.port.off(handlers);
 
-      $stage = $steps = spotlight = tileObserver = tagboxObserver = null;
+      $stage = $p = $steps = spotlight = tileObserver = keeperObserver = tagboxObserver = stepIdx = pIdx = null;
       $(document).data('esc').remove(hide);
-      $(window).off('resize', updateSpotlightPosition);
+      $(window).off('resize.guideStep1');
       return ms;
     } else {
       return 0;
     }
   }
 
-  function complete(n) {
-    if (completed < n) {
-      completed = n;
-      updateSpotlightPosition();
-    }
-  }
+  function animateIntoPlace(idx, el, r, ms) {
+    if (pIdx !== idx || idx == null) {
+      if (idx != null) {
+        if (stepIdx == null || stepIdx < idx) {
+          stepIdx = idx;
+        }
+        pIdx = idx;
+      }
+      var step = steps[stepIdx], p = steps[pIdx];
+      var lit = document.querySelector(p.lit);
+      if (lit) {
+        $stage.attr({'kifi-step': stepIdx, 'kifi-p': pIdx});
+        if (!r || lit !== el) {
+          r = lit.getBoundingClientRect();
+        }
+        log('[animateIntoPlace]', stepIdx, pIdx, r);
+        ms = spotlight.animateTo({
+            x: r.left - p.pad[1],
+            y: r.top - p.pad[0],
+            w: r.width + p.pad[1] * 2,
+            h: r.height + p.pad[0] + p.pad[p.pad.length > 2 ? 2 : 0]
+          }, {opacity: 1, ms: ms});
 
-  function updateSpotlightPosition(el, r, ms) {
-    var stepIdx = completed, pIdx = stepIdx;
-    var step = steps[stepIdx], p = step;
-    var lit = document.querySelector(step.lit);
-    if (!lit && step.req) {
-      for (var i = step.req.length; !lit && i--;) {
-        pIdx = step.req[i];
-        p = steps[pIdx];
-        lit = document.querySelector(p.lit);
+        return ms;
+      } else {
+        log('[animateIntoPlace]', stepIdx, pIdx, 'hiding');
+        return hide();
       }
-    }
-    if (lit) {
-      $stage.attr({'kifi-step': stepIdx, 'kifi-p': pIdx});
-      if (!r || lit !== el) {
-        r = lit.getBoundingClientRect();
-      }
-      console.log('animating to:', r);
-      return spotlight.animateTo({
-          x: r.left - p.pad[1],
-          y: r.top - p.pad[0],
-          w: r.width + p.pad[1] * 2,
-          h: r.height + p.pad[0] + p.pad[p.pad.length > 2 ? 2 : 0]
-        }, {opacity: 1, ms: ms});
-    } else {
-      return hide();
     }
   }
 
   function onTileChildChange(records) {
-    log('[onTileChildChange]', completed, records);
-    if (completed < 1) {
-      if (tile.querySelector(steps[1].lit)) {
-        completed = 1;
-      }
-    } else if (completed < 4) {
-      // TODO: check records for addition of .kifi-tagbox node instead
-      var tagbox = tile.querySelector(steps[3].lit);
-      if (tagbox) {
-        completed = 3;
-        var onTagboxChangeDebounced = _.debounce(onTagboxChange.bind(tagbox), 20, true);
-        tagboxObserver = new MutationObserver(onTagboxChangeDebounced);
-        tagboxObserver.observe(tagbox, {attributes: true});
-        onTagboxChangeDebounced();
-        return;
-      }
-      // TODO: disconnect and release tagboxObserver if .kifi-tagbox element removed
+    log('[onTileChildChange]', stepIdx, records);
+    var tagbox, keeper;
+    if ((tagbox = added(records, 'kifi-tagbox'))) {
+      var onTagboxChangeDebounced = _.debounce(onTagboxChange.bind(tagbox), 20, true);
+      tagboxObserver = new MutationObserver(onTagboxChangeDebounced);
+      tagboxObserver.observe(tagbox, {attributes: true});
+      onTagboxChangeDebounced();
+    } else if ((keeper = added(records, 'kifi-keeper'))) {
+      var onKeeperChangeDebounced = _.debounce(onKeeperChange.bind(keeper), 20, true);
+      keeperObserver = new MutationObserver(onKeeperChangeDebounced);
+      keeperObserver.observe(keeper, {attributes: true});
+      // onKeeperChangeDebounced();
+      animateIntoPlace(1);
     }
-    updateSpotlightPosition();
+    // TODO: disconnect and release keeperObserver if .kifi-keeper element removed
+    // TODO: disconnect and release tagboxObserver if .kifi-tagbox element removed
   }
 
   function onTagboxChange(records) {
+    log('[onTagboxChange]', records);
     if (this.classList.contains('kifi-in')) {
       var cs = window.getComputedStyle(this);
       var w = parseFloat(cs.width) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
@@ -127,10 +122,31 @@ guide.step1 = guide.step1 || function () {
       var ms = (~dur.indexOf('ms') ? 1 : 1000) * parseFloat(dur);  // TODO: check whether a transition is in effect before using ms
       var r = this.getBoundingClientRect();
       log('[onTagboxChange]', records, w, 'x', h, 'right:', r.right, 'bottom:', r.bottom, 'ms:', ms);
-      updateSpotlightPosition(this, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
+      animateIntoPlace(3, this, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
     } else {
       log('[onTagboxChange]', records);
-      updateSpotlightPosition();
+      animateIntoPlace(2);
+    }
+  }
+
+  function onKeeperChange(records) {
+    log('[onKeeperChange]', records);
+    if (this.classList.contains('kifi-hiding')) {
+      animateIntoPlace(0);
+    } else {
+      // animateIntoPlace();
+    }
+  }
+
+  function added(records, cssClass) {
+    for (var i = 0; i < records.length; i++) {
+      var nodes = records[i].addedNodes;
+      for (var j = 0; j < nodes.length; j++) {
+        var node = nodes[j];
+        if (node.nodeType === 1 && node.classList.contains(cssClass)) {
+          return node;
+        }
+      }
     }
   }
 
