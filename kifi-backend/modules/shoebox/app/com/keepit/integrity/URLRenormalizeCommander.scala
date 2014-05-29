@@ -19,8 +19,8 @@ case class DomainOrURLRegex(domainRegex: Option[String] = None, urlRegex: Option
 
   def isDefined: Boolean = !isEmpty
   def isEmpty: Boolean = domainRegex.isEmpty && urlRegex.isEmpty
-  def isDomainRegex: Boolean = domainRegex.isDefined && urlRegex.isEmpty
-  def isUrlRegex: Boolean = domainRegex.isEmpty && urlRegex.isDefined
+  def isDomainRegex: Boolean = domainRegex.isDefined
+  def isUrlRegex: Boolean = urlRegex.isDefined
 }
 
 class URLRenormalizeCommander @Inject()(
