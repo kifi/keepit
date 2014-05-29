@@ -45,12 +45,10 @@ private[scraper] class ScrapeScheduler @Inject() (
   implicit val config = scraperConfig
 
   def checkOverdues(): Unit = {
-    val (assignedCount, assignedOverdues) = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
-      val assignedCount = scrapeInfoRepo.getAssignedCount()
-      val assignedOverdues = scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
-      (assignedCount, assignedOverdues)
+    val assignedOverdues = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
+      scrapeInfoRepo.getOverdueAssignedList(currentDateTime.minusMinutes(config.pendingOverdueThreshold))
     }
-    log.info(s"[checkOverdues]: assigned:${assignedCount} assigned-overdues=${assignedOverdues.length}")
+    log.info(s"[checkOverdues]: assigned-overdues=${assignedOverdues.length}")
 
     if (!assignedOverdues.isEmpty) {
       val workers = serviceDiscovery.serviceCluster(ServiceType.SCRAPER).allMembers

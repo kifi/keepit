@@ -62,5 +62,12 @@ class SchemeNormalizerTest extends Specification {
       normalize(normalizer, "http://m.imdb.com/title/tt0057012/") === "http://m.imdb.com/title/tt0057012/"
       normalize(normalizer, "https://secure.imdb.com/title/tt0062622/") === "http://m.secure.imdb.com/title/tt0062622/"
     }
+
+    "detect the right scheme" in {
+      SchemeNormalizer.findSchemeNormalization("https://infinit.io/") === Some(Normalization.HTTPS)
+      SchemeNormalizer.findSchemeNormalization("https://infinit.io") === Some(Normalization.HTTPS)
+      SchemeNormalizer.findSchemeNormalization("https://www.infinit.io/") === Some(Normalization.HTTPSWWW)
+      SchemeNormalizer.findSchemeNormalization("https://www.infinit.io") === Some(Normalization.HTTPSWWW)
+    }
   }
 }

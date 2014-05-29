@@ -1,0 +1,51 @@
+@()
+
+@admin("URL Renormalization Console"){
+  <form id = "renorm">
+    <input id = "regex" type = "text" value = "" placeholder="sql regex, e.g. %kifi%">
+    <select id = "urlSelection">
+      <option value = "domain">domain regex</option>
+      <option value = "url">url regex</option>
+    </select>
+
+    <select id = "mode">
+      <option value = "preview">preview urls</option>
+      <option value = "readOnly">read-only mode</option>
+      <option value = "readWrite">read-write mode</option>
+    </select>
+
+    <button type = "submit">Apply</button>
+
+  </form>
+
+  <p id = "previewList"></p>
+
+  <br><br><br>
+
+
+<script type="text/javascript">
+  $(document).ready(function(){
+
+
+    $("#renorm").submit(function(event){
+      event.preventDefault();
+      $("#previewList").empty().prepend("Loading...")
+
+      $.post('@com.keepit.controllers.admin.routes.UrlController.urlRenormalizeConsoleSubmit()',
+        {regex: $("#regex").val(), urlSelection: $("#urlSelection").val(), mode: $("#mode").val()}
+      ).done(done).fail(fail)
+
+      function done(data) { $("#previewList").empty().prepend(data) }
+      function fail() { alert("bad things happened") }
+
+    })
+
+
+
+
+  });
+
+
+</script>
+
+}

@@ -44,8 +44,6 @@ html[kifi-with-pane] .kifi-tagbox {
   display: block;
 }
 .kifi-tagbox.kifi-suggested .kifi-tagbox-empty {
-  color: #b8c5d1;
-  background: white;
   display: none;
 }
 .kifi-tagbox.kifi-tagged .kifi-tagbox-empty {
@@ -159,6 +157,7 @@ html[kifi-with-pane] .kifi-tagbox {
   transition: color .2s linear;
 }
 .kifi-tagbox-suggest {
+  display: none;
   position: relative;
   overflow: hidden;
 }

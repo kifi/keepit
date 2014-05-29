@@ -1,5 +1,7 @@
 package com.keepit.graph.model
 
+import com.keepit.graph.model.EdgeKind.EdgeType
+
 trait GraphReader {
   def getNewVertexReader(): GlobalVertexReader
   def getNewEdgeReader(): GlobalEdgeReader
@@ -19,10 +21,10 @@ trait GraphWriter extends GraphReader {
 
   def removeEdgeIfExists[S <: VertexDataReader, D <: VertexDataReader, E <: EdgeDataReader](source: VertexDataId[S], destination: VertexDataId[D], edgeKind: EdgeKind[E])(implicit sourceKind: VertexKind[S], destinationKind: VertexKind[D]): Boolean = {
     try { removeEdge(source, destination, edgeKind); true }
-    catch { case VertexNotFoundException(_) | EdgeNotFoundException(_, _) => false }
+    catch { case VertexNotFoundException(_) | EdgeNotFoundException(_, _, _) => false }
   }
 }
 
 case class VertexNotFoundException(vertexId: VertexId) extends Throwable(s"Vertex $vertexId could not be found.")
-case class EdgeNotFoundException(sourceId: VertexId, destinationId: VertexId) extends Throwable(s"Edge from $sourceId to $destinationId could not be found.")
+case class EdgeNotFoundException(sourceId: VertexId, destinationId: VertexId, edgeKind: EdgeType) extends Throwable(s"Edge of kind $edgeKind from $sourceId to $destinationId could not be found.")
 case class UninitializedReaderException(message: String) extends Throwable(message)

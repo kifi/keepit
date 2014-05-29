@@ -44,7 +44,7 @@ class NormalizationServiceImpl @Inject() (
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
     val relevantCandidates = getRelevantCandidates(currentReference, candidates)
-    log.debug(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
+    log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
     val futureResult = for {
       betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
       betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
@@ -152,9 +152,6 @@ class NormalizationServiceImpl @Inject() (
           }
           if (currentReference.persistedNormalization != correctNormalization)
             saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
-
-          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
-          log.debug(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
         }
         log.debug(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some(betterReference)
@@ -163,6 +160,11 @@ class NormalizationServiceImpl @Inject() (
         log.warn(s"Aborting verified normalization because of recent overwrite of $currentReference with $latestCurrentUri")
         None
       }
+    } tap {
+      case Some(betterReference) =>
+        uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
+        log.debug(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
+      case None =>
     }
 
   private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {
