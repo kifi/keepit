@@ -47,14 +47,19 @@ class UrlController @Inject() (
     Ok(html.admin.adminDashboard())
   }
 
-  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
+  private def asyncSafelyRenormalize(readOnly: Boolean, clearSeq: Boolean, regex: DomainOrURLRegex) = {
     Future {
       try {
-        urlRenormalizeCommander.doRenormalize(readOnly, clearSeq, domainRegex)
+        urlRenormalizeCommander.doRenormalize(readOnly, clearSeq, regex = regex)
       } catch {
         case ex: Throwable => airbrake.notify(ex)
       }
     }
+  }
+
+  // old secret admin endpoint
+  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminHtmlAction.authenticated { implicit request =>
+    asyncSafelyRenormalize(readOnly, clearSeq, regex = DomainOrURLRegex(domainRegex = domainRegex))
     Ok("Started!")
   }
 
@@ -150,6 +155,40 @@ class UrlController @Inject() (
     uriIntegrityPlugin.clearRedirects(toUriId)
     Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
   }
+
+  def urlRenormalizeConsole() = AdminHtmlAction.authenticated{ request =>
+    Ok(html.admin.urlRenormalization())
+  }
+
+  def urlRenormalizeConsoleSubmit() = AdminHtmlAction.authenticated{ request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val regexStr = body.get("regex").get
+    val urlSelection = body.get("urlSelection").get
+    val mode = body.get("mode").get
+
+    val regex = if (urlSelection == "domain") DomainOrURLRegex(domainRegex = Some(regexStr)) else DomainOrURLRegex(urlRegex = Some(regexStr))
+
+    if (mode == "preview") {
+
+      val urls = db.readOnly { implicit s =>
+        if (regex.isDomainRegex) urlRepo.getByDomainRegex(regex.domainRegex.get)
+        else if (regex.isUrlRegex) urlRepo.getByURLRegex(regex.urlRegex.get)
+        else Seq()
+      }
+
+      val msg = urls.map { _.url }.mkString("\n")
+      Ok(msg.replaceAll("\n", "\n<br>"))
+
+    } else {
+
+      val readOnly = if (mode == "readWrite") false else true
+      asyncSafelyRenormalize(readOnly, clearSeq = false, regex = regex)
+
+      Ok(s"Started! readOnlyMode = ${readOnly}")
+    }
+
+  }
+
 
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200

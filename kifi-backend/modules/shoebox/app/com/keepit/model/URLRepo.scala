@@ -11,6 +11,7 @@ trait URLRepo extends Repo[URL] {
   def get(url: String, uriId: Id[NormalizedURI])(implicit session: RSession): Option[URL]
   def getByDomain(domain: String)(implicit session: RSession): List[URL]
   def getByDomainRegex(regex: String)(implicit session: RSession): List[URL]
+  def getByURLRegex(regex: String)(implicit session: RSession): List[URL]
   def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit session: RSession): Seq[URL]
 }
 
@@ -43,6 +44,9 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extend
 
   def getByDomainRegex(regex: String)(implicit session: RSession): List[URL] =
     (for(u <- rows if (u.domain like regex) && u.state === URLStates.ACTIVE) yield u).list
+
+  def getByURLRegex(regex: String)(implicit session: RSession): List[URL] =
+    (for(u <- rows if (u.url like regex) && u.state === URLStates.ACTIVE) yield u).list
 
   def getByNormUri(normalizedUriId: Id[NormalizedURI])(implicit session: RSession): Seq[URL] =
     (for(u <- rows if u.normalizedUriId === normalizedUriId && u.state === URLStates.ACTIVE) yield u).list

@@ -62,7 +62,7 @@ class CortexController @Inject()(
     val resOpt = word2vec.getDoc2VecResult(text)
     val rv = resOpt match {
       case None => Map("keywords" -> "N/A", "bow" -> "N/A")
-      case Some(res) => Map("keywords" -> res.keywords.mkString(", "), "bow" -> res.bagOfWords.mkString(", ") )
+      case Some(res) => Map("keywords" -> res.keywords.mkString(", "), "bow" -> res.bagOfWords.toArray.sortBy(-1*_._2).mkString(", ") )
     }
     Ok(Json.toJson(rv))
   }

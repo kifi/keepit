@@ -21,4 +21,35 @@ class Word2VecFormatterTest extends Specification{
       1 === 1
     }
   }
+
+  "RichWord2VecDocFeatureFormat" should {
+    "work" in {
+
+      var dim = 4
+      var vec = Array(1.1f, -2.3f, 4f, -3.14f)
+      var keywords = Array("apple", "orange")
+      var bow = Map("apple" -> 7, "orange" -> 5, "banana" -> 2)
+      var feat = RichWord2VecDocFeature(dim, vec, keywords, bow)
+
+      var bytes = RichWord2VecDocFeatureFormat.toBinary(feat)
+      var back = RichWord2VecDocFeatureFormat.fromBinary(bytes)
+
+      back.dim === feat.dim
+      back.vec === feat.vec
+      back.keywords === feat.keywords
+      back.bagOfWords.toArray === feat.bagOfWords.toArray
+
+      keywords = Array.empty[String]
+      bow = Map.empty[String, Int]
+      feat = RichWord2VecDocFeature(dim, vec, keywords, bow)
+
+      bytes = RichWord2VecDocFeatureFormat.toBinary(feat)
+      back = RichWord2VecDocFeatureFormat.fromBinary(bytes)
+
+      back.dim === feat.dim
+      back.vec === feat.vec
+      back.keywords === feat.keywords
+      back.bagOfWords.toArray === feat.bagOfWords.toArray
+    }
+  }
 }

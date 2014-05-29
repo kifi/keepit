@@ -6,6 +6,7 @@ import com.google.inject.Inject
 import com.keepit.model.KeepRepo
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.logging.Logging
 
 class AbuseMonitorException(message: String) extends Exception(message)
 
@@ -14,7 +15,7 @@ class KeepsAbuseMonitor @Inject() (
     absoluteError: Int,
     keepRepo: KeepRepo,
     db: Database,
-    airbrake: AirbrakeNotifier) {
+    airbrake: AirbrakeNotifier) extends Logging {
 
   if (absoluteWarn >= absoluteError) throw new IllegalStateException(s"absolute warn $absoluteWarn is larger then error $absoluteError")
 

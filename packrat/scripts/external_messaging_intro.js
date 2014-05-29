@@ -13,9 +13,9 @@ api.port.emit('prefs', function (prefs) {
     var $intro = $(render('html/keeper/tile_tooltip', {
       header: 'Email this page to anyone',
       text: 'Did you know you can share this page in a beautiful way?',
-      actions: ['Send beautifully formatted page to any email address',
+      actions: ['Send a summary of the page to any email address',
         'Recipients can join the discussion by replying via email'],
-      tip: 'Make life easier by <a class="kifi-tile-tooltip-import-contacts" href="javascript:">importing your Gmail contacts</a>'
+      tip: 'Make life easier – <a class="kifi-tile-tooltip-import-contacts" href="javascript:">import your Gmail contacts</a>'
     }))
       .insertAfter(tile)
       .on('click', '.kifi-tile-tooltip-x', onClickX)

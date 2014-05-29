@@ -98,10 +98,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     val userVertexId: VertexDataId[UserReader] = update.userId
 
     update.state match {
-      case KeepStates.INACTIVE | KeepStates.DUPLICATE =>
-        writer.removeVertexIfExists(keepVertexId)
 
-      case KeepStates.ACTIVE =>
+      case KeepStates.ACTIVE if update.source != KeepSource.default =>
         writer.saveVertex(KeepData(keepVertexId))
         writer.saveVertex(UriData(uriVertexId))
         writer.saveVertex(UserData(userVertexId))
@@ -111,6 +109,9 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
         writer.saveEdge(keepVertexId, userVertexId, EmptyEdgeData)
         writer.saveEdge(uriVertexId, keepVertexId, EmptyEdgeData)
+
+      case _ =>
+        writer.removeVertexIfExists(keepVertexId)
     }
   }
 

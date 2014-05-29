@@ -223,12 +223,38 @@ exports.requestUpdateCheck = function () {
   log('[requestUpdateCheck]');
   if (addon) {
     var appVer = Cc['@mozilla.org/xre/app-info;1'].getService(Ci.nsIXULAppInfo).version;
+    var versions = Cc['@mozilla.org/xpcom/version-comparator;1'].getService(Ci.nsIVersionComparator);
     addon.findUpdates({
         onCompatibilityUpdateAvailable: exports.noop,
         onNoCompatibilityUpdateAvailable: exports.noop,
         onUpdateAvailable: function (addon, install) {
-          log('[onUpdateAvailable] installing', install.version);
-          install.install();
+          log('[onUpdateAvailable]', self.version, '=>', install.version, install.state);
+          if (versions.compare(self.version, install.version) < 0) {
+            var listener = {
+              onNewInstall: exports.noop,
+              onDownloadStarted: exports.noop,
+              onDownloadProgress: exports.noop,
+              onDownloadEnded: onDownloadEnded,
+              onDownloadCancelled: exports.noop,
+              onDownloadFailed: exports.noop,
+              onInstallStarted: exports.noop,
+              onInstallEnded: stopListening,
+              onInstallCancelled: stopListening,
+              onInstallFailed: stopListening,
+              onExternalInstall: exports.noop
+            };
+            install.addListener(listener);
+            install.install();
+          }
+          function onDownloadEnded(install) {
+            log('[onDownloadEnded]', self.version, '=>', install.version, install.state);
+            if (versions.compare(self.version, install.version) >= 0) {
+              install.cancel();
+            }
+          }
+          function stopListening() {
+            install.removeListener(listener);
+          }
         },
         onNoUpdateAvailable: function (addon) {
           log('[onNoUpdateAvailable]');

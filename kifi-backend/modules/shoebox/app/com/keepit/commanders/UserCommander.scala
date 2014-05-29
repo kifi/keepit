@@ -49,6 +49,7 @@ import com.keepit.common.mail.GenericEmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.common.db.slick.Database.Slave
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -98,6 +99,8 @@ class UserCommander @Inject() (
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
+  keepClickRepo: KeepClickRepo,
+  rekeepRepo: ReKeepRepo,
   userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
@@ -226,6 +229,14 @@ class UserCommander @Inject() (
   def getHelpCounts(user: Id[User]): (Int, Int) = {
     //unique keeps, total clicks
     db.readOnly { implicit session => bookmarkClicksRepo.getClickCounts(user) }
+  }
+
+  def getKeepAttributionCounts(userId: Id[User]): (Int, Int) = { // (clickCount, rekeepCount)
+    db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+      val clickCount = keepClickRepo.getClickCountByKeeper(userId)
+      val rekeepCount = rekeepRepo.getReKeepCountByKeeper(userId)
+      (clickCount, rekeepCount)
+    }
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {

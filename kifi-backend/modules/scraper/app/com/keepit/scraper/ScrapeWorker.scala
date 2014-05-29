@@ -301,7 +301,7 @@ class ScrapeWorker(
             val description = getDescription(extractor)
             val keywords = getKeywords(extractor)
             val media = getMediaTypeString(extractor)
-            val signature = Signature(Seq(title, description.getOrElse(""), keywords.getOrElse(""), content))
+            val signature = getSignature(extractor)
 
             val contentLang = description match {
               case Some(desc) => LangDetector.detect(content + " " + desc)
@@ -357,6 +357,15 @@ class ScrapeWorker(
 
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
+  private[this] def getSignature(x: Extractor) = {
+    Signature(Seq(
+      getTitle(x),
+      getDescription(x).getOrElse(""),
+      getKeywords(x).getOrElse(""),
+      x.getContent()
+    ))
+  }
+
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = getTitle(extractor),
     content = extractor.getContent,
@@ -365,7 +374,8 @@ class ScrapeWorker(
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-    destinationUrl = Some(destinationUrl)
+    destinationUrl = Some(destinationUrl),
+    signature = getSignature(extractor)
   )
 
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {

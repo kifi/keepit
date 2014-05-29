@@ -100,6 +100,26 @@
 
   <!-- ================================ -->
 
+  <appender name="wanderer" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>log/wanderer.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <fileNamePattern>log/wanderer.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+    </rollingPolicy>
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="async_wanderer" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="wanderer" />
+  </appender>
+
+  <logger name="com.keepit.wanderer" level="ALL" additivity="false">
+    <appender-ref ref="async_wanderer" />
+  </logger>
+
+  <!-- ================================ -->
+
   <logger name="com.mysql" level="ERROR"/>
   <logger name="com.ning.http" level="INFO"/>
   <!--logger name="securesocial.core" level="DEBUG"/-->

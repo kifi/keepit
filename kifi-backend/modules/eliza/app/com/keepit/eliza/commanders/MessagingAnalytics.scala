@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.{Singleton, Inject}
 import com.keepit.heimdal._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.model.{NotificationCategory, User}
@@ -19,7 +20,7 @@ class MessagingAnalytics @Inject() (
   heimdal: HeimdalServiceClient,
   shoebox: ShoeboxServiceClient,
   threadRepo: MessageThreadRepo,
-  db: Database) {
+  db: Database) extends Logging {
 
   private val kifi = "kifi"
   private val push = "push"

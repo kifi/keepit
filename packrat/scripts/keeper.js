@@ -286,11 +286,16 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }, 400, true));
   }
 
+  function stopPropagation(e) {
+    e.stopPropagation();
+  }
+
   function showSlider(trigger) {
     log('[showSlider]', trigger);
 
     createSlider();
     $slider.prependTo(tile);
+    $(tile).on('mousedown click keydown keypress keyup', stopPropagation);
 
     api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)})]);
     api.port.emit('keeper_shown');
@@ -337,6 +342,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         justKept = false;
       }
     });
+    $(tile).off('mousedown click keydown keypress keyup', stopPropagation);
   }
 
   function startDrag(data) {
@@ -348,9 +354,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (data.dragStarting) {
         delete data.dragStarting;
         log('[startDrag] installing draggable');
-        data.$dragGlass = $('<div class=kifi-drag-glass>').mouseup(stopDrag).appendTo(tile.parentNode);
-        $(tile).draggable({axis: 'y', containment: 'window', scroll: false, stop: stopDrag})[0]
-          .dispatchEvent(data.mousedownEvent); // starts drag
+        data.$dragGlass = $('<div class="kifi-drag-glass kifi-root">').mouseup(stopDrag).appendTo(tile.parentNode);
+        $(tile).draggable({axis: 'y', containment: [0, 0, window.innerWidth, window.innerHeight - tile.offsetHeight], scroll: false, stop: stopDrag})[0]
+          .dispatchEvent(new MouseEvent('mousedown', data.mousedownEvent)); // starts drag
       }
       function stopDrag() {
         var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;

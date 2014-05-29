@@ -5,8 +5,9 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.cortex.utils.MatrixUtils
 import com.keepit.cortex.nlp.POSTagger
 import com.keepit.common.logging.Logging
+import com.keepit.cortex.utils.TextUtils.TextTokenizer
 
-case class Doc2VecResult(vec: Array[Float], keywords: Array[String], bagOfWords: Array[String])
+case class Doc2VecResult(vec: Array[Float], keywords: Array[String], bagOfWords: Map[String, Int])
 
 class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
 
@@ -85,8 +86,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     (rwords.toArray, r, rscore)
   }
 
-  def cluster(text: String): (Vectors, ArrayOfWords) = {
-    val tokens = text.toLowerCase().split(" ").toList
+  def cluster(tokens: Seq[String]): (Vectors, ArrayOfWords) = {
     val shuffled = Random.shuffle(tokens).toArray
     val (ws, vecs) = genVecs(shuffled)
     val crp = new CRPImpl()
@@ -138,14 +138,14 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     (c.toArray, cw.toArray)
   }
 
-  def getRepresentatives(text: String): (Vectors, ArrayOfWords) = {
-    val (c, cw) = cluster(text)
+  def getRepresentatives(tokens: Seq[String]): (Vectors, ArrayOfWords) = {
+    val (c, cw) = cluster(tokens)
     val (c2, cw2) = filterAndRankClusters(c, cw)
     (c2, cw2)
   }
 
-  def getDocVecAndKeyWords(text: String): Option[Doc2VecResult] = {
-    val (c, cw) = getRepresentatives(text)
+  def getDocVecAndKeyWords(tokens: Seq[String]): Option[Doc2VecResult] = {
+    val (c, cw) = getRepresentatives(tokens)
     if (c.isEmpty) None
     else {
       val docVec = new Array[Float](dim)
@@ -164,16 +164,16 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
         rword
       }.flatten.toSet.toArray
 
-      val bagOfWords = cw.flatten.toArray     // not using idf info for now
+      val bagOfWords = cw.flatten.toArray.zipWithIndex.groupBy(_._1).map{case (a, b) => (a, b.size)}     // not using idf info for now
       Some(Doc2VecResult(docVec, keywords, bagOfWords))
     }
   }
 
-  def sampleBest(text: String, numTry: Int = 5, normalize: Boolean = true, parallel: Boolean = true): Option[Doc2VecResult] = {
+  def sampleBest(tokens: Seq[String], numTry: Int = 5, normalize: Boolean = true, parallel: Boolean = true): Option[Doc2VecResult] = {
     val samples = if (parallel) {
-      (0 until numTry).par.flatMap{ i => getDocVecAndKeyWords(text) }.toArray
+      (0 until numTry).par.flatMap{ i => getDocVecAndKeyWords(tokens) }.toArray
     } else {
-      (0 until numTry).flatMap{ i => getDocVecAndKeyWords(text) }.toArray
+      (0 until numTry).flatMap{ i => getDocVecAndKeyWords(tokens) }.toArray
     }
 
     if (samples.isEmpty) return None
@@ -181,17 +181,23 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     val weights = samples.map{ res => 1f / res.bagOfWords.size}.toArray
     val target = if (normalize) MatrixUtils.weightedAverage(samples.map{_.vec}, weights) else MatrixUtils.average(samples.map{_.vec})
 
+    val keyStat = scala.collection.mutable.Map[String, Int]().withDefaultValue(0)
+
     var bestIdx = -1
     var bestScore = -1f * Float.MaxValue
     samples.zipWithIndex.foreach{ case (res, i) =>
       val s = MatrixUtils.cosineDistance(res.vec, target)
-      log.info(s"keywords: ${res.keywords.mkString(", ")}, score: $s, bow size: ${res.bagOfWords.size}")
+      res.keywords.foreach{ w => keyStat(w) = keyStat(w) + 1}
       if ( s > bestScore) {
         bestScore = s; bestIdx = i
       }
     }
+
+    // more stable keywords
+    val avgKeywords = keyStat.toArray.filter(_._2 > 1).sortBy(-1 * _._2).take(5).map{_._1}
+
     if (bestIdx == -1) None
-    else Some(samples(bestIdx))
+    else Some(samples(bestIdx).copy(keywords = avgKeywords))
   }
 
   // console debug

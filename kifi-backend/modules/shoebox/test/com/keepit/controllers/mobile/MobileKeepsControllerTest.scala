@@ -347,7 +347,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
             "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
             "others":1,
             "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
-            "clickCount":0,
+            "clickCount":-1,
+            "rekeepCount":-1,
             "collections":[]},
           {
             "id":"${bookmark1.externalId.toString}",
@@ -357,7 +358,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
             "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
             "others":-1,
             "keepers":[],
-            "clickCount":0,
+            "clickCount":-1,
+            "rekeepCount":-1,
             "collections":[]}
         ]}
       """)
@@ -426,7 +428,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
               "createdAt":"2013-02-16T23:59:00.000Z",
               "others":-1,
               "keepers":[],
-              "clickCount":0,
+              "clickCount":-1,
+              "rekeepCount":-1,
               "collections":[]
             }
           ]
