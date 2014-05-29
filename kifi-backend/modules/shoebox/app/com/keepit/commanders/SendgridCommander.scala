@@ -41,15 +41,13 @@ class SendgridCommander @Inject() (
                                    |Updated at: ${email.updatedAt}<br/>""".stripMargin
           case None => s"Got event:<br/> $event"
         }
-        db.readWrite{ implicit s =>
-          systemAdminMailSender.sendMail(
-            ElectronicMail(
-              from = EmailAddresses.ENG,
-              to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
-              subject = s"Sendgrid event [$eventType]",
-              htmlBody = htmlBody,
-              category = NotificationCategory.System.ADMIN))
-        }
+        systemAdminMailSender.sendMail(
+          ElectronicMail(
+            from = EmailAddresses.ENG,
+            to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
+            subject = s"Sendgrid event [$eventType]",
+            htmlBody = htmlBody,
+            category = NotificationCategory.System.ADMIN))
       }
     }
   }

@@ -93,7 +93,7 @@ class ServiceDiscoveryImpl(
    */
   private var lastLeaderLogTime = 0L
 
-  def isLeader: Boolean = if (isCanary) false else zkClient.session{ zk =>
+  def isLeader(): Boolean = if (isCanary) false else zkClient.session{ zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
