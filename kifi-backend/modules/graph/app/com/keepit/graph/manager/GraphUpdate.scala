@@ -72,7 +72,7 @@ case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnection
   def apply(connection: IndexableSocialConnection): SocialConnectionGraphUpdate = SocialConnectionGraphUpdate(connection.firstSocialUserId, connection.secondSocialUserId, connection.network, connection.state, connection.seq)
 }
 
-case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
+case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], source: KeepSource, keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
   type U = KeepGraphUpdate
   def kind = KeepGraphUpdate
   def seq = kind.seq(keepSeq.value)
@@ -80,7 +80,7 @@ case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedU
 
 case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
   val code = "keep_graph_update"
-  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.seq)
+  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.source, keep.seq)
 }
 
 case class SparseLDAGraphUpdate(modelVersion: ModelVersion[DenseLDA], uriFeatures: UriSparseLDAFeatures) extends GraphUpdate {
