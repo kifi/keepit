@@ -76,6 +76,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
         scope.invited = false;
         scope.byline = network === 'email' ? inNetworkId : network.charAt(0).toUpperCase() + network.slice(1);
         scope.actionText = 'Invite';
+        scope.actionTextHeavy = '+';
       }
       scope.refreshScroll();
     }

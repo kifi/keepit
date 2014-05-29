@@ -1,7 +1,7 @@
 <div ng-controller="InviteCtrl">
   <div class="invite-wrapper" antiscroll="{ autoHide: false }">
     <div class="invite">
-      <h2>Find people to invite to Kifi</h2>
+      <h2>Find people to invite</h2>
       <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
         <div class="bouncy-ball">
           <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
@@ -12,7 +12,7 @@
 
       <div kf-networks-need-attention></div>
 
-      <h3>People you may want to add to Kifi</h3>
+      <div class="invite-list-header">Recommended people to invite</div>
 
       <div class="kf-connection-card-container">
         <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
