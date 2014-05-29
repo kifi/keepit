@@ -201,6 +201,10 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return scope.toggleSelect();
         };
 
+        scope.removeTag = function (tag) {
+          tagService.removeKeepsFromTag(tag.id, scope.keep.id);
+        };
+
         var dragMask = element.find('.kf-drag-mask');
         scope.isDragTarget = false;
 

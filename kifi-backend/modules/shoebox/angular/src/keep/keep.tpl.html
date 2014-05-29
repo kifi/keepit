@@ -16,7 +16,7 @@
     <ul class="page-coll-list">
       <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in keep.tagList">
         <a class="kf-keep-tag-link" href="/tag/{{tag.id}}">{{tag.name}}</a>
-        <a class="page-coll-x" href="javascript:" ng-click="removeTagFromSelectedKeeps(tag)">×</a>
+        <a class="page-coll-x" href="javascript:" ng-click="removeTag(tag)">×</a>
       </li>
     </ul>
   </div>
