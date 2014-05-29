@@ -44,6 +44,24 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         scope.newLocationTagId = null;
         scope.viewedTagId = null;
 
+        var w = angular.element($window);
+        var tagList = element.find('.kf-tag-list');
+        tagList.on('mousewheel', function (e) {
+          console.log('stopping propagation');
+          e.stopPropagation();
+        })
+
+        w.bind('resize', function() {
+            scope.$apply(function() {
+                setTagListHeight();
+            });
+        });
+
+        function setTagListHeight() {
+          tagList.height(w.height() - (tagList.offset().top - w[0].pageYOffset));
+        }
+        setTagListHeight();
+
         scope.clearFilter = function (focus) {
           scope.filter.name = '';
           if (focus) {

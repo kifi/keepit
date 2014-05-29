@@ -98,7 +98,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           scope.$apply(closeDropdown);
         }
 
-        scope.toggleDropdown = function () {
+        scope.toggleDropdown = function (e) {
+          e.stopPropagation();
           if (!scope.isDropdownOpen) {
             scope.isDropdownOpen = true;
             $document.bind('click', applyCloseDropdown);
@@ -186,14 +187,6 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           element.removeClass('kf-dragged');
           clone.remove();
           scope.$apply(function () { scope.isDragging = false; });
-        });
-
-        var tagLink = element.find('.kf-nav-link');
-        var tagInfo = element.find('.kf-tag-info');
-        var tagName = element.find('.kf-tag-name');
-        $timeout(function () {
-          tagName.css({maxWidth: 0});
-          tagName.css({maxWidth: (parseInt(tagLink.css('width'), 10) - parseInt(tagInfo.css('width'), 10)) + 'px'});
         });
 
         var newLocationMask = element.find('.kf-tag-new-location-mask');
