@@ -10,13 +10,43 @@ kfTagHeight = 30px
     background-color: #f6f6f6
 
   &:hover
+  &.highlight
     background-color: #eeeeee
 
+  &:hover
     .kf-tag-tool
       display: block
 
   .kf-dropdown-menu
     right: 0
+
+.kf-tag-new
+  cursor: pointer
+  margin: 10px 40px 10px 20px
+  line-height: 18px
+  padding: 10px 0 4px
+  font-size: 13px
+  color: textDarkColor
+  vertical-align: middle
+  border-top: 1px solid separatorColor
+
+  .kf-tag-caption
+    font-style: italic
+
+  .kf-tag-name
+    color: blueColor
+
+.kf-tag-new-contents
+  border-radius: 2px
+  background: url(../img/placeholder-icon.png) 20px center / 16px no-repeat
+  padding: 3px 15px 3px 45px
+  left: -20px
+  position: relative
+  width: calc(100% - 20px)
+
+  &:hover
+  &.highlight
+    background-color: #eeeeee
 
 .kf-tag-info
   cursor: pointer
@@ -28,11 +58,16 @@ kfTagHeight = 30px
   border-radius: 12px
   border-style: none
   background: #eeeeee
-  transition: background-color .16s
-  width: 100%
+  transition: all .16s
   height: 24px
-  margin: 2px 0 20px 0
+  margin: 2px 32px 10px 11px
   font-weight: 200
+  box-sizing: border-box
+  border: 1px solid #eeeeee
+
+  &.focused
+    background: #fff
+    border-color: blueColor
 
   input
     width: calc(100% - 20px)
@@ -98,9 +133,6 @@ input.kf-tag-rename
 
 .kf-scrollable-tags
   position: relative
-
-.kf-tags-header
-  margin: 0 40px 0 20px
 
 .kf-tag-tool
   position: absolute
