@@ -135,7 +135,7 @@ class ShoeboxController @Inject() (
   def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
-    val saved = db.readWrite(attempts = 1) { implicit s =>
+    val saved = db.readWrite(attempts = 3) { implicit s =>
       normUriRepo.save(normalizedUri)
     }
     log.debug(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
@@ -143,7 +143,7 @@ class ShoeboxController @Inject() (
   }
 
   def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
-     val saveResult = Try(db.readWrite(attempts = 1) { implicit s =>
+     val saveResult = Try(db.readWrite(attempts = 2) { implicit s =>
        // Handle serialization in session to be transactional.
        val originalNormalizedUri = normUriRepo.get(uriId)
        val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
@@ -166,64 +166,6 @@ class ShoeboxController @Inject() (
         Ok(Json.toJson(false))
     }
 
-  }
-
-  def scraped() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val ts = System.currentTimeMillis
-    val json = request.body
-    val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
-    val infoOpt = (json \ "info").asOpt[ScrapeInfo]
-    val updateBookmark = (json \ "updateBookmark").asOpt[JsBoolean].getOrElse(JsBoolean(false)).value
-    log.info(s"[scraped] uri=$uriOpt info=$infoOpt updateBookmark=$updateBookmark")
-    if (!(uriOpt.isDefined && infoOpt.isDefined)) BadRequest(s"Illegal arguments: arguments($uriOpt, $infoOpt) cannot be null")
-    else {
-      val uri = uriOpt.get
-      val info = infoOpt.get
-      val savedUri = db.readWrite(attempts = 1) { implicit request =>
-        val savedUri  = normUriRepo.save(uri)
-        val savedInfo = scrapeInfoRepo.save(info)
-        if (updateBookmark) {
-          keepRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
-            keepRepo.save(bookmark.copy(title = savedUri.title))
-          }
-        }
-        log.info(s"[scraped($savedUri,$savedInfo)] time-lapsed=${System.currentTimeMillis - ts}")
-        savedUri
-      }
-      Ok(Json.toJson(savedUri))
-    }
-  }
-
-  def scrapeFailed() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val ts = System.currentTimeMillis
-    val json = request.body
-    val uriOpt  = (json \ "uri").asOpt[NormalizedURI]
-    val infoOpt = (json \ "info").asOpt[ScrapeInfo]
-    log.warn(s"[scrapeFailed] uri=$uriOpt info=$infoOpt")
-    if (!(uriOpt.isDefined && infoOpt.isDefined)) BadRequest(s"Illegal arguments: arguments($uriOpt, $infoOpt) cannot be null")
-    else {
-      val (savedUri, savedInfo) = {
-        val uri = uriOpt.get
-        val info = infoOpt.get
-        db.readWrite(attempts = 1) { implicit request =>
-          val uri2 = uri.id match {
-            case Some(id) => Some(normUriRepo.get(id))
-            case None => normUriRepo.getByUri(uri.url)
-          }
-          val savedUri = uri2 match {
-            case None => uri
-            case Some(uri2) => {
-              if (uri2.state == NormalizedURIStates.INACTIVE) uri2
-              else normUriRepo.save(uri2.withState(NormalizedURIStates.SCRAPE_FAILED))
-            }
-          }
-          val savedInfo = scrapeInfoRepo.save(info.withFailure)
-          log.warn(s"[scrapeFailed(uri(${uri.id}).url=${uri.url},info(${info.id}).state=${info.state})] time-lapsed:${System.currentTimeMillis - ts} updated: savedUri(${savedUri.id}).state=${savedUri.state}; savedInfo(${savedInfo.id}).state=${savedInfo.state}")
-          (savedUri, savedInfo)
-        }
-      }
-      Ok(Json.obj("uri" -> savedUri, "info" -> savedInfo))
-    }
   }
 
   // todo: revisit

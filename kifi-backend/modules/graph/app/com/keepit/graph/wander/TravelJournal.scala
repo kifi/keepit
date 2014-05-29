@@ -1,12 +1,13 @@
 package com.keepit.graph.wander
 
-import com.keepit.graph.model.{VertexId, EdgeDataReader, EdgeKind, VertexReader}
+import com.keepit.graph.model.{VertexId, VertexReader}
 import scala.collection.mutable
 import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.EdgeKind.EdgeType
 
 trait TravelJournal {
   def onStart(start: VertexReader): Unit
-  def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeKind[_ <: EdgeDataReader]): Unit
+  def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeType): Unit
   def onTeleportation(source: VertexReader, destination: VertexReader): Unit
   def onDeadend(deadend: VertexReader, restart: VertexReader): Unit
   def onComplete(end: VertexReader): Unit
@@ -19,7 +20,7 @@ class TeleportationJournal extends TravelJournal {
 
   def onStart(start: VertexReader): Unit = {}
 
-  def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeKind[_ <: EdgeDataReader]) = {
+  def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeType) = {
     lastVisited = Some(source.id)
     visited(source.kind) = visited(source.kind) + 1
   }
