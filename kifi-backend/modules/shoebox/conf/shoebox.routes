@@ -344,6 +344,8 @@ GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
 GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
+GET     /admin/data/renormalizeConsole              @com.keepit.controllers.admin.UrlController.urlRenormalizeConsole()
+POST    /admin/data/renormalizeConsole/submit       @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
 GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates

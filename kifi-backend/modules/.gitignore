@@ -1,0 +1,9 @@
+*/.cache
+*/.classpath
+*/.project
+*/.settings
+*/.target
+*/bin
+**/node_modules
+common/conf/app_compilation_date.txt
+common/conf/app_version.txt

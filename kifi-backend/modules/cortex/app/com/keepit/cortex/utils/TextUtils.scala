@@ -13,7 +13,7 @@ object TextUtils {
   object TextTokenizer {
     object LowerCaseTokenizer {
       def tokenize(text: String): Seq[String] = {
-        TextNormalizer.LowerCaseNormalizer.normalize(text).split(" ").filter(!_.isEmpty())
+        TextNormalizer.LowerCaseNormalizer.normalize(text).split("[\\s-]").filter(!_.isEmpty())
       }
     }
   }

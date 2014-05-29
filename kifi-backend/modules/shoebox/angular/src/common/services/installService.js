@@ -41,7 +41,7 @@ angular.module('kifi.installService', [])
             }, 10000);
           });
         } else if (isFirefox && supported) {
-          $window.location.href = '//www.kifi.com/assets/plugins/kifi-beta.xpi';
+          $window.location.href = '//www.kifi.com/assets/plugins/kifi.xpi';
         } else {
           $window.location.href = '//www.kifi.com/unsupported';
         }

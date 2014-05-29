@@ -9,32 +9,46 @@ import com.keepit.common.logging.Logging
 import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.graph.model.EdgeKind.EdgeType
 
-class MutableVertex(var data: VertexDataReader, val edges: MutableMap[VertexId, EdgeDataReader]) extends Vertex
+class MutableVertex(var data: VertexDataReader, val edges: MutableMap[(VertexType, EdgeType), MutableMap[VertexId, EdgeDataReader]]) extends Vertex
 
 object MutableVertex {
+
+  def buildEdgeIndex(edgeIterator: Iterator[(VertexId, EdgeDataReader)]): MutableMap[(VertexType, EdgeType), MutableMap[VertexId, EdgeDataReader]] = {
+    val edges = MutableMap[(VertexType, EdgeType), MutableMap[VertexId, EdgeDataReader]]()
+    edgeIterator.foreach { case (destinationId, edgeData) =>
+      val component = (destinationId.kind, edgeData.kind)
+      if (!edges.contains(component)) { edges += (component -> MutableMap[VertexId, EdgeDataReader]()) }
+      edges(component) += (destinationId -> edgeData)
+    }
+    edges
+  }
 
   implicit val format: Format[MutableVertex] = new Format[MutableVertex] {
 
     def writes(vertex: MutableVertex): JsValue = Json.obj(
       "data" -> VertexDataReader.writes.writes(vertex.data),
-      "edges" -> JsArray(vertex.edges.flatMap { case (destinationId, edgeDataReader) => Seq(VertexId.format.writes(destinationId), EdgeDataReader.writes.writes(edgeDataReader)) }.toSeq)
+      "edges" -> JsArray(vertex.edges.flatMap { case (component, edges) =>
+        edges.flatMap { case (destinationId, edgeDataReader) =>
+          Seq(VertexId.format.writes(destinationId), EdgeDataReader.writes.writes(edgeDataReader)) }
+        }.toSeq
+      )
     )
-    def reads(json: JsValue): JsResult[MutableVertex] = for {
-      data <- VertexDataReader.readsAsVertexData.reads(json \ "data")
-      edges <- (json \ "edges").validate[JsArray].map { jsArray =>
-        val edges = MutableMap[VertexId, EdgeDataReader]()
-        edges ++= jsArray.value.sliding(2,2).map { case Seq(destinationId, edgeData) =>
-          destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
+    def reads(json: JsValue): JsResult[MutableVertex] = {
+      for {
+        data <- VertexDataReader.readsAsVertexData.reads(json \ "data")
+        edgeIterator <- (json \ "edges").validate[JsArray].map { jsArray =>
+          jsArray.value.sliding(2,2).map { case Seq(destinationId, edgeData) =>
+            destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
+          }
         }
-        edges
-      }
-    } yield new MutableVertex(data.asReader, edges)
+      } yield { new MutableVertex(data.asReader, buildEdgeIndex(edgeIterator)) }
+    }
   }
 }
 
 class SimpleGraphWriter(
   bufferedVertices: BufferedMap[VertexId, MutableVertex],
-  bufferedIncomingEdges: BufferedMap[VertexId, MutableMap[VertexId, EdgeType]],
+  bufferedIncomingEdges: BufferedMap[VertexId, MutableMap[VertexId, MutableSet[EdgeType]]],
   vertexStatistics: Map[VertexType, AtomicLong],
   edgeStatistics: Map[(VertexType, VertexType, EdgeType), AtomicLong]
 ) extends SimpleGraphReader(bufferedVertices) with GraphWriter with Logging {
@@ -45,17 +59,22 @@ class SimpleGraphWriter(
   private def getBufferedVertex(vertexId: VertexId): Option[MutableVertex] = bufferedVertices.get(vertexId) map {
     case alreadyBufferedVertex if bufferedVertices.hasBuffered(vertexId) => alreadyBufferedVertex
     case vertex => {
-      val buffered = new MutableVertex(vertex.data, MutableMap() ++= vertex.edges)
+      val edges = MutableVertex.buildEdgeIndex(vertex.edges.valuesIterator.flatten)
+      val buffered = new MutableVertex(vertex.data, edges)
       bufferedVertices += (vertexId -> buffered)
       buffered
     }
   }
 
-  private def getBufferedIncomingEdges(vertexId: VertexId): MutableMap[VertexId, EdgeType] = bufferedIncomingEdges.get(vertexId) match {
+  private def getBufferedIncomingEdges(vertexId: VertexId): MutableMap[VertexId, MutableSet[EdgeType]] = bufferedIncomingEdges.get(vertexId) match {
     case Some(alreadyBufferedIncomingEdges) if bufferedIncomingEdges.hasBuffered(vertexId) => alreadyBufferedIncomingEdges
     case incomingEdgesOption => {
-      val buffered = MutableMap[VertexId, EdgeType]()
-      incomingEdgesOption.foreach(buffered ++= _)
+      val buffered = MutableMap[VertexId, MutableSet[EdgeType]]()
+      incomingEdgesOption.foreach { incomingEdges =>
+        incomingEdges.foreach { case (destinationId, edgeKinds) =>
+          buffered += destinationId -> (MutableSet() ++= edgeKinds)
+        }
+      }
       bufferedIncomingEdges += (vertexId -> buffered)
       buffered
     }
@@ -76,12 +95,12 @@ class SimpleGraphWriter(
 
   def removeVertex[V <: VertexDataReader](vertex: VertexDataId[V])(implicit vertexKind: VertexKind[V]): Unit = {
     val vertexId = VertexId(vertex)
-
-    val bufferedVertex = getBufferedVertex(vertexId) getOrElse { throw new VertexNotFoundException(vertexId) }
-    bufferedVertex.edges.foreach { case (destinationVertexId, edgeData) => removeEdge(vertexId, destinationVertexId, edgeData.kind) }
+    Vertex.checkIfVertexExists(bufferedVertices)(vertexId)
+    val bufferedVertex = getBufferedVertex(vertexId).get
+    bufferedVertex.edges.valuesIterator.flatten.foreach { case (destinationVertexId, edgeData) => removeEdge(vertexId, destinationVertexId, edgeData.kind) }
 
     val bufferedVertexIncomingEdges = getBufferedIncomingEdges(vertexId)
-    bufferedVertexIncomingEdges.foreach { case (sourceVertexId, edgeKind) => removeEdge(sourceVertexId, vertexId, edgeKind) }
+    bufferedVertexIncomingEdges.foreach { case (sourceVertexId, edgeKinds) => edgeKinds.foreach { edgeKind => removeEdge(sourceVertexId, vertexId, edgeKind) } }
 
     bufferedVertices -= vertexId
     bufferedIncomingEdges -= vertexId
@@ -90,13 +109,19 @@ class SimpleGraphWriter(
 
   def saveEdge[S <: VertexDataReader, D <: VertexDataReader, E <: EdgeDataReader](source: VertexDataId[S], destination: VertexDataId[D], data: E)(implicit sourceKind: VertexKind[S], destinationKind: VertexKind[D]): Boolean = {
     val sourceVertexId = VertexId(source)
-    val bufferedSourceVertex = getBufferedVertex(sourceVertexId) getOrElse { throw new VertexNotFoundException(sourceVertexId) }
     val destinationVertexId = VertexId(destination)
-    if (!bufferedVertices.contains(destinationVertexId)) { throw new VertexNotFoundException(destinationVertexId) }
-    val isNewEdge = !bufferedSourceVertex.edges.contains(destinationVertexId)
-    bufferedSourceVertex.edges += (destinationVertexId -> data)
+    Vertex.checkIfVertexExists(bufferedVertices)(sourceVertexId)
+    Vertex.checkIfVertexExists(bufferedVertices)(destinationVertexId)
+
+    val bufferedSourceVertex = getBufferedVertex(sourceVertexId).get
+    val component = (destinationKind, data.kind)
+    if (!bufferedSourceVertex.edges.contains(component)) { bufferedSourceVertex.edges += (component -> MutableMap()) }
+    val isNewEdge = !bufferedSourceVertex.edges(component).contains(destinationVertexId)
+    bufferedSourceVertex.edges(component) += (destinationVertexId -> data)
     if (isNewEdge) {
-      getBufferedIncomingEdges(destinationVertexId) += (sourceVertexId -> data.kind)
+      val bufferedIncomingEdges = getBufferedIncomingEdges(destinationVertexId)
+      if (!bufferedIncomingEdges.contains(sourceVertexId)) { bufferedIncomingEdges += (sourceVertexId -> MutableSet[EdgeType]()) }
+      bufferedIncomingEdges(sourceVertexId) += data.kind
       edgeDeltas((sourceKind, destinationKind, data.kind)).incrementAndGet()
     }
     isNewEdge
@@ -108,12 +133,18 @@ class SimpleGraphWriter(
     removeEdge(sourceVertexId, destinationVertexId, edgeKind)
   }
 
-  private def removeEdge[E <: EdgeDataReader](sourceVertexId: VertexId, destinationVertexId: VertexId, edgeKind: EdgeKind[E]): Unit = {
-    val bufferedSourceVertex = getBufferedVertex(sourceVertexId) getOrElse { throw new VertexNotFoundException(sourceVertexId) }
-    if (!bufferedVertices.contains(destinationVertexId)) { throw new VertexNotFoundException(destinationVertexId) }
-    if (!bufferedSourceVertex.edges.contains(destinationVertexId)) { throw new EdgeNotFoundException(sourceVertexId, destinationVertexId) }
-    bufferedSourceVertex.edges -= destinationVertexId
-    getBufferedIncomingEdges(destinationVertexId) -= sourceVertexId
+  private def removeEdge(sourceVertexId: VertexId, destinationVertexId: VertexId, edgeKind: EdgeType): Unit = {
+    Vertex.checkIfEdgeExists(bufferedVertices)(sourceVertexId, destinationVertexId, edgeKind)
+    val component = (destinationVertexId.kind, edgeKind)
+    val bufferedSourceVertex = getBufferedVertex(sourceVertexId).get
+
+    bufferedSourceVertex.edges(component) -= destinationVertexId
+    if (bufferedSourceVertex.edges(component).isEmpty) { bufferedSourceVertex.edges -= component }
+
+    val bufferedIncomingEdges = getBufferedIncomingEdges(destinationVertexId)
+    bufferedIncomingEdges(sourceVertexId) -= edgeKind
+    if (bufferedIncomingEdges(sourceVertexId).isEmpty) { bufferedIncomingEdges -= sourceVertexId }
+
     edgeDeltas((sourceVertexId.kind, destinationVertexId.kind, edgeKind)).decrementAndGet()
   }
 

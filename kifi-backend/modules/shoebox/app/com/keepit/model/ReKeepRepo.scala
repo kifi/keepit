@@ -11,10 +11,11 @@ import Q.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
-  def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
-  def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusDays(7))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByReKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
+  def getReKeepCountByKeeper(userId:Id[User])(implicit r:RSession):Int
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int]
   def getReKeeps(keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Seq[ReKeep]]
   def getAllReKeepCountsByUser()(implicit r:RSession):Map[Id[User], Int]
@@ -59,6 +60,10 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
     (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE)) yield r).list()
+  }
+
+  def getReKeepCountByKeeper(userId: Id[User])(implicit r: RSession): Int = {
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).length.run
   }
 
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int] = {

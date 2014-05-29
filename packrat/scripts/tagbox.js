@@ -12,7 +12,6 @@
 // @require scripts/html/keeper/tag-new.js
 // @require scripts/html/keeper/tagbox-tag.js
 // @require styles/keeper/tagbox.css
-// @require styles/animate-custom.css
 
 /**
  * ---------------
@@ -30,12 +29,6 @@ this.tagbox = (function ($, win) {
 		kifiUtil = win.kifiUtil,
 		Q = win.Q,
 		_ = win._;
-
-	function log(name) {
-		var args = Array.prototype.slice.call(arguments);
-		args[0] = '[tagbox.' + name + ']';
-		return win.log.apply(win, args);
-	}
 
 	function indexOfTag(tags, tagId) {
 		for (var i = 0, len = tags.length; i < len; i++) {
@@ -56,8 +49,7 @@ this.tagbox = (function ($, win) {
 			index = indexOfTag(tags, tagId);
 		if (index === -1) {
 			tags.push(tag);
-		}
-		else if (tag.name) {
+		} else if (tag.name) {
 			tags[index].name = tag.name;
 		}
 		return index;
@@ -79,7 +71,7 @@ this.tagbox = (function ($, win) {
 	api.port.on({
 		tags: function (tags) {
 			var tagbox = win.tagbox;
-			tagbox.tags = tags || [];
+			tagbox.tags = tags;
 			tagbox.updateTagList();
 			tagbox.updateSuggestion();
 			tagbox.updateScroll();
@@ -101,7 +93,7 @@ this.tagbox = (function ($, win) {
 			var tagbox = win.tagbox,
 				tag = o.tag,
 				tagId = tag && tag.id;
-			log('tag_change', o.op, tag);
+			log('[tag_change]', o.op, tag);
 			switch (o.op) {
 			case 'create':
 				addTag(win.tags, tag);
@@ -188,16 +180,17 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		init: function (trigger) {
-			log('init', trigger);
+			log('[init]', trigger);
 			this.active = true;
 			this.initTagBox();
 			this.initSuggest();
 			this.initTagList();
 			this.initInput();
-			this.initCloseIcon();
-			this.initClearAll();
+			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this, 'X'));
+			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
 			this.initTags();
 			this.onShow.dispatch();
+			win.setTimeout(this.focusInput.bind(this), 1);
 		},
 
 		/**
@@ -210,11 +203,6 @@ this.tagbox = (function ($, win) {
 			function onClick(e) {
 				if (!this.contains(e.target)) {
 					e.closedTagbox = true;
-					/*
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          */
 					this.hide('outside');
 				}
 			}
@@ -246,98 +234,62 @@ this.tagbox = (function ($, win) {
 		 * Add event listeners to the input element.
 		 */
 		initInput: function () {
-			var $inputbox = this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-			this.$input = $inputbox.find('input.kifi-tagbox-input');
+			this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
+			this.$input = this.$tagbox.find('.kifi-tagbox-input')
+				.on('focus', function () {
+					$(this).closest('.kifi-tagbox-input-box').addClass('kifi-focus');
+				})
+				.on('blur', function () {
+					$(this).closest('.kifi-tagbox-input-box').removeClass('kifi-focus');
+				})
+				.on('input', _.debounce(function (e) {
+					if (!this.active) {
+						return;
+					}
+					var text = e.target.value.trim();
+					if (text !== this.text) {
+						this.text = text;
+						this.$inputbox.toggleClass('kifi-empty', !text);
+						this.suggest(text);
+					}
+				}.bind(this), 1))
+				.on('keydown', function onKeydown(e) {
+					if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
+						return;
+					}
 
-			this.addInputEvents();
-			win.setTimeout(this.focusInput.bind(this), 1);
+					switch (e.which) {
+					case 38: // up
+						this.navigate('up');
+						e.preventDefault();
+						break;
+					case 40: // down
+						this.navigate('down');
+						e.preventDefault();
+						break;
+					case 13: // enter
+					case 9: // tab
+						this.select(null, 'key:' + (e.which === 9 ? 'tab' : 'enter'));
+						this.setInputValue();
+						e.preventDefault();
+						break;
+					}
+				}.bind(this));
 		},
 
 		focusInput: function () {
 			return this.$input && this.$input.focus();
 		},
 
-		/**
-		 * Add event listeners to the input element.
-		 * This is called inside {@link initInput}
-		 *
-		 * @see initInput
-		 */
-		addInputEvents: (function () {
-			function onFocus() {
-				$(this).closest('.kifi-tagbox-input-box').addClass('kifi-focus');
-			}
-
-			function onBlur() {
-				$(this).closest('.kifi-tagbox-input-box').removeClass('kifi-focus');
-			}
-
-			var KEY_UP = 38,
-				KEY_DOWN = 40,
-				KEY_ENTER = 13,
-				KEY_TAB = 9;
-
-			function onInput(e) {
-				if (!this.active) {
-					return;
-				}
-				var text = e.target.value.trim();
-				if (text !== this.text) {
-					this.text = text;
-					this.$inputbox.toggleClass('kifi-empty', !text);
-					this.suggest(text);
-				}
-			}
-
-			function onKeydown(e) {
-				if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
-					return;
-				}
-
-				switch (e.which) {
-				case KEY_UP:
-					this.navigate('up');
-					e.preventDefault();
-					break;
-				case KEY_DOWN:
-					this.navigate('down');
-					e.preventDefault();
-					break;
-				case KEY_ENTER:
-				case KEY_TAB:
-					this.select(null, 'key:' + (e.which === KEY_ENTER ? 'enter' : 'tab'));
-					this.setInputValue();
-					e.preventDefault();
-					break;
-				}
-			}
-
-			return function () {
-				var $input = this.$input;
-				$input.on('focus', onFocus);
-				$input.on('blur', onBlur);
-				$input.on('input', _.debounce(onInput.bind(this), 1));
-				$input.on('keydown', onKeydown.bind(this));
-			};
-		})(),
-
 		handleEsc: function () {
-			log('esc');
+			log('[handleEsc]');
 
 			if (this.currentSuggestion) {
 				this.navigateTo(null, 'esc');
-			}
-			else {
+			} else {
 				this.hide('key:esc');
 			}
 			return false;
-		},
-
-		/**
-		 * Add a close event listener to close button.
-		 */
-		initCloseIcon: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-close', this.hide.bind(this, 'X'));
 		},
 
 		/**
@@ -346,18 +298,11 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for suggestion list
 		 */
 		initSuggest: function () {
-			log('initSuggest.start');
-
-			var $suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner');
-			this.$suggest = $suggest;
-
-			$suggest.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this));
-			$suggest.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this));
-			$suggest.on('mouseover', this.onMouseoverSuggestion.bind(this));
-
-			log('initSuggest.end');
-
-			return $suggest;
+			log('[initSuggest]');
+			return this.$suggest = this.$tagbox.find('.kifi-tagbox-suggest-inner')
+				.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this))
+				.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this))
+				.on('mouseover', this.onMouseoverSuggestion.bind(this));
 		},
 
 		/**
@@ -366,27 +311,9 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} A jQuery object for tag list
 		 */
 		initTagList: function () {
-			log('initTagList.start');
-
-			var $tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner');
-			this.$tagList = $tagList;
-
-			this.$tagbox.on('click', '.kifi-tagbox-tag-name', function () {
-				log('navigate');
-			});
-
-			$tagList.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
-
-			log('initTagList.end');
-
-			return $tagList;
-		},
-
-		/**
-		 * Add a clear event listener to clear button.
-		 */
-		initClearAll: function () {
-			this.$tagbox.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
+			log('[initTagList]');
+			return this.$tagList = this.$tagbox.find('.kifi-tagbox-tag-list-inner')
+				.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
 		},
 
 		/**
@@ -396,13 +323,13 @@ this.tagbox = (function ($, win) {
 		 * @return {Object} A deferred promise object
 		 */
 		initTags: function () {
-			log('initTags.start');
+			log('[initTags]');
 			this.requestTags()
 				.then(this.onFetchTags.bind(this))
 				.then(this.updateSuggestHeight.bind(this))
 				.then(this.updateTagList.bind(this))
 				.then(this.moveKeeperToBottom.bind(this))
-				.then(this.setLoaded.bind(this, false))
+				.then(this.startShow.bind(this))
 				.then(this.initScroll.bind(this))
 				.then(this.$input.triggerHandler.bind(this.$input, 'input'))
 				.then(this.focusInput.bind(this))
@@ -411,11 +338,10 @@ this.tagbox = (function ($, win) {
 					throw err;
 				}.bind(this))
 				.fail(this.logError.bind(this));
-			log('initTags.end');
 		},
 
 		initScroll: function () {
-			log('initScroll.start');
+			log('[initScroll]');
 
 			var $suggestWrapper = this.$tagbox.find('.kifi-tagbox-suggest');
 			this.$suggestWrapper = $suggestWrapper;
@@ -431,12 +357,10 @@ this.tagbox = (function ($, win) {
 
 			var winResizeListener = this.winResizeListener = this.updateScroll.bind(this);
 			$(win).on('resize.kifi-tagbox-suggest', winResizeListener);
-
-			log('initScroll.end');
 		},
 
 		updateScroll: function () {
-			log('updateScroll');
+			log('[updateScroll]');
 
 			if (this.active) {
 				this.$tagListWrapper.data('antiscroll').refresh();
@@ -451,7 +375,7 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		destroy: function (trigger) {
-			log('destroy', trigger);
+			log('[destroy]', trigger);
 			if (this.active) {
 				this.active = false;
 
@@ -479,6 +403,7 @@ this.tagbox = (function ($, win) {
 					this.onDocClick = null;
 				}
 
+				this.text = null;
 				this.$slider = null;
 				this.tags = [];
 				this.tagsAdded = {};
@@ -721,20 +646,17 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Removes 'kifi-loading' class of the root element.
-		 *
-		 * @return {jQuery} A jQuery object for the root element
+		 * Starts the animation that shows the tagbox.
 		 */
-		setLoaded: function () {
-			this.removeClass('kifi-loading');
+		startShow: function () {
+			this.addClass('kifi-in');
 			if (win.pane) {
 				win.pane.shade();
 			}
 		},
 
 		/**
-		 * Given an input string to match against,
-		 * it rerenders tag suggestions.
+		 * Given an input string to match against, rerenders tag suggestions.
 		 *
 		 * @param {string} text - An input string to match against
 		 */
@@ -743,21 +665,17 @@ this.tagbox = (function ($, win) {
 				return;
 			}
 
-			//log('suggest', text);
-
 			var tags = this.tags;
 			tags = this.filterOutAddedTags(tags);
 			tags = this.filterTagsByText(text, tags);
 
-			var html = this.renderTagSuggestionsHtml(tags),
-				$suggest = this.$suggest;
-			$suggest.html(html);
+			this.$suggest.html(this.renderTagSuggestionsHtml(tags));
 
 			if (text.trim() && this.indexOfTagByName(text) === -1) {
-				$suggest.append(this.renderNewTagSuggestionHtml(text));
+				this.$suggest.append(this.renderNewTagSuggestionHtml(text));
 			}
 
-			this.updateSuggestedClass();
+			this.toggleClass('kifi-suggested', text || this.$suggest.children().length);
 			this.updateScroll();
 
 			this.navigateTo('first', 'suggest');
@@ -768,10 +686,8 @@ this.tagbox = (function ($, win) {
 		 */
 		updateTagList: function () {
 			if (this.active) {
-				var tags = this.getAddedTags(),
-					html = tags.map(this.renderTagHtml, this).join('');
-				this.$tagList.html(html);
-
+				var tags = this.getAddedTags();
+				this.$tagList.html(tags.map(this.renderTagHtml, this).join(''));
 				this.toggleClass('kifi-tagged', tags.length);
 			}
 		},
@@ -829,12 +745,12 @@ this.tagbox = (function ($, win) {
 			name = tagNameToString(name);
 
 			if (this.indexOfTagByName(name) !== -1) {
-				log('createTag', 'tag already exists', name);
+				log('[createTag]', 'tag already exists', name);
 				return null;
 			}
 
 			if (this.isTagBusy(name)) {
-				log('createTag', 'tag is already being created', name);
+				log('[createTag]', 'tag is already being created', name);
 				return null;
 			}
 
@@ -845,7 +761,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, name));
 
-			log('createTag', trigger, name);
+			log('[createTag]', trigger, name);
 
 			return deferred;
 		},
@@ -863,12 +779,12 @@ this.tagbox = (function ($, win) {
 		addTagById: function (tagId, $suggestion, trigger) {
 			var $el = this.getTag$ById(tagId);
 			if ($el.length) {
-				log('addTagById', 'tag already added', tagId);
+				log('[addTagById]', 'tag already added', tagId);
 				return null;
 			}
 
 			if (this.isTagBusy(tagId)) {
-				log('addTagById', 'tag is already being added', tagId);
+				log('[addTagById]', 'tag is already being added', tagId);
 				return null;
 			}
 
@@ -882,7 +798,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 
-			log('addTag', {
+			log('[addTagById]', {
 				trigger: trigger,
 				name: this.getTagNameById(tagId),
 				input: this.getInputValue()
@@ -903,12 +819,12 @@ this.tagbox = (function ($, win) {
 		removeTagById: function (tagId, trigger) {
 			var $el = this.getTag$ById(tagId);
 			if (!$el.length) {
-				log('removeTagById', 'tag is not added', tagId);
+				log('[removeTagById]', 'tag is not added', tagId);
 				return null;
 			}
 
 			if (this.isTagBusy(tagId)) {
-				log('removeTagById', 'tag is already being removed', tagId);
+				log('[removeTagById]', 'tag is already being removed', tagId);
 				return null;
 			}
 
@@ -919,7 +835,7 @@ this.tagbox = (function ($, win) {
 				.fail(this.logError.bind(this))
 				.fin(this.removeTagBusy.bind(this, tagId));
 
-			log('removeTag', trigger, tagId);
+			log('[removeTag]', trigger, tagId);
 
 			return deferred;
 		},
@@ -998,13 +914,6 @@ this.tagbox = (function ($, win) {
 		 */
 		updateTaggedClass: function () {
 			return this.toggleClass('kifi-tagged', this.$tagList.children().length);
-		},
-
-		/**
-		 * Updates (add/remove) 'kifi-suggested' class of the tagbox.
-		 */
-		updateSuggestedClass: function () {
-			return this.toggleClass('kifi-suggested', this.getInputValue() || this.$suggest.children().length);
 		},
 
 		updateTagName: function (tag) {
@@ -1166,7 +1075,7 @@ this.tagbox = (function ($, win) {
 		 *   }]
 		 */
 		onFetchTags: function (tags) {
-			log('onFetchTags', tags);
+			log('[onFetchTags]', tags);
 			this.setTags(tags.all);
 			this.rebuildTagsAdded(tags.page);
 			return arguments;
@@ -1250,7 +1159,7 @@ this.tagbox = (function ($, win) {
 		 *   }
 		 */
 		onAddResponse: function (tag) {
-			log('onAddResponse', tag);
+			log('[onAddResponse]', tag);
 
 			var tagId = tag.id;
 
@@ -1271,7 +1180,7 @@ this.tagbox = (function ($, win) {
 		 *   Response: {}
 		 */
 		onRemoveResponse: function (tagId, response) {
-			log('onRemoveResponse', response);
+			log('[onRemoveResponse]', response);
 
 			return this.removeTag$ById(tagId);
 		},
@@ -1286,7 +1195,7 @@ this.tagbox = (function ($, win) {
 		 *   Response: {}
 		 */
 		onClearTagsResponse: function () {
-			log('onClearTagsResponse');
+			log('[onClearTagsResponse]');
 
 			this.clearTags$();
 			this.tagsAdded = {};
@@ -1549,7 +1458,7 @@ this.tagbox = (function ($, win) {
 				.then(this.onClearTagsResponse.bind(this))
 				.fail(this.logError.bind(this));
 
-			log('clearTags', trigger);
+			log('[clearTags]', trigger);
 
 			return deferred;
 		},
@@ -1582,7 +1491,12 @@ this.tagbox = (function ($, win) {
 		 * @param {string} trigger - A triggering user action
 		 */
 		hide: function (trigger) {
-			this.destroy(trigger);
+			var self = this;
+			this.$tagbox.on('transitionend', function (e) {
+				if (e.target === this) {
+					self.destroy(trigger);
+				}
+			}).removeClass('kifi-in');
 		},
 
 		/**
@@ -1594,8 +1508,7 @@ this.tagbox = (function ($, win) {
 		toggle: function ($slider, trigger) {
 			if (this.active) {
 				this.hide(trigger);
-			}
-			else {
+			} else {
 				this.show($slider, trigger);
 			}
 		},

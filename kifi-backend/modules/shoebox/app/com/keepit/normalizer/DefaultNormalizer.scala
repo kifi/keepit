@@ -8,7 +8,7 @@ object DefaultNormalizer extends StaticNormalizer with Logging {
   val stopParams = Set(
     "jsessionid", "phpsessid", "aspsessionid",
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "trk", "goback", "icid", "zenid")
+    "trk", "goback", "icid", "ncid", "zenid")
 
   def isDefinedAt(uri: URI) = true // default normalizer should always be applicable
   def apply(uri: URI) = {

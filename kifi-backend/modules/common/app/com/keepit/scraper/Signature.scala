@@ -9,6 +9,12 @@ import javax.xml.bind.DatatypeConverter._
 import scala.math._
 
 object Signature {
+
+  import play.api.libs.json._
+  import play.api.libs.functional.syntax._
+
+  implicit val format: Format[Signature] = Format[Signature](Reads.of[String].fmap(Signature.apply), Writes { signature => JsString(signature.toBase64()) })
+
   def apply(arr: Array[Byte]) = new Signature(arr)
   def apply(base64: String) = new Signature(parseBase64Binary(base64))
   def apply(fields: Seq[String]): Signature = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build

@@ -244,9 +244,12 @@ class UserController @Inject() (
        Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
        Json.obj("experiments" -> experiments.map(_.value))
     val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
+    val (clickCount, rekeepCount) = if (experiments.contains(ExperimentType.HELPRANK)) userCommander.getKeepAttributionCounts(userId) else (-1, -1)
     Ok(json ++ Json.obj(
       "uniqueKeepsClicked" -> uniqueKeepsClicked,
-      "totalKeepsClicked" -> totalClicks
+      "totalKeepsClicked" -> totalClicks,
+      "clickCount" -> clickCount,
+      "rekeepCount" -> rekeepCount
     ))
   }
 
