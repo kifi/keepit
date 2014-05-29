@@ -9,8 +9,6 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
       restrict: 'A',
       scope: {
         tag: '=',
-        takeFocus: '&',
-        releaseFocus: '&',
         watchTagReorder: '&',
         reorderTag: '&',
         hasNewLocation: '&',
@@ -49,7 +47,6 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
 
         scope.setRenaming = function () {
           closeDropdown();
-          scope.takeFocus();
           scope.isRenaming = true;
           scope.renameTag.value = scope.tag.name;
           $timeout(function () {
@@ -86,7 +83,6 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
 
         scope.cancelRename = function () {
           scope.isRenaming = false;
-          scope.releaseFocus();
         };
 
         function closeDropdown() {

@@ -43,6 +43,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         scope.tags = tagService.list;
         scope.newLocationTagId = null;
         scope.viewedTagId = null;
+        scope.isFilterFocused = false;
 
         var w = angular.element($window);
         var tagList = element.find('.kf-tag-list');
@@ -62,23 +63,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         }
         setTagListHeight();
 
-        scope.clearFilter = function (focus) {
+        scope.clearFilter = function () {
           scope.filter.name = '';
-          if (focus) {
-            scope.focusFilter = true;
-          }
-        };
-
-        scope.unfocus = function () {
-          scope.lastHighlight = scope.highlight;
-        };
-
-        scope.refocus = function () {
-          if (scope.lastHighlight && !scope.highlight) {
-            scope.highlight = scope.lastHighlight;
-          }
-          scope.lastHighlight = null;
-          scope.focusFilter = true;
+          scope.onFilterChange();
         };
 
         function getFilterValue() {
@@ -141,12 +128,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
             scope.select();
             break;
           case KEY_ESC:
-            if (scope.highlight) {
-              scope.dehighlight();
-            }
-            else {
-              scope.clearFilter();
-            }
+            setTimeout(function () {
+              element.find('.kf-tag-filter-input').blur(); // 
+            });
             break;
           case KEY_DEL:
             scope.remove(scope.highlight);
@@ -313,6 +297,16 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
             }
           });
         };
+
+        scope.focusFilter = function () {
+          scope.isFilterFocused = true;
+        };
+
+        scope.blurFilter = function () {
+          scope.dehighlight();
+          scope.isFilterFocused = false;
+          scope.clearFilter();
+        }
       }
     };
   }

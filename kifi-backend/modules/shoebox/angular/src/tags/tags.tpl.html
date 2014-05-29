@@ -1,22 +1,19 @@
 <div class="kf-tags">
-  <div class="kf-tags-header">
-    <div class="kf-nav-group-name">TAGS</div>
-    <div class="kf-tag-input-box">
-      <input kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" focus-when="focusFilter" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-blur="dehighlight()">
-      <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
-    </div>
-    <div class="kf-tag-list-hidden"></div>
+  <div class="kf-nav-group-name">TAGS</div>
+  <div class="kf-tag-input-box" ng-class="{'focused': isFilterFocused}">
+    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilter()">
+    <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
   </div>
+  <div class="kf-tag-list-hidden"></div>
 
   <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }">
     <ul class="kf-tag-list">
-      <li kf-tag-item tag="tag" take-focus="unfocus()" release-focus="refocus()" has-new-location="newLocationTagId === tag.id" watch-tag-reorder="watchTagReorder()" reorder-tag="reorderTag(isTop,srcTag,dstTag)" received-tag-drag="receivedTagDrag()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" ng-repeat="tag in tags"></li>
-      <li class="kf-nav-item kf-tag kf-tag-new" ng-class="{ highlight: isHighlightNew() }" ng-show="showAddTag()">
-        <a href="javascript:" ng-click="create(filter.name)">
-          <span class="kf-tag-icon kf-tag-icon-create"></span>
-          <span class="kf-tag-caption">Add a new tag:</span>
-          <span class="kf-tag-name">{{filter.name}}</span>
-        </a>
+      <li kf-tag-item tag="tag" has-new-location="newLocationTagId === tag.id" watch-tag-reorder="watchTagReorder()" reorder-tag="reorderTag(isTop,srcTag,dstTag)" received-tag-drag="receivedTagDrag()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" ng-repeat="tag in tags"></li>
+      <li class="kf-tag-new" ng-show="showAddTag()" ng-click="create(filter.name)">
+        <div class="kf-tag-new-contents" ng-class="{ highlight: isHighlightNew() }">
+          <div class="kf-tag-caption">Add as a new tag:</div>
+          <div class="kf-tag-name">{{filter.name}}</div>
+        </div>
       </li>
     </ul>
   </div>
