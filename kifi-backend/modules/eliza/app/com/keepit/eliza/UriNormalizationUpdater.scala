@@ -41,9 +41,9 @@ class UriNormalizationUpdater @Inject() (
 
   def checkAndUpdate(remoteSequenceNumberOpt: Option[SequenceNumber[ChangedURI]]) : Unit = synchronized {
     var localSeqNum = localSequenceNumber()
-    log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
+    log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader()}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
     remoteSequenceNumberOpt match {
-      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader) => {
+      case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader()) => {
         val upperBound = if (remoteSequenceNumber - localSequenceNumber > 500) localSequenceNumber + 500 else remoteSequenceNumber
         val thereIsMore = upperBound < remoteSequenceNumber
         val updatesFuture = shoebox.getNormalizedUriUpdates(localSequenceNumber, upperBound)
