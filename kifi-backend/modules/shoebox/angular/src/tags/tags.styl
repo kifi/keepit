@@ -1,3 +1,21 @@
+kfTagHeight = 30px
+
+.kf-tag
+  position: relative
+  margin-right: 10px
+  border-radius: 2px
+  height: kfTagHeight
+
+  &:hover
+    background-color: #eeeeee
+    
+    .kf-tag-tool
+      display: block
+
+.kf-tag-info
+  padding: 0 20px 0 20px
+  line-height: kfTagHeight
+
 .kf-tag-input-box
   cursor: text
   border-radius: 12px
@@ -55,7 +73,6 @@
   overflow: hidden
   text-overflow: ellipsis
   vertical-align: middle
-  line-height: 26px
   font-size: 13px
   padding: 0 5px 0 26px
   background: url(../img/placeholder-icon.png) 0 center / 16px no-repeat
@@ -64,15 +81,29 @@
 .kf-tag-count
   float: right
   font-size: 12px
-  line-height: 26px
   color: countColor
   font-weight: 200
 
 .kf-scrollable-tags
   position: relative
 
-.kf-tag-list
-  padding-right: 30px
-
 .kf-tags-header
-  margin-right: 30px
+  margin: 0 30px 0 20px
+
+.kf-tag-tool
+  position: absolute
+  display: none
+  height: 100%
+  width: 10px
+  padding: 0 5px
+  top: 0
+
+.kf-tag-dropdown-toggle
+  right: 0
+  background: url(../img/arrow-gray-down.png) center/10px no-repeat
+
+.kf-tag-handle
+  left: 0
+  cursor: move
+  background: url(../img/drag-handle-tag.png) center/10px no-repeat
+
