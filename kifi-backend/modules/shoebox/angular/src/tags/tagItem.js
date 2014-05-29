@@ -98,7 +98,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           scope.$apply(closeDropdown);
         }
 
-        scope.toggleDropdown = function () {
+        scope.toggleDropdown = function (e) {
+          e.stopPropagation();
           if (!scope.isDropdownOpen) {
             scope.isDropdownOpen = true;
             $document.bind('click', applyCloseDropdown);
