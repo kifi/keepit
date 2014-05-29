@@ -45,8 +45,6 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def saveBookmark(bookmark:Keep): Future[Keep] = shoeboxServiceClient.saveBookmark(bookmark)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxServiceClient.recordPermanentRedirect(uri, redirect)
   def isUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxServiceClient.isUnscrapableP(url, destinationUrl)
-  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = shoeboxServiceClient.scraped(uri, info)
-  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo) = shoeboxServiceClient.scrapeFailed(uri, info)
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
     shoeboxServiceClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls)
   }
@@ -84,8 +82,4 @@ trait ShoeboxDbCallbacks {
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
-
-  def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
-  def scrapeFailed(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
-  // def updateScrapeInfo(idOpt:Option[Id[ScrapeInfo]], uriId:Id[NormalizedURI], state:State[ScrapeInfo]):Future[ScrapeInfo]
 }
