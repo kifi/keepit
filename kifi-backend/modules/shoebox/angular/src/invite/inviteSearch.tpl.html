@@ -1,5 +1,6 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)">
+  <input type="text" ng-model="search.name" placeholder="Search for friends" ng-change="change($event)">
+  <div class="social-invite-search-explain">Search by name or email address</div>
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
