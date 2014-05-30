@@ -283,13 +283,6 @@ module.exports = function (grunt) {
     // Easiest install on OSX:
     //    wget https://raw.githubusercontent.com/LearnBoost/node-canvas/master/install -O - | sh
     //    npm install canvas
-    sprite:{
-      all: {
-        src: 'img/sprites/*.png',
-        destImg: 'img/sprites.png',
-        destCSS: 'src/common/sprites.styl'
-      }
-    },
     spritepacker: {
       default_options: {
         options: {
