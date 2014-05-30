@@ -30,12 +30,12 @@ class URIPullerImpl @Inject()(
   }
 }
 
-abstract class URIFeatureUpdater[M <: StatModel](
-  representer: FeatureRepresenter[NormalizedURI, M],
-  featureStore: VersionedStore[Id[NormalizedURI], M, FeatureRepresentation[NormalizedURI, M]],
+abstract class URIFeatureUpdater[M <: StatModel, FT <: FeatureRepresentation[NormalizedURI, M]](
+  representer: FeatureRepresenter[NormalizedURI, M, FT],
+  featureStore: VersionedStore[Id[NormalizedURI], M, FT],
   commitInfoStore: CommitInfoStore[NormalizedURI, M],
   dataPuller: DataPuller[NormalizedURI]
-) extends FeatureUpdater[Id[NormalizedURI], NormalizedURI, M](representer, featureStore, commitInfoStore, dataPuller){
+) extends FeatureUpdater[Id[NormalizedURI], NormalizedURI, M, FT](representer, featureStore, commitInfoStore, dataPuller){
 
   protected def getSeqNumber(uri: NormalizedURI): SequenceNumber[NormalizedURI] = uri.seq
   protected def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get

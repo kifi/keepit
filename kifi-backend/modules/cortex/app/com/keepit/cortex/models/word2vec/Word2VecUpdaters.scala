@@ -16,14 +16,14 @@ class Word2VecURIFeatureUpdater @Inject()(
   featureStore: Word2VecURIFeatureStore,
   commitStore: Word2VecURIFeatureCommitStore,
   uriPuller: URIPuller
-) extends URIFeatureUpdater[Word2Vec](representer, featureStore, commitStore, uriPuller){
+) extends URIFeatureUpdater(representer, featureStore, commitStore, uriPuller){
   override val pullSize = 200
 }
 
 class Word2VecURIFeatureUpdateActor @Inject()(
   airbrake: AirbrakeNotifier,
   updater: Word2VecURIFeatureUpdater
-) extends FeatureUpdateActor[Id[NormalizedURI], NormalizedURI, Word2Vec](airbrake: AirbrakeNotifier, updater)
+) extends FeatureUpdateActor(airbrake: AirbrakeNotifier, updater)
 
 trait Word2VecURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, Word2Vec]
 
@@ -32,7 +32,7 @@ class Word2VecURIFeatureUpdatePluginImpl @Inject()(
   actor: ActorInstance[Word2VecURIFeatureUpdateActor],
   discovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends BaseFeatureUpdatePlugin[Id[NormalizedURI], NormalizedURI, Word2Vec](actor, discovery) with Word2VecURIFeatureUpdatePlugin {
+) extends BaseFeatureUpdatePlugin(actor, discovery) with Word2VecURIFeatureUpdatePlugin {
   override val startTime: FiniteDuration = 45 seconds
   override val updateFrequency: FiniteDuration = 2 minutes
 }

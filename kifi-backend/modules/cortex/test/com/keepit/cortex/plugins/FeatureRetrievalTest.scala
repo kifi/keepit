@@ -11,7 +11,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       val (fooRepresenter, fooFeatStore, commitStore, fakePuller) = setup()
 
-      val updater = new FeatureUpdater[Id[Foo], Foo, FakeModel](
+      val updater = new FeatureUpdater(
           fooRepresenter, fooFeatStore, commitStore, fakePuller){
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get
@@ -41,7 +41,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
     "tricky retrieval works" in {
        val (fooRepresenter, fooOddFeatStore, commitStore, fakePuller) = setup2()
 
-      val updater = new FeatureUpdater[Id[Foo], Foo, FakeModel](
+      val updater = new FeatureUpdater(
           fooRepresenter, fooOddFeatStore, commitStore, fakePuller){
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get

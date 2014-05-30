@@ -12,14 +12,14 @@ case class Word2VecWordRepresenter(val version: ModelVersion[Word2Vec], word2vec
 
 case class Word2VecDocRepresenter @Inject()(
   word2vec: Word2VecWordRepresenter
-) extends DocRepresenter[Word2Vec]{
+) extends DocRepresenter[Word2Vec, FloatVecFeature[Document, Word2Vec]]{
 
   val dimension = word2vec.dimension
   val version = word2vec.version
 
   private val doc2vec = new Doc2Vec(word2vec.mapper, word2vec.dimension)
 
-  override def apply(doc: Document): Option[FeatureRepresentation[Document, Word2Vec]] = {
+  override def apply(doc: Document): Option[FloatVecFeature[Document, Word2Vec]] = {
     doc2vec.sampleBest(doc.tokens, numTry = 6).map{ res =>
       FloatVecFeature[Document, Word2Vec](res.vec)
     }

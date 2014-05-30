@@ -8,12 +8,12 @@ import com.keepit.cortex.core.FeatureRepresentation
 import com.keepit.search.Article
 import com.keepit.cortex.core.FloatVecFeature
 
-trait URIFeatureRepresenter[M <: StatModel] extends FeatureRepresenter[NormalizedURI, M]
+trait URIFeatureRepresenter[M <: StatModel, +FT <: FeatureRepresentation[NormalizedURI, M]] extends FeatureRepresenter[NormalizedURI, M, FT]
 
 abstract class BaseURIFeatureRepresenter[M <: StatModel](
-  docRepresenter: DocRepresenter[M],
+  docRepresenter: DocRepresenter[M, FeatureRepresentation[Document, M]],
   articleStore: ArticleStore
-) extends URIFeatureRepresenter[M]{
+) extends URIFeatureRepresenter[M, FeatureRepresentation[NormalizedURI, M]]{
 
   override val version = docRepresenter.version
   override val dimension = docRepresenter.dimension
