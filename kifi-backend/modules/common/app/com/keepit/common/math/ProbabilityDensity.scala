@@ -7,7 +7,7 @@ import play.api.libs.json.{JsNumber, JsArray, Json, Format}
 case class ProbabilityDensity[+A](density: Seq[(A, Double)]) {
   require(density.forall(_._2 >= 0), "Probabilities must be non-negative")
   require(density.map(_._2).sum <= 1.1, "Probabilities sum up to more than 1")
-  val cumulative: Seq[(A, Double)] = { // The order of the density sequence is implied to compute the CDF
+  private val cumulative: Seq[(A, Double)] = { // The order of the density sequence is implied to compute the CDF
     var cdf = 0.0
     density.collect { case (outcome, probability) if probability > 0 =>
       cdf += probability
