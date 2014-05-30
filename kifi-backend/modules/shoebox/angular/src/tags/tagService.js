@@ -64,13 +64,13 @@ angular.module('kifi.tagService', [
       api.fetchAll();
     }
 
-    function reorderTag(isTop, srcTag, dstTag) {
-      // isTop indicates whether dstTag should be placed before or after srcTag
+    function reorderTag(srcTag, dstTag, isAfter) {
+      // isAfter indicates whether srcTag should be placed before or after dstTag
       var index = _.findIndex(allTags, function (tag) { return tag.id === dstTag.id; });
       var newSrcTag = _.clone(srcTag);
       var srcTagId = srcTag.id;
       newSrcTag.id = -1;
-      if (!isTop) {
+      if (isAfter) {
         index += 1;
       }
       allTags.splice(index, 0, newSrcTag);
