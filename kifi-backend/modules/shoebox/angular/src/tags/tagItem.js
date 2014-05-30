@@ -96,7 +96,6 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         }
 
         scope.toggleDropdown = function (e) {
-          console.log("toggling");
           e.stopPropagation();
           e.preventDefault();
           if (!scope.isDropdownOpen) {
@@ -188,7 +187,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
               scope.tagDragTarget = scope.tag;
             }
           });
-        })
+        });
 
         var newLocationMask = element.find('.kf-tag-new-location-mask');
         scope.$watch(scope.hasNewLocation, function (value) {
