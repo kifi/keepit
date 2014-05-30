@@ -19,7 +19,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       updater.update()
 
-      val retriever = new FeatureRetrieval[Id[Foo], Foo, FakeModel](
+      val retriever = new FeatureRetrieval(
         fooFeatStore, commitStore, fakePuller
       ){
         def genFeatureKey(foo: Foo) = foo.id.get
@@ -49,7 +49,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       updater.update()
 
-      val retriever = new FeatureRetrieval[Id[Foo], Foo, FakeModel](
+      val retriever = new FeatureRetrieval(
         fooOddFeatStore, commitStore, fakePuller
       ){
         def genFeatureKey(foo: Foo) = foo.id.get

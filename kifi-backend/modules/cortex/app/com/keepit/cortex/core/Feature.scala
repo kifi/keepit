@@ -15,3 +15,9 @@ trait FeatureRepresenter[T, M <: StatModel]{
   def apply(datum: T): Option[FeatureRepresentation[T, M]]
   def getRawVector(datum: T): Option[Array[Float]] = apply(datum).map{_.vectorize}    // subclass may override this to improve performance
 }
+
+
+trait BinaryFeatureFormatter[T <: FeatureRepresentation[ _, _ <: StatModel]] {
+  def toBinary(m: T): Array[Byte]
+  def fromBinary(bytes: Array[Byte]): T
+}

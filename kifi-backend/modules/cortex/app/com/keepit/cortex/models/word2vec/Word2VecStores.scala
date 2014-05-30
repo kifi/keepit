@@ -39,3 +39,18 @@ class S3Word2VecURIFeatureCommitStore(bucketName: S3Bucket,
 }
 
 class InMemoryWord2VecURIFeatureCommitStore extends InMemoryCommitInfoStore[NormalizedURI, Word2Vec] with Word2VecURIFeatureCommitStore
+
+
+trait RichWord2VecURIFeatureStore extends BinaryFeatureStore[Id[NormalizedURI], NormalizedURI, Word2Vec, RichWord2VecDocFeature]
+
+class S3RichWord2VecURIFeatureStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)
+  extends S3BlobBinaryFeatureStore[Id[NormalizedURI], NormalizedURI, Word2Vec, RichWord2VecDocFeature] with RichWord2VecURIFeatureStore {
+
+  val formatter = RichWord2VecDocFeatureFormatter
+  val prefix = CommitInfoStorePrefix.URIFeature.word2vec
+}
+
+class InMemoryRichWord2VecURIFeatureCommitStore
+  extends InMemoryBinaryFeatureStore[Id[NormalizedURI], NormalizedURI, Word2Vec, RichWord2VecDocFeature]
+   with RichWord2VecURIFeatureStore
+

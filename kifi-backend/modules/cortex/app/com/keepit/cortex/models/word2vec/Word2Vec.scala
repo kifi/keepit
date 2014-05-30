@@ -3,6 +3,8 @@ package com.keepit.cortex.models.word2vec
 import com.keepit.cortex.core.{BinaryFormatter, FeatureRepresentation, StatModel}
 import com.keepit.cortex.features.Document
 import java.io._
+import com.keepit.cortex.core.BinaryFeatureFormatter
+import com.keepit.model.NormalizedURI
 
 trait Word2Vec extends StatModel {
   val dimension: Int
@@ -28,10 +30,19 @@ case class RichWord2VecDocFeature(
   vec: Array[Float],
   keywords: Array[String],
   bagOfWords: Map[String, Int]
-) extends FeatureRepresentation[Document, Word2Vec] {
+) extends FeatureRepresentation[NormalizedURI, Word2Vec] {
   override def vectorize: Array[Float] = vec
 }
 
+object RichWord2VecDocFeatureFormatter extends BinaryFeatureFormatter[RichWord2VecDocFeature] {
+  def toBinary(feat: RichWord2VecDocFeature): Array[Byte] = {
+    RichWord2VecDocFeatureFormat.toBinary(feat)
+  }
+
+  def fromBinary(bytes: Array[Byte]): RichWord2VecDocFeature = {
+    RichWord2VecDocFeatureFormat.fromBinary(bytes)
+  }
+}
 
 object RichWord2VecDocFeatureFormat {
   private val FLOAT_SIZE = 4
