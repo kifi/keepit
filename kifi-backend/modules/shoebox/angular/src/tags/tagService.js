@@ -64,22 +64,13 @@ angular.module('kifi.tagService', [
       api.fetchAll();
     }
 
-    function reorderTag(srcTag, dstTag, isAfter) {
-      // isAfter indicates whether srcTag should be placed before or after dstTag
-      var index = _.findIndex(allTags, function (tag) { return tag.id === dstTag.id; });
+    function reorderTag(srcTag, index) {
       var newSrcTag = _.clone(srcTag);
       var srcTagId = srcTag.id;
       newSrcTag.id = -1;
-      if (isAfter) {
-        index += 1;
-      }
       allTags.splice(index, 0, newSrcTag);
       _.remove(allTags, function (tag) { return tag.id === srcTagId; });
-      for (var i = 0; i < allTags.length; i++) {
-        if (allTags[i].id === -1) {
-          allTags[i].id = srcTagId;
-        }
-      }
+      newSrcTag.id = srcTagId;
       persistOrdering();
       $analytics.eventTrack('user_clicked_page', {
         'action': 'reorderTag'
