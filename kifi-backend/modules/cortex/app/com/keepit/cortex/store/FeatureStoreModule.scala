@@ -33,6 +33,13 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
     new S3BlobWord2VecURIFeatureStore(bucketName, amazonS3Client, accessLog)
   }
 
+  @Singleton
+  @Provides
+  def richWord2vecURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): RichWord2VecURIFeatureStore = {
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
+    new S3RichWord2VecURIFeatureStore(bucketName, amazonS3Client, accessLog)
+  }
+
 }
 
 case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule{
@@ -52,6 +59,14 @@ case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdS
     whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.word2vecURIFeatureStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryWord2VecURIFeatureStore)
+  }
+
+  @Singleton
+  @Provides
+  def richWord2vecURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): RichWord2VecURIFeatureStore = {
+    whenConfigured(S3_CORTEX_BUCKET)(
+      prodStoreModule.richWord2vecURIFeatureStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryRichWord2VecURIFeatureStore)
   }
 
 }
