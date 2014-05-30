@@ -77,12 +77,22 @@ var Spotlight = Spotlight || (function (window, document) {
 
   function position(el, ro, ri) {
     var r = Math.round(Math.sqrt(ri.w * ri.w + ri.h * ri.h) / 2);
-    var cx = Math.round(ri.x + ri.w / 2);
-    var cy = Math.round(ri.y + ri.h / 2);
-    positionOne(el[0], r, cx, cy, ro.x, ro.y, ro.w, ri.y - ro.y);
-    positionOne(el[1], r, cx, cy, ro.x, ri.y, ri.x - ro.x, ri.h);
-    positionOne(el[2], r, cx, cy, ri.x + ri.w, ri.y, ro.x + ro.w - ri.x - ri.w, ri.h);
-    positionOne(el[3], r, cx, cy, ro.x, ri.y + ri.h, ro.w, ro.y + ro.h - ri.y - ri.h);
+    if (r > 0) {
+      var cx = Math.round(ri.x + ri.w / 2);
+      var cy = Math.round(ri.y + ri.h / 2);
+      positionOne(el[0], r, cx, cy, ro.x, ro.y, ro.w, ri.y - ro.y);
+      positionOne(el[1], r, cx, cy, ro.x, ri.y, ri.x - ro.x, ri.h);
+      positionOne(el[2], r, cx, cy, ri.x + ri.w, ri.y, ro.x + ro.w - ri.x - ri.w, ri.h);
+      positionOne(el[3], r, cx, cy, ro.x, ri.y + ri.h, ro.w, ro.y + ro.h - ri.y - ri.h);
+    } else {
+      var s = el[0].style;
+      s.display = '';
+      s.left = s.top = '0';
+      s.width = s.height = '100%';
+      s.backgroundColor = 'rgba(0,0,0,.85)';
+      s.backgroundImage = '';
+      el[1].style.display = el[2].style.display = el[3].style.display = 'none';
+    }
   }
 
   function positionOne(el, r, cx, cy, x, y, w, h) {
@@ -93,6 +103,7 @@ var Spotlight = Spotlight || (function (window, document) {
       s.top = Math.round(y) + 'px';
       s.width = Math.round(w) + 'px';
       s.height = Math.round(h) + 'px';
+      s.backgroundColor = '';
       s.backgroundImage = 'radial-gradient(circle ' + (r + 9) + 'px at ' + (cx - x) + 'px ' + (cy - y) + 'px, rgba(0,0,0,0) ' + r + 'px, rgba(0,0,0,.85) ' + (r + 4) + 'px)';
     } else {
       s.display = 'none';

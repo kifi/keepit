@@ -62,43 +62,34 @@ guide.step1 = guide.step1 || function () {
   }
 
   function showStep(idx, el, r, ms) {
-    if (pIdx !== idx) {
-      var pIdxOrig = pIdx;
-      var stepIdxOrig = stepIdx;
-
-      var stepIdxNew = stepIdx == null || idx > stepIdx ? idx : stepIdx;
-      var pIdxNew = idx != null ? idx : pIdx;
-      var step = steps[stepIdxNew];
-      var p = steps[pIdxNew];
-      var lit = document.querySelector(p.lit);
-      if (!r || lit !== el) {
-        r = lit.getBoundingClientRect();
-      }
-      log('[showStep] step:', stepIdx, '=>', stepIdxNew, 'p:', pIdx, '=>', pIdxNew, r);
-      var t0 = Date.now();
-      ms = spotlight.animateTo({
-          x: r.left - p.pad[1],
-          y: r.top - p.pad[0],
-          w: r.width + p.pad[1] * 2,
-          h: r.height + p.pad[0] + p.pad[p.pad.length > 2 ? 2 : 0]
-        }, {opacity: 1, ms: ms});
-
-      var hidePromise = stepIdxNew !== stepIdxOrig && stepIdxOrig ? hideStep() : null;
-
-      if (stepIdxOrig == null || hidePromise) {
-        Q.when(hidePromise, function () {
-          showNewStep(stepIdxNew, ms - (Date.now() - t0));
-        });
-      } else if (pIdxNew !== pIdxOrig) {
-        switchP(pIdxNew, ms);
-      }
-
-      return ms;
-      // } else {
-      //   log('[showStep]', stepIdx, pIdx, 'hiding');
-      //   return hide();
-      // }
+    var stepIdxNew = stepIdx == null || idx > stepIdx ? idx : stepIdx;
+    var pIdxNew = idx != null ? idx : pIdx;
+    var step = steps[stepIdxNew];
+    var p = steps[pIdxNew];
+    var lit = document.querySelector(p.lit);
+    if (!r || lit !== el) {
+      r = lit.getBoundingClientRect();
     }
+    log('[showStep] step:', stepIdx, '=>', stepIdxNew, 'p:', pIdx, '=>', pIdxNew, r);
+    var t0 = Date.now();
+    ms = spotlight.animateTo({
+        x: r.left - p.pad[1],
+        y: r.top - p.pad[0],
+        w: r.width + p.pad[1] * 2,
+        h: r.height + p.pad[0] + p.pad[p.pad.length > 2 ? 2 : 0]
+      }, {opacity: 1, ms: ms});
+
+    var hidePromise = stepIdxNew !== stepIdx && stepIdx ? hideStep() : null;
+
+    if (stepIdx == null || hidePromise) {
+      Q.when(hidePromise, function () {
+        showNewStep(stepIdxNew, ms - (Date.now() - t0));
+      });
+    } else if (pIdxNew !== pIdx) {
+      switchP(pIdxNew, ms);
+    }
+
+    return ms;
   }
 
   function showNewStep(idx, ms) {
@@ -132,15 +123,14 @@ guide.step1 = guide.step1 || function () {
   function onTileChildChange(records) {
     log('[onTileChildChange]', stepIdx, records);
     var tagbox, keeper;
-    if ((tagbox = added(records, 'kifi-tagbox'))) {
-      var onTagboxChangeDebounced = _.debounce(onTagboxChange.bind(tagbox), 20, true);
-      tagboxObserver = new MutationObserver(onTagboxChangeDebounced);
-      tagboxObserver.observe(tagbox, {attributes: true});
-      onTagboxChangeDebounced();
-    } else if ((keeper = added(records, 'kifi-keeper'))) {
+    if ((tagbox = elementAdded(records, 'kifi-tagbox'))) {
+      spotOnTagbox(tagbox);
+      tagboxObserver = new MutationObserver(onTagboxChange);
+      tagboxObserver.observe(tagbox, {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
+    } else if ((keeper = elementAdded(records, 'kifi-keeper'))) {
       var onKeeperChangeDebounced = _.debounce(onKeeperChange.bind(keeper), 20, true);
       keeperObserver = new MutationObserver(onKeeperChangeDebounced);
-      keeperObserver.observe(keeper, {attributes: true});
+      keeperObserver.observe(keeper, {attributes: true, attributeFilter: ['class']});
       // onKeeperChangeDebounced();
       showStep(stepIdx > 1 ? 2 : 1);
     }
@@ -150,33 +140,40 @@ guide.step1 = guide.step1 || function () {
 
   function onTagboxChange(records) {
     log('[onTagboxChange]', records);
-    if (this.classList.contains('kifi-tagged')) {
+    if (stepIdx >= 3 && classAdded(records, 'kifi-tagged') || classRemoved(records, 'kifi-tagged')) {
       // TODO: inspect .kifi-tagbox-tagged-wrapper’s transition to compute new height and its transition duration
-    } else if (this.classList.contains('kifi-in')) {
-      var cs = window.getComputedStyle(this);
-      var w = parseFloat(cs.width) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-      var h = parseFloat(cs.height) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-      var dur = cs.transitionDuration.split(',')[0];
-      var ms = (~dur.indexOf('ms') ? 1 : 1000) * parseFloat(dur);  // TODO: check whether a transition is in effect before using ms
-      var r = this.getBoundingClientRect();
-      log('[onTagboxChange]', records, w, 'x', h, 'right:', r.right, 'bottom:', r.bottom, 'ms:', ms);
-      showStep(Math.max(3, stepIdx), this, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
-    } else {
-      log('[onTagboxChange]', records);
-      showStep(2);
+    } else if (classRemoved(records, 'kifi-in')) {
+      if (stepIdx < 4) {
+        showStep(2);
+      } else {
+        spotlight.animateTo({x: window.innerWidth - 32, y: window.innerHeight - 32, w: 0, h: 0}, {});
+      }
     }
+  }
+
+  function spotOnTagbox(tagbox) {
+    var cs = window.getComputedStyle(tagbox);
+    var w = parseFloat(cs.width) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    var h = parseFloat(cs.height) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    var dur = cs.transitionDuration.split(',')[0];
+    var ms = (~dur.indexOf('ms') ? 1 : 1000) * parseFloat(dur);  // TODO: check whether a transition is in effect before using ms
+    var r = tagbox.getBoundingClientRect();
+    log('[spotOnTagbox]', w, 'x', h, 'right:', r.right, 'bottom:', r.bottom, 'ms:', ms);
+    showStep(Math.max(3, stepIdx), tagbox, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
   }
 
   function onKeeperChange(records) {
     log('[onKeeperChange]', records);
     if (this.classList.contains('kifi-hiding')) {
-      showStep(0);
+      if (stepIdx < 4) {
+        showStep(0);
+      }
     } else {
       // showStep();
     }
   }
 
-  function added(records, cssClass) {
+  function elementAdded(records, cssClass) {
     for (var i = 0; i < records.length; i++) {
       var nodes = records[i].addedNodes;
       for (var j = 0; j < nodes.length; j++) {
@@ -184,6 +181,24 @@ guide.step1 = guide.step1 || function () {
         if (node.nodeType === 1 && node.classList.contains(cssClass)) {
           return node;
         }
+      }
+    }
+  }
+
+  function classAdded(records, cssClass) {
+    for (var i = 0; i < records.length; i++) {
+      var rec = records[i];
+      if (rec.target.classList.contains(cssClass) && rec.oldValue.split(' ').indexOf(cssClass) < 0) {
+        return true;
+      }
+    }
+  }
+
+  function classRemoved(records, cssClass) {
+    for (var i = 0; i < records.length; i++) {
+      var rec = records[i];
+      if (!rec.target.classList.contains(cssClass) && ~rec.oldValue.split(' ').indexOf(cssClass)) {
+        return true;
       }
     }
   }
