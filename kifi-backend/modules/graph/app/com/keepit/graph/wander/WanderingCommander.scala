@@ -52,7 +52,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     log.info(s"Collisions found: ${collisions.groupBy(_._1.kind).mapValues(_.size).mkString(", ")}")
 
     collisions collect {
-      case (vertexId, _) if forbiddenCollisions.contains(vertexId) || (preferredCollisions.nonEmpty && !preferredCollisions.contains(vertexId.kind)) => // ignore
+      case (vertexId, count) if count <= 1 || forbiddenCollisions.contains(vertexId) || (preferredCollisions.nonEmpty && !preferredCollisions.contains(vertexId.kind)) => // ignore
       case (vertexId, count) if vertexId.kind == UserReader => users += VertexDataId.toUserId(vertexId.asId[UserReader]) -> count
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
       case (vertexId, count) if vertexId.kind == FacebookAccountReader => socialUsers += VertexDataId.fromFacebookAccountIdtoSocialUserId(vertexId.asId[FacebookAccountReader]) -> count
