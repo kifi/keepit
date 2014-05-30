@@ -8,7 +8,7 @@
 
   <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }">
     <ul class="kf-tag-list">
-      <li kf-tag-item tag="tag" has-new-location="newLocationTagId === tag.id" watch-tag-reorder="watchTagReorder()" reorder-tag="reorderTag(isTop,srcTag,dstTag)" received-tag-drag="receivedTagDrag()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" ng-repeat="tag in tags"></li>
+      <li kf-tag-item tag="tag" has-new-location="newLocationTagId === tag.id" watch-tag-reorder="watchTagReorder()" reorder-tag="reorderTag(srcTag,dstTag,isAfter)" received-tag-drag="receivedTagDrag()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" ng-repeat="tag in tags" tag-drag-source="data.tagDragSource" tag-drag-target="data.tagDragTarget"></li>
       <li class="kf-tag-new" ng-show="showAddTag()" ng-click="create(filter.name)">
         <div class="kf-tag-new-contents" ng-class="{ highlight: isHighlightNew() }">
           <div class="kf-tag-caption">Add as a new tag:</div>
