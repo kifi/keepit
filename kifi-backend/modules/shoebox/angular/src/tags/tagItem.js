@@ -3,8 +3,8 @@
 angular.module('kifi.tagItem', ['kifi.tagService'])
 
 .directive('kfTagItem', [
-  '$timeout', '$document', 'tagService', 'keyIndices', 'util',
-  function ($timeout, $document, tagService, keyIndices, util) {
+  '$timeout', '$document', 'tagService', 'keyIndices',
+  function ($timeout, $document, tagService, keyIndices) {
     return {
       restrict: 'A',
       scope: {
@@ -13,18 +13,22 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         reorderTag: '&',
         hasNewLocation: '&',
         viewTag: '&',
-        removeTag: '&'
+        removeTag: '&',
+        tagDragSource: '=',
+        tagDragTarget: '='
       },
       replace: true,
       templateUrl: 'tags/tagItem.tpl.html',
       link: function (scope, element) {
+        scope.isHovering = false;
         scope.isRenaming = false;
         scope.isWaiting = false;
         scope.isDropdownOpen = false;
         scope.renameTag = {};
-        scope.isHovering = false;
         var input = element.find('input');
         var waitingTimeout;
+        var clone, cloneMask;
+        var tagList = element.parent();
 
         scope.onKeepDrop = function (keeps) {
           waitingTimeout = $timeout(function () {
@@ -46,18 +50,12 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         };
 
         scope.setRenaming = function () {
-          closeDropdown();
           scope.isRenaming = true;
           scope.renameTag.value = scope.tag.name;
           $timeout(function () {
             input.focus();
             input.select();
           });
-        };
-
-        scope.remove = function () {
-          closeDropdown();
-          scope.removeTag({tag: scope.tag});
         };
 
         scope.onRenameKeydown = function (e) {
@@ -85,9 +83,13 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           scope.isRenaming = false;
         };
 
+        function removeCloseDropdownHandler() {
+          $document.unbind('mousedown', applyCloseDropdown);
+        }
+
         function closeDropdown() {
           scope.isDropdownOpen = false;
-          $document.unbind('click', applyCloseDropdown);
+          removeCloseDropdownHandler();
         }
 
         function applyCloseDropdown() {
@@ -96,13 +98,18 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
 
         scope.toggleDropdown = function (e) {
           e.stopPropagation();
+          e.preventDefault();
           if (!scope.isDropdownOpen) {
             scope.isDropdownOpen = true;
-            $document.bind('click', applyCloseDropdown);
+            $document.bind('mousedown', applyCloseDropdown);
           } else {
             closeDropdown();
           }
         };
+
+        scope.$on('$destroy', function () {
+          removeCloseDropdownHandler();
+        });
 
         input.on('blur', function () {
           scope.$apply(function () { scope.cancelRename(); });
@@ -119,70 +126,80 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           scope.$apply(function () { scope.isDragTarget = false; });
         });
 
-        var tagDragMask = element.find('.kf-tag-drag-mask');
-        var tagDraggedUpon = false;
-        var yBoundary = parseInt(element.css('height'), 10) / 2;
-        var isTop = null;
+        element.on('dragstart', function (e) {
+          scope.$apply(function () {
+            if (!scope.watchTagReorder()) { return; }
+            scope.tagDragSource = scope.tag;
+            tagList.addClass('kf-tag-list-reordering');
 
-        function startTagDrag() {
-          tagDraggedUpon = true;
-          isTop = null;
-        }
+            var clonePositioning = {
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              width: element.css('width'),
+              height: element.css('height'),
+              zIndex: -1
+            };
 
-        function stopTagDrag() {
-          tagDraggedUpon = false;
-          tagDragMask.css({borderTopStyle: 'none', borderBottomStyle: 'none', margin: 0});
-        }
-
-        tagDragMask.on('dragenter', startTagDrag);
-        tagDragMask.on('dragover', function (e) {
-          if (tagDraggedUpon && scope.watchTagReorder()) {
-            var posY = e.originalEvent.clientY - util.offset(element).top;
-            if (posY > yBoundary) {
-              isTop = false;
-              tagDragMask.css({borderTopStyle: 'none', borderBottomStyle: 'dotted', marginTop: '1px'});
-            } else {
-              isTop = true;
-              tagDragMask.css({borderTopStyle: 'dotted', borderBottomStyle: 'none', marginTop: 0});
-            }
-          }
-        });
-        tagDragMask.on('dragleave', stopTagDrag);
-
-        scope.onTagDrop = function (tag) {
-          stopTagDrag();
-          if (isTop !== null && scope.watchTagReorder()) {
-            // The "dragend" handler must be called before removing the element from the DOM.
-            element.find('.kf-nav-link').triggerHandler('dragend');
-            scope.reorderTag({isTop: isTop, srcTag: tag, dstTag: scope.tag});
-          }
-        };
-
-        scope.isDragging = false;
-        var clone;
-        var mouseX, mouseY;
-        element.bind('mousemove', function (e) {
-          mouseX = e.pageX - util.offset(element).left;
-          mouseY = e.pageY - util.offset(element).top;
-        });
-        element.bind('dragstart', function (e) {
-          element.addClass('kf-dragged');
-          clone = element.clone().css({
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: element.css('width'),
-            height: element.css('height'),
-            zIndex: -1
+            clone = element.clone()
+              .css(clonePositioning)
+              .addClass('kf-dragged-clone');
+            cloneMask = angular.element('<li></li>')
+              .css(clonePositioning)
+              .addClass('kf-dragged-clone-mask');
+            element.addClass('kf-dragged')
+              .after(clone, cloneMask);
+            e.dataTransfer.setDragImage(clone[0], 0, 0);
           });
-          element.parent().after(clone);
-          e.dataTransfer.setDragImage(clone[0], mouseX, mouseY);
-          scope.$apply(function () { scope.isDragging = true; });
-        });
-        element.bind('dragend', function () {
+        })
+        .on('dragend', function () {
+          tagList.removeClass('kf-tag-list-reordering');
+          function removeAnimate() {
+            element.removeClass('animate');
+            element.off('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+          }
+          element.on('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+          element.addClass('animate');
+
           element.removeClass('kf-dragged');
-          clone.remove();
-          scope.$apply(function () { scope.isDragging = false; });
+          if (clone) { clone.remove(); }
+          if (cloneMask) { cloneMask.remove(); }
+          //scope.tagDragTarget = null;
+        })
+        .on('drag', function (e) {
+          var x = e.originalEvent.pageX,
+            y = e.originalEvent.pageY,
+            top = tagList.offset().top,
+            left = tagList.offset().left,
+            right = left + tagList.width(),
+            bottom = top + tagList.height();
+          if (x < left || x > right || y < top || y > bottom) {
+            clone.after(element);
+          }
+        })
+        .on('dragover', function (e) {
+          e.preventDefault();
+        })
+        .on('drop', function () {
+          scope.reorderTag({srcTag: scope.tagDragSource, dstTag: scope.tagDragTarget, isAfter: false});
+        })
+        .on('mouseenter', function () {
+          scope.$apply(function () { scope.isHovering = true; });
+        })
+        .on('mouseleave', function () {
+          scope.$apply(function () { scope.isHovering = false; });
+        });
+
+        // Setup tag drag target
+        element.find('.kf-tag-drag-mask')
+        .on('dragenter', function () {
+          scope.$apply(function () {
+            var el = element.parent().find('.kf-dragged');
+            element.before(el);
+            if (scope.tag.id !== scope.tagDragSource.id) {
+              scope.tagDragTarget = scope.tag;
+            }
+          });
         });
 
         var newLocationMask = element.find('.kf-tag-new-location-mask');
@@ -194,14 +211,6 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
             });
           }
         });
-
-        scope.enableHover = function () {
-          scope.isHovering = true;
-        };
-
-        scope.disableHover = function () {
-          scope.isHovering = false;
-        };
       }
     };
   }

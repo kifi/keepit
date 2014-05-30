@@ -44,22 +44,26 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         scope.newLocationTagId = null;
         scope.viewedTagId = null;
         scope.isFilterFocused = false;
+        scope.data = {
+          tagDragTarget: null,
+          tagDragSource: null
+        };
 
         var w = angular.element($window);
-        var tagList = element.find('.kf-tag-list');
-        tagList.on('mousewheel', function (e) {
-          console.log('stopping propagation');
-          e.stopPropagation();
-        })
+        var scrollableTagList = element.find('.kf-scrollable-tags');
 
-        w.bind('resize', function() {
-            scope.$apply(function() {
-                setTagListHeight();
-            });
+        scrollableTagList.on('mousewheel', function (e) {
+          e.stopPropagation();
+        });
+
+        w.bind('resize', function () {
+          scope.$apply(function () {
+            setTagListHeight();
+          });
         });
 
         function setTagListHeight() {
-          tagList.height(w.height() - (tagList.offset().top - w[0].pageYOffset));
+          scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
         }
         setTagListHeight();
 
@@ -284,8 +288,8 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           return !getFilterValue();
         };
 
-        scope.reorderTag = function (isTop, srcTag, dstTag) {
-          tagService.reorderTag(isTop, srcTag, dstTag);
+        scope.reorderTag = function (srcTag, dstTag, isAfter) {
+          tagService.reorderTag(srcTag, dstTag, isAfter);
           scope.newLocationTagId = srcTag.id;
         };
 
@@ -306,7 +310,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           scope.dehighlight();
           scope.isFilterFocused = false;
           scope.clearFilter();
-        }
+        };
       }
     };
   }
