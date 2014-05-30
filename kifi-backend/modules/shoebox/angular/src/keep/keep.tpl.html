@@ -12,14 +12,7 @@
     </a>
   </div>
   <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-  <div class="kf-keep-tags">
-    <ul class="page-coll-list">
-      <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in keep.tagList">
-        <a class="kf-keep-tag-link" href="/tag/{{tag.id}}">{{tag.name}}</a>
-        <a class="page-coll-x" href="javascript:" ng-click="removeTagFromSelectedKeeps(tag)">×</a>
-      </li>
-    </ul>
-  </div>
+  <!-- I'm working on this <div kf-tag-list></div> -->
   <div class="kf-keep-who">
     <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
     <span class="kf-keep-who-others" ng-if="showOthers()"></span>
