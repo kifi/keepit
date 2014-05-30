@@ -1,10 +1,10 @@
 'use strict';
 
-angular.module('kifi.tagItem', ['kifi.tagService'])
+angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
 
 .directive('kfTagItem', [
-  '$timeout', '$document', 'tagService', 'keyIndices',
-  function ($timeout, $document, tagService, keyIndices) {
+  '$timeout', '$document', 'tagService', 'keyIndices', 'dragService',
+  function ($timeout, $document, tagService, keyIndices, dragService) {
     return {
       restrict: 'A',
       scope: {
@@ -127,6 +127,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         });
 
         element.on('dragstart', function (e) {
+          // Firefox requires data to be set
+          e.dataTransfer.setData('text/plain', '');
           scope.$apply(function () {
             if (!scope.watchTagReorder()) { return; }
             scope.tagDragSource = scope.tag;
@@ -152,7 +154,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
             e.dataTransfer.setDragImage(clone[0], 0, 0);
           });
         })
-        .on('dragend', function () {
+        .on('dragend', function (e) {
+          e.preventDefault();
           tagList.removeClass('kf-tag-list-reordering');
           function removeAnimate() {
             element.removeClass('animate');
@@ -164,11 +167,11 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
           element.removeClass('kf-dragged');
           if (clone) { clone.remove(); }
           if (cloneMask) { cloneMask.remove(); }
-          //scope.tagDragTarget = null;
         })
-        .on('drag', function (e) {
-          var x = e.originalEvent.pageX,
-            y = e.originalEvent.pageY,
+        .on('drag', function () {
+          var dragPosition = dragService.getDragPosition(),
+            x = dragPosition.pageX,
+            y = dragPosition.pageY,
             top = tagList.offset().top,
             left = tagList.offset().left,
             right = left + tagList.width(),
@@ -180,7 +183,8 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         .on('dragover', function (e) {
           e.preventDefault();
         })
-        .on('drop', function () {
+        .on('drop', function (e) {
+          e.preventDefault();
           scope.reorderTag({srcTag: scope.tagDragSource, dstTag: scope.tagDragTarget, isAfter: false});
         })
         .on('mouseenter', function () {
