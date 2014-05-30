@@ -56,7 +56,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
 
   private def traverseTo(destination: VertexId, edgeKind: EdgeType, journal: TravelJournal): Unit = {
     scout.moveTo(destination)
-    log.info(s"[Traverse] ${wanderer.id} --${edgeKind.code}-> ${scout.id}")
+    log.info(s"[Traverse] ${wanderer.id} --> ${scout.id} | ${edgeKind.code}")
     journal.onEdgeTraversal(wanderer, scout, edgeKind)
     wanderer.moveTo(destination)
   }
@@ -65,7 +65,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     val componentWeights = mutable.MutableList[((VertexType, EdgeType), Double)]()
     while (wanderer.edgeReader.moveToNextComponent()) {
       val (destinationKind, edgeKind) = wanderer.edgeReader.component
-      val weight = resolver.weightComponent(wanderer.kind, destinationKind, edgeKind)
+      val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
       componentWeights += (destinationKind, edgeKind) -> weight
     }
     val probability = ProbabilityDensity.normalized(componentWeights)
