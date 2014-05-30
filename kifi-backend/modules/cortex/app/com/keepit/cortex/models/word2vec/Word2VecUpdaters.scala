@@ -75,7 +75,8 @@ class RichWord2VecURIFeatureUpdatePluginImpl @Inject()(
   discovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
 ) extends BaseFeatureUpdatePlugin(actor, discovery) with RichWord2VecURIFeatureUpdatePlugin {
-  override val startTime: FiniteDuration = 30 days
+
+  override val startTime: FiniteDuration = 45 seconds
   override val updateFrequency: FiniteDuration = 2 minutes
 }
 

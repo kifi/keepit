@@ -13,7 +13,7 @@ import com.keepit.cortex.utils.TextUtils
 @Singleton
 class Word2VecCommander @Inject()(
   word2vec: Word2VecWordRepresenter,
-  uriFeatureRetriever: Word2VecURIFeatureRetriever
+  uriFeatureRetriever: RichWord2VecURIFeatureRetriever
 ) {
   val (dim, mapper, doc2vec) = {
     (word2vec.dimension, word2vec.mapper, new Doc2Vec(word2vec.mapper, word2vec.dimension))
