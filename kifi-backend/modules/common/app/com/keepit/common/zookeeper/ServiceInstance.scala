@@ -30,7 +30,7 @@ class ServiceInstance(val node: Node, val thisInstance: Boolean, val remoteServi
 
   lazy val id: ServiceInstanceId = ServiceInstanceId(node.name.substring(node.name.lastIndexOf('_') + 1).toLong)
 
-  def reportServiceUnavailable(): Int = {
+  def reportServiceUnavailable(): Int = if (remoteService.serviceType == ServiceType.DEV_MODE) 0 else {
     log.warn(s"marking service $remoteService as sentServiceUnavailableException for the ${sentServiceUnavailable.get} time")
     sentServiceUnavailable.incrementAndGet()
   }
