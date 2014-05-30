@@ -1,5 +1,5 @@
 <li class="kf-tag">
-  <div ng-class="{ renaming: isRenaming, hover: isHovering, 'kf-drag-target': isDragTarget }">
+  <div ng-class="{ renaming: isRenaming, hover: isHovering, 'kf-drag-target': isDragTarget }" ng-show="!isFake">
     <div class="kf-tag-info" ng-click="navigateToTag($event)">
       <div class="kf-tag-count" ng-show="!isWaiting">{{tag.keeps}}</div>
       <div class="kf-tag-name-holder">
@@ -18,8 +18,7 @@
         <a href="javascript:" ng-mousedown="removeTag(tag)">Remove</a>
       </li>
     </ul>
-    <div class="kf-drag-mask"></div>
-    <div class="kf-tag-drag-mask"></div>
-    <div class="kf-tag-new-location-mask hidden"></div>
   </div>
+  <div class="kf-drag-mask"></div>
+  <div class="kf-tag-drag-mask"></div>
 </li>

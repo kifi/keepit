@@ -41,12 +41,11 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
       controller: 'TagsCtrl',
       link: function (scope, element) {
         scope.tags = tagService.list;
-        scope.newLocationTagId = null;
         scope.viewedTagId = null;
         scope.isFilterFocused = false;
         scope.data = {
-          tagDragTarget: null,
-          tagDragSource: null
+          tagDragSource: null,
+          targetIdx: null
         };
 
         var w = angular.element($window);
@@ -286,11 +285,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 
         scope.watchTagReorder = function () {
           return !getFilterValue();
-        };
-
-        scope.reorderTag = function (srcTag, dstTag, isAfter) {
-          tagService.reorderTag(srcTag, dstTag, isAfter);
-          scope.newLocationTagId = srcTag.id;
         };
 
         scope.removeTag = function (tag) {

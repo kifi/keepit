@@ -10,16 +10,16 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
       scope: {
         tag: '=',
         watchTagReorder: '&',
-        reorderTag: '&',
-        hasNewLocation: '&',
         viewTag: '&',
         removeTag: '&',
         tagDragSource: '=',
-        tagDragTarget: '='
+        targetIdx: '=',
+        index: '@'
       },
       replace: true,
       templateUrl: 'tags/tagItem.tpl.html',
       link: function (scope, element, attrs) {
+        scope.isFake = attrs.fake !== undefined;
         scope.isHovering = false;
         scope.isRenaming = false;
         scope.isWaiting = false;
@@ -30,7 +30,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         var clone, cloneMask;
         var tagList = element.parent();
 
-        element.attr("draggable", true);
+        element.attr('draggable', true);
 
         scope.onKeepDrop = function (keeps) {
           waitingTimeout = $timeout(function () {
@@ -174,8 +174,8 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
           var dragPosition = dragService.getDragPosition(),
             x = dragPosition.pageX,
             y = dragPosition.pageY,
-            top = tagList.offset().top,
-            left = tagList.offset().left,
+            left = tagList.offset().left - window.pageXOffset,
+            top = tagList.offset().top - window.pageYOffset,
             right = left + tagList.width(),
             bottom = top + tagList.height();
           if (x < left || x > right || y < top || y > bottom) {
@@ -187,7 +187,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         })
         .on('drop', function (e) {
           e.preventDefault();
-          scope.reorderTag({srcTag: scope.tagDragSource, dstTag: scope.tagDragTarget, isAfter: false});
+          tagService.reorderTag(scope.tagDragSource, scope.targetIdx);
         })
         .on('mouseenter', function () {
           scope.$apply(function () { scope.isHovering = true; });
@@ -202,20 +202,10 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
           scope.$apply(function () {
             var el = element.parent().find('.kf-dragged');
             element.before(el);
-            if (scope.tag.id !== scope.tagDragSource.id) {
-              scope.tagDragTarget = scope.tag;
+            if (!scope.tag || scope.tag.id !== scope.tagDragSource.id) {
+              scope.targetIdx = parseInt(scope.index, 10);
             }
           });
-        });
-
-        var newLocationMask = element.find('.kf-tag-new-location-mask');
-        scope.$watch(scope.hasNewLocation, function (value) {
-          if (value) {
-            newLocationMask.removeClass('hidden');
-            $timeout(function () {
-              newLocationMask.addClass('hidden');
-            });
-          }
         });
       }
     };
