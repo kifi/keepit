@@ -124,7 +124,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         $document.on('keydown', keepKeyBindings);
 
         scope.$on('$destroy', function () {
-          keepService.clearState();
           $document.off('keydown', keepKeyBindings);
         });
 

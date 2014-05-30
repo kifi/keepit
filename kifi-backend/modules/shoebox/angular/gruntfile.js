@@ -279,6 +279,20 @@ module.exports = function (grunt) {
         autoWatch: true
       }
     },
+    spritepacker: {
+      default_options: {
+        options: {
+          template: 'src/common/sprites.styl.tpl', // Path to the template for generating metafile:
+          destCss: 'src/common/sprites.styl', // Destination metafile:
+          baseUrl: '/img/', // Base URL for sprite image, used in template
+          padding: 2,
+          evenPixels: true
+        },
+        files: {
+          'img/sprites.png': ['img/sprites/*.png']
+        }
+      }
+    },
     env: {
       // https://github.com/jsoverson/grunt-env#configuration
       dev: {
@@ -374,6 +388,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-stylus');
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-karma');
+  grunt.loadNpmTasks('grunt-sprite-packer');
   grunt.loadNpmTasks('grunt-env');
   grunt.loadNpmTasks('grunt-html2js');
 
