@@ -279,6 +279,17 @@ module.exports = function (grunt) {
         autoWatch: true
       }
     },
+    // To run this task, you need css-sprites, node-canvas, and Cairo
+    // Easiest install on OSX:
+    //    wget https://raw.githubusercontent.com/LearnBoost/node-canvas/master/install -O - | sh
+    //    npm install canvas
+    sprite:{
+      all: {
+        src: 'img/sprites/*.png',
+        destImg: 'img/sprites.png',
+        destCSS: 'src/common/sprites.styl'
+      }
+    },
     spritepacker: {
       default_options: {
         options: {
@@ -388,7 +399,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-stylus');
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-karma');
-  grunt.loadNpmTasks('grunt-sprite-packer');
+  grunt.loadNpmTasks('grunt-spritesmith');
   grunt.loadNpmTasks('grunt-env');
   grunt.loadNpmTasks('grunt-html2js');
 

@@ -1,31 +1,354 @@
-import-from-other-services-icon = ('/img/sprites.png' -2px -2px 74px 70px sprites)
-import-bookmarks-icon@2x = ('/img/sprites.png' -80px -2px 74px 70px sprites)
-guide-icon@2x = ('/img/sprites.png' -2px -76px 68px 68px sprites)
-kifi-logo-white@2x = ('/img/sprites.png' -74px -76px 68px 40px sprites)
-settings-active@2x = ('/img/sprites.png' -158px -2px 62px 64px sprites)
-add-a-link-default@2x = ('/img/sprites.png' -158px -70px 62px 64px sprites)
-settings-hover@2x = ('/img/sprites.png' -2px -148px 62px 64px sprites)
-settings-default@2x = ('/img/sprites.png' -68px -148px 62px 64px sprites)
-friends-hover@2x = ('/img/sprites.png' -134px -148px 64px 64px sprites)
-friends-default@2x = ('/img/sprites.png' -224px -2px 64px 64px sprites)
-find-friends-icon@2x = ('/img/sprites.png' -224px -70px 64px 64px sprites)
-friends-active@2x = ('/img/sprites.png' -224px -138px 64px 64px sprites)
-grabbericon@2x = ('/img/sprites.png' -2px -216px 26px 60px sprites)
-my-keeps-library-active@2x = ('/img/sprites.png' -32px -216px 52px 52px sprites)
-my-keeps-library-default@2x = ('/img/sprites.png' -88px -216px 52px 52px sprites)
-add-a-tag-button-default@2x = ('/img/sprites.png' -144px -216px 48px 28px sprites)
-add-a-tag-button-active@2x = ('/img/sprites.png' -196px -216px 48px 28px sprites)
-add-a-tag-button-hover@2x = ('/img/sprites.png' -292px -2px 48px 28px sprites)
-heart-icon@2x = ('/img/sprites.png' -292px -34px 44px 40px sprites)
-checkbox-icon-hover@2x = ('/img/sprites.png' -292px -78px 42px 40px sprites)
-checkbox-icon-default@2x = ('/img/sprites.png' -292px -122px 42px 40px sprites)
-search-icon-active@2x = ('/img/sprites.png' -292px -166px 40px 42px sprites)
-search-icon-default@2x = ('/img/sprites.png' -292px -212px 40px 42px sprites)
-checkbox-icon-active@2x = ('/img/sprites.png' -2px -280px 42px 40px sprites)
-tag-blue-active@2x = ('/img/sprites.png' -48px -280px 40px 40px sprites)
-tag-blue-default@2x = ('/img/sprites.png' -92px -280px 40px 40px sprites)
-lock-private-icon@2x = ('/img/sprites.png' -136px -280px 36px 36px sprites)
-close-x-icon-default@2x = ('/img/sprites.png' -248px -216px 26px 26px sprites)
-close-x-icon-hover@2x = ('/img/sprites.png' -176px -280px 26px 26px sprites)
-edit-pencil-icon@2x = ('/img/sprites.png' -74px -120px 24px 24px sprites)
-tag-new-plus-icon@2x = ('/img/sprites.png' -292px -258px 12px 12px sprites)
+/*
+Stylus variables are information about icon's compiled state, stored under its original file name
+
+.icon-home {
+  width: $icon_home_width;
+}
+
+The large array-like variables contain all information about a single icon
+$icon_home = x y offset_x offset_y width height total_width total_height image_path;
+*/
+$add-a-link-default@2x_x = 0px;
+$add-a-link-default@2x_y = 981px;
+$add-a-link-default@2x_offset_x = 0px;
+$add-a-link-default@2x_offset_y = -981px;
+$add-a-link-default@2x_width = 62px;
+$add-a-link-default@2x_height = 63px;
+$add-a-link-default@2x_total_width = 73px;
+$add-a-link-default@2x_total_height = 1439px;
+$add-a-link-default@2x_image = '../../img/sprites.png';
+$add-a-link-default@2x = 0px 981px 0px -981px 62px 63px 73px 1439px '../../img/sprites.png';
+$add-a-tag-button-active@2x_x = 0px;
+$add-a-tag-button-active@2x_y = 143px;
+$add-a-tag-button-active@2x_offset_x = 0px;
+$add-a-tag-button-active@2x_offset_y = -143px;
+$add-a-tag-button-active@2x_width = 47px;
+$add-a-tag-button-active@2x_height = 28px;
+$add-a-tag-button-active@2x_total_width = 73px;
+$add-a-tag-button-active@2x_total_height = 1439px;
+$add-a-tag-button-active@2x_image = '../../img/sprites.png';
+$add-a-tag-button-active@2x = 0px 143px 0px -143px 47px 28px 73px 1439px '../../img/sprites.png';
+$add-a-tag-button-default@2x_x = 0px;
+$add-a-tag-button-default@2x_y = 115px;
+$add-a-tag-button-default@2x_offset_x = 0px;
+$add-a-tag-button-default@2x_offset_y = -115px;
+$add-a-tag-button-default@2x_width = 47px;
+$add-a-tag-button-default@2x_height = 28px;
+$add-a-tag-button-default@2x_total_width = 73px;
+$add-a-tag-button-default@2x_total_height = 1439px;
+$add-a-tag-button-default@2x_image = '../../img/sprites.png';
+$add-a-tag-button-default@2x = 0px 115px 0px -115px 47px 28px 73px 1439px '../../img/sprites.png';
+$add-a-tag-button-hover@2x_x = 0px;
+$add-a-tag-button-hover@2x_y = 87px;
+$add-a-tag-button-hover@2x_offset_x = 0px;
+$add-a-tag-button-hover@2x_offset_y = -87px;
+$add-a-tag-button-hover@2x_width = 47px;
+$add-a-tag-button-hover@2x_height = 28px;
+$add-a-tag-button-hover@2x_total_width = 73px;
+$add-a-tag-button-hover@2x_total_height = 1439px;
+$add-a-tag-button-hover@2x_image = '../../img/sprites.png';
+$add-a-tag-button-hover@2x = 0px 87px 0px -87px 47px 28px 73px 1439px '../../img/sprites.png';
+$checkbox-icon-active@2x_x = 0px;
+$checkbox-icon-active@2x_y = 284px;
+$checkbox-icon-active@2x_offset_x = 0px;
+$checkbox-icon-active@2x_offset_y = -284px;
+$checkbox-icon-active@2x_width = 42px;
+$checkbox-icon-active@2x_height = 39px;
+$checkbox-icon-active@2x_total_width = 73px;
+$checkbox-icon-active@2x_total_height = 1439px;
+$checkbox-icon-active@2x_image = '../../img/sprites.png';
+$checkbox-icon-active@2x = 0px 284px 0px -284px 42px 39px 73px 1439px '../../img/sprites.png';
+$checkbox-icon-default@2x_x = 0px;
+$checkbox-icon-default@2x_y = 206px;
+$checkbox-icon-default@2x_offset_x = 0px;
+$checkbox-icon-default@2x_offset_y = -206px;
+$checkbox-icon-default@2x_width = 42px;
+$checkbox-icon-default@2x_height = 39px;
+$checkbox-icon-default@2x_total_width = 73px;
+$checkbox-icon-default@2x_total_height = 1439px;
+$checkbox-icon-default@2x_image = '../../img/sprites.png';
+$checkbox-icon-default@2x = 0px 206px 0px -206px 42px 39px 73px 1439px '../../img/sprites.png';
+$checkbox-icon-hover@2x_x = 0px;
+$checkbox-icon-hover@2x_y = 245px;
+$checkbox-icon-hover@2x_offset_x = 0px;
+$checkbox-icon-hover@2x_offset_y = -245px;
+$checkbox-icon-hover@2x_width = 42px;
+$checkbox-icon-hover@2x_height = 39px;
+$checkbox-icon-hover@2x_total_width = 73px;
+$checkbox-icon-hover@2x_total_height = 1439px;
+$checkbox-icon-hover@2x_image = '../../img/sprites.png';
+$checkbox-icon-hover@2x = 0px 245px 0px -245px 42px 39px 73px 1439px '../../img/sprites.png';
+$close-x-icon-default@2x_x = 0px;
+$close-x-icon-default@2x_y = 35px;
+$close-x-icon-default@2x_offset_x = 0px;
+$close-x-icon-default@2x_offset_y = -35px;
+$close-x-icon-default@2x_width = 26px;
+$close-x-icon-default@2x_height = 26px;
+$close-x-icon-default@2x_total_width = 73px;
+$close-x-icon-default@2x_total_height = 1439px;
+$close-x-icon-default@2x_image = '../../img/sprites.png';
+$close-x-icon-default@2x = 0px 35px 0px -35px 26px 26px 73px 1439px '../../img/sprites.png';
+$close-x-icon-hover@2x_x = 0px;
+$close-x-icon-hover@2x_y = 61px;
+$close-x-icon-hover@2x_offset_x = 0px;
+$close-x-icon-hover@2x_offset_y = -61px;
+$close-x-icon-hover@2x_width = 26px;
+$close-x-icon-hover@2x_height = 26px;
+$close-x-icon-hover@2x_total_width = 73px;
+$close-x-icon-hover@2x_total_height = 1439px;
+$close-x-icon-hover@2x_image = '../../img/sprites.png';
+$close-x-icon-hover@2x = 0px 61px 0px -61px 26px 26px 73px 1439px '../../img/sprites.png';
+$edit-pencil-icon@2x_x = 0px;
+$edit-pencil-icon@2x_y = 12px;
+$edit-pencil-icon@2x_offset_x = 0px;
+$edit-pencil-icon@2x_offset_y = -12px;
+$edit-pencil-icon@2x_width = 23px;
+$edit-pencil-icon@2x_height = 23px;
+$edit-pencil-icon@2x_total_width = 73px;
+$edit-pencil-icon@2x_total_height = 1439px;
+$edit-pencil-icon@2x_image = '../../img/sprites.png';
+$edit-pencil-icon@2x = 0px 12px 0px -12px 23px 23px 73px 1439px '../../img/sprites.png';
+$find-friends-icon@2x_x = 0px;
+$find-friends-icon@2x_y = 1170px;
+$find-friends-icon@2x_offset_x = 0px;
+$find-friends-icon@2x_offset_y = -1170px;
+$find-friends-icon@2x_width = 64px;
+$find-friends-icon@2x_height = 64px;
+$find-friends-icon@2x_total_width = 73px;
+$find-friends-icon@2x_total_height = 1439px;
+$find-friends-icon@2x_image = '../../img/sprites.png';
+$find-friends-icon@2x = 0px 1170px 0px -1170px 64px 64px 73px 1439px '../../img/sprites.png';
+$friends-active@2x_x = 0px;
+$friends-active@2x_y = 729px;
+$friends-active@2x_offset_x = 0px;
+$friends-active@2x_offset_y = -729px;
+$friends-active@2x_width = 63px;
+$friends-active@2x_height = 63px;
+$friends-active@2x_total_width = 73px;
+$friends-active@2x_total_height = 1439px;
+$friends-active@2x_image = '../../img/sprites.png';
+$friends-active@2x = 0px 729px 0px -729px 63px 63px 73px 1439px '../../img/sprites.png';
+$friends-default@2x_x = 0px;
+$friends-default@2x_y = 792px;
+$friends-default@2x_offset_x = 0px;
+$friends-default@2x_offset_y = -792px;
+$friends-default@2x_width = 63px;
+$friends-default@2x_height = 63px;
+$friends-default@2x_total_width = 73px;
+$friends-default@2x_total_height = 1439px;
+$friends-default@2x_image = '../../img/sprites.png';
+$friends-default@2x = 0px 792px 0px -792px 63px 63px 73px 1439px '../../img/sprites.png';
+$friends-hover@2x_x = 0px;
+$friends-hover@2x_y = 855px;
+$friends-hover@2x_offset_x = 0px;
+$friends-hover@2x_offset_y = -855px;
+$friends-hover@2x_width = 63px;
+$friends-hover@2x_height = 63px;
+$friends-hover@2x_total_width = 73px;
+$friends-hover@2x_total_height = 1439px;
+$friends-hover@2x_image = '../../img/sprites.png';
+$friends-hover@2x = 0px 855px 0px -855px 63px 63px 73px 1439px '../../img/sprites.png';
+$grabbericon@2x_x = 0px;
+$grabbericon@2x_y = 669px;
+$grabbericon@2x_offset_x = 0px;
+$grabbericon@2x_offset_y = -669px;
+$grabbericon@2x_width = 26px;
+$grabbericon@2x_height = 60px;
+$grabbericon@2x_total_width = 73px;
+$grabbericon@2x_total_height = 1439px;
+$grabbericon@2x_image = '../../img/sprites.png';
+$grabbericon@2x = 0px 669px 0px -669px 26px 60px 73px 1439px '../../img/sprites.png';
+$guide-icon@2x_x = 0px;
+$guide-icon@2x_y = 1234px;
+$guide-icon@2x_offset_x = 0px;
+$guide-icon@2x_offset_y = -1234px;
+$guide-icon@2x_width = 67px;
+$guide-icon@2x_height = 67px;
+$guide-icon@2x_total_width = 73px;
+$guide-icon@2x_total_height = 1439px;
+$guide-icon@2x_image = '../../img/sprites.png';
+$guide-icon@2x = 0px 1234px 0px -1234px 67px 67px 73px 1439px '../../img/sprites.png';
+$heart-icon@2x_x = 0px;
+$heart-icon@2x_y = 323px;
+$heart-icon@2x_offset_x = 0px;
+$heart-icon@2x_offset_y = -323px;
+$heart-icon@2x_width = 44px;
+$heart-icon@2x_height = 39px;
+$heart-icon@2x_total_width = 73px;
+$heart-icon@2x_total_height = 1439px;
+$heart-icon@2x_image = '../../img/sprites.png';
+$heart-icon@2x = 0px 323px 0px -323px 44px 39px 73px 1439px '../../img/sprites.png';
+$import-bookmarks-icon@2x_x = 0px;
+$import-bookmarks-icon@2x_y = 1370px;
+$import-bookmarks-icon@2x_offset_x = 0px;
+$import-bookmarks-icon@2x_offset_y = -1370px;
+$import-bookmarks-icon@2x_width = 73px;
+$import-bookmarks-icon@2x_height = 69px;
+$import-bookmarks-icon@2x_total_width = 73px;
+$import-bookmarks-icon@2x_total_height = 1439px;
+$import-bookmarks-icon@2x_image = '../../img/sprites.png';
+$import-bookmarks-icon@2x = 0px 1370px 0px -1370px 73px 69px 73px 1439px '../../img/sprites.png';
+$import-from-other-services-icon@2x_x = 0px;
+$import-from-other-services-icon@2x_y = 1301px;
+$import-from-other-services-icon@2x_offset_x = 0px;
+$import-from-other-services-icon@2x_offset_y = -1301px;
+$import-from-other-services-icon@2x_width = 73px;
+$import-from-other-services-icon@2x_height = 69px;
+$import-from-other-services-icon@2x_total_width = 73px;
+$import-from-other-services-icon@2x_total_height = 1439px;
+$import-from-other-services-icon@2x_image = '../../img/sprites.png';
+$import-from-other-services-icon@2x = 0px 1301px 0px -1301px 73px 69px 73px 1439px '../../img/sprites.png';
+$kifi-logo-white@2x_x = 0px;
+$kifi-logo-white@2x_y = 362px;
+$kifi-logo-white@2x_offset_x = 0px;
+$kifi-logo-white@2x_offset_y = -362px;
+$kifi-logo-white@2x_width = 68px;
+$kifi-logo-white@2x_height = 39px;
+$kifi-logo-white@2x_total_width = 73px;
+$kifi-logo-white@2x_total_height = 1439px;
+$kifi-logo-white@2x_image = '../../img/sprites.png';
+$kifi-logo-white@2x = 0px 362px 0px -362px 68px 39px 73px 1439px '../../img/sprites.png';
+$lock-private-icon@2x_x = 0px;
+$lock-private-icon@2x_y = 171px;
+$lock-private-icon@2x_offset_x = 0px;
+$lock-private-icon@2x_offset_y = -171px;
+$lock-private-icon@2x_width = 35px;
+$lock-private-icon@2x_height = 35px;
+$lock-private-icon@2x_total_width = 73px;
+$lock-private-icon@2x_total_height = 1439px;
+$lock-private-icon@2x_image = '../../img/sprites.png';
+$lock-private-icon@2x = 0px 171px 0px -171px 35px 35px 73px 1439px '../../img/sprites.png';
+$my-keeps-library-active@2x_x = 0px;
+$my-keeps-library-active@2x_y = 617px;
+$my-keeps-library-active@2x_offset_x = 0px;
+$my-keeps-library-active@2x_offset_y = -617px;
+$my-keeps-library-active@2x_width = 52px;
+$my-keeps-library-active@2x_height = 52px;
+$my-keeps-library-active@2x_total_width = 73px;
+$my-keeps-library-active@2x_total_height = 1439px;
+$my-keeps-library-active@2x_image = '../../img/sprites.png';
+$my-keeps-library-active@2x = 0px 617px 0px -617px 52px 52px 73px 1439px '../../img/sprites.png';
+$my-keeps-library-default@2x_x = 0px;
+$my-keeps-library-default@2x_y = 565px;
+$my-keeps-library-default@2x_offset_x = 0px;
+$my-keeps-library-default@2x_offset_y = -565px;
+$my-keeps-library-default@2x_width = 52px;
+$my-keeps-library-default@2x_height = 52px;
+$my-keeps-library-default@2x_total_width = 73px;
+$my-keeps-library-default@2x_total_height = 1439px;
+$my-keeps-library-default@2x_image = '../../img/sprites.png';
+$my-keeps-library-default@2x = 0px 565px 0px -565px 52px 52px 73px 1439px '../../img/sprites.png';
+$search-icon-active@2x_x = 0px;
+$search-icon-active@2x_y = 523px;
+$search-icon-active@2x_offset_x = 0px;
+$search-icon-active@2x_offset_y = -523px;
+$search-icon-active@2x_width = 40px;
+$search-icon-active@2x_height = 42px;
+$search-icon-active@2x_total_width = 73px;
+$search-icon-active@2x_total_height = 1439px;
+$search-icon-active@2x_image = '../../img/sprites.png';
+$search-icon-active@2x = 0px 523px 0px -523px 40px 42px 73px 1439px '../../img/sprites.png';
+$search-icon-default@2x_x = 0px;
+$search-icon-default@2x_y = 481px;
+$search-icon-default@2x_offset_x = 0px;
+$search-icon-default@2x_offset_y = -481px;
+$search-icon-default@2x_width = 40px;
+$search-icon-default@2x_height = 42px;
+$search-icon-default@2x_total_width = 73px;
+$search-icon-default@2x_total_height = 1439px;
+$search-icon-default@2x_image = '../../img/sprites.png';
+$search-icon-default@2x = 0px 481px 0px -481px 40px 42px 73px 1439px '../../img/sprites.png';
+$settings-active@2x_x = 0px;
+$settings-active@2x_y = 1044px;
+$settings-active@2x_offset_x = 0px;
+$settings-active@2x_offset_y = -1044px;
+$settings-active@2x_width = 62px;
+$settings-active@2x_height = 63px;
+$settings-active@2x_total_width = 73px;
+$settings-active@2x_total_height = 1439px;
+$settings-active@2x_image = '../../img/sprites.png';
+$settings-active@2x = 0px 1044px 0px -1044px 62px 63px 73px 1439px '../../img/sprites.png';
+$settings-default@2x_x = 0px;
+$settings-default@2x_y = 1107px;
+$settings-default@2x_offset_x = 0px;
+$settings-default@2x_offset_y = -1107px;
+$settings-default@2x_width = 62px;
+$settings-default@2x_height = 63px;
+$settings-default@2x_total_width = 73px;
+$settings-default@2x_total_height = 1439px;
+$settings-default@2x_image = '../../img/sprites.png';
+$settings-default@2x = 0px 1107px 0px -1107px 62px 63px 73px 1439px '../../img/sprites.png';
+$settings-hover@2x_x = 0px;
+$settings-hover@2x_y = 918px;
+$settings-hover@2x_offset_x = 0px;
+$settings-hover@2x_offset_y = -918px;
+$settings-hover@2x_width = 62px;
+$settings-hover@2x_height = 63px;
+$settings-hover@2x_total_width = 73px;
+$settings-hover@2x_total_height = 1439px;
+$settings-hover@2x_image = '../../img/sprites.png';
+$settings-hover@2x = 0px 918px 0px -918px 62px 63px 73px 1439px '../../img/sprites.png';
+$tag-blue-active@2x_x = 0px;
+$tag-blue-active@2x_y = 401px;
+$tag-blue-active@2x_offset_x = 0px;
+$tag-blue-active@2x_offset_y = -401px;
+$tag-blue-active@2x_width = 40px;
+$tag-blue-active@2x_height = 40px;
+$tag-blue-active@2x_total_width = 73px;
+$tag-blue-active@2x_total_height = 1439px;
+$tag-blue-active@2x_image = '../../img/sprites.png';
+$tag-blue-active@2x = 0px 401px 0px -401px 40px 40px 73px 1439px '../../img/sprites.png';
+$tag-blue-default@2x_x = 0px;
+$tag-blue-default@2x_y = 441px;
+$tag-blue-default@2x_offset_x = 0px;
+$tag-blue-default@2x_offset_y = -441px;
+$tag-blue-default@2x_width = 40px;
+$tag-blue-default@2x_height = 40px;
+$tag-blue-default@2x_total_width = 73px;
+$tag-blue-default@2x_total_height = 1439px;
+$tag-blue-default@2x_image = '../../img/sprites.png';
+$tag-blue-default@2x = 0px 441px 0px -441px 40px 40px 73px 1439px '../../img/sprites.png';
+$tag-new-plus-icon@2x_x = 0px;
+$tag-new-plus-icon@2x_y = 0px;
+$tag-new-plus-icon@2x_offset_x = 0px;
+$tag-new-plus-icon@2x_offset_y = 0px;
+$tag-new-plus-icon@2x_width = 12px;
+$tag-new-plus-icon@2x_height = 12px;
+$tag-new-plus-icon@2x_total_width = 73px;
+$tag-new-plus-icon@2x_total_height = 1439px;
+$tag-new-plus-icon@2x_image = '../../img/sprites.png';
+$tag-new-plus-icon@2x = 0px 0px 0px 0px 12px 12px 73px 1439px '../../img/sprites.png';
+
+/*
+The provided mixins are intended to be used with the array-like variables
+
+.icon-home {
+  spriteWidth($icon_home)
+}
+
+.icon-email {
+  sprite($icon_email)
+}
+*/
+spriteWidth($sprite) {
+  width: $sprite[4];
+}
+
+spriteHeight($sprite) {
+  height: $sprite[5];
+}
+
+spritePosition($sprite) {
+  background-position: $sprite[2] $sprite[3];
+}
+
+spriteImage($sprite) {
+  background-image: url($sprite[8]);
+}
+
+sprite($sprite) {
+  spriteImage($sprite)
+  spritePosition($sprite)
+  spriteWidth($sprite)
+  spriteHeight($sprite)
+}
