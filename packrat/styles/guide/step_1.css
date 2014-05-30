@@ -5,12 +5,30 @@
   height: 260px;
   width: 640px;
   z-index: 999999999993;
-  opacity: 0;
-  transition: opacity .3s linear;
   text-align: center;
+  opacity: 0;
+  -webkit-transform: translate3d(-20px,-5px,0);
+  transform: translate3d(-20px,-5px,0);
 }
 .kifi-guide-stage.kifi-open {
   opacity: 1;
+  -webkit-transform: none;
+  transform: none;
+  transition: opacity linear, -webkit-transform ease-out;
+  transition: opacity linear, transform ease-out;
+  transition-duration: .2s;
+}
+.kifi-guide-stage.kifi-done {
+  opacity: 0;
+  transition: opacity linear .1s;
+}
+.kifi-guide-stage[kifi-step='3'] {
+  bottom: 200px;
+  right: 200px;
+}
+.kifi-guide-stage[kifi-step='4'] {
+  bottom: 200px;
+  right: 300px;
 }
 .kifi-guide-h1 {
   margin: 12px 0;
@@ -58,7 +76,7 @@
 .kifi-guide-stage[kifi-p='3'] .kifi-p3 {
   display: block;
 }
-.kifi-guide-svg {
+.kifi-guide-arrow {
   position: absolute;
   top: 0;
   left: 0;
