@@ -167,7 +167,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         case reported: ReportedException => reported.id
         case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex, s"Unreported Exception $ex")).id
       }
-      System.err.println(s"Play onError handler for ${ex.toString}")
+      System.err.println(s"Play onError (${errorId.id}): ${ex.toString}\n\t${request.path}\n\t${request.queryString}")
       ex.printStackTrace()
       serviceDiscoveryHandleError()
       val message = if (request.path.startsWith("/internal/")) {
