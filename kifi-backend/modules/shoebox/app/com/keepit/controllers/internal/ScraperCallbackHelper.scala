@@ -85,10 +85,8 @@ class ScraperCallbackHelper @Inject()(
   }
 
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
-    withLock(normalizedUriLock) {
-      db.readWrite(attempts = 1) { implicit s =>
-        normUriRepo.save(normalizedUri)
-      }
+    db.readWrite(attempts = 1) { implicit s =>
+      normUriRepo.save(normalizedUri)
     }
   }
 }
