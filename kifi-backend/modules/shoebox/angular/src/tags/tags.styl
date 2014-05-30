@@ -6,16 +6,17 @@ highlightColor = #eeeeee
   margin-right: 20px
   border-radius: 4px
   height: kfTagHeight
-  box-sizing: border-box
 
-  .renaming
+  &.renaming
     background-color: #f6f6f6
 
   &:hover
   &.kf-dragged
-    background-color: highlightColor
     .kf-tag-tool
       display: block
+
+  &:hover:not(.kf-dragged)
+    background-color: highlightColor
 
   .kf-dropdown-menu
     right: 0
@@ -25,17 +26,35 @@ highlightColor = #eeeeee
     &:hover
       background-color: transparent
     &.kf-dragged
-      background-color: editYellowColor
-      border: 1px dashed #cccccc
-      //background-color: transparent
+      .kf-tag-drag-background-mask
+        background-color: editYellowColor
+        border-color: #cccccc
     .kf-tag-tool
       display: none
 
   .kf-tag-drag-mask
     display: block
 
-  //&.kf-dragged
-  //  border: 1px solid blueColor
+.kf-tag-drag-mask
+.kf-tag-drag-background-mask
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  
+.kf-tag-drag-mask
+  display: none
+  z-index: 1
+
+.kf-tag-drag-background-mask
+  background-color: transparent
+  border: 1px dashed transparent
+  border-radius: 2px
+  z-index: -1
+  box-sizing: border-box
+  -webkit-transition:all linear 0.5s
+  transition:all linear 0.5s
 
 .kf-dragged-clone
   background-color: editYellowColor
