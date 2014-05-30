@@ -60,9 +60,9 @@ class S3RichWord2VecURIFeatureStore(val bucketName: S3Bucket, val amazonS3Client
   extends S3BlobBinaryFeatureStore[Id[NormalizedURI], NormalizedURI, Word2Vec, RichWord2VecURIFeature] with RichWord2VecURIFeatureStore {
 
   val formatter = RichWord2VecURIFeatureFormatter
-  val prefix = CommitInfoStorePrefix.URIFeature.word2vec
+  val prefix = FeatureStorePrefix.URIFeature.word2vec
 }
 
-class InMemoryRichWord2VecURIFeatureCommitStore
+class InMemoryRichWord2VecURIFeatureStore
   extends InMemoryBinaryFeatureStore[Id[NormalizedURI], NormalizedURI, Word2Vec, RichWord2VecURIFeature]
    with RichWord2VecURIFeatureStore
