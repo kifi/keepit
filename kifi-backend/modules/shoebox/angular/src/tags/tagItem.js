@@ -20,6 +20,7 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
       replace: true,
       templateUrl: 'tags/tagItem.tpl.html',
       link: function (scope, element) {
+        scope.isHovering = false;
         scope.isRenaming = false;
         scope.isWaiting = false;
         scope.isDropdownOpen = false;
@@ -153,6 +154,12 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         })
         .on('dragend', function () {
           tagList.removeClass('kf-tag-list-reordering');
+          function removeAnimate() {
+            element.removeClass('animate');
+            element.off('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+          }
+          element.on('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+          element.addClass('animate');
 
           element.removeClass('kf-dragged');
           if (clone) { clone.remove(); }
@@ -175,6 +182,12 @@ angular.module('kifi.tagItem', ['kifi.tagService'])
         })
         .on('drop', function () {
           scope.reorderTag({srcTag: scope.tagDragSource, dstTag: scope.tagDragTarget, isAfter: false});
+        })
+        .on('mouseenter', function () {
+          scope.$apply(function () { scope.isHovering = true; });
+        })
+        .on('mouseleave', function () {
+          scope.$apply(function () { scope.isHovering = false; });
         });
 
         // Setup tag drag target

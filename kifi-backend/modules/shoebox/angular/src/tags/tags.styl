@@ -10,20 +10,26 @@ highlightColor = #eeeeee
   &.renaming
     background-color: #f6f6f6
 
-  &:hover
+  .hover
   &.kf-dragged
     .kf-tag-tool
       display: block
 
-  &:hover:not(.kf-dragged)
+  .hover:not(.kf-dragged)
     background-color: highlightColor
 
   .kf-dropdown-menu
     right: 0
 
+.kf-tag.animate
+  .hover
+    background-color: transparent
+    .kf-tag-tool
+      display: none
+
 .kf-tag-list-reordering
   .kf-tag
-    &:hover
+    .hover
       background-color: transparent
     &.kf-dragged
       .kf-tag-drag-background-mask
@@ -44,8 +50,8 @@ highlightColor = #eeeeee
   height: 100%
   
 .kf-tag-drag-mask
-  display: none
   z-index: 1
+  display: none
 
 .kf-tag-drag-background-mask
   background-color: transparent
@@ -53,8 +59,31 @@ highlightColor = #eeeeee
   border-radius: 2px
   z-index: -1
   box-sizing: border-box
-  -webkit-transition:all linear 0.5s
-  transition:all linear 0.5s
+
+.kf-tag.animate
+  .kf-tag-drag-background-mask
+    -webkit-animation: tag-blink 0.2s 3
+    animation: tag-blink 0.2s 3
+
+@keyframes tag-blink {
+  0% {
+    background-color: editYellowColor
+    border-color: #cccccc
+  }
+  50% {
+    background-color: editYellowColor
+    border-color: #cccccc
+  }
+  51% {
+    background-color: appBackgroundColor
+    border-color: transparent
+  }
+  100% {
+    background-color: appBackgroundColor
+    border-color: transparent
+  }
+
+}
 
 .kf-dragged-clone
   background-color: editYellowColor
