@@ -33,7 +33,6 @@ class Word2VecFormatterTest extends Specification{
 
       var bytes = RichWord2VecURIFeatureFormat.toBinary(feat)
       var back = RichWord2VecURIFeatureFormat.fromBinary(bytes)
-
       back.dim === feat.dim
       back.vec === feat.vec
       back.keywords === feat.keywords
@@ -45,11 +44,30 @@ class Word2VecFormatterTest extends Specification{
 
       bytes = RichWord2VecURIFeatureFormat.toBinary(feat)
       back = RichWord2VecURIFeatureFormat.fromBinary(bytes)
-
       back.dim === feat.dim
       back.vec === feat.vec
       back.keywords === feat.keywords
       back.bagOfWords.toArray === feat.bagOfWords.toArray
+
+      keywords = Array.empty[String]
+      bow = Map("apple" -> 7, "orange" -> 5, "banana" -> 2)
+
+      bytes = RichWord2VecURIFeatureFormat.toBinary(feat)
+      back = RichWord2VecURIFeatureFormat.fromBinary(bytes)
+      back.dim === feat.dim
+      back.vec === feat.vec
+      back.keywords === feat.keywords
+      back.bagOfWords.toArray === feat.bagOfWords.toArray
+
+      keywords = Array("apple", "orange")
+      bow = Map.empty[String, Int]
+      bytes = RichWord2VecURIFeatureFormat.toBinary(feat)
+      back = RichWord2VecURIFeatureFormat.fromBinary(bytes)
+      back.dim === feat.dim
+      back.vec === feat.vec
+      back.keywords === feat.keywords
+      back.bagOfWords.toArray === feat.bagOfWords.toArray
+
     }
   }
 }
