@@ -7,8 +7,8 @@ import com.keepit.common.logging.Logging
 import scala.collection.mutable.ArrayBuffer
 
 
-abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
-  featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
+abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel, FT <: FeatureRepresentation[T, M]](
+  featureStore: VersionedStore[K, M, FT],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
 ) extends Logging{
@@ -21,11 +21,11 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
     }
   }
 
-  def getByKey(key: K, version: ModelVersion[M]): Option[FeatureRepresentation[T, M]] = {
+  def getByKey(key: K, version: ModelVersion[M]): Option[FT] = {
     featureStore.get(key, version)
   }
 
-  private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+  private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FT)] = {
     val keys = entities.map{genFeatureKey(_)}
     val start = System.currentTimeMillis
     val values = featureStore.batchGet(keys, version)
@@ -35,7 +35,7 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
     ret
   }
 
-  def getSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
+  def getSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FT)] = {
     val featSeq = getFeatureStoreSeq(version)
     if (lowSeq.value >= featSeq.value) Seq()
     else {
@@ -45,8 +45,8 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel](
   }
 
   // this makes sure return size == fetchSize whenever there are enough data
-  def trickyGetSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FeatureRepresentation[T, M])] = {
-    val buf = ArrayBuffer.empty[(T, FeatureRepresentation[T, M])]
+  def trickyGetSince(lowSeq: SequenceNumber[T], fetchSize: Int, version: ModelVersion[M]): Seq[(T, FT)] = {
+    val buf = ArrayBuffer.empty[(T, FT)]
     var nextBatchSize = fetchSize * 2
     var startSeq = lowSeq
     var exhausted = false
