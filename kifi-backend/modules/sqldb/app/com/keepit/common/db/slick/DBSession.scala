@@ -56,7 +56,7 @@ object DBSession {
         timeCheck()
         open = false
       } else {
-        log.warn("Closing the same connection more than once!")
+        log.warn("Closing the same connection more than once!\tlocation:${location.location}")
       }
     }
 
