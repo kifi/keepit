@@ -56,7 +56,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
 
   private def traverseTo(destination: VertexId, edgeKind: EdgeType, journal: TravelJournal): Unit = {
     scout.moveTo(destination)
-    log.info(s"[Traverse] ${wanderer.id} --${edgeKind.code}-> ${scout.id}")
+    log.info(s"[Traverse] ${wanderer.id} --> ${scout.id} | ${edgeKind.code}")
     journal.onEdgeTraversal(wanderer, scout, edgeKind)
     wanderer.moveTo(destination)
   }
