@@ -25,10 +25,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
       teleporter.maybe(wanderer) match {
         case Some(newStart) => teleportTo(newStart, journal)
         case None => {
-          {sampleComponent(resolver).flatMap { component =>
-            println(s"SELECT COMPONENT $component")
-            sampleDestination(component, resolver, probabilityCache)
-          }} match {
+          sampleComponent(resolver).flatMap(sampleDestination(_, resolver, probabilityCache)) match {
             case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
             case None => teleportTo(teleporter.surely, journal, isDeadend = true)
           }
