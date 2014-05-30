@@ -19,7 +19,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
       },
       replace: true,
       templateUrl: 'tags/tagItem.tpl.html',
-      link: function (scope, element) {
+      link: function (scope, element, attrs) {
         scope.isHovering = false;
         scope.isRenaming = false;
         scope.isWaiting = false;
@@ -29,6 +29,8 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         var waitingTimeout;
         var clone, cloneMask;
         var tagList = element.parent();
+
+        element.attr("draggable", true);
 
         scope.onKeepDrop = function (keeps) {
           waitingTimeout = $timeout(function () {
