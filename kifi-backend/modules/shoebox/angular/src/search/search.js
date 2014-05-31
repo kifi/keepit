@@ -23,11 +23,8 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
 
     if ($scope.search) {
       $scope.search.text = $routeParams.q;
-      $scope.search.enabled = true;
-      $scope.$on('$destroy', function () {
-        $scope.search.enabled = false;
-      });
     }
+    $scope.enableSearch();
 
     var reportSearchAnalyticsOnUnload = function () {
       reportSearchAnalytics('unload');

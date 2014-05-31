@@ -22,12 +22,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
-    if ($scope.search) {
-      $scope.search.enabled = true;
-      $scope.$on('$destroy', function () {
-        $scope.search.enabled = false;
-      });
-    }
+    $scope.enableSearch();
 
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
