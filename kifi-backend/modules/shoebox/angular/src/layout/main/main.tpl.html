@@ -1,4 +1,5 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
+  <div ng-show="search.enabled" ng-include="'search/mainSearchBar.tpl.html'"></div>
   <div ng-view></div>
 
   <!-- Dialogs -->

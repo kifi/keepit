@@ -11,8 +11,11 @@ angular.module('kifi.layout.main', [
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
     injectedState, $rootScope, $analytics, keepService) {
 
-    $scope.search = {};
+    $scope.search = {
+      enabled: false
+    };
     $scope.data = $scope.data || {};
+    $scope.editMode = false;
 
     $scope.isEmpty = function () {
       return !$scope.search.text;

@@ -18,11 +18,15 @@ angular.module('kifi.search', [
 
 .controller('SearchCtrl', [
   '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService', '$log',
-  function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log) {
+function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log) {
     keepService.reset();
 
     if ($scope.search) {
       $scope.search.text = $routeParams.q;
+      $scope.search.enabled = true;
+      $scope.$on('$destroy', function () {
+        $scope.search.enabled = false;
+      });
     }
 
     var reportSearchAnalyticsOnUnload = function () {
