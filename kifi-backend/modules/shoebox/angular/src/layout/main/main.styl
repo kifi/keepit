@@ -28,22 +28,26 @@
     height: 38px
 
 .kf-main-title
-  margin: 0 0 8px
-  font-size: 27px
-  line-height: 32px
+  margin: 0 0 2px
+  font-size: 25px
+  line-height: 30px
   font-weight: 300
 
 .kf-subtitle
-  position: relative
-  padding-left: 30px
   font-size: 13px
-  font-weight: 300
   line-height: 20px
-  color: #5b6670
+  -webkit-font-smoothing: antialiased;
 
   .kf-subtitle-text
-    min-width: 80px
-    display: inline-block
+    color: #999
+    vertical-align: middle
+
+  .kf-edit-keeps
+    padding-left: 16px
+    float: right
+    color: linkColor
+    vertical-align: middle
+    background: url(../img/placeholder-icon.png) 0 3px / 13px no-repeat;
 
 .kf-main-keeps
   overflow: hidden
@@ -84,22 +88,21 @@
 
 .kf-query-wrap
   position: relative
-  padding: 10px 20px 12px
+  padding: 0 15px 12px 20px
   white-space: nowrap
   z-index: 1
 
 .kf-query.kf-query
   width: 100%
-  height: 48px
-  padding: 9px 48px 9px 20px
+  padding: 9px 48px 9px 35px
   border: 1px solid #c7c7c7
   border-radius: 3px
-  font-size: 25px
+  font-size: 17px
   font-family: inherit
   font-weight: 300
-  line-height: 30px
   font-smoothing: antialiased
   box-sizing: border-box
+  background: #fff url(../img/placeholder-icon.png) 5px center / 22px no-repeat
 
   &::-webkit-input-placeholder
     color: #99a3b3
@@ -113,34 +116,14 @@
   &::-ms-clear
     display: none
 
-.kf-query-icon
-  position: relative
-  display: inline-block
-  right: 48px
-  height: 48px
-  width: 48px
-  vertical-align: bottom
-  overflow: hidden
-
-.kf-query-mag
 .kf-query-x
   position: absolute
   top: 0
   bottom: 0
-  left: 0
-  width: 100%
+  right: 0
   padding-top: 13px
   text-align: center
   box-sizing: border-box
-  transition: left .15s .07s
-
-  &:before
-    content: " "
-    display: inline-block
-    vertical-align: bottom
-    height: 23px
-    background-image: url(../img/search.png)
-    background-size: auto 23px
 
 .kf-query-mag
   cursor: text
