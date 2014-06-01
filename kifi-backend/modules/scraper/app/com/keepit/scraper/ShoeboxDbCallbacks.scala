@@ -26,9 +26,9 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def syncSaveNormalizedUri(uri:NormalizedURI): NormalizedURI = {
     try {
       normalizedUriLock.lock()
-      log.info(s"[${normalizedUriLock.getQueueLength}}] about to persist $uri")
+      log.info(s"[${normalizedUriLock.getQueueLength}] about to persist $uri")
       val saved = await(saveNormalizedUri(uri))
-      log.info(s"[${normalizedUriLock.getQueueLength}}] done with persist $uri")
+      log.info(s"[${normalizedUriLock.getQueueLength}] done with persist $uri")
       saved
     } finally {
       normalizedUriLock.unlock()
@@ -42,9 +42,9 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
     try {
       recordPermanentRedirectLock.lock()
-      log.info(s"[${recordPermanentRedirectLock.getQueueLength}}] about to persist redirected $uri")
+      log.info(s"[${recordPermanentRedirectLock.getQueueLength}] about to persist redirected $uri")
       val saved = await(recordPermanentRedirect(uri, redirect))
-      log.info(s"[${recordPermanentRedirectLock.getQueueLength}}] done with persist redirected $uri")
+      log.info(s"[${recordPermanentRedirectLock.getQueueLength}] done with persist redirected $uri")
       saved
     } finally {
       recordPermanentRedirectLock.unlock()
