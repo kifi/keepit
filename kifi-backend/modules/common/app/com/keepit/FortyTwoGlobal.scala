@@ -97,7 +97,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
     injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
-      statsd.increment("deploys", 42)
+      statsd.incrementOne("deploys", ALWAYS)
       injector.instance[AirbrakeNotifier].reportDeployment()
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
