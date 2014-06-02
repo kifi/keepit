@@ -17,6 +17,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable
 import com.keepit.common.time._
 import com.keepit.scraper.ScraperServiceClient
+import com.keepit.scraper.embedly.EmbedlyStore
+import com.keepit.common.db.Id
+import com.keepit.cortex.CortexServiceClient
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
@@ -24,8 +27,10 @@ class URISummaryCommander @Inject()(
   pageInfoRepo: PageInfoRepo,
   db: Database,
   scraper: ScraperServiceClient,
+  cortex: CortexServiceClient,
   pagePeekerClient: PagePeekerClient,
   uriImageStore: S3URIImageStore,
+  embedlyStore: EmbedlyStore,
   imageFetcher: ImageFetcher,
   airbrake: AirbrakeNotifier,
   clock: Clock
@@ -205,6 +210,17 @@ class URISummaryCommander @Inject()(
       return (width > size.width && height > size.height)
     }
     false
+  }
+
+  def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[String] = {
+    embedlyStore.get(id) match {
+      case Some(info) => info.info.keywords.sortBy(-1 * _.score).map{_.name}
+      case None => Seq()
+    }
+  }
+
+  def getWord2VecKeywords(id: Id[NormalizedURI]): Future[Option[Word2VecKeywords]] = {
+    cortex.word2vecURIKeywords(id)
   }
 
   //todo(martin) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)

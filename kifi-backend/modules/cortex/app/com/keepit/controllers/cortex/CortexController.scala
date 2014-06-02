@@ -67,4 +67,9 @@ class CortexController @Inject()(
     Ok(Json.toJson(rv))
   }
 
+  def getURIKeywords(uri: Id[NormalizedURI]) = Action { request =>
+    val key = word2vec.uriKeywords(uri)
+    Ok(Json.toJson(key))
+  }
+
 }
