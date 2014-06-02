@@ -32,7 +32,7 @@ guide.step1 = guide.step1 || function () {
       tileObserver.observe(tile, {childList: true});
       api.port.on(handlers);
 
-      spotlight = new Spotlight(wholeWindow(), {opacity: 0});
+      spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
       $stage = $(render('html/guide/step_1', me)).appendTo('body');
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
       showStep(0);

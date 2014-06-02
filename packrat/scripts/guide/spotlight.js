@@ -1,16 +1,16 @@
 // @require styles/guide/spotlight.css
+// @require scripts/lib/underscore.js
 
 var Spotlight = Spotlight || (function (window, document) {
   'use strict';
 
   function Spotlight(rectToCircumscribe, opts) {
     var ri = this.ri = rectToCircumscribe;
-    var ro = this.ro = opts.outer || {x: 0, y: 0, w: 9000, h: 9000};
-    var el = this.el = [0,0,0,0].map(div.bind(null, 'kifi-spotlight kifi-root'));
-    if ('opacity' in opts) {
-      setOpacity(el, this.opacity = sanitizeOpacity(opts.opacity));
-    }
-    position(el, ro, ri);
+    var wd = this.wd = {w: window.innerWidth, h: window.innerHeight};
+    var dc = this.dc = [0,0,0,0].map(newDarkCanvas.bind(null, wd.w, wd.h, 'kifi-spotlight kifi-root'));
+    this.onResize = _.throttle(onResize.bind(null, this), 100, {leading: false});
+    this.maxOpacity = sanitizeOpacity(opts.maxOpacity);
+    show(dc, wd, ri, Math.min(this.maxOpacity, sanitizeOpacity(opts.opacity)));
     this.attach();
   }
 
@@ -18,23 +18,28 @@ var Spotlight = Spotlight || (function (window, document) {
     attached: false,
     attach: function () {
       if (!this.attached) {
+        // TODO: call this.onResize if window has resized while detached
         var f = document.createDocumentFragment();
-        this.el.forEach(f.appendChild.bind(f));
+        this.dc.forEach(function (dc) {
+          f.appendChild(dc.el);
+        });
         document.body.appendChild(f);
+        window.addEventListener('resize', this.onResize, true);
         this.attached = true;
       }
       return this;
     },
     detach: function () {
       if (this.attached) {
-        this.el.forEach(function (el) {el.remove()});
+        this.dc.forEach(function (dc) {dc.el.remove()});
+        window.removeEventListener('resize', this.onResize, true);
         this.attached = false;
       }
       return this;
     },
     animateTo: function (rectToCircumscribe, opts) {
-      var o0 = this.opacity;
-      var oN = 'opacity' in opts ? sanitizeOpacity(opts.opacity) : null;
+      var o0 = this.dc[0].styleCache.opacity;
+      var oN = Math.min(this.maxOpacity, sanitizeOpacity(opts.opacity));
       var ease = opts.ease || swing;
       var r0 = this.ri;
       var rN = rectToCircumscribe;
@@ -47,19 +52,16 @@ var Spotlight = Spotlight || (function (window, document) {
           if (t < tN) {
             window.requestAnimationFrame(tick);
             var alpha = t > t0 ? (t - t0) * ms_1 : 0;
-            position(this.el, this.ro, this.ri = interpolateRect(ease(alpha), r0, rN));
-            if (oN != null) {
-              setOpacity(this.el, this.opacity = o0 + (oN - o0) * alpha);
-            }
+            show(this.dc, this.wd, this.ri = interpolateRect(ease(alpha), r0, rN), o0 + (oN - o0) * alpha);
           } else {
             this.tick = null;
             if (opts.detach) {
               this.detach();
+              this.dc.forEach(function (dc) {
+                dc.setOpacity(oN);
+              });
             } else {
-              position(this.el, this.ro, this.ri = rN);
-            }
-            if (oN != null) {
-              setOpacity(this.el, this.opacity = oN);
+              show(this.dc, this.wd, this.ri = rN, oN);
             }
           }
         }
@@ -69,55 +71,112 @@ var Spotlight = Spotlight || (function (window, document) {
     }
   };
 
-  function div(className) {
-    var el = document.createElement('div');
-    el.className = className;
-    return el;
+  function newDarkCanvas(w, h, className) {
+    return new DarkCanvas(w, h, className);
   }
 
-  function position(el, ro, ri) {
+  function DarkCanvas(w, h, className) {
+    var el = document.createElement('canvas');
+    el.className = className;
+    var gc = el.getContext('2d');
+    gc.fillStyle = '#000';
+    this.el = el;
+    this.gc = gc;
+    this.size(w, h);
+    this.spotBounds = {x: 0, y: 0, w: 0, h: 0};
+    this.x = 0;
+    this.y = 0;
+    this.styleCache = {
+      display: '',
+      opacity: 1,
+      clip: ''
+    };
+  }
+
+  DarkCanvas.prototype = {
+    size: function(w, h) {
+      this.el.width = w;
+      this.el.height = h;
+      this.gc.fillRect(0, 0, w, h);
+    },
+    draw: function(wd, r, cx, cy, x, y, opacity, clipHeight) {
+      if (x + wd.w > 0 && y + (clipHeight || wd.h) > 0 && x < wd.w && y < wd.h) {
+        var cs = this.styleCache;
+        var es = this.el.style;
+        var xOld = cs.left;
+        var yOld = cs.top;
+        updateStylePx(es, cs, 'left', x);
+        updateStylePx(es, cs, 'top', y);
+        updateStyle(es, cs, 'display', '');
+        if (opacity != null) {
+          updateStyle(es, cs, 'opacity', opacity);
+        }
+        updateStyle(es, cs, 'clip', clipHeight ? 'rect(0,auto,' + clipHeight + 'px,0)' : '');
+        var gc = this.gc;
+        var sb = this.spotBounds;
+        gc.fillRect(sb.x, sb.y, sb.w, sb.h);
+        gc.fillRect(
+          sb.x = cx - x - r - 2,
+          sb.y = cy - y - r - 2,
+          sb.w = 2 * r + 4,
+          sb.h = 2 * r + 4);
+        gc.globalCompositeOperation = 'destination-out';
+        gc.beginPath();
+        gc.arc(cx - x, cy - y, r, 0, 2 * Math.PI);
+        gc.closePath();
+        gc.fill();
+        gc.globalCompositeOperation = 'source-over';
+      } else {
+        this.hide();
+      }
+    },
+    setOpacity: function (opacity) {
+      updateStyle(this.el.style, this.styleCache, 'opacity', opacity);
+    },
+    hide: function () {
+      updateStyle(this.el.style, this.styleCache, 'display', 'none');
+    }
+  };
+
+  function show(dc, wd, ri, opacity) {
     var r = Math.round(Math.sqrt(ri.w * ri.w + ri.h * ri.h) / 2);
     if (r > 0) {
       var cx = Math.round(ri.x + ri.w / 2);
       var cy = Math.round(ri.y + ri.h / 2);
-      positionOne(el[0], r, cx, cy, ro.x, ro.y, ro.w, ri.y - ro.y);
-      positionOne(el[1], r, cx, cy, ro.x, ri.y, ri.x - ro.x, ri.h);
-      positionOne(el[2], r, cx, cy, ri.x + ri.w, ri.y, ro.x + ro.w - ri.x - ri.w, ri.h);
-      positionOne(el[3], r, cx, cy, ro.x, ri.y + ri.h, ro.w, ro.y + ro.h - ri.y - ri.h);
+      dc[0].draw(wd, r, cx, cy, 0, ri.y - wd.h, opacity);
+      dc[1].draw(wd, r, cx, cy, ri.x - wd.w, ri.y, opacity, ri.h);
+      dc[2].draw(wd, r, cx, cy, ri.x + ri.w, ri.y, opacity, ri.h);
+      dc[3].draw(wd, r, cx, cy, 0, ri.y + ri.h, opacity);
     } else {
-      var s = el[0].style;
-      s.display = '';
-      s.left = s.top = '0';
-      s.width = s.height = '100%';
-      s.backgroundColor = 'rgba(0,0,0,.85)';
-      s.backgroundImage = '';
-      el[1].style.display = el[2].style.display = el[3].style.display = 'none';
+      dc[0].draw(wd, 0, 0, 0, 0, 0, opacity);
+      dc[1].hide();
+      dc[2].hide();
+      dc[3].hide();
     }
   }
 
-  function positionOne(el, r, cx, cy, x, y, w, h) {
-    var s = el.style;
-    if (w > 0 && h > 0) {
-      s.display = '';
-      s.left = Math.round(x) + 'px';
-      s.top = Math.round(y) + 'px';
-      s.width = Math.round(w) + 'px';
-      s.height = Math.round(h) + 'px';
-      s.backgroundColor = '';
-      s.backgroundImage = 'radial-gradient(circle ' + (r + 3) + 'px at ' + (cx - x) + 'px ' + (cy - y) + 'px, rgba(0,0,0,0) ' + r + 'px, rgba(0,0,0,.85) ' + (r + 1) + 'px)';
-    } else {
-      s.display = 'none';
+  function onResize(spotlight) {
+    var wd = {w: window.innerWidth, h: window.innerHeight};
+    spotlight.dc.forEach(function (dc) {
+      dc.size(wd.w, wd.h);
+    });
+    show(spotlight.dc, spotlight.wd = wd, spotlight.ri, null);
+  }
+
+  function updateStyle(elementStyle, styleCache, name, val) {
+    if (styleCache[name] !== val) {
+      elementStyle[name] = styleCache[name] = val;
+    }
+  }
+
+  function updateStylePx(elementStyle, styleCache, name, val) {
+    if (styleCache[name] !== val) {
+      elementStyle[name] = styleCache[name] = val + 'px';
     }
   }
 
   function sanitizeOpacity(val) {
     return typeof val === 'number' ? (val < 0 ? 0 : (val > 1 ? 1 : val)) : 1;
-  }
-
-  function setOpacity(el, val) {
-    for (var i = 0; i < el.length; i++) {
-      el[i].style.opacity = val;
-    }
   }
 
   function calcDurationMs(r1, r2) {
