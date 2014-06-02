@@ -33,6 +33,7 @@ import com.keepit.common.mail.GenericEmailAddress
 import com.keepit.eliza.mail.DomainToNameMapper
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.util.{MessageFormatter, TextSegment}
+import com.keepit.common.strings.AbbreviateString
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -106,7 +107,7 @@ class ElizaEmailCommander @Inject() (
     ThreadEmailInfo(
       pageUrl = thread.nUrl.get,
       pageName = pageName,
-      pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
+      pageTitle = uriSummary.title.getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
       heroImageUrl = uriSummary.imageUrl,
       pageDescription = uriSummary.description.map(_.take(190) + "..."),
