@@ -104,7 +104,7 @@ var Spotlight = Spotlight || (function (window, document) {
       s.width = Math.round(w) + 'px';
       s.height = Math.round(h) + 'px';
       s.backgroundColor = '';
-      s.backgroundImage = 'radial-gradient(circle ' + (r + 9) + 'px at ' + (cx - x) + 'px ' + (cy - y) + 'px, rgba(0,0,0,0) ' + r + 'px, rgba(0,0,0,.85) ' + (r + 4) + 'px)';
+      s.backgroundImage = 'radial-gradient(circle ' + (r + 3) + 'px at ' + (cx - x) + 'px ' + (cy - y) + 'px, rgba(0,0,0,0) ' + r + 'px, rgba(0,0,0,.85) ' + (r + 1) + 'px)';
     } else {
       s.display = 'none';
     }

@@ -1,15 +1,72 @@
+// @require styles/guide/svg_arrow.css
 
 var SvgArrow = SvgArrow || (function (window, document) {
   'use strict';
 
-  function SvgArrow(..., opts) {
-    var ri = this.ri = rectToCircumscribe;
-    var ro = this.ro = opts.outer || {x: 0, y: 0, w: 9000, h: 9000};
-    var el = this.el = [0,0,0,0].map(div.bind(null, 'kifi-spotlight kifi-root'));
-    if ('opacity' in opts) {
-      setOpacity(el, this.opacity = sanitizeOpacity(opts.opacity));
+  var HEAD_WIDTH = 20;
+  var HEAD_LENGTH = HEAD_WIDTH / 2 * Math.sqrt(3);
+  var TAIL_WIDTH = 4;
+
+  function SvgArrow(elTail, elHead, angleTail, angleHead) {
+    var rTail = elTail.getBoundingClientRect();
+    var rHead = elHead.getBoundingClientRect();
+    var x1, y1, x2, y2, xT, yT, xH, yH;
+    switch (angleTail) {
+      case 0:
+        xT = 0;
+        yT = HEAD_WIDTH / 2;
+        x1 = rTail.right + 10;
+        y1 = (rTail.top + rTail.bottom) / 2 - yT;
+        break;
+      default:
+        throw Error('unsupported angleTail: ' + angleTail);
     }
-    position(el, ro, ri);
+    switch (angleHead) {
+      case 0:
+        var yTmp = (rHead.top + rHead.bottom) / 2;
+        x2 = rHead.left - 10;
+        y2 = yTmp + HEAD_WIDTH / 2;
+        xH = x2 - x1;
+        yH = yTmp - y1;
+        break;
+      case -45:
+        x2 = rHead.left - 8;
+        y2 = rHead.top - 8;
+        xH = x2 - x1;
+        yH = y2 - y1;
+        break;
+      case -90:
+        var xTmp = (rHead.left + rHead.right) / 2;
+        x2 = xTmp + HEAD_WIDTH / 2;
+        y2 = rHead.top - 10;
+        xH = xTmp - x1;
+        yH = y2 - y1;
+        break;
+      default:
+        throw Error('unsupported angleHead: ' + angleHead);
+    }
+    this.svg = $svg('svg')
+      .attr('class', 'kifi-svg-arrow kifi-root')
+      .attr('style', [
+        'width:', x2 - x1, 'px;',
+        'height:', y2 - y1, 'px;',
+        'right:', window.innerWidth - x2, 'px;',
+        'bottom:', window.innerHeight - y2, 'px']);
+    this.tail = $svg('path')
+      .attr('class', 'kifi-svg-arrow-tail')
+      // .attr('d', 'M' + d3_svg_lineCardinalOpen([[xH, yH + 40], [xH, yH - HEAD_LENGTH - 6], [xT, yT], [xT - 90, yT]], 0))
+      .attr('d', ['M', xH, yH - HEAD_LENGTH - 8, 'A', xH - xT, yH - HEAD_LENGTH - 8 - yT, 0, 0, 0, xT, yT].join(' '))
+      .appendTo(this.svg.el);
+    this.head = $svg('path')
+      .attr('class', 'kifi-svg-arrow-head')
+      .attr('d', triangle(xH, yH, angleHead))
+      .appendTo(this.svg.el);
+    // $svg('circle')
+    //   .attr('cx', cp[0])
+    //   .attr('cy', cp[1])
+    //   .attr('r', 2)
+    //   .attr('style', ['stroke:none;fill:yellow'])
+    //   .appendTo(this.svg.el);
     this.attach();
   }
 
@@ -17,172 +74,175 @@ var SvgArrow = SvgArrow || (function (window, document) {
     attached: false,
     attach: function () {
       if (!this.attached) {
-        var f = document.createDocumentFragment();
-        this.el.forEach(f.appendChild.bind(f));
-        document.body.appendChild(f);
+        document.body.appendChild(this.svg.el);
         this.attached = true;
       }
       return this;
     },
-    detach: function () {
+    fadeAndDetach: function () {
       if (this.attached) {
-        this.el.forEach(function (el) {el.remove()});
+        // TODO: fade first
+        this.svg.el.remove();
         this.attached = false;
       }
       return this;
-    },
-    animateTo: function (rectToCircumscribe, opts) {
-      var o0 = this.opacity;
-      var oN = 'opacity' in opts ? sanitizeOpacity(opts.opacity) : null;
-      var ease = opts.ease || swing;
-      var r0 = this.ri;
-      var rN = rectToCircumscribe;
-      var ms = opts.ms || calcDurationMs(r0, rN);
-      var ms_1 = 1 / ms;
-      var t0 = window.performance.now();
-      var tN = t0 + ms;
-      var tick = this.tick = (function (t) {
-        if (this.tick === tick) {
-          if (t < tN) {
-            window.requestAnimationFrame(tick);
-            var alpha = t > t0 ? (t - t0) * ms_1 : 0;
-            position(this.el, this.ro, this.ri = interpolateRect(ease(alpha), r0, rN));
-            if (oN != null) {
-              setOpacity(this.el, this.opacity = o0 + (oN - o0) * alpha);
-            }
-          } else {
-            this.tick = null;
-            if (opts.detach) {
-              this.detach();
-            } else {
-              position(this.el, this.ro, this.ri = rN);
-            }
-            if (oN != null) {
-              setOpacity(this.el, this.opacity = oN);
-            }
-          }
-        }
-      }).bind(this);
-      window.requestAnimationFrame(tick);
-      return ms;
     }
   };
 
-  function div(className) {
-    var el = document.createElement('div');
-    el.className = className;
-    return el;
-  }
-
-  function position(el, ro, ri) {
-    var r = Math.round(Math.sqrt(ri.w * ri.w + ri.h * ri.h) / 2);
-    var cx = Math.round(ri.x + ri.w / 2);
-    var cy = Math.round(ri.y + ri.h / 2);
-    positionOne(el[0], r, cx, cy, ro.x, ro.y, ro.w, ri.y - ro.y);
-    positionOne(el[1], r, cx, cy, ro.x, ri.y, ri.x - ro.x, ri.h);
-    positionOne(el[2], r, cx, cy, ri.x + ri.w, ri.y, ro.x + ro.w - ri.x - ri.w, ri.h);
-    positionOne(el[3], r, cx, cy, ro.x, ri.y + ri.h, ro.w, ro.y + ro.h - ri.y - ri.h);
-  }
-
-  function positionOne(el, r, cx, cy, x, y, w, h) {
-    var s = el.style;
-    if (w > 0 && h > 0) {
-      s.display = '';
-      s.left = Math.round(x) + 'px';
-      s.top = Math.round(y) + 'px';
-      s.width = Math.round(w) + 'px';
-      s.height = Math.round(h) + 'px';
-      s.backgroundImage = 'radial-gradient(circle ' + (r + 9) + 'px at ' + (cx - x) + 'px ' + (cy - y) + 'px, rgba(0,0,0,0) ' + r + 'px, rgba(0,0,0,.85) ' + (r + 4) + 'px)';
+  function $svg(tagName) {
+    if (this) {
+      this.el = document.createElementNS('http://www.w3.org/2000/svg', tagName);
     } else {
-      s.display = 'none';
+      return new $svg(tagName);
     }
   }
 
-  function sanitizeOpacity(val) {
-    return typeof val === 'number' ? (val < 0 ? 0 : (val > 1 ? 1 : val)) : 1;
-  }
-
-  function setOpacity(el, val) {
-    for (var i = 0; i < el.length; i++) {
-      el[i].style.opacity = val;
+  $svg.prototype = {
+    appendTo: function (el) {
+      el.appendChild(this.el);
+      return this;
+    },
+    attr: function (name, val) {
+      if (val.join) {
+        val = val.join('');
+      }
+      this.el.setAttributeNS(null, name, val);
+      return this;
     }
+  };
+
+  function triangle(x, y, angle) {
+    return ['M', x, y, 'l', -HEAD_WIDTH / 2, -HEAD_LENGTH, 'l', HEAD_WIDTH, 0, 'z'].join(' ');
   }
 
-  function calcDurationMs(r1, r2) {
-    var px = Math.max.apply(null, [r1.x - r2.x, r1.y - r2.y, r1.x + r1.w - r2.x - r2.w, r1.y + r1.h - r2.y - r2.h].map(Math.abs));
-    return 200 * Math.log((px + 80) / 60) | 0;
+  // github.com/mbostock/d3
+  // Copyright (c) 2010-2014, Michael Bostock
+  // All rights reserved.
+
+  // Open cardinal spline interpolation; generates "C" commands.
+  function d3_svg_lineCardinalOpen(points, tension) {
+    return points[1] + d3_svg_lineHermite(
+      points.slice(1, points.length - 1),
+      d3_svg_lineCardinalTangents(points, tension));
   }
 
-  function interpolateRect(alpha, r1, r2) {
-    return {
-      x: r1.x + (r2.x - r1.x) * alpha,
-      y: r1.y + (r2.y - r1.y) * alpha,
-      w: r1.w + (r2.w - r1.w) * alpha,
-      h: r1.h + (r2.h - r1.h) * alpha
-    };
+  // Hermite spline construction; generates "C" commands.
+  function d3_svg_lineHermite(points, tangents) {
+    if (tangents.length < 1
+        || (points.length != tangents.length
+        && points.length != tangents.length + 2)) {
+      return d3_svg_lineLinear(points);
+    }
+
+    var quad = points.length != tangents.length,
+        path = "",
+        p0 = points[0],
+        p = points[1],
+        t0 = tangents[0],
+        t = t0,
+        pi = 1;
+
+    if (quad) {
+      path += "Q" + (p[0] - t0[0] * 2 / 3) + "," + (p[1] - t0[1] * 2 / 3)
+          + "," + p[0] + "," + p[1];
+      p0 = points[1];
+      pi = 2;
+    }
+
+    if (tangents.length > 1) {
+      t = tangents[1];
+      p = points[pi];
+      pi++;
+      path += "C" + (p0[0] + t0[0]) + "," + (p0[1] + t0[1])
+          + "," + (p[0] - t[0]) + "," + (p[1] - t[1])
+          + "," + p[0] + "," + p[1];
+      for (var i = 2; i < tangents.length; i++, pi++) {
+        p = points[pi];
+        t = tangents[i];
+        path += "S" + (p[0] - t[0]) + "," + (p[1] - t[1])
+            + "," + p[0] + "," + p[1];
+      }
+    }
+
+    if (quad) {
+      var lp = points[pi];
+      path += "Q" + (p[0] + t[0] * 2 / 3) + "," + (p[1] + t[1] * 2 / 3)
+          + "," + lp[0] + "," + lp[1];
+    }
+
+    return path;
   }
 
-  function swing(p) {
-    return .5 - Math.cos(p * Math.PI) / 2;
+  // Generates tangents for a cardinal spline.
+  function d3_svg_lineCardinalTangents(points, tension) {
+    var tangents = [],
+        a = (1 - tension) / 2,
+        p0,
+        p1 = points[0],
+        p2 = points[1],
+        i = 1,
+        n = points.length;
+    while (++i < n) {
+      p0 = p1;
+      p1 = p2;
+      p2 = points[i];
+      tangents.push([a * (p2[0] - p0[0]), a * (p2[1] - p0[1])]);
+    }
+    return tangents;
   }
 
-  return Spotlight;
-}(window, document));
+  var d3_interpolate_numberA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g,
+      d3_interpolate_numberB = new RegExp(d3_interpolate_numberA.source, 'g');
 
+  function d3_interpolateNumber(a, b) {
+    b -= a = +a;
+    return function(t) { return a + b * t; };
+  }
 
-// github.com/mbostock/d3
-// Copyright (c) 2010-2014, Michael Bostock
-// All rights reserved.
+  function d3_interpolateString(a, b) {
+    var bi = d3_interpolate_numberA.lastIndex = d3_interpolate_numberB.lastIndex = 0, // scan index for next number in b
+        am, // current match in a
+        bm, // current match in b
+        bs, // string preceding current number in b, if any
+        i = -1, // index in s
+        s = [], // string constants and placeholders
+        q = []; // number interpolators
 
-function d3_interpolateNumber(a, b) {
-  b -= a = +a;
-  return function(t) { return a + b * t; };
-}
+    // Coerce inputs to strings.
+    a = a + '', b = b + '';
 
-function d3_interpolateString(a, b) {
-  var bi = d3_interpolate_numberA.lastIndex = d3_interpolate_numberB.lastIndex = 0, // scan index for next number in b
-      am, // current match in a
-      bm, // current match in b
-      bs, // string preceding current number in b, if any
-      i = -1, // index in s
-      s = [], // string constants and placeholders
-      q = []; // number interpolators
+    // Interpolate pairs of numbers in a & b.
+    while ((am = d3_interpolate_numberA.exec(a))
+        && (bm = d3_interpolate_numberB.exec(b))) {
+      if ((bs = bm.index) > bi) { // a string precedes the next number in b
+        bs = b.substring(bi, bs);
+        if (s[i]) s[i] += bs; // coalesce with previous string
+        else s[++i] = bs;
+      }
+      if ((am = am[0]) === (bm = bm[0])) { // numbers in a & b match
+        if (s[i]) s[i] += bm; // coalesce with previous string
+        else s[++i] = bm;
+      } else { // interpolate non-matching numbers
+        s[++i] = null;
+        q.push({i: i, x: d3_interpolateNumber(am, bm)});
+      }
+      bi = d3_interpolate_numberB.lastIndex;
+    }
 
-  // Coerce inputs to strings.
-  a = a + '', b = b + '';
-
-  // Interpolate pairs of numbers in a & b.
-  while ((am = d3_interpolate_numberA.exec(a))
-      && (bm = d3_interpolate_numberB.exec(b))) {
-    if ((bs = bm.index) > bi) { // a string precedes the next number in b
-      bs = b.substring(bi, bs);
+    if (bi < b.length) {
+      bs = b.substring(bi);
       if (s[i]) s[i] += bs; // coalesce with previous string
       else s[++i] = bs;
     }
-    if ((am = am[0]) === (bm = bm[0])) { // numbers in a & b match
-      if (s[i]) s[i] += bm; // coalesce with previous string
-      else s[++i] = bm;
-    } else { // interpolate non-matching numbers
-      s[++i] = null;
-      q.push({i: i, x: d3_interpolateNumber(am, bm)});
-    }
-    bi = d3_interpolate_numberB.lastIndex;
+
+    return s.length < 2
+        ? (q[0] ? (b = q[0].x, function(t) { return b(t) + ''; })
+        : function() { return b; })
+        : (b = q.length, function(t) {
+            for (var i = 0, o; i < b; ++i) s[(o = q[i]).i] = o.x(t);
+            return s.join('');
+          });
   }
 
-  if (bi < b.length) {
-    bs = b.substring(bi);
-    if (s[i]) s[i] += bs; // coalesce with previous string
-    else s[++i] = bs;
-  }
-
-  return s.length < 2
-      ? (q[0] ? (b = q[0].x, function(t) { return b(t) + ''; })
-      : function() { return b; })
-      : (b = q.length, function(t) {
-          for (var i = 0, o; i < b; ++i) s[(o = q[i]).i] = o.x(t);
-          return s.join('');
-        });
-}
-
-var d3_interpolate_numberA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g,
-    d3_interpolate_numberB = new RegExp(d3_interpolate_numberA.source, 'g');
+  return SvgArrow;
+}(window, document));

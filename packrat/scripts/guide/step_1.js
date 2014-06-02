@@ -6,17 +6,18 @@
 // @require scripts/keeper.js
 // @require scripts/render.js
 // @require scripts/guide/spotlight.js
+// @require scripts/guide/svg_arrow.js
 // @require scripts/html/guide/step_1.js
 // @require scripts/html/guide/steps.js
 
 var guide = guide || {};
 guide.step1 = guide.step1 || function () {
-  var $stage, $p, $steps, spotlight, tileObserver, keeperObserver, tagboxObserver, stepIdx, pIdx;
+  var $stage, $steps, spotlight, arrow, tileObserver, keeperObserver, tagboxObserver, stepIdx, pIdx;
   var steps = [
-    {lit: '.kifi-tile-card', pad: [20, 40], arrow: {}},
-    {lit: '.kifi-keep-card', pad: [10, 44], arrow: {}},
-    {lit: '.kifi-keep-card', pad: [10, 44], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', rot: 45}},
-    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], arrow: {sel: '.kifi-tagbox-suggestion', rot: 90}},
+    {lit: '.kifi-tile-card', pad: [20, 40], arrow: {angle: -90}},
+    {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {angle: -90}},
+    {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', angle: -45}},
+    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], arrow: {sel: '.kifi-tagbox-suggestion', angle: 0}},
     {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20]}];
   var handlers = {
     kept: showStep.bind(null, 2),
@@ -33,7 +34,6 @@ guide.step1 = guide.step1 || function () {
 
       spotlight = new Spotlight(wholeWindow(), {opacity: 0});
       $stage = $(render('html/guide/step_1', me)).appendTo('body');
-      $p = $stage.find('.kifi-guide-p');
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
       showStep(0);
       $steps.find('.kifi-guide-steps-x').click(hide);
@@ -47,12 +47,13 @@ guide.step1 = guide.step1 || function () {
       $stage.one('transitionend', remove).css('transition-delay', '').removeClass('kifi-open');
       $steps.one('transitionend', remove).removeClass('kifi-showing');
       var ms = spotlight.animateTo(wholeWindow(), {opacity: 0, detach: true});
+      arrow.fadeAndDetach(ms);
       tileObserver.disconnect();
       if (keeperObserver) keeperObserver.disconnect();
       if (tagboxObserver) tagboxObserver.disconnect();
       api.port.off(handlers);
 
-      $stage = $p = $steps = spotlight = tileObserver = keeperObserver = tagboxObserver = stepIdx = pIdx = null;
+      $stage = $steps = spotlight = arrow = tileObserver = keeperObserver = tagboxObserver = stepIdx = pIdx = null;
       $(document).data('esc').remove(hide);
       $(window).off('resize.guideStep1');
       return ms;
@@ -72,12 +73,16 @@ guide.step1 = guide.step1 || function () {
     }
     log('[showStep] step:', stepIdx, '=>', stepIdxNew, 'p:', pIdx, '=>', pIdxNew, r);
     var t0 = Date.now();
+    var padT = p.pad[0];
+    var padR = p.pad.length > 1 ? p.pad[1] : padT;
+    var padB = p.pad.length > 2 ? p.pad[2] : padT;
+    var padL = p.pad.length > 3 ? p.pad[3] : padR;
     ms = spotlight.animateTo({
-        x: r.left - p.pad[1],
-        y: r.top - p.pad[0],
-        w: r.width + p.pad[1] * 2,
-        h: r.height + p.pad[0] + p.pad[p.pad.length > 2 ? 2 : 0]
-      }, {opacity: 1, ms: ms});
+      x: r.left - padL,
+      y: r.top - padT,
+      w: r.width + padL + padR,
+      h: r.height + padT + padB
+    }, {opacity: 1, ms: ms});
 
     var hidePromise = stepIdxNew !== stepIdx && stepIdx ? hideStep() : null;
 
@@ -97,6 +102,18 @@ guide.step1 = guide.step1 || function () {
     $stage
       .attr({'kifi-step': stepIdx, 'kifi-p': pIdx})
       .css('transition-delay', Math.max(0, ms - 200) + 'ms')
+      .on('transitionend', function end(e) {
+        if (e.target === this) {
+          $(this).off('transitionend', end);
+          var p = steps[pIdx];
+          var arr = p.arrow;
+          if (arr) {
+            var elTail = this.querySelector('.kifi-p' + pIdx);
+            var elHead = document.querySelector(arr.sel || p.lit);
+            arrow = new SvgArrow(elTail, elHead, 0, arr.angle);
+          }
+        }
+      })
       .layout().addClass('kifi-open');
   }
 
@@ -117,6 +134,10 @@ guide.step1 = guide.step1 || function () {
         deferred.resolve();
       }
     }).addClass('kifi-done');
+    if (arrow) {
+      arrow.fadeAndDetach(0);
+      arrow = null;
+    }
     return deferred.promise;
   }
 
