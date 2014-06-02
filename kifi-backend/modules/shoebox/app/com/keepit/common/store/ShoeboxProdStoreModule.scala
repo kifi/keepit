@@ -1,16 +1,16 @@
 package com.keepit.common.store
 
-import com.keepit.inject.AppScoped
-import com.google.inject.{Provider, Provides, Singleton}
-import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
-import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
+import com.amazonaws.services.s3.AmazonS3
+import com.google.inject.{Inject, Provider, Provides, Singleton}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.time.Clock
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.inject.AppScoped
+import com.keepit.scraper.embedly.{EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl}
 import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
-import play.api.Play._
+import com.keepit.typeahead.abook.{EContactTypeaheadStore, InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore}
 import com.keepit.typeahead.socialusers._
-import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
+
+import play.api.Play.current
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {
@@ -57,6 +57,13 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.contact.bucket").get)
     new S3EContactTypeaheadStore(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Singleton
+  @Provides
+  def embedlyStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EmbedlyStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.embedly.bucket").get)
+    new S3EmbedlyStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
 }
@@ -106,6 +113,14 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     whenConfigured("amazon.s3.typeahead.contact.bucket")(
       prodStoreModule.econtactTypeaheadStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryEContactTypeaheadStore())
+  }
+
+  @Singleton
+  @Provides
+  def embedlyStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): EmbedlyStore = {
+    whenConfigured("amazon.s3.embedly.bucket")(
+      prodStoreModule.embedlyStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryEmbedlyStoreImpl())
   }
 
 }
