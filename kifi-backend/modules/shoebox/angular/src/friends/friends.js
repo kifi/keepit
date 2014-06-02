@@ -51,7 +51,7 @@ angular.module('kifi.friends', [
 
     $scope.friendsScrollDistance = '100%';
     $scope.isFriendsScrollDisabled = function () {
-      return !friendService.hasMoreFriends;
+      return !friendService.hasMore();
     };
     $scope.friendsScrollNext = _.throttle(friendService.getMore, 1000);
 
