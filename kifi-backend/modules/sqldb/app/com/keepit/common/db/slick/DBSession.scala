@@ -18,6 +18,7 @@ object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
     def database = _session.database
     private var open = false
+    private var wasOpened = false
     private var doRollback = false
     private var transaction: Option[Promise[Unit]] = None
     private var transactionFuture: Option[Future[Unit]] = None
@@ -26,6 +27,7 @@ object DBSession {
       val s = _session
       if (inTransaction) s.conn.setAutoCommit(false)
       open = true
+      wasOpened = true
       startTime = System.currentTimeMillis
       s
     }
@@ -55,7 +57,7 @@ object DBSession {
         dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:SESSION\tduration:${time}\tname:$name\tlocation:${location.location}")
         timeCheck()
         open = false
-      } else {
+      } else if (wasOpened) {
         log.warn(s"Closing the same connection more than once!\tlocation:${location.location}")
       }
     }
