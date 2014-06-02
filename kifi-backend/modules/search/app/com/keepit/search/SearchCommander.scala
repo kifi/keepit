@@ -429,7 +429,7 @@ class SearchCommanderImpl @Inject() (
     def sendTotal(): Unit = {
       statsd.timing("extSearch.postSearchTime", getDecorationTime, ALWAYS)
       statsd.timing("extSearch.total", getTotalTime, ALWAYS)
-      statsd.increment("extSearch.total")
+      statsd.incrementOne("extSearch.total", ONE_IN_TEN)
     }
 
     override def toString = {
