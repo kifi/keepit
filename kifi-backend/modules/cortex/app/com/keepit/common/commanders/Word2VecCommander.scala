@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
 import com.keepit.cortex.utils.TextUtils
+import com.keepit.model.Word2VecKeywords
 
 
 @Singleton
@@ -126,4 +127,11 @@ class Word2VecCommander @Inject()(
 
   }
 
+  def uriKeywords(uri: Id[NormalizedURI]): Option[Word2VecKeywords] = {
+    uriFeatureRetriever.getByKey(uri, word2vec.version).map{ feat =>
+      val cosineKeywords = feat.keywords
+      val freqKeywords = feat.bagOfWords.toArray.sortBy( -1 * _._2).take(5).map{_._1}
+      Word2VecKeywords(cosineKeywords, freqKeywords)
+    }
+  }
 }

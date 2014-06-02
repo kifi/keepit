@@ -45,10 +45,17 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val fakeKeywords = KeywordsSummary(Seq("emb1"), Seq("w2v1"), Seq("w2v2"))
-      uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+      val embedlyKeywords = uriSummaryCommander.getStoredEmbedlyKeywords(uri.id.get)
+      val word2vecKeywordsFut = uriSummaryCommander.getWord2VecKeywords(uri.id.get)
+      val imageUrlOptFut = uriSummaryCommander.getURIImage(uri)
+
+      for {
+        word2vecKeys <- word2vecKeywordsFut
+        imageUrlOpt <- imageUrlOptFut
+      } yield {
+        val keywords = KeywordsSummary(embedlyKeywords, word2vecKeys.map{_.cosine}.getOrElse(Seq()), word2vecKeys.map{_.freq}.getOrElse(Seq()))
         val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, fakeKeywords))
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, keywords))
       }
     }
   }
