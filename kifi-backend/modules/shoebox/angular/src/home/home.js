@@ -22,6 +22,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
+    $scope.enableSearch();
 
     $scope.toggleSelectAll = keepService.toggleSelectAll;
     $scope.isSelectedAll = keepService.isSelectedAll;
@@ -61,16 +62,16 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
       var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
-        return 'You have no Keeps';
+        return 'You have no keeps';
       case 1:
-        return 'Showing your only Keep';
+        return 'Showing your only keep';
       case 2:
-        return 'Showing both of your Keeps';
+        return 'Showing both of your keeps';
       default:
         if (keepService.isEnd()) {
-          return 'Showing all ' + numShown + ' of your Keeps';
+          return 'Showing all ' + numShown + ' of your keeps';
         }
-        return 'Showing your ' + numShown + ' latest Keeps';
+        return 'Showing your ' + numShown + ' latest keeps';
       }
     };
 

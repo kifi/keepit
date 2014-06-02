@@ -12,7 +12,17 @@ angular.module('kifi.layout.main', [
     injectedState, $rootScope, $analytics, keepService) {
 
     $scope.search = {};
+    $scope.searchEnabled = false;
     $scope.data = $scope.data || {};
+    $scope.editMode = false;
+
+    $scope.enableSearch = function () {
+      $scope.searchEnabled = true;
+      // add event handler on the inheriting scope
+      this.$on('$destroy', function () {
+        $scope.searchEnabled = false;
+      });
+    };
 
     $scope.isEmpty = function () {
       return !$scope.search.text;
