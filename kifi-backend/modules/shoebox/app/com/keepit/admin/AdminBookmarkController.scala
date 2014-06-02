@@ -4,7 +4,6 @@ import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.google.inject.Inject
-
 import com.keepit.search.{IndexInfo, SearchServiceClient}
 import com.keepit.common.controller.{AuthenticatedRequest, AdminController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -23,6 +22,7 @@ import com.keepit.common.time._
 import play.api.mvc.{AnyContent, Action}
 import com.keepit.commanders.URISummaryCommander
 import com.keepit.commanders.RichWhoKeptMyKeeps
+import com.keepit.model.KeywordsSummary
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -45,9 +45,10 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
+      val fakeKeywords = KeywordsSummary(Seq("emb1"), Seq("w2v1"), Seq("w2v2"))
       uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
         val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl))
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, fakeKeywords))
       }
     }
   }
