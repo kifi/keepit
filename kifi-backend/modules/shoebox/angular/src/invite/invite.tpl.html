@@ -1,5 +1,5 @@
 <div ng-controller="InviteCtrl">
-  <div class="invite-wrapper">
+  <div class="invite-wrapper" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
     <div class="invite">
       <h2>Find people to invite</h2>
       <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
