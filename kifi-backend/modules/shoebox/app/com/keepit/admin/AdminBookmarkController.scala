@@ -238,7 +238,7 @@ class AdminBookmarksController @Inject() (
         val s3 = w2v.map{_.freq}.getOrElse(Seq()).toSet
         s1.intersect(s2).intersect(s3).foreach{ word => keyCounts(word) = keyCounts(word) + 1 }
       }
-      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2)))
+      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(50)))
     }
   }
 }
