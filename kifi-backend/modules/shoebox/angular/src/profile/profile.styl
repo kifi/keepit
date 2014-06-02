@@ -16,15 +16,17 @@
 
 .profile
   padding-top: 18px
-  padding-left: 18px
-  padding-right: 18px
+  padding-left: 32px
+  padding-right: 32px
 
 .profile-container
   position: relative
   padding: 33px 88px 29px 167px
-  border-top: 2px solid #e3e6ee
   margin-top: 1px
-  background-color: #f5f7fb
+  background-color: #ffffff
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  border-radius: 3px
 
 .profile-image-wrapper
   position: absolute
@@ -427,6 +429,12 @@ a.profile-change-password-save
 
 .profile-section
   padding: 20px 0 20px 27px
+  background-color: #ffffff
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  border-radius: 3px
+  margin-top: 10px
+  text-align: center
 
   & h3
     font-size: 18px
@@ -622,6 +630,7 @@ a.profile-nw
   background-size: auto 15px
   background-position: 0
   overflow: hidden
+  text-align: left
 
 .profile-connected
   position: absolute
@@ -700,10 +709,15 @@ td.profile-email-separator
   font-size: 11px
   padding: 5px 0
 
-.profile-email-accounts-title
+.profile-email-account-wrapper
+  text-align: center
+
+.profile-email-accounts-overview
   color: #9FB1C3
   margin-top: 12px
   letter-spacing: .5px
+  display: inline-block
+  text-align: left
 
 .kf-profile-image-dialog-image
   width: 280px

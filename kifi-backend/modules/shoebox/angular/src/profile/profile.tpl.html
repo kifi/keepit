@@ -1,5 +1,5 @@
 <div ng-controller="ProfileCtrl">
-  <div class="profile-wrapper" antiscroll="{ autoHide: false }">
+  <div class="profile-wrapper">
     <div class="profile">
       <h2>Settings</h2>
       <div class="profile-container">
@@ -12,16 +12,6 @@
             </span>
             <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{me.firstName}}" novalidate>
             <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{me.lastName}}" novalidate>
-          </div>
-        </div>
-        <div class="profile-input-wrapper">
-          <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-          <div kf-profile-input input-state="descInput" input-save-action="saveDescription(value)" explicit-enabling="true">
-            <input class="profile-input-input profile-description-input"
-              ng-disabled="!descInput.editing"
-              kf-focus-if focus-cond="descInput.editing"
-              ng-model="descInput.value"
-              type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
           </div>
         </div>
         <div class="profile-input-wrapper profile-email">
@@ -83,7 +73,6 @@
           </li>
         </ul>
       </div>
-      <hr class="profile-section-divider">
       <div class="profile-section" kf-email-import></div>
     </div>
   </div>
