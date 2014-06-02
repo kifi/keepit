@@ -223,5 +223,10 @@ class URISummaryCommander @Inject()(
     cortex.word2vecURIKeywords(id)
   }
 
+  def batchGetWord2VecKeywords(ids: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
+    cortex.word2vecBatchURIKeywords(ids)
+  }
+
+
   //todo(martin) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
 }
