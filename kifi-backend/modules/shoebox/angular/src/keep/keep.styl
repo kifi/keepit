@@ -1,8 +1,12 @@
 .kf-keep
   position: relative
-  padding-left: 30px
-  border-top: 1px solid #f9f9f9
+  //border-top: 1px solid #f9f9f9
   box-sizing: border-box
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  background-color: white
+  border-radius: 3px
+  margin-top: 10px
 
   &.detailed
     background-color: #eff2f7
@@ -17,16 +21,6 @@
     overflow: hidden
     transition: height .3s ease-in-out
 
-  &:before
-    content: " "
-    display: block
-    height: 10px
-
-  &:after
-    content: " "
-    display: block
-    height: 13px
-
   &.ng-hide-add
   &.ng-hide-remove
     transition: max-height 0.3s linear
@@ -39,6 +33,32 @@
   &.ng-hide-add
   &.ng-hide-remove.ng-hide-remove-active
     max-height: 200px
+
+.kf-keep-body
+  padding: 0 20px
+
+.kf-keep-description
+  padding: 10px 0
+
+.kf-keep-footer
+  background-color: #f9f9f9
+  font-size: 12px
+  font-weight: 200
+  color: #5983bd
+  padding: 0 20px
+  line-height: 37px
+
+  a:active
+    color: #92add3
+
+.kf-keep-footer-link a
+  cursor: pointer
+    
+
+.kf-keep-footer-link + .kf-keep-footer-link:before
+    content: "·"
+    color: textGreyColor
+    padding: 0 6px 0 5px
 
 .kf-keep.selected
 .kf-shadow-keep-ellipsis
@@ -95,14 +115,14 @@
 
 .kf-keep-title
   max-width: 100%
-  font-size: 16px
+  font-size: 14px
+  font-weight: 200
   line-height: 24px
-  color: #0089d5
   font-smoothing: antialiased
   long-text()
 
-.kf-keep.example .kf-keep-title-link.kf-keep-title-link
-  color: #66b8e6
+  a[href]
+    color: textBlackColor
 
 .kf-keep-url
   font-size: 12px
@@ -170,64 +190,11 @@
   .kf-keep.example &
     display: inline-block
 
-.kf-keep:not(.mine)
-  .me
-  .keep-you
-  .kf-keep-private
-    display: none
-
 .kf-keep-private
-  display: inline-block
-  padding-left: 21px
+  float: right
+  padding-right: 21px
   margin: 0 2px
-  line-height: 17px
-  background: url(../img/private.png) left center/17px no-repeat
-
-  &:not(.on)
-    display: none
-
-.kf-keep:not(.mine) .kf-keep-you + .keep-kept-this:before
-  content: "Nobody has "
-  line-height: 23px
-
-// preview arrow
-.kf-keep-arrow-1
-  position: absolute
-  top: 26px
-  bottom: 0
-  right: 16px
-  width: 22px
-
-.kf-keep-arrow-2
-  display: table
-  table-layout: fixed
-  width: 100%
-  height: 100%
-
-.kf-keep-arrow-3
-  display: table-cell
-  vertical-align: middle
-
-.kf-keep-arrow-4
-  display: inline-block
-  width: 6px
-  height: 16px
-  border: solid transparent
-  border-width: 4px 8px
-  background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box
-  transition: transform .2s
-  cursor: pointer
-
-  &:hover
-    border-color: rgba(0,0,0,.05)
-    background-color: rgba(0,0,0,.05)
-
-  .kf-keep:hover &
-    background-position: right
-
-  .kf-keep.detailed &
-    background-position: right
-    transform: scale(-1,1)
+  background: url(../img/private.png) right center/17px no-repeat
 
 // preview button
 .kf-keep-hover-button-wrapper

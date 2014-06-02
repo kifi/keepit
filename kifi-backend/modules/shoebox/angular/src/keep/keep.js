@@ -9,10 +9,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
       return keep.isMyBookmark || false;
     };
 
-    $scope.isPrivate = function (keep) {
-      return keep.isPrivate || false;
-    };
-
     $scope.isExampleTag = function (tag) {
       return (tag && tag.name && tag.name.toLowerCase()) === 'example keep';
     };
@@ -38,8 +34,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootElement', 'tagService', 'util',
-  function ($document, $rootElement, tagService, util) {
+  '$document', '$rootElement', 'tagService', 'keepService', 'util',
+  function ($document, $rootElement, tagService, keepService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -56,14 +52,31 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
       replace: true,
       templateUrl: 'keep/keep.tpl.html',
       link: function (scope, element /*, attrs*/ ) {
-        scope.getTags = function () {
-          return scope.keep.tagList;
-        };
 
         var aUrlParser = $document[0].createElement('a');
         var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
         var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
         var fileNameToSpaceRe = /[\/._-]/g;
+
+        scope.getTags = function () {
+          return scope.keep.tagList;
+        };
+
+        scope.hasTag = function () {
+          return !!scope.getTags().length;
+        }
+
+        scope.unkeep = function () {
+          keepService.unkeep([scope.keep]);
+        }
+
+        scope.isPrivate = function () {
+          return scope.keep.isPrivate || false;
+        };
+
+        scope.togglePrivate = function () {
+          keepService.togglePrivate([scope.keep]);
+        }
 
         function formatTitleFromUrl(url, matches) {
           aUrlParser.href = url;
