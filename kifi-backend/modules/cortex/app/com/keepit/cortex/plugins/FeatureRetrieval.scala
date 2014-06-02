@@ -25,6 +25,10 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel, F
     featureStore.get(key, version)
   }
 
+  def getByKeys(keys: Seq[K], version: ModelVersion[M]): Seq[Option[FT]] = {
+    featureStore.batchGet(keys, version)
+  }
+
   private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FT)] = {
     val keys = entities.map{genFeatureKey(_)}
     val start = System.currentTimeMillis
