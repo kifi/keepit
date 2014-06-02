@@ -278,7 +278,7 @@ class ShoeboxController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def recordScrapedNormalization() = Action(parse.tolerantJson) { request =>
+  def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
 
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
@@ -288,14 +288,16 @@ class ShoeboxController @Inject() (
     val signature = Signature((request.body \ "signature").as[String])
     val scrapedUri = db.readOnly { implicit session => normUriRepo.get(uriId) }
 
-    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate)
-    // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
-    scrapedUri.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { scrapedUriCandidate =>
-      val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
-      val alternateUris = db.readOnly { implicit session => alternateUrls.flatMap(normUriRepo.getByUri(_)) }
-      alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), scrapedUriCandidate))
+    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
+      val bestReference = newReferenceOption.map { newReferenceId => db.readOnly { implicit session => normUriRepo.get(newReferenceId) } } getOrElse scrapedUri
+      // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
+      bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
+        val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
+        val alternateUris = db.readOnly { implicit session => alternateUrls.flatMap(normUriRepo.getByUri(_)) }
+        alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), bestCandidate))
+      }
+      Ok
     }
-    Ok
   }
 
   def getProxy(url:String) = SafeAsyncAction { request =>
