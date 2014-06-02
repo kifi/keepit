@@ -289,12 +289,14 @@ class ShoeboxController @Inject() (
     val scrapedUri = db.readOnly { implicit session => normUriRepo.get(uriId) }
 
     normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
-      val bestReference = newReferenceOption.map { newReferenceId => db.readOnly { implicit session => normUriRepo.get(newReferenceId) } } getOrElse scrapedUri
-      // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
-      bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
-        val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
-        val alternateUris = db.readOnly { implicit session => alternateUrls.flatMap(normUriRepo.getByUri(_)) }
-        alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), bestCandidate))
+
+      (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
+        val bestReference = newReferenceOption.map { newReferenceId => db.readOnly { implicit session => normUriRepo.get(newReferenceId) } } getOrElse scrapedUri
+        // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
+        bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
+          val alternateUris = db.readOnly { implicit session => alternateUrls.flatMap(normUriRepo.getByUri(_)) }
+          alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), bestCandidate))
+        }
       }
       Ok
     }
