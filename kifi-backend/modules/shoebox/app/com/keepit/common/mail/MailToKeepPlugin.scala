@@ -88,7 +88,7 @@ class MailToKeepActor @Inject() (
                   message = message,
                   htmlBody = s"""
                     |Hi There, <br><br>
-                    |We are unable to keep this page for you because it was sent from an unverified email address ($senderAddress) or it is not associated with a Kifi account. <br>
+                    |We are unable to securely keep this page for you because it was sent from an unverified email address ($senderAddress) or it is not associated with a Kifi account. <br>
                     |Let us help you get set up so this doesn’t happen again. <br><br>
                     |<u>Get verified</u>
                     |If you are a registered Kifi user, log in and visit <a href="https://www.kifi.com/profile">your profile</a>. Click to "Manage your email addresses". If the email address isn’t listed, add it and we’ll send you an email to verify it. If it is listed, you can resend a verification email. <br><br>
