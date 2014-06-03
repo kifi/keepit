@@ -44,8 +44,6 @@ class LoggingStatsdClient(log: Logger)  {
     Statsd.increment(key, value, samplingRate)
   }
 
-
-
   def incrementOne(key: String, samplingRate: Double): Unit =
     increment(key, 1, samplingRate)
 
