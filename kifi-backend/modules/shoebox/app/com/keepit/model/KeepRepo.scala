@@ -42,6 +42,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
   def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
+  def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -335,5 +336,14 @@ class KeepRepoImpl @Inject() (
     val min = bookmarks.map(_.createdAt).min
     val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark
     oldest.sortBy(_.createdAt asc).firstOption
+  }
+
+  def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    import StaticQuery.interpolation
+
+    val sql = if (includePrivate) sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} order by created_at DESC limit ${limit}"
+    else sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} and is_private = false order by created_at DESC limit ${limit}"
+
+    sql.as[Id[NormalizedURI]].list
   }
 }
