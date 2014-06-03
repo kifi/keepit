@@ -5,7 +5,7 @@ var Spotlight = Spotlight || (function (window, document) {
   'use strict';
 
   function Spotlight(rectToCircumscribe, opts) {
-    var ri = this.ri = rectToCircumscribe;
+    var ri = this.ri = rectOnPxGrid(rectToCircumscribe);
     var wd = this.wd = {w: window.innerWidth, h: window.innerHeight};
     var dc = this.dc = [0,0,0,0].map(newDarkCanvas.bind(null, wd.w, wd.h, 'kifi-spotlight kifi-root'));
     this.onResize = _.throttle(onResize.bind(null, this), 100, {leading: false});
@@ -42,7 +42,7 @@ var Spotlight = Spotlight || (function (window, document) {
       var oN = Math.min(this.maxOpacity, sanitizeOpacity(opts.opacity));
       var ease = opts.ease || swing;
       var r0 = this.ri;
-      var rN = rectToCircumscribe;
+      var rN = rectOnPxGrid(rectToCircumscribe);
       var ms = opts.ms || calcDurationMs(r0, rN);
       var ms_1 = 1 / ms;
       var t0 = window.performance.now();
@@ -185,13 +185,22 @@ var Spotlight = Spotlight || (function (window, document) {
   }
 
   function interpolateRect(alpha, r1, r2) {
-    return {
+    return rectOnPxGrid({
       x: r1.x + (r2.x - r1.x) * alpha,
       y: r1.y + (r2.y - r1.y) * alpha,
       w: r1.w + (r2.w - r1.w) * alpha,
       h: r1.h + (r2.h - r1.h) * alpha
-    };
+    });
   }
+
+  function rectOnPxGrid(r) {
+    return {
+      x: Math.round(r.x),
+      y: Math.round(r.y),
+      w: Math.round(r.w),
+      h: Math.round(r.h)
+    };
+  };
 
   function swing(p) {
     return .5 - Math.cos(p * Math.PI) / 2;
