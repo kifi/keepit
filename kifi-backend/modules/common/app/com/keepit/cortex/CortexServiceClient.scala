@@ -15,6 +15,7 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, DenseLDA}
 import com.keepit.serializer.TraversableFormat
 import com.keepit.model.Word2VecKeywords
+import com.keepit.common.net.CallTimeouts
 
 
 trait CortexServiceClient extends ServiceClient{
@@ -43,6 +44,8 @@ class CortexServiceClientImpl(
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier
 ) extends CortexServiceClient {
+
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   def word2vecWordSimilarity(word1: String, word2: String): Future[Option[Float]] = {
     call(Cortex.internal.word2vecSimilairty(word1, word2)).map{ r =>
@@ -128,7 +131,7 @@ class CortexServiceClientImpl(
   }
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = {
-    call(Cortex.internal.getSparseLDAFeaturesChanged(modelVersion, seqNum, fetchSize)).map { response =>
+    call(Cortex.internal.getSparseLDAFeaturesChanged(modelVersion, seqNum, fetchSize), callTimeouts = longTimeout).map { response =>
       val publishedModelVersion = (response.json \ "modelVersion").as[ModelVersion[DenseLDA]]
       val uriFeatures = (response.json \ "features").as[JsArray].value.map(_.as[UriSparseLDAFeatures])
       (publishedModelVersion, uriFeatures)
