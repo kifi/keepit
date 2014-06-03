@@ -48,7 +48,7 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
           if (!scope.keep.isMyBookmark) {
             return text;
           }
-          return '+ ' + text;
+          return 'and ' + text;
         };
 
         scope.getOthersText = function () {
@@ -60,7 +60,7 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
             text = others + ' others';
           }
           if (scope.keep.isMyBookmark || scope.keep.keepers.length > 0) {
-            text = '+ ' + text;
+            text = 'and ' + text;
           }
           return text;
         };

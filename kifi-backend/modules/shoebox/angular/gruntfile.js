@@ -141,7 +141,8 @@ module.exports = function (grunt) {
           'import': [
             'nib',
             'constants',
-            'common'
+            'common',
+            'sprites'
           ]
         },
         files: {
@@ -279,29 +280,20 @@ module.exports = function (grunt) {
         autoWatch: true
       }
     },
-    // To run this task, you need css-sprites, node-canvas, and Cairo
-    // Easiest install on OSX:
-    //    wget https://raw.githubusercontent.com/LearnBoost/node-canvas/master/install -O - | sh
-    //    npm install canvas
     sprite:{
+      // https://github.com/Ensighten/grunt-spritesmith
       all: {
         src: 'img/sprites/*.png',
         destImg: 'img/sprites.png',
-        destCSS: 'src/common/sprites.styl'
-      }
-    },
-    spritepacker: {
-      default_options: {
-        options: {
-          template: 'src/common/sprites.styl.tpl', // Path to the template for generating metafile:
-          destCss: 'src/common/sprites.styl', // Destination metafile:
-          baseUrl: '/img/', // Base URL for sprite image, used in template
-          padding: 2,
-          evenPixels: true
+        destCSS: 'src/common/build-css/sprites.styl',
+        imgPath: '/img/sprites.png',
+        algorithm: 'binary-tree',
+        padding: 2,
+        cssFormat: 'stylus',
+        cssVarMap: function (sprite) {
+          // useful to override template variables
         },
-        files: {
-          'img/sprites.png': ['img/sprites/*.png']
-        }
+        cssTemplate: 'src/common/build-css/sprites.styl.tpl'
       }
     },
     env: {

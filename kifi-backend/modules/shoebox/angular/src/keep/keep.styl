@@ -51,9 +51,12 @@
   a:active
     color: #92add3
 
+.kf-keep-tags
+  padding: 7px 0
+  border-top: separatorBorder
+
 .kf-keep-footer-link a
   cursor: pointer
-    
 
 .kf-keep-footer-link + .kf-keep-footer-link:before
     content: "·"
@@ -135,7 +138,6 @@
 
 // tag
 .kf-keep-tags
-  font-size: 12px
 
   &:empty
     border-bottom-width: 0
@@ -147,15 +149,16 @@
 .kf-keep-tag
   display: inline-block
   position: relative
+  vertical-align: middle
   overflow: hidden
   white-space: nowrap
-
-  &:not(:last-of-type):after
-    content: " "
-    display: inline-block
-    height: 9px
-    font-size: 0
-    border-right: 1px solid #99a3b3
+  color: blueColor
+  border: 1px solid blueColor
+  border-radius: 3px
+  padding: 2px 6px 1px
+  margin-right: 4px
+  font-size: 12px
+  font-smoothing: antialiased
 
   &.removed
     width: 0 !important
@@ -174,21 +177,12 @@
     text-decoration: underline
     font-smoothing: antialiased
 
-.kf-example-tag
-  display: none
-  position: relative
-  top: -1px
-  font-size: 12px
-  font-weight: 500
-  line-height: 22px
-  padding: 0 10px
-  border-radius: 2px
-  margin-right: 4px
-  color: white
-  background-color: #c3dba8
-
-  .kf-keep.example &
-    display: inline-block
+.kf-keep-add-tag
+  display: inline-block
+  vertical-align: middle
+  height: 17px
+  width: 17px
+  background: url(../img/placeholder-icon.png) left center / 17px no-repeat
 
 .kf-keep-private
   float: right
