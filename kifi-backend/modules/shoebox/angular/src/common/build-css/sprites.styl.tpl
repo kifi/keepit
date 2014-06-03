@@ -14,6 +14,7 @@ ${{name}}_total_width = {{px.total_width}};
 ${{name}}_total_height = {{px.total_height}};
 ${{name}}_image = '{{{escaped_image}}}';
 ${{name}} = {{px.x}} {{px.y}} {{px.offset_x}} {{px.offset_y}} {{px.width}} {{px.height}} {{px.total_width}} {{px.total_height}} '{{{escaped_image}}}';
+
 {{/items}}
 
 {{#options.functions}}
@@ -48,19 +49,19 @@ sprite($sprite) {
 }
 
 spriteWidth2x($sprite) {
-  width: ceil(($sprite[4]/2));
+  width: ceil((($sprite[4] + 1)/2));
 }
 
 spriteHeight2x($sprite) {
-  height: ceil(($sprite[5]/2));
+  height: ceil((($sprite[5] + 1)/2));
 }
 
 spritePosition2x($sprite) {
-  background-position: floor(($sprite[2]/2)) floor(($sprite[3]/2));
+  background-position: ceil(($sprite[2]/2)) ceil(($sprite[3]/2));
 }
 
 spriteBackgroundSize2x($sprite) {
-  background-size: floor(($sprite[6]/2)) floor(($sprite[7]/2));
+  background-size: ceil(($sprite[6]/2)) ceil(($sprite[7]/2));
 }
 
 sprite2x($sprite) {
