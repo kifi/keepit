@@ -21,7 +21,7 @@ angular.module('kifi.friends.friendCard', [])
         } else {
           scope.possesive = friend.firstName + 's';
         }
-        scope.mainImage = friendService.getPictureUrlForFriend(friend);
+        scope.mainImage = friendService.getPictureUrlForUser(friend);
         scope.friendCount = friend.friendCount;
         scope.unfriended = friend.unfriended;
         scope.searchFriend = friend.searchFriend;

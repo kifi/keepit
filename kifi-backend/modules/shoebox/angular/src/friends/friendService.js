@@ -129,8 +129,8 @@ angular.module('kifi.friendService', [
         });
       },
 
-      getPictureUrlForFriend: function (friend) {
-        return '//djty7jcqog9qu.cloudfront.net/users/' + friend.id + '/pics/200/' + friend.pictureName;
+      getPictureUrlForUser: function (user) {
+        return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/200/' + user.pictureName;
       }
 
 
