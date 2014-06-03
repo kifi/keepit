@@ -8,7 +8,7 @@ import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.model._
 import play.api.test.Helpers._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.net.FakeHttpClientModule
 import play.api.libs.json.JsString
 import com.keepit.common.social.FakeShoeboxSecureSocialModule
@@ -18,6 +18,8 @@ import play.api.libs.json.JsObject
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import scala.reflect.internal.util.FakePos
 import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -29,7 +31,10 @@ class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeMailModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   "DeskController" should {
