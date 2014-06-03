@@ -3,10 +3,13 @@
   'functions': false
 }
 
-{{#items}}
-.sprite-{{name}} {
+.sprite
   display: inline-block
   vertical-align: middle
+  font-size: 0
+
+{{#items}}
+.sprite-{{name}}
   sprite2x(${{name}})
-}
+
 {{/items}}
