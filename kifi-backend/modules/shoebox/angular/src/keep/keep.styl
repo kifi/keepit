@@ -115,12 +115,16 @@
   .kf-keep.selected &
     background-position: 2px 4px
 
+.kf-keep-big-image-container
+  width: 100%
+
+.kf-keep-content-line
+  display: table
+  padding: 10px 0
+
 .kf-keep-big-image
 .kf-keep-small-image
   margin: 4px 0 11px
-
-.kf-keep-big-image-container
-  width: 100%
 
 .kf-keep-big-image
   display: block
@@ -130,16 +134,16 @@
   margin-right: auto
 
 .kf-keep-small-image
-  width: 30%
   vertical-align: top
+  display: table-cell
 
 .kf-keep-small-image + .kf-keep-info
-  width: calc(70% - 20px)
-  display: inline-block
-  margin-left: 20px
+  padding-left: 20px
+  overflow: hidden
 
 .kf-keep-info
-  padding: 10px 0
+  vertical-align: top
+  display: table-cell
 
 .kf-keep-title
   max-width: 100%

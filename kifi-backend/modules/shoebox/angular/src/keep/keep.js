@@ -34,8 +34,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootElement', 'tagService', 'keepService', 'util',
-  function ($document, $rootElement, tagService, keepService, util) {
+  '$document', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
+  function ($document, $rootElement, $timeout, tagService, keepService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -57,7 +57,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
         var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
         var fileNameToSpaceRe = /[\/._-]/g;
-        var imageWidthThreshold = 500;
+        var imageWidthThreshold = 300;
 
         scope.getTags = function () {
           return scope.keep.tagList;
@@ -216,6 +216,14 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var keep = scope.keep;
           return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth < imageWidthThreshold;
         };
+
+        $timeout(function () {
+          var img = element.find('.kf-keep-small-image');
+          if (img) {
+            var imgWidth = scope.keep.summary.imageWidth
+            img.css({maxWidth: imgWidth});
+          }
+        })
 
         scope.hasKeepers = function () {
           var keep = scope.keep;

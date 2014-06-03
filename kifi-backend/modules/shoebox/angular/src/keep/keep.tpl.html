@@ -7,18 +7,20 @@
       <div class="kf-keep-handle">
         <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
       </div>
-      <img class="kf-keep-small-image" ng-if="hasSmallImage()" ng-src="{{keep.summary.imageUrl}}"></img>
-      <div class="kf-keep-info">
-        <div class="kf-keep-title">
-          <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
-          </a>
-        </div>
-        <div class="kf-keep-subtitle">
-          <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-          <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
-        </div>
-        <div class="kf-keep-description">
-          {{keep.summary.description}}
+      <div class="kf-keep-content-line">
+        <img class="kf-keep-small-image" ng-if="hasSmallImage()" ng-src="{{keep.summary.imageUrl}}"></img>
+        <div class="kf-keep-info">
+          <div class="kf-keep-title">
+            <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
+            </a>
+          </div>
+          <div class="kf-keep-subtitle">
+            <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
+            <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+          </div>
+          <div class="kf-keep-description">
+            {{keep.summary.description}}
+          </div>
         </div>
       </div>
       <img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></img>
