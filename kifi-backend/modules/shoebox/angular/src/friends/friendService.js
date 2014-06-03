@@ -30,7 +30,6 @@ angular.module('kifi.friendService', [
           friends.length = 0;
         }
         hasMoreFriends = res.data.friends.length >= friendsPageSize;
-        console.log(hasMoreFriends)
         friends.push.apply(friends, _.filter(res.data.friends, function (friend) {
           return !friend.unfriended;
         }));

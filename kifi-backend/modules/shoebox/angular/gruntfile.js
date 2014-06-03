@@ -282,7 +282,7 @@ module.exports = function (grunt) {
     },
     sprite:{
       // https://github.com/Ensighten/grunt-spritesmith
-      all: {
+      base2x: {
         src: 'img/sprites/*.png',
         destImg: 'img/sprites.png',
         destCSS: 'src/common/build-css/sprites.styl',
@@ -294,6 +294,16 @@ module.exports = function (grunt) {
           // useful to override template variables
         },
         cssTemplate: 'src/common/build-css/sprites.styl.tpl'
+      },
+      baseCss2x: {
+        src: 'img/sprites/*.png',
+        destImg: 'img/sprites.png',
+        destCSS: 'src/common/spritesClasses.styl',
+        imgPath: '/img/sprites.png',
+        algorithm: 'binary-tree',
+        padding: 2,
+        cssFormat: 'stylus',
+        cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl'
       }
     },
     env: {
