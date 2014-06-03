@@ -13,15 +13,25 @@
     font-size: 26px
     line-height: 1.2
     font-smoothing: antialiased
+    margin-bottom: 20px
 
 .profile
   padding-top: 18px
   padding-left: 32px
   padding-right: 32px
+  position: relative
+
+a.profile-logout
+  position: absolute
+  top: 32px
+  right: 50px
+  color: #557DB6
+  font-size: 12px
+  font-weight: 200
 
 .profile-container
   position: relative
-  padding: 33px 88px 29px 167px
+  padding: 20px 88px 40px 167px
   margin-top: 1px
   background-color: #ffffff
   box-shadow: defaultBoxShadow
@@ -72,16 +82,19 @@ a.profile-image-change
     background-color: #9FACB8
 
 .profile-input-title
-  color: #9fb1c3
-  font-size: 18px
+  color: #c1c1c1
+  font-size: 20px
   font-weight: 200
   letter-spacing: 1px
   margin-bottom: 4px
+  font-family: "Georgia", Arial, sans-serif
+  font-style: italic
 
 .profile-input-wrapper
   padding-bottom: 1px
   border-bottom: 1px solid #d2dae3
   margin-bottom: 19px
+  margin-top: 25px
 
   &:last-child
     margin-bottom: 0
@@ -113,11 +126,12 @@ input.profile-input-input
   border: 0
   margin: 0
   width: 100%
-  color: #818691
-  padding: 6px 0
+  color: #333333
+  padding: 6px 2px
   background-color: transparent
   box-sizing: border-box
   transition: all .3s ease
+
 
 input.profile-input-input:focus
   padding-left: 7px
@@ -143,7 +157,7 @@ input.profile-input-input:focus
     margin-left: -10px
     border-style: solid
     border-width: 0 10px 8px
-    border-color: transparent transparent #ef6f6e
+    border-color: transparent transparent #c1c1c1
     font-size: 0
 
   .error-header
@@ -230,6 +244,9 @@ a.profile-email-pending-cancel
 .profile-email-address-pending-email
   color: #777c87
 
+.profile-email-addresses
+  margin-top: 25px
+
 .profile-setting-arrow-right
 .profile-setting-arrow-down
   display: block
@@ -253,7 +270,7 @@ a.profile-email-pending-cancel
 
 a.profile-email-addresses-title-wrapper
   display: block
-  color: #9FB1C3
+  color: #333333
   font-size: 15px
   padding: 5px 0
   margin-top: 10px
@@ -383,7 +400,7 @@ a.profile-email-address-add-save
 
 a.profile-change-password-title-wrapper
   display: block
-  color: #9FB1C3
+  color: #333333
   font-size: 15px
   padding: 5px 0
   margin-top: 10px
@@ -428,7 +445,7 @@ a.profile-change-password-save
   color: #b7ce84
 
 .profile-section
-  padding: 20px 0 20px 27px
+  padding: 20px 0 30px 27px
   background-color: #ffffff
   box-shadow: defaultBoxShadow
   border: defaultBorder
@@ -437,17 +454,21 @@ a.profile-change-password-save
   text-align: center
 
   & h3
-    font-size: 18px
+    font-size: 20px
     font-weight: 300
     letter-spacing: .5px
-    color: #9fb1c3
+    color: #333333
     margin-bottom: 3px
+    font-family: "Georgia", Arial, sans-serif
+    font-style: italic
+    margin-bottom: 20px
 
   & h5
-    color: #818691
+    color: #C6C6C6
     font-weight: 200
     letter-spacing: .5px
-    margin-bottom: 22px
+    margin-bottom: 28px
+    font-size: 13px
 
 .profile .networks
   position: relative
@@ -709,8 +730,9 @@ td.profile-email-separator
   font-size: 11px
   padding: 5px 0
 
-.profile-email-account-wrapper
+.profile-email-accounts-wrapper
   text-align: center
+  margin-top: 5px
 
 .profile-email-accounts-overview
   color: #9FB1C3
