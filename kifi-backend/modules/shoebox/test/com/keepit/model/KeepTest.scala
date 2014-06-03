@@ -178,7 +178,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val urlId = urlRepo.save(URL(url = uri.url, domain = Some("kifi.com"), normalizedUriId = uri.id.get)).id.get
           val uriId = uri.id.get
           val url = uri.url
-          val firstUserId = userRepo.save(User(firstName = "L��o", lastName = "Grimaldi")).id.get
+          val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi")).id.get
           val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith")).id.get
           (uri, uriId, url, firstUserId, secondUserId, urlId)
         }
