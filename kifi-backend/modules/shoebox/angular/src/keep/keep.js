@@ -57,6 +57,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
         var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
         var fileNameToSpaceRe = /[\/._-]/g;
+        var imageWidthThreshold = 500;
 
         scope.getTags = function () {
           return scope.keep.tagList;
@@ -145,16 +146,21 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return text;
         }
 
+        function getSite() {
+          var keep = scope.keep;
+          return keep.siteName || keep.url;
+        }
+
         function updateTitleHtml() {
           scope.keep.titleHtml = toTitleHtml(scope.keep);
         }
 
-        function updateDescHtml() {
-          scope.keep.descHtml = formatDesc(scope.keep.url);
+        function updateSiteDescHtml() {
+          scope.keep.descHtml = formatDesc(getSite());
         }
 
         updateTitleHtml();
-        updateDescHtml();
+        updateSiteDescHtml();
 
         // Really weird hack to fix a ng-class bug
         // In certain cases, ng-class is not setting DOM classes correctly.
@@ -185,7 +191,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.$watch('keep.url', function () {
           updateTitleHtml();
-          updateDescHtml();
+          updateSiteDescHtml();
         });
 
         scope.getTitle = function () {
@@ -193,11 +199,23 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return keep.title || keep.url;
         };
 
+        scope.getSite = getSite;
+
         scope.getName = function (user) {
           return [user.firstName, user.firstName].filter(function (n) {
             return !!n;
           }).join(' ');
         };
+
+        scope.hasBigImage = function () {
+          var keep = scope.keep;
+          return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth >= imageWidthThreshold;
+        }
+
+        scope.hasSmallImage = function () {
+          var keep = scope.keep;
+          return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth < imageWidthThreshold;
+        }
 
         scope.hasKeepers = function () {
           var keep = scope.keep;
