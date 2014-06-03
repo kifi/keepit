@@ -37,7 +37,7 @@
 .kf-keep-body
   padding: 0 20px
 
-.kf-keep-description
+.kf-keep-contents
   padding: 10px 0
 
 .kf-keep-footer
@@ -69,11 +69,10 @@
   border-color: #f0f0f0
 
 .kf-keep-time
-  float: right
-  margin: 0 16px 0 4%
-  font-size: 12px
-  line-height: 28px
+  font-size: 13px
   color: #99a3b3
+  font-family: "Georgia", Arial, sans-serif
+  margin-left: 10px
 
 .kf-keep-handle
   display: none
@@ -116,9 +115,28 @@
   .kf-keep.selected &
     background-position: 2px 4px
 
+.kf-keep-big-image
+.kf-keep-small-image
+  margin: 4px 0 11px
+
+.kf-keep-big-image
+  width: 100%
+
+.kf-keep-small-image
+  width: 30%
+  vertical-align: top
+
+.kf-keep-small-image + .kf-keep-info
+  width: calc(70% - 20px)
+  display: inline-block
+  margin-left: 20px
+
+.kf-keep-info
+  padding: 10px 0
+
 .kf-keep-title
   max-width: 100%
-  font-size: 14px
+  font-size: 15px
   font-weight: 200
   line-height: 24px
   font-smoothing: antialiased
@@ -127,10 +145,24 @@
   a[href]
     color: textBlackColor
 
+.kf-keep-subtitle
+  line-height: 17px
+
+.kf-keep-description
+  font-size: 17px
+  line-height: 21px
+  margin-top: 10px
+  font-family: "Georgia", Arial, sans-serif
+  font-smoothing: antialiased
+  color: textBlackColor
+  word-wrap: break-word
+
 .kf-keep-url
-  font-size: 12px
-  line-height: 14px
+  display: inline-block
+  font-size: 13px
   color: #99a3b3
+  vertical-align: middle
+  font-smoothing: antialiased
   long-text()
 
   .kf-keep.example &

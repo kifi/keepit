@@ -298,6 +298,7 @@ angular.module('kifi.keepService', [
         params = params || {};
         params.count = params.count || limit;
         params.before = before || void 0;
+        params.withPageInfo = true;
 
         var config = {
           params: params
