@@ -16,7 +16,7 @@ angular.module('kifi.friendService', [
     var requests = [];
     var friendsHasRequested = false;
     var hasMoreFriends = true;
-    var friendsPageSize = 10;
+    var friendsPageSize = 20;
     var currentPage = 0;
     var totalFriends = 0;
 
