@@ -319,7 +319,6 @@ angular.module('kifi.keepService', [
 
           list.push.apply(list, keeps);
           before = list.length ? list[list.length - 1].id : null;
-          console.log(keeps);
           return keeps;
         });
       },

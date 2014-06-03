@@ -210,12 +210,12 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         scope.hasBigImage = function () {
           var keep = scope.keep;
           return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth >= imageWidthThreshold;
-        }
+        };
 
         scope.hasSmallImage = function () {
           var keep = scope.keep;
           return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth < imageWidthThreshold;
-        }
+        };
 
         scope.hasKeepers = function () {
           var keep = scope.keep;
