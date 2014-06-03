@@ -223,7 +223,7 @@ class AdminBookmarksController @Inject() (
     val user = request.userId
     val uris = db.readOnly{ implicit s =>
       keepRepo.getByUser(user)
-    }.filter(!_.isPrivate).map{_.uriId}.sortBy( x => x.id)    // sorting helps s3 performance
+    }.filter(!_.isPrivate).sortBy(-1L * _.createdAt.getMillis).map{_.uriId}.take(500).sortBy( x => x.id)    // sorting helps s3 performance
 
     val word2vecFut = uriSummaryCommander.batchGetWord2VecKeywords(uris)
 
