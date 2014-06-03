@@ -43,6 +43,8 @@ import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+
 
 class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -55,7 +57,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    FakeCortexServiceClientModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id

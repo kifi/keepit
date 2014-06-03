@@ -184,7 +184,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
         }
         case None => Future.successful {
-          statsd.increment(s"websocket.anonymous")
+          statsd.incrementOne(s"websocket.anonymous", ONE_IN_TEN)
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
           (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
         }
@@ -222,7 +222,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           try {
             handler(payload)
           } finally {
-            statsd.increment(s"websocket.handler.$action.$agentFamily")
+            statsd.incrementOne(s"websocket.handler.$action.$agentFamily", ONE_IN_TEN)
             accessLog.add(timer.done(url = action, trackingId = socketInfo.trackingId, method = "MESSAGE", query = payload.toString()))
           }
         }

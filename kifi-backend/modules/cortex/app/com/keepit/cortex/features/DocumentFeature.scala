@@ -8,11 +8,11 @@ import scala.collection.mutable
 
 case class Document(tokens: Seq[String])
 
-trait DocRepresenter[M <: StatModel] extends FeatureRepresenter[Document, M]
+trait DocRepresenter[M <: StatModel, +FT <: FeatureRepresentation[Document, M]] extends FeatureRepresenter[Document, M, FT]
 
 abstract class NaiveSumDocRepresenter[M <: StatModel](
-  wordRep: WordRepresenter[M]
-) extends DocRepresenter[M]{
+  wordRep: WordRepresenter[M, FeatureRepresentation[String, M]]
+) extends DocRepresenter[M, FeatureRepresentation[Document, M]]{
 
   override val version = wordRep.version
   override val dimension = wordRep.dimension

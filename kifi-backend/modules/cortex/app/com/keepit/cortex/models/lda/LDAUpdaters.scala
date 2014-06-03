@@ -15,12 +15,12 @@ class LDAURIFeatureUpdater @Inject()(
   featureStore: LDAURIFeatureStore,
   commitStore: LDAURIFeatureCommitStore,
   uriPuller: URIPuller
-) extends URIFeatureUpdater[DenseLDA](representer, featureStore, commitStore, uriPuller)
+) extends URIFeatureUpdater(representer, featureStore, commitStore, uriPuller)
 
 class LDAURIFeatureUpdateActor @Inject()(
   airbrake: AirbrakeNotifier,
   updater: LDAURIFeatureUpdater
-) extends FeatureUpdateActor[Id[NormalizedURI], NormalizedURI, DenseLDA](airbrake: AirbrakeNotifier, updater)
+) extends FeatureUpdateActor(airbrake: AirbrakeNotifier, updater)
 
 trait LDAURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, DenseLDA]
 
@@ -29,7 +29,7 @@ class LDAURIFeatureUpdatePluginImpl @Inject()(
   actor: ActorInstance[LDAURIFeatureUpdateActor],
   discovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends BaseFeatureUpdatePlugin[Id[NormalizedURI], NormalizedURI, DenseLDA](actor, discovery) with LDAURIFeatureUpdatePlugin
+) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAURIFeatureUpdatePlugin
 
 @Singleton
 class LDAURIFeatureRetriever @Inject()(

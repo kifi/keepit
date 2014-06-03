@@ -7,6 +7,8 @@ import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
+import play.api.libs.concurrent.Execution.Implicits._
+
 
 
 
@@ -62,9 +64,21 @@ class CortexController @Inject()(
     val resOpt = word2vec.getDoc2VecResult(text)
     val rv = resOpt match {
       case None => Map("keywords" -> "N/A", "bow" -> "N/A")
-      case Some(res) => Map("keywords" -> res.keywords.mkString(", "), "bow" -> res.bagOfWords.mkString(", ") )
+      case Some(res) => Map("keywords" -> res.keywords.mkString(", "), "bow" -> res.bagOfWords.toArray.sortBy(-1*_._2).mkString(", ") )
     }
     Ok(Json.toJson(rv))
+  }
+
+  def getURIKeywords(uri: Id[NormalizedURI]) = Action { request =>
+    val key = word2vec.uriKeywords(uri)
+    Ok(Json.toJson(key))
+  }
+
+  def batchGetURIKeywords = Action.async(parse.tolerantJson){ request =>
+    val uris = request.body.as[Seq[Id[NormalizedURI]]]
+    word2vec.batchURIKeywords(uris).map{ keys =>
+      Ok(Json.toJson(keys))
+    }
   }
 
 }

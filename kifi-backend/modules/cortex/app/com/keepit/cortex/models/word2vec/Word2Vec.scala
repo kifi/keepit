@@ -3,6 +3,8 @@ package com.keepit.cortex.models.word2vec
 import com.keepit.cortex.core.{BinaryFormatter, FeatureRepresentation, StatModel}
 import com.keepit.cortex.features.Document
 import java.io._
+import com.keepit.cortex.core.BinaryFeatureFormatter
+import com.keepit.model.NormalizedURI
 
 trait Word2Vec extends StatModel {
   val dimension: Int
@@ -23,23 +25,33 @@ object Word2VecFormatter extends BinaryFormatter[Word2Vec]{
   }
 }
 
-case class RichWord2VecDocFeature(
+case class RichWord2VecURIFeature(
   dim: Int,
   vec: Array[Float],
   keywords: Array[String],
   bagOfWords: Map[String, Int]
-) extends FeatureRepresentation[Document, Word2Vec] {
+) extends FeatureRepresentation[NormalizedURI, Word2Vec] {
   override def vectorize: Array[Float] = vec
 }
 
+object RichWord2VecURIFeatureFormatter extends BinaryFeatureFormatter[RichWord2VecURIFeature] {
+  def toBinary(feat: RichWord2VecURIFeature): Array[Byte] = {
+    RichWord2VecURIFeatureFormat.toBinary(feat)
+  }
 
-object RichWord2VecDocFeatureFormat {
+  def fromBinary(bytes: Array[Byte]): RichWord2VecURIFeature = {
+    RichWord2VecURIFeatureFormat.fromBinary(bytes)
+  }
+}
+
+
+object RichWord2VecURIFeatureFormat {
   private val FLOAT_SIZE = 4
   private val INT_SIZE = 4
   private val CHAR_SIZE = 2
   private val SEP = '\t'
 
-  private def numOfBytes(feat: RichWord2VecDocFeature): Int = {
+  private def numOfBytes(feat: RichWord2VecURIFeature): Int = {
     val intSize = 1 * INT_SIZE + feat.bagOfWords.size * INT_SIZE
     val floatSize = feat.dim * FLOAT_SIZE
     val keywordSize = (feat.keywords.map{_.length}.sum + feat.keywords.size) * CHAR_SIZE   // keyword1 SEP keyword2 SEP ... keywordn SEP
@@ -48,7 +60,7 @@ object RichWord2VecDocFeatureFormat {
     intSize + floatSize + keywordSize + bagOfWordSize
   }
 
-  def toBinary(feat: RichWord2VecDocFeature): Array[Byte] = {
+  def toBinary(feat: RichWord2VecURIFeature): Array[Byte] = {
     val bs = new ByteArrayOutputStream(numOfBytes(feat))
     val os = new DataOutputStream(bs)
     os.writeInt(feat.dim)
@@ -76,7 +88,7 @@ object RichWord2VecDocFeatureFormat {
     rv
   }
 
-  def fromBinary(bytes: Array[Byte]): RichWord2VecDocFeature = {
+  def fromBinary(bytes: Array[Byte]): RichWord2VecURIFeature = {
     val is = new DataInputStream(new ByteArrayInputStream(bytes))
 
     val dim = is.readInt()
@@ -117,6 +129,6 @@ object RichWord2VecDocFeatureFormat {
     }
     val bow = if (builder2.isEmpty) Array[String]() else builder2.toString.split(SEP)
 
-    RichWord2VecDocFeature(dim, arr, keywords, (bow zip counts).toMap)
+    RichWord2VecURIFeature(dim, arr, keywords, (bow zip counts).toMap)
   }
 }

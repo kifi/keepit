@@ -9,9 +9,14 @@ case class FloatVecFeature[T, M <: StatModel](value: Array[Float]) extends Featu
 }
 
 
-trait FeatureRepresenter[T, M <: StatModel]{
+trait FeatureRepresenter[T, M <: StatModel, +FT <: FeatureRepresentation[T, M]]{
   val version: ModelVersion[M]
   val dimension: Int
-  def apply(datum: T): Option[FeatureRepresentation[T, M]]
+  def apply(datum: T): Option[FT]
   def getRawVector(datum: T): Option[Array[Float]] = apply(datum).map{_.vectorize}    // subclass may override this to improve performance
+}
+
+trait BinaryFeatureFormatter[T <: FeatureRepresentation[ _, _ <: StatModel]] {
+  def toBinary(m: T): Array[Byte]
+  def fromBinary(bytes: Array[Byte]): T
 }
