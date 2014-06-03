@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import com.keepit.model.NotificationCategory
 import scala.concurrent.duration._
 
@@ -27,8 +27,8 @@ class ForkJoinExecContextMonitor @Inject() (
     val fj = com.keepit.common.concurrent.ExecutionContext.fjPool
     log.debug(s"[checkFJContext] #queuedSubmission=${fj.getQueuedSubmissionCount} #queuedTasks=${fj.getQueuedTaskCount} fj=${fj}")
     if (fj.getQueuedSubmissionCount > Runtime.getRuntime.availableProcessors * 5) { // todo: tweak; airbrake if this proves useful
-      systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG,
-        to = Seq(EmailAddresses.RAY),
+      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
+        to = Seq(SystemEmailAddress.RAY),
         category = NotificationCategory.System.HEALTHCHECK, // may need a new category
         subject = s"fjPool-queuedSubmission=${fj.getQueuedSubmissionCount}",
         htmlBody = s"ForkJoinPool-backed context queued submission count exceeded threshold $fj"))

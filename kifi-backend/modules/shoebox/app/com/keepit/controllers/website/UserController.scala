@@ -301,8 +301,8 @@ class UserController @Inject() (
   def needMoreInvites() = JsonAction.authenticated { request =>
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
-        from = EmailAddresses.INVITATION,
-        to = Seq(EmailAddresses.EFFI),
+        from = SystemEmailAddress.INVITATION,
+        to = Seq(SystemEmailAddress.EFFI),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
         category = NotificationCategory.System.ADMIN))
@@ -370,7 +370,7 @@ class UserController @Inject() (
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(GenericEmailAddress(email)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,

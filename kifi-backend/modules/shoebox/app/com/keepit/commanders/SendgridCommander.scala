@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, ElectronicMailRepo}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal._
 import com.keepit.common.performance.timing
@@ -43,8 +43,8 @@ class SendgridCommander @Inject() (
         }
         systemAdminMailSender.sendMail(
           ElectronicMail(
-            from = EmailAddresses.ENG,
-            to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
+            from = SystemEmailAddress.ENG,
+            to = List(SystemEmailAddress.SUPPORT, SystemEmailAddress.SENDGRID),
             subject = s"Sendgrid event [$eventType]",
             htmlBody = htmlBody,
             category = NotificationCategory.System.ADMIN))

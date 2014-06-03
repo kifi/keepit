@@ -12,7 +12,7 @@ case class GenericEmailAddress(address: String) extends EmailAddressHolder
 
 sealed abstract class SystemEmailAddress(val address: String) extends EmailAddressHolder
 
-object EmailAddresses {
+object SystemEmailAddress {
   case object TEAM extends SystemEmailAddress("team@42go.com")
   case object NOTIFICATIONS extends SystemEmailAddress("notifications@kifi.com")
   case object ENG extends SystemEmailAddress("eng@42go.com")

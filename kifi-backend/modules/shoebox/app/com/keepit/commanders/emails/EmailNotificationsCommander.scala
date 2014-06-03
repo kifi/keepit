@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{LocalPostOffice, EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{LocalPostOffice, SystemEmailAddress, ElectronicMail}
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.eliza.model.ThreadItem
@@ -45,7 +45,7 @@ class EmailNotificationsCommander @Inject() (
       val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
       val destinationEmail = emailRepo.getByUser(recipient.id.get)(session)
       val email = ElectronicMail(
-        from = EmailAddresses.NOTIFICATIONS, fromName = Some("Kifi Notifications"),
+        from = SystemEmailAddress.NOTIFICATIONS, fromName = Some("Kifi Notifications"),
         to = List(destinationEmail),
         subject = s"""New messages on "$title" with $authorFirst""",
         htmlBody = emailBody,

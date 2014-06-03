@@ -67,7 +67,7 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
     val subject = "([0-9]+)".r.replaceAllIn(subjectWithNumerics, "*").abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
-    sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
 }
@@ -164,7 +164,7 @@ class HealthcheckPluginImpl @Inject() (
   override def reportStart() = {
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
-    val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
         subject = subject, htmlBody = message.body,
         category = NotificationCategory.System.HEALTHCHECK)
 
@@ -177,7 +177,7 @@ class HealthcheckPluginImpl @Inject() (
   override def reportStop() = {
     val subject = s"Service ${services.currentService} stopped"
     val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
-    val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
         subject = subject, htmlBody = message.body,
         category = NotificationCategory.System.HEALTHCHECK)
     if (!isCanary) {

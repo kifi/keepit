@@ -19,7 +19,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.{TreeSet, ArrayBuffer}
 import org.joda.time.DateTime

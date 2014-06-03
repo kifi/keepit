@@ -101,7 +101,7 @@ object ElectronicMail {
   implicit val emailExternalIdFormat = ExternalId.format[ElectronicMail]
   implicit val idFormat = Id.format[ElectronicMail]
   implicit val fromFormat: Format[SystemEmailAddress] =
-    Format(__.read[String].map(s => EmailAddresses(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
+    Format(__.read[String].map(s => SystemEmailAddress(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
   implicit val emailAddressHolderFormat: Format[EmailAddressHolder] =
     Format(__.read[String].map(s => GenericEmailAddress(s)), new Writes[EmailAddressHolder]{ def writes(o: EmailAddressHolder) = JsString(o.address) })
   implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] =

@@ -23,7 +23,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import com.keepit.common.time._
 
 import akka.pattern.ask
@@ -85,7 +85,7 @@ private[classify] class DomainTagImportActor @Inject() (
         WS.url(settings.url).withRequestTimeout(120000).get().onSuccess { case res =>
           persistEvent(IMPORT_START, new HeimdalContextBuilder)
           val startTime = currentDateTime
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
             subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
             category = NotificationCategory.System.ADMIN))
           val s = new FileOutputStream(outputPath)
@@ -121,7 +121,7 @@ private[classify] class DomainTagImportActor @Inject() (
           persistEvent(IMPORT_SUCCESS, context)
 
           val endTime = currentDateTime
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
             subject = "Domain import finished",
             htmlBody =
                 s"Domain import started at $startTime and completed successfully at $endTime " +

@@ -21,7 +21,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{
   ElectronicMail,
-  EmailAddresses,
+  SystemEmailAddress,
   EmailAddressHolder,
   PostOffice
 }
@@ -249,7 +249,7 @@ class ElizaEmailCommander @Inject() (
     }
 
     protoEmailFut.flatMap { protoEmail =>
-      val magicAddress = EmailAddresses.discussion(nonUserThread.accessToken.token)
+      val magicAddress = SystemEmailAddress.discussion(nonUserThread.accessToken.token)
       val email = ElectronicMail (
         from = magicAddress,
         fromName = Some(protoEmail.starterName + " (via Kifi)"),

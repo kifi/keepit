@@ -136,7 +136,7 @@ class MailToKeepActor @Inject() (
     db.readWrite { implicit s =>
       val newMessage = message.reply(false)
       postOffice.sendMail(ElectronicMail(
-        from = EmailAddresses.NOTIFICATIONS,
+        from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some("Kifi Team"),
         to = List(new EmailAddressHolder {
           val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)

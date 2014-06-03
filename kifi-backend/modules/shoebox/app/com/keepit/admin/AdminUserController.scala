@@ -807,7 +807,7 @@ class AdminUserController @Inject() (
     val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
     val title = "FortyTwo Connections to be created"
     val msg = toBeCreated.mkString("\n")
-    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.LÉO),
+    systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
       subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     Ok(json)
   }}

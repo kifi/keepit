@@ -284,7 +284,7 @@ class UserCommander @Inject() (
           val user = userRepo.get(userId)
           postOffice.sendMail(ElectronicMail(
             senderUserId = None,
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
             to = List(id2Email(userId)),
             subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
@@ -338,7 +338,7 @@ class UserCommander @Inject() (
               if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(targetEmailOpt.get),
             category = category,
             subject = subj,
@@ -352,7 +352,7 @@ class UserCommander @Inject() (
           val emailAddr = emailRepo.getByUser(newUser.id.get)
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
           val mail = ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(emailAddr),
             category = NotificationCategory.User.WELCOME,
             subject = "Let's get started with Kifi",
@@ -496,7 +496,7 @@ class UserCommander @Inject() (
 
       postOffice.sendMail(ElectronicMail(
         senderUserId = None,
-        from = EmailAddresses.NOTIFICATIONS,
+        from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName} (via Kifi)"),
         to = List(destinationEmail),
         subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
@@ -531,7 +531,7 @@ class UserCommander @Inject() (
       val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
       postOffice.sendMail(ElectronicMail(
         senderUserId = None,
-        from = EmailAddresses.NOTIFICATIONS,
+        from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName} (via Kifi)"),
         to = List(destinationEmail),
         subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
@@ -738,7 +738,7 @@ class UserCommander @Inject() (
           val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
           postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(GenericEmailAddress(address)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(firstName, verifyUrl).body,

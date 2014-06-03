@@ -277,7 +277,7 @@ class InviteCommander @Inject() (
     db.readWrite { implicit session =>
       val electronicMail = ElectronicMail(
         senderUserId = None,
-        from = EmailAddresses.INVITATION,
+        from = SystemEmailAddress.INVITATION,
         fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
         to = Seq(GenericEmailAddress(c.email)),
         subject = subject,

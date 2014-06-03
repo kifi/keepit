@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.model.{NotificationCategory, FeatureWaitlistEntry, FeatureWaitlistRepo}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, GenericEmailAddress, EmailAddresses}
+import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, GenericEmailAddress, SystemEmailAddress}
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.emails.EmailOptOutCommander
 
@@ -22,7 +22,7 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
       db.readWrite{ implicit session =>
         postOffice.sendMail(ElectronicMail(
           senderUserId = None,
-          from = EmailAddresses.NOTIFICATIONS,
+          from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some("Kifi"),
           to = List(GenericEmailAddress(email)),
           subject = s"You're on the wait list",

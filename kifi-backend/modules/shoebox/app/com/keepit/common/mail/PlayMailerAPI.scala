@@ -14,7 +14,7 @@ class PlayMailerAPI @Inject()(
     airbrake: AirbrakeNotifier
     ) extends MailerAPI {
   private val mail = new DynamicVariable(ElectronicMail(
-    from = EmailAddresses.NOTIFICATIONS,
+    from = SystemEmailAddress.NOTIFICATIONS,
     subject = "",
     htmlBody = "",
     category = NotificationCategory.System.PLAY))
@@ -58,12 +58,12 @@ class PlayMailerAPI @Inject()(
   }
 
   def setFrom(from: String ): com.typesafe.plugin.MailerAPI = {
-    mail.value = mail.value.copy(from = EmailAddresses(from))
+    mail.value = mail.value.copy(from = SystemEmailAddress(from))
     this
   }
 
   def addFrom(from: String): MailerAPI = reportErrors {
-    mail.value = mail.value.copy(from = EmailAddresses(from))
+    mail.value = mail.value.copy(from = SystemEmailAddress(from))
     this
   }
   def addRecipient(recipients: String*): MailerAPI = reportErrors {
