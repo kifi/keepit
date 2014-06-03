@@ -14,6 +14,7 @@ ${{name}}_total_width = {{px.total_width}};
 ${{name}}_total_height = {{px.total_height}};
 ${{name}}_image = '{{{escaped_image}}}';
 ${{name}} = {{px.x}} {{px.y}} {{px.offset_x}} {{px.offset_y}} {{px.width}} {{px.height}} {{px.total_width}} {{px.total_height}} '{{{escaped_image}}}';
+
 {{/items}}
 
 {{#options.functions}}

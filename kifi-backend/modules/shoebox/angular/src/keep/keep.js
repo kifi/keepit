@@ -64,11 +64,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.hasTag = function () {
           return !!scope.getTags().length;
-        }
+        };
 
         scope.unkeep = function () {
           keepService.unkeep([scope.keep]);
-        }
+        };
 
         scope.isPrivate = function () {
           return scope.keep.isPrivate || false;
@@ -76,7 +76,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.togglePrivate = function () {
           keepService.togglePrivate([scope.keep]);
-        }
+        };
 
         function formatTitleFromUrl(url, matches) {
           aUrlParser.href = url;
