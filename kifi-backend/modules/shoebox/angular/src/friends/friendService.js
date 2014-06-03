@@ -16,7 +16,7 @@ angular.module('kifi.friendService', [
     var requests = [];
     var friendsHasRequested = false;
     var hasMoreFriends = true;
-    var friendsPageSize = 20;
+    var friendsPageSize = 10;
     var currentPage = 0;
     var totalFriends = 0;
 
@@ -127,6 +127,10 @@ angular.module('kifi.friendService', [
             'action': 'unFriend'
           });
         });
+      },
+
+      getPictureUrlForFriend: function (friend) {
+        return '//djty7jcqog9qu.cloudfront.net/users/' + friend.id + '/pics/200/' + friend.pictureName;
       }
 
 
