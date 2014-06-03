@@ -8,12 +8,14 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
 import com.keepit.cortex.utils.TextUtils
-
+import com.keepit.model.Word2VecKeywords
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 @Singleton
 class Word2VecCommander @Inject()(
   word2vec: Word2VecWordRepresenter,
-  uriFeatureRetriever: Word2VecURIFeatureRetriever
+  uriFeatureRetriever: RichWord2VecURIFeatureRetriever
 ) {
   val (dim, mapper, doc2vec) = {
     (word2vec.dimension, word2vec.mapper, new Doc2Vec(word2vec.mapper, word2vec.dimension))
@@ -126,4 +128,22 @@ class Word2VecCommander @Inject()(
 
   }
 
+  private def extractKeywords(feat: RichWord2VecURIFeature): Word2VecKeywords = {
+    val cosineKeywords = feat.keywords
+    val freqKeywords = feat.bagOfWords.toArray.sortBy( -1 * _._2).take(5).map{_._1}
+    Word2VecKeywords(cosineKeywords, freqKeywords)
+  }
+
+  def uriKeywords(uri: Id[NormalizedURI]): Option[Word2VecKeywords] = {
+    uriFeatureRetriever.getByKey(uri, word2vec.version).map{ feat =>
+      extractKeywords(feat)
+    }
+  }
+
+  def batchURIKeywords(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
+    val featsFut = Future {uriFeatureRetriever.getByKeys(uris, word2vec.version)}
+    featsFut.map{ feats =>
+      feats.map{ ftOpt => ftOpt.map{extractKeywords(_)}}
+    }
+  }
 }

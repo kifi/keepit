@@ -7,7 +7,7 @@ import com.keepit.cortex.nlp.POSTagger
 import com.keepit.common.logging.Logging
 import com.keepit.cortex.utils.TextUtils.TextTokenizer
 
-case class Doc2VecResult(vec: Array[Float], keywords: Array[String], bagOfWords: Array[String])
+case class Doc2VecResult(vec: Array[Float], keywords: Array[String], bagOfWords: Map[String, Int])
 
 class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
 
@@ -164,7 +164,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
         rword
       }.flatten.toSet.toArray
 
-      val bagOfWords = cw.flatten.toArray     // not using idf info for now
+      val bagOfWords = cw.flatten.toArray.zipWithIndex.groupBy(_._1).map{case (a, b) => (a, b.size)}     // not using idf info for now
       Some(Doc2VecResult(docVec, keywords, bagOfWords))
     }
   }
@@ -181,17 +181,23 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging{
     val weights = samples.map{ res => 1f / res.bagOfWords.size}.toArray
     val target = if (normalize) MatrixUtils.weightedAverage(samples.map{_.vec}, weights) else MatrixUtils.average(samples.map{_.vec})
 
+    val keyStat = scala.collection.mutable.Map[String, Int]().withDefaultValue(0)
+
     var bestIdx = -1
     var bestScore = -1f * Float.MaxValue
     samples.zipWithIndex.foreach{ case (res, i) =>
       val s = MatrixUtils.cosineDistance(res.vec, target)
-      log.info(s"keywords: ${res.keywords.mkString(", ")}, score: $s, bow size: ${res.bagOfWords.size}")
+      res.keywords.foreach{ w => keyStat(w) = keyStat(w) + 1}
       if ( s > bestScore) {
         bestScore = s; bestIdx = i
       }
     }
+
+    // more stable keywords
+    val avgKeywords = keyStat.toArray.filter(_._2 > 1).sortBy(-1 * _._2).take(5).map{_._1}
+
     if (bestIdx == -1) None
-    else Some(samples(bestIdx))
+    else Some(samples(bestIdx).copy(keywords = avgKeywords))
   }
 
   // console debug

@@ -8,20 +8,33 @@ import com.keepit.model.{RawKeepFactory, KeepSource, User}
 import play.api.libs.json.Json
 import akka.testkit.{TestActorRef, TestKit}
 import play.api.test.Helpers._
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.shoebox.{TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule}
 import com.keepit.common.actor.{ActorBuilder, TestActorSystemModule}
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.common.external.FakeExternalServiceModule
 
 
 class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
   // This is a good example of how to test actor side effects.
   implicit val context = HeimdalContext.empty
 
-  def modules = KeepImportsModule() :: TestActorSystemModule() :: TestSearchServiceClientModule() :: TestShoeboxServiceClientModule() :: FakeHttpClientModule() :: FakeScrapeSchedulerModule() :: ShoeboxFakeStoreModule() :: Nil
+  def modules = Seq(
+    KeepImportsModule(),
+    TestActorSystemModule(),
+    TestSearchServiceClientModule(),
+    TestShoeboxServiceClientModule(),
+    FakeHttpClientModule(),
+    FakeScrapeSchedulerModule(),
+    ShoeboxFakeStoreModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
+  )
 
   "RawKeepImporter" should {
 

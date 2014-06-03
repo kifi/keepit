@@ -36,8 +36,8 @@ object FeaturePluginMessages{
   case object Update
 }
 
-abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
-  actor: ActorInstance[FeatureUpdateActor[K, T, M]],
+abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
+  actor: ActorInstance[FeatureUpdateActor[K, T, M, FT]],
   serviceDiscovery: ServiceDiscovery
 ) extends FeatureUpdatePlugin[T, M]{
 
@@ -62,9 +62,9 @@ abstract class BaseFeatureUpdatePlugin[K, T, M<: StatModel](
 
 }
 
-abstract class FeatureUpdateActor[K, T, M <: StatModel](
+abstract class FeatureUpdateActor[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
   airbrake: AirbrakeNotifier,
-  updater: FeatureUpdater[K, T, M]
+  updater: FeatureUpdater[K, T, M, FT]
 ) extends FortyTwoActor(airbrake) {
   import FeaturePluginMessages._
 
@@ -79,9 +79,9 @@ trait DataPuller[T] {
 
 
 // K: key for versionedStore
-abstract class FeatureUpdater[K, T, M <: StatModel](
-  representer: FeatureRepresenter[T, M],
-  featureStore: VersionedStore[K, M, FeatureRepresentation[T, M]],
+abstract class FeatureUpdater[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
+  representer: FeatureRepresenter[T, M, FT],
+  featureStore: VersionedStore[K, M, FT],
   commitInfoStore: CommitInfoStore[T, M],
   dataPuller: DataPuller[T]
 ) extends Logging {

@@ -25,10 +25,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
       teleporter.maybe(wanderer) match {
         case Some(newStart) => teleportTo(newStart, journal)
         case None => {
-          {sampleComponent(resolver).flatMap { component =>
-            println(s"SELECT COMPONENT $component")
-            sampleDestination(component, resolver, probabilityCache)
-          }} match {
+          sampleComponent(resolver).flatMap(sampleDestination(_, resolver, probabilityCache)) match {
             case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
             case None => teleportTo(teleporter.surely, journal, isDeadend = true)
           }
@@ -59,7 +56,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
 
   private def traverseTo(destination: VertexId, edgeKind: EdgeType, journal: TravelJournal): Unit = {
     scout.moveTo(destination)
-    log.info(s"[Traverse] ${wanderer.id} --${edgeKind.code}-> ${scout.id}")
+    log.info(s"[Traverse] ${wanderer.id} --> ${scout.id} | ${edgeKind.code}")
     journal.onEdgeTraversal(wanderer, scout, edgeKind)
     wanderer.moveTo(destination)
   }
@@ -68,7 +65,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     val componentWeights = mutable.MutableList[((VertexType, EdgeType), Double)]()
     while (wanderer.edgeReader.moveToNextComponent()) {
       val (destinationKind, edgeKind) = wanderer.edgeReader.component
-      val weight = resolver.weightComponent(wanderer.kind, destinationKind, edgeKind)
+      val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
       componentWeights += (destinationKind, edgeKind) -> weight
     }
     val probability = ProbabilityDensity.normalized(componentWeights)

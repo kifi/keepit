@@ -135,7 +135,7 @@ POST    /m/1/collections/create             @com.keepit.controllers.mobile.Mobil
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileBookmarksController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
-GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
 
@@ -221,7 +221,7 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 ##########################################
 
 
-GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple()
 POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
 POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
@@ -312,6 +312,7 @@ GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBo
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
+GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
@@ -640,8 +641,6 @@ GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.in
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxController.isUnscrapableP
-POST     /internal/shoebox/database/scraped           @com.keepit.controllers.internal.ShoeboxController.scraped
-POST     /internal/shoebox/database/scrapeFailed      @com.keepit.controllers.internal.ShoeboxController.scrapeFailed
 GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: String)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: String)

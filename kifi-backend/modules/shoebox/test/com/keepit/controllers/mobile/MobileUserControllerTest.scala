@@ -32,7 +32,9 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.common.external.FakeExternalServiceModule
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -49,7 +51,10 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeActionAuthenticatorModule(),
     FakeSocialGraphModule(),
     FakeShoeboxSecureSocialModule(),
-    TestABookServiceClientModule()
+    TestABookServiceClientModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

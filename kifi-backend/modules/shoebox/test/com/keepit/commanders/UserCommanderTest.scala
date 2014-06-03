@@ -8,12 +8,14 @@ import com.keepit.common.mail.{FakeMailModule, FakeOutbox}
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 
 import play.api.test.Helpers.running
 
 import com.google.inject.Injector
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
 
@@ -56,7 +58,10 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule()
+    ShoeboxFakeStoreModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   "UserCommander" should {

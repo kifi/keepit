@@ -4,7 +4,6 @@ import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.google.inject.Inject
-
 import com.keepit.search.{IndexInfo, SearchServiceClient}
 import com.keepit.common.controller.{AuthenticatedRequest, AdminController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -23,6 +22,7 @@ import com.keepit.common.time._
 import play.api.mvc.{AnyContent, Action}
 import com.keepit.commanders.URISummaryCommander
 import com.keepit.commanders.RichWhoKeptMyKeeps
+import com.keepit.model.KeywordsSummary
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -45,9 +45,17 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+      val embedlyKeywords = uriSummaryCommander.getStoredEmbedlyKeywords(uri.id.get)
+      val word2vecKeywordsFut = uriSummaryCommander.getWord2VecKeywords(uri.id.get)
+      val imageUrlOptFut = uriSummaryCommander.getURIImage(uri)
+
+      for {
+        word2vecKeys <- word2vecKeywordsFut
+        imageUrlOpt <- imageUrlOptFut
+      } yield {
+        val keywords = KeywordsSummary(embedlyKeywords, word2vecKeys.map{_.cosine}.getOrElse(Seq()), word2vecKeys.map{_.freq}.getOrElse(Seq()))
         val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl))
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, keywords))
       }
     }
   }
@@ -208,6 +216,29 @@ class AdminBookmarksController @Inject() (
         case cnt => (cnt._1.value, cnt._2)
       }.sortBy(v => -v._2)
       Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, privateKeeperKeepCount, tweakedCounts, total))
+    }
+  }
+
+  def userBookmarkKeywords = AdminHtmlAction.authenticatedAsync { request =>
+    val user = request.userId
+    val uris = db.readOnly{ implicit s =>
+      keepRepo.getByUser(user)
+    }.filter(!_.isPrivate).sortBy(-1L * _.createdAt.getMillis).map{_.uriId}.take(500).sortBy( x => x.id)    // sorting helps s3 performance
+
+    val word2vecFut = uriSummaryCommander.batchGetWord2VecKeywords(uris)
+
+    val embedlyKeys = uris.map{ uriId => uriSummaryCommander.getStoredEmbedlyKeywords(uriId) }
+
+    val keyCounts = MutableMap.empty[String, Int].withDefaultValue(0)
+
+    word2vecFut.map{ word2vecKeys =>
+      (embedlyKeys zip word2vecKeys).map{ case (emb, w2v) =>
+        val s1 = emb.toSet
+        val s2 = w2v.map{_.cosine}.getOrElse(Seq()).toSet
+        val s3 = w2v.map{_.freq}.getOrElse(Seq()).toSet
+        (s1.union(s2.intersect(s3))).foreach{ word => keyCounts(word) = keyCounts(word) + 1 }
+      }
+      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(50)))
     }
   }
 }

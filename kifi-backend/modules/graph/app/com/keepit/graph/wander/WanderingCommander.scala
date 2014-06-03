@@ -18,14 +18,8 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
     val startingVertexKind = VertexKind.apply(wanderlust.startingVertexKind)
     val startingVertexId = VertexId(startingVertexKind)(wanderlust.startingVertexDataId)
-    val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.avoidTrivialCollisions)
-    val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
 
-    val teleporter = UniformTeleporter(Set(startingVertexId)) { wanderer =>
-      if (forbiddenCollisions.contains(wanderer.id)) 0
-      else if (preferredCollisions.isEmpty || preferredCollisions.contains(wanderer.kind)) wanderlust.restartProbability
-      else wanderlust.restartProbability / 2
-    }
+    val teleporter = UniformTeleporter(Set(startingVertexId)) { Function.const(wanderlust.restartProbability) }
 
     val journal = new TeleportationJournal()
 
@@ -42,20 +36,23 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     }
     val end = clock.now()
     log.info(s"Wandered for ${wanderlust.steps} steps during ${end.getMillis - start.getMillis} ms.")
-    log.info(s"Vertices visited: ${journal.getVisited().mkString(", ")}")
-    getCollisions(journal)
+    val forbiddenCollisions = getForbiddenCollisions(startingVertexId, wanderlust.avoidTrivialCollisions)
+    val preferredCollisions = wanderlust.preferredCollisions.map(VertexKind(_))
+    getCollisions(journal, forbiddenCollisions, preferredCollisions)
   }
 
-  private def getCollisions(journal: TeleportationJournal): Collisions = {
+  private def getCollisions(journal: TeleportationJournal, forbiddenCollisions: Set[VertexId], preferredCollisions: Set[VertexType]): Collisions = {
+
     val users = mutable.Map[Id[User], Int]()
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
     val uris =  mutable.Map[Id[NormalizedURI], Int]()
     val extra = mutable.Map[String, Int]()
 
-    val collisions = journal.getTeleportations()
+    val collisions = journal.getVisited()
     log.info(s"Collisions found: ${collisions.groupBy(_._1.kind).mapValues(_.size).mkString(", ")}")
 
     collisions collect {
+      case (vertexId, count) if count <= 1 || forbiddenCollisions.contains(vertexId) || (preferredCollisions.nonEmpty && !preferredCollisions.contains(vertexId.kind)) => // ignore
       case (vertexId, count) if vertexId.kind == UserReader => users += VertexDataId.toUserId(vertexId.asId[UserReader]) -> count
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
       case (vertexId, count) if vertexId.kind == FacebookAccountReader => socialUsers += VertexDataId.fromFacebookAccountIdtoSocialUserId(vertexId.asId[FacebookAccountReader]) -> count

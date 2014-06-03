@@ -111,7 +111,7 @@ class Database @Inject() (
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readOnly transaction attempt $attempt of $attempts")
-          statsd.increment(s"db.fail.attempt.$attempt.$throwableName", 1)
+          statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }
     readOnly(f)(dbMasterSlave, location)
@@ -134,7 +134,7 @@ class Database @Inject() (
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
           log.warn(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts")
-          statsd.increment(s"db.fail.attempt.$attempt.$throwableName", 1)
+          statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }
     readWrite(f)(location)
