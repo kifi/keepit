@@ -11,7 +11,7 @@
     <li><a href="javascript:" ng-click="unfriend()">Unfriend</a></li>
   </ul>
   <div kf-modal show="showUnfriendConfirm" class="kf-unfriend-confirm-modal">
-    <div kf-basic-modal-content with-cancel="true" title="Unfriend {{name}}?" with-warning action="reallyUnfriend()">
+    <div kf-basic-modal-content with-cancel="true" title="Unfriend {{name}}?" with-warning action="reallyUnfriend()" ng-if="showUnfriendConfirm">
       Are you sure you want to unfriend this user?
       <ul>
         <li> You will not see each other's results </li>
