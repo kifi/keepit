@@ -22,6 +22,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.FakeScraperServiceClientImpl
 import com.keepit.scraper.ScraperServiceClient
 import com.google.inject.{Singleton, Provides}
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 object URISummaryCommanderTestDummyValues {
   val dummyImage = ImageInfo(
@@ -142,10 +144,16 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
     def scraperClient(): ScraperServiceClient = {
       MockScraperServiceClient(null, null)
     }
+
+    @Singleton @Provides
+    def embedlyStore(): EmbedlyStore = {
+      new InMemoryEmbedlyStoreImpl()
+    }
   }
 
   val modules = Seq(
-    URISummaryCommanderTestModule()
+    URISummaryCommanderTestModule(),
+    FakeCortexServiceClientModule()
   )
 
   "URISummaryCommander" should {

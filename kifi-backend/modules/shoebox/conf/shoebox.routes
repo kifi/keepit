@@ -312,6 +312,7 @@ GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBo
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
+GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
@@ -640,8 +641,6 @@ GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.in
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxController.getProxyP()
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxController.isUnscrapableP
-POST     /internal/shoebox/database/scraped           @com.keepit.controllers.internal.ShoeboxController.scraped
-POST     /internal/shoebox/database/scrapeFailed      @com.keepit.controllers.internal.ShoeboxController.scrapeFailed
 GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: String)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: String)

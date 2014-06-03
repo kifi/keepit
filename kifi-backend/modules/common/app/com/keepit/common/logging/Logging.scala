@@ -3,6 +3,7 @@ package com.keepit.common.logging
 import com.keepit.macros.Location
 import play.modules.statsd.api.{StatsdClientCake, StatsdClient, Statsd}
 import play.api.Logger
+import scala.util.Random
 
 case class LogPrefix(prefix: String) extends AnyVal {
   override def toString = prefix
@@ -27,12 +28,9 @@ trait Logging {
  * Signatures and default values copied from
  * https://github.com/typesafehub/play-plugins/blob/master/statsd/src/main/scala/play/modules/statsd/api/StatsdClient.scala
  */
-class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCake {
-  //Stupid Cake pattern ditching!
-  protected val statPrefix: String = ""
-  protected val send: Function1[String, Unit] = {foo => }
-  protected def now(): Long = -1
-  protected def nextFloat(): Float = -1.0f
+class LoggingStatsdClient(log: Logger)  {
+  private lazy val random = new Random()
+  private def nextFloat(): Float = random.nextFloat()
 
   /**
    * Increment a given stat key. Optionally give it a value and sampling rate.
@@ -41,10 +39,13 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param value The amount by which to increment the stat. Defaults to 1.
    * @param samplingRate The probability for which to increment. Defaults to 1.
    */
-  override def increment(key: String, value: Long = 1, samplingRate: Double): Unit = {
+  def increment(key: String, value: Long, samplingRate: Double): Unit = {
     maybeLog(s"[increment] key: $key, value: $value, samplingRate: $samplingRate", samplingRate)
     Statsd.increment(key, value, samplingRate)
   }
+
+  def incrementOne(key: String, samplingRate: Double): Unit =
+    increment(key, 1, samplingRate)
 
   /**
    * Timing data for given stat key. Optionally give it a sampling rate.
@@ -53,7 +54,7 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param millis The number of milliseconds the operation took.
    * @param samplingRate The probability for which to increment. Defaults to 1.
    */
-  override def timing(key: String, millis: Long, samplingRate: Double): Unit = {
+  def timing(key: String, millis: Long, samplingRate: Double): Unit = {
     maybeLog(s"[timing] key: $key, millis: $millis, samplingRate: $samplingRate", samplingRate)
     Statsd.timing(key, millis, samplingRate)
   }
@@ -66,7 +67,7 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param timed An arbitrary block of code to be timed.
    * @return The result of the timed operation.
    */
-  override def time[T](key: String, samplingRate: Double)(timed: => T): T = {
+  def time[T](key: String, samplingRate: Double)(timed: => T): T = {
     maybeLog(s"[time] key: $key, samplingRate: $samplingRate", samplingRate)
     Statsd.time(key, samplingRate)(timed)
   }
@@ -77,7 +78,7 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param key The stat key to update.
    * @param value The value to record for the stat.
    */
-  override def gauge(key: String, value: Long): Unit = {
+  def gauge(key: String, value: Long): Unit = {
     maybeLog(s"[gauge] key: $key, value: $value")
     Statsd.gauge(key, value)
   }
@@ -88,7 +89,7 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * @param key The stat key to update.
    * @param value The value to record for the stat.
    */
-  override def gauge(key: String, value: Long, delta: Boolean): Unit = {
+  def gauge(key: String, value: Long, delta: Boolean): Unit = {
     maybeLog(s"[gauge] key: $key, value: $value, delta: $delta")
     Statsd.gauge(key, value, delta)
   }
@@ -101,7 +102,7 @@ class LoggingStatsdClient(log: Logger) extends StatsdClient with StatsdClientCak
    * is calculated separately for each in order to to be intrusive on the current implementation of the client.
    */
   private def maybeLog(msg: => String, samplingRate: Double = 1.0) {
-    if (samplingRate >= 1.0 || nextFloat() < (samplingRate / 10)) {
+    if (samplingRate >= 1.0 || nextFloat() < (samplingRate / 10.0d)) {
       log.info(msg)
     }
   }

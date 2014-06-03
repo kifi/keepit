@@ -11,7 +11,7 @@ package object cortex {
 
   object ModelVersions {
     val denseLDAVersion = ModelVersion[DenseLDA](1)
-    val word2vecVersion = ModelVersion[Word2Vec](1)
+    val word2vecVersion = ModelVersion[Word2Vec](2)
   }
 
   object ModelStorePrefix {

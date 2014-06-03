@@ -31,7 +31,7 @@ trait FeaturePluginTestHelper {
     }
   }
 
-  class FooFeatureRepresenter extends FeatureRepresenter[Foo, FakeModel]{
+  class FooFeatureRepresenter extends FeatureRepresenter[Foo, FakeModel, FooRepresentation]{
     val version = ModelVersion[FakeModel](1)
     val dimension: Int = 2
     def apply(foo: Foo): Option[FooRepresentation] = {

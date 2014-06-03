@@ -21,7 +21,7 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper{
 
       val (fooRepresenter, fooFeatStore, commitStore, fakePuller) = setup()
 
-      val updater = new FeatureUpdater[Id[Foo], Foo, FakeModel](
+      val updater = new FeatureUpdater(
           fooRepresenter, fooFeatStore, commitStore, fakePuller){
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get
@@ -37,7 +37,7 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper{
       fooFeatStore.get(Id[Foo](550), fooRepresenter.version) === None
 
       // as if we restart server. should continue with last seqNum
-      val updater2 = new FeatureUpdater[Id[Foo], Foo, FakeModel](
+      val updater2 = new FeatureUpdater(
           fooRepresenter, fooFeatStore, commitStore, fakePuller){
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get

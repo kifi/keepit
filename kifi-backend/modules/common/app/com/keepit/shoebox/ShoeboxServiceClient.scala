@@ -109,8 +109,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
-  def scraped(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
-  def scrapeFailed(uri:NormalizedURI, info:ScrapeInfo): Future[Option[NormalizedURI]]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: String): Future[Option[String]]
   def setUserValue(userId: Id[User], key: String, value: String): Unit
@@ -618,7 +616,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
   def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), routingStrategy = leaderPriority).map { r =>
       r.json.as[NormalizedURI]
     }
   }
@@ -658,7 +656,7 @@ class ShoeboxServiceClientImpl @Inject() (
     )
     val payload = Json.obj(safeJsonParams: _*)
     val stripped = payload.stripJsNulls()
-    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout).map { resp =>
+    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = leaderPriority).map { resp =>
       resp.json.asOpt[Boolean].getOrElse(false)
     }
   }
@@ -712,26 +710,6 @@ class ShoeboxServiceClientImpl @Inject() (
     })
     call(Shoebox.internal.isUnscrapableP, payload, callTimeouts = longTimeout).map { r =>
       r.json.as[Boolean]
-    }
-  }
-
-  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = {
-    val payload = Json.obj(
-      "uri" -> Json.toJson(uri),
-      "info" -> Json.toJson(info)
-    )
-    call(Shoebox.internal.scraped, payload).map { r =>
-      r.json.asOpt[NormalizedURI]
-    }
-  }
-
-  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = {
-    val payload = Json.obj(
-      "uri" -> Json.toJson(uri),
-      "info" -> Json.toJson(info)
-    )
-    call(Shoebox.internal.scrapeFailed, payload).map { r =>
-      r.json.asOpt[NormalizedURI]
     }
   }
 

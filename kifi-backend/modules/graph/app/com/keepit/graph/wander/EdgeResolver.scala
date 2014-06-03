@@ -5,12 +5,12 @@ import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.graph.model.EdgeKind.EdgeType
 
 trait EdgeResolver {
-  def weightComponent(source: VertexType, destinationKind: VertexType, edgeKind: EdgeType): Double
+  def weightComponent(source: VertexReader, destinationKind: VertexType, edgeKind: EdgeType): Double
   def weightEdge(source: VertexReader, destination: VertexReader, edge: EdgeReader): Double
 }
 
 case class RestrictedDestinationResolver(mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean) extends EdgeResolver {
-  def weightComponent(sourceKind: VertexType, destinationKind: VertexType, edgeKind: EdgeType): Double = 1
+  def weightComponent(source: VertexReader, destinationKind: VertexType, edgeKind: EdgeType): Double = 1
   def weightEdge(source: VertexReader, destination: VertexReader, edge: EdgeReader): Double = {
     if (!mayTraverse(source, destination, edge)) { 0 }
     else edge.data match {

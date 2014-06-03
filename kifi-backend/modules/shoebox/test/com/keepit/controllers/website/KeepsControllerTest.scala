@@ -41,6 +41,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class KeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -53,7 +54,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    FakeCortexServiceClientModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
