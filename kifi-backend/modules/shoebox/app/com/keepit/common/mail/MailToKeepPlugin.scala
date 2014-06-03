@@ -86,12 +86,17 @@ class MailToKeepActor @Inject() (
               case (None, _) =>
                 sendReply(
                   message = message,
-                  htmlBody = s"""|Hi There, <br><br>
-                    |We couldn't keep this page for you because the email address you sent this email from ($senderAddr) is not associated with any kifi account. <br><br>
-                    |How to resolve this? <br>
-                    |Go to <a href="http://www.kifi.com/profile">http://www.kifi.com/profile</a> open the "Manage your email addresses" section and add this email to be recognized with your Kifi account. <br><br>
+                  htmlBody = s"""
+                    |Hi There, <br><br>
+                    |We are unable to keep this page for you because it was sent from an unverified email address ($senderAddr) or it is not associated with a Kifi account. <br>
+                    |Let us help you get set up so this doesn’t happen again. <br><br>
+                    |<u>Get verified</u>
+                    |If you are a registered Kifi user, log in and visit <a href="https://www.kifi.com/profile">your profile</a>. Click to "Manage your email addresses". If the email address isn’t listed, add it and we’ll send you an email to verify it. If it is listed, you can resend a verification email. <br><br>
+                    |<u>Not a Kifi user?</u>
+                    |If you are not a Kifi user someone may have accidentally added your email,  if you think this is the case please contact us. If you tried to keep something, but haven’t registered for Kifi yet, you can <a href="https://www.kifi.com">sign up for free</a>. <br><br>
                     |Thanks! <br>
-                    |The Kifi Team""".stripMargin
+                    |The Kifi Team
+                  """.stripMargin
                 )
               case (Some(user), Seq()) =>
                 sendReply(
@@ -165,8 +170,9 @@ class MailToKeepMessageParser @Inject() (
 
   def getUser(message: Message): Option[User] = {
     db.readOnly { implicit s =>
-      message.getFrom.map(getAddr)
-        .map(emailAddressRepo.getByAddressOpt(_).map(_.userId)).headOption.flatten.map(userRepo.get)
+      message.getFrom.map(getAddr).map { address =>
+        emailAddressRepo.getVerifiedOwner(address)
+      }.headOption.flatten.map(userRepo.get)
     }
   }
 }
