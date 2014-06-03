@@ -312,7 +312,9 @@ module.exports = function (grunt) {
           var root = names.slice(0, names.length - 1).join('-');
 
           if (pseudoClasses.indexOf(modifier) !== -1) {
-            cssSelector += '.sprite-' + sprite.name + ', .sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
+            cssSelector += '.sprite-' + sprite.name + ',\n.sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
+          } else if (modifier === 'default') {
+            cssSelector += '.sprite-' + root + '\n  sprite2x($' + sprite.name + ')\n';
           } else {
             cssSelector += '.sprite-' + sprite.name + '\n  sprite2x($' + sprite.name + ')\n';
           }
