@@ -10,63 +10,63 @@ var SvgArrow = SvgArrow || (function (window, document) {
   function SvgArrow(elTail, elHead, angleTail, angleHead) {
     var rTail = elTail.getBoundingClientRect();
     var rHead = elHead.getBoundingClientRect();
-    var x1, y1, x2, y2, xT, yT, xH, yH;
-    switch (angleTail) {
-      case 0:
-        xT = 0;
-        yT = HEAD_WIDTH / 2;
-        x1 = rTail.right + 10;
-        y1 = (rTail.top + rTail.bottom) / 2 - yT;
-        break;
-      default:
-        throw Error('unsupported angleTail: ' + angleTail);
+    var box = {x: 0, y: 0, w: 0, h: 0}, T;
+    /*
+                 svg bounding rect (box)
+    ,---------,  . . . . . . . . . . . .    -,
+    |  elTail |  : o o o o .,          :     | visible portion
+    '---------'  : T         `o.,      :     | of elliptical arc
+                 :               `o    :    _|
+                 :              -------:     |
+                 :               \   / :     | invisible portion
+                 :                \ /  :     | of elliptical arc
+                 : . . . . . . . . V . :    _|    __
+                                   H                |
+                                                    | tip space height
+                       ,-----------------------,   -'
+                       | elHead                |
+                       |           •C          |
+                       |                       |
+                       '-----------------------'
+    */
+    if (angleTail !== 0) {
+      throw Error('angleTail value not yet supported: ' + angleTail);
     }
-    switch (angleHead) {
-      case 0:
-        var yTmp = (rHead.top + rHead.bottom) / 2;
-        x2 = rHead.left - 10;
-        y2 = yTmp + HEAD_WIDTH / 2;
-        xH = x2 - x1;
-        yH = yTmp - y1;
-        break;
-      case -45:
-        x2 = rHead.left - 8;
-        y2 = rHead.top - 8;
-        xH = x2 - x1;
-        yH = y2 - y1;
-        break;
-      case -90:
-        var xTmp = (rHead.left + rHead.right) / 2;
-        x2 = xTmp + HEAD_WIDTH / 2;
-        y2 = rHead.top - 10;
-        xH = xTmp - x1;
-        yH = y2 - y1;
-        break;
-      default:
-        throw Error('unsupported angleHead: ' + angleHead);
+    var T = {x: TAIL_WIDTH / 2, y: TAIL_WIDTH / 2};
+    box.x = Math.round(rTail.right + 10);
+    box.y = Math.round((rTail.top + rTail.bottom) / 2 + 2 - T.y);
+    var C = {
+      x: (rHead.left + rHead.right) / 2,
+      y: (rHead.top + rHead.bottom) / 2
+    };
+    if (angleHead > 0 || angleHead < -90) {
+      throw Error('angleHead value not yet supported: ' + angleHead);
     }
+    var angleHeadRad = angleHead / 180 * Math.PI;
+    var tipSpace = 10;
+    var tipSpaceHeight = tipSpace * Math.sin(-angleHeadRad);
+    var H = {
+      x: C.x - box.x + (tipSpaceHeight + rHead.height / 2) / Math.tan(angleHeadRad),
+      y: rHead.top - box.y - tipSpaceHeight
+    };
+    box.w = Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 3)));
+    box.h = Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 6)));
     this.svg = $svg('svg')
       .attr('class', 'kifi-svg-arrow kifi-root')
       .attr('style', [
-        'width:', x2 - x1, 'px;',
-        'height:', y2 - y1, 'px;',
-        'right:', window.innerWidth - x2, 'px;',
-        'bottom:', window.innerHeight - y2, 'px']);
+        'width:', box.w, 'px;',
+        'height:', box.h, 'px;',
+        'right:', window.innerWidth - (box.x + box.w), 'px;',
+        'bottom:', window.innerHeight - (box.y + box.h), 'px']);
     this.tail = $svg('path')
       .attr('class', 'kifi-svg-arrow-tail')
-      // .attr('d', 'M' + d3_svg_lineCardinalOpen([[xH, yH + 40], [xH, yH - HEAD_LENGTH - 6], [xT, yT], [xT - 90, yT]], 0))
-      .attr('d', ['M', xH, yH - HEAD_LENGTH - 8, 'A', xH - xT, yH - HEAD_LENGTH - 8 - yT, 0, 0, 0, xT, yT].join(' '))
+      .attr('d', ellipseArc(H, Math.PI + angleHeadRad, T))
       .appendTo(this.svg.el);
     this.head = $svg('path')
       .attr('class', 'kifi-svg-arrow-head')
-      .attr('d', triangle(xH, yH, angleHead))
+      .attr('d', triangle(H))
+      .attr('transform', ['rotate(', -angleHead, ',', H.x, ',', H.y, ')'])
       .appendTo(this.svg.el);
-    // $svg('circle')
-    //   .attr('cx', cp[0])
-    //   .attr('cy', cp[1])
-    //   .attr('r', 2)
-    //   .attr('style', ['stroke:none;fill:yellow'])
-    //   .appendTo(this.svg.el);
     this.attach();
   }
 
@@ -111,8 +111,27 @@ var SvgArrow = SvgArrow || (function (window, document) {
     }
   };
 
-  function triangle(x, y, angle) {
-    return ['M', x, y, 'l', -HEAD_WIDTH / 2, -HEAD_LENGTH, 'l', HEAD_WIDTH, 0, 'z'].join(' ');
+  function triangle(H) {
+    return ['M', H.x, H.y, 'l', -HEAD_LENGTH, -HEAD_WIDTH / 2, 'l', 0, HEAD_WIDTH, 'z'].join(' ');
+  }
+
+  function ellipseArc(H, phi, T) {  // phi is the tangential angle (radians from positive x-axis)
+    var G = {  // point of tangency is the center of the arrow head base
+      x: H.x + HEAD_LENGTH * Math.cos(phi),
+      y: H.y - HEAD_LENGTH * Math.sin(phi)
+    };
+
+    // solving for parameter t and then radii a and b using these formulae from
+    // en.wikipedia.org/wiki/Ellipse#Parametric_form_in_canonical_position
+    // G.x === a * cos(t)
+    // G.y === b * (1 - sin(t))  // "1 -" transforms to standard Cartesian coordinates from SVG
+    // -tan(t) === b / (a * tan(phi))
+
+    var t = Math.asin(-G.y / (G.y + G.x * Math.tan(phi)));
+    var a = G.x / Math.cos(t);
+    var b = G.y / (1 - Math.sin(t));
+
+    return ['M', G.x, G.y, 'A', a, b, 0, 0, 0, T.x, T.y].join(' ');
   }
 
   // github.com/mbostock/d3

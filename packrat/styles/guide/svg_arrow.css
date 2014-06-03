@@ -1,12 +1,11 @@
 .kifi-svg-arrow {
   position: fixed;
   z-index: 999999999993;
-  /*background-color: rgba(255,255,0,.5);*/
 }
 .kifi-svg-arrow-tail {
   fill: none;
   stroke: #f99;
-  stroke-dasharray: .01 9;
+  stroke-dasharray: .001 9;
   stroke-width: 4;
   stroke-linecap: round;
 }
