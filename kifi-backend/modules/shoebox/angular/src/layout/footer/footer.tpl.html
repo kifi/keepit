@@ -1,6 +1,6 @@
 <div class="kf-footer">
 
-  <h2 class="kf-footer-header"><span class="sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
+  <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
 
   <div class="kf-footer-help-rank-item" ng-if="me.totalKeepsClicked > 0" ng-click="openHelpRankHelp()">
       <div class="kf-footer-help-rank-number">{{me.totalKeepsClicked}}</div>
@@ -31,7 +31,7 @@
   <ul class="kf-footer-essentials-list about-kifi">
     <li>
       <a class="kf-footer-item-link kifi-tutorial" href="#" ng-click="data.showGettingStarted = true">
-        <span class="sprite-guide-icon"></span>Kifi Step-by-step guide
+        <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
       </a>
       <div ng-if="data.showGettingStarted">
         <iframe class="kifi-onboarding-iframe" ng-src="https://www.kifi.com/assets/onboarding.html" frameborder="0"></iframe>
@@ -39,17 +39,17 @@
     </li>
     <li class="install-kifi">
       <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
-        <span class="sprite-install-extension-icon"></span><span ng-show="!installInProgress()">Install the extension</span><span ng-show="installInProgress()">Installing...</span><span ng-show="installed()">Installed!</span>
+        <span class="sprite sprite-install-extension-icon"></span><span ng-show="!installInProgress()">Install the extension</span><span ng-show="installInProgress()">Installing...</span><span ng-show="installed()">Installed!</span>
       </a>
     </li>
     <li class="import-bookmarks">
       <a class="kf-footer-item-link" href="javascript:" ng-click="importBookmarks()">
-        <span class="sprite-import-bookmarks-icon"></span>Import your bookmarks
+        <span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks
       </a>
     </li>
     <li class="import-bookmark-file">
       <a class="kf-footer-item-link" href="javascript:" ng-click="importBookmarkFile()">
-        <span class="sprite-import-from-other-services-icon"></span>Import Delicious / Kippt / Pocket
+        <span class="sprite sprite-import-from-other-services-icon"></span>Import Delicious / Kippt / Pocket
       </a>
     </li>
   </ul>

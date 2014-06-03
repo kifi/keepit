@@ -287,7 +287,7 @@ module.exports = function (grunt) {
         destImg: 'img/sprites.png',
         destCSS: 'src/common/build-css/sprites.styl',
         imgPath: '/img/sprites.png',
-        algorithm: 'binary-tree',
+        algorithm: 'top-down',
         padding: 2,
         cssFormat: 'stylus',
         cssVarMap: function (sprite) {
@@ -300,7 +300,7 @@ module.exports = function (grunt) {
         destImg: 'img/sprites.png',
         destCSS: 'src/common/spritesClasses.styl',
         imgPath: '/img/sprites.png',
-        algorithm: 'binary-tree',
+        algorithm: 'top-down',
         padding: 2,
         cssFormat: 'stylus',
         cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl'
