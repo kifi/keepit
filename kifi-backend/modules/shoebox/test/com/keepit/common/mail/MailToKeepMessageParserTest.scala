@@ -79,7 +79,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
         message.setContent("Hey, you should check out http://google.com/.", "text/html")
         message.saveChanges()
 
-        parser.getUser(message).get.firstName === "Eishay"
+        parser.getUser(message.toString).get.firstName === "Eishay"
       }
     }
   }

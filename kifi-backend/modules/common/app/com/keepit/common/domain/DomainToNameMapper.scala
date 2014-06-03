@@ -1,9 +1,17 @@
-package com.keepit.eliza.mail
+package com.keepit.common.domain
+
+import com.keepit.common.net.URI
 
 object DomainToNameMapper {
 
-  def getName(domain: String): Option[String] = {
-    domainToName.get(domain)
+  def getNameFromUrl(url: String): Option[String] = {
+    val hostOpt = URI.parse(url).toOption.flatMap(_.host)
+    hostOpt map { host =>
+      def nameForSuffixLength(n: Int) = domainToName.get(host.domain.take(n).reverse.mkString("."))
+      // Attempts to map more restrictive subdomains first
+      val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
+      candidates.collectFirst { case Some(name) => name }.getOrElse(host.name)
+    }
   }
 
   /**

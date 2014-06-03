@@ -22,7 +22,9 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -35,7 +37,10 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
     TestHeimdalServiceClientModule(),
-    TestMailModule()
+    TestMailModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   "AdminDashboardController" should {
