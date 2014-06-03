@@ -152,7 +152,7 @@ class MailToKeepActor @Inject() (
 
 class MailToKeepMessageParser @Inject() (
     db: Database,
-    emailAddressRepo: EmailAddressRepo,
+    emailAddressRepo: UserEmailAddressRepo,
     userRepo: UserRepo
   ) extends GenericMailParser with Logging {
 

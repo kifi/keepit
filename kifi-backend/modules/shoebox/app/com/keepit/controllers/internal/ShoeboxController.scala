@@ -54,7 +54,7 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   keepsCommander: KeepsCommander,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
@@ -466,7 +466,7 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
-  def getEmailAddressById(id: Id[EmailAddress]) = Action { request =>
+  def getEmailAddressById(id: Id[UserEmailAddress]) = Action { request =>
     val address = db.readOnly { implicit s => emailAddressRepo.get(id).address }
     Ok(Json.toJson(address))
   }

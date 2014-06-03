@@ -27,7 +27,7 @@ class ShoeboxRichConnectionCommander @Inject() (
     userConnectionRepo: Provider[UserConnectionRepo],
     invitationRepo: Provider[InvitationRepo],
     socialUserInfoRepo: Provider[SocialUserInfoRepo],
-    emailAddressRepo: Provider[EmailAddressRepo],
+    emailAddressRepo: Provider[UserEmailAddressRepo],
     systemValueRepo: SystemValueRepo,
     db: Database,
     serviceDiscovery: ServiceDiscovery
@@ -37,7 +37,7 @@ class ShoeboxRichConnectionCommander @Inject() (
   private val sqsUserConnectionSeq = Name[SequenceNumber[UserConnection]]("sqs_user_connection")
   private val sqsSocialUserInfoSeq = Name[SequenceNumber[SocialUserInfo]]("sqs_social_user_info")
   private val sqsInvitationSeq = Name[SequenceNumber[Invitation]]("sqs_invitation")
-  private val sqsEmailAddressSeq = Name[SequenceNumber[EmailAddress]]("sqs_email_address")
+  private val sqsEmailAddressSeq = Name[SequenceNumber[UserEmailAddress]]("sqs_email_address")
 
   def sendSocialConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
     val (updateRichConnections, socialConnectionCount, highestSeq) = db.readOnly() { implicit session =>
@@ -228,7 +228,7 @@ class InvitationModificationActor @Inject() (
   }
 }
 
-case class EmailAddressModification(modif: RepoModification[EmailAddress]) extends RepoModificationEvent[EmailAddress]
+case class EmailAddressModification(modif: RepoModification[UserEmailAddress]) extends RepoModificationEvent[UserEmailAddress]
 class EmailAddressModificationActor @Inject() (
   val clock: Clock,
   val scheduler: Scheduler,

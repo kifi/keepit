@@ -104,7 +104,7 @@ class InviteCommander @Inject() (
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
   postOffice: LocalPostOffice,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   eliza: ElizaServiceClient,
   basicUserRepo: BasicUserRepo,

@@ -46,7 +46,7 @@ private[mail] class MailSenderActor @Inject() (
     mailRepo: ElectronicMailRepo,
     emailOptOutRepo: EmailOptOutRepo,
     userNotifyPreferenceRepo: UserNotifyPreferenceRepo,
-    emailAddressRepo: EmailAddressRepo,
+    emailAddressRepo: UserEmailAddressRepo,
     airbrake: AirbrakeNotifier,
     mailProvider: MailProvider,
     heimdalContextBuiler: HeimdalContextBuilderFactory,

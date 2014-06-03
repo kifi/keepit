@@ -19,7 +19,7 @@ import play.api.{Application, Play}
 import securesocial.core._
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.IdentityId
-import com.keepit.model.EmailAddress
+import com.keepit.model.UserEmailAddress
 import securesocial.core.providers.Token
 import scala.Some
 import securesocial.core.PasswordInfo
@@ -37,7 +37,7 @@ class SecureSocialUserPluginImpl @Inject() (
   userCredRepo: UserCredRepo,
   imageStore: S3ImageStore,
   airbrake: AirbrakeNotifier,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userCommander: UserCommander,
   userExperimentCommander: LocalUserExperimentCommander,
@@ -143,7 +143,7 @@ class SecureSocialUserPluginImpl @Inject() (
         case Some(e) if e.state == EmailAddressStates.VERIFIED => e
         case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
         case None => emailRepo.save(
-          EmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
+          UserEmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
       }
       log.info(s"[save] Saved email is $emailAddress")
       emailAddress
@@ -240,7 +240,7 @@ class SecureSocialUserPluginImpl @Inject() (
               if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
                 val email = socialUser.email.getOrElse(throw new IllegalStateException("user has no email"))
                 val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
-                  emailRepo.save(EmailAddress(userId = user.id.get, address = email))
+                  emailRepo.save(UserEmailAddress(userId = user.id.get, address = email))
                 }
                 val cred =
                   UserCred(

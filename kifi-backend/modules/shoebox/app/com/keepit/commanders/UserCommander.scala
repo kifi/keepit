@@ -39,7 +39,7 @@ import com.keepit.model.SocialConnection
 import play.api.libs.json.JsString
 import com.keepit.model.SocialUserInfoUserKey
 import scala.Some
-import com.keepit.model.EmailAddress
+import com.keepit.model.UserEmailAddress
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.UserIdentity
 import com.keepit.heimdal.ContextStringData
@@ -94,7 +94,7 @@ case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthe
 class UserCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
@@ -713,7 +713,7 @@ class UserCommander @Inject() (
   }
 
 
-  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[EmailAddress]], emails: Seq[EmailInfo]): Unit = {
+  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[UserEmailAddress]], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email")
       val uniqueEmailStrings = emails.map(_.address).toSet
@@ -733,7 +733,7 @@ class UserCommander @Inject() (
       // Add new emails
       for (address <- uniqueEmailStrings -- existing.map(_.address)) {
         if (emailRepo.getByAddressOpt(address).isEmpty) {
-          val emailAddr = emailRepo.save(EmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
+          val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
           val siteUrl = fortytwoConfig.applicationBaseUrl
           val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
@@ -774,7 +774,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUserPrimaryEmail(primaryEmail: EmailAddress)(implicit session: RWSession) = {
+  def updateUserPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession) = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
     val currentUser = userRepo.get(primaryEmail.userId)

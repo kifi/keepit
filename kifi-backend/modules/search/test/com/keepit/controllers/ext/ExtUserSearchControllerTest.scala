@@ -34,9 +34,9 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     val usersWithId = client.saveUsers(users: _*)
 
     val emails = (0 until 4).map{ i =>
-      EmailAddress(userId = usersWithId(i).id.get, address = s"user${i}@42go.com")
-    } ++ Seq(EmailAddress(userId = usersWithId(4).id.get, address = "woody@fox.com"),
-     EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
+      UserEmailAddress(userId = usersWithId(i).id.get, address = s"user${i}@42go.com")
+    } ++ Seq(UserEmailAddress(userId = usersWithId(4).id.get, address = "woody@fox.com"),
+     UserEmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
 
     client.saveEmails(emails: _*)
 

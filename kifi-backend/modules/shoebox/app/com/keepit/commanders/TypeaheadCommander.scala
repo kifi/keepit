@@ -46,7 +46,7 @@ class TypeaheadCommander @Inject()(
   socialConnectionRepo: SocialConnectionRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   userRepo: UserRepo,
   friendRequestRepo: FriendRequestRepo,
   abookServiceClient: ABookServiceClient,

@@ -54,7 +54,7 @@ class AuthHelper @Inject() (
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
   socialRepo: SocialUserInfoRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   userValueRepo: UserValueRepo,
   passwordResetRepo: PasswordResetRepo,
   kifiInstallationRepo: KifiInstallationRepo, // todo: factor out

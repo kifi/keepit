@@ -20,7 +20,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
+import com.keepit.model.{UserEmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
@@ -83,7 +83,7 @@ class AdminUserController @Inject() (
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
-    emailRepo: EmailAddressRepo,
+    emailRepo: UserEmailAddressRepo,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
@@ -293,7 +293,7 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[EmailAddress])(implicit s: RSession): Seq[User] = {
+  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val bySocial: Seq[Id[User]] = socialUserInfos map { info =>
       invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
     } flatten
@@ -405,7 +405,7 @@ class AdminUserController @Inject() (
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            emailRepo.save(EmailAddress(address = address, userId = userId))
+            emailRepo.save(UserEmailAddress(address = address, userId = userId))
         }
       }).toSet
 

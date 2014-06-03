@@ -17,7 +17,7 @@ class EmailNotificationsCommander @Inject() (
   localPostOffice: LocalPostOffice,
   userRepo: UserRepo,
   deepLinkRepo: DeepLinkRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   db: Database,
   clock: Clock,
   airbrake: AirbrakeNotifier) extends Logging {

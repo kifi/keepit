@@ -5,7 +5,7 @@ import com.keepit.common.mail.{EmailAddresses, ElectronicMail, ElectronicMailRep
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal._
 import com.keepit.common.performance.timing
-import com.keepit.model.{NotificationCategory, EmailAddressRepo}
+import com.keepit.model.{NotificationCategory, UserEmailAddressRepo}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.social.NonUserKinds
@@ -14,7 +14,7 @@ class SendgridCommander @Inject() (
   db: Database,
   systemAdminMailSender: SystemAdminMailSender,
   heimdalClient: HeimdalServiceClient,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   electronicMailRepo: ElectronicMailRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory
 ) extends Logging {

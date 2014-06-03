@@ -29,7 +29,7 @@ case class BasicUserInvitation(name: String, picture: Option[String], state: Sta
 class InviteController @Inject() (db: Database,
   userRepo: UserRepo,
   socialUserRepo: SocialUserInfoRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,

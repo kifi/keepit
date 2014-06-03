@@ -8,9 +8,9 @@ import com.keepit.model._
 
 class SocialUserImportEmail @Inject() (
     db: Database,
-    emailRepo: EmailAddressRepo) extends Logging {
+    emailRepo: UserEmailAddressRepo) extends Logging {
 
-  def importEmail(userId: Id[User], emailString: String): EmailAddress = {
+  def importEmail(userId: Id[User], emailString: String): UserEmailAddress = {
     db.readWrite { implicit s =>
       val emails = emailRepo.getByAddress(emailString, excludeState = None)
       emails.map { email =>
@@ -26,7 +26,7 @@ class SocialUserImportEmail @Inject() (
         }
       }.flatten.headOption.getOrElse {
         log.info(s"creating new email $emailString for user $userId")
-        emailRepo.save(EmailAddress(userId = userId, address = emailString, state = EmailAddressStates.VERIFIED))
+        emailRepo.save(UserEmailAddress(userId = userId, address = emailString, state = EmailAddressStates.VERIFIED))
       }
     }
   }

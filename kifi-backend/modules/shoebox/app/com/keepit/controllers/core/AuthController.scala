@@ -47,7 +47,7 @@ class AuthController @Inject() (
     userValueRepo: UserValueRepo,
     s3ImageStore: S3ImageStore,
     airbrakeNotifier: AirbrakeNotifier,
-    emailAddressRepo: EmailAddressRepo,
+    emailAddressRepo: UserEmailAddressRepo,
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,

@@ -8,78 +8,78 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
 
-@ImplementedBy(classOf[EmailAddressRepoImpl])
-trait EmailAddressRepo extends Repo[EmailAddress] with RepoWithDelete[EmailAddress] with SeqNumberFunction[EmailAddress] {
-  def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
-    (implicit session: RSession): Seq[EmailAddress]
-  def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
-      (implicit session: RSession): Option[EmailAddress]
-  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
-  def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
-  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress]
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[EmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress]
+@ImplementedBy(classOf[UserEmailAddressRepoImpl])
+trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
+  def getByAddress(address: String, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+    (implicit session: RSession): Seq[UserEmailAddress]
+  def getByAddressOpt(address: String, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+      (implicit session: RSession): Option[UserEmailAddress]
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
+  def getByUser(userId: Id[User])(implicit session: RSession): UserEmailAddress
+  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
+  def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getVerifiedOwner(address: String)(implicit session: RSession): Option[Id[User]]
 }
 
 @Singleton
-class EmailAddressRepoImpl @Inject() (
+class UserEmailAddressRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   userValueRepo: UserValueRepo,
   userRepo: UserRepo,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
-  override protected val changeListener: Option[RepoModification.Listener[EmailAddress]]
-) extends DbRepo[EmailAddress] with DbRepoWithDelete[EmailAddress] with SeqNumberDbFunction[EmailAddress] with EmailAddressRepo {
+  override protected val changeListener: Option[RepoModification.Listener[UserEmailAddress]]
+) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
 
   import db.Driver.simple._
 
   type RepoImpl = EmailAddressTable
-  class EmailAddressTable(tag: Tag) extends RepoTable[EmailAddress](db, tag, "email_address") with SeqNumberColumn[EmailAddress] {
+  class EmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[String]("address", O.NotNull)
     def verifiedAt = column[DateTime]("verified_at", O.NotNull)
     def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt.?, lastVerificationSent.?,
-      verificationCode, seq) <> ((EmailAddress.apply _).tupled, EmailAddress.unapply _)
+      verificationCode, seq) <> ((UserEmailAddress.apply _).tupled, UserEmailAddress.unapply _)
   }
 
   def table(tag: Tag) = new EmailAddressTable(tag)
   initTable()
 
-  private val sequence = db.getSequence[EmailAddress]("email_address_sequence")
+  private val sequence = db.getSequence[UserEmailAddress]("email_address_sequence")
 
-  override def save(emailAddress: EmailAddress)(implicit session: RWSession): EmailAddress = {
+  override def save(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     val toSave = emailAddress.copy(seq = sequence.incrementAndGet())
     super.save(toSave)
   }
 
-  override def deleteCache(emailAddress: EmailAddress)(implicit session: RSession): Unit = {
+  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
     if (emailAddress.verified) {
       verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
     }
   }
-  override def invalidateCache(emailAddress: EmailAddress)(implicit session: RSession): Unit = {
+  override def invalidateCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
     if (emailAddress.verified) {
       verifiedEmailUserIdCache.set(VerifiedEmailUserIdKey(emailAddress.address), emailAddress.userId)
     }
   }
 
-  def getByAddress(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
-    (implicit session: RSession): Seq[EmailAddress] =
+  def getByAddress(address: String, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+    (implicit session: RSession): Seq[UserEmailAddress] =
     (for(f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
 
-  def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
-      (implicit session: RSession): Option[EmailAddress] = {
+  def getByAddressOpt(address: String, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+      (implicit session: RSession): Option[UserEmailAddress] = {
     val allAddresses = getByAddress(address, excludeState)
     allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == EmailAddressStates.UNVERIFIED).headOption)
   }
 
-  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
+  def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
     (for(f <- rows if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
 
-  def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
+  def getByUser(userId: Id[User])(implicit session: RSession): UserEmailAddress = {
     if (userRepo.get(userId).primaryEmailId.isDefined) {
       get(userRepo.get(userId).primaryEmailId.get)
     } else {
@@ -93,10 +93,10 @@ class EmailAddressRepoImpl @Inject() (
     }
   }
 
-  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[EmailAddress] =
+  def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] =
     (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
 
-  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[EmailAddress], Boolean) = {
+  def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) = {
     // returns (verifiedEmailOption, isFirstTimeUsed)
     getByUserAndCode(userId, verificationCode) match {
       case Some(verifiedAddress) if verifiedAddress.state == EmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
@@ -105,7 +105,7 @@ class EmailAddressRepoImpl @Inject() (
     }
   }
 
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[EmailAddress] = {
+  def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] = {
     (for (e <- rows if e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
   }
 

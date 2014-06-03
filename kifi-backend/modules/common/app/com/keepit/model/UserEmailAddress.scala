@@ -12,22 +12,22 @@ import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatist
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 
-case class EmailAddress (
-  id: Option[Id[EmailAddress]] = None,
+case class UserEmailAddress (
+  id: Option[Id[UserEmailAddress]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
-  state: State[EmailAddress] = EmailAddressStates.UNVERIFIED,
+  state: State[UserEmailAddress] = EmailAddressStates.UNVERIFIED,
   address: String,
   verifiedAt: Option[DateTime] = None,
   lastVerificationSent: Option[DateTime] = None,
   verificationCode: Option[String] = None,
-  seq: SequenceNumber[EmailAddress] = SequenceNumber.ZERO
-) extends ModelWithState[EmailAddress] with EmailAddressHolder with ModelWithSeqNumber[EmailAddress] {
-  def withId(id: Id[EmailAddress]) = this.copy(id = Some(id))
+  seq: SequenceNumber[UserEmailAddress] = SequenceNumber.ZERO
+) extends ModelWithState[UserEmailAddress] with EmailAddressHolder with ModelWithSeqNumber[UserEmailAddress] {
+  def withId(id: Id[UserEmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def sameAddress(otherAddress: String) = otherAddress == address
-  def withState(state: State[EmailAddress]) = copy(state = state)
+  def withState(state: State[UserEmailAddress]) = copy(state = state)
   def withVerificationCode(now: DateTime) = this.copy(
     lastVerificationSent = Some(now),
     verificationCode = Some(new BigInteger(128, EmailAddressObject.random).toString(36)))
@@ -42,9 +42,9 @@ object EmailAddressObject {
 }
 
 object EmailAddressStates {
-  val VERIFIED = State[EmailAddress]("verified")
-  val UNVERIFIED = State[EmailAddress]("unverified")
-  val INACTIVE = State[EmailAddress]("inactive")
+  val VERIFIED = State[UserEmailAddress]("verified")
+  val UNVERIFIED = State[UserEmailAddress]("unverified")
+  val INACTIVE = State[UserEmailAddress]("inactive")
 }
 
 case class VerifiedEmailUserIdKey(address: String) extends Key[Id[User]] {

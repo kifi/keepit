@@ -32,7 +32,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
 import scala.util.{Failure, Success}
-import com.keepit.model.EmailAddress
+import com.keepit.model.UserEmailAddress
 import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
@@ -50,7 +50,7 @@ class UserController @Inject() (
   userExperimentCommander: LocalUserExperimentCommander,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   userValueRepo: UserValueRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
