@@ -9,26 +9,27 @@
         <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
       </div>
       <div class="kf-keep-title">
-        <span class="kf-example-tag">Example keep</span>
         <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
         </a>
       </div>
       <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
     </div>
-
     <!-- I'm working on this <div kf-tag-list></div> -->
-    <div class="kf-horizontal-separator"></div>
     <div class="kf-keep-who">
       <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
       <span class="kf-keep-who-others" ng-if="showOthers()"></span>
       <span kf-keep-who-text keep="keep"></span>
     </div>
+    <div class="kf-keep-tags" ng-if="hasTag()">
+      <div class="kf-keep-tag" ng-repeat="tag in getTags()">{{tag.name}}</div>
+      <div class="kf-keep-add-tag"></div>
+    </div>
   </div>
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link"><a>Send</a></span>
-    <span class="kf-keep-footer-link" ng-show="!hasTag()"><a>Tag</a></span>
-    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-show="!isPrivate()"><a>Make Private</a></span>
-    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-show="isPrivate()"><a>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="!hasTag()"><a>Tag</a></span>
+    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="!isPrivate()"><a>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isPrivate()"><a>Make Public</a></span>
     <span class="kf-keep-footer-link" ng-click="unkeep()"><a>Unkeep</a></span>
     <div class="kf-keep-private">Private</div>
   </div>
