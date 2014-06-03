@@ -2,7 +2,7 @@ package com.keepit.search.message
 
 
 import com.keepit.common.db.{Id, SequenceNumber}
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicUserLikeEntity}
 import com.keepit.model.User
 
 import play.api.libs.json._
@@ -38,7 +38,7 @@ case class ThreadContent(
   mode: ThreadContentUpdateMode,
   id: Id[ThreadContent],
   seq: SequenceNumber[ThreadContent],
-  participants: Seq[BasicUser],
+  participants: Seq[BasicUserLikeEntity],
   updatedAt: DateTime,
   url: String,
   threadExternalId: String,
@@ -56,7 +56,7 @@ object ThreadContent {
     (__ \ 'mode).format[ThreadContentUpdateMode] and
     (__ \ 'id).format(Id.format[ThreadContent]) and
     (__ \ 'seq).format(SequenceNumber.format[ThreadContent]) and
-    (__ \ 'participants).format[Seq[BasicUser]] and
+    (__ \ 'participants).format[Seq[BasicUserLikeEntity]] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'url).format[String] and
     (__ \ 'threadExternalId).format[String] and
