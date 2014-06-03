@@ -81,14 +81,14 @@ class MailToKeepActor @Inject() (
             KeepEmail.findFirstMatchIn(_).map(_.group(1).toLowerCase.trim)
           }.flatten
           for (keepType <- KeepType.allTypes.filter(prefixes contains _.emailPrefix)) {
-            val senderAddr = messageParser.getSenderAddr(message)
-            (messageParser.getUser(message), messageParser.getUris(message)) match {
+            val senderAddress = messageParser.getSenderAddress(message)
+            (messageParser.getUser(senderAddress), messageParser.getUris(message)) match {
               case (None, _) =>
                 sendReply(
                   message = message,
                   htmlBody = s"""
                     |Hi There, <br><br>
-                    |We are unable to keep this page for you because it was sent from an unverified email address ($senderAddr) or it is not associated with a Kifi account. <br>
+                    |We are unable to keep this page for you because it was sent from an unverified email address ($senderAddress) or it is not associated with a Kifi account. <br>
                     |Let us help you get set up so this doesn’t happen again. <br><br>
                     |<u>Get verified</u>
                     |If you are a registered Kifi user, log in and visit <a href="https://www.kifi.com/profile">your profile</a>. Click to "Manage your email addresses". If the email address isn’t listed, add it and we’ll send you an email to verify it. If it is listed, you can resend a verification email. <br><br>
@@ -158,9 +158,7 @@ class MailToKeepMessageParser @Inject() (
 
   private val Url = """(?i)(?<![@.])\b(https?://)?(([a-z0-9\-]+\.)+[a-z]{2,3}(/\S*)?)\b""".r
 
-  def getSenderAddr(m: Message): String = {
-    m.getReplyTo.headOption.orElse(m.getFrom.headOption).map(getAddr).head
-  }
+  def getSenderAddress(m: Message): String = { getAddr(m.getFrom.head) }
 
   def getUris(m: Message): Seq[URI] = {
     Url.findAllMatchIn(m.getSubject + " " + getText(m).getOrElse("")).map { m =>
@@ -168,11 +166,11 @@ class MailToKeepMessageParser @Inject() (
     }.flatten.toList.distinct
   }
 
-  def getUser(message: Message): Option[User] = {
+  def getUser(senderAddress: String): Option[User] = {
     db.readOnly { implicit s =>
-      message.getFrom.map(getAddr).map { address =>
-        emailAddressRepo.getVerifiedOwner(address)
-      }.headOption.flatten.map(userRepo.get)
+      emailAddressRepo.getVerifiedOwner(senderAddress).map { userId =>
+        userRepo.get(userId)
+      }
     }
   }
 }
