@@ -17,6 +17,13 @@ class Word2VecCommander @Inject()(
   word2vec: Word2VecWordRepresenter,
   uriFeatureRetriever: RichWord2VecURIFeatureRetriever
 ) {
+
+  // a few more than Lucene default stopwords
+  val STOP_WORDS = Set("a", "an", "and", "are", "as", "at", "be", "but", "by",
+    "for", "if", "in", "into", "is", "it", "no", "not", "of", "on", "or", "such",
+    "that", "the", "their", "then", "there", "these","they", "this", "to", "was",
+    "will", "with", "you", "your", "my", "mine", "he", "she", "his", "her")
+
   val (dim, mapper, doc2vec) = {
     (word2vec.dimension, word2vec.mapper, new Doc2Vec(word2vec.mapper, word2vec.dimension))
   }
@@ -129,8 +136,8 @@ class Word2VecCommander @Inject()(
   }
 
   private def extractKeywords(feat: RichWord2VecURIFeature): Word2VecKeywords = {
-    val cosineKeywords = feat.keywords
-    val freqKeywords = feat.bagOfWords.toArray.sortBy( -1 * _._2).take(5).map{_._1}
+    val cosineKeywords = feat.keywords.filter(!STOP_WORDS.contains(_))
+    val freqKeywords = feat.bagOfWords.toArray.sortBy( -1 * _._2).map{_._1}.filter(!STOP_WORDS.contains(_)).take(5)
     Word2VecKeywords(cosineKeywords, freqKeywords)
   }
 
