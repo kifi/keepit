@@ -287,7 +287,7 @@ module.exports = function (grunt) {
         destImg: 'img/sprites.png',
         destCSS: 'src/common/build-css/sprites.styl',
         imgPath: '/img/sprites.png',
-        algorithm: 'top-down',
+        algorithm: 'binary-tree',
         padding: 2,
         cssFormat: 'stylus',
         cssVarMap: function (sprite) {
@@ -300,10 +300,24 @@ module.exports = function (grunt) {
         destImg: 'img/sprites.png',
         destCSS: 'src/common/spritesClasses.styl',
         imgPath: '/img/sprites.png',
-        algorithm: 'top-down',
+        algorithm: 'binary-tree',
         padding: 2,
         cssFormat: 'stylus',
-        cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl'
+        cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl',
+        cssVarMap: function (sprite) {
+          var cssSelector = '';
+          var pseudoClasses = ['hover', 'active'];
+          var names = sprite.name.split('-');
+          var modifier = names[names.length - 1];
+          var root = names.slice(0, names.length - 1).join('-');
+
+          if (pseudoClasses.indexOf(modifier) !== -1) {
+            cssSelector += '.sprite-' + sprite.name + ', .sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
+          } else {
+            cssSelector += '.sprite-' + sprite.name + '\n  sprite2x($' + sprite.name + ')\n';
+          }
+          sprite.cssSelector = cssSelector;
+        }
       }
     },
     env: {

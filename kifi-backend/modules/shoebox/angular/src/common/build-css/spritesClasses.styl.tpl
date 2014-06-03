@@ -9,7 +9,5 @@
   font-size: 0
 
 {{#items}}
-.sprite-{{name}}
-  sprite2x(${{name}})
-
+{{cssSelector}}
 {{/items}}
