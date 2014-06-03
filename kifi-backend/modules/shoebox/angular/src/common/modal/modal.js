@@ -110,7 +110,7 @@ angular.module('kifi.modal', [])
         var wrap = element.find('.dialog-body-wrap');
 
         var resizeWindow = _.debounce(function () {
-          var winHeight = $window.document.body.clientHeight;
+          var winHeight = $window.innerHeight;
           wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
         }, 100);
 
