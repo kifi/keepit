@@ -220,10 +220,10 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         $timeout(function () {
           var img = element.find('.kf-keep-small-image');
           if (img) {
-            var imgWidth = scope.keep.summary.imageWidth
+            var imgWidth = scope.keep.summary.imageWidth;
             img.css({maxWidth: imgWidth});
           }
-        })
+        });
 
         scope.hasKeepers = function () {
           var keep = scope.keep;

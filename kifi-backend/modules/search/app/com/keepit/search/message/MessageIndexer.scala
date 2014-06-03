@@ -15,6 +15,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import java.io.StringReader
+import com.keepit.social.{BasicUser, BasicNonUser}
 
 
 object ThreadIndexFields {
@@ -82,10 +83,19 @@ class MessageContentIndexable(
 
     //add the participant names
     val participantNameList = (0 until data.participants.length).map{ i=>
-      val user = data.participants(i)
-      val userName = user.firstName + " " + user.lastName
-      val userNameLang = LangDetector.detect(userName, preferedLang)
-      (i, userName, userNameLang)
+      val participant = data.participants(i)
+      val participantName = participant match {
+        case user: BasicUser => user.firstName + " " + user.lastName
+        case nonUser: BasicNonUser => {
+          val fullNameOpt = for {
+            firstName <- nonUser.firstName
+            lastName <- nonUser.lastName
+          } yield firstName + " " + lastName
+          fullNameOpt getOrElse nonUser.id
+        }
+      }
+      val participantNameLang = LangDetector.detect(participantName, preferedLang)
+      (i, participantName, participantNameLang)
     }
     val participantNames = buildLineField(ThreadIndexFields.participantNameField, participantNameList){ (fieldName, text, lang) =>
       val analyzer = DefaultAnalyzer.getAnalyzer(lang)

@@ -189,9 +189,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByUri", ALWAYS) {
-      getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
-    }
+    getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
   }
 
   /**

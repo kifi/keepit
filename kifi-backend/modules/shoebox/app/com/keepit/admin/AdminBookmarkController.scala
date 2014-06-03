@@ -222,8 +222,8 @@ class AdminBookmarksController @Inject() (
   def userBookmarkKeywords = AdminHtmlAction.authenticatedAsync { request =>
     val user = request.userId
     val uris = db.readOnly{ implicit s =>
-      keepRepo.getByUser(user)
-    }.filter(!_.isPrivate).sortBy(-1L * _.createdAt.getMillis).map{_.uriId}.take(500).sortBy( x => x.id)    // sorting helps s3 performance
+      keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)
+    }.sortBy(x => x.id)    // sorting helps s3 performance
 
     val word2vecFut = uriSummaryCommander.batchGetWord2VecKeywords(uris)
 
@@ -238,7 +238,7 @@ class AdminBookmarksController @Inject() (
         val s3 = w2v.map{_.freq}.getOrElse(Seq()).toSet
         (s1.union(s2.intersect(s3))).foreach{ word => keyCounts(word) = keyCounts(word) + 1 }
       }
-      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(50)))
+      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
     }
   }
 }
