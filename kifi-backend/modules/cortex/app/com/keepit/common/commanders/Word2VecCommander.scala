@@ -8,13 +8,22 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.MatrixUtils
 import com.keepit.cortex.utils.TextUtils
-
+import com.keepit.model.Word2VecKeywords
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 @Singleton
 class Word2VecCommander @Inject()(
   word2vec: Word2VecWordRepresenter,
-  uriFeatureRetriever: Word2VecURIFeatureRetriever
+  uriFeatureRetriever: RichWord2VecURIFeatureRetriever
 ) {
+
+  // a few more than Lucene default stopwords
+  val STOP_WORDS = Set("a", "an", "and", "are", "as", "at", "be", "but", "by",
+    "for", "if", "in", "into", "is", "it", "no", "not", "of", "on", "or", "such",
+    "that", "the", "their", "then", "there", "these","they", "this", "to", "was",
+    "will", "with", "you", "your", "my", "mine", "he", "she", "his", "her")
+
   val (dim, mapper, doc2vec) = {
     (word2vec.dimension, word2vec.mapper, new Doc2Vec(word2vec.mapper, word2vec.dimension))
   }
@@ -126,4 +135,22 @@ class Word2VecCommander @Inject()(
 
   }
 
+  private def extractKeywords(feat: RichWord2VecURIFeature): Word2VecKeywords = {
+    val cosineKeywords = feat.keywords.filter(!STOP_WORDS.contains(_))
+    val freqKeywords = feat.bagOfWords.toArray.sortBy( -1 * _._2).map{_._1}.filter(!STOP_WORDS.contains(_)).take(5)
+    Word2VecKeywords(cosineKeywords, freqKeywords)
+  }
+
+  def uriKeywords(uri: Id[NormalizedURI]): Option[Word2VecKeywords] = {
+    uriFeatureRetriever.getByKey(uri, word2vec.version).map{ feat =>
+      extractKeywords(feat)
+    }
+  }
+
+  def batchURIKeywords(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
+    val featsFut = Future {uriFeatureRetriever.getByKeys(uris, word2vec.version)}
+    featsFut.map{ feats =>
+      feats.map{ ftOpt => ftOpt.map{extractKeywords(_)}}
+    }
+  }
 }

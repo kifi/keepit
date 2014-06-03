@@ -34,9 +34,11 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
     case AirbrakeErrorNotice(error, selfError) =>
       try {
         if (error.panic) pagerDutySender.openIncident(error.message.getOrElse(error.exception.toString), error.exception, Some(error.signature.value))
-        val xml = formatter.format(error)
-        airbrakeSender.sendError(xml)
-        println(xml)
+        if (!error.aggregateOnly) {
+          val xml = formatter.format(error)
+          airbrakeSender.sendError(xml)
+          println(xml)
+        }
       } catch {
         case e: Throwable =>
           log.error(s"can't format or send error $error")

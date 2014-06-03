@@ -286,6 +286,8 @@ object Cortex extends Service {
   object internal {
     def word2vecSimilairty(word1: String, word2: String) = ServiceRoute(GET, "/internal/cortex/word2vec/wordSimilarity", Param("word1", word1), Param("word2", word2))
     def keywordsAndBow() = ServiceRoute(POST, "/internal/cortex/word2vec/keywordsAndBow")
+    def uriKeywords(uri: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/word2vec/uriKeywords", Param("uri", uri))
+    def batchGetURIKeywords() = ServiceRoute(POST, "/internal/cortex/word2vec/batchUriKeywords")
     def word2vecURISimilarity(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = ServiceRoute(GET, s"/internal/cortex/word2vec/uriSimilarity", Param("uri1", uri1), Param("uri2", uri2))
     def word2vecUserSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/userSimilarity")
     def word2vecQueryUriSimilarity() = ServiceRoute(POST, "/internal/cortex/word2vec/queryUriSimilarity")

@@ -1,0 +1,10 @@
+@(userId: Id[User], keywords: Seq[(String, Int)])
+
+@admin("Keywords Cloud"){
+  <div>User Id: @userId</div>
+
+  @keywords.map{ case (word, cnt) =>
+    <div> @word  ----> @cnt</div>
+  }
+
+}

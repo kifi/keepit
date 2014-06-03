@@ -41,6 +41,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{SocialNetworkType, SocialId, SocialNetworks}
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class KeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -53,7 +54,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    FakeCortexServiceClientModule()
   )
 
   def externalIdForTitle(title: String): String = forTitle(title).externalId.id
@@ -152,7 +154,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
               "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
               "clickCount":-1,
               "rekeepCount":-1,
-              "collections":[]},
+              "collections":[],
+              "siteName":"Amazon"},
             {
               "id":"${bookmark1.externalId.toString}",
               "title":"G1",
@@ -163,7 +166,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
               "keepers":[],
               "clickCount":-1,
               "rekeepCount":-1,
-              "collections":[]}
+              "collections":[],
+              "siteName":"Google"}
           ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
@@ -233,7 +237,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
                 "keepers":[],
                 "clickCount":-1,
                 "rekeepCount":-1,
-                "collections":[]
+                "collections":[],
+                "siteName":"Amazon"
               }
             ]
           }

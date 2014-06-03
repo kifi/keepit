@@ -135,28 +135,26 @@ class ShoeboxController @Inject() (
   def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val ts = System.currentTimeMillis
     val normalizedUri = request.body.as[NormalizedURI]
-    val saved = db.readWrite(attempts = 3) { implicit s =>
-      normUriRepo.save(normalizedUri)
-    }
+    val saved = scraperHelper.saveNormalizedURI(normalizedUri)
     log.debug(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
     Ok(Json.toJson(saved))
   }
 
   def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
-     val saveResult = Try(db.readWrite(attempts = 2) { implicit s =>
-       // Handle serialization in session to be transactional.
-       val originalNormalizedUri = normUriRepo.get(uriId)
-       val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
-       val newNormalizedUriResult = Json.fromJson[NormalizedURI](originalJson ++ request.body.as[JsObject])
+    val saveResult = Try {
+      // Handle serialization in session to be transactional.
+      val originalNormalizedUri = db.readOnly{ implicit s => normUriRepo.get(uriId) }
+      val originalJson = Json.toJson(originalNormalizedUri).as[JsObject]
+      val newNormalizedUriResult = Json.fromJson[NormalizedURI](originalJson ++ request.body.as[JsObject])
 
-       newNormalizedUriResult.fold({ invalid =>
-         log.error(s"Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}")
-         airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update: $invalid. See logs for more.")
-         None
-       }, { normalizedUri =>
-         Some(normUriRepo.save(normalizedUri))
-       }).nonEmpty
-    })
+      newNormalizedUriResult.fold({ invalid =>
+        log.error(s"Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}")
+        airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update: $invalid. See logs for more.")
+        None
+      }, { normalizedUri =>
+        Some(scraperHelper.saveNormalizedURI(normalizedUri))
+      }).nonEmpty
+    }
     saveResult match {
       case Success(res) =>
         Ok(Json.toJson(res))
@@ -165,7 +163,6 @@ class ShoeboxController @Inject() (
         airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update", ex)
         Ok(Json.toJson(false))
     }
-
   }
 
   // todo: revisit
@@ -220,7 +217,7 @@ class ShoeboxController @Inject() (
     resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
-  def recordScrapedNormalization() = Action(parse.tolerantJson) { request =>
+  def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
 
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
@@ -230,14 +227,21 @@ class ShoeboxController @Inject() (
     val signature = Signature((request.body \ "signature").as[String])
     val scrapedUri = db.readOnly { implicit session => normUriRepo.get(uriId) }
 
-    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate)
-    // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
-    scrapedUri.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { scrapedUriCandidate =>
-      val alternateUrls = (request.body \ "alternateUrls").asOpt[Set[String]].getOrElse(Set.empty)
-      val alternateUris = db.readOnly { implicit session => alternateUrls.flatMap(normUriRepo.getByUri(_)) }
-      alternateUris.foreach(uri => normalizationServiceProvider.get.update(NormalizationReference(uri), scrapedUriCandidate))
+    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
+
+      (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
+        val bestReference = newReferenceOption.map { newReferenceId => db.readOnly { implicit session => normUriRepo.get(newReferenceId) } } getOrElse scrapedUri
+        // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
+        bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
+          alternateUrls.foreach { alternateUrl =>
+            db.readWrite { implicit session =>
+              normUriRepo.internByUri(alternateUrl, bestCandidate)
+            }
+          }
+        }
+      }
+      Ok
     }
-    Ok
   }
 
   def getProxy(url:String) = SafeAsyncAction { request =>

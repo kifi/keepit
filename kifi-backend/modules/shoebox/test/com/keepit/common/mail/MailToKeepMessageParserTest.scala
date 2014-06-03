@@ -5,12 +5,13 @@ import java.util.Properties
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{EmailAddress, User, UserRepo, EmailAddressRepo}
+import com.keepit.model._
 
 import javax.mail.Message.RecipientType
 import javax.mail.Session
 import javax.mail.internet.{MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage}
 import com.keepit.test.ShoeboxTestInjector
+import com.keepit.model.EmailAddress
 
 class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector {
   "MailToKeepMessageParser" should {
@@ -67,7 +68,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
               userRepo.save(User(firstName = "Greg", lastName = "Methvin")))
         }
         db.readWrite { implicit s =>
-          emailAddressRepo.save(EmailAddress(address = "eishay@42go.com", userId = eishay.id.get))
+          emailAddressRepo.save(EmailAddress(address = "eishay@42go.com", userId = eishay.id.get, state = EmailAddressStates.VERIFIED))
           emailAddressRepo.save(EmailAddress(address = "greg@42go.com", userId = greg.id.get))
         }
         val parser = new MailToKeepMessageParser(db, emailAddressRepo, userRepo)
@@ -78,8 +79,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
         message.setRecipient(RecipientType.TO, new InternetAddress("greg@42go.com"))
         message.setContent("Hey, you should check out http://google.com/.", "text/html")
         message.saveChanges()
-
-        parser.getUser(message).get.firstName === "Eishay"
+        parser.getUser(parser.getSenderAddress(message)).get.firstName === "Eishay"
       }
     }
   }

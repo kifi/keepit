@@ -1,29 +1,55 @@
 package com.keepit.scraper
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.{Future, Await, Awaitable}
 import com.keepit.model._
 import com.keepit.common.db.{State, Id}
 import scala.concurrent.duration._
 import com.keepit.common.concurrent.ExecutionContext
+import java.util.concurrent.locks.ReentrantLock
+import com.keepit.common.logging.Logging
 
-class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) extends SyncShoeboxDbCallbacks with ShoeboxDbCallbacks {
+@Singleton
+class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) extends SyncShoeboxDbCallbacks with ShoeboxDbCallbacks with Logging {
   implicit val serviceCallTimeout = config.serviceCallTimeout
   implicit val fjCtx = ExecutionContext.fj
+
+  private val normalizedUriLock = new ReentrantLock()
+  private val recordPermanentRedirectLock = new ReentrantLock()
 
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 
   def syncAssignTasks(zkId:Long, max: Int):Seq[ScrapeRequest] = await(assignTasks(zkId, max))
   def syncIsUnscrapableP(url: String, destinationUrl: Option[String]) = await(isUnscrapableP(url, destinationUrl))
   def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI] = await(getNormalizedUri(uri))
-  def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI = await(saveNormalizedUri(uri))
+  def syncSaveNormalizedUri(uri:NormalizedURI): NormalizedURI = {
+    try {
+      normalizedUriLock.lock()
+      log.info(s"[${normalizedUriLock.getQueueLength}] about to persist $uri")
+      val saved = await(saveNormalizedUri(uri))
+      log.info(s"[${normalizedUriLock.getQueueLength}] done with persist $uri")
+      saved
+    } finally {
+      normalizedUriLock.unlock()
+    }
+  }
   def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = await(saveScrapeInfo(info))
   def syncSavePageInfo(info:PageInfo):PageInfo = await(savePageInfo(info))
   def syncSaveImageInfo(info:ImageInfo):ImageInfo = await(saveImageInfo(info))
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Keep] = await(getBookmarksByUriWithoutTitle(uriId))
   def syncGetLatestKeep(url: String): Option[Keep] = await(getLatestKeep(url))
-  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = await(recordPermanentRedirect(uri, redirect))
+  def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
+    try {
+      recordPermanentRedirectLock.lock()
+      log.info(s"[${recordPermanentRedirectLock.getQueueLength}] about to persist redirected $uri")
+      val saved = await(recordPermanentRedirect(uri, redirect))
+      log.info(s"[${recordPermanentRedirectLock.getQueueLength}] done with persist redirected $uri")
+      saved
+    } finally {
+      recordPermanentRedirectLock.unlock()
+    }
+  }
   def syncSaveBookmark(bookmark:Keep):Keep = await(saveBookmark(bookmark))
   def syncRecordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Unit = {
     await(recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls))

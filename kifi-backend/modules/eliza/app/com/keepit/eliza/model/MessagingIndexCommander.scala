@@ -34,8 +34,9 @@ class MessagingIndexCommander @Inject() (
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
     log.info(s"getting content for thread $threadId seq $seq")
     val thread = db.readOnly{ implicit session => threadRepo.get(threadId) }
-    val participants : Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
-    val participantBasicUsersFuture = shoebox.getBasicUsers(participants)
+    val userParticipants : Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
+    val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
+    val participantBasicNonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).map(NonUserParticipant.toBasicNonUser)
 
     val messages : Seq[Message] = db.readOnly{ implicit session =>
       messageRepo.get(threadId, 0)
@@ -67,14 +68,14 @@ class MessagingIndexCommander @Inject() (
         mode = FULL,
         id = Id[ThreadContent](threadId.id),
         seq = seq,
-        participants = participantBasicUsers.values.toSeq,
+        participants = participantBasicUsers.values.toSeq ++ participantBasicNonUsers,
         updatedAt = messages.head.createdAt,
         url = thread.url.getOrElse(""),
         threadExternalId = thread.externalId.id,
         pageTitleOpt = thread.pageTitle,
         digest = digest,
         content = content,
-        participantIds = participants
+        participantIds = userParticipants
       )
     }
   }

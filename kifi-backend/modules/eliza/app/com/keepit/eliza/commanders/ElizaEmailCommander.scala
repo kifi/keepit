@@ -30,9 +30,10 @@ import com.keepit.common.net.URI
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
 import com.keepit.common.mail.GenericEmailAddress
-import com.keepit.eliza.mail.DomainToNameMapper
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.util.{MessageFormatter, TextSegment}
+import com.keepit.common.strings.AbbreviateString
+import com.keepit.common.domain.DomainToNameMapper
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -93,20 +94,12 @@ class ElizaEmailCommander @Inject() (
     val starterUser = allUsers(starterUserId)
     val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
 
-    val pageName = thread.nUrl.flatMap { url =>
-      val hostOpt = URI.parse(url).toOption.flatMap(_.host)
-      hostOpt map { host =>
-        def nameForSuffixLength(n: Int) = DomainToNameMapper.getName(host.domain.take(n).reverse.mkString("."))
-        // Attempts to map more restrictive subdomains first
-        val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
-        candidates.collectFirst { case Some(name) => name }.getOrElse(host.name)
-      }
-    }.getOrElse("")
+    val pageName = thread.nUrl.flatMap(DomainToNameMapper.getNameFromUrl(_)).getOrElse("")
 
     ThreadEmailInfo(
       pageUrl = thread.nUrl.get,
       pageName = pageName,
-      pageTitle = uriSummary.title.getOrElse(thread.nUrl.get),
+      pageTitle = uriSummary.title.getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
       heroImageUrl = uriSummary.imageUrl,
       pageDescription = uriSummary.description.map(_.take(190) + "..."),
