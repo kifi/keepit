@@ -85,6 +85,7 @@ class ScraperCallbackHelper @Inject()(
   }
 
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
+    log.info(s"scraper callback: save uri: ${normalizedUri.id.get}")
     db.readWrite(attempts = 1) { implicit s =>
       normUriRepo.save(normalizedUri)
     }
