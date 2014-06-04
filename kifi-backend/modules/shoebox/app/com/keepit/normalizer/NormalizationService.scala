@@ -154,7 +154,7 @@ class NormalizationServiceImpl @Inject() (
             saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
           }
         }
-        log.debug(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
+        log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some((betterReference, shouldMigrate))
       }
       else {
@@ -164,7 +164,7 @@ class NormalizationServiceImpl @Inject() (
     } map { case (betterReference, shouldMigrate) =>
       if (shouldMigrate) {
         uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
-        log.debug(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
+        log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
       }
       betterReference
     }
