@@ -52,18 +52,26 @@ class OrphanCleaner @Inject() (
     cleanNormalizedURIsByNormalizedURIs(readOnly)
   }
 
+  val theTwo = Set(3429L, 1059893L)
+
   private def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
     val currentUri = nuriRepo.get(uriId)
     val activeScrapeInfoOption = scrapeInfoRepo.getActiveByUriId(uriId)
     val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
 
+    if (theTwo.contains(currentUri.id.get.id)){
+      log.info(s"orphan cleaner: [check integrity] for ${currentUri.id.get.id}")
+    }
+
     if (isActuallyKept) {
       // Make sure the uri is not inactive and has a scrape info
       val (updatedUri, turnedUriActive) = currentUri match {
-        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) => (
-          if (readOnly) uriToBeActive else nuriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE)),
-          true
-        )
+        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) =>
+
+          val update = if (readOnly) uriToBeActive else nuriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE))
+          if (theTwo.contains(update.id.get.id)) { log.info(s"[check integrity 1]: updated uri: ${update}")}
+          (update, true)
+
         case _ => (currentUri, false)
       }
 
@@ -82,7 +90,9 @@ class OrphanCleaner @Inject() (
       // Remove any existing scrape info and make the uri active
       val (updatedUri, turnedUriActive) = currentUri match {
         case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          (if (readOnly) currentUri else nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE)), true)
+          val update = if (readOnly) currentUri else nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
+          if (theTwo.contains(update.id.get.id)) { log.info(s"[check integrity 2]: updated uri: ${update}")}
+          (update, true)
         case uri => (currentUri, false)
       }
 
