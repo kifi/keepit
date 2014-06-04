@@ -79,6 +79,10 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           keepService.togglePrivate([scope.keep]);
         };
 
+        scope.getSingleSelectedKeep = function () {
+          return [scope.keep];
+        };
+
         function formatTitleFromUrl(url, matches) {
           aUrlParser.href = url;
 
@@ -218,10 +222,13 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         };
 
         $timeout(function () {
-          var img = element.find('.kf-keep-small-image');
-          if (img) {
-            var imgWidth = scope.keep.summary.imageWidth;
-            img.css({maxWidth: imgWidth});
+          var content = element.find('.kf-keep-content-line');
+          var img = content.find('.kf-keep-small-image');
+          if (img.length) {
+            var info = content.find('.kf-keep-info');
+            var imgWidth = Math.min(scope.keep.summary.imageWidth, imageWidthThreshold);
+            img.outerWidth(imgWidth);
+            info.outerWidth(content.width() - imgWidth);
           }
         });
 
@@ -238,10 +245,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           // needed to prevent previewing
           e.stopPropagation();
           return scope.toggleSelect();
-        };
-
-        scope.removeTag = function (tag) {
-          tagService.removeKeepsFromTag(tag.id, scope.keep.id);
         };
 
         var dragMask = element.find('.kf-drag-mask');
@@ -304,7 +307,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
       },
       replace: true,
       restrict: 'A',
-      templateUrl: 'keep/tagList.tpl.html',
+      templateUrl: 'keeps/tagList.tpl.html',
       link: function (scope, element/*, attrs*/ ) {
         scope.data = {};
         scope.data.isClickingInList = false;
@@ -357,7 +360,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             }).slice(0, dropdownSuggestionCount);
           }
           function generateDropdownSuggestionCount() {
-            var elem = element.find('.page-coll-list');
+            var elem = element.find('.kf-keep-tag-list');
             if (elem && elem.offset().top) {
               return Math.min(10, Math.max(3, ($document.height() - elem.offset().top) / 24 - 1));
             }
@@ -398,9 +401,9 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return scope.hideAddTagDropdown();
         };
 
-        scope.createAndAddTag = function (keep) {
+        scope.createAndAddTag = function () {
           tagService.create(scope.tagFilter.name).then(function (tag) {
-            scope.addTag(tag, keep);
+            scope.addTag(tag);
           });
         };
 
@@ -548,17 +551,21 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           }
         };
 
+        scope.removeTag = function (tag) {
+          tagService.removeKeepsFromTag(tag.id, [scope.keep]);
+        };
+
         scope.removeTagFromSelectedKeeps = function (tag) {
           var keepsWithTag = scope.getSelectedKeeps().filter(function (keep) {
             var tagIds = _.pluck(keep.tagList, 'id');
             return _.contains(tagIds, tag.id);
           });
-          tagService.removeKeepsFromTag(tag.id, _.pluck(keepsWithTag, 'id'));
+          tagService.removeKeepsFromTag(tag.id, keepsWithTag);
         };
 
-        element.on('mousedown', '.page-coll-opt', function () {
+        element.on('mousedown', '.kf-keep-tag-opt', function () {
           scope.data.isClickingInList = true;
-        }).on('mouseup', '.page-coll-opt', function () {
+        }).on('mouseup', '.kf-keep-tag-opt', function () {
           scope.data.isClickingInList = false;
         });
 
@@ -587,19 +594,12 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
   function ($timeout) {
     return function (scope, element) {
       $timeout(function () {
-        var hiddenElement = element.find('.page-coll-opt-hidden');
+        var hiddenElement = element.find('.kf-keep-tag-hidden');
         var input = element.find('input');
         scope.$watch('tagFilter.name', function (value) {
           var html = value;
-          if (scope.isAddTagShown()) {
-            html += scope.newTagLabel;
-          }
           hiddenElement.html(html);
-          var parentWidth = element.parents('.page-coll-list')[0].offsetWidth - 20; // a padding offset
           var width = hiddenElement[0].offsetWidth + 10;
-          if (width > parentWidth) {
-            width = parentWidth;
-          }
           input.css('width', width + 'px');
         });
       });

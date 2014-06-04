@@ -3,12 +3,13 @@
 angular.module('kifi.keepService', [
   'kifi.undo',
   'kifi.clutch',
-  'angulartics'
+  'angulartics',
+  'util'
 ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location', 'util',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location, util) {
 
 
     function createPageSession() {
@@ -32,7 +33,7 @@ angular.module('kifi.keepService', [
     $rootScope.$on('tags.remove', function (tagId) {
       _.forEach(list, function (keep) {
         if (keep.tagList) {
-          keep.tagList = keep.tagList.filter(function (tag) {
+          var newTagList = keep.tagList.filter(function (tag) {
             if (tag.id === tagId) {
               if (!keep.removedTagList) {
                 keep.removedTagList = [];
@@ -42,6 +43,7 @@ angular.module('kifi.keepService', [
             }
             return true;
           });
+          keep.tagList = util.replaceArrayInPlace(keep.tagList, newTagList);
         }
       });
     });
@@ -59,34 +61,6 @@ angular.module('kifi.keepService', [
             }
             return true;
           });
-        }
-      });
-    });
-
-    $rootScope.$on('tags.removeFromKeep', function (e, data) {
-      var tagId = data.tagId,
-          keepId = data.keepId;
-      _.forEach(list, function (keep) {
-        if (keep.id === keepId && keep.tagList) {
-          keep.tagList = keep.tagList.filter(function (tag) {
-            return tag.id !== tagId;
-          });
-        }
-      });
-    });
-
-    $rootScope.$on('tags.addToKeep', function (e, data) {
-      var tag = data.tag,
-          keepId = data.keep.id;
-      _.forEach(list, function (keep) {
-        keep.isMyBookmark = true;
-        if (keep.id === keepId && keep.tagList) {
-          var isAlreadyThere = _.find(keep.tagList, function (existingTag) {
-            return existingTag.id === tag.id;
-          });
-          if (!isAlreadyThere) {
-            keep.tagList.push(tag);
-          }
         }
       });
     });
@@ -338,11 +312,12 @@ angular.module('kifi.keepService', [
         }, {});
 
         _.forEach(keeps, function (keep) {
-          keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
+          var newTagList = _.map(keep.collections || keep.tags, function (tagId) {
             return idMap[tagId] || null;
           }).filter(function (tag) {
             return tag != null;
           });
+          keep.tagList = util.replaceArrayInPlace(keep.tagList, newTagList);
         });
       },
 

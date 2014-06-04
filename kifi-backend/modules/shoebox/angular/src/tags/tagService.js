@@ -48,11 +48,13 @@ angular.module('kifi.tagService', [
           'action': 'addKeepsToTag'
         });
         if (res.data && res.data.addedToCollection) {
-          updateKeepCount(tag.id, res.data.addedToCollection);
-          // broadcast change to interested parties
           keeps.forEach(function (keep) {
-            $rootScope.$emit('tags.addToKeep', {tag: tag, keep: keep});
+            if (!_.contains(_.pluck(keep.tagList, 'id'), tag.id)) {
+              keep.tagList.push(tag);
+              keep.collections.push(tag.id);
+            }
           });
+          updateKeepCount(tag.id, res.data.addedToCollection);
         }
         return res;
       });
@@ -150,10 +152,10 @@ angular.module('kifi.tagService', [
 
       create: function (name) {
         var url = env.xhrBase + '/collections/create';
-
-        return $http.post(url, {
+        var payload = {
           name: name
-        }).then(function (res) {
+        };
+        return $http.post(url, payload).then(function (res) {
           var tag = res.data;
 
           tag.keeps = tag.keeps || 0;
@@ -230,13 +232,13 @@ angular.module('kifi.tagService', [
         });
       },
 
-      removeKeepsFromTag: function (tagId, keepIds) {
+      removeKeepsFromTag: function (tagId, keeps) {
         var url = env.xhrBase + '/collections/' + tagId + '/removeKeeps';
-        $http.post(url, keepIds).then(function (res) {
-          updateKeepCount(tagId, -keepIds.length);
-          // broadcast change to interested parties
-          keepIds.forEach(function (keepId) {
-            $rootScope.$emit('tags.removeFromKeep', {tagId: tagId, keepId: keepId});
+        $http.post(url, _.pluck(keeps, 'id')).then(function (res) {
+          updateKeepCount(tagId, -keeps.length);
+          keeps.forEach(function (keep) {
+            var index = _.findIndex(keep.tagList, function (tag) { return tag.id === tagId; });
+            keep.tagList.splice(index, 1);
           });
           $analytics.eventTrack('user_clicked_page', {
             'action': 'removeKeepsFromTag'
