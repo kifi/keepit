@@ -3,12 +3,14 @@
 angular.module('kifi.keepService', [
   'kifi.undo',
   'kifi.clutch',
-  'angulartics'
+  'kifi.tagService',
+  'angulartics',
+  'util'
 ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location', 'tagService', 'util',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location, tagService, util) {
 
 
     function createPageSession() {
@@ -26,99 +28,20 @@ angular.module('kifi.keepService', [
       limit = 10,
       smallLimit = 4,
       previewUrls = {},
-      doc = $document[0],
-      screenshotDebouncePromise = false;
+      doc = $document[0];
 
     $rootScope.$on('tags.remove', function (tagId) {
-      _.forEach(list, function (keep) {
-        if (keep.tagList) {
-          keep.tagList = keep.tagList.filter(function (tag) {
-            if (tag.id === tagId) {
-              if (!keep.removedTagList) {
-                keep.removedTagList = [];
-              }
-              keep.removedTagList.push(tag);
-              return false;
-            }
-            return true;
-          });
-        }
+      var keeps = _.filter(list, function (keep) {
+        return keep.removeTag(tagId);
       });
+      tagService.setRemovedKeepsForTag(tagId, keeps);
     });
 
     $rootScope.$on('tags.unremove', function (tagId) {
-      _.forEach(list, function (keep) {
-        if (keep.removedTagList) {
-          keep.removedTagList.filter(function (tag) {
-            if (tag.id === tagId) {
-              if (!keep.tagList) {
-                keep.tagList = [];
-              }
-              keep.tagList.push(tag);
-              return false;
-            }
-            return true;
-          });
-        }
+      _.forEach(tagService.getRemovedKeepsForTag(tagId), function (keep) {
+        keep.addTag(tagId);
       });
     });
-
-    $rootScope.$on('tags.removeFromKeep', function (e, data) {
-      var tagId = data.tagId,
-          keepId = data.keepId;
-      _.forEach(list, function (keep) {
-        if (keep.id === keepId && keep.tagList) {
-          keep.tagList = keep.tagList.filter(function (tag) {
-            return tag.id !== tagId;
-          });
-        }
-      });
-    });
-
-    $rootScope.$on('tags.addToKeep', function (e, data) {
-      var tag = data.tag,
-          keepId = data.keep.id;
-      _.forEach(list, function (keep) {
-        keep.isMyBookmark = true;
-        if (keep.id === keepId && keep.tagList) {
-          var isAlreadyThere = _.find(keep.tagList, function (existingTag) {
-            return existingTag.id === tag.id;
-          });
-          if (!isAlreadyThere) {
-            keep.tagList.push(tag);
-          }
-        }
-      });
-    });
-
-    function fetchScreenshots(keeps) {
-      if (keeps && keeps.length) {
-        api.fetchScreenshotUrls(keeps).then(function (urls) {
-          _.forEach(keeps, function (keep) {
-            keep.screenshot = urls[keep.url];
-          });
-        });
-      }
-    }
-
-    function lookupScreenshotUrls(keeps) {
-      if (keeps && keeps.length) {
-        var url = env.xhrBase + '/keeps/screenshot',
-          data = {
-            urls: _.pluck(keeps, 'url')
-          };
-
-        $log.log('keepService.lookupScreenshotUrls()', data);
-
-        return $http.post(url, data).then(function (res) {
-          $timeout(function () {
-            api.prefetchImages(res.data.urls);
-          });
-          return res.data.urls;
-        });
-      }
-      return $q.when(keeps || []);
-    }
 
     function processHit(hit) {
       _.extend(hit, hit.bookmark);
@@ -177,6 +100,33 @@ angular.module('kifi.keepService', [
       return deferred.promise;
     }
 
+    function buildKeep(keep) {
+      keep.isMyBookmark = true;
+      keep.tagList = keep.tagList || [];
+      keep.collections = keep.collections || [];
+
+      keep.addTag = function (tag) {
+        this.tagList.push(tag);
+        this.collections.push(tag.id);
+      };
+
+      keep.removeTag = function (tagId) {
+        var idx1 = _.findIndex(this.tagList, function (tag) {
+          return tag.id === tagId;
+        });
+        if (idx1 > -1) {
+          this.tagList.splice(idx1, 1);
+        }
+        var idx2 = this.collections.indexOf(tagId);
+        if (idx2 > -1) {
+          this.collections.splice(idx2, 1);
+          return true;
+        } else {
+          return false;
+        }
+      };
+    }
+
     var keepList = new Clutch(function (url, config) {
       $log.log('keepService.getList()', config && config.params);
 
@@ -184,11 +134,7 @@ angular.module('kifi.keepService', [
         var data = res.data,
           keeps = data.keeps || [];
 
-        _.forEach(keeps, function (keep) {
-          keep.isMyBookmark = true;
-        });
-
-        fetchScreenshots(keeps);
+        _.forEach(keeps, buildKeep);
 
         return { keeps: keeps, before: data.before };
       });
@@ -197,8 +143,6 @@ angular.module('kifi.keepService', [
 
     var api = {
       list: list,
-
-      totalKeepCount: 0,
 
       lastSearchContext: function () {
         return lastSearchContext;
@@ -338,11 +282,12 @@ angular.module('kifi.keepService', [
         }, {});
 
         _.forEach(keeps, function (keep) {
-          keep.tagList = _.map(keep.collections || keep.tags, function (tagId) {
+          var newTagList = _.map(keep.collections || keep.tags, function (tagId) {
             return idMap[tagId] || null;
           }).filter(function (tag) {
             return tag != null;
           });
+          keep.tagList = util.replaceArrayInPlace(keep.tagList, newTagList);
         });
       },
 
@@ -364,22 +309,6 @@ angular.module('kifi.keepService', [
           });
         }
         return $q.when({'threads': 0});
-      },
-
-      fetchScreenshotUrls: function (urls) {
-        var previousCancelled = screenshotDebouncePromise && $timeout.cancel(screenshotDebouncePromise);
-
-        if (previousCancelled) {
-          // We cancelled an existing call that was in a timeout. User is likely typing actively.
-          screenshotDebouncePromise = $timeout(angular.noop, 1000);
-          return screenshotDebouncePromise.then(function () {
-            return lookupScreenshotUrls(urls);
-          });
-        }
-
-        // No previous request was going. Start a timer, but go ahead and run the screenshot lookup.
-        screenshotDebouncePromise = $timeout(angular.noop, 1000);
-        return lookupScreenshotUrls(urls);
       },
 
       prefetchImages: function (urls) {
@@ -542,8 +471,6 @@ angular.module('kifi.keepService', [
 
           _.forEach(hits, processHit);
           list.push.apply(list, hits);
-
-          fetchScreenshots(hits);
 
           refinements++;
           lastSearchContext = {

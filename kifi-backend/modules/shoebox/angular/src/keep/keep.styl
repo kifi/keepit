@@ -119,7 +119,6 @@
   width: 100%
 
 .kf-keep-content-line
-  display: table
   padding: 10px 0
 
 .kf-keep-big-image
@@ -135,15 +134,15 @@
 
 .kf-keep-small-image
   vertical-align: top
-  display: table-cell
+  display: inline-block
 
 .kf-keep-small-image + .kf-keep-info
   padding-left: 20px
-  overflow: hidden
+  display: inline-block
 
 .kf-keep-info
   vertical-align: top
-  display: table-cell
+  box-sizing: border-box
 
 .kf-keep-title
   max-width: 100%
@@ -167,6 +166,7 @@
   font-smoothing: antialiased
   color: textBlackColor
   word-wrap: break-word
+  text-align: justify
 
 .kf-keep-url
   display: inline-block
@@ -189,19 +189,41 @@
   .kf-keep-tags
     background-position: 0 1px
 
+
+.kf-keep-tag
+input.kf-keep-tag-input
+  border: 1px solid blueColor
+  border-radius: 3px
+  margin-right: 4px
+  vertical-align: middle
+
+.kf-keep-tag
+input.kf-keep-tag-input
+.kf-keep-tag-opt
+.kf-keep-tag-hidden
+  max-width: 150px
+  font-size: 12px
+  font-smoothing: antialiased
+  color: linkColor
+  
+.kf-keep-tag
+input.kf-keep-tag-input
+  padding: 2px 6px 1px
+  margin-bottom: 3px
+
+.kf-keep-tag-opt
+  padding: 3px 6px 3px
+
+input.kf-keep-tag-input
+.kf-keep-tag-opt
+  min-width: 75px
+  long-text()
+  
 .kf-keep-tag
   display: inline-block
   position: relative
-  vertical-align: middle
   overflow: hidden
   white-space: nowrap
-  color: blueColor
-  border: 1px solid blueColor
-  border-radius: 3px
-  padding: 2px 6px 1px
-  margin-right: 4px
-  font-size: 12px
-  font-smoothing: antialiased
 
   &.removed
     width: 0 !important
@@ -209,31 +231,57 @@
 
 .kf-keep-tag-link
   padding: 0 5px
+  font-smoothing: antialiased
 
-  &:not(:hover)
-    color: #99a3b3
+  &:active
+    color: clearBlueColor
 
-    .kf-keep-tag.example &
-      color: #c3dba8
+.kf-keep-tag-x-container
+  float: right
+  margin-left: 3px
 
-  &:hover
-    text-decoration: underline
-    font-smoothing: antialiased
+.kf-keep-tag-opts
+  position: absolute
+  border: 1px solid blueColor
+  background-color: #fff
+  z-index: 1
 
-.kf-keep-add-tag
-  display: inline-block
-  vertical-align: middle
-  height: 17px
-  width: 17px
-  background: url(../img/placeholder-icon.png) left center / 17px no-repeat
+.kf-keep-tag-opt.current
+  background-color: #eee
+  
+.kf-keep-tag-opt-new
+  padding: 2px 3px 1px 6px
+
+.kf-keep-tag-link-container
+.kf-keep-tag-opt-new-text
+  text-overflow: ellipsis
+  long-text()
+
+.kf-keep-tag-opt-new-label
+  float: right
+  font-size: 9px
+  padding: 2px 3px 1px 3px
+  margin-left: 5px
+  background-color: blueColor
+  color: #fff
+
+.kf-keep-tag-hidden
+  position: absolute
+  white-space: nowrap
+  visibility: hidden
 
 .kf-keep-private
   float: right
-  padding-right: 14px
   margin: 0 2px
 
   .kf-keep-private-label
-    padding-left: 4px
+    padding-right: 6px
+    color: textDarkGrey
+    font-size: 13px
+    font-weight: 200
+    font-smoothing: antialiased
+    font-style: italic
+    vertical-align: middle
 
 // preview button
 .kf-keep-hover-button-wrapper
@@ -332,6 +380,8 @@
 .kf-shadow-keep-ellipsis-counter-hidden
   visibility: hidden
 
-.page-coll-list>li
+.kf-keep-tag-list>li
   display: inline-block
 
+.kf-keep-add-tag-button
+  cursor: pointer
