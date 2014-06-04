@@ -7,6 +7,7 @@
     <span class="kf-byline">{{byline2}}</span>
   </span>
   <span class="kf-connection-card-action" ng-class="{'kf-connection-invited': invited}" ng-click="action()">
+    <span class="sprite sprite-tag-new-plus-icon" ng-if="actionText=='Invite'"></span>
     {{actionText}}
   </span>
   <span class="kf-connection-card-close" ng-click="closeAction()">✕</span>
