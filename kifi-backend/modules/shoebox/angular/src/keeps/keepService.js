@@ -169,7 +169,7 @@ angular.module('kifi.keepService', [
           this.tagList.splice(idx1, 1);
         }
         var idx2 = this.collections.indexOf(tagId);
-        if (idx2) {
+        if (idx2 > -1) {
           this.collections.splice(idx2, 1);
         }
       };
