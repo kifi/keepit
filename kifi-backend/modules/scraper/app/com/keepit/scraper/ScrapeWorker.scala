@@ -118,7 +118,8 @@ class ScrapeWorker(
     val Scraped(article, signature, redirects) = scraped
     val updatedUri = processRedirects(latestUri, redirects)
 
-    if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
+    if (updatedUri.state == NormalizedURIStates.REDIRECTED) (updatedUri, None)
+    else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
       helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
       log.debug(s"[processURI] (${uri.url}) no change detected")
       (latestUri, None)
@@ -164,7 +165,8 @@ class ScrapeWorker(
 
     val unscrapableURI = {
       helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-      val toBeSaved = processRedirects(latestUri, redirects).withState(NormalizedURIStates.UNSCRAPABLE)
+      val updatedUri = processRedirects(latestUri, redirects)
+      val toBeSaved = if (updatedUri.state == NormalizedURIStates.REDIRECTED) updatedUri else updatedUri.withState(NormalizedURIStates.UNSCRAPABLE)
       helper.syncSaveNormalizedUri(toBeSaved)
     }
     log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
@@ -378,6 +380,7 @@ class ScrapeWorker(
     signature = getSignature(extractor)
   )
 
+  // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
     redirects.find(_.isLocatedAt(uri.url)) match {
       case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => {
