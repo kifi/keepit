@@ -1,0 +1,11 @@
+<div class="profile-input-box">
+  <div ng-class="{ error: state.invalid }">
+    <div ng-transclude></div>
+    <div class="input-error" ng-show="state.invalid">
+      <div class="error-header" ng-bind-html="errorHeader"></div>
+      <div class="error-body" ng-bind-html="errorBody"></div>
+    </div>
+  </div>
+  <a class="profile-input-edit" href="javascript:" ng-hide="state.editing" ng-click="edit()" ng-if="explicitEnabling">Edit</a>
+  <a class="profile-input-save" href="javascript:" ng-show="!explicitEnabling || state.editing" ng-click="save()">{{actionLabel || 'Save'}}</a>
+</div>

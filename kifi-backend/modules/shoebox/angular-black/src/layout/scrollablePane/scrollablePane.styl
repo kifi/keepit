@@ -1,0 +1,14 @@
+.kf-scrollable-pane
+  width: calc(100% - 270px)
+  padding-left: 270px
+
+
+@media only screen and (max-width: 900px)
+  .kf-scrollable-pane
+    width: 100%
+    padding-left: 0
+    -webkit-transition: padding-left sidebarTransitionDuration;
+    transition: padding-left sidebarTransitionDuration;
+
+  .kf-sidebar-active .kf-scrollable-pane
+      padding-left: 270px

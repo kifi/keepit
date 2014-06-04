@@ -1,0 +1,283 @@
+.kf-main
+  min-width: 454px
+  width: calc(100% - 310px)
+
+@media only screen and (max-width: 900px)
+  .kf-main
+    -webkit-transition: width sidebarTransitionDuration;
+    transition: width sidebarTransitionDuration;
+
+  .kf-sidebar-active .kf-main
+    width: calc(100% - 270px)
+
+.kf-main
+
+  &>.kf-col-inner
+    border-left: 1px solid #dbdee3
+    //border-right: 1px solid #dbdee3
+    box-sizing: border-box
+
+.kf-main-head
+  position: relative
+  height: 73px
+  padding: 13px 20px 0
+  box-sizing: border-box
+
+  .kf-main-search &
+    padding-top: 10px
+    height: 38px
+
+.kf-main-title
+  margin: 0 0 2px
+  font-size: 25px
+  line-height: 30px
+  font-weight: 300
+
+.kf-subtitle
+  font-size: 13px
+  line-height: 20px
+  -webkit-font-smoothing: antialiased;
+
+  .kf-subtitle-text
+    color: #999
+    vertical-align: middle
+
+  .kf-edit-keeps
+    padding-left: 16px
+    float: right
+    color: linkColor
+    vertical-align: middle
+
+  .sprite-edit-pencil-icon
+    margin-right: 5px
+
+.kf-main-keeps
+  overflow: hidden
+
+  .kf-main-search &
+    top: 108px
+
+  & > .antiscroll-inner
+    padding: 0 19px 0 18px
+    box-sizing: border-box
+    overflow-x: hidden
+
+  & > .antiscroll-scrollbar
+    z-index: 1
+
+.kf-check-all
+  position: absolute
+  top: 1px
+  left: 0
+  width: 17px
+  height: 17px
+  border: 1px solid #e3e6ee
+  background: url(../img/check.png) 99px/12px 8px no-repeat #fff
+  box-sizing: border-box
+
+  &.enabled
+    cursor: pointer
+
+    &:hover
+      border-color: #b8c5d2
+
+  &.checked
+    background-position: 2px 4px
+
+  &.multi-checked
+    background: url(../img/multi-check.png) 99px/12px 8px no-repeat #fff
+    background-position: 2px 4px
+
+.kf-query-wrap
+  position: relative
+  padding: 0 25px 12px 30px
+  white-space: nowrap
+  z-index: 1
+
+.kf-query.kf-query
+  width: 100%
+  padding: 9px 48px 9px 35px
+  border: defaultBorder
+  border-radius: 3px
+  font-size: 17px
+  font-family: inherit
+  font-weight: 300
+  font-smoothing: antialiased
+  box-sizing: border-box
+  background: #fff url(../img/placeholder-icon.png) 5px center / 22px no-repeat
+
+  &::-webkit-input-placeholder
+    color: #99a3b3
+
+  &::-moz-placeholder
+    color: #99a3b3
+
+  &::placeholder
+    color: #99a3b3
+
+  &::-ms-clear
+    display: none
+
+.kf-query-x
+  position: absolute
+  top: 0
+  bottom: 0
+  right: 0
+  padding-top: 13px
+  text-align: center
+  box-sizing: border-box
+
+.kf-query-mag
+  cursor: text
+
+  &:before
+    width: 26px
+
+    .focus &
+      background-position: -26px
+
+.kf-query-x:before
+  width: 23px
+  background-position: -52px
+
+.kf-query-x:hover:before
+  background-position: -75px
+
+.kf-query-x:active:before
+  background-position: -98px
+
+.kf-query-wrap.empty .kf-query-x
+.kf-query-wrap:not(.empty) .kf-query-mag
+  left: 100%
+  transition-delay: 0
+
+.kf-small-tooltip
+  position: absolute
+  left: 0
+  right: 0
+  bottom: -12px
+  text-align: center
+  z-index: 1
+
+.kf-small-tooltip-box
+  display: inline-block
+  height: 18px
+  padding: 0 12px
+  border: 1px solid #f8f4e8
+  border-radius: 2px
+  font-size: 13px
+  font-weight: 300
+  line-height: 17px
+  background-color: #ffc
+  white-space: nowrap
+
+.kf-small-tooltip-link
+  font-weight: 500
+  margin-left: 4px
+
+  &:hover
+    text-decoration: underline
+
+.kf-search-filters
+  display: inline
+
+  &:before
+    content: ' | '
+    color: #cccccc
+    margin-left: 11px
+    margin-right: 17px
+
+.kf-search-filter.kf-search-filter
+  display: inline
+  color: #cccccc
+  text-decoration: none
+
+  &:after
+    content: '|'
+    color: #cccccc
+    font-size: 0.9em
+    margin: 0 5px
+
+  &:last-child:after
+    display: none
+    content: ''
+
+  &.enabled
+    color: linkColor
+
+    &:hover
+      text-decoration: underline
+
+  &.selected
+    color: #333333
+
+
+.import-modal
+
+  .import-star-to-kifi
+    width: 127px
+    height: 37px
+    margin: 12px 168px 16px
+
+  a.dialog-cancel
+    position: absolute
+    left: 50px
+    margin-top: 27px
+    color: #777
+    text-decoration: underline
+
+  button
+    width: 170px
+
+.import-file-modal
+
+  .import-file-link
+    cursor: pointer
+    margin-bottom: 12px
+
+  .import-file-status
+    text-align: center
+    cursor: pointer
+
+  .import-kippt-to-kifi
+    width: 127px
+    height: 37px
+    margin: 0px 168px 30px
+
+  .file-import-well
+    background-color: #eff2f7
+    border-radius: 10px
+    padding: 10px 20px 15px 20px
+    margin: 20px -20px
+
+  .file-import-inner
+    padding: 20px 20px 0
+
+  .import-how-to
+    font-weight: 800
+    margin: 10px 0
+
+  h3.pitch
+    font-size: 14px
+    font-weight: 800
+    margin-bottom: 10px
+
+  li.import-benefit
+    list-style-type: disc
+    margin-left: 15px
+
+  .import-inset input
+    opacity: 0
+    visibility: hidden
+    position: absolute
+    top: -3000px
+
+  .disabled
+    background-color: #a6b5c8
+
+  .disabled:hover
+    background-color: #a6b5c8
+    cursor: inherit
+
+  button
+    width: 240px

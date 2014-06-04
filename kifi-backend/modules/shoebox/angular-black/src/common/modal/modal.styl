@@ -1,0 +1,138 @@
+.modal-dialog.modal-dialog
+  position: fixed
+  left: 50%
+  top: 50%
+  transform: translate(-50%, -50%)
+  width: auto
+  margin: 0
+  z-index: 1050
+
+.modal-content.modal-content
+  width: 100%
+  height: 100%
+  border: 1px solid #8197AC
+  box-shadow: 10px 10px 0 rgba(0, 40, 90, 0.2)
+  background: #fff
+  border-radius: 5px
+  overflow: hidden
+
+
+.kifi-onboarding-iframe
+  position: fixed
+  top: 0
+  left: 0
+  margin: 0 auto
+  width: 100%
+  height: 100%
+  background: transparent
+  z-index: 10000
+
+
+.dialog-content
+  color: #66829b
+  line-height: 1.5
+  padding: 0 0 10px
+
+  h1
+    margin: 0 0 0
+    font-size: 28px
+    font-weight: 300
+    color: #333
+    font-smoothing: antialiased
+    text-align: center
+
+  button
+    width: 100px
+    height: 20px
+    line-height: 20px
+    padding: 11px 15px
+    background-color: #4372B1
+    color: #fff
+    border: none
+    border-radius: 6px
+    font-size: 17px
+    font-weight: 300
+    font-smoothing: antialiased
+    cursor: pointer
+    transition: background-color .1s
+
+    &:hover
+      background-color: #5382C1
+
+    &.dialog-warn
+      background-color: #ce6159
+
+      &:focus
+      &:hover
+        background-color: #D3716A
+
+
+    &.dialog-cancel
+      background-color: #b8c5d1
+
+      &:focus
+      &:hover
+        background-color: #C5D2DE
+
+      &:active
+        background-color: #9FACB8
+
+  .action-wrap
+    margin: 0 auto 15px
+    width: 100%
+    text-align: center
+
+  .email-address
+    color: #73787f
+
+.dialog-header
+  font-size: 18px
+  font-weight: 300
+  padding: 9px 6px 8px
+  color: #3a495b
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+  text-align: center
+
+  &.dialog-warning
+    color: #ce6159
+
+.dialog-x
+  position: absolute
+  color: #67829C
+  right: 20px
+  top: 25px
+  font-size: 18px
+  text-decoration: none
+  cursor: pointer
+
+.dialog-buttons
+  text-align: center
+  margin: 24px auto 30px
+
+.dialog-body-wrap
+  min-width: 300px
+  margin: 40px 35px
+  color: #333
+  font-size: 14px
+
+  .dialog-body
+    margin: 0 auto
+
+  .dialog-buttons
+    margin-bottom: 0px
+
+.dialog-centered
+  text-align: center
+
+.modal-backdrop
+  position: fixed
+  top: 0
+  right: 0
+  bottom: 0
+  left: 0
+  z-index: 1030
+  background-color: #000000
+  opacity: 0.3
+
