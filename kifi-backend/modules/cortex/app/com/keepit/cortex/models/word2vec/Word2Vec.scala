@@ -5,6 +5,7 @@ import com.keepit.cortex.features.Document
 import java.io._
 import com.keepit.cortex.core.BinaryFeatureFormatter
 import com.keepit.model.NormalizedURI
+import com.keepit.serializer.BinaryFormat
 
 trait Word2Vec extends StatModel {
   val dimension: Int
@@ -130,5 +131,21 @@ object RichWord2VecURIFeatureFormat {
     val bow = if (builder2.isEmpty) Array[String]() else builder2.toString.split(SEP)
 
     RichWord2VecURIFeature(dim, arr, keywords, (bow zip counts).toMap)
+  }
+}
+
+class RichWord2VecURIFeatureCacheFormat extends BinaryFormat[RichWord2VecURIFeature] {
+  protected def writes(prefix: Byte, value: RichWord2VecURIFeature): Array[Byte] = {
+    val bytes = RichWord2VecURIFeatureFormat.toBinary(value)
+    val ret = new Array[Byte](1 + bytes.size)
+    ret(0) = prefix
+    System.arraycopy(bytes, 0, ret, 1, bytes.size)
+    ret
+  }
+
+  protected def reads(obj: Array[Byte], offset: Int, length: Int): RichWord2VecURIFeature = {
+    val bytes = new Array[Byte](length)
+    System.arraycopy(obj, offset, bytes, 0, length)
+    RichWord2VecURIFeatureFormat.fromBinary(bytes)
   }
 }
