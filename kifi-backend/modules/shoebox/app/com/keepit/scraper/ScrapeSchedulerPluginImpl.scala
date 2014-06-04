@@ -142,8 +142,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
           case ScrapeInfoStates.ACTIVE   => s.withNextScrape(date)
           case ScrapeInfoStates.ASSIGNED => s // no change
           case ScrapeInfoStates.INACTIVE => {
-            val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
-            log.warn(msg, new IllegalStateException(msg))
+            log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
             s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // dangerous; revisit
           }
         }
