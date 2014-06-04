@@ -166,8 +166,7 @@ class ScrapeWorker(
     val unscrapableURI = {
       helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
       val updatedUri = processRedirects(latestUri, redirects)
-      val toBeSaved = if (updatedUri.state == NormalizedURIStates.REDIRECTED) updatedUri else updatedUri.withState(NormalizedURIStates.UNSCRAPABLE)
-      helper.syncSaveNormalizedUri(toBeSaved)
+      if (updatedUri.state == NormalizedURIStates.REDIRECTED) updatedUri else helper.syncSaveNormalizedUri(updatedUri.withState(NormalizedURIStates.UNSCRAPABLE))
     }
     log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
 
