@@ -214,8 +214,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_HUNDRED) {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
-          session.onTransactionSuccess {
-            updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
+          if (candidates.nonEmpty) {
+            session.onTransactionSuccess {
+              updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
+            }
           }
           uri
         case Success(Right(prenormalizedUrl)) => {
