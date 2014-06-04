@@ -3,10 +3,22 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
+    var friendsReady = false;
+
+    friendService.getKifiFriends().then(function () {
+      friendsReady = true;
+    });
+    $timeout(function () {
+      friendsReady = true;
+    }, 1200);
+
+    $scope.readyToDraw = function () {
+      return profileService.me.seqNum > 0 && friendsReady;
+    }
 
     $scope.openHelpRankHelp = function () {
       $scope.data.showHelpRankHelp = true;
