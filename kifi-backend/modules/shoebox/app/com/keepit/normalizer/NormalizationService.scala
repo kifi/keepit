@@ -150,21 +150,23 @@ class NormalizationServiceImpl @Inject() (
           val correctNormalization = currentReference.normalization orElse {
             weakerCandidates.collectFirst { case candidate if candidate.isTrusted && candidate.url == currentReference.url => candidate.normalization }
           }
-          if (currentReference.persistedNormalization != correctNormalization)
+          if (currentReference.persistedNormalization != correctNormalization) {
             saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
+          }
         }
         log.debug(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
-        Some(betterReference)
+        Some((betterReference, shouldMigrate))
       }
       else {
         log.warn(s"Aborting verified normalization because of recent overwrite of $currentReference with $latestCurrentUri")
         None
       }
-    } tap {
-      case Some(betterReference) =>
+    } map { case (betterReference, shouldMigrate) =>
+      if (shouldMigrate) {
         uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
         log.debug(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
-      case None =>
+      }
+      betterReference
     }
 
   private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {
