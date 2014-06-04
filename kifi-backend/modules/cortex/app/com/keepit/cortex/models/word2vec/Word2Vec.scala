@@ -1,11 +1,17 @@
 package com.keepit.cortex.models.word2vec
 
-import com.keepit.cortex.core.{BinaryFormatter, FeatureRepresentation, StatModel}
-import com.keepit.cortex.features.Document
 import java.io._
-import com.keepit.cortex.core.BinaryFeatureFormatter
+
+import scala.Array.canBuildFrom
+import scala.concurrent.duration.Duration
+
+import com.keepit.common.cache.{BinaryCacheImpl, CacheStatistics, FortyTwoCachePlugin, Key}
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
+import com.keepit.cortex.core._
 import com.keepit.model.NormalizedURI
 import com.keepit.serializer.BinaryFormat
+
 
 trait Word2Vec extends StatModel {
   val dimension: Int
@@ -149,3 +155,12 @@ class RichWord2VecURIFeatureCacheFormat extends BinaryFormat[RichWord2VecURIFeat
     RichWord2VecURIFeatureFormat.fromBinary(bytes)
   }
 }
+
+case class NormalizedURIWord2VecKey(id: Id[NormalizedURI]) extends Key[RichWord2VecURIFeature] {
+  override val version = 1
+  val namespace = "w2v_by_uriId"
+  def toKey(): String = id.id.toString
+}
+
+class RichWord2VecURIFeatureCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends BinaryCacheImpl[NormalizedURIWord2VecKey, RichWord2VecURIFeature](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(new RichWord2VecURIFeatureCacheFormat())
