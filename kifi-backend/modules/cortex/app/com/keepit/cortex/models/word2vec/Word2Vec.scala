@@ -1,10 +1,17 @@
 package com.keepit.cortex.models.word2vec
 
-import com.keepit.cortex.core.{BinaryFormatter, FeatureRepresentation, StatModel}
-import com.keepit.cortex.features.Document
 import java.io._
-import com.keepit.cortex.core.BinaryFeatureFormatter
+
+import scala.Array.canBuildFrom
+import scala.concurrent.duration.Duration
+
+import com.keepit.common.cache.{BinaryCacheImpl, CacheStatistics, FortyTwoCachePlugin, Key}
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
+import com.keepit.cortex.core._
 import com.keepit.model.NormalizedURI
+import com.keepit.serializer.BinaryFormat
+
 
 trait Word2Vec extends StatModel {
   val dimension: Int
@@ -132,3 +139,28 @@ object RichWord2VecURIFeatureFormat {
     RichWord2VecURIFeature(dim, arr, keywords, (bow zip counts).toMap)
   }
 }
+
+class RichWord2VecURIFeatureCacheFormat extends BinaryFormat[RichWord2VecURIFeature] {
+  protected def writes(prefix: Byte, value: RichWord2VecURIFeature): Array[Byte] = {
+    val bytes = RichWord2VecURIFeatureFormat.toBinary(value)
+    val ret = new Array[Byte](1 + bytes.size)
+    ret(0) = prefix
+    System.arraycopy(bytes, 0, ret, 1, bytes.size)
+    ret
+  }
+
+  protected def reads(obj: Array[Byte], offset: Int, length: Int): RichWord2VecURIFeature = {
+    val bytes = new Array[Byte](length)
+    System.arraycopy(obj, offset, bytes, 0, length)
+    RichWord2VecURIFeatureFormat.fromBinary(bytes)
+  }
+}
+
+case class NormalizedURIWord2VecKey(id: Id[NormalizedURI]) extends Key[RichWord2VecURIFeature] {
+  override val version = 1
+  val namespace = "w2v_by_uriId"
+  def toKey(): String = id.id.toString
+}
+
+class RichWord2VecURIFeatureCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends BinaryCacheImpl[NormalizedURIWord2VecKey, RichWord2VecURIFeature](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(new RichWord2VecURIFeatureCacheFormat())

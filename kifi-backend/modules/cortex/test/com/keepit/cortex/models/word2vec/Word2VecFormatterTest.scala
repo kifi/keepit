@@ -70,4 +70,28 @@ class Word2VecFormatterTest extends Specification{
 
     }
   }
+
+  "RichWord2VecURIFeatureCacheFormat" should {
+    "work" in {
+      var dim = 4
+      var vec = Array(1.1f, -2.3f, 4f, -3.14f)
+      var keywords = Array("apple", "orange")
+      var bow = Map("apple" -> 7, "orange" -> 5, "banana" -> 2)
+      var feat = RichWord2VecURIFeature(dim, vec, keywords, bow)
+
+      val format = new RichWord2VecURIFeatureCacheFormat()
+      var bytes = format.writes(Some(feat))
+      var back = format.reads(bytes).get
+
+      back.dim === feat.dim
+      back.vec === feat.vec
+      back.keywords === feat.keywords
+      back.bagOfWords.toArray === feat.bagOfWords.toArray
+
+      bytes = format.writes(None)
+      format.reads(bytes) === None
+
+    }
+
+  }
 }
