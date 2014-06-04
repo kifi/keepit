@@ -13,6 +13,7 @@ import Q.interpolation
 trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def allActive(implicit session: RSession): Seq[ScrapeInfo]
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
+  def getActiveByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
   def getOverdueCount(due: DateTime = currentDateTime)(implicit session: RSession):Int
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
   def getAssignedCount()(implicit session: RSession):Int
@@ -61,6 +62,9 @@ class ScrapeInfoRepoImpl @Inject() (
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo] =
     (for(f <- rows if f.uriId === uriId) yield f).firstOption
+
+  def getActiveByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo] =
+    (for(f <- rows if f.uriId === uriId && f.state === ScrapeInfoStates.ACTIVE) yield f).firstOption
 
   def getOverdueCount(due: DateTime = currentDateTime)(implicit session: RSession):Int = {
     sql"select count(*) from scrape_info where state = '#${ScrapeInfoStates.ACTIVE.value}' and next_scrape < $due".as[Int].first

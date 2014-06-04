@@ -136,7 +136,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
-    uri.state match {
+    saved.state match {
       case e:State[NormalizedURI] if DO_NOT_SCRAPE.contains(e) => // ensure no ACTIVE scrapeInfo records
         scrapeRepo.getByUriId(saved.id.get) match {
           case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
@@ -151,7 +151,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
         }
       case ACTIVE => // do nothing
       case _ =>
-        throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
+        throw new IllegalStateException(s"Unhandled state=${saved.state}; uri=$uri")
     }
     saved
   }
