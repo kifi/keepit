@@ -17,9 +17,9 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
     "user filters" in {
       withDb(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>
-          val mails = ElectronicMail(from = SystemEmailAddress.TEAM, to = List(SystemEmailAddress.ENG), subject = "foo 1", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
-                      ElectronicMail(from = SystemEmailAddress.TEAM, to = List(SystemEmailAddress.TEAM), cc = SystemEmailAddress.EISHAY :: SystemEmailAddress.JARED :: Nil, subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = NotificationCategory.System.HEALTHCHECK) ::
-                      ElectronicMail(from = SystemEmailAddress.TEAM, to = List(SystemEmailAddress.EISHAY), subject = "foo 3", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
+          val mails = ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.ENG), subject = "foo 1", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
+                      ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.TEAM), cc = Seq(SystemEmailAddress.EISHAY, SystemEmailAddress.JARED), subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = NotificationCategory.System.HEALTHCHECK) ::
+                      ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.EISHAY), subject = "foo 3", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
                       Nil
           mails map {mail => electronicMailRepo.save(mail) }
         }

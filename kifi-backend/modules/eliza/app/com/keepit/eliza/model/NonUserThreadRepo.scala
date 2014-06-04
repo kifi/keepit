@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.db.{State, Id}
 import com.keepit.model.{User, EContact, NormalizedURI}
-import com.keepit.common.mail.EmailAddressHolder
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.social.{NonUserKind, NonUserKinds}
 import scala.slick.jdbc.StaticQuery.interpolation
@@ -16,7 +16,7 @@ import scala.slick.jdbc.StaticQuery.interpolation
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {
 
-  def getThreadsByEmail(emailAddress: EmailAddressHolder)(implicit session: RSession): Seq[Id[MessageThread]]
+  def getThreadsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[MessageThread]]
 
   def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]]
 
@@ -34,7 +34,7 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread]
 
-  def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddressHolder, Int]
+  def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddress, Int]
 
 }
 
@@ -56,7 +56,7 @@ class NonUserThreadRepoImpl @Inject() (
   class NonUserThreadTable(tag: Tag) extends RepoTable[NonUserThread](db, tag, "non_user_thread") {
     def createdBy = column[Id[User]]("created_by", O.NotNull)
     def kind = column[NonUserKind]("kind", O.NotNull)
-    def emailAddress = column[EmailAddressHolder]("email_address", O.Nullable)
+    def emailAddress = column[EmailAddress]("email_address", O.Nullable)
     def econtactId = column[Id[EContact]]("econtact_id", O.Nullable)
     def threadId = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
@@ -68,7 +68,7 @@ class NonUserThreadRepoImpl @Inject() (
 
     def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedByOtherAt.?, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
 
-    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddressHolder], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
+    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddress], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
       val participant = t._5 match {
         case NonUserKinds.email =>
           NonUserEmailParticipant(t._6.get, t._7)
@@ -90,7 +90,7 @@ class NonUserThreadRepoImpl @Inject() (
   override def deleteCache(model: NonUserThread)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: NonUserThread)(implicit session: RSession): Unit = {}
 
-  def getThreadsByEmail(emailAddress: EmailAddressHolder)(implicit session: RSession): Seq[Id[MessageThread]] =
+  def getThreadsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[MessageThread]] =
     (for (row <- rows if row.emailAddress === emailAddress) yield row.threadId).list
 
   def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]] =
@@ -143,7 +143,7 @@ class NonUserThreadRepoImpl @Inject() (
     (for (row <- rows if row.accessToken===token) yield row).firstOption
   }
 
-  def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddressHolder, Int] = {
+  def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddress, Int] = {
     val relevantThreads = (for (row <- rows if row.createdBy === userId && row.createdAt > since) yield row)
     val recentRecipients = relevantThreads.groupBy(_.emailAddress).map { case (recipient, threads) => (recipient, threads.length) }
     recentRecipients.run.toMap

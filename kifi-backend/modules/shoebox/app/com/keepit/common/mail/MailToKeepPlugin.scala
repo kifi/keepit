@@ -138,9 +138,7 @@ class MailToKeepActor @Inject() (
       postOffice.sendMail(ElectronicMail(
         from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some("Kifi Team"),
-        to = List(new EmailAddressHolder {
-          val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
-        }),
+        to = List(EmailAddress(messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head))),
         subject = Option(newMessage.getSubject).getOrElse(""),
         htmlBody = htmlBody,
         inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),

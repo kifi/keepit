@@ -29,7 +29,7 @@ import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
 import scala.util.Success
 import play.api.mvc.Cookie
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.Invitation
@@ -165,7 +165,7 @@ class AuthHelper @Inject() (
   def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
-      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(GenericEmailAddress(emailAddrStr))) }
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(EmailAddress(emailAddrStr))) }
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -243,7 +243,7 @@ class AuthHelper @Inject() (
     )
   }
 
-  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddressHolder])] = {
+  private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {
     db.readOnly { implicit s =>
       val emailAddrOpt = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None)  // TODO: exclude INACTIVE records
       emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
@@ -251,7 +251,7 @@ class AuthHelper @Inject() (
           (userId, None)
         } getOrElse {
           // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified))
+          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified).map(EmailAddressHolder.toEmailAddress))
         }
       }
     }
@@ -263,7 +263,7 @@ class AuthHelper @Inject() (
         getResetEmailAddresses(emailAddrStr)
       } match {
         case Some((userId, verifiedEmailAddressOpt)) =>
-          val emailAddresses = Set(GenericEmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
+          val emailAddresses = Set(EmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
           db.readWrite { implicit session =>
             emailAddresses.map { resetEmailAddress =>
             // TODO: Invalidate both reset tokens the first time one is used.

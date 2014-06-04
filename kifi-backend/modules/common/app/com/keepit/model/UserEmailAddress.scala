@@ -6,7 +6,7 @@ import java.security.SecureRandom
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.mail.EmailAddressHolder
+import com.keepit.common.mail.{EmailAddressHolder, EmailAddress}
 import com.keepit.abook.{EmailParserUtils, EmailParser}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
 import com.keepit.common.logging.AccessLog

@@ -39,7 +39,7 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.SecureSocialClientIds
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.commanders.emails.EmailOptOutCommander
 
@@ -271,7 +271,7 @@ class InviteCommander @Inject() (
     val subject = inviteInfo.subject.getOrElse("Join me on kifi")
     log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] sending with subject=$subject message=$message")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
-    val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(GenericEmailAddress(c.email)))}"
+    val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(EmailAddress(c.email)))}"
 
 
     db.readWrite { implicit session =>
@@ -279,7 +279,7 @@ class InviteCommander @Inject() (
         senderUserId = None,
         from = SystemEmailAddress.INVITATION,
         fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
-        to = Seq(GenericEmailAddress(c.email)),
+        to = Seq(EmailAddress(c.email)),
         subject = subject,
         htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
         textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),

@@ -45,7 +45,7 @@ import com.keepit.social.UserIdentity
 import com.keepit.heimdal.ContextStringData
 import play.api.libs.json.JsSuccess
 import com.keepit.model.SocialUserConnectionsKey
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.commanders.emails.EmailOptOutCommander
@@ -314,7 +314,7 @@ class UserCommander @Inject() (
     }}
   }
 
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
     val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
@@ -739,7 +739,7 @@ class UserCommander @Inject() (
 
           postOffice.sendMail(ElectronicMail(
             from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(address)),
+            to = Seq(EmailAddress(address)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(firstName, verifyUrl).body,
             category = NotificationCategory.User.EMAIL_CONFIRMATION

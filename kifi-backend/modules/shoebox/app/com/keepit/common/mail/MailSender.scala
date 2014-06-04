@@ -102,7 +102,7 @@ private[mail] class MailSenderActor @Inject() (
     } else mail
   }
 
-  def addressHasOptedOut(address: EmailAddressHolder, category: ElectronicMailCategory)(implicit session: RSession) = {
+  def addressHasOptedOut(address: EmailAddress, category: ElectronicMailCategory)(implicit session: RSession) = {
     emailOptOutRepo.hasOptedOut(address, category) || {
       emailAddressRepo.getByAddressOpt(address.address).map(_.userId) match {
         case None => // Email isn't owned by any user, send away!

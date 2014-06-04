@@ -3,13 +3,13 @@ package com.keepit.model
 import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.common.mail.{ElectronicMailCategory, EmailAddressHolder}
+import com.keepit.common.mail.{ElectronicMailCategory, EmailAddress}
 
 case class EmailOptOut(
   id: Option[Id[EmailOptOut]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  address: EmailAddressHolder,
+  address: EmailAddress,
   category: ElectronicMailCategory,
   state: State[EmailOptOut] = EmailOptOutStates.ACTIVE
 ) extends ModelWithState[EmailOptOut] {

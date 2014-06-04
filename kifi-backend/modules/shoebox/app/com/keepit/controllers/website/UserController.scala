@@ -39,7 +39,7 @@ import scala.Some
 import play.api.libs.json.JsUndefined
 import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
 import com.keepit.inject.FortyTwoConfig
@@ -371,7 +371,7 @@ class UserController @Inject() (
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           postOffice.sendMail(ElectronicMail(
             from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(email)),
+            to = Seq(EmailAddress(email)),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
             category = NotificationCategory.User.EMAIL_CONFIRMATION

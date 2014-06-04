@@ -1,6 +1,7 @@
 package com.keepit.common.mail
 
-// TODO: refactor to EmailAddress AnyVal type and rename EmailAddress model to UserEmailAddress
+case class EmailAddress(address: String) extends AnyVal
+
 trait EmailAddressHolder {
   val address: String
   override def equals(obj: Any) = obj.isInstanceOf[EmailAddressHolder] && obj.asInstanceOf[EmailAddressHolder].address == address
@@ -8,7 +9,9 @@ trait EmailAddressHolder {
   override def toString() = address
 }
 
-case class GenericEmailAddress(address: String) extends EmailAddressHolder
+object EmailAddressHolder {
+  implicit def toEmailAddress(holder: EmailAddressHolder): EmailAddress = EmailAddress(holder.address)
+}
 
 sealed abstract class SystemEmailAddress(val address: String) extends EmailAddressHolder
 

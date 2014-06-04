@@ -6,7 +6,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.{GenericEmailAddress, ElectronicMail, SystemEmailAddress}
+import com.keepit.common.mail.{EmailAddress, ElectronicMail, SystemEmailAddress}
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.ExtendedThreadItem
@@ -125,7 +125,7 @@ class ElizaUserEmailNotifierActor @Inject() (
             ElectronicMail(
               from = magicAddress,
               fromName = Some("Kifi Notifications"),
-              to = Seq(GenericEmailAddress(destinationEmail)),
+              to = Seq(EmailAddress(destinationEmail)),
               subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
               htmlBody = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, true, false, true).body,
               category = NotificationCategory.User.MESSAGE

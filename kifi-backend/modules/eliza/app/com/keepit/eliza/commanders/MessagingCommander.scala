@@ -8,7 +8,7 @@ import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -419,7 +419,7 @@ class MessagingCommander @Inject() (
 
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], addresses: Seq[String], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = constructUserRecipients(newParticipantsExtIds)
-    val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, addresses.map(s => NonUserEmailParticipant(GenericEmailAddress(s),None)))
+    val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, addresses.map(s => NonUserEmailParticipant(EmailAddress(s),None)))
 
     val haveBeenAdded = for {
       newUserParticipants <- newUserParticipantsFuture
@@ -631,7 +631,7 @@ class MessagingCommander @Inject() (
             // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
             (obj \ "kind").asOpt[String] match {
               case Some("email") if (obj \ "email").asOpt[String].isDefined =>
-                Some(NonUserEmailParticipant(GenericEmailAddress((obj \ "email").as[String]), None))
+                Some(NonUserEmailParticipant(EmailAddress((obj \ "email").as[String]), None))
               case _ => // Unsupported kind
                 None
             }

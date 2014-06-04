@@ -41,8 +41,8 @@ case class ElectronicMail (
   senderUserId: Option[Id[User]] = None,
   from: SystemEmailAddress,
   fromName: Option[String] = None,
-  to: Seq[EmailAddressHolder] = Seq[EmailAddressHolder](),
-  cc: Seq[EmailAddressHolder] = Seq[EmailAddressHolder](),
+  to: Seq[EmailAddress] = Seq[EmailAddress](),
+  cc: Seq[EmailAddress] = Seq[EmailAddress](),
   subject: String,
   state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
   htmlBody: LargeString,
@@ -102,8 +102,8 @@ object ElectronicMail {
   implicit val idFormat = Id.format[ElectronicMail]
   implicit val fromFormat: Format[SystemEmailAddress] =
     Format(__.read[String].map(s => SystemEmailAddress(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
-  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] =
-    Format(__.read[String].map(s => GenericEmailAddress(s)), new Writes[EmailAddressHolder]{ def writes(o: EmailAddressHolder) = JsString(o.address) })
+  implicit val emailAddressHolderFormat: Format[EmailAddress] =
+    Format(__.read[String].map(s => EmailAddress(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
   implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] =
     Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId]{ def writes(o: ElectronicMailMessageId) = JsString(o.id) })
   implicit val emailCategoryFormat: Format[ElectronicMailCategory] =
@@ -117,8 +117,8 @@ object ElectronicMail {
       (__ \ 'senderUserId).formatNullable(Id.format[User]) and
       (__ \ 'from).format[SystemEmailAddress] and
       (__ \ 'fromName).formatNullable[String] and
-      (__ \ 'to).format[Seq[EmailAddressHolder]] and
-      (__ \ 'cc).format[Seq[EmailAddressHolder]] and
+      (__ \ 'to).format[Seq[EmailAddress]] and
+      (__ \ 'cc).format[Seq[EmailAddress]] and
       (__ \ 'subject).format[String] and
       (__ \ 'state).format(State.format[ElectronicMail]) and
       (__ \ 'htmlBody).format[LargeString] and

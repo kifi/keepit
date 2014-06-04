@@ -19,7 +19,7 @@ import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
 import play.api.libs.json.JsObject
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
@@ -46,10 +46,10 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
   implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
-  implicit val emailAddressHolderMapper = MappedColumnType.base[EmailAddressHolder, String](_.address, GenericEmailAddress.apply)
-  implicit val seqEmailAddressHolderMapper = MappedColumnType.base[Seq[EmailAddressHolder], String](v => v.map {e => e.address} mkString(","), v => v.trim match {
+  implicit val emailAddressMapper = MappedColumnType.base[EmailAddress, String](_.address, EmailAddress.apply)
+  implicit val seqEmailAddressMapper = MappedColumnType.base[Seq[EmailAddress], String](v => v.map {e => e.address} mkString(","), v => v.trim match {
     case "" => Nil
-    case trimmed => trimmed.split(",") map { addr => new GenericEmailAddress(addr.trim) }
+    case trimmed => trimmed.split(",") map { addr => EmailAddress(addr.trim) }
   })
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
