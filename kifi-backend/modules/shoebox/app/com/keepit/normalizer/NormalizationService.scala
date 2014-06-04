@@ -153,7 +153,6 @@ class NormalizationServiceImpl @Inject() (
           if (currentReference.persistedNormalization != correctNormalization) {
             saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
           }
-
         }
         log.debug(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some((betterReference, shouldMigrate))
