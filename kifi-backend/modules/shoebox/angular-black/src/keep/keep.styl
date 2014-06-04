@@ -1,0 +1,387 @@
+.kf-keep
+  position: relative
+  //border-top: 1px solid #f9f9f9
+  box-sizing: border-box
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  background-color: white
+  border-radius: 3px
+  margin-top: 10px
+
+  &.detailed
+    background-color: #eff2f7
+
+  &.selected.detailed
+    background-color: #F7F7F5
+
+  &.ui-draggable-dragging
+    border-top: none
+
+  &.toggling
+    overflow: hidden
+    transition: height .3s ease-in-out
+
+  &.ng-hide-add
+  &.ng-hide-remove
+    transition: max-height 0.3s linear
+    display: block !important
+
+  &.ng-hide-add.ng-hide-add-active
+  &.ng-hide-remove
+    max-height: 0
+
+  &.ng-hide-add
+  &.ng-hide-remove.ng-hide-remove-active
+    max-height: 200px
+
+.kf-keep-body
+  padding: 0 20px
+
+.kf-keep-contents
+  padding: 10px 0
+
+.kf-keep-footer
+  background-color: #f9f9f9
+  font-size: 12px
+  font-weight: 200
+  color: #5983bd
+  padding: 0 20px
+  line-height: 37px
+
+  a:active
+    color: #92add3
+
+.kf-keep-tags
+  padding: 7px 0
+  border-top: separatorBorder
+
+.kf-keep-footer-link a
+  cursor: pointer
+
+.kf-keep-footer-link + .kf-keep-footer-link:before
+    content: "·"
+    color: textGreyColor
+    padding: 0 6px 0 5px
+
+.kf-keep.selected
+.kf-shadow-keep-ellipsis
+  background-color: #fffcf1
+  border-color: #f0f0f0
+
+.kf-keep-time
+  font-size: 13px
+  color: #99a3b3
+  font-family: "Georgia", Arial, sans-serif
+  margin-left: 10px
+
+.kf-keep-handle
+  display: none
+  position: absolute
+  top: 0
+  bottom: 0
+  left: 0
+  width: 21px
+  background: url(../img/drag-handle.png) center/10px no-repeat
+  cursor: move
+
+  &:hover
+  .kf-keep.detailed &
+  .kf-keep.selected &
+  .kf-keep.ui-draggable-dragging &
+    background-color: #e3e6ee
+
+  .kf-keep:hover &
+  .kf-keep.detailed &
+  .kf-keep.selected &
+  .kf-keep.ui-draggable-dragging &
+    display: block
+
+.kf-keep-checkbox
+  display: none
+  position: absolute
+  left: 3px
+  top: 4px
+  width: 15px
+  height: 15px
+  background: url(../img/check.png) 99px/12px 8px no-repeat #fff
+  cursor: pointer
+
+  .kf-keep-handle:hover &
+  .kf-keep.detailed &
+  .kf-keep.selected &
+  .kf-keep.ui-draggable-dragging &
+    display: block
+
+  .kf-keep.selected &
+    background-position: 2px 4px
+
+.kf-keep-big-image-container
+  width: 100%
+
+.kf-keep-content-line
+  padding: 10px 0
+
+.kf-keep-big-image
+.kf-keep-small-image
+  margin: 4px 0 11px
+
+.kf-keep-big-image
+  display: block
+  max-width: 100%
+  max-height: 400px
+  margin-left: auto
+  margin-right: auto
+
+.kf-keep-small-image
+  vertical-align: top
+  display: inline-block
+
+.kf-keep-small-image + .kf-keep-info
+  padding-left: 20px
+  display: inline-block
+
+.kf-keep-info
+  vertical-align: top
+  box-sizing: border-box
+
+.kf-keep-title
+  max-width: 100%
+  font-size: 15px
+  font-weight: 200
+  line-height: 24px
+  font-smoothing: antialiased
+  long-text()
+
+  a[href]
+    color: textBlackColor
+
+.kf-keep-subtitle
+  line-height: 17px
+
+.kf-keep-description
+  font-size: 17px
+  line-height: 21px
+  margin-top: 10px
+  font-family: "Georgia", Arial, sans-serif
+  font-smoothing: antialiased
+  color: textBlackColor
+  word-wrap: break-word
+  text-align: justify
+
+.kf-keep-url
+  display: inline-block
+  font-size: 13px
+  color: #99a3b3
+  vertical-align: middle
+  font-smoothing: antialiased
+  long-text()
+
+  .kf-keep.example &
+    color: #c6cbd3
+
+// tag
+.kf-keep-tags
+
+  &:empty
+    border-bottom-width: 0
+
+@-moz-document url-prefix()
+  .kf-keep-tags
+    background-position: 0 1px
+
+
+.kf-keep-tag
+input.kf-keep-tag-input
+  border: 1px solid blueColor
+  border-radius: 3px
+  margin-right: 4px
+  vertical-align: middle
+
+.kf-keep-tag
+input.kf-keep-tag-input
+.kf-keep-tag-opt
+.kf-keep-tag-hidden
+  max-width: 150px
+  font-size: 12px
+  font-smoothing: antialiased
+  color: linkColor
+  
+.kf-keep-tag
+input.kf-keep-tag-input
+  padding: 2px 6px 1px
+  margin-bottom: 3px
+
+.kf-keep-tag-opt
+  padding: 3px 6px 3px
+
+input.kf-keep-tag-input
+.kf-keep-tag-opt
+  min-width: 75px
+  long-text()
+  
+.kf-keep-tag
+  display: inline-block
+  position: relative
+  overflow: hidden
+  white-space: nowrap
+
+  &.removed
+    width: 0 !important
+    transition: width .12s ease-in-out
+
+.kf-keep-tag-link
+  padding: 0 5px
+  font-smoothing: antialiased
+
+  &:active
+    color: clearBlueColor
+
+.kf-keep-tag-x-container
+  float: right
+  margin-left: 3px
+
+.kf-keep-tag-opts
+  position: absolute
+  border: 1px solid blueColor
+  background-color: #fff
+  z-index: 1
+
+.kf-keep-tag-opt.current
+  background-color: #eee
+  
+.kf-keep-tag-opt-new
+  padding: 2px 3px 1px 6px
+
+.kf-keep-tag-link-container
+.kf-keep-tag-opt-new-text
+  text-overflow: ellipsis
+  long-text()
+
+.kf-keep-tag-opt-new-label
+  float: right
+  font-size: 9px
+  padding: 2px 3px 1px 3px
+  margin-left: 5px
+  background-color: blueColor
+  color: #fff
+
+.kf-keep-tag-hidden
+  position: absolute
+  white-space: nowrap
+  visibility: hidden
+
+.kf-keep-private
+  float: right
+  margin: 0 2px
+
+  .kf-keep-private-label
+    padding-right: 6px
+    color: textDarkGrey
+    font-size: 13px
+    font-weight: 200
+    font-smoothing: antialiased
+    font-style: italic
+    vertical-align: middle
+
+// preview button
+.kf-keep-hover-button-wrapper
+  display: none
+  position: absolute
+  right: 0
+  top: 0
+  width: 1px
+  height: 100%
+
+  .kf-keep:hover &
+    display: block
+
+.kf-keep-hover-button-table
+  display: table
+  width: 100%
+  height: 100%
+
+.kf-keep-hover-button-cell
+  display: table-cell
+  vertical-align: middle
+
+.kf-keep-hover-button
+  position: absolute
+  right: 16px
+  padding: 7px 12px
+  border: 1px solid transparent
+  border-radius: 9px
+  font-size: 11px
+  color: #fff
+  background: #67829c
+  cursor: pointer
+  user-select: none
+
+  .kf-keep.detailed &
+    background: #67829c
+
+.kf-keep-button-close
+  display: none
+
+  .kf-keep.detailed &
+    display: block
+
+.kf-keep.detailed .kf-keep-button-preview
+  display: none
+
+.kf-drag-target
+  background-color: #E2E6EC
+
+.kf-keep.kf-dragged-keep
+  box-sizing: border-box
+  border-width: 1px
+  border-color: #d2d2d2
+  border-style: solid
+
+.kf-shadow-keep-first
+.kf-shadow-keep-second
+.kf-shadow-keep-ellipsis
+.kf-shadow-keep-last
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+
+.kf-shadow-keep-ellipsis
+  display: none
+  box-sizing: border-box
+  border-width: 1px
+  border-style: solid
+  border-bottom: none
+  border-color: #d2d2d2
+
+  &.active
+    display: inline
+
+.kf-shadow-keep-ellipsis-line
+  position: relative
+  top: 50%
+  height: 50%
+  width: 100%
+  border: inherit
+  border-left: none
+  border-right: none
+  margin-top: -1px
+
+.kf-shadow-keep-ellipsis-counter
+.kf-shadow-keep-ellipsis-counter-hidden
+  position: absolute
+  font-size: 13px
+  color: #818692
+  background-color: inherit
+  height: 80%
+  top: 20%
+  padding: 0 3px
+
+.kf-shadow-keep-ellipsis-counter-hidden
+  visibility: hidden
+
+.kf-keep-tag-list>li
+  display: inline-block
+
+.kf-keep-add-tag-button
+  cursor: pointer

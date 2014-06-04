@@ -1,0 +1,228 @@
+kfTagHeight = 30px
+highlightColor = #eeeeee
+
+.kf-tag
+  position: relative
+  margin-right: 20px
+  border-radius: 2px
+  height: kfTagHeight
+  border: 1px dashed transparent
+  box-sizing: border-box
+
+  &.renaming
+    background-color: #f6f6f6
+
+  .hover
+  &.kf-dragged
+    .kf-tag-tool
+      display: block
+
+  .hover:not(.kf-dragged)
+    background-color: highlightColor
+
+  .kf-dropdown-menu
+    right: 0
+
+.kf-tag.animate
+  .hover
+    background-color: transparent
+    .kf-tag-tool
+      display: none
+
+.kf-tag-list-reordering
+  .kf-tag
+    .hover
+      background-color: transparent
+    &.kf-dragged
+      background-color: editYellowColor
+      border-color: #cccccc
+    .kf-tag-tool
+      display: none
+
+  .kf-tag-drag-mask
+    display: block
+
+.kf-tag-drag-mask
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  z-index: 1
+  display: none
+
+.kf-tag.animate
+  -webkit-animation: tag-blink 0.2s 3
+  animation: tag-blink 0.2s 3
+
+@keyframes tag-blink {
+  0% {
+    background-color: editYellowColor
+    border-color: #cccccc
+  }
+  50% {
+    background-color: editYellowColor
+    border-color: #cccccc
+  }
+  51% {
+    background-color: appBackgroundColor
+    border-color: transparent
+  }
+  100% {
+    background-color: appBackgroundColor
+    border-color: transparent
+  }
+
+}
+
+.kf-dragged-clone
+  background-color: editYellowColor
+
+.kf-dragged-clone-mask
+  background-color: appBackgroundColor
+
+.kf-tag-new
+  cursor: pointer
+  margin: 10px 40px 10px 20px
+  line-height: 18px
+  padding: 10px 0 4px
+  font-size: 13px
+  color: textDarkColor
+  vertical-align: middle
+  border-top: 1px solid separatorColor
+
+  .kf-tag-caption
+    font-style: italic
+
+  .kf-tag-name
+    color: blueColor
+
+.kf-tag-new-contents
+  border-radius: 2px
+  background: url(../img/placeholder-icon.png) 20px center / 16px no-repeat
+  padding: 3px 15px 3px 45px
+  left: -20px
+  position: relative
+  width: calc(100% - 20px)
+
+  &:hover
+    background-color: highlightColor
+
+.antiscroll-inner
+  position: relative // necessary to scroll with keyboard
+
+.kf-tag-list
+  user-select: none
+
+.kf-tag-list:not(:hover)
+  .highlight
+    background-color: highlightColor
+
+.kf-tag-info
+  cursor: pointer
+  padding: 0 20px 0 20px
+  line-height: kfTagHeight
+
+.kf-tag-input-box
+  cursor: text
+  border-radius: 12px
+  border-style: none
+  background: highlightColor
+  transition: all .16s
+  height: 24px
+  margin: 2px 32px 10px 11px
+  font-weight: 200
+  box-sizing: border-box
+  border: 1px solid highlightColor
+
+  &.focused
+    background: #fff
+    border-color: blueColor
+
+  input
+    width: calc(100% - 20px)
+    white-space: nowrap
+    margin: 0
+    border: 0
+    padding: 3px 10px
+    background-color: transparent
+    color: textDarkGrey
+    font-size: 13px
+    font-weight: 200
+    font-smoothing: antialiased
+    line-height: 18px
+    box-sizing: border-box
+
+::-webkit-input-placeholder
+  color: #aaaaaa
+  font-style: italic
+:-moz-placeholder
+  color: #aaaaaa
+  font-style: italic
+::-moz-placeholder
+  color: #aaaaaa
+  font-style: italic
+:-ms-input-placeholder
+  color: #aaaaaa
+  font-style: italic
+
+.kf-tag-input-clear
+  float: right
+  width: 20px
+  padding: 0 10px 0 0
+  font-size: 17px
+  line-height: 20px
+  cursor: pointer
+  box-sizing: border-box
+
+  &.kf-tag-input-clear
+    color: #99a3b3
+
+  &:hover
+    color: #6fa6ef
+
+.kf-tag-name-holder
+  padding: 0 15px 0 0
+  font-size: 13px
+  color: textDarkColor
+  vertical-align: middle
+
+.kf-tag-icon
+  sprite2x($tag-blue-default)
+  float: left
+  margin-top: 4px
+  margin-right: 7px
+
+.kf-tag-name
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+input.kf-tag-rename
+  background-color: transparent
+
+.kf-tag-count
+  float: right
+  font-size: 12px
+  color: countColor
+  font-weight: 200
+
+.kf-scrollable-tags
+  position: relative
+
+.kf-tag-tool
+  position: absolute
+  display: none
+  height: 100%
+  width: 10px
+  padding: 0 5px
+  top: 0
+
+.kf-tag-dropdown-toggle
+  right: 0
+  background: url(../img/arrow-gray-down.png) center/10px no-repeat
+
+.kf-tag-handle
+  left: 0
+  cursor: move
+  background: url(../img/drag-handle-tag.png) center/10px no-repeat

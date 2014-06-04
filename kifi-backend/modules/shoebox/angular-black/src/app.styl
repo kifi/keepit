@@ -1,0 +1,98 @@
+html
+  height: 100%
+  text-align: center
+  overflow: visible
+
+body
+  position: relative
+  overflow: visible
+  min-height: calc(100% - 62px)
+  width: 100%
+  padding: 0
+  margin: 62px 0 0;
+  background: appBackgroundColor
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
+
+*, :after, :before
+  box-sizing: content-box
+
+h1, h2, h3, h4, h5, label
+  margin: 0
+  font-weight: normal
+  font-smoothing: antialiased
+
+h1, h2
+  font-family: "Georgia", Arial, sans-serif
+  font-style: italic
+  font-smoothing: antialiased
+  color: textDarkColor
+
+input[type="text"]
+  padding: 0
+  border: none
+  margin: 0
+  background: #fff
+
+img
+  border: none
+  vertical-align: middle
+
+menu, ol, ul
+  list-style: none
+  padding: 0
+  margin: 0
+
+a[href]
+  color: linkColor
+  text-decoration: none
+  font-smoothing: antialiased
+
+::-webkit-input-placeholder
+  color: #b6c3cc
+
+:-moz-placeholder
+  color: #b6c3cc
+
+::-moz-placeholder
+  color: #b6c3cc
+
+:-ms-input-placeholder
+  color: #b6c3cc
+
+:focus
+  outline: none
+
+.clearfix
+  &::before
+  &::after
+    content: ""
+    display: table
+
+  &::after
+    clear: both
+
+  zoom: 1
+
+.kf-cols
+  min-width: 100%
+  height: 100%
+  overflow: hidden
+  text-align: left
+  text-align: start
+
+.kf-col
+  display: inline-block
+  vertical-align: top
+  background: appBackgroundColor
+  margin-top: 15px
+  box-sizing: border-box
+
+.kf-col-inner
+  height: 100%
+  width: 100%
+
+.kf-horizontal-separator
+  width: 100%
+  padding: 2px 0 0
+  border-bottom: separatorBorder
+  margin: 10px 0

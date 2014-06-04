@@ -1,0 +1,47 @@
+.kf-nav-item
+  padding: 20px 0 10px 0
+  font-size: 13px
+  user-select: none
+
+  &.active
+
+    .sprite-my-keeps-library
+        sprite2x($my-keeps-library-active)
+
+    .kf-nav-count
+      color: countColor
+
+.kf-nav-name
+.kf-nav-count
+  line-height: 26px
+  display: inline-block
+  vertical-align: top
+
+.kf-nav-name
+  color: textDarkColor
+  font-weight: 400
+  font-smoothing: antialiased
+  padding: 0 5px
+  text-transform: uppercase
+
+
+.kf-nav-count
+  font-size: 12px
+  font-weight: 200
+  padding: 0 0 0 2px
+  color: countGreyColor
+
+  &.empty
+    display: none
+
+.kf-nav-item:hover
+  .sprite-my-keeps-library
+    sprite2x($my-keeps-library-active)
+
+.kf-nav-group-name
+  margin: 0 40px 0 20px
+  font-size: 14px
+  line-height: 36px
+  color: textDarkColor
+  font-weight: 400
+  font-smoothing: antialiased
