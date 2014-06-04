@@ -23,7 +23,8 @@ angular.module('kifi.keepService', [
       before = null,
       end = false,
       selectedIdx = 0,
-      limit = 30,
+      limit = 10,
+      smallLimit = 4,
       previewUrls = {},
       doc = $document[0],
       screenshotDebouncePromise = false;
@@ -296,7 +297,12 @@ angular.module('kifi.keepService', [
 
         var url = env.xhrBase + '/keeps/all';
         params = params || {};
-        params.count = params.count || limit;
+        if (before) {
+          params.count = params.count || limit;
+        } else {
+          params.count = smallLimit;
+        }
+
         params.before = before || void 0;
         params.withPageInfo = true;
 

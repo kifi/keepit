@@ -48,9 +48,6 @@ angular.module('kifi.friendService', [
     }, clutchParams);
 
     var api = {
-      connectWithKifiUser: function (userId) {
-        return userId; // todo!
-      },
 
       getMore: function () {
         return api.getKifiFriends(++currentPage);

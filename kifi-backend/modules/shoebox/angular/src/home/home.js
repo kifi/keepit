@@ -95,6 +95,8 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
       });
     };
 
-    $scope.getNextKeeps();
+    $scope.getNextKeeps().then(function () {
+      return $scope.getNextKeeps();
+    });
   }
 ]);
