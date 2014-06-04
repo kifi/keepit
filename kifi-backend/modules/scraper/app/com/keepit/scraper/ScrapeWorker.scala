@@ -138,7 +138,7 @@ class ScrapeWorker(
       }
 
       // Report canonical url
-      article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
+      article.canonicalUrl.foreach(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls))
 
       log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
@@ -375,7 +375,7 @@ class ScrapeWorker(
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-    destinationUrl = Some(destinationUrl),
+    destinationUrl = destinationUrl,
     signature = getSignature(extractor)
   )
 
@@ -419,7 +419,7 @@ class ScrapeWorker(
     hasFishy301Restriction || isFishy
   }
 
-  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
+  private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
     sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
       val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl
       helper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
