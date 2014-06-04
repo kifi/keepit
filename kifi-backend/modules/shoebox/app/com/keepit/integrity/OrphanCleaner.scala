@@ -70,7 +70,7 @@ class OrphanCleaner @Inject() (
       // nuriRepo.save has side-effects on scrape_info && uri.state
       val createdScrapeInfo = scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
         case None if (!readOnly && !NormalizedURIStates.DO_NOT_SCRAPE.contains(updatedUri.state)) => {
-          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for ${updatedUri.toShortString}")
+          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for uri=${updatedUri.toShortString}")
           scraper.scheduleScrape(updatedUri)
           true
         }
@@ -80,15 +80,16 @@ class OrphanCleaner @Inject() (
 
     } else {
       // Remove any existing scrape info and make the uri active
-      val turnedUriActive = currentUri match {
+      val (updatedUri, turnedUriActive) = currentUri match {
         case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          if (!readOnly) nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          true
-        case uri => false
+          (if (readOnly) currentUri else nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE)), true)
+        case uri => (currentUri, false)
       }
 
-      activeScrapeInfoOption match {
-        case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE && !readOnly => scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+      scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE && !readOnly =>
+          log.warn(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] mark scrapeInfo as INACTIVE: si=$scrapeInfo uri=${updatedUri.toShortString}")
+          scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
         case _ => // all good
       }
       (turnedUriActive, false)

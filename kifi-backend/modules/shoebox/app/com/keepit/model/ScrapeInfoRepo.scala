@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.Id
 import org.joda.time.DateTime
 import com.keepit.common.time._
