@@ -23,7 +23,9 @@ angular.module('util', [])
         // empties oldArray, loads newArray values into it, keeping the same reference.
         oldArray = oldArray || [];
         oldArray.length = 0;
-        oldArray.push.apply(oldArray, newArray);
+        // returning the array in case it was undefined before
+        Array.prototype.push.apply(oldArray, newArray);
+        return oldArray;
       },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
