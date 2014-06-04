@@ -74,7 +74,7 @@ class AdminBookmarksController @Inject() (
         else embedlyKeywords.toSet intersect w2vInter
       }
 
-      KeywordsSummary(embedlyKeywords, word2vecKeys.map{_.cosine}.getOrElse(Seq()), word2vecKeys.map{_.freq}.getOrElse(Seq()), inter.seq)
+      KeywordsSummary(embedlyKeywords, word2vecKeys.map{_.cosine}.getOrElse(Seq()), word2vecKeys.map{_.freq}.getOrElse(Seq()), inter.toSeq)
     }
 
   }
