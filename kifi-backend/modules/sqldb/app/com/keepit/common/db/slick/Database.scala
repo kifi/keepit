@@ -141,6 +141,7 @@ class Database @Inject() (
   }
 
   private[this] val READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL = 500
+  private[this] val READ_WRITE_SEQ_SESSION_REFRESH_INTERVAL   = 50
 
   def readWriteSeq[D, T](batch: Seq[D])(f: (RWSession, D) => T)(implicit location: Location): Unit = {
     def sink(a: D, b: T): Unit = {}
@@ -148,8 +149,8 @@ class Database @Inject() (
   }
 
   def readWriteSeq[D, T](batch: Seq[D], collector: (D, T) => Unit)(f: (RWSession, D) => T)(implicit location: Location): Unit = {
-    batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foreach{ chunk =>
-      var rw = createReadWriteSession(location)
+    batch.grouped(READ_WRITE_SEQ_SESSION_REFRESH_INTERVAL).foreach{ chunk =>
+      val rw = createReadWriteSession(location)
       try {
         chunk.foreach{ item => collector(item, rw.withTransaction{ f(rw, item) }) }
       } finally { rw.close() }
