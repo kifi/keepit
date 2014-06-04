@@ -1,0 +1,12 @@
+<span class="kf-keep-who-text">
+  <span class="kf-keep-you" ng-if="keep.isMyBookmark">
+    You
+  </span>
+  <span class="kf-keep-friends" ng-show="hasKeepers()">{{getFriendText()}}</span>
+  <span></span>
+  <span class="kf-keep-others" ng-show="hasOthers()">{{getOthersText()}}</span>
+  <span class="kf-keep-kept-this">kept this</span>
+  <div class="kf-help-rank" ng-if="helprankEnabled && keep.clickCount > 0">
+  	<div><span class="kf-heart">♥</span> Your keep helped friends {{keep.clickCount}} times!</div>
+  </div>
+</span>
