@@ -70,7 +70,7 @@ class OrphanCleaner @Inject() (
       // nuriRepo.save has side-effects on scrape_info && uri.state
       val createdScrapeInfo = scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
         case None if (!readOnly && !NormalizedURIStates.DO_NOT_SCRAPE.contains(updatedUri.state)) => {
-          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for $updatedUri")
+          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for ${updatedUri.toShortString}")
           scraper.scheduleScrape(updatedUri)
           true
         }
