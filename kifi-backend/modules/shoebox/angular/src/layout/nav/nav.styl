@@ -4,6 +4,10 @@
   user-select: none
 
   &.active
+
+    .sprite-my-keeps-library
+        sprite2x($my-keeps-library-active)
+
     .kf-nav-count
       color: countColor
 
@@ -30,9 +34,9 @@
   &.empty
     display: none
 
-.kf-nav-icon-library
-  sprite2x($my-keeps-library-active)
-  display: inline-block
+.kf-nav-item:hover
+  .sprite-my-keeps-library
+    sprite2x($my-keeps-library-active)
 
 .kf-nav-group-name
   margin: 0 40px 0 20px
