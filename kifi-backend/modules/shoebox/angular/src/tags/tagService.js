@@ -14,7 +14,8 @@ angular.module('kifi.tagService', [
       tagsById = {},
       prevFilter = '',
       fetchAllPromise = null,
-      removedKeepsByTagId = {};
+      removedKeepsByTagId = {},
+      totalKeepCount; // this should get out of this service
 
     var listLength = 70;
 
@@ -145,8 +146,7 @@ angular.module('kifi.tagService', [
           });
           api.refreshList();
 
-          // Disabling this for now. It introduces a bad dependency of tagService on keepService
-          //keepService.totalKeepCount = res.data.keeps;
+          totalKeepCount = res.data.keeps;
 
           return allTags;
         });
@@ -224,6 +224,10 @@ angular.module('kifi.tagService', [
 
       setRemovedKeepsForTag: function (tagId, keeps) {
         removedKeepsByTagId[tagId] = keeps;
+      },
+
+      getTotalKeepCount: function () {
+        return totalKeepCount;
       },
 
       rename: function (tagId, name) {
