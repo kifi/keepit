@@ -59,16 +59,33 @@ angular.module('kifi.invite', [
   'socialService', '$rootScope',
   function (socialService, $rootScope) {
     return {
-      scope: {},
+      scope: {
+        'showFindFriends': '='
+      },
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        scope.networks = socialService.networks;
+
+      }
+    };
+  }
+])
+
+.directive('kfSocialNetworksStatus', [
+  'socialService', '$rootScope',
+  function (socialService, $rootScope) {
+    return {
+      scope: {},
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/socialNetworkStatus.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+        scope.numNetworks = socialService.networks.length;
         scope.$watch(function () {
           return socialService.networks.length;
         }, function (networksLength) {
-          scope.networkText = networksLength === 1 ? '1 network connected' : networksLength + ' networks connected';
+          scope.numNetworks = networksLength;
         });
 
 
