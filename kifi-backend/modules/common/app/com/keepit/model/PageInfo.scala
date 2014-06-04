@@ -206,7 +206,7 @@ object URISummary {
     )(URISummary.apply _, unlift(URISummary.unapply))
 }
 
-case class KeywordsSummary(embedly: Seq[String], word2vecCosine: Seq[String], word2vecFreq: Seq[String])
+case class KeywordsSummary(embedly: Seq[String], word2vecCosine: Seq[String], word2vecFreq: Seq[String], intersection: Seq[String])
 
 case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String])
 
