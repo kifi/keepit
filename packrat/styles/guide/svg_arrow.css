@@ -5,7 +5,6 @@
 .kifi-svg-arrow-tail {
   fill: none;
   stroke: #f99;
-  stroke-dasharray: .001 9;
   stroke-width: 4;
   stroke-linecap: round;
 }

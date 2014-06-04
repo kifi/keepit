@@ -7,67 +7,81 @@ var SvgArrow = SvgArrow || (function (window, document) {
   var HEAD_LENGTH = HEAD_WIDTH / 2 * Math.sqrt(3);
   var TAIL_WIDTH = 4;
 
-  function SvgArrow(elTail, elHead, angleTail, angleHead) {
-    var rTail = elTail.getBoundingClientRect();
-    var rHead = elHead.getBoundingClientRect();
-    var box = {x: 0, y: 0, w: 0, h: 0}, T;
-    /*
-                 svg bounding rect (box)
-    ,---------,  . . . . . . . . . . . .    -,
-    |  elTail |  : o o o o .,          :     | visible portion
-    '---------'  : T         `o.,      :     | of elliptical arc
-                 :               `o    :    _|
-                 :              -------:     |
-                 :               \   / :     | invisible portion
-                 :                \ /  :     | of elliptical arc
-                 : . . . . . . . . V . :    _|    __
-                                   H                |
-                                                    | tip space height
-                       ,-----------------------,   -'
-                       | elHead                |
-                       |           •C          |
-                       |                       |
-                       '-----------------------'
-    */
+  function SvgArrow(elTail, elHead, angleTail, angleHead, revealMs) {
     if (angleTail !== 0) {
       throw Error('angleTail value not yet supported: ' + angleTail);
     }
-    var T = {x: TAIL_WIDTH / 2, y: TAIL_WIDTH / 2};
-    box.x = Math.round(rTail.right + 10);
-    box.y = Math.round((rTail.top + rTail.bottom) / 2 + 2 - T.y);
+    if (angleHead > 0 || angleHead < -90) {
+      throw Error('angleHead value not yet supported: ' + angleHead);
+    }
+    var rTail = elTail.getBoundingClientRect();
+    var rHead = elHead.getBoundingClientRect();
+    /*
+     ,--------,  svg bounding rect (box)
+     |        |  . . . . . . . . . . . .    -,
+     | elTail |  : o o o o .,          :     | visible portion
+     |        |  : T         `o.,      :     | of elliptical arc
+     '--------'  :               `o    :    -'
+                 :              ---•---:    <- arrowhead axis is tangent to arc where they meet at G
+                 :               \ G / :
+                 :                \ /  :    <- arrowhead orientation is configurable (-90° shown)
+                 : . . . . . . . . V . :         __
+                   +y              H              |
+     origin ->   - • +x            .              | tip space height
+    for paths      -     ,---------.---------,   -'
+    (center of           | elHead  .         |
+     ellipse)            |         •C        |  <- arrowhead points to center of elHead
+                         |                   |
+                         '-------------------'
+    */
+    var T = {
+      x: Math.ceil(rTail.right + 10 + TAIL_WIDTH / 2),
+      y: Math.round((rTail.top + rTail.bottom) / 2 + 2)
+    };
     var C = {
       x: (rHead.left + rHead.right) / 2,
       y: (rHead.top + rHead.bottom) / 2
     };
-    if (angleHead > 0 || angleHead < -90) {
-      throw Error('angleHead value not yet supported: ' + angleHead);
-    }
-    var angleHeadRad = angleHead / 180 * Math.PI;
+    var angleHeadRad = Math.PI / 180 * angleHead;
     var tipSpace = 10;
     var tipSpaceHeight = tipSpace * Math.sin(-angleHeadRad);
     var H = {
-      x: C.x - box.x + (tipSpaceHeight + rHead.height / 2) / Math.tan(angleHeadRad),
-      y: rHead.top - box.y - tipSpaceHeight
+      x: C.x + (tipSpaceHeight + rHead.height / 2) / Math.tan(angleHeadRad),
+      y: rHead.top - tipSpaceHeight
     };
-    box.w = Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 3)));
-    box.h = Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 6)));
+    var G = {
+      x: H.x - HEAD_LENGTH * Math.cos(angleHeadRad),
+      y: H.y + HEAD_LENGTH * Math.sin(angleHeadRad)
+    };
+    var box = {
+      left: -1 + Math.floor(T.x - TAIL_WIDTH / 2),
+      top: -1 + Math.floor(T.y - HEAD_WIDTH / 2),
+      right: 1 + Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 3))),
+      bottom: 1 + Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 6)))
+    };
+    var arc = this.arc = ellipseArcTo(G.x - T.x, T.y - G.y, Math.PI + angleHeadRad);
     this.svg = $svg('svg')
       .attr('class', 'kifi-svg-arrow kifi-root')
       .attr('style', [
-        'width:', box.w, 'px;',
-        'height:', box.h, 'px;',
-        'right:', window.innerWidth - (box.x + box.w), 'px;',
-        'bottom:', window.innerHeight - (box.y + box.h), 'px']);
+        'width:', box.right - box.left, 'px;',
+        'height:', box.bottom - box.top, 'px;',
+        'right:', window.innerWidth - box.right, 'px;',
+        'bottom:', window.innerHeight - box.bottom, 'px']);
+    this.g = $svg('g')
+      .attr('transform', ['translate(', T.x - box.left, ',', T.y - box.top + arc.b, ') scale(1,-1)'])
+      .appendTo(this.svg.el);
     this.tail = $svg('path')
       .attr('class', 'kifi-svg-arrow-tail')
-      .attr('d', ellipseArc(H, Math.PI + angleHeadRad, T))
-      .appendTo(this.svg.el);
+      .attr('d', ellipseArcPathData(arc), ' ')
+      .attr('style', tailDashArrayStyle(0))
+      .appendTo(this.g.el);
     this.head = $svg('path')
       .attr('class', 'kifi-svg-arrow-head')
-      .attr('d', triangle(H))
-      .attr('transform', ['rotate(', -angleHead, ',', H.x, ',', H.y, ')'])
-      .appendTo(this.svg.el);
+      .attr('d', headPathData(), ' ')
+      .attr('transform', headTransform(arc, arc.t0))
+      .appendTo(this.g.el);
     this.attach();
+    reveal.call(this, revealMs);
   }
 
   SvgArrow.prototype = {
@@ -89,6 +103,30 @@ var SvgArrow = SvgArrow || (function (window, document) {
     }
   };
 
+  function reveal(ms) {
+    var subArc = $svg('path');
+    var ease = swing;
+    var ms_1 = 1 / ms;
+    var t0 = window.performance.now();
+    var tN = t0 + ms;
+    var tick = this.tick = (function (t) {
+      if (this.tick === tick) {
+        var arc = this.arc;
+        var frac = t < tN ? t > t0 ? ease((t - t0) * ms_1) : 0 : 1;
+        var arcT = arc.t0 * (1 - frac) + arc.t1 * frac;
+        subArc.attr('d', ellipseArcPathData(new EllipseArc(arc.a, arc.b, arc.t0, arcT)), ' ');
+        this.tail.attr('style', tailDashArrayStyle(Math.round(subArc.el.getTotalLength() / 9)));
+        this.head.attr('transform', headTransform(arc, arcT));
+        if (t < tN) {
+          window.requestAnimationFrame(tick);
+        } else {
+          this.tick = null;
+        }
+      }
+    }).bind(this);
+    window.requestAnimationFrame(tick);
+  }
+
   function $svg(tagName) {
     if (this) {
       this.el = document.createElementNS('http://www.w3.org/2000/svg', tagName);
@@ -102,113 +140,86 @@ var SvgArrow = SvgArrow || (function (window, document) {
       el.appendChild(this.el);
       return this;
     },
-    attr: function (name, val) {
+    attr: function (name, val, sep) {
       if (val.join) {
-        val = val.join('');
+        val = val.join(sep || '');
       }
-      this.el.setAttributeNS(null, name, val);
+      this.el.setAttributeNS(null, name, val);  // TODO: cache attr values to avoid writes
       return this;
     }
   };
 
-  function triangle(H) {
-    return ['M', H.x, H.y, 'l', -HEAD_LENGTH, -HEAD_WIDTH / 2, 'l', 0, HEAD_WIDTH, 'z'].join(' ');
+  function EllipseArc(a, b, t0, t1) {  // axis-aligned, at origin
+    this.a = a;
+    this.b = b;
+    this.t0 = t0;
+    this.t1 = t1;
   }
 
-  function ellipseArc(H, phi, T) {  // phi is the tangential angle (radians from positive x-axis)
-    var G = {  // point of tangency is the center of the arrow head base
-      x: H.x + HEAD_LENGTH * Math.cos(phi),
-      y: H.y - HEAD_LENGTH * Math.sin(phi)
-    };
+  EllipseArc.prototype = {  // x(t) and y(t) return SVG coordinates
+    x: function (t) {
+      return this.a * Math.cos(t);
+    },
+    y: function (t) {
+      return this.b * Math.sin(t);
+    },
+    phi: function (t) {
+      return Math.atan2(-this.b, this.a * Math.tan(t));
+    }
+  };
 
-    // solving for parameter t and then radii a and b using these formulae from
+  // Identifies axis-aligned ellipse from the origin (the top of the ellipse)
+  // to point P (x,y) with tangent angle phi at P. phi is measured from the
+  // positive x-axis in radians, CCW positive.
+  function ellipseArcTo(x, y, phi) {
+    // solving for parameter t and then radii a and b using formulæ from
     // en.wikipedia.org/wiki/Ellipse#Parametric_form_in_canonical_position
-    // G.x === a * cos(t)
-    // G.y === b * (1 - sin(t))  // "1 -" transforms to standard Cartesian coordinates from SVG
-    // -tan(t) === b / (a * tan(phi))
+    // with b subtracted from Y(t) to account for vertical translation between ellipse's top and center
+    //   X(t) === a * cos(t)
+    //   Y(t) === b * sin(t) - b
+    //   -tan(t) === b / (a * tan(phi))
 
-    var t = Math.asin(-G.y / (G.y + G.x * Math.tan(phi)));
-    var a = G.x / Math.cos(t);
-    var b = G.y / (1 - Math.sin(t));
+    var t = Math.asin(y / (y + x * Math.tan(phi)));
+    var a = x / Math.cos(t);
+    var b = y / (Math.sin(t) - 1);
 
-    return ['M', G.x, G.y, 'A', a, b, 0, 0, 0, T.x, T.y].join(' ');
+    return new EllipseArc(a, b, Math.PI / 2, t);
+  }
+
+  function ellipseArcPathData(arc) {
+    return ['M', arc.x(arc.t0), arc.y(arc.t0), 'A', arc.a, arc.b, 0, 0, 0, arc.x(arc.t1), arc.y(arc.t1)];
+  }
+
+  function headPathData() {
+    return ['M', 0, - HEAD_WIDTH / 2, 'l', 0, HEAD_WIDTH, 'l', HEAD_LENGTH, -HEAD_WIDTH / 2, 'z'];
+  }
+
+  function headTransform(arc, t) {
+    return ['translate(', arc.x(t), ',', arc.y(t), ') rotate(', 180 / Math.PI * arc.phi(t), ')'];
+  }
+
+  function tailDashArrayStyle(numDots) {
+    if (numDots > 0) {
+      var arr = new Array(2 * numDots + 1);
+      arr[0] = 'stroke-dasharray:';
+      for (var i = 1; i < arr.length; i += 2) {
+        arr[i] = .001;
+        arr[i+1] = 9;
+      }
+      arr[arr.length - 1] = 9999;
+      return arr.join(' ');
+    } else {
+      return 'stroke-dasharray:0 9999';
+    }
+  }
+
+  function swing(p) {
+    return .5 - Math.cos(p * Math.PI) / 2;
   }
 
   // github.com/mbostock/d3
   // Copyright (c) 2010-2014, Michael Bostock
   // All rights reserved.
-
-  // Open cardinal spline interpolation; generates "C" commands.
-  function d3_svg_lineCardinalOpen(points, tension) {
-    return points[1] + d3_svg_lineHermite(
-      points.slice(1, points.length - 1),
-      d3_svg_lineCardinalTangents(points, tension));
-  }
-
-  // Hermite spline construction; generates "C" commands.
-  function d3_svg_lineHermite(points, tangents) {
-    if (tangents.length < 1
-        || (points.length != tangents.length
-        && points.length != tangents.length + 2)) {
-      return d3_svg_lineLinear(points);
-    }
-
-    var quad = points.length != tangents.length,
-        path = "",
-        p0 = points[0],
-        p = points[1],
-        t0 = tangents[0],
-        t = t0,
-        pi = 1;
-
-    if (quad) {
-      path += "Q" + (p[0] - t0[0] * 2 / 3) + "," + (p[1] - t0[1] * 2 / 3)
-          + "," + p[0] + "," + p[1];
-      p0 = points[1];
-      pi = 2;
-    }
-
-    if (tangents.length > 1) {
-      t = tangents[1];
-      p = points[pi];
-      pi++;
-      path += "C" + (p0[0] + t0[0]) + "," + (p0[1] + t0[1])
-          + "," + (p[0] - t[0]) + "," + (p[1] - t[1])
-          + "," + p[0] + "," + p[1];
-      for (var i = 2; i < tangents.length; i++, pi++) {
-        p = points[pi];
-        t = tangents[i];
-        path += "S" + (p[0] - t[0]) + "," + (p[1] - t[1])
-            + "," + p[0] + "," + p[1];
-      }
-    }
-
-    if (quad) {
-      var lp = points[pi];
-      path += "Q" + (p[0] + t[0] * 2 / 3) + "," + (p[1] + t[1] * 2 / 3)
-          + "," + lp[0] + "," + lp[1];
-    }
-
-    return path;
-  }
-
-  // Generates tangents for a cardinal spline.
-  function d3_svg_lineCardinalTangents(points, tension) {
-    var tangents = [],
-        a = (1 - tension) / 2,
-        p0,
-        p1 = points[0],
-        p2 = points[1],
-        i = 1,
-        n = points.length;
-    while (++i < n) {
-      p0 = p1;
-      p1 = p2;
-      p2 = points[i];
-      tangents.push([a * (p2[0] - p0[0]), a * (p2[1] - p0[1])]);
-    }
-    return tangents;
-  }
 
   var d3_interpolate_numberA = /[-+]?(?:\d+\.?\d*|\.?\d+)(?:[eE][-+]?\d+)?/g,
       d3_interpolate_numberB = new RegExp(d3_interpolate_numberA.source, 'g');

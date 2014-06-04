@@ -14,7 +14,7 @@ var guide = guide || {};
 guide.step1 = guide.step1 || function () {
   var $stage, $steps, spotlight, arrow, tileObserver, keeperObserver, tagboxObserver, stepIdx, pIdx;
   var steps = [
-    {lit: '.kifi-tile-card', pad: [20, 40], arrow: {angle: -60}},
+    {lit: '.kifi-tile-card', pad: [20, 40], arrow: {angle: -70}},
     {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {angle: -90}},
     {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', angle: -45}},
     {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], arrow: {sel: '.kifi-tagbox-suggestion', angle: 0}},
@@ -110,7 +110,7 @@ guide.step1 = guide.step1 || function () {
           if (arr) {
             var elTail = this.querySelector('.kifi-p' + pIdx);
             var elHead = document.querySelector(arr.sel || p.lit);
-            arrow = new SvgArrow(elTail, elHead, 0, arr.angle);
+            arrow = new SvgArrow(elTail, elHead, 0, arr.angle, 600);
           }
         }
       })
