@@ -3,13 +3,14 @@
 angular.module('kifi.keepService', [
   'kifi.undo',
   'kifi.clutch',
+  'kifi.tagService',
   'angulartics',
   'util'
 ])
 
 .factory('keepService', [
-  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location', 'util',
-  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location, util) {
+  '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location', 'tagService', 'util',
+  function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location, tagService, util) {
 
 
     function createPageSession() {
@@ -30,37 +31,15 @@ angular.module('kifi.keepService', [
       doc = $document[0];
 
     $rootScope.$on('tags.remove', function (tagId) {
-      _.forEach(list, function (keep) {
-        if (keep.tagList) {
-          var newTagList = keep.tagList.filter(function (tag) {
-            if (tag.id === tagId) {
-              if (!keep.removedTagList) {
-                keep.removedTagList = [];
-              }
-              keep.removedTagList.push(tag);
-              return false;
-            }
-            return true;
-          });
-          keep.tagList = util.replaceArrayInPlace(keep.tagList, newTagList);
-        }
+      var keeps = _.filter(list, function (keep) {
+        return keep.removeTag(tagId);
       });
+      tagService.setRemovedKeepsForTag(tagId, keeps);
     });
 
     $rootScope.$on('tags.unremove', function (tagId) {
-      _.forEach(list, function (keep) {
-        if (keep.removedTagList) {
-          keep.removedTagList.filter(function (tag) {
-            if (tag.id === tagId) {
-              if (!keep.tagList) {
-                keep.tagList = [];
-              }
-              keep.addTag(tag);
-              return false;
-            }
-            return true;
-          });
-        }
+      _.forEach(tagService.getRemovedKeepsForTag(tagId), function (keep) {
+        keep.addTag(tagId);
       });
     });
 
@@ -141,6 +120,9 @@ angular.module('kifi.keepService', [
         var idx2 = this.collections.indexOf(tagId);
         if (idx2 > -1) {
           this.collections.splice(idx2, 1);
+          return true;
+        } else {
+          return false;
         }
       };
     }

@@ -2,19 +2,19 @@
 
 angular.module('kifi.tagService', [
   'kifi.undo',
-  'kifi.keepService',
   'kifi.routeService',
   'angulartics'
 ])
 
 .factory('tagService', [
-  '$http', 'env', '$q', '$rootScope', 'undoService', 'keepService', 'routeService', '$analytics', 'util',
-  function ($http, env, $q, $rootScope, undoService, keepService, routeService, $analytics, util) {
+  '$http', 'env', '$q', '$rootScope', 'undoService', 'routeService', '$analytics', 'util',
+  function ($http, env, $q, $rootScope, undoService, routeService, $analytics, util) {
     var allTags = [],
       list = [],
       tagsById = {},
       prevFilter = '',
-      fetchAllPromise = null;
+      fetchAllPromise = null,
+      removedKeepsByTagId = {};
 
     var listLength = 70;
 
@@ -71,6 +71,7 @@ angular.module('kifi.tagService', [
       newSrcTag.id = -1;
       allTags.splice(index, 0, newSrcTag);
       _.remove(allTags, function (tag) { return tag.id === srcTagId; });
+      api.refreshList();
       newSrcTag.id = srcTagId;
       persistOrdering();
       $analytics.eventTrack('user_clicked_page', {
@@ -112,6 +113,10 @@ angular.module('kifi.tagService', [
         return list;
       },
 
+      refreshList: function () {
+        api.filterList(prevFilter);
+      },
+
       fetchAll: function (force) {
         if (!force && fetchAllPromise) {
           return fetchAllPromise.then(function () {
@@ -138,8 +143,10 @@ angular.module('kifi.tagService', [
             tag.lowerName = tag.name.toLowerCase();
             tagsById[tag.id] = tag;
           });
+          api.refreshList();
 
-          keepService.totalKeepCount = res.data.keeps; // a bit weird...
+          // Disabling this for now. It introduces a bad dependency of tagService on keepService
+          //keepService.totalKeepCount = res.data.keeps;
 
           return allTags;
         });
@@ -161,6 +168,7 @@ angular.module('kifi.tagService', [
           tag.lowerName = tag.name.toLowerCase();
           tagsById[tag.id] = tag;
           allTags.unshift(tag);
+          api.refreshList();
 
           api.filterList('');
 
@@ -177,6 +185,7 @@ angular.module('kifi.tagService', [
           var allIndex = indexById(allTags, tag.id);
           if (allIndex !== -1) {
             allTags.splice(allIndex, 1);
+            api.refreshList();
             var listIndex = indexById(list, tag.id);
             if (listIndex !== -1) {
               list.splice(listIndex, 1);
@@ -198,6 +207,7 @@ angular.module('kifi.tagService', [
         return $http.post(url).then(function () {
           if (index !== -1) {
             allTags.splice(index, 0, tag);
+            api.refreshList();
           }
           $rootScope.$emit('tags.unremove', tag.id);
           $analytics.eventTrack('user_clicked_page', {
@@ -206,6 +216,14 @@ angular.module('kifi.tagService', [
           persistOrdering();
           return tag;
         });
+      },
+
+      getRemovedKeepsForTag: function (tagId) {
+        return removedKeepsByTagId[tagId];
+      },
+
+      setRemovedKeepsForTag: function (tagId, keeps) {
+        removedKeepsByTagId[tagId] = keeps;
       },
 
       rename: function (tagId, name) {
