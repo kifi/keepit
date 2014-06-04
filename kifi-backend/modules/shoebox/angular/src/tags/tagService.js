@@ -50,8 +50,7 @@ angular.module('kifi.tagService', [
         if (res.data && res.data.addedToCollection) {
           keeps.forEach(function (keep) {
             if (!_.contains(_.pluck(keep.tagList, 'id'), tag.id)) {
-              keep.tagList.push(tag);
-              keep.collections.push(tag.id);
+              keep.addTag(tag);
             }
           });
           updateKeepCount(tag.id, res.data.addedToCollection);
@@ -237,8 +236,7 @@ angular.module('kifi.tagService', [
         $http.post(url, _.pluck(keeps, 'id')).then(function (res) {
           updateKeepCount(tagId, -keeps.length);
           keeps.forEach(function (keep) {
-            var index = _.findIndex(keep.tagList, function (tag) { return tag.id === tagId; });
-            keep.tagList.splice(index, 1);
+            keep.removeTag(tagId);
           });
           $analytics.eventTrack('user_clicked_page', {
             'action': 'removeKeepsFromTag'

@@ -56,7 +56,7 @@ angular.module('kifi.keepService', [
               if (!keep.tagList) {
                 keep.tagList = [];
               }
-              keep.tagList.push(tag);
+              keep.addTag(tag);
               return false;
             }
             return true;
@@ -151,6 +151,30 @@ angular.module('kifi.keepService', [
       return deferred.promise;
     }
 
+    function buildKeep(keep) {
+      keep.isMyBookmark = true;
+      keep.tagList = keep.tagList || [];
+      keep.collections = keep.collections || [];
+
+      keep.addTag = function (tag) {
+        this.tagList.push(tag);
+        this.collections.push(tag.id);
+      };
+
+      keep.removeTag = function (tagId) {
+        var idx1 = _.findIndex(this.tagList, function (tag) {
+          return tag.id === tagId;
+        });
+        if (idx1 > -1) {
+          this.tagList.splice(idx1, 1);
+        }
+        var idx2 = this.collections.indexOf(tagId);
+        if (idx2) {
+          this.collections.splice(idx2, 1);
+        }
+      };
+    }
+
     var keepList = new Clutch(function (url, config) {
       $log.log('keepService.getList()', config && config.params);
 
@@ -158,9 +182,7 @@ angular.module('kifi.keepService', [
         var data = res.data,
           keeps = data.keeps || [];
 
-        _.forEach(keeps, function (keep) {
-          keep.isMyBookmark = true;
-        });
+        _.forEach(keeps, buildKeep);
 
         fetchScreenshots(keeps);
 
