@@ -235,8 +235,8 @@ class ShoeboxController @Inject() (
         bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
           alternateUrls.foreach { alternateUrl =>
             db.readWrite { implicit session =>
-              normUriRepo.getByUri(alternateUrl).map(_.id.get) match {
-                case Some(bestReference.id.get) => // ignore
+              normUriRepo.getByUri(alternateUrl) match {
+                case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
                 case _ => normUriRepo.internByUri(alternateUrl, bestCandidate)
               }
             }
