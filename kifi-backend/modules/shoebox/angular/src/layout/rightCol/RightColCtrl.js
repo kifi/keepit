@@ -18,7 +18,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
     $scope.readyToDraw = function () {
       return profileService.me.seqNum > 0 && friendsReady;
-    }
+    };
 
     $scope.openHelpRankHelp = function () {
       $scope.data.showHelpRankHelp = true;
