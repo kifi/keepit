@@ -60,7 +60,7 @@ class OrphanCleaner @Inject() (
     val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
 
     if (theTwo.contains(currentUri.id.get.id)){
-      log.info(s"orphan cleaner: [check integrity] for ${currentUri.id.get.id}")
+      log.info(s"orphan cleaner: [check integrity] for ${currentUri} with activeScrapeInfoOption: ${activeScrapeInfoOption}")
     }
 
     if (isActuallyKept) {
