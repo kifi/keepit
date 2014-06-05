@@ -128,6 +128,9 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(renormalizedURLs, collector){ (s, renormalizedURL) =>
+        if (theTwo.contains(renormalizedURL.oldUriId.id)){
+          log.info(s"orphan cleaner: processing renormalizedURL with old uri id ${renormalizedURL.oldUriId}")
+        }
         checkIntegrity(renormalizedURL.oldUriId, readOnly)(s)
       }
       if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq) // update high watermark
@@ -157,6 +160,9 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(changedURIs, collector){ (s, changedUri) =>
+        if (theTwo.contains(changedUri.oldUriId.id)){
+          log.info(s"orphan cleaner: processing changedURIs with old uri id ${changedUri.oldUriId.id}")
+        }
         checkIntegrity(changedUri.oldUriId, readOnly)(s)
       }
       if (!done && !readOnly) centralConfig.update(changedURISeqKey, seq) // update high watermark
@@ -186,6 +192,11 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(bookmarks, collector){ (s, bookmark) =>
+
+        if (theTwo.contains(bookmark.uriId.id)){
+          log.info(s"orphan cleaner: processing bookmark with uriId ${bookmark.uriId.id}")
+        }
+
         bookmark.state match {
           case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)(s)
           case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)(s)
