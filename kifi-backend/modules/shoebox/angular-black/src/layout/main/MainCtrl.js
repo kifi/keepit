@@ -42,7 +42,7 @@ angular.module('kifi.layout.main', [
     };
 
     $scope.clearable = function () {
-      return $scope.search.text !== '';
+      return !!$scope.search.text;
     };
 
     function performSearch() {
