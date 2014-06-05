@@ -311,11 +311,8 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
 
       adjustWidth();
 
-      scope.$watch('tagFilter.name', function (value) {
-        $timeout(function () {
-          var html = value;
-          adjustWidth();
-        });
+      scope.$watch('tagFilter.name', function () {
+        $timeout(adjustWidth);
       });
     };
   }
