@@ -42,11 +42,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         keep: '=',
         me: '=',
         toggleSelect: '&',
-        isPreviewed: '&',
         isSelected: '&',
         clickAction: '&',
         dragKeeps: '&',
-        stopDraggingKeeps: '&'
+        stopDraggingKeeps: '&',
+        editMode: '='
       },
       controller: 'KeepCtrl',
       replace: true,
@@ -176,7 +176,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             'mine': scope.isMyBookmark(scope.keep),
             'example': scope.isExample(scope.keep),
             'private': scope.isPrivate(scope.keep),
-            'detailed': scope.isPreviewed({keep: scope.keep}),
             'selected': !!scope.isSelected({keep: scope.keep})
           };
         }, function (cur) {

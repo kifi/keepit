@@ -6,11 +6,11 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">Your keeps library</h1>
     <div class="kf-subtitle">
-      <div class="kf-edit-keeps"><span class="sprite sprite-edit-pencil-icon"></span><span class="kf-edit-keeps-label">Edit keeps</span></div>
+      <div class="kf-edit-keeps" ng-click="toggleEdit()">
+        <span class="sprite sprite-edit-pencil-icon"></span>
+        <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
+      </div>
       <div class="kf-subtitle-text">{{getSubtitle()}}</div>
-    </div>
-    <div ng-show="editMode">
-      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll(),  'multi-checked': isMultiChecked() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
     </div>
   </div>
   <div kf-keeps
@@ -19,5 +19,6 @@
     keeps-has-more="hasMore()"
     scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"
+    edit-mode="editMode"
   ></div>
 </div>
