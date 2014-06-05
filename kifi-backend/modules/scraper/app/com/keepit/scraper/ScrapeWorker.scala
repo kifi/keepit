@@ -119,7 +119,7 @@ class ScrapeWorker(
     val updatedUri = processRedirects(latestUri, redirects)
 
     if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
-      helper.syncSaveScrapeInfo(info.withState(ScrapeInfoStates.INACTIVE))
+      helper.syncSaveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
       (updatedUri, None)
     }
     else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
