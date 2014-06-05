@@ -55,6 +55,17 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.toggleSelect = keepService.toggleSelect;
         scope.getSelected = keepService.getSelected;
         scope.isSelected = keepService.isSelected;
+        scope.toggleSelectAll = keepService.toggleSelectAll;
+        scope.isSelectedAll = keepService.isSelectedAll;
+        scope.editingTags = false;
+
+        scope.isMultiChecked = function () {
+          return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
+        };
+
+        scope.isUnchecked = function () {
+          return !scope.isSelectedAll() && !scope.isMultiChecked();
+        };
 
         scope.isShowMore = function () {
           return !scope.keepsLoading && scope.keepsHasMore;
@@ -112,6 +123,20 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             return 'Private';
           }
         };
+
+        scope.enableEditTags = function () {
+          scope.editingTags = true;
+        };
+
+        scope.disableEditTags = function () {
+          scope.editingTags = false;
+        };
+
+        scope.$watch(function () {
+          return scope.getSelected().length;
+        }, function () {
+          scope.disableEditTags();
+        });
       }
     };
   }

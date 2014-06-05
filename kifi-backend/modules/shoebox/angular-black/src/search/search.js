@@ -169,29 +169,8 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
       return '';
     };
 
-    $scope.toggleSelectAll = keepService.toggleSelectAll;
-    $scope.isSelectedAll = keepService.isSelectedAll;
-
-    $scope.isMultiChecked = function () {
-      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
-    };
-
-    $scope.isCheckEnabled = function () {
-      return $scope.keeps.length;
-    };
-
     $scope.hasMore = function () {
       return !keepService.isEnd();
-    };
-
-    $scope.mouseoverCheckAll = false;
-
-    $scope.onMouseoverCheckAll = function () {
-      $scope.mouseoverCheckAll = true;
-    };
-
-    $scope.onMouseoutCheckAll = function () {
-      $scope.mouseoverCheckAll = false;
     };
 
     $scope.getSubtitle = function () {

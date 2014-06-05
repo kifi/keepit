@@ -36,6 +36,7 @@ angular.module('kifi', [
   'kifi.tags',
   'kifi.keeps',
   'kifi.keep',
+  'kifi.tagList',
   'kifi.layout.header',
   'kifi.layout.main',
   'kifi.layout.nav',
