@@ -1,7 +1,7 @@
 <div class="kf-query-wrap" ng-class="{empty: isEmpty()}">
   <input kf-no-drag-input class="kf-query" type="text" placeholder="Search kifi..." ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()" ng-change="onChange()">
-  <span class="kf-query-icon">
-    <a class="kf-query-x" href="javascript:" ng-click="clear()"></a>
+  <span class="kf-search-clear-wrapper" ng-if="clearable()">
+    <a href="javascript:" ng-click="clear()">Clear</a>
   </span>
   <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
     <span class="kf-small-tooltip-box">
