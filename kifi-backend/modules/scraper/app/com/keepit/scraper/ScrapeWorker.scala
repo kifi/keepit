@@ -118,7 +118,7 @@ class ScrapeWorker(
     val Scraped(article, signature, redirects) = scraped
     val updatedUri = processRedirects(latestUri, redirects)
 
-    if (updatedUri.state == NormalizedURIStates.REDIRECTED) (updatedUri, None)
+    if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) (updatedUri, None)
     else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
       helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
       log.debug(s"[processURI] (${uri.url}) no change detected")
@@ -138,7 +138,7 @@ class ScrapeWorker(
       }
 
       // Report canonical url
-      article.canonicalUrl.foreach(recordCanonicalUrl(latestUri, signature, _, article.alternateUrls))
+      article.canonicalUrl.foreach(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls))
 
       log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
@@ -375,24 +375,39 @@ class ScrapeWorker(
     media = getMediaTypeString(extractor),
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-    destinationUrl = Some(destinationUrl),
+    destinationUrl = destinationUrl,
     signature = getSignature(extractor)
   )
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
-    redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => {
+    redirects.dropWhile(!_.isLocatedAt(uri.url)) match {
+      case Seq(redirect, _*) if !redirect.isPermanent || hasFishy301(uri) => {
         if (redirect.isPermanent) log.warn(s"Found fishy $redirect for $uri") else log.warn(s"Found non permanent $redirect for $uri")
         updateRedirectRestriction(uri, redirect)
       }
-      case Some(permanentRedirect) if permanentRedirect.isAbsolute => {
-        log.debug(s"Found permanent $permanentRedirect for $uri")
-        helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
+      case permanentsRedirects => {
+        var absoluteDestination = uri.url
+        var currentLocation = uri.url
+        permanentsRedirects.takeWhile(_.isPermanent).foreach { case permanentRedirect =>
+          if (permanentRedirect.isLocatedAt(currentLocation)) {
+            currentLocation = permanentRedirect.newDestination
+            if (URI.isAbsolute(currentLocation)) {
+              absoluteDestination = currentLocation
+            }
+          }
+        }
+
+        if (absoluteDestination != uri.url) {
+          val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
+          log.debug(s"Found permanent $validRedirect for $uri")
+          helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
+        }
+        else {
+          permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
+          removeRedirectRestriction(uri)
+        }
       }
-      case relativePermanentRedirectOption =>
-        relativePermanentRedirectOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
-        removeRedirectRestriction(uri)
     }
   }
 
@@ -419,7 +434,7 @@ class ScrapeWorker(
     hasFishy301Restriction || isFishy
   }
 
-  private def recordCanonicalUrl(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
+  private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
     sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
       val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl
       helper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)

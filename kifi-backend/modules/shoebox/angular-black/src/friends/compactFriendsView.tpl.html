@@ -1,6 +1,8 @@
 <div>
   <div class="kf-compact-friends-image-row" ng-if="friendGroup.length > 0" ng-repeat="friendGroup in friendGroups">
-    <img class="kf-compact-friend-image" title="{{friend.firstName}}" src="{{friend.pictureUrl}}" ng-repeat="friend in friendGroup"></img>
+    <a href="/friends" ng-repeat="friend in friendGroup">
+      <img class="kf-compact-friend-image" title="{{friend.firstName}}" src="{{friend.pictureUrl}}"></img>
+    </a>
   </div>
   <div class="kf-footer-friends-links">
     <a href="/friends">{{friendCount}} friends</a> <span class="kf-friends-links-divider">|</span> <a href="/invite">Invite more friends...</a>

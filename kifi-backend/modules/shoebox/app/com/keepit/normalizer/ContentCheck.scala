@@ -38,22 +38,21 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
   private var referenceUrlIsBroken = false
 
   protected def check(candidate: NormalizationCandidate): Future[Boolean] = {
-    val alternateUrl = candidate.url
-    if (referenceUrlIsBroken || failedContentChecks.contains(alternateUrl)) Future.successful(false)
+    if (referenceUrlIsBroken || failedContentChecks.contains(candidate.url)) Future.successful(false)
     else for {
       currentContentSignatureOption <- referenceContentSignatureFuture
-      candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) signature(alternateUrl) else Future.successful(None)
+      candidateContentSignatureOption <- if (currentContentSignatureOption.isDefined) signature(candidate.url) else Future.successful(None)
     } yield (currentContentSignatureOption, candidateContentSignatureOption) match {
         case (Some(currentContentSignature), Some(candidateContentSignature)) => {
           val similarity = currentContentSignature.similarTo(candidateContentSignature)
           val threshold = 0.99 // todo(Léo): move to config
           val doTheyMatch =  similarity > threshold
-          log.info(s"[${if (doTheyMatch) "ACCEPT" else "REJECT"} at $threshold] Content similarity of ${referenceUrl} and ${alternateUrl}: $similarity")
+          log.info(s"[${if (doTheyMatch) "ACCEPT" else "REJECT"} at $threshold] Content similarity of ${referenceUrl} and ${candidate.url}: $similarity")
           doTheyMatch
         }
         case (Some(_), None) => {
-          log.error(s"Content signature of URL ${alternateUrl} could not be computed.")
-          failedContentChecks += alternateUrl; false
+          log.error(s"Content signature of URL ${candidate.url} could not be computed.")
+          failedContentChecks += candidate.url; false
         }
         case (None, _) => {
           log.error(s"Content signature of reference URL ${referenceUrl} could not be computed.")

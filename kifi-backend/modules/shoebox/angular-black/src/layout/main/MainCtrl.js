@@ -14,7 +14,9 @@ angular.module('kifi.layout.main', [
     $scope.search = {};
     $scope.searchEnabled = false;
     $scope.data = $scope.data || {};
-    $scope.editMode = false;
+    $scope.editMode = {
+      enabled: false
+    };
 
     $scope.enableSearch = function () {
       $scope.searchEnabled = true;
@@ -39,6 +41,10 @@ angular.module('kifi.layout.main', [
     $scope.clear = function () {
       $scope.search.text = '';
       performSearch();
+    };
+
+    $scope.clearable = function () {
+      return !!$scope.search.text;
     };
 
     function performSearch() {
@@ -223,6 +229,18 @@ angular.module('kifi.layout.main', [
       $timeout(function () {
         $file.click();
       });
+    };
+
+    $scope.editKeepsLabel = function () {
+      if ($scope.editMode.enabled) {
+        return 'Done editing';
+      } else {
+        return 'Edit keeps';
+      }
+    };
+
+    $scope.toggleEdit = function () {
+      $scope.editMode.enabled = !$scope.editMode.enabled;
     };
 
     if (/^Mac/.test($window.navigator.platform)) {

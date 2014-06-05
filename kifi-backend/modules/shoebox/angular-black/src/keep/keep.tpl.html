@@ -1,12 +1,16 @@
 <li class="kf-keep" ng-click="clickAction({keep: keep, event: $event})"
   ng-hide="keep.unkept"
   ui-draggable="true" drag-channel="keepDragChannel" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-drag-target"
-  ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }">
+  ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget , 'editing': editMode.enabled }">
+  <div class="kf-keep-edit-tools">
+    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected()" ng-click="toggleSelect({keep: keep})"></div>
+    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected()" ng-click="toggleSelect({keep: keep})"></div>
+    <div class="kf-keep-handle sprite sprite-grabbericon">
+      <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
+    </div>
+  </div>
   <div class="kf-keep-body">
     <div class="kf-keep-contents">
-      <div class="kf-keep-handle">
-        <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
-      </div>
       <div class="kf-keep-content-line">
         <img class="kf-keep-small-image" ng-if="hasSmallImage()" ng-src="{{keep.summary.imageUrl}}"></img>
         <div class="kf-keep-info">
@@ -25,7 +29,6 @@
       </div>
       <img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></img>
     </div>
-    <!-- I'm working on this <div kf-tag-list></div> -->
     <div class="kf-keep-who">
       <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
       <span class="kf-keep-who-others" ng-if="showOthers()"></span>
