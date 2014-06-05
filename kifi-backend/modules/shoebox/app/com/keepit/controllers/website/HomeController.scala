@@ -139,7 +139,12 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+
+      if ((request.experiments.contains(ExperimentType.ADMIN) || request.experiments.contains(ExperimentType.KIFI_BLACK)) && request.domain.startsWith("preview.")) {
+        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)).withSession(request.session + ("preview", "true")) as HTML
+      } else {
+        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+      }
     }
   }
 
