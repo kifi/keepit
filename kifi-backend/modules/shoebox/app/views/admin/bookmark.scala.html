@@ -35,6 +35,9 @@
         <th>Next scrape</th><td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.nextScrape)).mkString</td>
       </tr>
       <tr>
+        <th>Article Keywords</th><td>@keywords.article.mkString(" ")</td>
+      </tr>
+      <tr>
         <th>Embedly Keywords</th><td>@keywords.embedly.mkString(" ")</td>
       </tr>
       <tr>
@@ -44,7 +47,7 @@
         <th>Word2Vec Freq Keywords</th><td>@keywords.word2vecFreq.mkString(" ")</td>
       </tr>
       <tr>
-        <th>keywords best guess</th><td>@keywords.intersection.mkString(" ")</td>
+        <th>keywords best guess</th><td>@keywords.bestGuess.mkString(" ")</td>
       </tr>
       <tr>
         <th>Screenshot</th>
