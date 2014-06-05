@@ -118,7 +118,7 @@ class ScrapeWorker(
     val Scraped(article, signature, redirects) = scraped
     val updatedUri = processRedirects(latestUri, redirects)
 
-    if (updatedUri.normalization == Some(Normalization.MOVED)) (updatedUri, None)
+    if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) (updatedUri, None)
     else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
       helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
       log.debug(s"[processURI] (${uri.url}) no change detected")
