@@ -56,8 +56,7 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteWell', [
-  'socialService', '$rootScope',
-  function (socialService, $rootScope) {
+  function () {
     return {
       scope: {
         'showFindFriends': '='
@@ -65,7 +64,7 @@ angular.module('kifi.invite', [
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (/*scope, element, attrs*/) {
 
       }
     };
