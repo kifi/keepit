@@ -1,17 +1,20 @@
 <div class="kf-main-keeps">
   <div class="kf-keep-selection-tools" ng-if="editMode.enabled">
-    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon"></div>
-    <!-- Reuse or remove -->
-    <!--<span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll(),  'multi-checked': isMultiChecked() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>-->
+    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(), 'sprite-checkbox-icon-active': 'isSelectedAll() || isMultiChecked()' }" ng-click="toggleSelectAll()"></div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
         <span class="kf-keep-selected-count-number">{{getSelected().length}}</span>
         <span class="kf-keep-selected-count-text" ng-pluralize count="getSelected().length" when="{'1': 'keep selected', 'other': 'keeps selected'}"></span>
       </div>
-      <div class="kf-keep-selection-options" ng-if="getSelected().length">
+      <div class="kf-keep-selection-options" ng-class='{disabled: editingTags}' ng-if="getSelected().length">
         <div class="kf-keep-selection-option"><span ng-click="togglePrivate()">Make {{selectionPrivacyState()}}</span></div>
         <div class="kf-keep-selection-option"><span ng-click="unkeep()">Unkeep</span></div>
-        <div class="kf-keep-selection-option"><span>Add Tags</span></div>
+        <div class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Add Tags</span></div>
+        <div class="kf-keep-selection-options-mask"></div>
+      </div>
+      <div class="kf-keep-selection-tags" ng-if="editingTags">
+        <div class="kf-keep-selection-tags-done" ng-click="disableEditTags()">Done tagging</div>
+        <div kf-tag-list class="kf-keep-selection-tags-list" get-selected-keeps="getSelected()"></div>
       </div>
     </div>
   </div>

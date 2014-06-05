@@ -22,6 +22,21 @@
       </div>
     </div>
 
+    <div class="kf-helprank" ng-if="me.clickCount > 0">
+        <div class="kf-footer-help-rank-item">
+          <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
+          <span class="kf-footer-help-rank-description">
+            You have helped friends discover new things {{me.clickCount}} times in the last month
+          </span>
+        </div>
+        <div class="kf-footer-help-rank-item">
+          <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
+          <span class="kf-footer-help-rank-description">
+            {{me.rekeepCount}} people have kept new discoveries into their libraries because of you
+          </span>
+        </div>
+    </div>
+
     <div class="kf-horizontal-separator"></div>
 
     <h2 class="kf-footer-header">Friends on Kifi</h2>

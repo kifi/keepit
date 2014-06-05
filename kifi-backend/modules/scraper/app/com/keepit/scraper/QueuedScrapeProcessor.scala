@@ -251,7 +251,7 @@ class QueuedScrapeProcessor @Inject() (
         if (URI.parse(url).get.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
         val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
         val res = fetchStatus.statusCode match {
-          case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl) => Some(worker.basicArticle(url, extractor))
+          case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl) => Some(worker.basicArticle(fetchStatus.destinationUrl getOrElse url, extractor))
           case _ => None
         }
         res

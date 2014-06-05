@@ -20,6 +20,7 @@ import com.keepit.scraper.ScraperServiceClient
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.search.ArticleStore
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
@@ -31,6 +32,7 @@ class URISummaryCommander @Inject()(
   pagePeekerClient: PagePeekerClient,
   uriImageStore: S3URIImageStore,
   embedlyStore: EmbedlyStore,
+  articleStore: ArticleStore,
   imageFetcher: ImageFetcher,
   airbrake: AirbrakeNotifier,
   clock: Clock
@@ -221,12 +223,51 @@ class URISummaryCommander @Inject()(
     }
   }
 
+  def getArticleKeywords(id: Id[NormalizedURI]): Seq[String] = {
+
+    val rv = for {
+      article <- articleStore.get(id)
+      keywords <- article.keywords
+    } yield {
+      keywords.toLowerCase.split(" ").filter{x => !x.isEmpty && x.forall(_.isLetterOrDigit)}
+    }
+
+    rv.getOrElse(Array()).toSeq
+  }
+
   def getWord2VecKeywords(id: Id[NormalizedURI]): Future[Option[Word2VecKeywords]] = {
     cortex.word2vecURIKeywords(id)
   }
 
   def batchGetWord2VecKeywords(ids: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
     cortex.word2vecBatchURIKeywords(ids)
+  }
+
+  def getKeywordsSummary(uri: Id[NormalizedURI]): Future[KeywordsSummary] = {
+    val word2vecKeywordsFut = getWord2VecKeywords(uri)
+    val embedlyKeywords = getStoredEmbedlyKeywords(uri).toSet
+    val articleKeywords = getArticleKeywords(uri).toSet
+
+    for {
+      word2vecKeys <- word2vecKeywordsFut
+    } yield {
+
+      val w2vCos = word2vecKeys.map{ _.cosine.toSet} getOrElse Set()
+      val w2vFreq = word2vecKeys.map{ _.freq.toSet} getOrElse Set()
+
+      val bestGuess = if (!articleKeywords.isEmpty){
+        articleKeywords intersect ( embedlyKeywords union w2vCos union w2vFreq )
+      } else {
+        if (embedlyKeywords.isEmpty){
+          w2vCos intersect w2vFreq
+        } else {
+          embedlyKeywords intersect (w2vCos union w2vFreq)
+        }
+      }
+
+      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, bestGuess.toSeq)
+    }
+
   }
 
 

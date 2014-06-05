@@ -50,9 +50,14 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
+        var scrolledContent = scrollableTagList.find('.antiscroll-inner');
+        var tagList = element.find('.kf-sidebar-tag-list');
 
         scrollableTagList.on('mousewheel', function (e) {
-          e.stopPropagation();
+          if ((e.originalEvent.deltaY < 0 && scrolledContent.scrollTop() <= 0) ||
+            (e.originalEvent.deltaY > 0 && scrolledContent.scrollTop() + scrollableTagList.height() >= tagList.height())) {
+            e.preventDefault();
+          }
         });
 
         w.bind('resize', function () {
@@ -64,7 +69,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         function setTagListHeight() {
           scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
         }
-        setTagListHeight();
+        $timeout(setTagListHeight);
 
         scope.clearFilter = function () {
           scope.filter.name = '';
