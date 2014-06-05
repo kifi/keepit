@@ -83,7 +83,7 @@ highlightColor = #eeeeee
 
 .kf-tag-new
   cursor: pointer
-  margin: 10px 40px 10px 20px
+  margin: 10px 20px 10px 0
   line-height: 18px
   padding: 10px 0 4px
   font-size: 13px
@@ -97,26 +97,27 @@ highlightColor = #eeeeee
   .kf-tag-name
     color: blueColor
 
-.kf-tag-new-contents
-  border-radius: 2px
-  background: url(../img/placeholder-icon.png) 20px center / 16px no-repeat
-  padding: 3px 15px 3px 45px
-  left: -20px
-  position: relative
-  width: calc(100% - 20px)
+.kf-tag-new-icon
+  float: left
+  line-height: 29px
 
-  &:hover
-    background-color: highlightColor
+.kf-tag-new-contents
+  overflow: hidden
+  padding-left: 5px
 
 .antiscroll-inner
   position: relative // necessary to scroll with keyboard
 
-.kf-tag-list
+.kf-sidebar-tag-list
   user-select: none
 
-.kf-tag-list:not(:hover)
-  .highlight
-    background-color: highlightColor
+.kf-sidebar-tag-list:not(:hover) .highlight
+.kf-tag-new-inner:hover
+.kf-tag-new-inner.highlight
+  background-color: highlightColor
+
+.kf-tag-new-inner
+  padding: 3px 20px 2px 20px
 
 .kf-tag-info
   cursor: pointer
