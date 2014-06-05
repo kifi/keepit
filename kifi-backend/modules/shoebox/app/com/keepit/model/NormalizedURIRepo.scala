@@ -141,14 +141,14 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
         scrapeRepo.getByUriId(saved.id.get) match {
           case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
             val savedSI = scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-            log.info(s"[save(${uri.toShortString})] mark scrapeInfo as INACTIVE; si=${savedSI}")
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as INACTIVE; si=${savedSI}")
           case _ => // do nothing
         }
       case SCRAPE_FAILED | SCRAPED =>
         scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
           case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
             val savedSI = scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
-            log.info(s"[save(${uri.toShortString})] mark scrapeInfo as ACTIVE; si=${savedSI}")
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as ACTIVE; si=${savedSI}")
           case _ => // do nothing
         }
       case ACTIVE => // do nothing

@@ -67,11 +67,12 @@ class AdminBookmarksController @Inject() (
     } yield {
 
       val w2vInter = word2vecKeys.map{ key => key.cosine.toSet intersect key.freq.toSet}.getOrElse(Set())
+      val w2vUnion = word2vecKeys.map{ key => key.cosine.toSet union key.freq.toSet}.getOrElse(Set())
       val inter = if (embedlyKeywords.size == 0) {
         w2vInter
       } else {
         if (w2vInter.isEmpty) embedlyKeywords.toSet
-        else embedlyKeywords.toSet intersect w2vInter
+        else embedlyKeywords.toSet intersect w2vUnion
       }
 
       KeywordsSummary(embedlyKeywords, word2vecKeys.map{_.cosine}.getOrElse(Seq()), word2vecKeys.map{_.freq}.getOrElse(Seq()), inter.toSeq)
