@@ -229,17 +229,6 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
-    val callable = new TracedCallable[(NormalizedURI, Option[Article])] {
-      def doWork: (NormalizedURI, Option[Article]) = {
-        worker.safeProcessURI(uri, info, None, proxyOpt)
-      }
-      def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE_ARTICLE, None, None, None, None)
-    }
-    fjPool.submit(callable)
-    callable.future
-  }
-
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
       val extractor = extractorProviderTypeOpt match {
       case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
