@@ -11,6 +11,7 @@ import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.typeahead.socialusers.{KifiUserTypeaheadCache, SocialUserTypeaheadCache}
 import com.keepit.typeahead.abook.EContactTypeaheadCache
+import com.keepit.commanders.BasicCollectionByIdCache
 
 case class
 ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
@@ -54,6 +55,11 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides
   def userCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserCollectionsCache(stats, accessLog, (outerRepo, 7 day))
+
+  @Singleton
+  @Provides
+  def basicCollectionByIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new BasicCollectionByIdCache(stats, accessLog, (outerRepo, 7 day))
 
   @Singleton
   @Provides

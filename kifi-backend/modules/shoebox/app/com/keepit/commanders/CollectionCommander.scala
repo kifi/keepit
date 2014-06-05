@@ -11,6 +11,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
+import scala.concurrent.duration.Duration
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -21,6 +24,15 @@ object BasicCollection {
     BasicCollection(Some(c.externalId), c.name, keeps)
 }
 
+case class BasicCollectionByIdKey(id: Id[Collection]) extends Key[BasicCollection] {
+  override val version = 1
+  val namespace = "basic_collection"
+  def toKey(): String = id.toString
+}
+
+class BasicCollectionByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[BasicCollectionByIdKey, BasicCollection](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 case class CollectionSaveFail(message: String) extends AnyVal
 
 class CollectionCommander @Inject() (
@@ -29,7 +41,8 @@ class CollectionCommander @Inject() (
   userValueRepo: UserValueRepo,
   searchClient: SearchServiceClient,
   keepToCollectionRepo: KeepToCollectionRepo,
-  keptAnalytics: KeepingAnalytics) extends Logging {
+  keptAnalytics: KeepingAnalytics,
+  basicCollectionCache: BasicCollectionByIdCache) extends Logging {
 
   val CollectionOrderingKey = "user_collection_ordering"
 
@@ -154,5 +167,16 @@ class CollectionCommander @Inject() (
     }
     keptAnalytics.undeletedTag(collection, context)
     searchClient.updateURIGraph()
+  }
+
+  def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = { //ZZZ needs a cache for he basic collection by id
+    ids.map{ id =>
+      db.readOnly{ implicit session =>
+        basicCollectionCache.getOrElse(BasicCollectionByIdKey(id)){
+          val collection = collectionRepo.get(id)
+          BasicCollection.fromCollection(collection.summary)
+        }
+      }
+    }
   }
 }
