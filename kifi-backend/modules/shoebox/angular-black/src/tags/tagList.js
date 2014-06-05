@@ -1,106 +1,6 @@
 'use strict';
 
-angular.module('kifi.detail',
-	['kifi.keepService', 'kifi.tagService', 'kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.youtube', 'kifi.profileService', 'kifi.focus']
-)
-
-.directive('kfDetail', [
-  'keepService', '$filter', '$sce', '$document', 'profileService', '$window',
-  function (keepService, $filter, $sce, $document, profileService, $window) {
-
-    return {
-      replace: true,
-      restrict: 'A',
-      templateUrl: 'detail/detail.tpl.html',
-      link: function (scope) {
-        scope.isSingleKeep = keepService.isSingleKeep;
-        scope.getLength = keepService.getSelectedLength;
-        scope.isDetailOpen = keepService.isDetailOpen;
-        scope.getPreviewed = keepService.getPreviewed;
-        scope.getSelected = keepService.getSelected;
-        scope.closeDetail = keepService.clearState;
-        scope.me = profileService.me;
-
-
-        scope.$watch(scope.getPreviewed, function (keep) {
-          scope.keep = keep;
-          scope.refreshScroll();
-        });
-
-        scope.getSelectedKeeps = function () {
-          if (scope.isSingleKeep()) {
-            return [scope.getPreviewed()];
-          }
-          else {
-            return scope.getSelected();
-          }
-        };
-
-        scope.getPrivateConversationText = function () {
-          return scope.keep.conversationCount === 1 ? 'Private Conversation' : 'Private Conversations';
-        };
-
-        scope.getTitleText = function () {
-          return keepService.getSelectedLength() + ' Keeps selected';
-        };
-
-        scope.howKept = null;
-
-        scope.$watch(function () {
-          if (scope.isSingleKeep()) {
-            if (scope.keep) {
-              return scope.keep.isPrivate ? 'private' : 'public';
-            }
-            return null;
-          }
-
-          var selected = scope.getSelected();
-          if (_.every(selected, 'isMyBookmark')) {
-            return _.every(selected, 'isPrivate') ? 'private' : 'public';
-          }
-          return null;
-        }, function (howKept) {
-          scope.howKept = howKept;
-        });
-
-        scope.isPrivate = function () {
-          return scope.howKept === 'private' && scope.keep && scope.keep.isMyBookmark;
-        };
-
-        scope.isPublic = function () {
-          return scope.howKept === 'public' && scope.keep && scope.keep.isMyBookmark;
-        };
-
-        scope.toggleKeep = function () {
-          var keeps = scope.getSelectedKeeps();
-          return keepService.toggleKeep(keeps);
-        };
-
-        scope.togglePrivate = function () {
-          var keeps = scope.getSelectedKeeps();
-          return keepService.togglePrivate(keeps);
-        };
-
-        scope.selectionHasBookmark = function () {
-          return _.some(keepService.getSelected(), function (keep) {
-            return keep.isMyBookmark;
-          });
-        }
-
-        scope.refreshScroll = scope.refreshScroll || angular.noop;
-        var scrollRefresh = _.throttle(function () {
-          scope.refreshScroll();
-        }, 150);
-        $window.addEventListener('resize', scrollRefresh);
-
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', scrollRefresh);
-        });
-
-      }
-    };
-  }
-])
+angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
 
 .directive('kfTagList', [
   'keepService', 'tagService', '$filter', '$sce', '$document',
@@ -115,12 +15,11 @@ angular.module('kifi.detail',
 
     return {
       scope: {
-        'keep': '=',
         'getSelectedKeeps': '&'
       },
       replace: true,
       restrict: 'A',
-      templateUrl: 'detail/tagList.tpl.html',
+      templateUrl: 'tags/tagList.tpl.html',
       link: function (scope, element/*, attrs*/ ) {
         scope.data = {};
         scope.data.isClickingInList = false;
@@ -134,7 +33,7 @@ angular.module('kifi.detail',
           filterTags(null);
         });
 
-        scope.$watch('keep', function () {
+        scope.$watch('getSelectedKeeps', function () {
           scope.tagFilter.name = '';
           filterTags(null);
           scope.hideAddTagDropdown();
@@ -148,11 +47,11 @@ angular.module('kifi.detail',
           return _.map(commonTagIds, function (tagId) { return tagMap[tagId]; });
         };
 
-        scope.$watch(function () {
-          return _.pluck(scope.getSelectedKeeps(), 'tagList');
+        scope.$watchCollection(function () {
+          return _.flatten(_.pluck(scope.getSelectedKeeps(), 'tagList'));
         }, function () {
           scope.commonTags = scope.getCommonTags();
-        }, true);
+        });
 
         function indexOfTag(tag) {
           if (tag) {
@@ -162,18 +61,18 @@ angular.module('kifi.detail',
         }
 
         function filterTags(tagFilterTerm) {
-          function keepHasTag(tagId) {
-            return scope.keep && scope.allTags && scope.commonTags && !!_.find(scope.commonTags, function (keepTag) {
+          function selectedKeepsHaveTag(tagId) {
+            return scope.allTags && scope.commonTags && !!_.find(scope.commonTags, function (keepTag) {
               return keepTag.id === tagId;
             });
           }
           function allTagsExceptPreexisting() {
             return scope.allTags.filter(function (tag) {
-              return !keepHasTag(tag.id);
+              return !selectedKeepsHaveTag(tag.id);
             }).slice(0, dropdownSuggestionCount);
           }
           function generateDropdownSuggestionCount() {
-            var elem = element.find('.page-coll-list');
+            var elem = element.find('.kf-tag-list');
             if (elem && elem.offset().top) {
               return Math.min(10, Math.max(3, ($document.height() - elem.offset().top) / 24 - 1));
             }
@@ -186,7 +85,7 @@ angular.module('kifi.detail',
               // for given tagFilterTerm (user search value) and a tag, returns true if
               // every part of the tagFilterTerm exists at the beginning of a part of the tag
 
-              return !keepHasTag(tag.id) && splitTf.every(function (tfTerm) {
+              return !selectedKeepsHaveTag(tag.id) && splitTf.every(function (tfTerm) {
                 return _.find(tag.name.split(/[\W]+/), function (tagTerm) {
                   return tagTerm.toLowerCase().indexOf(tfTerm.toLowerCase()) === 0;
                 });
@@ -214,9 +113,9 @@ angular.module('kifi.detail',
           return scope.hideAddTagDropdown();
         };
 
-        scope.createAndAddTag = function (keep) {
+        scope.createAndAddTag = function () {
           tagService.create(scope.tagFilter.name).then(function (tag) {
-            scope.addTag(tag, keep);
+            scope.addTag(tag);
           });
         };
 
@@ -320,9 +219,9 @@ angular.module('kifi.detail',
 
         scope.selectTag = function () {
           if (scope.highlightedTag) {
-            return scope.addTag(scope.highlightedTag, scope.keep);
+            return scope.addTag(scope.highlightedTag);
           }
-          return scope.createAndAddTag(scope.keep);
+          return scope.createAndAddTag();
         };
 
         scope.hasTags = function () {
@@ -364,17 +263,17 @@ angular.module('kifi.detail',
           }
         };
 
-        scope.removeTagFromSelectedKeeps = function (tag) {
+        scope.removeTag = function (tag) {
           var keepsWithTag = scope.getSelectedKeeps().filter(function (keep) {
             var tagIds = _.pluck(keep.tagList, 'id');
             return _.contains(tagIds, tag.id);
           });
-          tagService.removeKeepsFromTag(tag.id, _.pluck(keepsWithTag, 'id'));
+          tagService.removeKeepsFromTag(tag.id, keepsWithTag);
         };
 
-        element.on('mousedown', '.page-coll-opt', function () {
+        element.on('mousedown', '.kf-keep-tag-opt', function () {
           scope.data.isClickingInList = true;
-        }).on('mouseup', '.page-coll-opt', function () {
+        }).on('mouseup', '.kf-keep-tag-opt', function () {
           scope.data.isClickingInList = false;
         });
 
@@ -402,68 +301,22 @@ angular.module('kifi.detail',
   '$timeout',
   function ($timeout) {
     return function (scope, element) {
-      $timeout(function () {
-        var hiddenElement = element.find('.page-coll-opt-hidden');
-        var input = element.find('input');
-        scope.$watch('tagFilter.name', function (value) {
+      var input = element.find('input');
+      var options = element.find('.kf-keep-tag-opts');
+
+      function adjustWidth() {
+        var optionsWidth = options.outerWidth();
+        input.outerWidth(optionsWidth);
+      }
+
+      adjustWidth();
+
+      scope.$watch('tagFilter.name', function (value) {
+        $timeout(function () {
           var html = value;
-          if (scope.isAddTagShown()) {
-            html += scope.newTagLabel;
-          }
-          hiddenElement.html(html);
-          var parentWidth = element.parents('.page-coll-list')[0].offsetWidth - 20; // a padding offset
-          var width = hiddenElement[0].offsetWidth + 10;
-          if (width > parentWidth) {
-            width = parentWidth;
-          }
-          input.css('width', width + 'px');
+          adjustWidth();
         });
       });
-    };
-  }
-])
-
-.directive('kfKeepDetail', [
-  function () {
-    var YOUTUBE_REGEX = /https?:\/\/(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube\.com\S*[^\w\-\s])([\w\-]{11})(?=[^\w\-]|$)[?=&+%\w.-]*/i;
-
-    function isYoutubeVideo(url) {
-      return url.indexOf('://www.youtube.com/') > -1 || url.indexOf('youtu.be/') > -1;
-    }
-
-    function getYoutubeVideoId(url) {
-      var match = url.match(YOUTUBE_REGEX);
-      if (match && match.length === 2) {
-        return match[1];
-      }
-      return null;
-    }
-
-    return {
-      replace: true,
-      restrict: 'A',
-      templateUrl: 'detail/keepDetail.tpl.html',
-      link: function (scope /*, element, attrs*/ ) {
-
-        function testEmbed(keep) {
-          if (keep) {
-            var url = keep && keep.url;
-            if (url && isYoutubeVideo(url)) {
-              var vid = getYoutubeVideoId(url);
-              if (vid) {
-                keep.videoId = vid;
-                keep.isEmbed = true;
-                return;
-              }
-            }
-            keep.isEmbed = false;
-          }
-        }
-
-        testEmbed(scope.keep);
-
-        scope.$watch('keep', testEmbed);
-      }
     };
   }
 ]);

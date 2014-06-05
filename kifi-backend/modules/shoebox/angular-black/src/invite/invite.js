@@ -22,8 +22,8 @@ angular.module('kifi.invite', [
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
-  function ($scope, $http, profileService, routeService, $window, wtiService, socialService) {
+  '$scope', '$rootScope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
+  function ($scope, $rootScope, $http, profileService, routeService, $window, wtiService, socialService) {
     $window.document.title = 'Kifi • Invite your friends';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {

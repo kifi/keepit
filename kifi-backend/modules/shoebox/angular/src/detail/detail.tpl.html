@@ -1,6 +1,6 @@
 <div class="kf-detail-pane" ng-show="isDetailOpen()">
   <div class="kf-detail-scroll" antiscroll="{ autoHide: false }">
-    <div class="kf-detail-inner" ng-class="{ single: isSingleKeep(), multiple: !isSingleKeep(), private: isPrivate(), public: isPublic() }">
+    <div class="kf-detail-inner" ng-class="{ single: isSingleKeep(), multiple: !isSingleKeep(), private: isPrivate(), public: isPublic(), 'has-bookmark': selectionHasBookmark() }">
       <a class="kf-detail-x" href="javascript:" ng-click="closeDetail()"></a>
       <div class="kf-page-meta" data-n="{{getLength()}}">
         <div kf-keep-detail ng-if="isSingleKeep()"></div>
