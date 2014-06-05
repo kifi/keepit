@@ -56,7 +56,7 @@ class ScrapeWorker(
 
   private def recordScrapeFailed(uri: NormalizedURI): Unit = {
     helper.syncGetNormalizedUri(uri).foreach { latestUri =>
-      if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else {
+      if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
         helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
       }
     }
