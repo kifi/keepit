@@ -381,18 +381,33 @@ class ScrapeWorker(
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
-    redirects.find(_.isLocatedAt(uri.url)) match {
-      case Some(redirect) if !redirect.isPermanent || hasFishy301(uri) => {
+    redirects.dropWhile(!_.isLocatedAt(uri.url)) match {
+      case Seq(redirect, _*) if !redirect.isPermanent || hasFishy301(uri) => {
         if (redirect.isPermanent) log.warn(s"Found fishy $redirect for $uri") else log.warn(s"Found non permanent $redirect for $uri")
         updateRedirectRestriction(uri, redirect)
       }
-      case Some(permanentRedirect) if permanentRedirect.isAbsolute => {
-        log.debug(s"Found permanent $permanentRedirect for $uri")
-        helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), permanentRedirect)
+      case permanentsRedirects => {
+        var absoluteDestination = uri.url
+        var currentLocation = uri.url
+        permanentsRedirects.takeWhile(_.isPermanent).foreach { case permanentRedirect =>
+          if (permanentRedirect.isLocatedAt(currentLocation)) {
+            currentLocation = permanentRedirect.newDestination
+            if (permanentRedirect.isAbsolute) {
+              absoluteDestination = currentLocation
+            }
+          }
+        }
+
+        if (absoluteDestination != uri.url) {
+          val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
+          log.debug(s"Found permanent $validRedirect for $uri")
+          helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
+        }
+        else {
+          permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
+          removeRedirectRestriction(uri)
+        }
       }
-      case relativePermanentRedirectOption =>
-        relativePermanentRedirectOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
-        removeRedirectRestriction(uri)
     }
   }
 
