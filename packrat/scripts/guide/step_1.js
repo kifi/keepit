@@ -16,7 +16,7 @@ guide.step1 = guide.step1 || function () {
   var steps = [
     {lit: '.kifi-tile-card', pad: [20, 40], arrow: {angle: -70}},
     {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {angle: -90}},
-    {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', angle: -45}},
+    {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', angle: -60}},
     {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], arrow: {sel: '.kifi-tagbox-suggestion', angle: 0}},
     {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20]}];
   var handlers = {
