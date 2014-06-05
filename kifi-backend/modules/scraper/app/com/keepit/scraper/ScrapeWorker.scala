@@ -392,7 +392,7 @@ class ScrapeWorker(
         permanentsRedirects.takeWhile(_.isPermanent).foreach { case permanentRedirect =>
           if (permanentRedirect.isLocatedAt(currentLocation)) {
             currentLocation = permanentRedirect.newDestination
-            if (permanentRedirect.isAbsolute) {
+            if (URI.isAbsolute(currentLocation)) {
               absoluteDestination = currentLocation
             }
           }
