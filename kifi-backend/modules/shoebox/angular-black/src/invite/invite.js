@@ -22,8 +22,8 @@ angular.module('kifi.invite', [
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', '$rootScope', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
-  function ($scope, $http, $rootScope, profileService, routeService, $window, wtiService, socialService) {
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
+  function ($scope, $http, profileService, routeService, $window, wtiService, socialService) {
     $window.document.title = 'Kifi • Invite your friends';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
@@ -56,8 +56,7 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteWell', [
-  'socialService', '$rootScope',
-  function (socialService, $rootScope) {
+  function () {
     return {
       scope: {
         'showFindFriends': '='
@@ -65,7 +64,7 @@ angular.module('kifi.invite', [
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (/*scope, element, attrs*/) {
 
       }
     };

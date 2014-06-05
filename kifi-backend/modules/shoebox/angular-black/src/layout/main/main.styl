@@ -47,6 +47,8 @@
     float: right
     color: linkColor
     vertical-align: middle
+    cursor: pointer
+    user-select: none
 
   .sprite-edit-pencil-icon
     margin-right: 5px
@@ -104,7 +106,7 @@
   font-weight: 300
   font-smoothing: antialiased
   box-sizing: border-box
-  background: #fff url(../img/placeholder-icon.png) 5px center / 22px no-repeat
+  background: #fff url(../img/sprites/search-icon-default.png) 5px center / 22px no-repeat
 
   &::-webkit-input-placeholder
     color: #99a3b3
@@ -118,14 +120,13 @@
   &::-ms-clear
     display: none
 
-.kf-query-x
-  position: absolute
-  top: 0
-  bottom: 0
-  right: 0
-  padding-top: 13px
-  text-align: center
-  box-sizing: border-box
+  &:focus
+    background: #fff url(../img/sprites/search-icon-active.png) 5px center / 22px no-repeat
+
+.kf-search-clear-wrapper
+  position: relative
+  right: 50px
+  font-size: 14px
 
 .kf-query-mag
   cursor: text
@@ -136,17 +137,7 @@
     .focus &
       background-position: -26px
 
-.kf-query-x:before
-  width: 23px
-  background-position: -52px
 
-.kf-query-x:hover:before
-  background-position: -75px
-
-.kf-query-x:active:before
-  background-position: -98px
-
-.kf-query-wrap.empty .kf-query-x
 .kf-query-wrap:not(.empty) .kf-query-mag
   left: 100%
   transition-delay: 0

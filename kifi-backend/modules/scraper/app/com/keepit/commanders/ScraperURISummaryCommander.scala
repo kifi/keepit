@@ -99,7 +99,10 @@ class ScraperURISummaryCommanderImpl @Inject()(
             case None => Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
             case Some(image) =>
               fetchAndInternImage(nUri, image) map { imageInfoOpt =>
-                Some(URISummary(imageInfoOpt flatMap { getS3URL(_, nUri) }, embedlyInfo.title, embedlyInfo.description))
+                val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
+                val widthOpt = imageInfoOpt.flatMap(_.width)
+                val heightOpt = imageInfoOpt.flatMap(_.height)
+                Some(URISummary(urlOpt, embedlyInfo.title, embedlyInfo.description, widthOpt, heightOpt))
               }
           }
         }

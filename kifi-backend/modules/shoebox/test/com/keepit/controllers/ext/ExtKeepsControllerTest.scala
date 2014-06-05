@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.normalizer._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.controller._
 import com.keepit.search._
 import com.keepit.common.time._
@@ -24,6 +24,8 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class ExtKeepsControllerTest extends Specification with ApplicationInjector {
 
@@ -34,7 +36,10 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get

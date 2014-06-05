@@ -100,11 +100,11 @@ class URISummaryCommander @Inject()(
             nUriId <- nUri.id
             pageInfo <- db.readOnly { implicit session => pageInfoRepo.getByUri(nUriId) }
           } yield {
-            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description)
+            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height)
           }
         }
         else {
-          Some(URISummary(getS3URL(imageInfo, nUri)))
+          Some(URISummary(imageUrl = getS3URL(imageInfo, nUri), imageWidth = imageInfo.width, imageHeight = imageInfo.height))
         }
       } else None
     }
@@ -124,9 +124,11 @@ class URISummaryCommander @Inject()(
       if (shouldFetchFromPagePeeker) {
         fetchFromPagePeeker(nUri, minSize) map { imageInfoOpt =>
           val imageUrlOpt = imageInfoOpt flatMap { getS3URL(_, nUri) }
+          val widthOpt = imageInfoOpt flatMap (_.width)
+          val heightOpt = imageInfoOpt flatMap (_.height)
           val title = embedlyResultOpt flatMap { _.title }
           val description = embedlyResultOpt flatMap { _.description }
-          URISummary(imageUrlOpt, title, description)
+          URISummary(imageUrlOpt, title, description, widthOpt, heightOpt)
         }
       } else Future.successful(embedlyResultOpt getOrElse URISummary())
     }

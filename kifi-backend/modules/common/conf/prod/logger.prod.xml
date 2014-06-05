@@ -8,6 +8,15 @@
    <file>log/app.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
      <fileNamePattern>log/app.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+
+     <!-- daily rollover -->
+     <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+       <!-- or whenever the file size reaches 200MB -->
+       <maxFileSize>200MB</maxFileSize>
+     </timeBasedFileNamingAndTriggeringPolicy>
+
+     <!-- keep N files/days worth of history -->
+     <maxHistory>5</maxHistory>
    </rollingPolicy>
    <encoder>
      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -24,6 +33,13 @@
    <file>log/statsd.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
      <fileNamePattern>log/statsd.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <!-- daily rollover -->
+     <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+         <!-- or whenever the file size reaches 50MB -->
+       <maxFileSize>50MB</maxFileSize>
+     </timeBasedFileNamingAndTriggeringPolicy>
+     <!-- keep N files/days worth of history -->
+     <maxHistory>2</maxHistory>
    </rollingPolicy>
    <encoder>
      <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
@@ -44,6 +60,13 @@
    <file>log/db.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
      <fileNamePattern>log/db.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <!-- daily rollover -->
+     <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+       <!-- or whenever the file size reaches 100MB -->
+       <maxFileSize>100MB</maxFileSize>
+     </timeBasedFileNamingAndTriggeringPolicy>
+     <!-- keep N files/days worth of history -->
+     <maxHistory>2</maxHistory>
    </rollingPolicy>
    <encoder>
      <pattern>%msg%n</pattern>
@@ -64,6 +87,13 @@
    <file>log/access.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
      <fileNamePattern>log/access.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <!-- daily rollover -->
+     <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+       <!-- or whenever the file size reaches 100MB -->
+       <maxFileSize>100MB</maxFileSize>
+     </timeBasedFileNamingAndTriggeringPolicy>
+     <!-- keep N files/days worth of history -->
+     <maxHistory>3</maxHistory>
    </rollingPolicy>
    <encoder>
      <pattern>%msg%n</pattern>
@@ -84,6 +114,13 @@
    <file>log/cache.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
      <fileNamePattern>log/cache.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <!-- daily rollover -->
+     <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+       <!-- or whenever the file size reaches 50MB -->
+       <maxFileSize>50MB</maxFileSize>
+     </timeBasedFileNamingAndTriggeringPolicy>
+     <!-- keep N files/days worth of history -->
+     <maxHistory>2</maxHistory>
    </rollingPolicy>
    <encoder>
      <pattern>%msg%n</pattern>
@@ -107,6 +144,13 @@
     </rollingPolicy>
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} %msg%n</pattern>
+      <!-- daily rollover -->
+      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <!-- or whenever the file size reaches 500MB -->
+        <maxFileSize>500MB</maxFileSize>
+      </timeBasedFileNamingAndTriggeringPolicy>
+      <!-- keep N files/days worth of history -->
+      <maxHistory>3</maxHistory>
     </encoder>
   </appender>
 

@@ -31,7 +31,8 @@ case class AirbrakeError(
     headers: Map[String, Seq[String]] = Map(),
     id: ExternalId[AirbrakeError] = ExternalId(),
     createdAt: DateTime = currentDateTime,
-    panic: Boolean = false) {
+    panic: Boolean = false,
+    aggregateOnly: Boolean = false) {
 
   lazy val cleanError: AirbrakeError = {
     if (exception.getCause == null) {
@@ -145,7 +146,7 @@ object AirbrakeError {
   val Max8M = 8 * 1024 * 1024
   val MaxStackTrace = 50
 
-  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None): AirbrakeError =
+  def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None, aggregateOnly: Boolean = false): AirbrakeError =
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
@@ -154,15 +155,17 @@ object AirbrakeError {
           url = Some(request.uri.abbreviate(MaxMessageSize)),
           params = request.queryString,
           method = Some(request.method),
-          headers = request.headers.toMap)
+          headers = request.headers.toMap,
+          aggregateOnly = aggregateOnly)
 
-  def outgoing(request: WSRequestHolder, response: Option[Response] = None, exception: Throwable = new DefaultAirbrakeException(), message: String = ""): AirbrakeError = {
+  def outgoing(request: WSRequestHolder, response: Option[Response] = None, exception: Throwable = new DefaultAirbrakeException(), message: String = "", aggregateOnly: Boolean = false): AirbrakeError = {
     new AirbrakeError(
           exception = exception,
           message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
           url = Some(request.url.abbreviate(MaxMessageSize)),
           params = request.queryString,
-          headers = response map { r => ningHeadersToMap(r.getAHCResponse.getHeaders) } getOrElse request.headers.toMap )
+          headers = response map { r => ningHeadersToMap(r.getAHCResponse.getHeaders) } getOrElse request.headers.toMap,
+          aggregateOnly = aggregateOnly)
   }
 
   private def ningHeadersToMap(headers: FluentCaseInsensitiveStringsMap): Map[String, Seq[String]] =

@@ -76,7 +76,7 @@ object NormalizationCandidate {
 
 case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, correctedNormalization: Option[Normalization] = None, signature: Option[Signature] = None) {
   require(uri.id.isDefined, "NormalizedURI must be persisted before it can be considered a reference normalization")
-  override def toString(): String = s"NormalizationReference(id=${uriId}, url=${url}, isNew=$isNew, persistedNorm=${persistedNormalization}, actualNorm=${normalization})"
+  override def toString(): String = s"NormalizationReference(id=${uriId}, url=${url}, isNew=$isNew, persistedNorm=${persistedNormalization}, correctedNorm=${normalization})"
   def uriId: Id[NormalizedURI] = uri.id.get
   def url = uri.url
   def persistedNormalization: Option[Normalization] = uri.normalization

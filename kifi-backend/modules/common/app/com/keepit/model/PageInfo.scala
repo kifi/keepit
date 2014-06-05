@@ -182,7 +182,7 @@ object ImageInfo {
 case class URISummaryRequest(
   url: String,
   imageType: ImageType,
-  minSize: ImageSize,
+  minSize: ImageSize = ImageSize(0,0),
   withDescription: Boolean,
   waiting: Boolean,
   silent: Boolean)
@@ -197,16 +197,23 @@ object URISummaryRequest {
     )(URISummaryRequest.apply _, unlift(URISummaryRequest.unapply))
 }
 
-case class URISummary(imageUrl: Option[String] = None, title: Option[String] = None, description: Option[String] = None)
+case class URISummary(
+imageUrl: Option[String] = None,
+title: Option[String] = None,
+description: Option[String] = None,
+imageWidth: Option[Int] = None,
+imageHeight: Option[Int] = None)
 object URISummary {
   implicit val format: Format[URISummary] = (
     (__ \ 'imageUrl).formatNullable[String] and
     (__ \ 'title).formatNullable[String] and
-    (__ \ 'description).formatNullable[String]
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'imageWidth).formatNullable[Int] and
+    (__ \ 'imageHeight).formatNullable[Int]
     )(URISummary.apply _, unlift(URISummary.unapply))
 }
 
-case class KeywordsSummary(embedly: Seq[String], word2vecCosine: Seq[String], word2vecFreq: Seq[String])
+case class KeywordsSummary(embedly: Seq[String], word2vecCosine: Seq[String], word2vecFreq: Seq[String], intersection: Seq[String])
 
 case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String])
 

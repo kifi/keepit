@@ -136,22 +136,24 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
-    uri.state match {
+    saved.state match {
       case e:State[NormalizedURI] if DO_NOT_SCRAPE.contains(e) => // ensure no ACTIVE scrapeInfo records
         scrapeRepo.getByUriId(saved.id.get) match {
           case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
-            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+            val savedSI = scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as INACTIVE; si=${savedSI}")
           case _ => // do nothing
         }
       case SCRAPE_FAILED | SCRAPED =>
         scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
           case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
-            scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+            val savedSI = scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as ACTIVE; si=${savedSI}")
           case _ => // do nothing
         }
       case ACTIVE => // do nothing
       case _ =>
-        throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
+        throw new IllegalStateException(s"Unhandled state=${saved.state}; uri=$uri")
     }
     saved
   }
@@ -168,7 +170,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ALWAYS) {
+    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) {
       val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
         (for (t <- rows if t.urlHash === hash) yield t).firstOption
@@ -189,9 +191,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByUri", ALWAYS) {
-      getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
-    }
+    getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
   }
 
   /**
@@ -213,11 +213,13 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
-    statsd.time(key = "normalizedURIRepo.internByUri", ALWAYS) {
+    statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_HUNDRED) {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
-          session.onTransactionSuccess {
-            updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
+          if (candidates.nonEmpty) {
+            session.onTransactionSuccess {
+              updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
+            }
           }
           uri
         case Success(Right(prenormalizedUrl)) => {
@@ -270,7 +272,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (for(t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
-  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ALWAYS) {
+  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ONE_IN_HUNDRED) {
     normalizationServiceProvider.get.prenormalize(uriString)
   }
 

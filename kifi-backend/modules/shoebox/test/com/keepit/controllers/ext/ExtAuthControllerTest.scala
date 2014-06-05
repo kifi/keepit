@@ -25,7 +25,9 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.TestMailModule
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -37,7 +39,10 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     TestHeimdalServiceClientModule(),
-    TestMailModule()
+    TestMailModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   "ExtAuthController" should {

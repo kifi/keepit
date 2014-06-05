@@ -247,7 +247,8 @@ case class HttpClientImpl(
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
-            exception = exception
+            exception = exception,
+            aggregateOnly = true
           )
         )
       }

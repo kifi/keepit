@@ -35,13 +35,15 @@ case class ScrapeInfo(
   }
 
   def withStateAndNextScrape(state: State[ScrapeInfo]) = {
+    import ScrapeInfoStates._
     val (curState, curNS) = (this.state, this.nextScrape)
     val res = state match { // TODO: revisit
-      case ScrapeInfoStates.ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
-      case ScrapeInfoStates.INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
-      case ScrapeInfoStates.ASSIGNED => copy(state = state, nextScrape = currentDateTime)
+      case ACTIVE => copy(state = state, nextScrape = START_OF_TIME) // scrape ASAP when switched to ACTIVE
+      case INACTIVE => copy(state = state, nextScrape = END_OF_TIME) // never scrape when switched to INACTIVE
+      case ASSIGNED => copy(state = state, nextScrape = currentDateTime)
     }
-    log.debug(s"[withStateAndNextScrape($id, $uriId, $destinationUrl)] ${curState} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
+    if (curState == INACTIVE && res.state == ACTIVE || curState == ACTIVE && res.state == INACTIVE)
+      log.warn(s"[withStateAndNextScrape($id, $uriId, ${destinationUrl.toString.take(50)})] ${curState.toString.toUpperCase} => ${res.state.toString.toUpperCase}; ${curNS} => ${res.nextScrape}")
     res
   }
 

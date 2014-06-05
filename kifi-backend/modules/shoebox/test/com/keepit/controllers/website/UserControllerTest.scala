@@ -25,9 +25,11 @@ import com.keepit.common.mail.TestMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{FakeShoeboxSecureSocialModule, FakeSocialGraphModule}
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 
 import scala.concurrent.Future
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class UserControllerTest extends Specification with ApplicationInjector {
 
@@ -43,7 +45,10 @@ class UserControllerTest extends Specification with ApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     TestHeimdalServiceClientModule(),
-    FakeShoeboxSecureSocialModule()
+    FakeShoeboxSecureSocialModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   "UserController" should {

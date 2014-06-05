@@ -1,12 +1,53 @@
+keepBorderRadius = 3px
+
 .kf-keep
-  position: relative
-  //border-top: 1px solid #f9f9f9
+.kf-keep-selection-tools
   box-sizing: border-box
   box-shadow: defaultBoxShadow
   border: defaultBorder
   background-color: white
-  border-radius: 3px
+  border-radius: keepBorderRadius
   margin-top: 10px
+
+.kf-keep-selection-tools-body
+  padding-left: 27px
+
+.kf-keep-selection-tools
+  margin-left: 3px
+  margin-right: 25px
+
+.kf-keep-selected-count
+  text-align: center
+  font-size: 14px
+  margin: 10px 0
+
+.kf-keep-selected-count-number
+  font-size: 28px
+  font-family: "Georgia", Arial, sans-serif
+  font-weight: bold
+
+.kf-keep-selection-options
+  background-color: #eee
+  color: linkColor
+  font-size: 13px
+  font-smoothing: antialiased
+  text-align: center
+  padding: 20px
+  margin: 20px
+  user-select: none
+
+.kf-keep-selection-option
+  display: inline-block
+
+  span
+    cursor: pointer
+
+.kf-keep-selection-option + .kf-keep-selection-option::before
+  content: "|"
+  padding: 5px
+
+.kf-keep
+  position: relative
 
   &.detailed
     background-color: #eff2f7
@@ -33,6 +74,12 @@
   &.ng-hide-add
   &.ng-hide-remove.ng-hide-remove-active
     max-height: 200px
+
+  &.editing
+    border-radius: 0 3px 3px
+
+    .kf-keep-edit-tools
+      display: block
 
 .kf-keep-body
   padding: 0 20px
@@ -63,7 +110,6 @@
     color: textGreyColor
     padding: 0 6px 0 5px
 
-.kf-keep.selected
 .kf-shadow-keep-ellipsis
   background-color: #fffcf1
   border-color: #f0f0f0
@@ -74,46 +120,28 @@
   font-family: "Georgia", Arial, sans-serif
   margin-left: 10px
 
-.kf-keep-handle
+.kf-keep-edit-tools
   display: none
   position: absolute
-  top: 0
+  top: -1px
   bottom: 0
-  left: 0
-  width: 21px
-  background: url(../img/drag-handle.png) center/10px no-repeat
+  left: -28px
+  width: 28px
+  height: 110px
+  background-color: #fff
+  border: defaultBorder
+  border-right: none
+  border-radius: keepBorderRadius 0 0 keepBorderRadius
+  box-sizing: border-box
+
+.kf-keep-checkbox-icon
+  float: left
+  margin: 15px 0 0 5px
+
+.kf-keep-handle
   cursor: move
-
-  &:hover
-  .kf-keep.detailed &
-  .kf-keep.selected &
-  .kf-keep.ui-draggable-dragging &
-    background-color: #e3e6ee
-
-  .kf-keep:hover &
-  .kf-keep.detailed &
-  .kf-keep.selected &
-  .kf-keep.ui-draggable-dragging &
-    display: block
-
-.kf-keep-checkbox
-  display: none
-  position: absolute
-  left: 3px
-  top: 4px
-  width: 15px
-  height: 15px
-  background: url(../img/check.png) 99px/12px 8px no-repeat #fff
-  cursor: pointer
-
-  .kf-keep-handle:hover &
-  .kf-keep.detailed &
-  .kf-keep.selected &
-  .kf-keep.ui-draggable-dragging &
-    display: block
-
-  .kf-keep.selected &
-    background-position: 2px 4px
+  margin-left: 9px
+  margin-top: 18px
 
 .kf-keep-big-image-container
   width: 100%

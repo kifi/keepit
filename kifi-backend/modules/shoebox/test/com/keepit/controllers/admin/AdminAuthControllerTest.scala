@@ -15,12 +15,14 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.mail.{FakeOutbox, FakeMailModule}
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -34,7 +36,10 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeMailModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
-    FakeShoeboxSecureSocialModule())
+    FakeShoeboxSecureSocialModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule())
 
   "AdminAuthController" should {
     "impersonate" in {

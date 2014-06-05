@@ -16,7 +16,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -25,6 +25,8 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{FakeShoeboxSecureSocialModule, FakeSocialGraphModule}
 import scala.util.Failure
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 
 class MobileAuthControllerTest extends Specification with ApplicationInjector {
 
@@ -39,7 +41,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule()
+    TestHeimdalServiceClientModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    TestScraperServiceClientModule()
   )
 
   "register version" in {

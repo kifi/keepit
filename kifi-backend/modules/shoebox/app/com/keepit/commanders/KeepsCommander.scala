@@ -26,24 +26,39 @@ import com.keepit.common.store.S3ImageStore
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance._
+import com.keepit.common.domain.DomainToNameMapper
 
 case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
 
-case class FullKeepInfo(bookmark: Keep, users: Set[BasicUser], collections: Set[ExternalId[Collection]], others: Int, clickCount:Int = -1, rekeepCount:Int = -1)
+case class FullKeepInfo(
+  bookmark: Keep,
+  users: Set[BasicUser],
+  collections: Set[ExternalId[Collection]],
+  others: Int,
+  siteName: Option[String] = None,
+  uriSummary: Option[URISummary] = None,
+  clickCount:Int = -1,
+  rekeepCount:Int = -1)
 
 class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
-  def writes(info: FullKeepInfo) = Json.obj(
-    "id" -> info.bookmark.externalId.id,
-    "title" -> info.bookmark.title,
-    "url" -> (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
-    "isPrivate" -> info.bookmark.isPrivate,
-    "createdAt" -> info.bookmark.createdAt,
-    "others" -> info.others,
-    "keepers" -> info.users,
-    "clickCount" -> info.clickCount,
-    "rekeepCount" -> info.rekeepCount,
-    "collections" -> info.collections.map(_.id)
-  )
+  def writes(info: FullKeepInfo) = {
+    val uriSummary = info.uriSummary map { clientPageInfo =>
+      Json.obj("summary" -> Json.toJson(clientPageInfo))
+    } getOrElse Json.obj()
+    val siteName = info.siteName map (name => Json.obj("siteName" -> Json.toJson(name))) getOrElse Json.obj()
+    Json.obj(
+      "id" -> info.bookmark.externalId.id,
+      "title" -> info.bookmark.title,
+      "url" -> (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
+      "isPrivate" -> info.bookmark.isPrivate,
+      "createdAt" -> info.bookmark.createdAt,
+      "others" -> info.others,
+      "keepers" -> info.users,
+      "clickCount" -> info.clickCount,
+      "rekeepCount" -> info.rekeepCount,
+      "collections" -> info.collections.map(_.id)
+    ) ++ uriSummary ++ siteName
+  }
 }
 
 object KeepInfo {
@@ -93,11 +108,18 @@ class KeepsCommander @Inject() (
     localUserExperimentCommander: LocalUserExperimentCommander,
     imageRepo: ImageInfoRepo,
     imageStore: S3ImageStore,
-    airbrake: AirbrakeNotifier
+    airbrake: AirbrakeNotifier,
+    uriSummaryCommander: URISummaryCommander
  ) extends Logging {
 
-  def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], count: Int, userId: Id[User]): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    val (keeps, collectionOpt, clickCount, rekeepCount) = db.readOnly { implicit s =>
+  def allKeeps(
+    before: Option[ExternalId[Keep]],
+    after: Option[ExternalId[Keep]],
+    collectionId: Option[ExternalId[Collection]],
+    count: Int,
+    userId: Id[User],
+    withPageInfo: Boolean): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
+    val (keeps, collectionOpt) = db.readOnly { implicit s =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
@@ -106,11 +128,26 @@ class KeepsCommander @Inject() (
           keepRepo.getByUser(userId, before, after, count)
       }
       val helpRankEnabled = localUserExperimentCommander.getExperimentsByUser(userId).contains(ExperimentType.HELPRANK)
-      val clickCount = if (helpRankEnabled) keepClicksRepo.getClickCountByKeeper(userId) else -1
-      val rekeepCount = if (helpRankEnabled) rekeepRepo.getReKeepCountByKeeper(userId) else -1
-      (keeps, collectionOpt, clickCount, rekeepCount)
+      // todo(ray?) - this appears to be unused, should we remove it?
+      //val clickCount = if (helpRankEnabled) keepClicksRepo.getClickCountByKeeper(userId) else -1
+      //val rekeepCount = if (helpRankEnabled) rekeepRepo.getReKeepCountByKeeper(userId) else -1
+      (keeps, collectionOpt)
     }
-    val infosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+    val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+    val pageInfosFuture = Future.sequence(keeps.map { keep =>
+      if (withPageInfo) {
+        val request = URISummaryRequest(
+          url = keep.url,
+          imageType = ImageType.ANY,
+          withDescription = true,
+          waiting = false,
+          silent = false
+        )
+        uriSummaryCommander.getURISummaryForRequest(request).map(Some(_))
+      } else {
+        Future.successful(None)
+      }
+    })
 
     val keepsWithCollIds = db.readOnly { implicit s =>
       val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId).map(c => c.id -> c.externalId).toMap
@@ -120,13 +157,16 @@ class KeepsCommander @Inject() (
       }
     }
 
-    infosFuture.map { infos =>
+    for {
+      sharingInfos <- sharingInfosFuture
+      pageInfos <- pageInfosFuture
+    } yield {
       val idToBasicUser = db.readOnly { implicit s =>
-        basicUserRepo.loadAll(infos.flatMap(_.sharingUserIds).toSet)
+        basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
       }
-      val keepsInfo = (keepsWithCollIds zip infos).map { case ((keep, collIds), info) =>
-        val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, info.sharingUserIds map idToBasicUser, collIds, others)
+      val keepsInfo = (keepsWithCollIds, sharingInfos, pageInfos).zipped.map { case ((keep, collIds), sharingInfos, pageInfos) =>
+        val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+        FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, collIds, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos)
       }
       (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }

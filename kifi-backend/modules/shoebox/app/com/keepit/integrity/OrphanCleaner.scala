@@ -52,40 +52,54 @@ class OrphanCleaner @Inject() (
     cleanNormalizedURIsByNormalizedURIs(readOnly)
   }
 
+  val theTwo = Set(3429L, 1059893L)
+
   private def checkIntegrity(uriId: Id[NormalizedURI], readOnly: Boolean, hasKnownKeep: Boolean = false)(implicit session: RWSession): (Boolean, Boolean) = {
     val currentUri = nuriRepo.get(uriId)
-    val activeScrapeInfoOption = scrapeInfoRepo.getByUriId(uriId).filterNot(_.state == ScrapeInfoStates.INACTIVE)
+    val activeScrapeInfoOption = scrapeInfoRepo.getActiveByUriId(uriId)
     val isActuallyKept = hasKnownKeep || keepRepo.exists(uriId)
+
+    if (theTwo.contains(currentUri.id.get.id)){
+      log.info(s"orphan cleaner: [check integrity] for ${currentUri} with activeScrapeInfoOption: ${activeScrapeInfoOption}")
+    }
 
     if (isActuallyKept) {
       // Make sure the uri is not inactive and has a scrape info
       val (updatedUri, turnedUriActive) = currentUri match {
-        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) => (
-          if (readOnly) uriToBeActive else nuriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE)),
-          true
-        )
+        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || (activeScrapeInfoOption.isEmpty && !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state)) =>
+
+          val update = if (readOnly) uriToBeActive else nuriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE))
+          if (theTwo.contains(update.id.get.id)) { log.info(s"[check integrity 1]: updated uri: ${update}")}
+          (update, true)
+
         case _ => (currentUri, false)
       }
 
-      val createdScrapeInfo = activeScrapeInfoOption match {
-        case None =>
-          if (!readOnly) scraper.scheduleScrape(updatedUri)
+      // nuriRepo.save has side-effects on scrape_info && uri.state
+      val createdScrapeInfo = scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
+        case None if (!readOnly && !NormalizedURIStates.DO_NOT_SCRAPE.contains(updatedUri.state)) => {
+          log.info(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] scheduling scrape for uri=${updatedUri.toShortString}")
+          scraper.scheduleScrape(updatedUri)
           true
+        }
         case _ => false
       }
       (turnedUriActive, createdScrapeInfo)
 
     } else {
       // Remove any existing scrape info and make the uri active
-      val turnedUriActive = currentUri match {
+      val (updatedUri, turnedUriActive) = currentUri match {
         case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          if (!readOnly) nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          true
-        case uri => false
+          val update = if (readOnly) currentUri else nuriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
+          if (theTwo.contains(update.id.get.id)) { log.info(s"[check integrity 2]: updated uri: ${update}")}
+          (update, true)
+        case uri => (currentUri, false)
       }
 
-      activeScrapeInfoOption match {
-        case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE && !readOnly => scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+      scrapeInfoRepo.getActiveByUriId(updatedUri.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE && !readOnly =>
+          log.warn(s"[checkIntegrity($uriId, $readOnly, $hasKnownKeep)] mark scrapeInfo as INACTIVE: si=$scrapeInfo uri=${updatedUri.toShortString}")
+          scrapeInfoRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
         case _ => // all good
       }
       (turnedUriActive, false)
@@ -114,6 +128,9 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(renormalizedURLs, collector){ (s, renormalizedURL) =>
+        if (theTwo.contains(renormalizedURL.oldUriId.id)){
+          log.info(s"orphan cleaner: processing renormalizedURL with old uri id ${renormalizedURL.oldUriId}")
+        }
         checkIntegrity(renormalizedURL.oldUriId, readOnly)(s)
       }
       if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq) // update high watermark
@@ -143,6 +160,9 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(changedURIs, collector){ (s, changedUri) =>
+        if (theTwo.contains(changedUri.oldUriId.id)){
+          log.info(s"orphan cleaner: processing changedURIs with old uri id ${changedUri.oldUriId.id}")
+        }
         checkIntegrity(changedUri.oldUriId, readOnly)(s)
       }
       if (!done && !readOnly) centralConfig.update(changedURISeqKey, seq) // update high watermark
@@ -172,6 +192,11 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(bookmarks, collector){ (s, bookmark) =>
+
+        if (theTwo.contains(bookmark.uriId.id)){
+          log.info(s"orphan cleaner: processing bookmark with uriId ${bookmark.uriId.id}")
+        }
+
         bookmark.state match {
           case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)(s)
           case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)(s)

@@ -205,5 +205,40 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "get latest keeps uri by user" in {
+      withDb() { implicit injector =>
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        db.readWrite{ implicit s =>
+          val user = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com/", Some("Kifi")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+          keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
+
+          keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9)))
+
+          keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6), isPrivate = true))
+
+        }
+
+        db.readOnly{ implicit s =>
+          var uris = keepRepo.getLatestKeepsURIByUser(Id[User](1), 2, includePrivate = true)
+          uris.map{_.id} === Seq(2, 3)
+          uris = keepRepo.getLatestKeepsURIByUser(Id[User](1), 2, includePrivate = false)
+          uris.map{_.id} === Seq(2, 1)
+        }
+      }
+
+    }
   }
 }
