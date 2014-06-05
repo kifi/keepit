@@ -57,7 +57,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
         var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
         var fileNameToSpaceRe = /[\/._-]/g;
-        var imageWidthThreshold = 300;
+        var imageWidthThreshold = 200;
 
         scope.getTags = function () {
           return scope.keep.tagList;
@@ -210,14 +210,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           }).join(' ');
         };
 
+        function shouldShowSmallImage(summary) {
+          return (summary.imageWidth && summary.imageWidth < imageWidthThreshold || summary.description);
+        }
+
         scope.hasBigImage = function () {
           var keep = scope.keep;
-          return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth >= imageWidthThreshold;
+          return keep.summary && !shouldShowSmallImage(keep.summary);
         };
 
         scope.hasSmallImage = function () {
           var keep = scope.keep;
-          return keep.summary && keep.summary.imageWidth && keep.summary.imageWidth < imageWidthThreshold;
+          return keep.summary && shouldShowSmallImage(keep.summary);
         };
 
         $timeout(function () {
