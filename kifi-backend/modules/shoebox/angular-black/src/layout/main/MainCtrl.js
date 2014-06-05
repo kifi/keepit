@@ -41,6 +41,10 @@ angular.module('kifi.layout.main', [
       performSearch();
     };
 
+    $scope.clearable = function () {
+      return $scope.search.text !== '';
+    };
+
     function performSearch() {
       var text = $scope.search.text || '';
       text = _.str.trim(text);
