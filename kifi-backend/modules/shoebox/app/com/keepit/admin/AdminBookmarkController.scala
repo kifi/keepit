@@ -168,11 +168,14 @@ class AdminBookmarksController @Inject() (
           bookmarks map (_.uriId) map scrapeRepo.getByUriId
         }}}
 
+        val keywordsFut = Future.sequence(bookmarks.map{ x => uriSummaryCommander.getKeywordsSummary(x.uriId)})
+
         for {
           users <- usersFuture
           uris <- urisFuture
           scrapes <- scrapesFuture
-        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+          keywords <- keywordsFut
+        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq, keywords).zipped.toList.seq
       }
     }
 
