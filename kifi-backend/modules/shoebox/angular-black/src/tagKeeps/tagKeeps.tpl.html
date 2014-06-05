@@ -2,7 +2,10 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">Tags / {{tag.name}}</h1>
     <div class="kf-subtitle">
-      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll(), 'multi-checked': isMultiChecked() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
+      <div class="kf-edit-keeps" ng-click="toggleEdit()">
+        <span class="sprite sprite-edit-pencil-icon"></span>
+        <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
+      </div>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>
@@ -13,5 +16,6 @@
     scroll-distance="scrollDistance"
     scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"
+    edit-mode="editMode"
   ></div>
 </div>
