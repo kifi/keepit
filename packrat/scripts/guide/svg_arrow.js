@@ -9,7 +9,6 @@ var SvgArrow = SvgArrow || (function (window, document) {
 
   function SvgArrow(elTail, elHead, angleTail, angleHead, revealMs) {
     var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead);
-    this.box = o.box;
     this.svg = $svg('svg')
       .attr('class', 'kifi-svg-arrow kifi-root')
       .attr('style', boxPosAndSize(o.box));
@@ -47,13 +46,12 @@ var SvgArrow = SvgArrow || (function (window, document) {
       return this;
     },
     animateTo: function (elTail, elHead, angleTail, angleHead, ms) {
-      // ms = 6000;
-      var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead, this.box);
-      var gTransform = ['translate(', this.box.left - o.box.left, ',', this.box.top - o.box.top, ')'].join('');
+      var box = this.svg.el.getBoundingClientRect();
+      var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead, box);
+      var gTransform = ['translate(', box.left - o.box.left, ',', box.top - o.box.top, ')'].join('');
       this.svg.attr('style', boxPosAndSize(o.box));
       this.g.attr('transform', gTransform);
       this.tail.attr('style', tailDashArrayStyle());
-      this.box = o.box;
       var interpolateGroupTransfrom = d3_interpolateString(gTransform, 'translate(0,0)');
       var interpolateTailPath = d3_interpolateString(this.tail.attr('d'), curvePathData(o.curve));
       var interpolateHeadTransform = d3_interpolateString(this.head.attr('transform'), headTransform(o.curve.x(1), o.curve.y(1), o.curve.phi(1)));
