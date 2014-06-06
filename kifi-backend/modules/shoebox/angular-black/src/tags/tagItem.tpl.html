@@ -1,6 +1,6 @@
 <li class="kf-tag">
   <div ng-class="{ renaming: isRenaming, hover: isHovering, 'kf-drag-target': isDragTarget }" ng-show="!isFake">
-    <div class="kf-tag-info" ng-click="navigateToTag($event)">
+    <div class="kf-tag-info" ng-mouseup="navigateToTag($event)">
       <div class="kf-tag-count" ng-show="!isWaiting">{{tag.keeps}}</div>
       <div class="kf-tag-name-holder">
         <div class="kf-tag-icon"></div>

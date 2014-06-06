@@ -42,9 +42,18 @@ class URISummaryCommander @Inject()(
    * Gets an image for the given URI. It can be an image on the page or a screenshot, and there are no size restrictions
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
-  def getURIImage(nUri: NormalizedURI): Future[Option[String]] = {
-    val request = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0,0), false, false, false)
-    getURISummaryForRequest(request, nUri) map { _.imageUrl }
+  def getURIImage(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[Option[String]] = {
+    getImageURISummary(nUri, minSizeOpt) map { _.imageUrl }
+  }
+
+  /**
+   * Uses a URISummaryRequest to request an image for the page, for the given size constraints.
+   * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
+   */
+  def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
+    val minSize = minSizeOpt getOrElse ImageSize(0,0)
+    val request = URISummaryRequest(nUri.url, ImageType.ANY, minSize, false, false, false)
+    getURISummaryForRequest(request, nUri)
   }
 
   /**
@@ -252,6 +261,7 @@ class URISummaryCommander @Inject()(
       word2vecKeys <- word2vecKeywordsFut
     } yield {
 
+      val word2vecCount = word2vecKeys.map{_.wordCounts} getOrElse 0
       val w2vCos = word2vecKeys.map{ _.cosine.toSet} getOrElse Set()
       val w2vFreq = word2vecKeys.map{ _.freq.toSet} getOrElse Set()
 
@@ -265,7 +275,7 @@ class URISummaryCommander @Inject()(
         }
       }
 
-      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, bestGuess.toSeq)
+      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, word2vecCount, bestGuess.toSeq)
     }
 
   }

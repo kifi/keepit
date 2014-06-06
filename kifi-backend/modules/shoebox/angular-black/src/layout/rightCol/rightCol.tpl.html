@@ -1,43 +1,22 @@
 <footer class="kf-col-inner" ng-controller="RightColCtrl">
   <div class="kf-footer" ng-show="readyToDraw()">
 
-    <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
-
-    <div class="kf-footer-help-rank-item" ng-if="me.totalKeepsClicked > 0" ng-click="openHelpRankHelp()">
-        <div class="kf-footer-help-rank-number">{{me.totalKeepsClicked}}</div>
-        <div class="kf-footer-help-rank-description">You helped {{me.totalKeepsClicked}} people discover new things in the last week</div>
-    </div>
-    <div kf-modal ng-if="data.showHelpRankHelp" show="data.showHelpRankHelp">
-      <div kf-basic-modal-content centered="true" single-action="false">
-        <div class="kf-help-rank-help">
-          <div class="kf-block-top">The vision of Kifi is about people helping people. <br> Here's where you come in:</div>
-          <div class="kf-block"><span class="kf-emph">{{me.uniqueKeepsClicked}}</span> of your public keeps have been clicked on <span class="kf-emph">{{me.totalKeepsClicked}}</span> times by your friends <br> when they searched on Google or Kifi.com</div>
-          <div class="kf-block-bottom">Do you like this feedback?
-            <div class="dialog-buttons">
-              <button ng-click="yesLikeHelpRank()">Yes</button>
-              <button ng-click="noLikeHelpRank()">No</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="kf-helprank" ng-if="me.clickCount > 0">
-        <div class="kf-footer-help-rank-item">
-          <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
-          <span class="kf-footer-help-rank-description">
-            You have helped friends discover new things {{me.clickCount}} times in the last month
-          </span>
-        </div>
-        <div class="kf-footer-help-rank-item">
-          <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
-          <span class="kf-footer-help-rank-description">
-            {{me.rekeepCount}} people have kept new discoveries into their libraries because of you
-          </span>
-        </div>
+      <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
+      <div class="kf-footer-help-rank-item">
+        <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
+        <span class="kf-footer-help-rank-description">
+          You have helped friends discover new things {{me.clickCount}} times in the last month
+        </span>
+      </div>
+      <div class="kf-footer-help-rank-item">
+        <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
+        <span class="kf-footer-help-rank-description">
+          {{me.rekeepCount}} people have kept new discoveries into their libraries because of you
+        </span>
+      </div>
+      <div class="kf-horizontal-separator"></div>
     </div>
-
-    <div class="kf-horizontal-separator"></div>
 
     <h2 class="kf-footer-header">Friends on Kifi</h2>
     <div kf-compact-friends-view></div>

@@ -59,6 +59,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         var fileNameToSpaceRe = /[\/._-]/g;
         var imageWidthThreshold = 200;
 
+        scope.addingTag = {enabled: false};
+
         scope.getTags = function () {
           return scope.keep.tagList;
         };
@@ -242,6 +244,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.showOthers = function () {
           return !scope.hasKeepers() && !! scope.keep.others;
+        };
+
+        scope.showSocial = function () {
+          return scope.keep.others || (scope.keep.keepers && scope.keep.keepers.length > 0);
+        };
+
+        scope.showTags = function () {
+          return scope.hasTag() || scope.addingTag.enabled;
+        };
+
+        scope.showAddTag = function () {
+          scope.addingTag.enabled = true;
         };
 
         scope.onCheck = function (e) {

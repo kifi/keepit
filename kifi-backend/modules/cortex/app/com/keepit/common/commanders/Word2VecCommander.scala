@@ -24,6 +24,8 @@ class Word2VecCommander @Inject()(
     "that", "the", "their", "then", "there", "these","they", "this", "to", "was",
     "will", "with", "you", "your", "my", "mine", "he", "she", "his", "her")
 
+  val MIN_WORD_COUNT = 20
+
   val (dim, mapper, doc2vec) = {
     (word2vec.dimension, word2vec.mapper, new Doc2Vec(word2vec.mapper, word2vec.dimension))
   }
@@ -136,9 +138,14 @@ class Word2VecCommander @Inject()(
   }
 
   private def extractKeywords(feat: RichWord2VecURIFeature): Word2VecKeywords = {
+    val count = feat.bagOfWords.map{_._2}.sum
+    val hasEnoughWords = count > MIN_WORD_COUNT
+
+    if (!hasEnoughWords) return Word2VecKeywords(Seq(), Seq(), 0)
+
     val cosineKeywords = feat.keywords.filter(!STOP_WORDS.contains(_))
     val freqKeywords = feat.bagOfWords.toArray.sortBy( -1 * _._2).map{_._1}.filter(!STOP_WORDS.contains(_)).take(5)
-    Word2VecKeywords(cosineKeywords, freqKeywords)
+    Word2VecKeywords(cosineKeywords, freqKeywords, count)
   }
 
   def uriKeywords(uri: Id[NormalizedURI]): Option[Word2VecKeywords] = {
