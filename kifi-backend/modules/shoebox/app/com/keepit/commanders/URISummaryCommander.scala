@@ -252,6 +252,7 @@ class URISummaryCommander @Inject()(
       word2vecKeys <- word2vecKeywordsFut
     } yield {
 
+      val word2vecCount = word2vecKeys.map{_.wordCounts} getOrElse 0
       val w2vCos = word2vecKeys.map{ _.cosine.toSet} getOrElse Set()
       val w2vFreq = word2vecKeys.map{ _.freq.toSet} getOrElse Set()
 
@@ -265,7 +266,7 @@ class URISummaryCommander @Inject()(
         }
       }
 
-      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, bestGuess.toSeq)
+      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, word2vecCount, bestGuess.toSeq)
     }
 
   }
