@@ -48,17 +48,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           targetIdx: null
         };
 
+        var preventClearFilter = false;
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
-        var scrolledContent = scrollableTagList.find('.antiscroll-inner');
-        var tagList = element.find('.kf-sidebar-tag-list');
-
-        scrollableTagList.on('mousewheel', function (e) {
-          if ((e.originalEvent.deltaY < 0 && scrolledContent.scrollTop() <= 0) ||
-            (e.originalEvent.deltaY > 0 && scrolledContent.scrollTop() + scrollableTagList.height() >= tagList.height())) {
-            e.preventDefault();
-          }
-        });
 
         w.bind('resize', function () {
           scope.$apply(function () {
@@ -305,10 +297,20 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           scope.isFilterFocused = true;
         };
 
+        scope.disableClearFilter = function () {
+          preventClearFilter = true;
+        };
+
+        scope.enableClearFilter = function () {
+          preventClearFilter = false;
+        };
+
         scope.blurFilter = function () {
-          scope.dehighlight();
           scope.isFilterFocused = false;
-          scope.clearFilter();
+          if (!preventClearFilter) {
+            scope.dehighlight();
+            scope.clearFilter();
+          }
         };
       }
     };
