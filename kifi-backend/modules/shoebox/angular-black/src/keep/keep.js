@@ -244,6 +244,10 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return !scope.hasKeepers() && !! scope.keep.others;
         };
 
+        scope.showSocial = function () {
+          return scope.keep.others || (scope.keep.keepers && scope.keep.keepers.length > 0);
+        }
+
         scope.onCheck = function (e) {
           // needed to prevent previewing
           e.stopPropagation();
