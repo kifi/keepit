@@ -19,7 +19,7 @@ guide.step1 = guide.step1 || function () {
     {lit: null, afterTransition: '.kifi-kept-side', arrow: {angle: -60, to: 'kifi-kept-tag'}, ev: {type: 'click', target: 'kifi-kept-tag'}},
     {lit: 'kifi-tagbox', pad: [0, 10, 20], arrow: {angle: 0, to: 'kifi-tagbox-suggestion'}},
     {lit: 'kifi-tagbox', pad: [0, 10, 20]}];
-  var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel dragstart drag dragstop keydown keypress keyup'.split(' ');
+  var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   return show;
 
   function show() {
@@ -92,7 +92,7 @@ guide.step1 = guide.step1 || function () {
 
   function showNewStep(msToEarliestCompletion) {
     $stage
-      .attr({'kifi-step': stepIdx, 'kifi-p': stepIdx})
+      .attr('kifi-step', stepIdx)
       .css('transition-delay', Math.max(0, msToEarliestCompletion - 200) + 'ms')
       .on('transitionend', function end(e) {
         if (e.target === this) {
@@ -100,7 +100,7 @@ guide.step1 = guide.step1 || function () {
           var step = steps[stepIdx];
           var arr = step.arrow;
           if (arr) {
-            var elTail = this.querySelector('.kifi-p' + stepIdx);
+            var elTail = this.querySelector('.kifi-p' + stepIdx).firstElementChild;
             var elHead = document.getElementsByClassName(arr.to || step.lit)[0];
             arrow = new SvgArrow(elTail, elHead, 0, arr.angle, stepIdx === 0 ? 600 : 400);
           }
@@ -110,12 +110,33 @@ guide.step1 = guide.step1 || function () {
   }
 
   function showSubstep(msToEarliestCompletion) {
-    $stage.attr('kifi-p', stepIdx);
     var step = steps[stepIdx];
     var arr = step.arrow;
-    var elTail = $stage[0].querySelector('.kifi-p' + stepIdx);
+    var $pOld = $stage.find('.kifi-p' + (stepIdx - 1)).css({display: 'block', position: 'absolute', width: '100%'});
+    var $pNew = $stage.find('.kifi-p' + stepIdx).css('opacity', 0);
+    $stage.attr('kifi-step', stepIdx);
+
     var elHead = document.getElementsByClassName(arr.to || step.lit)[0];
-    arrow.animateTo(elTail, elHead, 0, arr.angle, Math.max(200, msToEarliestCompletion));
+    var ms = Math.max(200, msToEarliestCompletion);
+    arrow.animateTo($pNew[0].firstElementChild, elHead, 0, arr.angle, ms);
+
+    var ms_1 = 1 / ms;
+    var t0 = window.performance.now();
+    var tN = t0 + ms;
+    var tick = this.tick = (function (t) {
+      if (this.tick === tick) {
+        var alpha = t < tN ? t > t0 ? (t - t0) * ms_1 : 0 : 1;
+        $pOld.css('opacity', 1 - alpha);
+        $pNew.css('opacity', alpha);
+        if (t < tN) {
+          window.requestAnimationFrame(tick);
+        } else {
+          $pOld.add($pNew).removeAttr('style');
+          this.tick = null;
+        }
+      }
+    }).bind(this);
+    window.requestAnimationFrame(tick);
   }
 
   function hideStep() {

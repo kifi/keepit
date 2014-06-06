@@ -69,12 +69,10 @@
 .kifi-guide-stage[kifi-step='2'] .kifi-step2,
 .kifi-guide-stage[kifi-step='3'] .kifi-step3,
 .kifi-guide-stage[kifi-step='4'] .kifi-step4,
-.kifi-guide-stage[kifi-step='5'] .kifi-step5 {
+.kifi-guide-stage[kifi-step='5'] .kifi-step5,
+.kifi-guide-stage[kifi-step='0'] .kifi-p0,
+.kifi-guide-stage[kifi-step='1'] .kifi-p1,
+.kifi-guide-stage[kifi-step='2'] .kifi-p2,
+.kifi-guide-stage[kifi-step='3'] .kifi-p3 {
   display: block;
-}
-.kifi-guide-stage[kifi-p='0'] .kifi-p0,
-.kifi-guide-stage[kifi-p='1'] .kifi-p1,
-.kifi-guide-stage[kifi-p='2'] .kifi-p2,
-.kifi-guide-stage[kifi-p='3'] .kifi-p3 {
-  display: inline;
 }
