@@ -121,11 +121,13 @@ class ScraperURISummaryCommanderImpl @Inject()(
 
 object ScraperURISummaryCommander {
 
+  val IMAGE_EXCLUSION_LIST = Seq("/blank.jpg", "/blank.png", "/blank.gif")
+
   def filterImageByUrl(url: String): Boolean = {
     URI.parse(url) match {
       case Success(imageUri) => {
         imageUri.path map { path =>
-          !path.endsWith("/blank.jpg") && !path.endsWith("/blank.png")
+          IMAGE_EXCLUSION_LIST exists (path.toLowerCase.endsWith(_))
         } getOrElse true
       }
       case Failure(imageUrl) => true
