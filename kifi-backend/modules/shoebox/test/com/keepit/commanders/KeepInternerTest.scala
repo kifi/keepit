@@ -198,7 +198,13 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           counts1.keySet.size === 2
           counts1.get(keeps1(0).id.get) === Some(1)
           counts1.get(keeps1(1).id.get) === Some(1)
-
+          val uriCounts1 = keepClickRepo.getUriClickCountsByKeeper(u1.id.get)
+          uriCounts1.size === counts1.size
+          uriCounts1.map(_._2).toSeq.sorted === counts1.map(_._2).toSeq.sorted
+          uriCounts1.forall { case (uriId, count) =>
+            val keep = keeps1.find(_.uriId == uriId).get
+            counts1.get(keep.id.get).get == count
+          } === true
 
           val counts2 = keepClickRepo.getClickCountsByKeeper(u2.id.get)
           println(s"counts2=${counts2.mkString(",")}")
@@ -268,6 +274,12 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val rkc1 = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
           rkc1.get(keeps1(0).id.get) === None
           rkc1.get(keeps1(1).id.get) === Some(1)
+          val uriRKC1 = rekeepRepo.getUriReKeepCountsByKeeper(u1.id.get)
+          uriRKC1.size === rkc1.size
+          uriRKC1.forall { case (uri, count) =>
+            val keep = keeps1.find(_.uriId == uri).get
+            rkc1.get(keep.id.get).get == count
+          } === true
 
           val rkc2 = rekeepRepo.getReKeepCountsByKeeper(u2.id.get)
           rkc2.get(keeps2(0).id.get) === Some(1)
@@ -278,6 +290,15 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) {(a,c) => a + c}
           rekeepRepo.getReKeepCountByKeeper(u3.id.get) === 1
           rekeepRepo.getReKeepCountByKeeper(u4.id.get) === 0
+
+          val bkMap1 = keepRepo.bulkGetByUserAndUriIds(u1.id.get, keeps1.map(_.uriId).toSet)
+          bkMap1.forall { case (uriId, keep) =>
+            keeps1.find(_.uriId == uriId).get == keep
+          } === true
+          val bkMap2 = keepRepo.bulkGetByUserAndUriIds(u2.id.get, keeps2.map(_.uriId).toSet)
+          bkMap2.forall { case (uriId, keep) =>
+            keeps2.find(_.uriId == uriId).get == keep
+          } === true
         }
 
         val attrCmdr = inject[AttributionCommander]
