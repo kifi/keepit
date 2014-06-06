@@ -14,6 +14,7 @@ import com.keepit.scraper.ShoeboxDbCallbackHelper
 import com.keepit.scraper.embedly.EmbedlyClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.net.URI
 
 
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
@@ -91,7 +92,10 @@ class ScraperURISummaryCommanderImpl @Inject()(
           Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
         } else {
           val images = embedlyInfo.buildImageInfo(nUriId)
-          val (smallImages, selectedImageOpt) = partitionImages(images, minSize)
+          val nonBlankImages = images.filter{ image =>
+            image.url map (ScraperURISummaryCommander.filterImageByUrl(_)) getOrElse false
+          }
+          val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)
 
           smallImages.foreach { fetchAndInternImage(nUri, _) }
 
@@ -113,4 +117,18 @@ class ScraperURISummaryCommanderImpl @Inject()(
     }
   }
 
+}
+
+object ScraperURISummaryCommander {
+
+  def filterImageByUrl(url: String): Boolean = {
+    URI.parse(url) match {
+      case Success(imageUri) => {
+        imageUri.path map { path =>
+          !path.endsWith("/blank.jpg") && !path.endsWith("/blank.png")
+        } getOrElse true
+      }
+      case Failure(imageUrl) => true
+    }
+  }
 }
