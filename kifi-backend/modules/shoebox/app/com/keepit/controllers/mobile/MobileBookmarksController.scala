@@ -7,13 +7,18 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json._
 
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.util.{Success, Failure}
+import com.keepit.common.store.ImageSize
+import play.api.mvc.SimpleResult
+import com.keepit.commanders.CollectionSaveFail
+import scala.Some
+import play.api.libs.json.JsObject
 
 class MobileBookmarksController @Inject() (
   db: Database,
@@ -134,9 +139,15 @@ class MobileBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
-  private def toJsObject(url: String, uri: NormalizedURI, screenshotUrlOpt: Option[String], imageUrlOpt: Option[String]): JsObject = {
+  private def toJsObject(
+    url: String,
+    uri: NormalizedURI,
+    screenshotUrlOpt: Option[String],
+    imageUrlOpt: Option[String],
+    imageWidthOpt: Option[Int],
+    imageHeightOpt: Option[Int]): JsObject = {
     log.info(s"[getImageUrl] returning screenshot $screenshotUrlOpt and image $imageUrlOpt")
-    (screenshotUrlOpt, imageUrlOpt) match {
+    val main = (screenshotUrlOpt, imageUrlOpt) match {
       case (None, None) =>
         Json.obj("url" -> url, "uriId" -> uri.id.get)
       case (None, Some(imgUrl)) =>
@@ -146,6 +157,9 @@ class MobileBookmarksController @Inject() (
       case (Some(ssUrl), Some(imgUrl)) =>
         Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
     }
+    val width =  (imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj())
+    val height =  (imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj())
+    main ++ width ++ height
   }
 
   // todo(ray): consolidate with web endpoint
@@ -154,46 +168,63 @@ class MobileBookmarksController @Inject() (
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
     urlOpt match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
       case Some(url) => {
-        val (uriOpt) = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
+        var minSizeOpt = (for {
+          minWidth <- (request.body \ "width").asOpt[Int]
+          minHeight <- (request.body \ "height").asOpt[Int]
+        } yield ImageSize(minWidth, minHeight))
+        val uriOpt = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
         uriOpt match {
           case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
           case Some(uri) => {
             val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-            uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
-              Ok(toJsObject(url, uri, screenshotUrlOpt, imageUrlOpt))
+            uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
+              Ok(toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight))
             }
           }
         }
       }
+      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
     }
   }
 
   def getImageUrls() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
-    val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
+    val urlsOpt = (request.body \ "urls").asOpt[Seq[JsValue]]
     log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
     urlsOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
       case Some(urls) => {
-        val tuples = db.readOnly { implicit ro =>
-          urls.map { s =>
-            s -> uriRepo.getByUri(s)
-          }
-        }
-        val tuplesF = tuples map { case (url, uriOpt) =>
-          val uriOpt = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
-          uriOpt match {
-            case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-            case Some(uri) => {
-              val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-              uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
-                toJsObject(url, uri, screenshotUrlOpt, imageUrlOpt)
+        val uriOpts = db.readOnly { implicit ro =>
+          urls flatMap { urlReq =>
+            urlReq match {
+              case JsString(url) => Some((url, uriRepo.getByUri(url), None))
+              case _ => {
+                val urlOpt = (urlReq \ "url").asOpt[String]
+                urlOpt map { url =>
+                  val widthOpt = (urlReq \ "width").asOpt[Int]
+                  val heightOpt = (urlReq \ "height").asOpt[Int]
+                  val minSizeOpt = for {
+                    width <- widthOpt
+                    height <- heightOpt
+                  } yield ImageSize(width, height)
+                  (url, uriRepo.getByUri(url), minSizeOpt)
+                }
               }
             }
           }
         }
-        Future.sequence(tuplesF) map { res =>
+        val resFutSeq = uriOpts map { case (url, uriOpt, minSizeOpt) =>
+          uriOpt match {
+            case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
+            case Some(uri) => {
+              val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
+              uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
+                toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight)
+              }
+            }
+          }
+        }
+        Future.sequence(resFutSeq) map { res =>
           Ok(Json.toJson(res))
         }
       }
