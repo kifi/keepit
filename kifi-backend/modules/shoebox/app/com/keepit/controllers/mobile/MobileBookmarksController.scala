@@ -167,8 +167,8 @@ class MobileBookmarksController @Inject() (
     urlOpt match {
       case Some(url) => {
         var minSizeOpt = (for {
-          minWidth <- (request.body \ "width").asOpt[Int]
-          minHeight <- (request.body \ "height").asOpt[Int]
+          minWidth <- (request.body \ "minWidth").asOpt[Int]
+          minHeight <- (request.body \ "minHeight").asOpt[Int]
         } yield ImageSize(minWidth, minHeight))
         val uriOpt = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
         uriOpt match {
@@ -199,9 +199,9 @@ class MobileBookmarksController @Inject() (
                 val urlOpt = (urlReq \ "url").asOpt[String]
                 urlOpt map { url =>
                   val minSizeOpt = for {
-                    width <- (urlReq \ "width").asOpt[Int]
-                    height <- (urlReq \ "height").asOpt[Int]
-                  } yield ImageSize(width, height)
+                    minWidth <- (urlReq \ "minWidth").asOpt[Int]
+                    minHeight <- (urlReq \ "minHeight").asOpt[Int]
+                  } yield ImageSize(minWidth, minHeight)
                   (url, uriRepo.getByUri(url), minSizeOpt)
                 }
               }
