@@ -58,6 +58,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.toggleSelectAll = keepService.toggleSelectAll;
         scope.isSelectedAll = keepService.isSelectedAll;
         scope.editingTags = false;
+        scope.addingTag = {enabled: false};
 
         scope.isMultiChecked = function () {
           return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();

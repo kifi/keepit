@@ -15,7 +15,8 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
 
     return {
       scope: {
-        'getSelectedKeeps': '&'
+        'getSelectedKeeps': '&',
+        'addingTag': '='
       },
       replace: true,
       restrict: 'A',
@@ -37,6 +38,12 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
           scope.tagFilter.name = '';
           filterTags(null);
           scope.hideAddTagDropdown();
+        });
+
+        scope.$watch('addingTag.enabled', function () {
+          if (scope.addingTag && scope.addingTag.enabled) {
+            scope.shouldGiveFocus = true;
+          }
         });
 
         scope.getCommonTags = function () {
@@ -232,12 +239,11 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
           scope.tagFilter.name = '';
           filterTags(null);
           scope.shouldGiveFocus = true;
-
-          return scope.isAddingTag = true;
+          return scope.addingTag.enabled = true;
         };
 
         scope.hideAddTagDropdown = function () {
-          return scope.isAddingTag = false;
+          return scope.addingTag.enabled = false;
         };
 
         scope.onKeydown = function (e) {
