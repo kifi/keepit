@@ -29,7 +29,7 @@
       </div>
       <img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></img>
     </div>
-    <div class="kf-keep-who">
+    <div class="kf-keep-who" ng-if="showSocial()">
       <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
       <span class="kf-keep-who-others" ng-if="showOthers()"></span>
       <span kf-keep-who-text keep="keep"></span>
