@@ -13,12 +13,9 @@ import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import scala.util.{Success, Failure}
 import com.keepit.common.store.ImageSize
-import play.api.mvc.SimpleResult
 import com.keepit.commanders.CollectionSaveFail
 import scala.Some
-import play.api.libs.json.JsObject
 
 class MobileBookmarksController @Inject() (
   db: Database,
@@ -201,11 +198,9 @@ class MobileBookmarksController @Inject() (
               case _ => {
                 val urlOpt = (urlReq \ "url").asOpt[String]
                 urlOpt map { url =>
-                  val widthOpt = (urlReq \ "width").asOpt[Int]
-                  val heightOpt = (urlReq \ "height").asOpt[Int]
                   val minSizeOpt = for {
-                    width <- widthOpt
-                    height <- heightOpt
+                    width <- (urlReq \ "width").asOpt[Int]
+                    height <- (urlReq \ "height").asOpt[Int]
                   } yield ImageSize(width, height)
                   (url, uriRepo.getByUri(url), minSizeOpt)
                 }
