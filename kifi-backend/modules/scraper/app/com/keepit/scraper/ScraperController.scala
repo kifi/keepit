@@ -54,29 +54,4 @@ class ScraperController @Inject() (
         }
     }
   }
-
-  def asyncScrapeWithInfo() = Action.async(parse.json) { request =>
-    val jsValues = request.body.as[JsArray].value
-    require(jsValues != null && jsValues.length >= 2, "Expect args to be nUri & scrapeInfo")
-    val uri = jsValues(0).as[NormalizedURI]
-    val info = jsValues(1).as[ScrapeInfo]
-    log.info(s"[asyncScrapeWithInfo] url=${uri.url}, scrapeInfo=$info")
-    val tupF = scrapeProcessor.scrapeArticle(uri, info, None)
-    tupF.map { t =>
-      val res = ScrapeTuple(t._1, t._2)
-      log.info(s"[asyncScrapeWithInfo(${uri.url})] result=${t._1}")
-      Ok(Json.toJson(res))
-    }(ExecutionContext.fj)
-  }
-
-  def asyncScrapeWithRequest() = Action.async(parse.json) { request =>
-    val scrapeRequest = request.body.as[ScrapeRequest]
-    log.info(s"[asyncScrapeWithRequest] req=$scrapeRequest")
-    val tupF = scrapeProcessor.scrapeArticle(scrapeRequest.uri, scrapeRequest.scrapeInfo, scrapeRequest.proxyOpt)
-    tupF.map { t =>
-      val res = ScrapeTuple(t._1, t._2)
-      log.info(s"[asyncScrapeWithInfo(${scrapeRequest.uri.url})] result=${t._1}")
-      Ok(Json.toJson(res))
-    }(ExecutionContext.fj)
-  }
 }

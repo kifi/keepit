@@ -155,6 +155,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
               "clickCount":-1,
               "rekeepCount":-1,
               "collections":[],
+              "tags":[],
               "siteName":"Amazon"},
             {
               "id":"${bookmark1.externalId.toString}",
@@ -167,6 +168,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
               "clickCount":-1,
               "rekeepCount":-1,
               "collections":[],
+              "tags":[],
               "siteName":"Google"}
           ]}
         """)
@@ -238,6 +240,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
                 "clickCount":-1,
                 "rekeepCount":-1,
                 "collections":[],
+                "tags":[],
                 "siteName":"Amazon"
               }
             ]

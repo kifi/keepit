@@ -41,26 +41,24 @@ class ScrapeWorker(
   implicit val myConfig = config
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = try {
+  private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = try {
     processURI(uri, info, pageInfoOpt, proxyOpt)
   } catch {
     case t: Throwable => {
       log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
       airbrake.notify(t)
 
-      val savedUri = recordScrapeFailed(uri)
+      recordScrapeFailed(uri)
       helper.syncSaveScrapeInfo(info.withFailure())   // then update the scrape schedule
-      (savedUri, None)
+      None
     }
   }
 
-  private def recordScrapeFailed(uri: NormalizedURI): NormalizedURI = {
-    helper.syncGetNormalizedUri(uri) match {
-      case Some(latestUri) =>
-        if (latestUri.state == NormalizedURIStates.INACTIVE) latestUri else {
-          helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-        }
-      case None => uri
+  private def recordScrapeFailed(uri: NormalizedURI): Unit = {
+    helper.syncGetNormalizedUri(uri).foreach { latestUri =>
+      if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
+        helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+      }
     }
   }
 
@@ -114,18 +112,18 @@ class ScrapeWorker(
     wordCountCache.set(NormalizedURIWordCountKey(uriId), count)
   }
 
-  private def handleSuccessfulScraped(uri: NormalizedURI, latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): (NormalizedURI, Option[Article]) = {
+  private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Option[Article] = {
     val Scraped(article, signature, redirects) = scraped
     val updatedUri = processRedirects(latestUri, redirects)
 
     if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
       helper.syncSaveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-      (updatedUri, None)
+      None
     }
     else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
       helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-      log.debug(s"[processURI] (${uri.url}) no change detected")
-      (latestUri, None)
+      log.debug(s"[processURI] (${latestUri.url}) no change detected")
+      None
     } else {
 
       articleStore += (latestUri.id.get -> article)
@@ -149,44 +147,42 @@ class ScrapeWorker(
         scrapedURI.id map (shoeboxClient.updateScreenshots(_))
       }
 
-      if (shouldUpdateImage(uri, scrapedURI, pageInfoOpt)) {
+      if (shouldUpdateImage(latestUri, scrapedURI, pageInfoOpt)) {
         scrapedURI.id map { id =>
           shoeboxClient.getUriImage(id) map { res =>
-            log.info(s"[processURI(${uri.id},${uri.url})] (asyncGetImageUrl) imageUrl=$res")
+            log.info(s"[processURI(${latestUri.id},${latestUri.url})] (asyncGetImageUrl) imageUrl=$res")
           }
         }
       }
 
-      log.debug(s"[processURI] (${uri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
-      (scrapedURI, Some(article))
-
+      log.debug(s"[processURI] (${latestUri.url}) needs re-indexing; scrapedURI=(${scrapedURI.id}, ${scrapedURI.state}, ${scrapedURI.url})")
+      Some(article)
     }
   }
 
-  private def handleNotScrapable(uri: NormalizedURI, latestUri: NormalizedURI, notScrapable: NotScrapable, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+  private def handleNotScrapable(latestUri: NormalizedURI, notScrapable: NotScrapable, info: ScrapeInfo): Option[Article] = {
     val NotScrapable(destinationUrl, redirects) = notScrapable
 
     val unscrapableURI = {
       helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
       val updatedUri = processRedirects(latestUri, redirects)
-      if (updatedUri.state == NormalizedURIStates.REDIRECTED) updatedUri else helper.syncSaveNormalizedUri(updatedUri.withState(NormalizedURIStates.UNSCRAPABLE))
+      if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) updatedUri else helper.syncSaveNormalizedUri(updatedUri.withState(NormalizedURIStates.UNSCRAPABLE))
     }
-    log.debug(s"[processURI] (${uri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
+    log.debug(s"[processURI] (${latestUri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
 
     updateWordCountCache(unscrapableURI.id.get, None)
 
-    (unscrapableURI, None)
-
+    None
   }
 
-  private def handleNotModified(uri: NormalizedURI, latestUri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+  private def handleNotModified(url: String, info: ScrapeInfo): Option[Article] = {
     // update the scrape schedule, uri is not changed
-    helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-    log.debug(s"[processURI] (${uri.url} not modified; latestUri=(${latestUri.id}, ${latestUri.state}, ${latestUri.url}})")
-    (latestUri, None)
+    val updatedInfo = helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+    log.debug(s"[processURI] (${url} not modified; updatedInfo=(${updatedInfo})")
+    None
   }
 
-  private def handlScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
+  private def handlScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Option[Article] = {
 
     val Error(httpStatus, msg) = error
     // store a fallback article in a store map
@@ -217,24 +213,24 @@ class ScrapeWorker(
 
     updateWordCountCache(errorURI.id.get, None)
 
-    (errorURI, None)
+    None
   }
 
   private def callEmbedly(uri: NormalizedURI): Unit = {
     embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): (NormalizedURI, Option[Article]) = {
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = {
     log.debug(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
     callEmbedly(latestUri)
 
-    if (latestUri.state == NormalizedURIStates.INACTIVE) (latestUri, None)
+    if (latestUri.state == NormalizedURIStates.INACTIVE) None
     else fetchedArticle match {
-      case scraped: Scraped => handleSuccessfulScraped(uri, latestUri, scraped, info, pageInfoOpt)
-      case notScrapable: NotScrapable => handleNotScrapable(uri, latestUri, notScrapable, info)
-      case NotModified => handleNotModified(uri, latestUri, info)
+      case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info, pageInfoOpt)
+      case notScrapable: NotScrapable => handleNotScrapable(latestUri, notScrapable, info)
+      case NotModified => handleNotModified(latestUri.url, info)
       case error: Error => handlScrapeError(latestUri, error, info)
     }
   }
