@@ -83,7 +83,6 @@ var Spotlight = Spotlight || (function (window, document) {
     this.el = el;
     this.gc = gc;
     this.size(w, h);
-    this.spotBounds = {x: 0, y: 0, w: 0, h: 0};
     this.x = 0;
     this.y = 0;
     this.styleCache = {
@@ -98,6 +97,7 @@ var Spotlight = Spotlight || (function (window, document) {
       this.el.width = w;
       this.el.height = h;
       this.gc.fillRect(0, 0, w, h);
+      this.spotBounds = {x: 0, y: 0, w: 0, h: 0};
     },
     draw: function(wd, r, cx, cy, x, y, opacity, clipHeight) {
       if (x + wd.w > 0 && y + (clipHeight || wd.h) > 0 && x < wd.w && y < wd.h) {

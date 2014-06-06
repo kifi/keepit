@@ -7,14 +7,14 @@
   opacity: 0;
   -webkit-transform: translate3d(-20px,-5px,0);
   transform: translate3d(-20px,-5px,0);
+  transition: opacity linear, -webkit-transform ease-out;
+  transition: opacity linear, transform ease-out;
+  transition-duration: .2s;
 }
 .kifi-guide-stage.kifi-open {
   opacity: 1;
   -webkit-transform: none;
   transform: none;
-  transition: opacity linear, -webkit-transform ease-out;
-  transition: opacity linear, transform ease-out;
-  transition-duration: .2s;
 }
 .kifi-guide-stage.kifi-done {
   opacity: 0;

@@ -8,6 +8,79 @@ var SvgArrow = SvgArrow || (function (window, document) {
   var TAIL_WIDTH = 4;
 
   function SvgArrow(elTail, elHead, angleTail, angleHead, revealMs) {
+    var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead);
+    this.box = o.box;
+    this.svg = $svg('svg')
+      .attr('class', 'kifi-svg-arrow kifi-root')
+      .attr('style', boxPosAndSize(o.box));
+    this.g = $svg('g')
+      .appendTo(this.svg.el);
+    this.tail = $svg('path')
+      .attr('class', 'kifi-svg-arrow-tail')
+      .attr('d', curvePathData(o.curve))
+      .attr('style', tailDashArrayStyle(0))
+      .appendTo(this.g.el);
+    this.head = $svg('path')
+      .attr('class', 'kifi-svg-arrow-head')
+      .attr('d', headPathData())
+      .attr('transform', headTransform(o.curve.x(0), o.curve.y(0), o.curve.phi(0)))
+      .appendTo(this.g.el);
+    this.attach();
+    reveal.call(this, o.curve, revealMs);
+  }
+
+  SvgArrow.prototype = {
+    attached: false,
+    attach: function () {
+      if (!this.attached) {
+        document.body.appendChild(this.svg.el);
+        this.attached = true;
+      }
+      return this;
+    },
+    fadeAndDetach: function () {
+      if (this.attached) {
+        // TODO: fade first
+        this.svg.el.remove();
+        this.attached = false;
+      }
+      return this;
+    },
+    animateTo: function (elTail, elHead, angleTail, angleHead, ms) {
+      // ms = 6000;
+      var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead, this.box);
+      var gTransform = ['translate(', this.box.left - o.box.left, ',', this.box.top - o.box.top, ')'].join('');
+      this.svg.attr('style', boxPosAndSize(o.box));
+      this.g.attr('transform', gTransform);
+      this.tail.attr('style', tailDashArrayStyle());
+      this.box = o.box;
+      var interpolateGroupTransfrom = d3_interpolateString(gTransform, 'translate(0,0)');
+      var interpolateTailPath = d3_interpolateString(this.tail.attr('d'), curvePathData(o.curve));
+      var interpolateHeadTransform = d3_interpolateString(this.head.attr('transform'), headTransform(o.curve.x(1), o.curve.y(1), o.curve.phi(1)));
+      var ease = swing;
+      var ms_1 = 1 / ms;
+      var t0 = window.performance.now();
+      var tN = t0 + ms;
+      var tick = this.tick = (function (t) {
+        if (this.tick === tick) {
+          var alpha = t < tN ? t > t0 ? ease((t - t0) * ms_1) : 0 : 1;
+          this.g.attr('transform', interpolateGroupTransfrom(alpha));
+          this.tail.attr('d', interpolateTailPath(alpha));
+          var totalLen = this.tail.el.getTotalLength();
+          this.head.attr('transform', interpolateHeadTransform(alpha));
+          if (t < tN) {
+            window.requestAnimationFrame(tick);
+          } else {
+            this.tail.attr('style', tailDashArrayStyle(Math.round(totalLen / 9)));
+            this.tick = null;
+          }
+        }
+      }).bind(this);
+      window.requestAnimationFrame(tick);
+    }
+  };
+
+  function computeBoxAndCurve(elTail, elHead, angleTail, angleHead, minBox) {
     if (angleTail !== 0) {
       throw Error('angleTail value not yet supported: ' + angleTail);
     }
@@ -53,67 +126,20 @@ var SvgArrow = SvgArrow || (function (window, document) {
       x: H.x - HEAD_LENGTH * Math.cos(angleHeadRad),
       y: H.y + HEAD_LENGTH * Math.sin(angleHeadRad)
     };
+    minBox = minBox || {left: 1e5, top: 1e5, right: -1e5, bottom: -1e5};
     var box = {
-      left: -1 + Math.floor(T.x - TAIL_WIDTH / 2),
-      top: -1 + Math.floor(T.y - HEAD_WIDTH / 2),
-      right: 1 + Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 3))),
-      bottom: 1 + Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 6)))
+      left: Math.min(minBox.left, -1 + Math.floor(T.x - TAIL_WIDTH / 2)),
+      top: Math.min(minBox.top, -1 + Math.floor(T.y - HEAD_WIDTH / 2)),
+      right: Math.max(minBox.right, 1 + Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 3)))),
+      bottom: Math.max(minBox.bottom, 1 + Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 6))))
     };
-    var curve = this.curve = chooseCurve(
+    var curve = chooseCurve(
       {x: T.x - box.left, y: T.y - box.top}, Math.PI / 180 * angleTail,
       {x: G.x - box.left, y: G.y - box.top}, Math.PI - angleHeadRad);
-    this.svg = $svg('svg')
-      .attr('class', 'kifi-svg-arrow kifi-root')
-      .attr('style', [
-        'width:', box.right - box.left, 'px;',
-        'height:', box.bottom - box.top, 'px;',
-        'right:', window.innerWidth - box.right, 'px;',
-        'bottom:', window.innerHeight - box.bottom, 'px'
-      ].join(''));
-    this.tail = $svg('path')
-      .attr('class', 'kifi-svg-arrow-tail')
-      .attr('d', curvePathData(curve))
-      .attr('style', tailDashArrayStyle(0))
-      .appendTo(this.svg.el);
-    this.head = $svg('path')
-      .attr('class', 'kifi-svg-arrow-head')
-      .attr('d', headPathData())
-      .attr('transform', headTransform(curve.x(0), curve.y(0), curve.phi(0)))
-      .appendTo(this.svg.el);
-    // $svg('circle')
-    //   .attr('r', 3)
-    //   .attr('cx', curve.B.x)
-    //   .attr('cy', curve.B.y)
-    //   .appendTo(this.svg.el);
-    // $svg('circle')
-    //   .attr('r', 3)
-    //   .attr('cx', curve.C.x)
-    //   .attr('cy', curve.C.y)
-    //   .appendTo(this.svg.el);
-    this.attach();
-    reveal.call(this, revealMs);
+    return {box: box, curve: curve};
   }
 
-  SvgArrow.prototype = {
-    attached: false,
-    attach: function () {
-      if (!this.attached) {
-        document.body.appendChild(this.svg.el);
-        this.attached = true;
-      }
-      return this;
-    },
-    fadeAndDetach: function () {
-      if (this.attached) {
-        // TODO: fade first
-        this.svg.el.remove();
-        this.attached = false;
-      }
-      return this;
-    }
-  };
-
-  function reveal(ms) {
+  function reveal(curve, ms) {
     var totalLen = this.tail.el.getTotalLength();
     var ease = swing;
     var ms_1 = 1 / ms;
@@ -125,7 +151,7 @@ var SvgArrow = SvgArrow || (function (window, document) {
         var len = alpha * totalLen;
         var P = this.tail.el.getPointAtLength(len);
         this.tail.attr('style', tailDashArrayStyle(Math.round(len / 9)));
-        this.head.attr('transform', headTransform(P.x, P.y, this.curve.phi(this.curve.t(P.x, P.y))));
+        this.head.attr('transform', headTransform(P.x, P.y, curve.phi(curve.t(P.x, P.y))));
         if (t < tN) {
           window.requestAnimationFrame(tick);
         } else {
@@ -150,8 +176,13 @@ var SvgArrow = SvgArrow || (function (window, document) {
       return this;
     },
     attr: function (name, val) {
-      this.el.setAttributeNS(null, name, val);  // TODO: cache attr values to avoid writes
-      return this;
+      // TODO: cache attr values to avoid unnecessary read and writes
+      if (val === undefined) {
+        return this.el.getAttributeNS(null, name);
+      } else {
+        this.el.setAttributeNS(null, name, val);
+        return this;
+      }
     }
   };
 
@@ -260,6 +291,16 @@ var SvgArrow = SvgArrow || (function (window, document) {
       (_3 - _2) * oneMinusT * t * 6 +
       (_4 - _3) * t * t * 3);
   }
+
+  function boxPosAndSize(box) {
+    return [
+      'width:', box.right - box.left, 'px;',
+      'height:', box.bottom - box.top, 'px;',
+      'right:', window.innerWidth - box.right, 'px;',
+      'bottom:', window.innerHeight - box.bottom, 'px'
+    ].join('');
+  }
+
   function curvePathData(c) {
     return ['M', c.A.x, c.A.y, 'C', c.B.x, c.B.y, c.C.x, c.C.y, c.D.x, c.D.y].join(' ');
   }
@@ -277,13 +318,15 @@ var SvgArrow = SvgArrow || (function (window, document) {
       var arr = new Array(2 * numDots + 1);
       arr[0] = 'stroke-dasharray:';
       for (var i = 1; i < arr.length; i += 2) {
-        arr[i] = .001;
-        arr[i+1] = 9;
+        arr[i] = '.001';
+        arr[i+1] = '9';
       }
       arr[arr.length - 1] = 9999;
       return arr.join(' ');
     } else {
-      return 'stroke-dasharray:0 9999';
+      return numDots === 0
+        ? 'stroke-dasharray:0 9999'
+        : 'stroke-dasharray:.001 9';
     }
   }
 

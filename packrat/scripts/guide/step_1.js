@@ -12,33 +12,30 @@
 
 var guide = guide || {};
 guide.step1 = guide.step1 || function () {
-  var $stage, $steps, spotlight, arrow, tileObserver, keeperObserver, tagboxObserver, stepIdx, pIdx;
+  var $stage, $steps, spotlight, arrow, tileObserver, tagboxObserver, stepIdx;
   var steps = [
-    {lit: '.kifi-tile-card', pad: [20, 40], arrow: {angle: -70}},
-    {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {angle: -90}},
-    {lit: '.kifi-keep-card', pad: [10, 20, 60, 60], arrow: {sel: '.kifi-kept-tag,.kifi-keep-tag', angle: -60}},
-    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20], arrow: {sel: '.kifi-tagbox-suggestion', angle: 0}},
-    {lit: '.kifi-tagbox.kifi-in', pad: [0, 10, 20]}];
-  var handlers = {
-    kept: showStep.bind(null, 2),
-    add_tag: showStep.bind(null, 4)
-  };
-
+    {lit: 'kifi-tile-card', pad: [20, 40], arrow: {angle: -70}, ev: {type: 'mouseover', target: 'kifi-tile-keep'}},
+    {lit: 'kifi-keep-card', pad: [10, 20, 60, 60], arrow: {angle: -90}, ev: {type: 'click', target: 'kifi-keep-btn'}, substep: true},
+    {lit: null, afterTransition: '.kifi-kept-side', arrow: {angle: -60, to: 'kifi-kept-tag'}, ev: {type: 'click', target: 'kifi-kept-tag'}},
+    {lit: 'kifi-tagbox', pad: [0, 10, 20], arrow: {angle: 0, to: 'kifi-tagbox-suggestion'}},
+    {lit: 'kifi-tagbox', pad: [0, 10, 20]}];
+  var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel dragstart drag dragstop keydown keypress keyup'.split(' ');
   return show;
 
   function show() {
     if (!$stage) {
       tileObserver = new MutationObserver(onTileChildChange);
       tileObserver.observe(tile, {childList: true});
-      api.port.on(handlers);
 
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
       $stage = $(render('html/guide/step_1', me)).appendTo('body');
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
-      showStep(0);
+      showStep(0);  // TODO: figure out which step to start on (in case already kept)
       $steps.find('.kifi-guide-steps-x').click(hide);
-      $(document).data('esc').add(hide);
-      $(window).on('resize.guideStep1', showStep.bind(null, null, null, null, 1));
+      $(window).on('resize.guideStep1', animateSpotlightTo.bind(null, null, null, null, 1));
+      eventsToScreen.forEach(function (type) {
+        window.addEventListener(type, screenEvent, true);
+      });
     }
   }
 
@@ -49,13 +46,13 @@ guide.step1 = guide.step1 || function () {
       var ms = spotlight.animateTo(wholeWindow(), {opacity: 0, detach: true});
       arrow.fadeAndDetach(ms);
       tileObserver.disconnect();
-      if (keeperObserver) keeperObserver.disconnect();
       if (tagboxObserver) tagboxObserver.disconnect();
-      api.port.off(handlers);
 
-      $stage = $steps = spotlight = arrow = tileObserver = keeperObserver = tagboxObserver = stepIdx = pIdx = null;
-      $(document).data('esc').remove(hide);
+      $stage = $steps = spotlight = arrow = tileObserver = tagboxObserver = stepIdx = null;
       $(window).off('resize.guideStep1');
+      eventsToScreen.forEach(function (type) {
+        window.removeEventListener(type, screenEvent, true);
+      });
       return ms;
     } else {
       return 0;
@@ -63,67 +60,62 @@ guide.step1 = guide.step1 || function () {
   }
 
   function showStep(idx, el, r, ms) {
-    var stepIdxNew = stepIdx == null || idx > stepIdx ? idx : stepIdx;
-    var pIdxNew = idx != null ? idx : pIdx;
-    var step = steps[stepIdxNew];
-    var p = steps[pIdxNew];
-    var lit = document.querySelector(p.lit);
-    if (!r || lit !== el) {
-      r = lit.getBoundingClientRect();
-    }
-    log('[showStep] step:', stepIdx, '=>', stepIdxNew, 'p:', pIdx, '=>', pIdxNew, r);
-    var t0 = Date.now();
-    var padT = p.pad[0];
-    var padR = p.pad.length > 1 ? p.pad[1] : padT;
-    var padB = p.pad.length > 2 ? p.pad[2] : padT;
-    var padL = p.pad.length > 3 ? p.pad[3] : padR;
-    ms = spotlight.animateTo({
-      x: r.left - padL,
-      y: r.top - padT,
-      w: r.width + padL + padR,
-      h: r.height + padT + padB
-    }, {opacity: 1, ms: ms});
+    if (idx > stepIdx || stepIdx == null) {
+      log('[showStep] step:', stepIdx, '=>', idx);
+      var step = steps[idx];
+      var t0 = Date.now();
+      ms = step.lit ? animateSpotlightTo(step, el, r, ms) : (ms || 0);
 
-    var hidePromise = stepIdxNew !== stepIdx && stepIdx ? hideStep() : null;
+      var promises = stepIdx != null && !step.substep ? [hideStep()] : [];
+      if (step.afterTransition) {
+        $(step.afterTransition).on('transitionend', function end(e) {
+          if (e.target === this) {
+            $(this).off('transitionend', end);
+            afterTransitionDeferred.resolve();
+          }
+        });
+        var afterTransitionDeferred = Q.defer();
+        promises.push(afterTransitionDeferred.promise);
+      }
 
-    if (stepIdx == null || hidePromise) {
-      Q.when(hidePromise, function () {
-        showNewStep(stepIdxNew, ms - (Date.now() - t0));
+      Q.all(promises).then(function () {
+        ms -= Date.now() - t0;
+        stepIdx = idx;
+        if (step.substep) {
+          showSubstep(ms);
+        } else {
+          showNewStep(ms);
+        }
       });
-    } else if (pIdxNew !== pIdx) {
-      switchP(pIdxNew, ms);
     }
-
-    return ms;
   }
 
-  function showNewStep(idx, ms) {
-    stepIdx = pIdx = idx;
+  function showNewStep(msToEarliestCompletion) {
     $stage
-      .attr({'kifi-step': stepIdx, 'kifi-p': pIdx})
-      .css('transition-delay', Math.max(0, ms - 200) + 'ms')
+      .attr({'kifi-step': stepIdx, 'kifi-p': stepIdx})
+      .css('transition-delay', Math.max(0, msToEarliestCompletion - 200) + 'ms')
       .on('transitionend', function end(e) {
         if (e.target === this) {
           $(this).off('transitionend', end);
-          var p = steps[pIdx];
-          var arr = p.arrow;
+          var step = steps[stepIdx];
+          var arr = step.arrow;
           if (arr) {
-            var elTail = this.querySelector('.kifi-p' + pIdx);
-            var elHead = document.querySelector(arr.sel || p.lit);
-            arrow = new SvgArrow(elTail, elHead, 0, arr.angle, 600);
+            var elTail = this.querySelector('.kifi-p' + stepIdx);
+            var elHead = document.getElementsByClassName(arr.to || step.lit)[0];
+            arrow = new SvgArrow(elTail, elHead, 0, arr.angle, stepIdx === 0 ? 600 : 400);
           }
         }
       })
       .layout().addClass('kifi-open');
   }
 
-  function switchP(idx, ms) {
-    stepIdx = Math.max(stepIdx, idx);
-    pIdx = idx;
-    $stage
-      .attr({'kifi-step': stepIdx, 'kifi-p': pIdx})
-      // .css('transition-delay', Math.max(0, ms - 200) + 'ms')
-      // .layout().addClass('kifi-open');
+  function showSubstep(msToEarliestCompletion) {
+    $stage.attr('kifi-p', stepIdx);
+    var step = steps[stepIdx];
+    var arr = step.arrow;
+    var elTail = $stage[0].querySelector('.kifi-p' + stepIdx);
+    var elHead = document.getElementsByClassName(arr.to || step.lit)[0];
+    arrow.animateTo(elTail, elHead, 0, arr.angle, Math.max(200, msToEarliestCompletion));
   }
 
   function hideStep() {
@@ -135,10 +127,28 @@ guide.step1 = guide.step1 || function () {
       }
     }).addClass('kifi-done');
     if (arrow) {
-      arrow.fadeAndDetach(0);
+      arrow.fadeAndDetach(0); // TODO
       arrow = null;
     }
     return deferred.promise;
+  }
+
+  function animateSpotlightTo(step, el, r, ms) {
+    step = step || steps[stepIdx];
+    var lit = document.getElementsByClassName(step.lit)[0];
+    if (!r || lit && lit !== el) {
+      r = lit.getBoundingClientRect();
+    }
+    var padT = step.pad[0];
+    var padR = step.pad.length > 1 ? step.pad[1] : padT;
+    var padB = step.pad.length > 2 ? step.pad[2] : padT;
+    var padL = step.pad.length > 3 ? step.pad[3] : padR;
+    return spotlight.animateTo({
+      x: r.left - padL,
+      y: r.top - padT,
+      w: r.width + padL + padR,
+      h: r.height + padT + padB
+    }, {opacity: 1, ms: ms});
   }
 
   function onTileChildChange(records) {
@@ -149,13 +159,8 @@ guide.step1 = guide.step1 || function () {
       tagboxObserver = new MutationObserver(onTagboxChange);
       tagboxObserver.observe(tagbox, {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
     } else if ((keeper = elementAdded(records, 'kifi-keeper'))) {
-      var onKeeperChangeDebounced = _.debounce(onKeeperChange.bind(keeper), 20, true);
-      keeperObserver = new MutationObserver(onKeeperChangeDebounced);
-      keeperObserver.observe(keeper, {attributes: true, attributeFilter: ['class']});
-      // onKeeperChangeDebounced();
-      showStep(stepIdx > 1 ? 2 : 1);
+      showStep(1);
     }
-    // TODO: disconnect and release keeperObserver if .kifi-keeper element removed
     // TODO: disconnect and release tagboxObserver if .kifi-tagbox element removed
   }
 
@@ -165,7 +170,7 @@ guide.step1 = guide.step1 || function () {
       // TODO: inspect .kifi-tagbox-tagged-wrapper’s transition to compute new height and its transition duration
     } else if (classRemoved(records, 'kifi-in')) {
       if (stepIdx < 4) {
-        showStep(2);
+        // showStep(2);
       } else {
         spotlight.animateTo({x: window.innerWidth - 32, y: window.innerHeight - 32, w: 0, h: 0}, {});
       }
@@ -181,17 +186,6 @@ guide.step1 = guide.step1 || function () {
     var r = tagbox.getBoundingClientRect();
     log('[spotOnTagbox]', w, 'x', h, 'right:', r.right, 'bottom:', r.bottom, 'ms:', ms);
     showStep(Math.max(3, stepIdx), tagbox, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
-  }
-
-  function onKeeperChange(records) {
-    log('[onKeeperChange]', records);
-    if (this.classList.contains('kifi-hiding')) {
-      if (stepIdx < 4) {
-        showStep(0);
-      }
-    } else {
-      // showStep();
-    }
   }
 
   function elementAdded(records, cssClass) {
@@ -221,6 +215,28 @@ guide.step1 = guide.step1 || function () {
       if (!rec.target.classList.contains(cssClass) && ~rec.oldValue.split(' ').indexOf(cssClass)) {
         return true;
       }
+    }
+  }
+
+  function screenEvent(e) {
+    var step = stepIdx != null && steps[stepIdx];
+    if (step && e.type === step.ev.type && e.target.classList.contains(step.ev.target)) {
+      if (stepIdx === 1) {
+        showStep(2);
+      }
+    } else if (!e.target.namespaceURI && e.target.className.lastIndexOf('kifi-guide', 0) === 0) {
+      // do not interfere with guide
+    } else if (e.type === 'keydown') {
+      if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        hide();
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && ~[75,79,83].indexOf(e.keyCode)) {  // kifi shortcuts
+        e.stopImmediatePropagation();
+      }
+    } else {
+      if (e.type !== 'mousedown') {
+        e.preventDefault();
+      }
+      e.stopImmediatePropagation();
     }
   }
 
