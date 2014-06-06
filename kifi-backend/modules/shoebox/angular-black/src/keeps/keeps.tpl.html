@@ -9,12 +9,12 @@
       <div class="kf-keep-selection-options" ng-class='{disabled: editingTags}' ng-if="getSelected().length">
         <div class="kf-keep-selection-option"><span ng-click="togglePrivate()">Make {{selectionPrivacyState()}}</span></div>
         <div class="kf-keep-selection-option"><span ng-click="unkeep()">Unkeep</span></div>
-        <div class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Add Tags</span></div>
+        <div class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
         <div class="kf-keep-selection-options-mask"></div>
       </div>
       <div class="kf-keep-selection-tags" ng-if="editingTags">
         <div class="kf-keep-selection-tags-done" ng-click="disableEditTags()">Done tagging</div>
-        <div kf-tag-list class="kf-keep-selection-tags-list" get-selected-keeps="getSelected()"></div>
+        <div kf-tag-list class="kf-keep-selection-tags-list" adding-tag="addingTag" get-selected-keeps="getSelected()"></div>
       </div>
     </div>
   </div>
