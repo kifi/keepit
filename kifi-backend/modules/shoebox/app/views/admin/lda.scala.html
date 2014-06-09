@@ -17,10 +17,16 @@
       <tr>
         <th> id
         <th> words
+        <th> topic name
+        <th> topic state
       <tr/>
     </thead>
     <tbody></tbody>
   </table>
+
+  <form id = "save_changes">
+    <button type = "submit">Save Above Changes</button>
+  </form>
 
   <br><br>
   <div>Show word topic. Only the top few topics are returned.</div>
@@ -47,6 +53,16 @@
   <script type="text/javascript">
 
     $(document).ready(function(){
+      $.postJson = function (uri, data, done) {
+        return $.ajax({
+          url: uri,
+          type: 'POST',
+          dataType: 'json',
+          data: JSON.stringify(data),
+          contentType: 'application/json',
+          success: done || $.noop
+        });
+      };
 
       $("#show_topics").submit(function(event){
         event.preventDefault();
@@ -57,22 +73,64 @@
 
         function done(data) {
           var x = JSON.parse(data)
-          var sz = x.length
+
           var fromId = parseInt($('#fromId').val())
+          var topicIds = x.ids
+          var topicWords = x.topicWords
+          var topicNames = x.topicNames
+          var states = x.states
+
+          var sz = topicWords.length
 
           $("#topic_words_table > tbody").empty()
           for(var i = 0; i < sz; i++){
-            var item  = x[i]
-            $("#topic_words_table > tbody:last").append(
+
+            var isActive = (states[i] == true)
+
+            $("#topic_words_table").append(
               "<tr>" +
-              "<td>" + (fromId + i) + "</td>" +
-              "<td><pre>" + item + "</pre></td>" +
+              "<td class = \"ids\" >" + topicIds[i] + "</td>" +
+              "<td><pre>" + topicWords[i] + "</pre></td>" +
+              "<td class = \"tnames\">" + $("<input>",{value: topicNames[i]}).prop('outerHTML') + "</td>" +
+              "<td class = \"active\">" + $("<input/>", {type: "checkbox", checked: isActive}).prop('outerHTML') + "</td>" +
               "</tr>"
             )
           }
         }
 
         function fail() { alert("bad things happened") }
+
+      })
+
+
+      $('#save_changes').submit(function(event){
+        event.preventDefault();
+
+        var ids = $(".ids")
+        var retIds = []
+        for(var j = 0; j < ids.length; j++){
+          retIds[j] = $(ids[j]).text()
+        }
+
+        var names = $(".tnames")
+        var retNames = []
+        for(var j = 0; j < names.length; j++){
+          retNames[j] = $(names[j]).find("input").val()
+        }
+
+        var states = $(".active")
+        var retStates = []
+        for(var j = 0; j < states.length; j++){
+          retStates[j] = $(states[j]).find("input").prop("checked")
+        }
+
+        $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.saveEdits',
+          {topic_ids: retIds, topic_names: retNames, topic_states: retStates}
+        ).done(done).fail(fail);
+
+        function done(data){ alert("changes saved") }
+        function fail() { alert("bad things happened") }
+
 
       })
 

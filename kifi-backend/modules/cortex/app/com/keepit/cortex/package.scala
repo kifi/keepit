@@ -39,7 +39,10 @@ package object cortex {
 
   object MiscPrefix {
     object LDA {
-      val topicWords = "misc/lda/topic_words/"
+      val topicWordsFolder = "misc/lda/topic_words/"
+      val topicConfigsFolder = "misc/lda/topic_configs/"
+      val topicWordsJsonFile = "topic_words"
+      val topicConfigsJsonFile = "topic_configs"
     }
   }
 
