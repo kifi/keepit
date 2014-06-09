@@ -24,7 +24,7 @@ extends CortexServiceController {
     val topicWords = lda.topicWords(fromId, toId, topN).map{case (id, words) => (id.toString, words.toMap)}
     val topicConfigs = lda.topicConfigs(fromId, toId)
     val infos = topicWords.map{ case (tid, words) =>
-      val config = topicConfigs.get(tid).get
+      val config = topicConfigs(tid)
       LDATopicInfo(tid.toInt, words, config)
     }
     Ok(Json.toJson(infos))
