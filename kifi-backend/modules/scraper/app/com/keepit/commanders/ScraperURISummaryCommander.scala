@@ -126,8 +126,8 @@ object ScraperURISummaryCommander {
   def filterImageByUrl(url: String): Boolean = {
     URI.parse(url) match {
       case Success(imageUri) => {
-        imageUri.path map { path =>
-          IMAGE_EXCLUSION_LIST exists (path.toLowerCase.endsWith(_))
+        imageUri.path.map { path =>
+          !IMAGE_EXCLUSION_LIST.exists(path.toLowerCase.endsWith(_))
         } getOrElse true
       }
       case Failure(imageUrl) => true
