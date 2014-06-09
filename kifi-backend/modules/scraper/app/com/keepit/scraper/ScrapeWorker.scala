@@ -386,23 +386,11 @@ class ScrapeWorker(
         updateRedirectRestriction(uri, redirect)
       }
       case permanentsRedirects => {
-        var absoluteDestination = uri.url
-        var currentLocation = uri.url
-        permanentsRedirects.takeWhile(_.isPermanent).foreach { case permanentRedirect =>
-          if (permanentRedirect.isLocatedAt(currentLocation)) {
-            currentLocation = permanentRedirect.newDestination
-            if (URI.isAbsolute(currentLocation)) {
-              absoluteDestination = currentLocation
-            }
-          }
-        }
-
-        if (absoluteDestination != uri.url) {
+        HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
           val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
           log.debug(s"Found permanent $validRedirect for $uri")
           helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
-        }
-        else {
+        } getOrElse {
           permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
           removeRedirectRestriction(uri)
         }

@@ -23,8 +23,8 @@ case class Email(local:LocalPart, host:Host) {
   }
 
   def isKifi = (domain == Email.FORTYTWO_DOMAIN) || (domain == Email.KIFI_DOMAIN)
-  def isTest = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.AUTOGEN) || host.name == "tfbnw.net"))
-  def isFake = isKifi && ((local.tag exists (tag => tag.t.startsWith(ETag.TEST))) || host.name == "tfbnw.net")
+  def isTest = isFake || isAutoGen
+  def isFake = isKifi && ((local.tag exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.UTEST))) || host.name == "tfbnw.net")
   def isAutoGen = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.AUTOGEN)))
 }
 
@@ -46,6 +46,7 @@ case class ETag(t:String) {
 }
 object ETag {
   val TEST    = "test"
+  val UTEST = "utest"
   val AUTOGEN = "autogen"
 }
 

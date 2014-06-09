@@ -131,6 +131,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         element.on('dragstart', function (e) {
           // Firefox requires data to be set
           e.dataTransfer.setData('text/plain', '');
+          e.dataTransfer.effectAllowed = 'none';
           scope.$apply(function () {
             if (!scope.watchTagReorder()) { return; }
             scope.tagDragSource = scope.tag;
