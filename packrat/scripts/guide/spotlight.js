@@ -87,8 +87,7 @@ var Spotlight = Spotlight || (function (window, document) {
     this.y = 0;
     this.styleCache = {
       display: '',
-      opacity: 1,
-      clip: ''
+      opacity: 1
     };
   }
 
@@ -98,6 +97,7 @@ var Spotlight = Spotlight || (function (window, document) {
       this.el.height = h;
       this.gc.fillRect(0, 0, w, h);
       this.spotBounds = {x: 0, y: 0, w: 0, h: 0};
+      this.clipHeight = null;
     },
     draw: function(wd, r, cx, cy, x, y, opacity, clipHeight) {
       if (x + wd.w > 0 && y + (clipHeight || wd.h) > 0 && x < wd.w && y < wd.h) {
@@ -111,15 +111,23 @@ var Spotlight = Spotlight || (function (window, document) {
         if (opacity != null) {
           updateStyle(es, cs, 'opacity', opacity);
         }
-        updateStyle(es, cs, 'clip', clipHeight ? 'rect(0,auto,' + clipHeight + 'px,0)' : '');
         var gc = this.gc;
-        var sb = this.spotBounds;
-        gc.fillRect(sb.x, sb.y, sb.w, sb.h);
-        gc.fillRect(
-          sb.x = cx - x - r - 2,
-          sb.y = cy - y - r - 2,
-          sb.w = 2 * r + 4,
-          sb.h = 2 * r + 4);
+        var sB = this.spotBounds;
+        var fillHeight = Math.min(clipHeight || wd.h, sB.y + sB.h) - sB.y;
+        if (fillHeight > 0) {
+          gc.fillRect(sB.x, sB.y, sB.w, fillHeight);
+        }
+        var cH = this.clipHeight;
+        if (clipHeight != null && (clipHeight < cH || cH == null)) {
+          gc.clearRect(0, clipHeight, this.el.width, (cH || this.el.height) - clipHeight);
+        } else if (cH != null && (clipHeight == null || clipHeight > cH)) {
+          gc.fillRect(0, cH, this.el.width, (clipHeight || this.el.height) - cH);
+        }
+        this.clipHeight = clipHeight;
+        sB.x = cx - x - r - 2,
+        sB.y = cy - y - r - 2,
+        sB.w = 2 * r + 4,
+        sB.h = 2 * r + 4;
         gc.globalCompositeOperation = 'destination-out';
         gc.beginPath();
         gc.arc(cx - x, cy - y, r, 0, 2 * Math.PI);
