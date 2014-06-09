@@ -12,7 +12,9 @@
   <div class="kf-keep-body">
     <div class="kf-keep-contents">
       <div class="kf-keep-content-line">
-        <img class="kf-keep-small-image" ng-if="hasSmallImage()" ng-src="{{keep.summary.imageUrl}}"></img>
+        <div class="kf-keep-small-image" ng-if="hasSmallImage()">
+          <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}">
+        </div>
         <div class="kf-keep-info">
           <div class="kf-keep-title">
             <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
@@ -29,16 +31,16 @@
       </div>
       <img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></img>
     </div>
-    <div class="kf-keep-who">
+    <div class="kf-keep-who" ng-if="showSocial()">
       <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
       <span class="kf-keep-who-others" ng-if="showOthers()"></span>
       <span kf-keep-who-text keep="keep"></span>
     </div>
-    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()"></div>
+    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" ng-show="showTags()"></div>
   </div>
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link"><a>Send</a></span>
-    <span class="kf-keep-footer-link" ng-if="!hasTag()"><a>Tag</a></span>
+    <span class="kf-keep-footer-link" ng-if="!hasTag()" ng-click="showAddTag()"><a>Tag</a></span>
     <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="!isPrivate()"><a>Make Private</a></span>
     <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isPrivate()"><a>Make Public</a></span>
     <span class="kf-keep-footer-link" ng-click="unkeep()"><a>Unkeep</a></span>

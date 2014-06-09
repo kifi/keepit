@@ -5,8 +5,8 @@
       <div class="kf-keep-tag-link-container"><a class="kf-keep-tag-link" href="/tag/{{tag.id}}">{{tag.name}}</a></div>
     </li>
     <li class="kf-keep-tag-new">
-      <span class="kf-keep-add-tag-button sprite sprite-add-a-tag-button" ng-click="showAddTagDropdown()" ng-if="!isAddingTag"></span>
-      <span kf-tag-suggestions ng-if="isAddingTag">
+      <span class="kf-keep-add-tag-button sprite sprite-add-a-tag-button" ng-click="showAddTagDropdown()" ng-if="!addingTag.enabled"></span>
+      <span kf-tag-suggestions ng-if="addingTag.enabled">
         <input focus-when="shouldGiveFocus" class="kf-keep-tag-input" type="text" placeholder="Tag name..." ng-model="tagFilter.name" ng-keydown="onKeydown($event)" ng-blur="hideAddTagDropdown()">
         <div class="kf-keep-tag-opts-container">
           <ul class="kf-keep-tag-opts">

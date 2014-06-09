@@ -59,6 +59,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         var fileNameToSpaceRe = /[\/._-]/g;
         var imageWidthThreshold = 200;
 
+        scope.addingTag = {enabled: false};
+
         scope.getTags = function () {
           return scope.keep.tagList;
         };
@@ -224,17 +226,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return keep.summary && shouldShowSmallImage(keep.summary);
         };
 
-        $timeout(function () {
-          var content = element.find('.kf-keep-content-line');
-          var img = content.find('.kf-keep-small-image');
-          if (img.length) {
-            var info = content.find('.kf-keep-info');
-            var imgWidth = Math.min(scope.keep.summary.imageWidth, imageWidthThreshold);
-            img.outerWidth(imgWidth);
-            info.outerWidth(content.width() - imgWidth);
-          }
-        });
-
         scope.hasKeepers = function () {
           var keep = scope.keep;
           return !!(keep.keepers && keep.keepers.length);
@@ -242,6 +233,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.showOthers = function () {
           return !scope.hasKeepers() && !! scope.keep.others;
+        };
+
+        scope.showSocial = function () {
+          return scope.keep.others || (scope.keep.keepers && scope.keep.keepers.length > 0);
+        };
+
+        scope.showTags = function () {
+          return scope.hasTag() || scope.addingTag.enabled;
+        };
+
+        scope.showAddTag = function () {
+          scope.addingTag.enabled = true;
         };
 
         scope.onCheck = function (e) {
