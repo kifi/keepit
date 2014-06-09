@@ -12,7 +12,9 @@
   <div class="kf-keep-body">
     <div class="kf-keep-contents">
       <div class="kf-keep-content-line">
-        <img class="kf-keep-small-image" ng-if="hasSmallImage()" ng-src="{{keep.summary.imageUrl}}"></img>
+        <div class="kf-keep-small-image" ng-if="hasSmallImage()">
+          <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}">
+        </div>
         <div class="kf-keep-info">
           <div class="kf-keep-title">
             <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
