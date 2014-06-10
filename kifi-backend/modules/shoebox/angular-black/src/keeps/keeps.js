@@ -66,7 +66,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.keepClickAction = function (event, keep) {
           if (event.metaKey) {
             if (!scope.editMode.enabled) {
-              scope.toggleEdit();
+              scope.toggleEdit(true);
             }
             scope.editMode.enabled = true;
             scope.toggleSelect(keep);
