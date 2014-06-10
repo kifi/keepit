@@ -172,6 +172,8 @@ GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
+GET    /m/1/discover/                           @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
+
 ##########################################
 # Website
 ##########################################
