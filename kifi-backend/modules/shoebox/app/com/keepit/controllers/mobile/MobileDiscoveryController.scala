@@ -26,7 +26,7 @@ class MobileDiscoveryController @Inject() (
   uriSummaryCommander: URISummaryCommander
 ) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  def discover(withPageInfo: Boolean, limit: Int = -1) = JsonAction.authenticatedParseJsonAsync { request =>
+  def discover(withPageInfo: Boolean, limit: Int = -1) = JsonAction.authenticatedAsync { request =>
     val userId = request.userId
     val futureUriCollisionInfos = graphClient.wander(Wanderlust.discovery(userId)).flatMap { collisions =>
       val sortedUriCollisions = collisions.uris.toSeq.sortBy(- _._2)
