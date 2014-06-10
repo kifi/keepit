@@ -104,11 +104,6 @@ a.kf-header-callout:hover
   .sprite
     cursor: pointer
 
-  .sprite:hover .kf-dropdown-menu
-    display: block
-    margin-top: -20px
-    margin-left: -128px
-
   @media screen and (max-width: 1280px)
     margin-right: 30px
 
@@ -116,3 +111,10 @@ a.kf-header-callout:hover
     &:hover
       sprite2x($add-link-active)
 
+.kf-header-icon-hover-container
+  display: inline-block
+
+  &:hover .kf-dropdown-menu
+    display: block
+    margin-top: -10px
+    margin-left: -128px
