@@ -160,7 +160,6 @@ class MessagingCommander @Inject() (
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
-    "2d18cd0b-ef30-4759-b6c5-f5f113a30f08", // effi
     "73b1134d-02d4-443f-b99b-e8bc571455e2", // chandler
     "c82b0fa0-6438-4892-8738-7fa2d96f1365", // ketan
     "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
