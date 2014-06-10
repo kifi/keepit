@@ -216,6 +216,13 @@ input.kf-tag-rename
 .kf-scrollable-tags
   position: relative
 
+  // This is a hack to hide the scrollbar
+  // (cf. comments in scrollbar.js)
+  overflow: hidden
+  .antiscroll-inner
+    .kf-sidebar-tag-list
+      width: calc(100% - 30px)
+
 .kf-tag-tool
   position: absolute
   display: none
