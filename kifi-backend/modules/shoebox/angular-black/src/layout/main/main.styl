@@ -22,13 +22,11 @@
 
 .kf-main-head
   position: relative
-  height: 73px
-  padding: 13px 25px 0 20px
+  padding: 13px 25px 0 30px
   box-sizing: border-box
 
   .kf-main-search &
     padding-top: 10px
-    height: 38px
 
 .kf-main-title
   margin: 0 0 2px
@@ -56,9 +54,6 @@
 .kf-main-keeps
   overflow: hidden
   position: relative
-
-  .kf-main-search &
-    top: 108px
 
   & > .antiscroll-inner
     padding: 0 19px 0 18px
@@ -171,24 +166,14 @@
     text-decoration: underline
 
 .kf-search-filters
-  display: inline
-
-  &:before
-    content: ' | '
-    color: #cccccc
-    margin-left: 11px
-    margin-right: 17px
+  padding-bottom: 10px
 
 .kf-search-filter.kf-search-filter
   display: inline
   color: #cccccc
   text-decoration: none
-
-  &:after
-    content: '|'
-    color: #cccccc
-    font-size: 0.9em
-    margin: 0 5px
+  title-text()
+  font-size: 17px
 
   &:last-child:after
     display: none
@@ -203,6 +188,10 @@
   &.selected
     color: #333333
 
+.kf-search-filter + .kf-search-filter
+  border-left: defaultBorder
+  padding-left: 10px
+  margin-left: 10px 
 
 .import-modal
 

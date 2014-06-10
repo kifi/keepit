@@ -37,8 +37,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$document', '$log', '$window',
-  function (keepService, $document, $log, $window) {
+  'keepService',
+  function (keepService) {
 
     return {
       restrict: 'A',
