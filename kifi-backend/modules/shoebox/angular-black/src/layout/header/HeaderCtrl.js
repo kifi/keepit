@@ -16,13 +16,5 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
     $scope.logout = function () {
       profileService.logout();
     };
-
-    $scope.isSidebarActive = function () {
-      $rootElement.hasClass('kf-sidebar-active');
-    };
-
-    $scope.isSidebarInactive = function () {
-      !$rootElement.hasClass('kf-sidebar-active');
-    };
   }
 ]);
