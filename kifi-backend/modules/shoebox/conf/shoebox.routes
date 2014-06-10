@@ -313,6 +313,7 @@ POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
+GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
