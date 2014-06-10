@@ -102,7 +102,6 @@
   font-weight: 300
   font-smoothing: antialiased
   box-sizing: border-box
-  background: #fff url(../img/sprites/search-icon-default.png) 5px center / 22px no-repeat
 
   &::-webkit-input-placeholder
     color: #99a3b3
@@ -116,8 +115,14 @@
   &::-ms-clear
     display: none
 
-  &:focus
-    background: #fff url(../img/sprites/search-icon-active.png) 5px center / 22px no-repeat
+.kf-query + .kf-query-icon
+  position: absolute
+  left: 40px
+  top: 9px
+  sprite2x($search-icon-default)
+
+.kf-query:focus + .kf-query-icon
+  sprite2x($search-icon-active)
 
 .kf-search-clear-wrapper
   position: relative
