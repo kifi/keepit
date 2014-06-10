@@ -46,7 +46,6 @@ angular.module('kifi', [
   'kifi.installService',
   'kifi.dragService',
   'jun.facebook',
-  'ngDragDrop',
   'ui.slider',
   'angulartics',
   'kifi.mixpanel',

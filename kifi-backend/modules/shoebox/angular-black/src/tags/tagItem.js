@@ -3,8 +3,8 @@
 angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
 
 .directive('kfTagItem', [
-  '$timeout', '$document', 'tagService', 'keyIndices', 'dragService',
-  function ($timeout, $document, tagService, keyIndices, dragService) {
+  '$timeout', '$document', '$rootScope', 'tagService', 'keepService', 'keyIndices', 'dragService',
+  function ($timeout, $document, $rootScope, tagService, keepService, keyIndices, dragService) {
     return {
       restrict: 'A',
       scope: {
@@ -26,22 +26,13 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         scope.isDropdownOpen = false;
         scope.renameTag = {};
         var input = element.find('input');
-        var waitingTimeout;
         var clone, cloneMask;
         var tagList = element.parent();
 
         element.attr('draggable', true);
-
-        scope.onKeepDrop = function (keeps) {
-          waitingTimeout = $timeout(function () {
-            scope.isWaiting = true;
-          }, 500);
-          scope.isDragTarget = false;
-          tagService.addKeepsToTag(scope.tag, keeps).then(function () {
-            $timeout.cancel(waitingTimeout);
-            scope.isWaiting = false;
-          });
-        };
+        if (window.jQuery && !window.jQuery.event.props.dataTransfer) {
+          window.jQuery.event.props.push('dataTransfer');
+        }
 
         scope.navigateToTag = function (event) {
           if (scope.isRenaming) {
@@ -117,21 +108,37 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
           scope.$apply(function () { scope.cancelRename(); });
         });
 
-        var keepDragMask = element.find('.kf-drag-mask');
+        var keepDragMask = element.find('.kf-keep-drag-mask');
         scope.isDragTarget = false;
 
-        keepDragMask.on('dragenter', function () {
-          scope.$apply(function () { scope.isDragTarget = true; });
-        });
+        function addKeepDragoverStyling() {
+          if ($rootScope.DRAGGING_KEEP) {
+            element.addClass('kf-keep-dragover-tag');
+          }
+        }
+        function removeKeepDragoverStyling() {
+          if ($rootScope.DRAGGING_KEEP) {
+            element.removeClass('kf-keep-dragover-tag');
+          }
+        }
 
-        keepDragMask.on('dragleave', function () {
-          scope.$apply(function () { scope.isDragTarget = false; });
-        });
+        keepDragMask.on('dragenter', addKeepDragoverStyling)
+        .on('dragleave', removeKeepDragoverStyling)
+        .on('drop', removeKeepDragoverStyling);
+
+        function animate() {
+          function removeAnimate() {
+            element.removeClass('animate');
+            element.off('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+          }
+          element.on('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+          element.addClass('animate');
+        }
 
         element.on('dragstart', function (e) {
           // Firefox requires data to be set
           e.dataTransfer.setData('text/plain', '');
-          e.dataTransfer.effectAllowed = 'none';
+          //e.dataTransfer.effectAllowed = 'none';
           scope.$apply(function () {
             if (!scope.watchTagReorder()) { return; }
             scope.tagDragSource = scope.tag;
@@ -160,12 +167,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         .on('dragend', function (e) {
           e.preventDefault();
           tagList.removeClass('kf-tag-list-reordering');
-          function removeAnimate() {
-            element.removeClass('animate');
-            element.off('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
-          }
-          element.on('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
-          element.addClass('animate');
+          animate();
 
           element.removeClass('kf-dragged');
           if (clone) { clone.remove(); }
@@ -188,7 +190,16 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         })
         .on('drop', function (e) {
           e.preventDefault();
-          tagService.reorderTag(scope.tagDragSource, scope.targetIdx);
+          var data = e.dataTransfer.getData('Text');
+          if (data.length > 0) {
+            // keep drop
+            var keeps = angular.fromJson(data);
+            keeps.forEach(keepService.buildKeep);
+            tagService.addKeepsToTag(scope.tag, keeps);
+            animate();
+          } else {
+            tagService.reorderTag(scope.tagDragSource, scope.targetIdx);
+          }
         })
         .on('mouseenter', function () {
           scope.$apply(function () { scope.isHovering = true; });
@@ -208,6 +219,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
             }
           });
         });
+        
       }
     };
   }

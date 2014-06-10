@@ -3,10 +3,10 @@
 angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
-  '$scope', 'profileService', 'keepService', 'tagService',
-  function ($scope, profileService, keepService, tagService) {
+  '$scope', '$timeout', 'profileService', 'keepService', 'tagService',
+  function ($scope, $timeout, profileService, keepService, tagService) {
     $scope.me = profileService.me;
-    $scope.data = {draggedKeeps: null};
+    $scope.data = {draggedKeeps: []};
 
     $scope.$watch(function () {
       return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.allTags.length;
@@ -17,15 +17,17 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     });
 
     $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
-      var draggedKeeps = [];//keepService.getSelected();
+      var draggedKeeps = keepService.getSelected();
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
       $scope.data.draggedKeeps = draggedKeeps;
-      var draggedKeepsElement = $scope.getDraggedKeepsElement();
       var sendData = angular.toJson($scope.data.draggedKeeps);
       event.dataTransfer.setData('Text', sendData);
+      //event.dataTransfer.setData('text/plain', '');
+      var draggedKeepsElement = $scope.getDraggedKeepsElement();
       event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
+      //event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
     };
 
     $scope.stopDraggingKeeps = function () {
@@ -77,28 +79,26 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         };
 
         scope.getDraggedKeepsElement = function () {
-          var ellipsis = element.find('.kf-shadow-keep-ellipsis');
-          var ellipsisCounter = element.find('.kf-shadow-keep-ellipsis-counter');
-          var ellipsisCounterHidden = element.find('.kf-shadow-keep-ellipsis-counter-hidden');
-          var second = element.find('.kf-shadow-keep-second');
-          var last = element.find('.kf-shadow-keep-last');
-          var keepHeaderHeight = 35;
-          var ellipsisHeight = 28;
-          if (scope.data.draggedKeeps.length === 2) {
-            last.css({top: keepHeaderHeight + 'px'});
-          } else if (scope.data.draggedKeeps.length === 3) {
-            second.css({top: keepHeaderHeight + 'px'});
-            last.css({top: 2 * keepHeaderHeight + 'px'});
-          } else if (scope.data.draggedKeeps.length >= 4) {
-            ellipsis.css({top: keepHeaderHeight + 'px', height: ellipsisHeight + 'px'});
+          if (scope.data.draggedKeeps.length >= 4) {
+            var ellipsis = element.find('.kf-shadow-keep-ellipsis');
+            var ellipsisCounter = element.find('.kf-shadow-keep-ellipsis-counter');
+            var ellipsisCounterHidden = element.find('.kf-shadow-keep-ellipsis-counter-hidden');
             ellipsisCounter.css({left: (parseInt(ellipsis.width(), 10) - parseInt(ellipsisCounterHidden.width(), 10)) / 2});
-            last.css({top: keepHeaderHeight + ellipsisHeight + 'px'});
           }
           return element.find('.kf-shadow-dragged-keeps');
         };
 
-        var shadowDraggedKeeps = element.find('.kf-shadow-dragged-keeps');
-        shadowDraggedKeeps.css({top: 0, width: element.find('.kf-my-keeps')[0].offsetWidth + 'px'});
+        scope.draggedTwo = function () {
+          return scope.data.draggedKeeps && scope.data.draggedKeeps.length === 2;
+        };
+
+        scope.draggedThree = function () {
+          return scope.data.draggedKeeps && scope.data.draggedKeeps.length === 3;
+        };
+
+        scope.draggedMore = function () {
+          return scope.data.draggedKeeps && scope.data.draggedKeeps.length > 3;
+        };
 
         angular.element($window).on('scroll', function () {
           var scrollMargin = $window.innerHeight;

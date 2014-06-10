@@ -28,7 +28,7 @@
     &:active
       background: #cccccc
 
-.kf-drag-mask
+.kf-keep-drag-mask
 .kf-tag-new-location-mask
   display: none
   position: absolute
@@ -38,17 +38,10 @@
   height: 100%
   z-index: 1
   box-sizing: border-box
-  border-width: 1px
-  border-color: #c4d4e9
-  border-style: none
 
-.kf-candidate-drag-target
-  .kf-drag-mask
+.kf-dragging-keep
+  .kf-keep-drag-mask
     display: block
-
-.kf-dragged
-  .kf-drag-mask
-    border-style: solid
 
 .fill-parent
   width: 100%
