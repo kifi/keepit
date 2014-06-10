@@ -78,8 +78,20 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           keepService.unkeep([scope.keep]);
         };
 
+        scope.keepPublic = function () {
+          keepService.keep([scope.keep], false);
+        };
+
+        scope.keepPrivate = function () {
+          keepService.keep([scope.keep], true);
+        };
+
         scope.isPrivate = function () {
           return (scope.keep && scope.keep.isPrivate) || false;
+        };
+
+        scope.isMine = function () {
+          return scope.isMyBookmark(scope.keep);
         };
 
         scope.togglePrivate = function () {

@@ -38,10 +38,12 @@
   </div>
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link"><a>Send</a></span>
-    <span class="kf-keep-footer-link" ng-if="!hasTag()" ng-click="showAddTag()"><a>Tag</a></span>
-    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="!isPrivate()"><a>Make Private</a></span>
-    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isPrivate()"><a>Make Public</a></span>
-    <span class="kf-keep-footer-link" ng-click="unkeep()"><a>Unkeep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)" ng-click="showAddTag()"><a>Tag</a></span>
+    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isMine() && !isPrivate()"><a>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isMine() && isPrivate()"><a>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine()" ng-click="unkeep()"><a>Unkeep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()" ng-click="keepPublic()"><a>Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()" ng-click="keepPrivate()"><a>Private Keep</a></span>
     <div class="kf-keep-private" ng-if="isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
   <div class="kf-keep-drag-mask"></div>
