@@ -82,15 +82,15 @@ case object WeightedEdgeReader extends EdgeKind[WeightedEdgeReader] {
   implicit val readsAsEdgeData: Reads[EdgeData[WeightedEdgeReader]] = Reads[EdgeData[WeightedEdgeReader]](json => json.validate[JsNumber].map{ x => WeightedEdgeData(x.as[Float])})
 }
 
-trait TimestampReader extends EdgeDataReader {
-  def kind = TimestampReader
-  type E = TimestampReader
+trait TimestampEdgeReader extends EdgeDataReader {
+  def kind = TimestampEdgeReader
+  type E = TimestampEdgeReader
   def timestamp: Long
 }
 
-case object TimestampReader extends EdgeKind[TimestampReader] {
+case object TimestampEdgeReader extends EdgeKind[TimestampEdgeReader] {
   val header = 3.toByte
-  def apply(rawDataReader: RawDataReader): TimestampReader = ???
-  implicit val writes = Writes[TimestampReader](x => JsNumber(x.timestamp))
-  implicit val readsAsEdgeData: Reads[EdgeData[TimestampReader]] = Reads[EdgeData[TimestampReader]](json => json.validate[JsNumber].map{ x => TimestampData(x.as[Long])})
+  def apply(rawDataReader: RawDataReader): TimestampEdgeReader = ???
+  implicit val writes = Writes[TimestampEdgeReader](x => JsNumber(x.timestamp))
+  implicit val readsAsEdgeData: Reads[EdgeData[TimestampEdgeReader]] = Reads[EdgeData[TimestampEdgeReader]](json => json.validate[JsNumber].map{ x => TimestampEdgeData(x.as[Long])})
 }

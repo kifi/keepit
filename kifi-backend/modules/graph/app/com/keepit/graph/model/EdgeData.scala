@@ -9,4 +9,4 @@ case object EmptyEdgeData extends EmptyEdgeReader with EdgeData[EmptyEdgeReader]
 
 case class WeightedEdgeData(weight: Float) extends WeightedEdgeReader with EdgeData[WeightedEdgeReader]
 
-case class TimestampData(timestamp: Long) extends TimestampReader with EdgeData[TimestampReader]
+case class TimestampEdgeData(timestamp: Long) extends TimestampEdgeReader with EdgeData[TimestampEdgeReader]
