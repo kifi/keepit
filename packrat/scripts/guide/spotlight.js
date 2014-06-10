@@ -82,6 +82,10 @@ var Spotlight = Spotlight || (function (window, document) {
     gc.fillStyle = '#000';
     this.el = el;
     this.gc = gc;
+    this.scale = (window.devicePixelRatio || 1) /  // html5rocks.com/en/tutorials/canvas/hidpi/
+      (gc.webkitBackingStorePixelRatio ||
+       gc.mozBackingStorePixelRatio ||
+       gc.backingStorePixelRatio || 1);
     this.size(w, h);
     this.x = 0;
     this.y = 0;
@@ -93,8 +97,14 @@ var Spotlight = Spotlight || (function (window, document) {
 
   DarkCanvas.prototype = {
     size: function(w, h) {
-      this.el.width = w;
-      this.el.height = h;
+      var scale = this.scale;
+      this.el.width = w * scale;
+      this.el.height = h * scale;
+      if (scale !== 1) {
+        this.el.style.width = w + 'px';
+        this.el.style.height = h + 'px';
+        this.gc.scale(scale, scale);
+      }
       this.gc.fillRect(0, 0, w, h);
       this.spotBounds = {x: 0, y: 0, w: 0, h: 0};
       this.clipHeight = null;
