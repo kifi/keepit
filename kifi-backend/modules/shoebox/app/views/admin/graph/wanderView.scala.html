@@ -43,7 +43,7 @@
             <label for="recency">Recency: </label>
             <select class="input-medium" name="recency">
                 <option value="" @if(wanderlust.recency.isEmpty) {selected}>Ever
-                @Seq("Today" -> 1, "This Week" -> 7, "This Month" -> 30).map { case (period, days) => <option value=@days @if(wanderlust.recency.exists(_.toDays == days)) {selected}> @period }
+                @Seq("Today" -> 1, "This Week" -> 7, "This Month" -> 30, "3 Months" -> 90, "6 Months" -> 180).map { case (period, days) => <option value=@days @if(wanderlust.recency.exists(_.toDays == days)) {selected}> @period }
             </select>
         </div>
         <div class="form-group">
