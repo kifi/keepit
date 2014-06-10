@@ -20,7 +20,7 @@ object Wanderlust {
 
   implicit val format = {
     implicit val durationFormat = new Format[Duration] {
-      def reads(json: JsValue) = json.validate[Long].map(Duration(_, "ms"))
+      def reads(json: JsValue) = json.validate[Long].map(Duration(_, "millis"))
       def writes(duration: Duration) = JsNumber(duration.toMillis)
     }
     Json.format[Wanderlust]
