@@ -309,6 +309,10 @@ module.exports = function (grunt) {
           var modifier = names[names.length - 1];
           var root = names.slice(0, names.length - 1).join('-');
 
+          if (sprite.width % 2 !== 0 || sprite.height % 2 !== 0) {
+            grunt.fail.warn("sprite " + sprite.name + " is not retina: " + sprite.width + " x " + sprite.height);
+          }
+
           if (pseudoClasses.indexOf(modifier) !== -1) {
             cssSelector += '.sprite-' + sprite.name + ',\n.sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
           } else if (modifier === 'default') {
