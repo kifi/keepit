@@ -16,6 +16,7 @@ import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, DenseLDA}
 import com.keepit.serializer.TraversableFormat
 import com.keepit.model.Word2VecKeywords
 import com.keepit.common.net.CallTimeouts
+import com.keepit.cortex.models.lda._
 
 
 trait CortexServiceClient extends ServiceClient{
@@ -32,9 +33,10 @@ trait CortexServiceClient extends ServiceClient{
   def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]]
 
   def ldaNumOfTopics(): Future[Int]
-  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]]
+  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Seq[LDATopicInfo]]
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
+  def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -111,9 +113,9 @@ class CortexServiceClientImpl(
     }
   }
 
-  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = {
+  def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Seq[LDATopicInfo]] = {
     call(Cortex.internal.ldaShowTopics(fromId, toId, topN)).map{ r =>
-      (r.json).as[Map[String, Map[String, Float]]]
+      (r.json).as[Seq[LDATopicInfo]]
     }
   }
 
@@ -128,6 +130,11 @@ class CortexServiceClientImpl(
     call(Cortex.internal.ldaDocTopic(), payload).map{ r =>
       Json.fromJson[Option[Array[Float]]](r.json).get
     }
+  }
+
+  def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = {
+    val payload = Json.toJson(configs)
+    broadcast(Cortex.internal.saveEdits(), payload)
   }
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = {
