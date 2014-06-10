@@ -248,8 +248,8 @@ var SvgArrow = SvgArrow || (function (window, document) {
     var lA = lineCoefficients(A, thetaA);
     var lD = lineCoefficients(D, thetaD);
     var P = intersectionOf(lA, lD);
-    var B = interpolatePoint(A, P, .5);
-    var C = interpolatePoint(D, P, .5);
+    var B = interpolatePoint(A, P, .7);
+    var C = interpolatePoint(D, P, .7);
     return new BezierCurve(A, B, C, D);
   }
 
