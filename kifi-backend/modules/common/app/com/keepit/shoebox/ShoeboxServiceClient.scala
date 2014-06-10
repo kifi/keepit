@@ -96,16 +96,16 @@ trait ShoeboxServiceClient extends ServiceClient {
   def assignScrapeTasks(zkId:Long, max:Int):Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]):Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]):Future[Boolean]
-  def getLatestKeep(url: String)(implicit timeout:Int = 10000): Future[Option[Keep]]
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int = 10000): Future[Seq[Keep]]
-  def saveBookmark(bookmark:Keep)(implicit timeout:Int = 10000): Future[Keep]
-  def saveScrapeInfo(info:ScrapeInfo)(implicit timeout:Int = 10000):Future[ScrapeInfo]
-  def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int = 10000):Future[NormalizedURI]
-  def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int = 10000):Future[PageInfo]
-  def getImageInfo(id:Id[ImageInfo])(implicit timeout:Int = 10000):Future[ImageInfo]
-  def saveImageInfo(imgInfo:ImageInfo)(implicit timeout:Int = 10000):Future[ImageInfo]
-  def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?)(implicit timeout:Int = 10000): Future[Boolean]
-  def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect)(implicit timeout:Int = 10000):Future[NormalizedURI]
+  def getLatestKeep(url: String): Future[Option[Keep]]
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
+  def saveBookmark(bookmark:Keep): Future[Keep]
+  def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
+  def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
+  def savePageInfo(pageInfo:PageInfo):Future[PageInfo]
+  def getImageInfo(id:Id[ImageInfo]):Future[ImageInfo]
+  def saveImageInfo(imgInfo:ImageInfo):Future[ImageInfo]
+  def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?): Future[Boolean]
+  def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
   def getProxyP(url:String):Future[Option[HttpProxy]]
@@ -230,20 +230,20 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout: Int): Future[Seq[Keep]] = {
-    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = {
+    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), callTimeouts = longTimeout).map { r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
     }
   }
 
-  def getLatestKeep(url: String)(implicit timeout: Int): Future[Option[Keep]] = {
-    call(Shoebox.internal.getLatestKeep(), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), body = JsString(url)).map { r =>
+  def getLatestKeep(url: String): Future[Option[Keep]] = {
+    call(Shoebox.internal.getLatestKeep(), callTimeouts = longTimeout, body = JsString(url)).map { r =>
       Json.fromJson[Option[Keep]](r.json).get
     }
   }
 
-  def saveBookmark(bookmark: Keep)(implicit timeout: Int): Future[Keep] = {
-    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+  def saveBookmark(bookmark: Keep): Future[Keep] = {
+    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Keep](r.json).get
     }
   }
@@ -590,33 +590,33 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = {
+  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = {
     call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r =>
       r.json.as[ScrapeInfo]
     }
   }
 
-  def savePageInfo(pageInfo:PageInfo)(implicit timeout:Int):Future[PageInfo] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), routingStrategy = leaderPriority).map { r =>
+  def savePageInfo(pageInfo:PageInfo):Future[PageInfo] = {
+    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[PageInfo]
     }
   }
 
-  def getImageInfo(id: Id[ImageInfo])(implicit timeout: Int): Future[ImageInfo] = {
+  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = {
     call(Shoebox.internal.getImageInfo(id)).map { r =>
       r.json.as[ImageInfo]
     }
   }
 
-  def saveImageInfo(imgInfo:ImageInfo)(implicit timeout:Int):Future[ImageInfo] = {
-    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), routingStrategy = leaderPriority).map { r =>
+  def saveImageInfo(imgInfo:ImageInfo):Future[ImageInfo] = {
+    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[ImageInfo]
     }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
-  def saveNormalizedURI(uri:NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = {
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = CallTimeouts(responseTimeout = Some(timeout)), routingStrategy = leaderPriority).map { r =>
+  def saveNormalizedURI(uri:NormalizedURI): Future[NormalizedURI] = {
+    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[NormalizedURI]
     }
   }
@@ -634,7 +634,7 @@ class ShoeboxServiceClientImpl @Inject() (
                           restriction: => Option[Restriction],
                           normalization: => Option[Normalization],
                           redirect: => Option[Id[NormalizedURI]],
-                          redirectTime: => Option[DateTime])(implicit timeout:Int): Future[Boolean] = {
+                          redirectTime: => Option[DateTime]): Future[Boolean] = {
     import com.keepit.common.strings.OptionWrappedJsObject
     val safeUrlHash = Option(urlHash).map(p => Option(p.hash)).flatten
     val safeSeq = Option(seq).map(v => if (v.value == -1L) None else Some(v)).flatten
@@ -661,8 +661,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = {
-    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = CallTimeouts(responseTimeout = Some(timeout))).map { r =>
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
+    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = longTimeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
