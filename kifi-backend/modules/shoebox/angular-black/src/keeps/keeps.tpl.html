@@ -1,6 +1,6 @@
 <div class="kf-main-keeps">
   <div class="kf-keep-selection-tools" ng-if="editMode.enabled">
-    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(), 'sprite-checkbox-icon-active': 'isSelectedAll() || isMultiChecked()' }" ng-click="toggleSelectAll()"></div>
+    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(), 'sprite-checkbox-icon-partial': isMultiChecked(), 'sprite-checkbox-icon-active': isSelectedAll() }" ng-click="toggleSelectAll()"></div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
         <span class="kf-keep-selected-count-number">{{getSelected().length}}</span>
