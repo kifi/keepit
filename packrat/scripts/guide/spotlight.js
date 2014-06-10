@@ -1,4 +1,3 @@
-// @require styles/guide/spotlight.css
 // @require scripts/lib/underscore.js
 
 var Spotlight = Spotlight || (function (window, document) {

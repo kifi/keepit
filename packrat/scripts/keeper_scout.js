@@ -155,8 +155,8 @@ var tile = tile || function() {  // idempotent for Chrome
       case 191: // ?
         if (e.altKey) {
           api.port.emit('guide', function () {
-            api.require('scripts/guide/step_1.js', function () {
-              guide.step1();
+            api.require('scripts/guide/step_2.js', function () {
+              guide.step2();
             });
           });
           e.preventDefault();

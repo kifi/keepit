@@ -51,7 +51,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   document.addEventListener('click', onClick, true);
   function onClick(e) {
-    if ($slider && $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root,.kifi-root *') && e.isTrusted !== false) {
+    if ($slider && (e.closeKeeper || $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root,.kifi-root *')) && e.isTrusted !== false) {
       hideSlider('clickout');
     }
   }

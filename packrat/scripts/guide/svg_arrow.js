@@ -1,17 +1,14 @@
-// @require styles/guide/svg_arrow.css
-
 var SvgArrow = SvgArrow || (function (window, document) {
   'use strict';
 
   var HEAD_WIDTH = 20;
   var HEAD_LENGTH = HEAD_WIDTH / 2 * Math.sqrt(3);
-  var TAIL_WIDTH = 4;
 
-  function SvgArrow(tail, head, revealMs) {
+  function SvgArrow(tail, head, anchor, revealMs) {
     var o = computeBoxAndCurve(tail, head);
     this.svg = $svg('svg')
       .attr('class', 'kifi-svg-arrow kifi-root')
-      .attr('style', boxPosAndSize(o.box));
+      .attr('style', boxPosAndSize(o.box, anchor));
     this.g = $svg('g')
       .appendTo(this.svg.el);
     this.tail = $svg('path')
@@ -24,6 +21,7 @@ var SvgArrow = SvgArrow || (function (window, document) {
       .attr('d', headPathData())
       .attr('transform', headTransform(o.curve.x(0), o.curve.y(0), o.curve.phi(0)))
       .appendTo(this.g.el);
+    this.anchor = anchor;
     this.attach();
     reveal.call(this, o.curve, revealMs);
   }
@@ -55,7 +53,7 @@ var SvgArrow = SvgArrow || (function (window, document) {
       var box = this.svg.el.getBoundingClientRect();
       var o = computeBoxAndCurve(tail, head, box);
       var gTransform = ['translate(', box.left - o.box.left, ',', box.top - o.box.top, ')'].join('');
-      this.svg.attr('style', boxPosAndSize(o.box));
+      this.svg.attr('style', boxPosAndSize(o.box, this.anchor));
       this.g.attr('transform', gTransform);
       this.tail.attr('style', tailDashArrayStyle());
       var interpolateGroupTransfrom = d3_interpolateString(gTransform, 'translate(0,0)');
@@ -111,10 +109,10 @@ var SvgArrow = SvgArrow || (function (window, document) {
     var H = pointOutsideRect(rHead, headAngleRad + Math.PI, head.gap);
     minBox = minBox || {left: 1e5, top: 1e5, right: -1e5, bottom: -1e5};
     var box = {
-      left: Math.min(minBox.left, -1 + Math.floor(T.x - TAIL_WIDTH / 2)),
-      top: Math.min(minBox.top, -1 + Math.floor(T.y - HEAD_WIDTH / 2)),
-      right: Math.max(minBox.right, 1 + Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(headAngleRad + Math.PI / 3)))),
-      bottom: Math.max(minBox.bottom, 1 + Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(headAngleRad + Math.PI / 6))))
+      left: Math.min(minBox.left, -1 + Math.floor(Math.min(T.x, H.x) - HEAD_WIDTH / 2)),
+      top: Math.min(minBox.top, -1 + Math.floor(Math.min(T.y, H.y) - HEAD_WIDTH / 2)),
+      right: Math.max(minBox.right, 1 + Math.ceil(Math.max(T.x, H.x) + HEAD_WIDTH / 2)),
+      bottom: Math.max(minBox.bottom, 1 + Math.ceil(Math.max(T.y, H.y) + HEAD_WIDTH / 2))
     };
     var G = {
       x: H.x - HEAD_LENGTH * Math.cos(headAngleRad),
@@ -300,13 +298,24 @@ var SvgArrow = SvgArrow || (function (window, document) {
       (_4 - _3) * t * t * 3);
   }
 
-  function boxPosAndSize(box) {
-    return [
+  function boxPosAndSize(box, anchor) {
+    var css = [
       'width:', box.right - box.left, 'px;',
-      'height:', box.bottom - box.top, 'px;',
-      'right:', window.innerWidth - box.right, 'px;',
-      'bottom:', window.innerHeight - box.bottom, 'px'
-    ].join('');
+      'height:', box.bottom - box.top, 'px;'
+    ];
+    if (~anchor.indexOf('t')) {
+      css.push('top:', box.top, 'px;');
+    }
+    if (~anchor.indexOf('l')) {
+      css.push('left:', box.left, 'px;');
+    }
+    if (~anchor.indexOf('r')) {
+      css.push('right:', window.innerWidth - box.right, 'px;');
+    }
+    if (~anchor.indexOf('b')) {
+      css.push('bottom:', window.innerHeight - box.bottom, 'px;');
+    }
+    return css.join('');
   }
 
   function curvePathData(c) {
