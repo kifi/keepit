@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
