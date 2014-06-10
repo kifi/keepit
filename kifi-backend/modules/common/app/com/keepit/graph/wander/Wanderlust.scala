@@ -17,7 +17,14 @@ case class Wanderlust(
 )
 
 object Wanderlust {
-  implicit val format = Json.format[Wanderlust]
+
+  implicit val format = {
+    implicit val durationFormat = new Format[Duration] {
+      def reads(json: JsValue) = json.validate[Long].map(Duration(_, "ms"))
+      def writes(duration: Duration) = JsNumber(duration.toMillis)
+    }
+    Json.format[Wanderlust]
+  }
 }
 
 case class Collisions(users: Map[Id[User], Int], socialUsers: Map[Id[SocialUserInfo], Int], uris: Map[Id[NormalizedURI], Int], extra: Map[String, Int])
