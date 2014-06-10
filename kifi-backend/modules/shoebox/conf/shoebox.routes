@@ -540,9 +540,10 @@ POST    /admin/cortex/lda/showTopics                       @com.keepit.controlle
 POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 
-GET     /admin/graph/statistics                             @com.keepit.controllers.admin.GraphAdminController.statistics
+GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
+GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
 ##########################################
 # Common Healthcheck / service routes
