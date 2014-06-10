@@ -1,9 +1,10 @@
 <div class="kf-header-inner" ng-controller="HeaderCtrl">
   <div class="kf-header-left">
-    <img class="kf-header-toggle-menu" src="img/placeholder-icon.png" ng-click="toggleMenu()">
+    <div class="kf-header-toggle-menu closed sprite sprite-burger" ng-click="toggleMenu()"></div>
+    <div class="kf-header-toggle-menu open sprite sprite-burger-open" ng-click="toggleMenu()"></div>
     <div class="kf-header-left-separator"></div>
     <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
-    <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
+    <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></img></a>
   </div>
   <div class="kf-header-right">
     <div class="sprite sprite-add-link">Add a link</div>

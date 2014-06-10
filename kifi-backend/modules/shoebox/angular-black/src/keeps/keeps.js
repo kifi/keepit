@@ -100,14 +100,11 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
           return scope.data.draggedKeeps && scope.data.draggedKeeps.length > 3;
         };
 
-        angular.element($window).on('scroll', function () {
-          var scrollMargin = $window.innerHeight;
-          var totalHeight = $document[0].documentElement.scrollHeight;
-          if (!scope.scrollDisabled &&
-            $window.pageYOffset + $window.innerHeight + scrollMargin > totalHeight) {
-            scope.scrollNext();
-          }
-        });
+        scope.isScrollDisabled = function () {
+          return scope.scrollDisabled;
+        };
+
+        scope.scrollDistance = '100%';
 
         scope.unkeep = function () {
           keepService.unkeep(keepService.getSelected());

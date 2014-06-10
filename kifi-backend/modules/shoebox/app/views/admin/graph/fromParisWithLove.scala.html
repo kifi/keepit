@@ -1,0 +1,22 @@
+@(user: com.keepit.model.User,
+  timing: scala.util.Try[Long],
+  uris: Seq[(com.keepit.model.NormalizedURI, Int)]
+)
+
+@import scala.util.{Success, Failure}
+
+@views.html.admin.admin(s"Good morning ${user.shortName}!") {
+
+    @{timing match {
+        case Success(timing) => <div class="text-success">The Internet is big. We spent {timing} ms wandering in there just for you.</div>
+        case Failure(ex) => <div class="text-error">Oups, sorry about that: {ex}</div>
+    }}
+
+    @if(uris.nonEmpty) {
+        <table class = "table table-bordered">
+            <tr><th colspan="3"><h3>And here's what we found:</h3></th></tr>
+            <tr> <th>Uri Id</th> <th>Page</th> <th>Score</th> </tr>
+            @uris.map { case (uri, count) => <tr> <td>@uri.id.get</td> <td><a href=@uri.url>@uri.title.getOrElse(uri.url.trim)</a></td> <td>@count</td> </tr> }
+        </table>
+    }
+}
