@@ -104,11 +104,11 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
         writer.saveVertex(UriData(uriVertexId))
         writer.saveVertex(UserData(userVertexId))
 
-        writer.saveEdge(userVertexId, keepVertexId, EmptyEdgeData)
-        writer.saveEdge(keepVertexId, uriVertexId, EmptyEdgeData)
+        writer.saveEdge(userVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
+        writer.saveEdge(uriVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
 
         writer.saveEdge(keepVertexId, userVertexId, EmptyEdgeData)
-        writer.saveEdge(uriVertexId, keepVertexId, EmptyEdgeData)
+        writer.saveEdge(keepVertexId, uriVertexId, EmptyEdgeData)
 
       case _ =>
         writer.removeVertexIfExists(keepVertexId)

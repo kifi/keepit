@@ -12,6 +12,7 @@ import com.keepit.common.time._
 import play.api.mvc.{SimpleResult}
 import scala.concurrent.Promise
 import scala.util.{Failure, Success}
+import scala.concurrent.duration.Duration
 
 class WanderingAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -44,8 +45,10 @@ class WanderingAdminController @Inject() (
         val avoidTrivialCollisions = body.contains("avoidTrivialCollisions")
         val steps = body("steps").head.toInt
         val restartProbability = body("restartProbability").head.toDouble
+        val recency = body("recency").headOption.collect { case days if days.nonEmpty => Duration(days.toLong, "days") }
+        val halfLife = body("decay").headOption.collect { case days if days.nonEmpty => Duration(days.toLong, "days") }
 
-        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability)
+        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability, recency, halfLife)
 
         val promisedResult = Promise[SimpleResult]()
 
