@@ -26,7 +26,6 @@ class EmailMessageProcessingCommander @Inject() (
   implicit val config: PublicIdConfiguration) extends Logging {
 
   def readIncomingMessages(): Unit = {
-    import NonUserThread._
     mailNotificationReplyQueue.nextWithLock(1 minute).onComplete{
       case Success(result) => {
         try {
@@ -49,9 +48,10 @@ class EmailMessageProcessingCommander @Inject() (
             sqsMessage.consume()
           }
         } catch {
-          case e:Throwable => log.warn(s"Failed to read messages: ${e.getMessage()}")
+          case e: Throwable => log.warn(s"Failed to read messages: ${e.getMessage}")
+        } finally {
+          readIncomingMessages()
         }
-        readIncomingMessages()
       }
       case Failure(t) => {
         log.info("RConn: Queue call failed")
