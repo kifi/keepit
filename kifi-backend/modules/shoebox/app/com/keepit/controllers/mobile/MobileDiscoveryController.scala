@@ -29,7 +29,7 @@ class MobileDiscoveryController @Inject() (
   def discover(withPageInfo: Boolean, limit: Int = -1) = JsonAction.authenticatedParseJsonAsync { request =>
     val userId = request.userId
     val futureUriCollisionInfos = graphClient.wander(Wanderlust.discovery(userId)).flatMap { collisions =>
-      val sortedUriCollisions = collisions.uris.toSeq.sortBy(_._2)
+      val sortedUriCollisions = collisions.uris.toSeq.sortBy(- _._2)
       val relevantUris = if (limit > 0) sortedUriCollisions.take(limit) else sortedUriCollisions
       val (uriIds, scores) = relevantUris.unzip
       val sharingInfosFuture = searchClient.sharingUserInfo(userId, uriIds)
