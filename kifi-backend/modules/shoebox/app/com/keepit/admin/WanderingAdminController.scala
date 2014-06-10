@@ -70,7 +70,7 @@ class WanderingAdminController @Inject() (
 
             val sortedUris = db.readOnly(dbMasterSlave = Slave) { implicit session =>
               collisions.uris.map { case (uriId, count) => uriRepo.get(uriId) -> count }
-            }.toSeq.sortBy(- _._2)
+            }.filter(_._1.restriction.isEmpty).toSeq.sortBy(- _._2)
 
             val sortedExtras = collisions.extra.toSeq.sortBy(- _._2)
 
