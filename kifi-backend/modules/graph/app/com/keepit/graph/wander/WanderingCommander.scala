@@ -3,12 +3,13 @@ package com.keepit.graph.wander
 import com.google.inject.{Singleton, Inject}
 import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.model._
-import com.keepit.model.{SocialUserInfo, NormalizedURI, User}
+import com.keepit.model.{URISummary, SocialUserInfo, NormalizedURI, User}
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.social.BasicUser
 
 @Singleton
 class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {

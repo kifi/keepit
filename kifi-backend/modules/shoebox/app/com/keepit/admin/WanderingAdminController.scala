@@ -96,20 +96,10 @@ class WanderingAdminController @Inject() (
   }
 
   def fromParisWithLove() = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val wanderlust = Wanderlust(
-      startingVertexKind = "User",
-      startingVertexDataId = request.userId.id,
-      preferredCollisions = Set("Uri"),
-      avoidTrivialCollisions = true,
-      steps = 100000,
-      restartProbability = 0.15,
-      recency = Some(30 days),
-      halfLife = Some(1 day)
-    )
     val start = clock.now()
     val promisedResult = Promise[SimpleResult]()
 
-    doWander(wanderlust).onComplete {
+    doWander(Wanderlust.discovery(request.userId)).onComplete {
       case Failure(ex) =>
         val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Failure[Long](ex), Seq.empty))
         promisedResult.success(view)

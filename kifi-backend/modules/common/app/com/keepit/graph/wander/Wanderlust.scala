@@ -3,7 +3,7 @@ package com.keepit.graph.wander
 import com.keepit.common.db.Id
 import com.keepit.model.{SocialUserInfo, NormalizedURI, User}
 import play.api.libs.json._
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 case class Wanderlust(
   startingVertexKind: String,
@@ -25,6 +25,17 @@ object Wanderlust {
     }
     Json.format[Wanderlust]
   }
+
+  def discovery(userId: Id[User]) = Wanderlust(
+    startingVertexKind = "User",
+    startingVertexDataId = userId.id,
+    preferredCollisions = Set("Uri"),
+    avoidTrivialCollisions = true,
+    steps = 100000,
+    restartProbability = 0.15,
+    recency = Some(30 days),
+    halfLife = Some(1 day)
+  )
 }
 
 case class Collisions(users: Map[Id[User], Int], socialUsers: Map[Id[SocialUserInfo], Int], uris: Map[Id[NormalizedURI], Int], extra: Map[String, Int])
