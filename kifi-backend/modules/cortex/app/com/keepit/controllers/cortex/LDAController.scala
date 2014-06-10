@@ -26,7 +26,7 @@ extends CortexServiceController {
     val infos = topicWords.map{ case (tid, words) =>
       val config = topicConfigs(tid)
       LDATopicInfo(tid.toInt, words, config)
-    }
+    }.toArray.sortBy( x => x.topicId)
     Ok(Json.toJson(infos))
   }
 
