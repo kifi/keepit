@@ -15,7 +15,7 @@ case class RestrictedDestinationResolver(mayTraverse: (VertexReader, VertexReade
     if (!mayTraverse(source, destination, edge)) { 0 }
     else edge.data match {
       case _: EmptyEdgeReader => 1.0
-      case weightedEdge: WeightedEdgeReader => weightedEdge.getWeight
+      case weightedEdge: WeightedEdgeReader => weightedEdge.weight
     }
   }
 }
