@@ -7,8 +7,8 @@ var SvgArrow = SvgArrow || (function (window, document) {
   var HEAD_LENGTH = HEAD_WIDTH / 2 * Math.sqrt(3);
   var TAIL_WIDTH = 4;
 
-  function SvgArrow(elTail, elHead, angleTail, angleHead, revealMs) {
-    var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead);
+  function SvgArrow(tail, head, revealMs) {
+    var o = computeBoxAndCurve(tail, head);
     this.svg = $svg('svg')
       .attr('class', 'kifi-svg-arrow kifi-root')
       .attr('style', boxPosAndSize(o.box));
@@ -37,17 +37,23 @@ var SvgArrow = SvgArrow || (function (window, document) {
       }
       return this;
     },
-    fadeAndDetach: function () {
+    fadeAndDetach: function (duration) {
       if (this.attached) {
-        // TODO: fade first
-        this.svg.el.remove();
-        this.attached = false;
+        this.svg.el.style.transition = 'opacity ' + (typeof duration === 'number' ? duration + 'ms' : duration) + ' linear';
+        this.svg.el.offsetWidth;
+        this.svg.el.style.opacity = '0';
+        this.svg.el.addEventListener('transitionend', function end() {
+          this.removeEventListener('transitionend', end);
+          this.remove();
+          self.attached = false;
+        });
+        var self = this;
       }
       return this;
     },
-    animateTo: function (elTail, elHead, angleTail, angleHead, ms) {
+    animateTo: function (tail, head, ms) {
       var box = this.svg.el.getBoundingClientRect();
-      var o = computeBoxAndCurve(elTail, elHead, angleTail, angleHead, box);
+      var o = computeBoxAndCurve(tail, head, box);
       var gTransform = ['translate(', box.left - o.box.left, ',', box.top - o.box.top, ')'].join('');
       this.svg.attr('style', boxPosAndSize(o.box));
       this.g.attr('transform', gTransform);
@@ -78,63 +84,67 @@ var SvgArrow = SvgArrow || (function (window, document) {
     }
   };
 
-  function computeBoxAndCurve(elTail, elHead, angleTail, angleHead, minBox) {
-    if (angleTail !== 0) {
-      throw Error('angleTail value not yet supported: ' + angleTail);
-    }
-    if (angleHead > 0 || angleHead < -90) {
-      throw Error('angleHead value not yet supported: ' + angleHead);
-    }
-    var rTail = elTail.getBoundingClientRect();
-    var rHead = elHead.getBoundingClientRect();
+  function computeBoxAndCurve(tail, head, minBox) {
     /*
-     ,--------,  svg bounding rect (box)
-     |        |  . . . . . . . . . . . .
-     | elTail |  : o o o o .,          :
-     |        |  : T         `o.,      :   <- dotted cubic Bézier curve
-     '--------'  :               `o    :
+    ,---------,  svg bounding rect (box)
+    |         |  . . . . . . . . . . . .
+    | tail.el |  : o o o o .,          :
+    |         |  : T         `o.,      :   <- dotted cubic Bézier curve
+    '---------'  :               `o    :
                  :              ---•---:   <- arrowhead axis is tangent to arc where they meet at G
                  :               \ G / :
                  :                \ /  :   <- arrowhead orientation is configurable (-90° shown)
                  : . . . . . . . . V . :         __
                                    H              |
-                                   .              | tip space height
+                                   .              | tip space
                          ,---------.---------,   -'
-                         | elHead  .         |
+                         | head.el .         |
                          |         •C        |  <- arrowhead points to center of elHead
                          |                   |
                          '-------------------'
     */
-    var T = {
-      x: Math.ceil(rTail.right + 10 + TAIL_WIDTH / 2),
-      y: Math.round((rTail.top + rTail.bottom) / 2 + 2)
-    };
-    var C = {
-      x: (rHead.left + rHead.right) / 2,
-      y: (rHead.top + rHead.bottom) / 2
-    };
-    var angleHeadRad = Math.PI / 180 * angleHead;
-    var tipSpace = 10;
-    var tipSpaceHeight = tipSpace * Math.sin(-angleHeadRad);
-    var H = {
-      x: C.x + (tipSpaceHeight + rHead.height / 2) / Math.tan(angleHeadRad),
-      y: rHead.top - tipSpaceHeight
-    };
-    var G = {
-      x: H.x - HEAD_LENGTH * Math.cos(angleHeadRad),
-      y: H.y + HEAD_LENGTH * Math.sin(angleHeadRad)
-    };
+    var rTail = tail.rect || tail.el.getBoundingClientRect();
+    var rHead = head.rect || head.el.getBoundingClientRect();
+    var tailAngleRad = Math.PI / 180 * tail.angle;
+    var headAngleRad = Math.PI / 180 * head.angle;
+    var T = pointOutsideRect(rTail, tailAngleRad, tail.gap);
+    var H = pointOutsideRect(rHead, headAngleRad + Math.PI, head.gap);
     minBox = minBox || {left: 1e5, top: 1e5, right: -1e5, bottom: -1e5};
     var box = {
       left: Math.min(minBox.left, -1 + Math.floor(T.x - TAIL_WIDTH / 2)),
       top: Math.min(minBox.top, -1 + Math.floor(T.y - HEAD_WIDTH / 2)),
-      right: Math.max(minBox.right, 1 + Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 3)))),
-      bottom: Math.max(minBox.bottom, 1 + Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(angleHeadRad + Math.PI / 6))))
+      right: Math.max(minBox.right, 1 + Math.ceil(H.x + Math.max(0, -HEAD_LENGTH * Math.sin(headAngleRad + Math.PI / 3)))),
+      bottom: Math.max(minBox.bottom, 1 + Math.ceil(H.y + Math.max(0, HEAD_LENGTH * Math.sin(headAngleRad + Math.PI / 6))))
+    };
+    var G = {
+      x: H.x - HEAD_LENGTH * Math.cos(headAngleRad),
+      y: H.y + HEAD_LENGTH * Math.sin(headAngleRad)
     };
     var curve = chooseCurve(
-      {x: T.x - box.left, y: T.y - box.top}, Math.PI / 180 * angleTail,
-      {x: G.x - box.left, y: G.y - box.top}, Math.PI - angleHeadRad);
+      {x: T.x - box.left, y: T.y - box.top}, tailAngleRad,
+      {x: G.x - box.left, y: G.y - box.top}, Math.PI - headAngleRad);
     return {box: box, curve: curve};
+  }
+
+  function pointOutsideRect(r, theta, d) {
+    var Cx = (r.left + r.right) / 2;
+    var Cy = (r.top + r.bottom) / 2;
+    var sinCorner = r.height / Math.sqrt(r.height * r.height + r.width * r.width);
+    var sinTheta = Math.sin(theta);
+    var cosTheta = Math.cos(theta);
+    if (Math.abs(sinTheta) > sinCorner) { // top/bottom
+      var y = (sinTheta < 0 ? -1 : 1) * (r.height / 2 + d);
+      return {
+        x: Cx + y * cosTheta / sinTheta,
+        y: Cy - y
+      };
+    } else { // left/right
+      var x = (cosTheta < 0 ? -1 : 1) * (r.width / 2 + d);
+      return {
+        x: Cx + x,
+        y: Cy - x * sinTheta / cosTheta
+      };
+    }
   }
 
   function reveal(curve, ms) {
