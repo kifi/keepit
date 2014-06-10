@@ -89,15 +89,13 @@ keepBorderRadius = 3px
   padding: 5px
 
 .kf-keep
+  position: relative
 
   &.detailed
     background-color: #eff2f7
 
   &.selected.detailed
     background-color: #F7F7F5
-
-  &.ui-draggable-dragging
-    border-top: none
 
   &.toggling
     overflow: hidden
@@ -149,10 +147,6 @@ keepBorderRadius = 3px
     content: "·"
     color: textGreyColor
     padding: 0 6px 0 5px
-
-.kf-shadow-keep-ellipsis
-  background-color: #fffcf1
-  border-color: #f0f0f0
 
 .kf-keep-time
   font-size: 13px
@@ -420,58 +414,6 @@ input.kf-keep-tag-input
 
 .kf-keep.detailed .kf-keep-button-preview
   display: none
-
-.kf-drag-target
-  background-color: #E2E6EC
-
-.kf-keep.kf-dragged-keep
-  box-sizing: border-box
-  border-width: 1px
-  border-color: #d2d2d2
-  border-style: solid
-
-.kf-shadow-keep-first
-.kf-shadow-keep-second
-.kf-shadow-keep-ellipsis
-.kf-shadow-keep-last
-  position: absolute
-  top: 0
-  left: 0
-  width: 100%
-
-.kf-shadow-keep-ellipsis
-  display: none
-  box-sizing: border-box
-  border-width: 1px
-  border-style: solid
-  border-bottom: none
-  border-color: #d2d2d2
-
-  &.active
-    display: inline
-
-.kf-shadow-keep-ellipsis-line
-  position: relative
-  top: 50%
-  height: 50%
-  width: 100%
-  border: inherit
-  border-left: none
-  border-right: none
-  margin-top: -1px
-
-.kf-shadow-keep-ellipsis-counter
-.kf-shadow-keep-ellipsis-counter-hidden
-  position: absolute
-  font-size: 13px
-  color: #818692
-  background-color: inherit
-  height: 80%
-  top: 20%
-  padding: 0 3px
-
-.kf-shadow-keep-ellipsis-counter-hidden
-  visibility: hidden
 
 .kf-keep-tag-list
   border-top: separatorBorder

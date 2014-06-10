@@ -66,7 +66,6 @@ module.exports = function (grunt) {
           'lib/angular-moment/angular-moment.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.js',
-          'lib/angular-dragdrop/draganddrop.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js',
           'managed-lib/ui-slider/slider.js',
           'lib/angulartics/dist/angulartics.min.js'
@@ -91,7 +90,6 @@ module.exports = function (grunt) {
           'lib/angular-moment/angular-moment.min.js',
           'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
-          'lib/angular-dragdrop/draganddrop.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
           'managed-lib/ui-slider/slider.js',
           'lib/angulartics/dist/angulartics.min.js'

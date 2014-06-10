@@ -6,7 +6,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
   '$scope',
   function ($scope) {
     $scope.isMyBookmark = function (keep) {
-      return keep.isMyBookmark || false;
+      return (keep && keep.isMyBookmark) || false;
     };
 
     $scope.isExampleTag = function (tag) {
@@ -25,17 +25,17 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
     }
 
     $scope.isExample = function (keep) {
-      if (keep.isExample == null) {
+      if (keep && keep.isExample == null) {
         keep.isExample = hasExampleTag($scope.getTags());
+        return keep.isExample;
       }
-      return keep.isExample;
     };
   }
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
-  function ($document, $rootElement, $timeout, tagService, keepService, util) {
+  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
+  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -62,11 +62,16 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         scope.addingTag = {enabled: false};
 
         scope.getTags = function () {
-          return scope.keep.tagList;
+          return scope.keep && scope.keep.tagList;
         };
 
         scope.hasTag = function () {
-          return !!scope.getTags().length;
+          var tags = scope.getTags();
+          if (tags) {
+            return !!tags.length;
+          } else {
+            return false;
+          }
         };
 
         scope.unkeep = function () {
@@ -74,7 +79,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         };
 
         scope.isPrivate = function () {
-          return scope.keep.isPrivate || false;
+          return (scope.keep && scope.keep.isPrivate) || false;
         };
 
         scope.togglePrivate = function () {
@@ -82,7 +87,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         };
 
         scope.getSingleSelectedKeep = function () {
-          return [scope.keep];
+          if (scope.keep) {
+            return [scope.keep];
+          } else {
+            return [];
+          }
         };
 
         function formatTitleFromUrl(url, matches) {
@@ -126,19 +135,21 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         }
 
         function toTitleHtml(keep) {
-          return keep.title || formatTitleFromUrl(keep.url);
+          return keep && (keep.title || formatTitleFromUrl(keep.url));
         }
 
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
 
         function formatDesc(url, matches) {
-          var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
-          url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
-          for (var i = matches && matches.length; i--;) {
-            matches[i][0] -= strippedSchemeLen;
+          if (url) {
+            var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+            url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
+            for (var i = matches && matches.length; i--;) {
+              matches[i][0] -= strippedSchemeLen;
+            }
+            return boldSearchTerms(url, matches);
           }
-          return boldSearchTerms(url, matches);
         }
 
         function boldSearchTerms(text, matches) {
@@ -154,15 +165,21 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         function getSite() {
           var keep = scope.keep;
-          return keep.siteName || keep.url;
+          if (keep) {
+            return keep.siteName || keep.url;
+          }
         }
 
         function updateTitleHtml() {
-          scope.keep.titleHtml = toTitleHtml(scope.keep);
+          if (scope.keep) {
+            scope.keep.titleHtml = toTitleHtml(scope.keep);
+          }
         }
 
         function updateSiteDescHtml() {
-          scope.keep.descHtml = formatDesc(getSite());
+          if (scope.keep) {
+            scope.keep.descHtml = formatDesc(getSite());
+          }
         }
 
         updateTitleHtml();
@@ -201,7 +218,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.getTitle = function () {
           var keep = scope.keep;
-          return keep.title || keep.url;
+          return keep && (keep.title || keep.url);
         };
 
         scope.getSite = getSite;
@@ -218,25 +235,25 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.hasBigImage = function () {
           var keep = scope.keep;
-          return keep.summary && !shouldShowSmallImage(keep.summary);
+          return keep && keep.summary && !shouldShowSmallImage(keep.summary);
         };
 
         scope.hasSmallImage = function () {
           var keep = scope.keep;
-          return keep.summary && shouldShowSmallImage(keep.summary);
+          return keep && keep.summary && shouldShowSmallImage(keep.summary);
         };
 
         scope.hasKeepers = function () {
           var keep = scope.keep;
-          return !!(keep.keepers && keep.keepers.length);
+          return keep && !!(keep.keepers && keep.keepers.length);
         };
 
         scope.showOthers = function () {
-          return !scope.hasKeepers() && !! scope.keep.others;
+          return !scope.hasKeepers() && !! (scope.keep && scope.keep.others);
         };
 
         scope.showSocial = function () {
-          return scope.keep.others || (scope.keep.keepers && scope.keep.keepers.length > 0);
+          return scope.keep && (scope.keep.others || (scope.keep.keepers && scope.keep.keepers.length > 0));
         };
 
         scope.showTags = function () {
@@ -253,19 +270,30 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return scope.toggleSelect();
         };
 
-        var dragMask = element.find('.kf-drag-mask');
+        var tagDragMask = element.find('.kf-tag-drag-mask');
         scope.isDragTarget = false;
 
+
+
+
+        // TODO: bind to 'drop' event
         scope.onTagDrop = function (tag) {
           tagService.addKeepToTag(tag, scope.keep);
           scope.isDragTarget = false;
         };
 
-        dragMask.on('dragenter', function () {
+
+
+
+        // TODO: add/remove kf-candidate-drag-target on dragenter/dragleave
+        // optionally: kf-drag-target when dragging a tag
+
+
+        tagDragMask.on('dragenter', function () {
           scope.$apply(function () { scope.isDragTarget = true; });
         });
 
-        dragMask.on('dragleave', function () {
+        tagDragMask.on('dragleave', function () {
           scope.$apply(function () { scope.isDragTarget = false; });
         });
 
@@ -274,20 +302,31 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         element.on('mousemove', function (e) {
           mouseX = e.pageX - util.offset(element).left;
           mouseY = e.pageY - util.offset(element).top;
-        });
-        element.on('dragstart', function (e) {
+        })
+        .on('dragstart', function (e) {
           scope.$apply(function () {
+            $rootScope.DRAGGING_KEEP = true;
+            $rootElement.addClass('kf-dragging-keep');
             element.addClass('kf-dragged');
             scope.dragKeeps({keep: scope.keep, event: e, mouseX: mouseX, mouseY: mouseY});
             scope.isDragging = true;
           });
-        });
-        element.on('dragend', function () {
+        })
+        .on('dragend', function () {
           scope.$apply(function () {
+            $rootScope.DRAGGING_KEEP = false;
+            $rootElement.removeClass('kf-dragging-keep');
             element.removeClass('kf-dragged');
             scope.stopDraggingKeeps();
             scope.isDragging = false;
           });
+        })
+        .on('drop', function (e) {
+          e.preventDefault();
+        });
+
+        scope.$watch('editMode.enabled', function () {
+          element.attr('draggable', true);
         });
       }
     };

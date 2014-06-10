@@ -144,6 +144,8 @@ angular.module('kifi.keepService', [
     var api = {
       list: list,
 
+      buildKeep: buildKeep,
+      
       lastSearchContext: function () {
         return lastSearchContext;
       },
