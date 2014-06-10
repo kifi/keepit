@@ -11,7 +11,7 @@
     <div class="kf-keep-contents">
       <div class="kf-keep-content-line">
         <div class="kf-keep-small-image" ng-if="hasSmallImage()">
-          <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}">
+          <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}"></a>
         </div>
         <div class="kf-keep-info">
           <div class="kf-keep-title">
@@ -27,7 +27,7 @@
           </div>
         </div>
       </div>
-      <img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></img>
+      <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></a>
     </div>
     <div class="kf-keep-who" ng-if="showSocial()">
       <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
