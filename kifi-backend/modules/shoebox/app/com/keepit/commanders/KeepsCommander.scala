@@ -113,7 +113,8 @@ class KeepsCommander @Inject() (
     imageStore: S3ImageStore,
     airbrake: AirbrakeNotifier,
     uriSummaryCommander: URISummaryCommander,
-    collectionCommander: CollectionCommander
+    collectionCommander: CollectionCommander,
+    clock: Clock
  ) extends Logging {
 
   private def getKeeps(
@@ -320,7 +321,7 @@ class KeepsCommander @Inject() (
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
-          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
       }
 
       timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
@@ -365,7 +366,7 @@ class KeepsCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) } tap(keptAnalytics.createdTag(_, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, createdAt = clock.now())) } tap(keptAnalytics.createdTag(_, context))
       case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap(keptAnalytics.createdTag(_, context))
     }
   }
