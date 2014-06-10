@@ -117,6 +117,15 @@
   &::-ms-clear
     display: none
 
+.kf-query + .kf-query-icon
+  position: absolute
+  left: 40px
+  top: 9px
+  sprite2x($search-icon-default)
+
+.kf-query:focus + .kf-query-icon
+  sprite2x($search-icon-active)
+
 .kf-search-clear-wrapper
   position: relative
   right: 50px

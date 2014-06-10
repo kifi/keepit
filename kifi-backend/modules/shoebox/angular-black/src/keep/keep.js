@@ -229,25 +229,15 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           }).join(' ');
         };
 
-        $timeout(function () {
-          var img = element.find('.kf-keep-small-image');
-          if (img.length) {
-            var aspectRatio = scope.keep.summary.imageWidth / scope.keep.summary.imageHeight;
-            if (aspectRatio < .4) { // 2.5 : 1 height / width
-              img.hide();
-            }
-          }
-        });
-
         function shouldShowSmallImage(summary) {
           return (summary.imageWidth && summary.imageWidth < imageWidthThreshold) || summary.description;
         }
 
         function hasSaneAspectRatio(summary) {
           var aspectRatio = summary.imageWidth && summary.imageHeight && summary.imageWidth / summary.imageHeight;
-          var saneAspectRatio = aspectRatio > .5 && aspectRatio < 3;
+          var saneAspectRatio = aspectRatio > 0.5 && aspectRatio < 3;
           var bigEnough = summary.imageWidth + summary.imageHeight > 200;
-          return bigEnough && aspectRatio > .5 && aspectRatio < 3;
+          return bigEnough && saneAspectRatio;
         }
 
         scope.hasBigImage = function () {
