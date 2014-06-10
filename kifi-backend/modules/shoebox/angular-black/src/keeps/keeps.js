@@ -49,7 +49,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         keepClick: '=',
         scrollDisabled: '=',
         scrollNext: '&',
-        editMode: '='
+        editMode: '=',
+        toggleEdit: '='
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -61,6 +62,16 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.isSelectedAll = keepService.isSelectedAll;
         scope.editingTags = false;
         scope.addingTag = {enabled: false};
+
+        scope.keepClickAction = function (event, keep) {
+          if (event.metaKey) {
+            if (!scope.editMode.enabled) {
+              scope.toggleEdit();
+            }
+            scope.editMode.enabled = true;
+            scope.toggleSelect(keep);
+          }
+        };
 
         scope.isMultiChecked = function () {
           return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();

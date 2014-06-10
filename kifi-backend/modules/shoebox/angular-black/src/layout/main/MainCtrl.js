@@ -240,6 +240,11 @@ angular.module('kifi.layout.main', [
     };
 
     $scope.toggleEdit = function () {
+      if (!$scope.editMode.enabled) {
+        $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
+      } else {
+        keepService.unselectAll();
+      }
       $scope.editMode.enabled = !$scope.editMode.enabled;
     };
 
