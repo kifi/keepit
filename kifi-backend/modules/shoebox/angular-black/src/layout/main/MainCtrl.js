@@ -251,5 +251,21 @@ angular.module('kifi.layout.main', [
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
+
+
+    $scope.addKeepCheckedPrivate = false;
+    $scope.addKeepInput = {};
+
+    $scope.addKeepTogglePrivate = function () {
+      $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
+    };
+
+    $scope.keepUrl = function () {
+      if ($scope.addKeepInput.url) {
+        keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
+      } else {
+        //todo(martin): Tell the user something went wrong
+      }
+    };
   }
 ]);

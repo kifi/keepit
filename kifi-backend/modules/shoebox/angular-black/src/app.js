@@ -42,14 +42,14 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
-  'kifi.addKeeps',
   'kifi.installService',
   'kifi.dragService',
   'jun.facebook',
   'ui.slider',
   'angulartics',
   'kifi.mixpanel',
-  'kifi.alertBanner'
+  'kifi.alertBanner',
+  'kifi.addKeepsModalBody'
 ])
 
 // fix for when ng-view is inside of ng-include:

@@ -1,0 +1,9 @@
+<div kf-modal class="kf-add-keep-modal" ng-if="data.showAddKeeps" show="data.showAddKeeps">
+  <div kf-basic-modal-content title="Add a keep" centered="true" action-text="Keep it" action="keepUrl()">
+    <div class="kf-add-keep-body">
+      <div class="kf-add-keep-hint">Did you know: You can easily keep any page  using the kifi keeper</div>
+      <input class="kf-add-keep-input" placeholder="http://..." ng-model="addKeepInput.url"></input>
+      <span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !addKeepCheckedPrivate, 'sprite-checkbox-icon-active': addKeepCheckedPrivate }" ng-click="addKeepTogglePrivate()"></span><span class="kf-add-keep-private-label">Private</span>
+    </div>
+  </div>
+</div>
