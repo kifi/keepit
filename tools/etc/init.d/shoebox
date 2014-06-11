@@ -65,7 +65,6 @@ function getServicePID {
    return 0; }
 
 function startServiceProcess {
-   curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=$serviceName" -d "message=$serviceName is coming up." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null
    cd $applDir || return 1
    rm -f $pidFile
    makeFileWritable $pidFile || return 1
@@ -85,7 +84,6 @@ function startServiceProcess {
    return 0; }
 
 function stopServiceProcess {
-   curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=$serviceName" -d "message=$serviceName is going down." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null
    kill $pid || return 1
    for ((i=0; i<maxShutdownTime*10; i++)); do
       checkProcessIsRunning $pid
