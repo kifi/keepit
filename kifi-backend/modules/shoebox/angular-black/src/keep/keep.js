@@ -327,7 +327,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             $rootScope.DRAGGING_KEEP = true;
             $rootElement.addClass('kf-dragging-keep');
             element.addClass('kf-dragged');
-            scope.dragKeeps({keep: scope.keep, event: e, mouseX: mouseX, mouseY: mouseY});
+            scope.dragKeeps({keep: scope.keep, event: e, mouseX: 20, mouseY: 50});
             scope.isDragging = true;
           });
         })
