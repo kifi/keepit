@@ -91,22 +91,22 @@ var SvgArrow = SvgArrow || (function (window, document) {
     '---------'  :               `o    :
                  :              ---•---:   <- arrowhead axis is tangent to arc where they meet at G
                  :               \ G / :
-                 :                \ /  :   <- arrowhead orientation is configurable (-90° shown)
+                 :                \ /  :   <- orientation of both head and tail are configurable
                  : . . . . . . . . V . :         __
                                    H              |
-                                   .              | tip space
-                         ,---------.---------,   -'
+              |____|               .              | head.gap
+             tail.gap    ,---------.---------,   -'
                          | head.el .         |
-                         |         •C        |  <- arrowhead points to center of elHead
-                         |                   |
+                         |         •         |  <- arrowhead and tail can be oriented toward any point
+                         |                   |     in their associated rects (their centers by default)
                          '-------------------'
     */
     var rTail = tail.rect || tail.el.getBoundingClientRect();
     var rHead = head.rect || head.el.getBoundingClientRect();
     var tailAngleRad = Math.PI / 180 * tail.angle;
     var headAngleRad = Math.PI / 180 * head.angle;
-    var T = pointOutsideRect(rTail, tailAngleRad, tail.gap);
-    var H = pointOutsideRect(rHead, headAngleRad + Math.PI, head.gap);
+    var T = pointOutsideRect(rTail, tail.along, tailAngleRad, tail.gap);
+    var H = pointOutsideRect(rHead, head.along, headAngleRad + Math.PI, head.gap);
     minBox = minBox || {left: 1e5, top: 1e5, right: -1e5, bottom: -1e5};
     var box = {
       left: Math.min(minBox.left, -1 + Math.floor(Math.min(T.x, H.x) - HEAD_WIDTH / 2)),
@@ -124,25 +124,32 @@ var SvgArrow = SvgArrow || (function (window, document) {
     return {box: box, curve: curve};
   }
 
-  function pointOutsideRect(r, theta, d) {
-    var Cx = (r.left + r.right) / 2;
-    var Cy = (r.top + r.bottom) / 2;
-    var sinCorner = r.height / Math.sqrt(r.height * r.height + r.width * r.width);
+  function pointOutsideRect(r, along, theta, d) {
+    if (along == null) {
+      along = [.5, .5];
+    }
+    var Px = r.left + (r.right - r.left) * along[0];
+    var Py = r.top + (r.bottom - r.top) * along[1];
+
+    // determine the two candidate edges (x = Cx and y = Cy)
     var sinTheta = Math.sin(theta);
     var cosTheta = Math.cos(theta);
-    if (Math.abs(sinTheta) > sinCorner) { // top/bottom
-      var y = (sinTheta < 0 ? -1 : 1) * (r.height / 2 + d);
-      return {
-        x: Cx + y * cosTheta / sinTheta,
-        y: Cy - y
-      };
-    } else { // left/right
-      var x = (cosTheta < 0 ? -1 : 1) * (r.width / 2 + d);
-      return {
-        x: Cx + x,
-        y: Cy - x * sinTheta / cosTheta
-      };
-    }
+    var Cx = cosTheta < 0 ? r.left - d : r.right + d;
+    var Cy = sinTheta > 0 ? r.top - d : r.bottom + d;
+
+    // find where ray from P crosses: (Qx, Cy) and (Cx, Qy)
+    var tanTheta = sinTheta / cosTheta;
+    var Qx = Px + (Py - Cy) / tanTheta;
+    var Qy = Py + (Px - Cx) * tanTheta;
+
+    // choose the point closer to P
+    return dist2(Px, Py, Qx, Cy) < dist2(Px, Py, Cx, Qy) ? {x: Qx, y: Cy} : {x: Cx, y: Qy};
+  }
+
+  function dist2(x1, y1, x2, y2) {
+    var dx = x1 - x2;
+    var dy = y1 - y2;
+    return dx * dx + dy * dy;
   }
 
   function reveal(curve, ms) {

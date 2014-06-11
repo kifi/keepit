@@ -6,10 +6,10 @@ guide.step2 = guide.step2 || function () {
   var steps = [
     {
       lit: '#kifi-res-list .r',
-      pad: [20, -180, 80, 20],
-      arrow: {from: {angle: 180, gap: 12}, to: {angle: 135, gap: 12, sel: '#kifi-res-list .kifi-res-title'}},
+      pad: [20, -180, 70, 20],
+      arrow: {from: {angle: 180, gap: 12}, to: {angle: 120, gap: 4, along: [.9, 1], sel: '#kifi-res-list .kifi-res-title'}},
       ev: {type: 'click', allow: '.kifi-res-title'},
-      pos: {top: 120, left: 510}
+      pos: {top: 120, left: 520}
     }
   ];
   return show;
