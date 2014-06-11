@@ -48,8 +48,7 @@ angular.module('kifi', [
   'ui.slider',
   'angulartics',
   'kifi.mixpanel',
-  'kifi.alertBanner',
-  'kifi.addKeepsModalBody'
+  'kifi.alertBanner'
 ])
 
 // fix for when ng-view is inside of ng-include:
