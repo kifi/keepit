@@ -1,0 +1,73 @@
+@(bms: Seq[Keep], keywords: Seq[KeywordsSummary], page: Int, pageCount: Int)
+
+@import com.keepit.controllers.admin.routes
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@routes.AdminBookmarksController.bookmarksKeywordsPageView(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @if(page - 20 > 0) {
+        <li class="disabled">
+          <a href="@routes.AdminBookmarksController.bookmarksKeywordsPageView(0)">...</a>
+        </li>
+      }
+      @for(i <- (0.max(page - 20) to (pageCount - 1).min(page + 20))) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@routes.AdminBookmarksController.bookmarksKeywordsPageView(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@routes.AdminBookmarksController.bookmarksKeywordsPageView(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      @if(page + 20 < pageCount - 1) {
+        <li class="disabled">
+          <a href="@routes.AdminBookmarksController.bookmarksKeywordsPageView(pageCount - 1)">...</a>
+        </li>
+      }
+      <li>
+        @if(bms.size > 0) {
+          <a href="@routes.AdminBookmarksController.bookmarksKeywordsPageView(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin("bookmark keywords"){
+
+  <table class="table table-bordered" style = "clear: both">
+
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>keywords</th>
+    </tr>
+
+    @bms.zipWithIndex.map{ case (bm, i) =>
+      <tr>
+        <td rowspan = "5"> @i </td>
+        <td rowspan = "5"> @adminHelper.bookmarkDisplay(bm)</td>
+        <th>article keywords</th><td>@keywords(i).article.mkString(" ")</td>
+      </tr>
+
+      <tr><th>embedly</th> <td>@keywords(i).embedly.mkString(" ")</td> </tr>
+      <tr><th>word2vec cosine</th> <td>@keywords(i).word2vecCosine.mkString(" ")</td> </tr>
+      <tr><th>word2vec freq</th> <td>@keywords(i).word2vecFreq.mkString(" ")</td> </tr>
+      <tr><th>best guess</th> <td>@keywords(i).bestGuess.mkString(" ")</td> </tr>
+    }
+}
