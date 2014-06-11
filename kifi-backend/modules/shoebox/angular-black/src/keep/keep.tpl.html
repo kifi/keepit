@@ -38,6 +38,15 @@
   </div>
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link"><a ng-href="{{keep.url}}" data-locator='/messages#compose'>Send</a></span>
+    <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Private Keep</a></span>
+
+
+    <span class="kf-keep-footer-link"><a ng-href="{{keep.url}}" data-locator='/messages#compose'>Send</a></span>
     <span class="kf-keep-footer-link" ng-if="!hasTag()" ng-click="showAddTag()"><a href='javascript:'>Tag</a></span>
     <span class="kf-keep-footer-link" ng-if="!isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
     <span class="kf-keep-footer-link" ng-if="isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
