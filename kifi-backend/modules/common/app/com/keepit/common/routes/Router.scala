@@ -268,9 +268,6 @@ object ABook extends Service {
 
 object Scraper extends Service {
   object internal {
-    def asyncScrapeArticle() = ServiceRoute(POST, s"/internal/scraper/asyncScrape")
-    def asyncScrapeArticleWithInfo() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithInfo")
-    def asyncScrapeArticleWithRequest() = ServiceRoute(POST, s"/internal/scraper/asyncScrapeWithRequest")
     def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
     def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
@@ -298,6 +295,7 @@ object Cortex extends Service {
     def ldaShowTopics(fromId: Int, toId: Int, topN: Int) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN))
     def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
+    def saveEdits() = ServiceRoute(POST, "/internal/cortex/lda/saveEdits")
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

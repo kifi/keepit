@@ -1145,7 +1145,8 @@ api.port.on({
     api.tabs.emit(tab, 'open_to', {
       trigger: 'deepLink',
       locator: '/messages',
-      composeTo: friendsById && friendsById[SUPPORT.id] || SUPPORT
+      compose: true,
+      to: friendsById && friendsById[SUPPORT.id] || SUPPORT
     }, {queue: 1});
   },
   logged_in: authenticate.bind(null, api.noop),
@@ -1513,7 +1514,8 @@ function awaitDeepLink(link, tabId, retrySec) {
       log('[awaitDeepLink]', tabId, link);
       api.tabs.emit(tab, 'open_to', {
         trigger: 'deepLink',
-        locator: loc,
+        locator: loc.replace(/#.*/, ''),
+        compose: loc.indexOf('#compose') >= 0,
         redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
       }, {queue: 1});
     } else if ((retrySec = retrySec || .5) < 5) {

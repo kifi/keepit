@@ -213,9 +213,9 @@ object URISummary {
     )(URISummary.apply _, unlift(URISummary.unapply))
 }
 
-case class KeywordsSummary(embedly: Seq[String], word2vecCosine: Seq[String], word2vecFreq: Seq[String])
+case class KeywordsSummary(article: Seq[String], embedly: Seq[String], word2vecCosine: Seq[String], word2vecFreq: Seq[String], word2vecWordCount: Int, bestGuess: Seq[String])
 
-case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String])
+case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String], wordCounts: Int)
 
 object Word2VecKeywords {
   implicit val format = Json.format[Word2VecKeywords]

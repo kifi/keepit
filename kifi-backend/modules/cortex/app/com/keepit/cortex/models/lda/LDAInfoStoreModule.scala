@@ -16,7 +16,6 @@ trait LDAInfoStoreModule extends StoreModule
 case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging{
   def configure(){}
 
-  val TOPIC_WORDS_FILE = "topic_words"
 
   @Singleton
   @Provides
@@ -27,18 +26,35 @@ case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging{
 
   @Singleton
   @Provides
+  def topicConfigsStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAConfigStore = {
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
+    new S3LDAConfigStore(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Singleton
+  @Provides
   def topicWords(store: LDATopicWordsStore): DenseLDATopicWords = {
     log.info("loading lda topic words")
     val version = ModelVersions.denseLDAVersion
-    store.get(TOPIC_WORDS_FILE, version).get
+    store.get(MiscPrefix.LDA.topicWordsJsonFile, version).get
   }
+
+  @Singleton
+  @Provides
+  def topicConfigs(store: LDAConfigStore): LDATopicConfigurations = {
+    log.info("loading lda topic configs")
+    val version = ModelVersions.denseLDAVersion
+    store.get(MiscPrefix.LDA.topicConfigsJsonFile, version) match {
+      case Some(configs) => configs
+      case None => LDATopicConfigurations(Map[String, LDATopicConfiguration]())
+    }
+  }
+
 
 }
 
 case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStoreProdModule()) with LDAInfoStoreModule with Logging{
   def configure(){}
-
-  val TOPIC_WORDS_FILE = "topic_words"
 
   @Singleton
   @Provides
@@ -49,8 +65,21 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
       val topicWords = Array(Map("a" -> 0.1f, "b" -> 0.2f), Map("c" -> 0.4f, "d" -> 0.2f, "e" -> 0.005f))
       val version = ModelVersions.denseLDAVersion
       val store = new InMemoryLDATopicWordsStore
-      store.+=(TOPIC_WORDS_FILE, version, DenseLDATopicWords(topicWords))
+      store.+=(MiscPrefix.LDA.topicWordsJsonFile, version, DenseLDATopicWords(topicWords))
       store
+    }
+  }
+
+  @Singleton
+  @Provides
+  def topicConfigsStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAConfigStore = {
+    whenConfigured(S3_CORTEX_BUCKET)(
+      prodStoreModule.topicConfigsStore(amazonS3Client, accessLog)
+    ) getOrElse {
+      val version = ModelVersions.denseLDAVersion
+      val store = new InMemoryLDAConfigStore
+      val config = Map("0" -> LDATopicConfiguration("foo", false), "1" -> LDATopicConfiguration("bar", false))
+      store.+=(MiscPrefix.LDA.topicConfigsJsonFile, version, LDATopicConfigurations(config))
     }
   }
 
@@ -59,6 +88,18 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
   def topicWords(store: LDATopicWordsStore): DenseLDATopicWords = {
     log.info("loading lda topic words")
     val version = ModelVersions.denseLDAVersion
-    store.get(TOPIC_WORDS_FILE, version).get
+    store.get(MiscPrefix.LDA.topicWordsJsonFile, version).get
   }
+
+  @Singleton
+  @Provides
+  def topicConfigs(store: LDAConfigStore): LDATopicConfigurations = {
+    log.info("loading lda topic configs")
+    val version = ModelVersions.denseLDAVersion
+    store.get(MiscPrefix.LDA.topicConfigsJsonFile, version) match {
+      case Some(config) => config
+      case None => LDATopicConfigurations(Map())
+    }
+  }
+
 }

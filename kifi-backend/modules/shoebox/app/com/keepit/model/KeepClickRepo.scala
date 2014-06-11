@@ -16,6 +16,7 @@ trait KeepClickRepo extends Repo[KeepClick] {
   def getClicksByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Seq[KeepClick]
   def getClickCountByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Int
   def getClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Map[Id[Keep], Int]
+  def getUriClickCountsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Map[Id[NormalizedURI], Int]
   def getClickCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Map[Id[Keep],Int]
 }
 
@@ -64,6 +65,13 @@ class KeepClickRepoImpl @Inject() (
     val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r)
       .groupBy(_.keepId)
       .map { case (kId, kc) => (kId, kc.length) }
+    q.toMap()
+  }
+
+  def getUriClickCountsByKeeper(userId: Id[User], since:DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepClickStates.ACTIVE && r.createdAt >= since)) yield r)
+      .groupBy(_.uriId)
+      .map { case (uriId, kc) => (uriId, kc.length) }
     q.toMap()
   }
 

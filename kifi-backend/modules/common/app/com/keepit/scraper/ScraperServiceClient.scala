@@ -121,9 +121,6 @@ trait ScraperServiceClient extends ServiceClient {
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
 
-  def asyncScrape(uri:NormalizedURI):Future[(NormalizedURI, Option[Article])] // pass in simple url? not sure if Tuple2
-  def asyncScrapeWithInfo(uri:NormalizedURI, info:ScrapeInfo):Future[(NormalizedURI, Option[Article])]
-  def asyncScrapeWithRequest(request:ScrapeRequest):Future[(NormalizedURI, Option[Article])]
   def getBasicArticle(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[BasicArticle]]
   def getSignature(url:String, proxy:Option[HttpProxy], extractor:Option[ExtractorProviderType]):Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
@@ -143,27 +140,6 @@ class ScraperServiceClientImpl @Inject() (
 
   val longTimeout = CallTimeouts(responseTimeout = Some(60000))
   val httpClient = defaultHttpClient.withTimeout(longTimeout)
-
-  def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
-    call(Scraper.internal.asyncScrapeArticle, Json.toJson(uri)).map{ r =>
-      val t = r.json.as[ScrapeTuple]
-      (t.uri, t.articleOpt)
-    }
-  }
-
-  def asyncScrapeWithInfo(uri: NormalizedURI, info:ScrapeInfo): Future[(NormalizedURI, Option[Article])] = {
-    call(Scraper.internal.asyncScrapeArticleWithInfo, JsArray(Seq(Json.toJson(uri), Json.toJson(info)))).map{ r =>
-      val t = r.json.as[ScrapeTuple]
-      (t.uri, t.articleOpt)
-    }
-  }
-
-  def asyncScrapeWithRequest(request: ScrapeRequest): Future[(NormalizedURI, Option[Article])] = {
-    call(Scraper.internal.asyncScrapeArticleWithRequest, Json.toJson(request)).map { r =>
-      val t = r.json.as[ScrapeTuple]
-      (t.uri, t.articleOpt)
-    }
-  }
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     call(Scraper.internal.getBasicArticle, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
@@ -228,16 +204,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, ()=>{})
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
-
-  def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = ???
-
-  def asyncScrapeWithInfo(uri: NormalizedURI, info: ScrapeInfo): Future[(NormalizedURI, Option[Article])] = ???
-
-  def asyncScrapeWithRequest(request: ScrapeRequest): Future[(NormalizedURI, Option[Article])] = ???
-
-  def scheduleScrape(uri: NormalizedURI, info: ScrapeInfo): Future[Boolean] = ???
-
-  def scheduleScrapeWithRequest(request: ScrapeRequest): Future[Boolean] = ???
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
 

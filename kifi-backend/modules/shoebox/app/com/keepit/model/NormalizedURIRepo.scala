@@ -136,22 +136,24 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
-    uri.state match {
+    saved.state match {
       case e:State[NormalizedURI] if DO_NOT_SCRAPE.contains(e) => // ensure no ACTIVE scrapeInfo records
         scrapeRepo.getByUriId(saved.id.get) match {
-          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
-            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+          case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE =>
+            val savedSI = scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as INACTIVE; si=${savedSI}")
           case _ => // do nothing
         }
       case SCRAPE_FAILED | SCRAPED =>
         scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
           case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
-            scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+            val savedSI = scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as ACTIVE; si=${savedSI}")
           case _ => // do nothing
         }
       case ACTIVE => // do nothing
       case _ =>
-        throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
+        throw new IllegalStateException(s"Unhandled state=${saved.state}; uri=$uri")
     }
     saved
   }
@@ -214,8 +216,10 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_HUNDRED) {
       val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
-          session.onTransactionSuccess {
-            updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
+          if (candidates.nonEmpty) {
+            session.onTransactionSuccess {
+              updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
+            }
           }
           uri
         case Success(Right(prenormalizedUrl)) => {

@@ -12,6 +12,8 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.model.Word2VecKeywords
+import com.keepit.cortex.models.lda.LDATopicConfiguration
+import com.keepit.cortex.models.lda.LDATopicInfo
 
 class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CortexServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), ()=>{})
@@ -28,9 +30,10 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def word2vecFeedUserUris(userUris: Seq[Id[NormalizedURI]], feedUris: Seq[Id[NormalizedURI]]): Future[Seq[Id[NormalizedURI]]] = ???
 
   override def ldaNumOfTopics(): Future[Int] = ???
-  override def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Map[String, Map[String, Float]]] = ???
+  override def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Seq[LDATopicInfo]] = ???
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
+  override def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = ???
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???
 }

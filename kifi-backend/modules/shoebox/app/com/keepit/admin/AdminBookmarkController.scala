@@ -45,15 +45,13 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val embedlyKeywords = uriSummaryCommander.getStoredEmbedlyKeywords(uri.id.get)
-      val word2vecKeywordsFut = uriSummaryCommander.getWord2VecKeywords(uri.id.get)
+      val keywordsFut = uriSummaryCommander.getKeywordsSummary(uri.id.get)
       val imageUrlOptFut = uriSummaryCommander.getURIImage(uri)
 
       for {
-        word2vecKeys <- word2vecKeywordsFut
+        keywords <- keywordsFut
         imageUrlOpt <- imageUrlOptFut
       } yield {
-        val keywords = KeywordsSummary(embedlyKeywords, word2vecKeys.map{_.cosine}.getOrElse(Seq()), word2vecKeys.map{_.freq}.getOrElse(Seq()))
         val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, keywords))
       }
@@ -170,11 +168,14 @@ class AdminBookmarksController @Inject() (
           bookmarks map (_.uriId) map scrapeRepo.getByUriId
         }}}
 
+        val keywordsFut = Future.sequence(bookmarks.map{ x => uriSummaryCommander.getKeywordsSummary(x.uriId)})
+
         for {
           users <- usersFuture
           uris <- urisFuture
           scrapes <- scrapesFuture
-        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+          keywords <- keywordsFut
+        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq, keywords).zipped.toList.seq
       }
     }
 

@@ -30,6 +30,6 @@ case class FixedResultScraper(override val airbrakeNotifier: AirbrakeNotifier, s
 
   override def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     val content = if (url == "http://fixedResult.com") "fixed result" else "na"
-    Future.successful(Some(BasicArticle(title = "not important", content = content, signature = Signature("fixedSignature"))))
+    Future.successful(Some(BasicArticle(title = "not important", content = content, signature = Signature("fixedSignature"), destinationUrl = url)))
   }
 }

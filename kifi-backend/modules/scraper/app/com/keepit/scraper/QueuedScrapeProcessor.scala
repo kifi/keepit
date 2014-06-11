@@ -81,8 +81,7 @@ object TracedCallable {
   }
 }
 
-abstract class ScrapeCallable(val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy])
-  extends TracedCallable[(NormalizedURI, Option[Article])] {
+abstract class ScrapeCallable(val uri:NormalizedURI, val info:ScrapeInfo, val proxyOpt:Option[HttpProxy]) extends TracedCallable[Option[Article]] {
   override def getTaskDetails(name:String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE, uri.id, info.id, Some(killCount.get), None)
 }
 
@@ -103,7 +102,7 @@ class QueuedScrapeProcessor @Inject() (
   wordCountCache: NormalizedURIWordCountCache,
   embedlyCommander: EmbedlyCommander) extends ScrapeProcessor with Logging with ScraperUtils {
 
-  type ScrapingForkJoinTask = ForkJoinTask[Try[(NormalizedURI, Option[Article])]]
+  type ScrapingForkJoinTask = ForkJoinTask[Try[Option[Article]]]
 
   val LONG_RUNNING_THRESHOLD = if (Play.isDev) 120000 else config.queueConfig.terminateThreshold
   val Q_SIZE_THRESHOLD = config.queueConfig.queueSizeThreshold
@@ -218,7 +217,7 @@ class QueuedScrapeProcessor @Inject() (
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
       val callable = new ScrapeCallable(nuri, scrapeInfo, proxy) {
-        def doWork: (NormalizedURI, Option[Article]) = worker.safeProcessURI(uri, info, pageInfoOpt, proxyOpt)
+        def doWork: Option[Article] = worker.safeProcessURI(uri, info, pageInfoOpt, proxyOpt)
       }
       val fjTask = fjPool.submit(callable)
       if (!fjTask.isDone) {
@@ -227,17 +226,6 @@ class QueuedScrapeProcessor @Inject() (
     } catch {
       case t:Throwable => logErr(t, "QScraper", s"uri=$nuri, info=$scrapeInfo", true)
     }
-  }
-
-  def scrapeArticle(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[(NormalizedURI, Option[Article])] = {
-    val callable = new TracedCallable[(NormalizedURI, Option[Article])] {
-      def doWork: (NormalizedURI, Option[Article]) = {
-        worker.safeProcessURI(uri, info, None, proxyOpt)
-      }
-      def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE_ARTICLE, None, None, None, None)
-    }
-    fjPool.submit(callable)
-    callable.future
   }
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
@@ -251,7 +239,7 @@ class QueuedScrapeProcessor @Inject() (
         if (URI.parse(url).get.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
         val fetchStatus = httpFetcher.fetch(url, proxy = proxyOpt)(input => extractor.process(input))
         val res = fetchStatus.statusCode match {
-          case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl) => Some(worker.basicArticle(url, extractor))
+          case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl) => Some(worker.basicArticle(fetchStatus.destinationUrl getOrElse url, extractor))
           case _ => None
         }
         res

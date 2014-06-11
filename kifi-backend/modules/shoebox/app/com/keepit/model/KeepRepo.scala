@@ -24,6 +24,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
+  def bulkGetByUserAndUriIds(userId: Id[User], uriIds:Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI],Keep]
   def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
@@ -201,6 +202,15 @@ class KeepRepoImpl @Inject() (
     interpolated.as[(Int, DateTime, Id[NormalizedURI], String)].list map { row =>
       WhoKeptMyKeeps(row._1, row._2, row._3, row._4.split(',').map(_.toInt).map(Id[User](_)) )
     }
+  }
+
+  def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep] = {
+    val res = bookmarkUriUserCache.bulkGetOrElse(uriIds.map(KeepUriUserKey(_, userId))) { keys =>
+      val missing = keys.map(_.uriId)
+      val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list()
+      keeps.map{ k => KeepUriUserKey(k.uriId, userId) -> k }.toMap
+    }
+    res.map{ case(key, keep) => key.uriId -> keep }
   }
 
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {

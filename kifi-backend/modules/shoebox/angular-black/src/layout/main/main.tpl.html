@@ -1,0 +1,12 @@
+<div class="kf-col-inner" ng-controller="MainCtrl">
+  <div ng-show="searchEnabled" ng-include="'search/mainSearchBar.tpl.html'"></div>
+  <div ng-view></div>
+
+  <!-- Dialogs -->
+  <div ng-if="modal">
+    <div ng-include="'keep/importModal.tpl.html'" ng-if="modal == 'import_bookmarks'"></div>
+    <div ng-include="'keep/bookmarkFileModal.tpl.html'" ng-if="modal == 'import_bookmark_file'"></div>
+    <div ng-include="'social/addNetworksModal.tpl.html'" ng-if="modal == 'add_networks'"></div>
+    <div kf-add-keeps-modal></div>
+  </div>
+</div>

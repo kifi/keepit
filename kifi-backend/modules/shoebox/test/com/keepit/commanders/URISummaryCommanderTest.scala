@@ -24,6 +24,7 @@ import com.keepit.scraper.ScraperServiceClient
 import com.google.inject.{Singleton, Provides}
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.search.{ArticleStore, InMemoryArticleStoreImpl}
 
 object URISummaryCommanderTestDummyValues {
   val dummyImage = ImageInfo(
@@ -149,6 +150,9 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
     def embedlyStore(): EmbedlyStore = {
       new InMemoryEmbedlyStoreImpl()
     }
+
+    @Singleton @Provides
+    def articleStore(): ArticleStore = new InMemoryArticleStoreImpl()
   }
 
   val modules = Seq(

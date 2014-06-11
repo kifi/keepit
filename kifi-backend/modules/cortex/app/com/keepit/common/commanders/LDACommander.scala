@@ -3,14 +3,20 @@ package com.keepit.common.commanders
 import com.google.inject.{Inject, Singleton}
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.features.Document
+import com.keepit.cortex.MiscPrefix
+
 
 @Singleton
 class LDACommander @Inject()(
   wordRep: LDAWordRepresenter,
   docRep: LDADocRepresenter,
-  ldaTopicWords: DenseLDATopicWords
+  ldaTopicWords: DenseLDATopicWords,
+  ldaConfigs: LDATopicConfigurations,
+  configStore: LDAConfigStore
 ){
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
+
+  var currentConfig = ldaConfigs
 
   def numOfTopics: Int = ldaTopicWords.topicWords.length
 
@@ -28,6 +34,13 @@ class LDACommander @Inject()(
     }.toMap
   }
 
+  def topicConfigs(fromId: Int, toId: Int): Map[String, LDATopicConfiguration] = {
+    assume(fromId <= toId && toId < numOfTopics && fromId >= 0)
+    (fromId to toId).map{ id =>
+      id.toString -> currentConfig.configs.getOrElse(id.toString, LDATopicConfiguration.default)
+    }.toMap
+  }
+
   def wordTopic(word: String): Option[Array[Float]] = {
     wordRep(word).map{_.vectorize}
   }
@@ -36,4 +49,9 @@ class LDACommander @Inject()(
     docRep(doc).map{_.vectorize}
   }
 
+  def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
+    val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
+    currentConfig = newConfig
+    configStore.+= (MiscPrefix.LDA.topicConfigsJsonFile, wordRep.version, newConfig)
+  }
 }

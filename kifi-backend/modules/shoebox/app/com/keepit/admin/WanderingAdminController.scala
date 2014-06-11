@@ -10,8 +10,9 @@ import com.keepit.common.db.slick.Database.Slave
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
 import play.api.mvc.{SimpleResult}
-import scala.concurrent.Promise
+import scala.concurrent.{Future, Promise}
 import scala.util.{Failure, Success}
+import scala.concurrent.duration._
 
 class WanderingAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -22,6 +23,27 @@ class WanderingAdminController @Inject() (
   uriRepo: NormalizedURIRepo,
   clock: Clock
 ) extends AdminController(actionAuthenticator) {
+
+  private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
+    graphClient.wander(wanderlust).map { collisions =>
+
+      val sortedUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+        collisions.users.map { case (userId, count) => userRepo.get(userId) -> count }
+      }.toSeq.sortBy(- _._2)
+
+      val sortedSocialUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+        collisions.socialUsers.map { case (socialUserInfoId, count) => socialUserRepo.get(socialUserInfoId) -> count }
+      }.toSeq.sortBy(- _._2)
+
+      val sortedUris = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+        collisions.uris.map { case (uriId, count) => uriRepo.get(uriId) -> count }
+      }.filter(_._1.restriction.isEmpty).toSeq.sortBy(- _._2)
+
+      val sortedExtras = collisions.extra.toSeq.sortBy(- _._2)
+
+      (sortedUsers, sortedSocialUsers, sortedUris, sortedExtras)
+    }
+  }
 
   def wander() = AdminHtmlAction.authenticatedAsync { implicit request =>
     request.request.method.toLowerCase match {
@@ -44,32 +66,21 @@ class WanderingAdminController @Inject() (
         val avoidTrivialCollisions = body.contains("avoidTrivialCollisions")
         val steps = body("steps").head.toInt
         val restartProbability = body("restartProbability").head.toDouble
+        val recency = body("recency").headOption.collect { case days if days.nonEmpty => Duration(days.toLong, "days") }
+        val halfLife = body("decay").headOption.collect { case days if days.nonEmpty => Duration(days.toLong, "days") }
 
-        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability)
+        val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability, recency, halfLife)
 
         val promisedResult = Promise[SimpleResult]()
 
-        graphClient.wander(wanderlust).onComplete {
+        doWander(wanderlust).onComplete {
 
           case Failure(ex) => {
             val view = Ok(views.html.admin.graph.wanderView(availableVertexKinds, wanderlust, Some(Failure(ex)), Seq.empty, Seq.empty, Seq.empty, Seq.empty))
             promisedResult.success(view)
           }
 
-          case Success(collisions) => {
-            val sortedUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
-              collisions.users.map { case (userId, count) => userRepo.get(userId) -> count }
-            }.toSeq.sortBy(- _._2)
-
-            val sortedSocialUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
-              collisions.socialUsers.map { case (socialUserInfoId, count) => socialUserRepo.get(socialUserInfoId) -> count }
-            }.toSeq.sortBy(- _._2)
-
-            val sortedUris = db.readOnly(dbMasterSlave = Slave) { implicit session =>
-              collisions.uris.map { case (uriId, count) => uriRepo.get(uriId) -> count }
-            }.toSeq.sortBy(- _._2)
-
-            val sortedExtras = collisions.extra.toSeq.sortBy(- _._2)
+          case Success((sortedUsers, sortedSocialUsers, sortedUris, sortedExtras)) => {
 
             val end = clock.now()
             val timing = end.getMillis - start.getMillis
@@ -82,5 +93,23 @@ class WanderingAdminController @Inject() (
         promisedResult.future
       }
     }
+  }
+
+  def fromParisWithLove() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val start = clock.now()
+    val promisedResult = Promise[SimpleResult]()
+
+    doWander(Wanderlust.discovery(request.userId)).onComplete {
+      case Failure(ex) =>
+        val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Failure[Long](ex), Seq.empty))
+        promisedResult.success(view)
+      case Success((_, _, sortedUris, _)) =>
+        val end = clock.now()
+        val timing = end.getMillis - start.getMillis
+        val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))
+        promisedResult.success(view)
+    }
+
+    promisedResult.future
   }
 }

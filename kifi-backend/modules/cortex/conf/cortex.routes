@@ -20,5 +20,6 @@ GET     /internal/cortex/lda/numOfTopics                                        
 GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int)
 GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word)
 POST    /internal/cortex/lda/docTopic                                               @com.keepit.controllers.cortex.LDAController.docTopic
+POST    /internal/cortex/lda/saveEdits                                              @com.keepit.controllers.cortex.LDAController.saveEdits
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

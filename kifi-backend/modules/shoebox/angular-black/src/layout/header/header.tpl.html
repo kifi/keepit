@@ -1,0 +1,20 @@
+<div class="kf-header-inner" ng-controller="HeaderCtrl">
+  <div class="kf-header-left">
+    <div class="kf-header-toggle-menu closed sprite sprite-burger" ng-click="toggleMenu()"></div>
+    <div class="kf-header-toggle-menu open sprite sprite-burger-open" ng-click="toggleMenu()"></div>
+    <div class="kf-header-left-separator"></div>
+    <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
+    <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
+  </div>
+  <div class="kf-header-right">
+    <div class="sprite sprite-add-link">Add a link</div>
+    <div class="kf-header-icon-hover-container">
+      <div class="sprite sprite-friends">Friends</div>
+      <ul class="kf-dropdown-menu">
+        <li><a href="/friends" ng-class="{'active': isActive('/friends') }">Your Kifi Friends</a></li>
+        <li><a href="/invite" ng-class="{'active': isActive('/invite') }">Invite a friend to Kifi</a></li>
+      </ul>
+    </div>
+    <a href="/profile" class="sprite sprite-settings">Settings</div>
+  </div>
+</div>

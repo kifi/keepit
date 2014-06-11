@@ -20,6 +20,7 @@ import com.keepit.scraper.ScraperServiceClient
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.search.ArticleStore
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
@@ -31,6 +32,7 @@ class URISummaryCommander @Inject()(
   pagePeekerClient: PagePeekerClient,
   uriImageStore: S3URIImageStore,
   embedlyStore: EmbedlyStore,
+  articleStore: ArticleStore,
   imageFetcher: ImageFetcher,
   airbrake: AirbrakeNotifier,
   clock: Clock
@@ -40,9 +42,18 @@ class URISummaryCommander @Inject()(
    * Gets an image for the given URI. It can be an image on the page or a screenshot, and there are no size restrictions
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
-  def getURIImage(nUri: NormalizedURI): Future[Option[String]] = {
-    val request = URISummaryRequest(nUri.url, ImageType.ANY, ImageSize(0,0), false, false, false)
-    getURISummaryForRequest(request, nUri) map { _.imageUrl }
+  def getURIImage(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[Option[String]] = {
+    getImageURISummary(nUri, minSizeOpt) map { _.imageUrl }
+  }
+
+  /**
+   * Uses a URISummaryRequest to request an image for the page, for the given size constraints.
+   * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
+   */
+  def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
+    val minSize = minSizeOpt getOrElse ImageSize(0,0)
+    val request = URISummaryRequest(nUri.url, ImageType.ANY, minSize, false, false, false)
+    getURISummaryForRequest(request, nUri)
   }
 
   /**
@@ -221,12 +232,52 @@ class URISummaryCommander @Inject()(
     }
   }
 
+  def getArticleKeywords(id: Id[NormalizedURI]): Seq[String] = {
+
+    val rv = for {
+      article <- articleStore.get(id)
+      keywords <- article.keywords
+    } yield {
+      keywords.toLowerCase.split(" ").filter{x => !x.isEmpty && x.forall(_.isLetterOrDigit)}
+    }
+
+    rv.getOrElse(Array()).toSeq
+  }
+
   def getWord2VecKeywords(id: Id[NormalizedURI]): Future[Option[Word2VecKeywords]] = {
     cortex.word2vecURIKeywords(id)
   }
 
   def batchGetWord2VecKeywords(ids: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
     cortex.word2vecBatchURIKeywords(ids)
+  }
+
+  def getKeywordsSummary(uri: Id[NormalizedURI]): Future[KeywordsSummary] = {
+    val word2vecKeywordsFut = getWord2VecKeywords(uri)
+    val embedlyKeywords = getStoredEmbedlyKeywords(uri).toSet
+    val articleKeywords = getArticleKeywords(uri).toSet
+
+    for {
+      word2vecKeys <- word2vecKeywordsFut
+    } yield {
+
+      val word2vecCount = word2vecKeys.map{_.wordCounts} getOrElse 0
+      val w2vCos = word2vecKeys.map{ _.cosine.toSet} getOrElse Set()
+      val w2vFreq = word2vecKeys.map{ _.freq.toSet} getOrElse Set()
+
+      val bestGuess = if (!articleKeywords.isEmpty){
+        articleKeywords intersect ( embedlyKeywords union w2vCos union w2vFreq )
+      } else {
+        if (embedlyKeywords.isEmpty){
+          w2vCos intersect w2vFreq
+        } else {
+          embedlyKeywords intersect (w2vCos union w2vFreq)
+        }
+      }
+
+      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, word2vecCount, bestGuess.toSeq)
+    }
+
   }
 
 

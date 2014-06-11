@@ -194,12 +194,18 @@ this.tagbox = (function ($, win) {
 				return this.moveKeeperToBottom();
 			}.bind(this))
 			.then(function () {
+				var self = this;
 				this.$tagbox.insertBefore(this.$slider) // .appendTo('body')
+					.on('transitionend', function end(e) {
+						if (e.target === this) {
+							$(this).off('transitionend', end);
+							self.initScroll();
+						}
+					})
 					.layout().addClass('kifi-in');
 				if (win.pane) {
 					win.pane.shade();
 				}
-				this.initScroll();
 				this.handleInput();
 				this.$input.focus();
 				win.setTimeout(this.addDocListeners.bind(this), 50);
@@ -288,8 +294,15 @@ this.tagbox = (function ($, win) {
 			log('[updateScroll]');
 
 			if (this.active) {
-				this.$tagListWrapper.data('antiscroll').refresh();
-				this.$suggestWrapper.data('antiscroll').refresh();
+				refresh(this.$tagListWrapper);
+				refresh(this.$suggestWrapper);
+			}
+
+			function refresh($el) {
+				var scroller = $el.data('antiscroll');
+				if (scroller) {
+					scroller.refresh();
+				}
 			}
 		},
 

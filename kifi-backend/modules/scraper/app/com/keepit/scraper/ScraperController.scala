@@ -33,9 +33,9 @@ class ScraperController @Inject() (
   def getSignature() = Action.async(parse.json) { request =>
     log.info(s"getSignature body=${request.body}")
     processBasicArticleRequest(request.body).map { articleOption =>
-      val signatureOption = articleOption.map(_.signature)
-      val json = Json.toJson(signatureOption.map(_.toBase64()))
       val url = (request.body \ "url").as[String]
+      val signatureOption = articleOption.collect { case article if article.destinationUrl == url => article.signature }
+      val json = Json.toJson(signatureOption.map(_.toBase64()))
       log.info(s"[getSignature($url)] result: $json")
       Ok(json)
     }(ExecutionContext.fj)
@@ -53,30 +53,5 @@ class ScraperController @Inject() (
           scrapeProcessor.fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
         }
     }
-  }
-
-  def asyncScrapeWithInfo() = Action.async(parse.json) { request =>
-    val jsValues = request.body.as[JsArray].value
-    require(jsValues != null && jsValues.length >= 2, "Expect args to be nUri & scrapeInfo")
-    val uri = jsValues(0).as[NormalizedURI]
-    val info = jsValues(1).as[ScrapeInfo]
-    log.info(s"[asyncScrapeWithInfo] url=${uri.url}, scrapeInfo=$info")
-    val tupF = scrapeProcessor.scrapeArticle(uri, info, None)
-    tupF.map { t =>
-      val res = ScrapeTuple(t._1, t._2)
-      log.info(s"[asyncScrapeWithInfo(${uri.url})] result=${t._1}")
-      Ok(Json.toJson(res))
-    }(ExecutionContext.fj)
-  }
-
-  def asyncScrapeWithRequest() = Action.async(parse.json) { request =>
-    val scrapeRequest = request.body.as[ScrapeRequest]
-    log.info(s"[asyncScrapeWithRequest] req=$scrapeRequest")
-    val tupF = scrapeProcessor.scrapeArticle(scrapeRequest.uri, scrapeRequest.scrapeInfo, scrapeRequest.proxyOpt)
-    tupF.map { t =>
-      val res = ScrapeTuple(t._1, t._2)
-      log.info(s"[asyncScrapeWithInfo(${scrapeRequest.uri.url})] result=${t._1}")
-      Ok(Json.toJson(res))
-    }(ExecutionContext.fj)
   }
 }
