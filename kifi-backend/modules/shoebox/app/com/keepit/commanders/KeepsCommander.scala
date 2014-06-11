@@ -28,8 +28,63 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance._
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.RSession
+import org.joda.time.DateTime
 
-case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
+case class KeepInfo(
+  id: Option[ExternalId[Keep]] = None,
+  title: Option[String],
+  url: String,
+  isPrivate: Boolean,
+  createdAt: Option[DateTime] = None,
+  others: Option[Int] = None,
+  keepers: Option[Set[BasicUser]] = None,
+  collections: Option[Set[String]] = None,
+  tags: Option[Set[BasicCollection]] = None,
+  uriSummary: Option[URISummary] = None,
+  siteName: Option[String] = None,
+  clickCount: Option[Int] = None,
+  rekeepCount: Option[Int] = None)
+
+object KeepInfo {
+
+  implicit val format = (
+    (__ \ 'id).formatNullable(ExternalId.format[Keep]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_)) and
+    (__ \ 'createdAt).formatNullable[DateTime] and
+    (__ \ 'others).formatNullable[Int] and
+    (__ \ 'keepers).formatNullable[Set[BasicUser]] and
+    (__ \ 'collections).formatNullable[Set[String]] and
+    (__ \ 'tags).formatNullable[Set[BasicCollection]] and
+    (__ \ 'summary).formatNullable[URISummary] and
+    (__ \ 'siteName).formatNullable[String] and
+    (__ \ 'clickCount).formatNullable[Int] and
+    (__ \ 'rekeepCount).formatNullable[Int]
+  )(KeepInfo.apply _, unlift(KeepInfo.unapply))
+
+  def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
+    KeepInfo(
+      Some(info.bookmark.externalId),
+      info.bookmark.title,
+      (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
+      info.bookmark.isPrivate,
+      Some(info.bookmark.createdAt),
+      Some(info.others),
+      Some(info.users),
+      Some(info.collections.map(_.id)),
+      Some(info.tags),
+      info.uriSummary,
+      info.siteName,
+      info.clickCount,
+      info.rekeepCount
+    )
+  }
+
+  def fromBookmark(bookmark: Keep): KeepInfo = {
+    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
+  }
+}
 
 case class FullKeepInfo(
   bookmark: Keep,
@@ -41,41 +96,6 @@ case class FullKeepInfo(
   uriSummary: Option[URISummary] = None,
   clickCount: Option[Int] = None,
   rekeepCount: Option[Int] = None)
-
-class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
-  def writes(info: FullKeepInfo) = {
-    val uriSummary = info.uriSummary map { clientPageInfo =>
-      Json.obj("summary" -> Json.toJson(clientPageInfo))
-    } getOrElse Json.obj()
-    val siteName = info.siteName map (name => Json.obj("siteName" -> Json.toJson(name))) getOrElse Json.obj()
-    val clickCount = info.clickCount map ( count => Json.obj("clickCount" -> count)) getOrElse Json.obj()
-    val rekeepCount = info.rekeepCount map ( count => Json.obj("rekeepCount" -> count)) getOrElse Json.obj()
-    Json.obj(
-      "id" -> info.bookmark.externalId.id,
-      "title" -> info.bookmark.title,
-      "url" -> (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
-      "isPrivate" -> info.bookmark.isPrivate,
-      "createdAt" -> info.bookmark.createdAt,
-      "others" -> info.others,
-      "keepers" -> info.users,
-      "collections" -> info.collections.map(_.id),
-      "tags" -> info.tags
-    ) ++ uriSummary ++ siteName ++ clickCount ++ rekeepCount
-  }
-}
-
-object KeepInfo {
-  implicit val format = (
-    (__ \ 'id).formatNullable(ExternalId.format[Keep]) and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_))
-  )(KeepInfo.apply _, unlift(KeepInfo.unapply))
-
-  def fromBookmark(bookmark: Keep): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
-  }
-}
 
 case class KeepInfosWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
@@ -171,6 +191,17 @@ class KeepsCommander @Inject() (
     }
   }
 
+  private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
+    val request = URISummaryRequest(
+      url = keep.url,
+      imageType = ImageType.ANY,
+      withDescription = true,
+      waiting = waiting,
+      silent = false
+    )
+    uriSummaryCommander.getURISummaryForRequest(request)
+  }
+
   def allKeeps(
     before: Option[ExternalId[Keep]],
     after: Option[ExternalId[Keep]],
@@ -182,25 +213,13 @@ class KeepsCommander @Inject() (
     val (keeps, collectionOpt, clkCounts, rkCounts) = getKeeps(before, after, collectionId, helprankOpt, count, userId)
     val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
-      if (withPageInfo) {
-        val request = URISummaryRequest(
-          url = keep.url,
-          imageType = ImageType.ANY,
-          withDescription = true,
-          waiting = false,
-          silent = false
-        )
-        uriSummaryCommander.getURISummaryForRequest(request).map(Some(_))
-      } else {
-        Future.successful(None)
-      }
+      if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
     })
 
-    val keepsWithColls = db.readOnly { implicit s =>
+    val colls = db.readOnly { implicit s =>
       keeps.map{ keep =>
         val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-        val colls : Seq[BasicCollection] = collectionCommander.getBasicCollections(collIds)
-        (keep, colls)
+        collectionCommander.getBasicCollections(collIds)
       }
     }
 
@@ -211,11 +230,35 @@ class KeepsCommander @Inject() (
       val idToBasicUser = db.readOnly { implicit s =>
         basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
       }
-      val keepsInfo = (keepsWithColls, sharingInfos, pageInfos).zipped.map { case ((keep, colls), sharingInfos, pageInfos) =>
+      val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map { case ((keep, colls), sharingInfos, pageInfos) =>
         val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
         FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos, clkCounts.get(keep.id.get), rkCounts.get(keep.id.get))
       }
       (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
+    }
+  }
+
+  /**
+   * This function currently does not return help rank info (can be added if necessary)
+   * Waiting is enabled for URISummary fetching
+   */
+  def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
+    db.readOnly { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
+      val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
+      val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
+      for {
+        sharingInfo <- sharingInfoFuture
+        pageInfo <- pageInfoFuture
+      } yield {
+        val (idToBasicUser, colls) = db.readOnly { implicit s =>
+          val idToBasicUser = basicUserRepo.loadAll(sharingInfo.sharingUserIds)
+          val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+          val colls : Seq[BasicCollection] = collectionCommander.getBasicCollections(collIds)
+          (idToBasicUser, colls)
+        }
+        val others = sharingInfo.keepersEdgeSetSize - sharingInfo.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+        FullKeepInfo(keep, sharingInfo.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfo)
+      }
     }
   }
 

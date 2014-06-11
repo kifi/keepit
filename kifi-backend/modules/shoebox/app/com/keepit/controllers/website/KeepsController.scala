@@ -42,8 +42,6 @@ class KeepsController @Inject() (
   )
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  implicit val writesKeepInfo = new FullKeepInfoWriter()
-
   def updateCollectionOrdering() = JsonAction.authenticatedParseJson { request =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
@@ -197,12 +195,19 @@ class KeepsController @Inject() (
     }
   }
 
-  def getKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
-      Ok(Json.toJson(KeepInfo.fromBookmark(b)))
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
+  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+    val resOpt = if (withFullInfo) {
+      bookmarksCommander.getFullKeepInfo(id, request.userId, true) map { infoFut =>
+        infoFut map { info =>
+          Ok(Json.toJson(KeepInfo.fromFullKeepInfo(info)))
+        }
+      }
+    } else {
+      db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
+        Future.successful(Ok(Json.toJson(KeepInfo.fromBookmark(b))))
+      }
     }
+    resOpt.getOrElse(Future.successful(NotFound(Json.obj("error" -> "not_found"))))
   }
 
   def updateKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
@@ -240,7 +245,7 @@ class KeepsController @Inject() (
         "collection" -> res._1,
         "before" -> before,
         "after" -> after,
-        "keeps" -> res._2
+        "keeps" -> res._2.map(KeepInfo.fromFullKeepInfo(_))
       ) ++ helprank)
     }
   }
