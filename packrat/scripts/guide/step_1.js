@@ -58,6 +58,9 @@ guide.step1 = guide.step1 || function () {
         observer = new MutationObserver(onTileChildChange);
         observer.observe(tile, {childList: true});
         break;
+      case 5:
+        api.port.emit('prime_search', 'guide');
+        break;
     }
   }
 

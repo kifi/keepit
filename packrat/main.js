@@ -613,6 +613,7 @@ var SUPPORT = {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', firstName: 'Tamila, K
 
 api.port.on({
   deauthenticate: deauthenticate,
+  prime_search: primeSearch,
   get_keeps: searchOnServer,
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
@@ -1988,11 +1989,12 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(function (whence) {
+api.on.beforeSearch.add(throttle(primeSearch, 50000));
+function primeSearch(whence) {
   if (me && enabled('search')) {
     ajax('search', 'GET', '/search/warmUp', {w: whence});
   }
-}, 50000));
+}
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 api.on.search.add(function prefetchResults(query, whence) {
