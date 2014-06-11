@@ -239,12 +239,35 @@ angular.module('kifi.layout.main', [
       }
     };
 
-    $scope.toggleEdit = function () {
+    $scope.toggleEdit = function (moveWindow) {
+      if (!$scope.editMode.enabled) {
+        if (moveWindow) {
+          $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
+        }
+      } else {
+        keepService.unselectAll();
+      }
       $scope.editMode.enabled = !$scope.editMode.enabled;
     };
 
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
+
+
+    $scope.addKeepCheckedPrivate = false;
+    $scope.addKeepInput = {};
+
+    $scope.addKeepTogglePrivate = function () {
+      $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
+    };
+
+    $scope.keepUrl = function () {
+      if ($scope.addKeepInput.url) {
+        keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
+      } else {
+        //todo(martin): Tell the user something went wrong
+      }
+    };
   }
 ]);

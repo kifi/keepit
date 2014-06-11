@@ -37,8 +37,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$document', '$log', '$window',
-  function (keepService, $document, $log, $window) {
+  'keepService',
+  function (keepService) {
 
     return {
       restrict: 'A',
@@ -49,7 +49,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         keepClick: '=',
         scrollDisabled: '=',
         scrollNext: '&',
-        editMode: '='
+        editMode: '=',
+        toggleEdit: '='
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -61,6 +62,16 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.isSelectedAll = keepService.isSelectedAll;
         scope.editingTags = false;
         scope.addingTag = {enabled: false};
+
+        scope.keepClickAction = function (event, keep) {
+          if (event.metaKey && event.target.tagName !== 'A') {
+            if (!scope.editMode.enabled) {
+              scope.toggleEdit(true);
+            }
+            scope.editMode.enabled = true;
+            scope.toggleSelect(keep);
+          }
+        };
 
         scope.isMultiChecked = function () {
           return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
@@ -100,14 +111,11 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
           return scope.data.draggedKeeps && scope.data.draggedKeeps.length > 3;
         };
 
-        angular.element($window).on('scroll', function () {
-          var scrollMargin = $window.innerHeight;
-          var totalHeight = $document[0].documentElement.scrollHeight;
-          if (!scope.scrollDisabled &&
-            $window.pageYOffset + $window.innerHeight + scrollMargin > totalHeight) {
-            scope.scrollNext();
-          }
-        });
+        scope.isScrollDisabled = function () {
+          return scope.scrollDisabled;
+        };
+
+        scope.scrollDistance = '100%';
 
         scope.unkeep = function () {
           keepService.unkeep(keepService.getSelected());

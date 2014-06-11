@@ -143,6 +143,12 @@ keepBorderRadius = 3px
 .kf-keep-footer-link a
   cursor: pointer
 
+  &:hover
+    text-decoration: underline
+
+  &:active
+    text-decoration: underline
+
 .kf-keep-footer-link + .kf-keep-footer-link:before
     content: "·"
     color: textGreyColor
@@ -198,6 +204,7 @@ keepBorderRadius = 3px
   display:table-cell
   width: 200px
   vertical-align: middle
+  padding-left: 15px
 
   @media screen and (min-width: 1150px) and (max-width: 1250px)
     width: 150px
@@ -223,8 +230,8 @@ keepBorderRadius = 3px
 
 .kf-keep-title
   max-width: 100%
-  font-size: 15px
-  font-weight: 200
+  font-size: 17px
+  font-weight: 400
   line-height: 24px
   font-smoothing: antialiased
 
@@ -242,7 +249,6 @@ keepBorderRadius = 3px
   font-smoothing: antialiased
   color: textBlackColor
   word-wrap: break-word
-  text-align: justify
 
 .kf-keep-url
   display: inline-block
@@ -250,6 +256,7 @@ keepBorderRadius = 3px
   color: #99a3b3
   vertical-align: middle
   font-smoothing: antialiased
+  font-weight: 500
   long-text()
 
   .kf-keep.example &

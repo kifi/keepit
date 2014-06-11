@@ -35,7 +35,7 @@
 .kf-header-toggle-menu
   cursor: pointer
   margin: 0 13px
-  
+
 .kf-header-left-separator
   height: 35px
   border: 1px solid #7d7d7d
@@ -57,7 +57,7 @@
 
   .kf-header-left
     margin-left: 20px
-    
+
   .kf-header-toggle-menu
     &.open
       display: none
@@ -98,13 +98,12 @@ a.kf-header-callout:hover
   .kf-dropdown-menu
     display: none
 
+    .active
+      background-color: #eee
+
   .sprite
     cursor: pointer
-
-  .sprite:hover .kf-dropdown-menu
-    display: block
-    margin-top: -20px
-    margin-left: -128px
+    margin-left: 5px
 
   @media screen and (max-width: 1280px)
     margin-right: 30px
@@ -113,3 +112,10 @@ a.kf-header-callout:hover
     &:hover
       sprite2x($add-link-active)
 
+.kf-header-icon-hover-container
+  display: inline-block
+
+  &:hover .kf-dropdown-menu
+    display: block
+    margin-top: -10px
+    margin-left: -128px

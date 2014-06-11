@@ -4,6 +4,8 @@ import com.keepit.cortex.core.StatModel
 import play.api.libs.json._
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.{SequenceNumber, Id}
+import play.api.libs.functional.syntax._
+import com.keepit.cortex.core.Versionable
 
 trait LDA extends StatModel
 
@@ -38,4 +40,32 @@ object SparseTopicRepresentation {
 case class UriSparseLDAFeatures(uriId: Id[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI], features: SparseTopicRepresentation)
 object UriSparseLDAFeatures {
   implicit val format = Json.format[UriSparseLDAFeatures]
+}
+
+// editable from admin
+case class LDATopicConfiguration(topicName: String, isActive: Boolean)
+
+object LDATopicConfiguration {
+  implicit val format = Json.format[LDATopicConfiguration]
+  def default = LDATopicConfiguration("n/a", true)
+}
+
+case class LDATopicConfigurations(configs: Map[String, LDATopicConfiguration]) extends Versionable[DenseLDA]
+
+object LDATopicConfigurations {
+  implicit val format = Json.format[LDATopicConfigurations]
+}
+
+case class LDATopicInfo(
+  topicId: Int,
+  topicWords: Map[String, Float],
+  config: LDATopicConfiguration
+)
+
+object LDATopicInfo {
+  implicit val format = (
+    (__ \'topicId).format[Int]  and
+    (__ \'topicWords).format[Map[String, Float]] and
+    (__ \'config).format[LDATopicConfiguration]
+  )(LDATopicInfo.apply, unlift(LDATopicInfo.unapply))
 }

@@ -14,6 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
+import com.keepit.common.time._
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -42,7 +43,8 @@ class CollectionCommander @Inject() (
   searchClient: SearchServiceClient,
   keepToCollectionRepo: KeepToCollectionRepo,
   keptAnalytics: KeepingAnalytics,
-  basicCollectionCache: BasicCollectionByIdCache) extends Logging {
+  basicCollectionCache: BasicCollectionByIdCache,
+  clock: Clock) extends Logging {
 
   val CollectionOrderingKey = "user_collection_ordering"
 
@@ -162,7 +164,7 @@ class CollectionCommander @Inject() (
 
   def undeleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
     db.readWrite { implicit s =>
-      collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE))
+      collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE, createdAt = clock.now()))
       updateCollectionOrdering(collection.userId)
     }
     keptAnalytics.undeletedTag(collection, context)

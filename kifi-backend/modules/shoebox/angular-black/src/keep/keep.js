@@ -78,8 +78,20 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           keepService.unkeep([scope.keep]);
         };
 
+        scope.keepPublic = function () {
+          keepService.keep([scope.keep], false);
+        };
+
+        scope.keepPrivate = function () {
+          keepService.keep([scope.keep], true);
+        };
+
         scope.isPrivate = function () {
           return (scope.keep && scope.keep.isPrivate) || false;
+        };
+
+        scope.isMine = function () {
+          return scope.isMyBookmark(scope.keep);
         };
 
         scope.togglePrivate = function () {
@@ -230,17 +242,24 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         };
 
         function shouldShowSmallImage(summary) {
-          return (summary.imageWidth && summary.imageWidth < imageWidthThreshold || summary.description);
+          return (summary.imageWidth && summary.imageWidth < imageWidthThreshold) || summary.description;
+        }
+
+        function hasSaneAspectRatio(summary) {
+          var aspectRatio = summary.imageWidth && summary.imageHeight && summary.imageWidth / summary.imageHeight;
+          var saneAspectRatio = aspectRatio > 0.5 && aspectRatio < 3;
+          var bigEnough = summary.imageWidth + summary.imageHeight > 200;
+          return bigEnough && saneAspectRatio;
         }
 
         scope.hasBigImage = function () {
           var keep = scope.keep;
-          return keep && keep.summary && !shouldShowSmallImage(keep.summary);
+          return keep && keep.summary && !shouldShowSmallImage(keep.summary) && hasSaneAspectRatio(keep.summary);
         };
 
         scope.hasSmallImage = function () {
           var keep = scope.keep;
-          return keep && keep.summary && shouldShowSmallImage(keep.summary);
+          return keep && keep.summary && shouldShowSmallImage(keep.summary) && hasSaneAspectRatio(keep.summary);
         };
 
         scope.hasKeepers = function () {

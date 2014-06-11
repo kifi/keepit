@@ -7,6 +7,8 @@ import com.keepit.common.controller.CortexServiceController
 import com.keepit.common.commanders.LDACommander
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
+import com.keepit.cortex.models.lda.LDATopicConfiguration
+import com.keepit.cortex.models.lda.LDATopicInfo
 
 
 class LDAController @Inject()(
@@ -19,8 +21,13 @@ extends CortexServiceController {
   }
 
   def showTopics(fromId: Int, toId: Int, topN: Int) = Action { request =>
-    val res = lda.topicWords(fromId, toId, topN).map{case (id, words) => (id.toString, words.toMap)}
-    Ok(Json.toJson(res))
+    val topicWords = lda.topicWords(fromId, toId, topN).map{case (id, words) => (id.toString, words.toMap)}
+    val topicConfigs = lda.topicConfigs(fromId, toId)
+    val infos = topicWords.map{ case (tid, words) =>
+      val config = topicConfigs(tid)
+      LDATopicInfo(tid.toInt, words, config)
+    }.toArray.sortBy( x => x.topicId)
+    Ok(Json.toJson(infos))
   }
 
   def wordTopic(word: String) = Action { request =>
@@ -34,6 +41,13 @@ extends CortexServiceController {
     val wrappedDoc = Document(TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(doc))
     val res = lda.docTopic(wrappedDoc)
     Ok(Json.toJson(res))
+  }
+
+  def saveEdits() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val configs = js.as[Map[String, LDATopicConfiguration]]
+    lda.saveConfigEdits(configs)
+    Ok
   }
 
 }

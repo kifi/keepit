@@ -22,13 +22,11 @@
 
 .kf-main-head
   position: relative
-  height: 73px
-  padding: 13px 25px 0 20px
+  padding: 13px 25px 0 30px
   box-sizing: border-box
 
   .kf-main-search &
     padding-top: 10px
-    height: 38px
 
 .kf-main-title
   margin: 0 0 2px
@@ -56,9 +54,6 @@
 .kf-main-keeps
   overflow: hidden
   position: relative
-
-  .kf-main-search &
-    top: 108px
 
   & > .antiscroll-inner
     padding: 0 19px 0 18px
@@ -107,7 +102,6 @@
   font-weight: 300
   font-smoothing: antialiased
   box-sizing: border-box
-  background: #fff url(../img/sprites/search-icon-default.png) 5px center / 22px no-repeat
 
   &::-webkit-input-placeholder
     color: #99a3b3
@@ -121,8 +115,14 @@
   &::-ms-clear
     display: none
 
-  &:focus
-    background: #fff url(../img/sprites/search-icon-active.png) 5px center / 22px no-repeat
+.kf-query + .kf-query-icon
+  position: absolute
+  left: 40px
+  top: 9px
+  sprite2x($search-icon-default)
+
+.kf-query:focus + .kf-query-icon
+  sprite2x($search-icon-active)
 
 .kf-search-clear-wrapper
   position: relative
@@ -171,24 +171,14 @@
     text-decoration: underline
 
 .kf-search-filters
-  display: inline
-
-  &:before
-    content: ' | '
-    color: #cccccc
-    margin-left: 11px
-    margin-right: 17px
+  padding-bottom: 10px
 
 .kf-search-filter.kf-search-filter
   display: inline
   color: #cccccc
   text-decoration: none
-
-  &:after
-    content: '|'
-    color: #cccccc
-    font-size: 0.9em
-    margin: 0 5px
+  title-text()
+  font-size: 17px
 
   &:last-child:after
     display: none
@@ -203,6 +193,10 @@
   &.selected
     color: #333333
 
+.kf-search-filter + .kf-search-filter
+  border-left: defaultBorder
+  padding-left: 10px
+  margin-left: 10px 
 
 .import-modal
 

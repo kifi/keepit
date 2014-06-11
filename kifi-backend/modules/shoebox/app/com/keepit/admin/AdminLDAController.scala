@@ -4,12 +4,11 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ActionAuthenticator, AdminController}
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
-
 import views.html
 import play.api.libs.json._
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.cortex.models.lda.LDATopicConfiguration
 
 
 class AdminLDAController @Inject()(
@@ -44,11 +43,13 @@ class AdminLDAController @Inject()(
     val topN = body.get("topN").get.toInt
     val res = Await.result(cortex.ldaShowTopics(fromId, toId, topN), 5 seconds)
 
-    val topics = res.toArray.sortBy(_._1.toInt).map{ case (id, map) =>
-      getFormatted(map)
-    }
+    val ids = res.map{_.topicId}
+    val topics = res.map{ x => getFormatted(x.topicWords)}
+    val names = res.map{_.config.topicName}
+    val states = res.map{_.config.isActive}
+    val js = Json.obj("ids" -> ids, "topicWords" -> topics, "topicNames" -> names, "states" -> states)
 
-    Ok(Json.toJson(topics))
+    Ok(js)
   }
 
   private def showTopTopicDistributions(arr: Array[Float]): String = {
@@ -66,6 +67,24 @@ class AdminLDAController @Inject()(
     }
 
     Ok(msg)
+  }
+
+  def saveEdits() = AdminHtmlAction.authenticated(parse.tolerantJson) { implicit request =>
+    val js = request.body
+
+    println(js)
+
+    val ids = (js \ "topic_ids").as[JsArray].value.map{_.as[String]}
+    val names = (js \ "topic_names").as[JsArray].value.map{_.as[String]}
+    val isActive = (js \ "topic_states").as[JsArray].value.map{_.as[Boolean]}
+
+    println(ids)
+    println(names)
+    println(isActive)
+
+    val config = (ids, names, isActive).zipped.map{ case (id, name, active) => id -> LDATopicConfiguration(name, active)}.toMap
+    cortex.saveEdits(config)
+    Ok
   }
 
   def docTopic() = AdminHtmlAction.authenticated { implicit request =>
