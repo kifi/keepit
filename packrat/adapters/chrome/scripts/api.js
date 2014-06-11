@@ -134,7 +134,7 @@ var log = log || function () {
   function log() {
     var buf = log.buffer;
     if (buf) {
-      var i = 0, d = new Date;
+      var i = 0, d = Date.now();
       while (i < buf.length && d - buf[i].d > 5000) {
         i++;
       }
@@ -143,8 +143,8 @@ var log = log || function () {
       }
       log.buffer.push({d: d, args: Array.prototype.slice.call(arguments)});
     } else {
-      var d = this || new Date, ds = d.toString();
-      arguments[0] = '[' + ds.substr(0, 2) + ds.substr(15,9) + '.' + String(+d).substr(10) + '] ' + arguments[0];
+      var ms = (this || Date.now()) % 1000;
+      arguments[0] = (ms < 100 ? ms < 10 ? '00' + ms : '0' + ms : ms) + ' ' + arguments[0];
       console.log.apply(console, arguments);
     }
   }
