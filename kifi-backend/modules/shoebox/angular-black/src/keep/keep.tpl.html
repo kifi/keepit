@@ -44,14 +44,6 @@
     <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Private Keep</a></span>
-
-
-    <span class="kf-keep-footer-link"><a ng-href="{{keep.url}}" data-locator='/messages#compose'>Send</a></span>
-    <span class="kf-keep-footer-link" ng-if="!hasTag()" ng-click="showAddTag()"><a href='javascript:'>Tag</a></span>
-    <span class="kf-keep-footer-link" ng-if="!isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
-    <span class="kf-keep-footer-link" ng-if="isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
-    <span class="kf-keep-footer-link"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
-    <div class="kf-keep-private" ng-if="isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
   <div class="kf-keep-drag-mask"></div>
 </li>
