@@ -191,12 +191,12 @@ class KeepsCommander @Inject() (
     }
   }
 
-  private def getKeepSummary(keep: Keep): Future[URISummary] = {
+  private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
     val request = URISummaryRequest(
       url = keep.url,
       imageType = ImageType.ANY,
       withDescription = true,
-      waiting = false,
+      waiting = waiting,
       silent = false
     )
     uriSummaryCommander.getURISummaryForRequest(request)
@@ -240,11 +240,12 @@ class KeepsCommander @Inject() (
 
   /**
    * This function currently does not return help rank info (can be added if necessary)
+   * Waiting is enabled for URISummary fetching
    */
   def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
     db.readOnly { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
       val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
-      val pageInfoFuture = if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
+      val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
       for {
         sharingInfo <- sharingInfoFuture
         pageInfo <- pageInfoFuture
