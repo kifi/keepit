@@ -37,13 +37,13 @@
     <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" ng-show="showTags()"></div>
   </div>
   <div class="kf-keep-footer">
-    <span class="kf-keep-footer-link"><a>Send</a></span>
-    <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)" ng-click="showAddTag()"><a>Tag</a></span>
-    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isMine() && !isPrivate()"><a>Make Private</a></span>
-    <span class="kf-keep-footer-link" ng-click="togglePrivate()" ng-if="isMine() && isPrivate()"><a>Make Public</a></span>
-    <span class="kf-keep-footer-link" ng-if="isMine()" ng-click="unkeep()"><a>Unkeep</a></span>
-    <span class="kf-keep-footer-link" ng-if="!isMine()" ng-click="keepPublic()"><a>Keep</a></span>
-    <span class="kf-keep-footer-link" ng-if="!isMine()" ng-click="keepPrivate()"><a>Private Keep</a></span>
+    <span class="kf-keep-footer-link"><a ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a></span>
+    <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Private Keep</a></span>
     <div class="kf-keep-private" ng-if="isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
   <div class="kf-keep-drag-mask"></div>
