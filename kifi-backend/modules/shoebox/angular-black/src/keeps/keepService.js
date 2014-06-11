@@ -520,6 +520,12 @@ angular.module('kifi.keepService', [
         params = params || {};
         params.collection = tagId;
         return api.getList(params);
+      },
+
+      getKeepsByHelpRank: function(selector, params) {
+        params = params || {};
+        params.selector = selector;
+        return api.getList(params);
       }
     };
 
