@@ -26,6 +26,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       event.dataTransfer.setData('Text', sendData);
       //event.dataTransfer.setData('text/plain', '');
       var draggedKeepsElement = $scope.getDraggedKeepsElement();
+      draggedKeepsElement.find('.kf-keep').css('background', 'rgba(255,255,255,.7)');
       event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
       //event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
     };
