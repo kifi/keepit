@@ -1,14 +1,12 @@
 // API for main.js
 
 var hexRe = /^#[0-9a-f]{3}$/i;
-function log() {
+function log(a0) {
   'use strict';
-  var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ", args = arguments, a0 = args[0];
+  var args = arguments;
   if (hexRe.test(a0)) {
-    args[0] = "%c" + t + args[1];
+    args[0] = "%c" + args[1];
     args[1] = "color:" + a0;
-  } else {
-    args[0] = t + a0;
   }
   console.log.apply(console, args);
 }
