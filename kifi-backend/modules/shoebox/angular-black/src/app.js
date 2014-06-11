@@ -42,7 +42,6 @@ angular.module('kifi', [
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
-  'kifi.addKeeps',
   'kifi.installService',
   'kifi.dragService',
   'jun.facebook',
