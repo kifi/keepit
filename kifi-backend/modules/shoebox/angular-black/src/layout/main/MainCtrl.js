@@ -267,6 +267,7 @@ angular.module('kifi.layout.main', [
         keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
       } else {
         //todo(martin): Tell the user something went wrong
+        return null; // silence jshint
       }
     };
   }
