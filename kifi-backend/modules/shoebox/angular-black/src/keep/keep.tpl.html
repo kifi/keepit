@@ -37,7 +37,10 @@
     <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" ng-show="showTags()"></div>
   </div>
   <div class="kf-keep-footer">
-    <span class="kf-keep-footer-link"><a ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a></span>
+    <span class="kf-keep-footer-link">
+      <a ng-if="canSend()" ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a>
+      <a ng-if="!canSend()" href="javascript:" ng-click="triggerInstall()">Send</a>
+    </span>
     <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
     <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
     <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>

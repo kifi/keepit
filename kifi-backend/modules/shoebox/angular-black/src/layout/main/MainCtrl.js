@@ -7,9 +7,9 @@ angular.module('kifi.layout.main', [
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'injectedState', '$rootScope', '$analytics', 'keepService',
+  'injectedState', '$rootScope', '$analytics', 'keepService', 'installService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, keepService) {
+    injectedState, $rootScope, $analytics, keepService, installService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -122,6 +122,13 @@ angular.module('kifi.layout.main', [
           $scope.modal = 'add_keeps';
           $scope.data.showAddKeeps = true;
           break;
+        case 'installExtension':
+          $scope.modal = 'install_extension';
+          $scope.data.showInstallExtension = true;
+          break;
+        case 'installExtensionError':
+          $scope.modal = 'install_extension_error';
+          $scope.data.showInstallErrorModal = true;
       }
     });
 
@@ -269,6 +276,12 @@ angular.module('kifi.layout.main', [
         //todo(martin): Tell the user something went wrong
         return null; // silence jshint
       }
+    };
+
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $rootScope.$emit('showGlobalModal','installExtensionError');
+      });
     };
   }
 ]);
