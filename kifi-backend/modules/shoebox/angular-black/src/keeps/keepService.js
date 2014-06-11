@@ -140,6 +140,29 @@ angular.module('kifi.keepService', [
       });
     });
 
+    function processKeepAction(url, data) {
+      $log.log('keepService.keep()', data);
+
+      return $http.post(url, data).then(function (res) {
+        var keeps = res.data.keeps;
+        _.forEach(keeps, buildKeep);
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'keep'
+        });
+        prependKeeps(keeps);
+        return keeps;
+      });
+    }
+
+    function prependKeeps(keeps) {
+      list.unshift.apply(list, keeps);
+      before = list.length ? list[list.length - 1].id : null;
+    }
+
+    function appendKeeps(keeps) {
+      list.push.apply(list, keeps);
+      before = list.length ? list[list.length - 1].id : null;
+    }
 
     var api = {
       list: list,
@@ -147,7 +170,7 @@ angular.module('kifi.keepService', [
       buildKeep: buildKeep,
       
       lastSearchContext: function () {
-        return lastSearchContext;
+      return lastSearchContext;
       },
 
       getHighlighted: function () {
@@ -269,8 +292,7 @@ angular.module('kifi.keepService', [
             list.length = 0;
           }
 
-          list.push.apply(list, keeps);
-          before = list.length ? list[list.length - 1].id : null;
+          appendKeeps(keeps);
           return keeps;
         });
       },
@@ -322,6 +344,20 @@ angular.module('kifi.keepService', [
         });
       },
 
+      keepUrl: function (keepUrls, isPrivate) {
+        var url = env.xhrBase + '/keeps/add',
+          data = {
+            keeps: keepUrls.map(function (keepUrl) {
+              return {
+                url: keepUrl,
+                isPrivate: !!isPrivate
+              };
+            })
+          };
+
+        return processKeepAction(url, data);
+      },
+
       keep: function (keeps, isPrivate) {
         if (!(keeps && keeps.length)) {
           return $q.when(keeps || []);
@@ -341,19 +377,7 @@ angular.module('kifi.keepService', [
             })
           };
 
-        $log.log('keepService.keep()', data);
-
-        return $http.post(url, data).then(function () {
-          _.forEach(keeps, function (keep) {
-            keep.isMyBookmark = true;
-            keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
-            keep.unkept = false;
-          });
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'keep'
-          });
-          return keeps;
-        });
+        return processKeepAction(url, data);
       },
 
       unkeep: function (keeps) {
