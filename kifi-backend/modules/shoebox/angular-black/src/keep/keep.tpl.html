@@ -9,17 +9,20 @@
   </div>
   <div class="kf-keep-body">
     <div class="kf-keep-contents">
+      <div class="kf-keep-title">
+        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
+        </a>
+      </div>
       <div class="kf-keep-content-line">
         <div class="kf-keep-info">
-          <div class="kf-keep-title">
-            <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
-            </a>
-          </div>
           <div class="kf-keep-subtitle">
             <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
             <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
           </div>
           <div class="kf-keep-description">
+            {{keep.summary.description}}
+          </div>
+          <div class="kf-keep-description-sizer">
             {{keep.summary.description}}
           </div>
         </div>
