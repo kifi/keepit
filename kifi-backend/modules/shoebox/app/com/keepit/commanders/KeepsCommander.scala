@@ -162,7 +162,7 @@ class KeepsCommander @Inject() (
           case Some(afterKeep) => uriIds.takeWhile(_.id != afterKeep.uriId)
         }
       }
-      after
+      if (count > 0) after.take(count) else after
     }
 
     db.readOnly { implicit ro =>
