@@ -5,6 +5,7 @@ import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
+import com.keepit.heimdal.controllers.EventTrackingController
 
 object HeimdalGlobal extends FortyTwoGlobal(Prod) with HeimdalServices {
   val module = HeimdalProdModule()
@@ -13,6 +14,7 @@ object HeimdalGlobal extends FortyTwoGlobal(Prod) with HeimdalServices {
     log.info("starting heimdal")
     startHeimdalServices()
     super.onStart(app)
+    injector.instance[EventTrackingController].readIncomingEvent()
     log.info("heimdal started")
   }
 
