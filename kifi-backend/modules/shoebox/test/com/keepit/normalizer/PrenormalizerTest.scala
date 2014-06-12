@@ -241,6 +241,10 @@ class PrenormalizerTest extends Specification {
       path = "https://touch.www.linkedin.com/mainsite?redirect_url=https://www.linkedin.com/today/post/article/20140605083410-93094-don-t-kill-your-channels?_mSplash=1&rs=false&sessionid=2738350133870592"
       prenormalize(path) === "https://www.linkedin.com/today/post/article/20140605083410-93094-don-t-kill-your-channels"
 
+      path = "https://touch.www.linkedin.com/?as=false&can=https%253A%252F%252Fwww.linkedin.com%252Fpub%252Fleslie-chang%252F1a%252F769%252Fb82&dl=no&rs=false&sessionid=4907903918014464#profile/67575122"
+      prenormalize(path) === "https://www.linkedin.com/pub/leslie-chang/1a/769/b82"
+
+
       //Wikipedia
 
       prenormalize("http://en.m.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"
