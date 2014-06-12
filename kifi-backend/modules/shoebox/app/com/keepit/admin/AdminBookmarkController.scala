@@ -236,7 +236,7 @@ class AdminBookmarksController @Inject() (
 
     word2vecFut.map{ word2vecKeys =>
       (embedlyKeys zip word2vecKeys).map{ case (emb, w2v) =>
-        val s1 = emb.toSet
+        val s1 = emb.map{_.name}.toSet
         val s2 = w2v.map{_.cosine}.getOrElse(Seq()).toSet
         val s3 = w2v.map{_.freq}.getOrElse(Seq()).toSet
         (s1.union(s2.intersect(s3))).foreach{ word => keyCounts(word) = keyCounts(word) + 1 }
