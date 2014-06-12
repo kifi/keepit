@@ -152,7 +152,7 @@ class KeepsCommander @Inject() (
         case Some(beforeExtId) =>
           keepRepo.getByExtIdAndUser(beforeExtId, userId) match {
             case None => uriIds
-            case Some(beforeKeep) => uriIds.dropWhile(_ != beforeKeep.uriId)
+            case Some(beforeKeep) => uriIds.dropWhile(_ != beforeKeep.uriId).drop(1)
           }
       }
       val after = afterOpt match {
