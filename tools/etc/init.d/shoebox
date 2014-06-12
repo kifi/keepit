@@ -20,12 +20,12 @@ maxShutdownTime=30                                         # maximum number of s
 pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (PID = process ID number)
 #yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/shoebox/log" #Yourkit profiler agent
 #newrelic="-javaagent:/opt/newrelic/newrelic.jar -Dnewrelic.bootstrap_classpath=true"
-jmxArgs="-Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
+jmxArgs="-Damazon.sqs.enable=true -Dscraper.pending.freq=10 -Dscraper.service.batch.max=50 -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
-javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintTenuringDistribution -XX:PermSize=64m -XX:MaxPermSize=256m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
+javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintTenuringDistribution -XX:PermSize=64m -XX:MaxPermSize=256m -XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
 #echo applDir=$applDir
-classpathLine=`grep "classpath=" $applDir/start | sed 's/.*"\(.*\)".*/\1/'`
+classpathLine=`grep "classpath=" $applDir/bin/$serviceNameLo | sed 's/.*"\(.*\)".*/\1/' | sed "s:\\\$lib_dir:$applDir/lib:g"`
 #echo classpathLine=$classpathLine
 classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
 #echo classpath=$classpath
@@ -65,6 +65,7 @@ function getServicePID {
    return 0; }
 
 function startServiceProcess {
+   cd $applDir || return 1
    rm -f $pidFile
    makeFileWritable $pidFile || return 1
    mkdir -p $applDir/log
@@ -83,7 +84,6 @@ function startServiceProcess {
    return 0; }
 
 function stopServiceProcess {
-   curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=$serviceName" -d "message=$serviceName is going down." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null
    kill $pid || return 1
    for ((i=0; i<maxShutdownTime*10; i++)); do
       checkProcessIsRunning $pid
@@ -162,4 +162,3 @@ function main {
 }
 
 main $1
-

@@ -17,6 +17,10 @@ angular.module('kifi.installService', [])
       other.parentNode.insertBefore(elem, other);
     }
 
+    function installedVersion() {
+      return $('html').attr('data-kifi-ext');
+    }
+
     var api = {
       triggerInstall: function (onError) {
         if (isChrome && supported) {
@@ -49,7 +53,27 @@ angular.module('kifi.installService', [])
       canInstall: supported,
       installInProgress: false,
       installed: false,
-      error: false
+      error: false,
+      installedVersion: installedVersion,
+      hasMinimumVersion: function (minVersion) {
+        var version = installedVersion();
+        if (!version) {
+          return false;
+        }
+        function parseVersion(version) {
+          return version.split('.').map(function (num) {
+            return parseInt(num, 10);
+          });
+        }
+        var nums = parseVersion(version);
+        var minNums = parseVersion(minVersion);
+        for (var i = 0; i < minNums.length; i++) {
+          if (i >= nums.length || nums[i] < minNums[i]) {
+            return false;
+          }
+        }
+        return true;
+      }
     };
 
     return api;

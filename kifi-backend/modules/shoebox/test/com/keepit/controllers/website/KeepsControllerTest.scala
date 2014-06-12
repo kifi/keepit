@@ -361,7 +361,6 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
                    "keeps":[
                     {
                       "id":"${keeps1(0).externalId.toString}",
-                      "title":null,
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
@@ -374,7 +373,6 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
                     },
                     {
                       "id":"${keeps1(1).externalId.toString}",
-                      "title":null,
                       "url":"${keeps1(1).url}",
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
@@ -435,9 +433,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", false) ::
-          KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", true) ::
-          KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", false) ::
+          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
+          KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
+          KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
           Nil
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
 
@@ -529,9 +527,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", false) ::
+          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
+            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
+            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
             Nil
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
 
@@ -589,9 +587,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", false) ::
-          KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", true) ::
-          KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", false) ::
+          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
+          KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
+          KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
           Nil
 
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)

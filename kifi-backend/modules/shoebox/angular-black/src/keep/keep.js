@@ -34,8 +34,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
-  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util) {
+  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'installService', 'util',
+  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, installService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -104,6 +104,14 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           } else {
             return [];
           }
+        };
+
+        scope.canSend = function () {
+          return installService.hasMinimumVersion('3.0.7');
+        };
+
+        scope.triggerInstall = function () {
+          $rootScope.$emit('showGlobalModal','installExtension');
         };
 
         function formatTitleFromUrl(url, matches) {
@@ -327,7 +335,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             $rootScope.DRAGGING_KEEP = true;
             $rootElement.addClass('kf-dragging-keep');
             element.addClass('kf-dragged');
-            scope.dragKeeps({keep: scope.keep, event: e, mouseX: mouseX, mouseY: mouseY});
+            scope.dragKeeps({keep: scope.keep, event: e, mouseX: 20, mouseY: 50});
             scope.isDragging = true;
           });
         })
