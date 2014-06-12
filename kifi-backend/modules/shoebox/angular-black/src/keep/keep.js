@@ -342,15 +342,13 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var res = calcHeightDelta(guess);
           var bestRes = res;
 
-          var d = +new Date;
           while(low + i < high && bestRes.score > 20) {
             res = calcHeightDelta(low + i);
             if (bestRes.score > res.score) {
               bestRes = res;
             }
-            i += 40
+            i += 40;
           }
-          console.log(+new Date - d);
 
           var asideWidth = w_c - bestRes.guess;
           element.find('.kf-keep-small-image img').width(Math.floor(asideWidth));
