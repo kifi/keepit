@@ -316,10 +316,14 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         // optionally: kf-drag-target when dragging a tag
 
         function sizeImage() {
+          if (!scope.keep || !scope.keep.summary) {
+            return;
+          }
 
           var $sizer = element.find('.kf-keep-description-sizer');
           var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
           var w_c = element.find('.kf-keep-contents').width();
+          var optimalWidth = Math.floor(w_c * 0.45);
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
@@ -332,7 +336,13 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             var h_i = w_i / aspR;
             var h_t = tryWidth(w_t);
             var delta = (h_t - h_i);
-            var score = Math.abs(delta) + 0.3 * Math.abs(350 - w_i);
+            var score = Math.abs(delta) + 0.3 * Math.abs(optimalWidth - w_i);
+            if (h_i > img.h) {
+              score += (h_i - img.h);
+            }
+            if (w_i > img.w) {
+              score += (w_i - img.w);
+            }
             return { guess: guessWidth, delta: delta, score: score, ht: h_t, hi: h_i};
           }
 
@@ -351,8 +361,15 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           }
 
           var asideWidth = w_c - bestRes.guess;
-          element.find('.kf-keep-small-image img').width(Math.floor(asideWidth));
+          element.find('.kf-keep-small-image').width(Math.floor((asideWidth / w_c) * 100) + '%');
+          // element.find('.kf-keep-small-image').width('auto');
+          // element.find('.kf-keep-small-image img').width(asideWidth);
+
         }
+
+        scope.$on('resizeImage', function() {
+          sizeImage();
+        })
 
         scope.$watch('keep', function() {
           if (scope.keep && scope.keep.summary) {
@@ -363,7 +380,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             }
           }
         });
-
 
         tagDragMask.on('dragenter', function () {
           scope.$apply(function () { scope.isDragTarget = true; });
