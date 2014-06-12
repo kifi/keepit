@@ -227,7 +227,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           }
         }
       } getOrElse {
-        airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr)
+        airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.extVersion} :: ${streamSession.userAgent})")
       }
     }.map(_ => endSession(streamSession, socketInfo))
   }
