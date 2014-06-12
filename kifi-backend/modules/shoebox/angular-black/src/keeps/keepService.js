@@ -526,6 +526,12 @@ angular.module('kifi.keepService', [
         params = params || {};
         params.collection = tagId;
         return api.getList(params);
+      },
+
+      getKeepsByHelpRank: function(helprank, params) {
+        params = params || {};
+        params.helprank = helprank;
+        return api.getList(params);
       }
     };
 
