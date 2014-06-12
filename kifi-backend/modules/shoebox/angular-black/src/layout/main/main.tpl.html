@@ -8,6 +8,8 @@
     <div ng-include="'keep/bookmarkFileModal.tpl.html'" ng-if="modal == 'import_bookmark_file'"></div>
     <div ng-include="'social/addNetworksModal.tpl.html'" ng-if="modal == 'add_networks'"></div>
     <div ng-include="'keeps/addKeepsModal.tpl.html'" ng-if="modal == 'add_keeps'"></div>
+    <div ng-include="'common/modal/installExtensionModal.tpl.html'" ng-if="modal == 'install_extension'"></div>
+    <div ng-include="'common/modal/installExtensionErrorModal.tpl.html'" ng-if="modal == 'install_extension_error'"></div>
     <div kf-add-keeps-modal></div>
   </div>
 </div>

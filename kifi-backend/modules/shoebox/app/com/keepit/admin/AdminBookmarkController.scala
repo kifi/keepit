@@ -179,20 +179,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = {
-      Future.sequence(searchServiceClient.indexInfoList()).map{ results =>
-        var countMap = Map.empty[String, Int]
-        results.flatMap(_._2).foreach{ info =>
-          if (info.name.startsWith("BookmarkStore")) {
-            countMap.get(info.name) match {
-              case Some(count) if count >= info.numDocs =>
-              case _ => countMap += (info.name -> info.numDocs)
-            }
-          }
-        }
-        countMap.values.sum
-      }
-    }
+    val bookmarkTotalCountFuture = getBookmarkCountsFuture
 
     val bookmarkTodayAllCountsFuture = future { timing("load bookmarks counts from today") { db.readOnly { implicit s =>
       keepRepo.getAllCountsByTimeAndSource(clock.now().minusDays(1), clock.now())
@@ -220,6 +207,21 @@ class AdminBookmarksController @Inject() (
     }
   }
 
+  private def getBookmarkCountsFuture(): Future[Int] = {
+    Future.sequence(searchServiceClient.indexInfoList()).map{ results =>
+        var countMap = Map.empty[String, Int]
+        results.flatMap(_._2).foreach{ info =>
+          if (info.name.startsWith("BookmarkStore")) {
+            countMap.get(info.name) match {
+              case Some(count) if count >= info.numDocs =>
+              case _ => countMap += (info.name -> info.numDocs)
+            }
+          }
+        }
+        countMap.values.sum
+      }
+  }
+
   def userBookmarkKeywords = AdminHtmlAction.authenticatedAsync { request =>
     val user = request.userId
     val uris = db.readOnly{ implicit s =>
@@ -234,12 +236,32 @@ class AdminBookmarksController @Inject() (
 
     word2vecFut.map{ word2vecKeys =>
       (embedlyKeys zip word2vecKeys).map{ case (emb, w2v) =>
-        val s1 = emb.toSet
+        val s1 = emb.map{_.name}.toSet
         val s2 = w2v.map{_.cosine}.getOrElse(Seq()).toSet
         val s3 = w2v.map{_.freq}.getOrElse(Seq()).toSet
         (s1.union(s2.intersect(s3))).foreach{ word => keyCounts(word) = keyCounts(word) + 1 }
       }
       Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
+    }
+  }
+
+  def bookmarksKeywordsPageView(page: Int = 0) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val PAGE_SIZE = 25
+
+    val bmsFut = future{ db.readOnly { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
+    val bookmarkTotalCountFuture = getBookmarkCountsFuture()
+
+    bmsFut.flatMap{ bms =>
+      val uris = bms.map{_.uriId}
+      val keywordsFut = Future.sequence(uris.map{ uri => uriSummaryCommander.getKeywordsSummary(uri)})
+
+      for {
+        keywords <- keywordsFut
+        totalCount <- bookmarkTotalCountFuture
+      } yield {
+        val pageCount = (totalCount * 1f / PAGE_SIZE).ceil.toInt
+        Ok(html.admin.bookmarkKeywords(bms, keywords, page, pageCount))
+      }
     }
   }
 }

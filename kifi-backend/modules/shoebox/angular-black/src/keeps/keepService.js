@@ -140,11 +140,11 @@ angular.module('kifi.keepService', [
       });
     });
 
-    function processKeepAction(url, data) {
+    function processKeepAction(url, data, existingKeeps) {
       $log.log('keepService.keep()', data);
 
       return $http.post(url, data).then(function (res) {
-        var keeps = res.data.keeps;
+        var keeps = existingKeeps || res.data.keeps;
         _.forEach(keeps, buildKeep);
         $analytics.eventTrack('user_clicked_page', {
           'action': 'keep'
@@ -154,14 +154,47 @@ angular.module('kifi.keepService', [
       });
     }
 
-    function prependKeeps(keeps) {
-      list.unshift.apply(list, keeps);
+    function fetchFullKeepInfo(keep) {
+      var url = routeService.getKeep(keep.id);
+      var config = {
+        params: { withFullInfo: true }
+      };
+
+      return $http.get(url, config).then(function (result) {
+        util.completeObjectInPlace(keep, result.data);
+        buildKeep(keep);
+        return keep;
+      });
+    }
+
+    function insertKeeps(keeps, insertFn) {
+      // Check which keeps are already in the list
+      var existing = [];
+      var nonExisting = [];
+      keeps.forEach(function (keep) {
+        var isExisting = !!_.find(list, function (existingKeep) {
+          return keep.id === existingKeep.id;
+        });
+        if (isExisting) {
+          existing.push(keep);
+        } else {
+          nonExisting.push(keep);
+        }
+      });
+      insertFn.apply(list, nonExisting);
+      existing.forEach(function (keep) {
+        keep.unkept = false;
+      });
       before = list.length ? list[list.length - 1].id : null;
+
+    }
+
+    function prependKeeps(keeps) {
+      insertKeeps(keeps, list.unshift);
     }
 
     function appendKeeps(keeps) {
-      list.push.apply(list, keeps);
-      before = list.length ? list[list.length - 1].id : null;
+      insertKeeps(keeps, list.push);
     }
 
     var api = {
@@ -355,7 +388,11 @@ angular.module('kifi.keepService', [
             })
           };
 
-        return processKeepAction(url, data);
+        processKeepAction(url, data).then(function (keeps) {
+          var keep = keeps[0];
+          fetchFullKeepInfo(keep);
+          return keep;
+        });
       },
 
       keep: function (keeps, isPrivate) {
@@ -363,21 +400,25 @@ angular.module('kifi.keepService', [
           return $q.when(keeps || []);
         }
 
+        // true if we should override the current keeps' privacy settings
         var keepPrivacy = isPrivate == null;
-        isPrivate = !! isPrivate;
 
         var url = env.xhrBase + '/keeps/add',
           data = {
             keeps: keeps.map(function (keep) {
+              if (!keepPrivacy) {
+                // updated before the actual call
+                keep.isPrivate = !!isPrivate;
+              }
               return {
                 title: keep.title,
                 url: keep.url,
-                isPrivate: keepPrivacy ? !! keep.isPrivate : isPrivate
+                isPrivate: !!keep.isPrivate
               };
             })
           };
 
-        return processKeepAction(url, data);
+        return processKeepAction(url, data, keeps);
       },
 
       unkeep: function (keeps) {
@@ -519,6 +560,12 @@ angular.module('kifi.keepService', [
       getKeepsByTagId: function (tagId, params) {
         params = params || {};
         params.collection = tagId;
+        return api.getList(params);
+      },
+
+      getKeepsByHelpRank: function(helprank, params) {
+        params = params || {};
+        params.helprank = helprank;
         return api.getList(params);
       }
     };
