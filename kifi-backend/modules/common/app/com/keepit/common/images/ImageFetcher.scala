@@ -52,7 +52,7 @@ class ImageFetcherImpl @Inject() (
         return Future.successful(None)//just ignore
       }
     }
-    WS.url(uriObj.toString()).withRequestTimeout(120000).get map { resp =>
+    WS.url(uriObj.toString).withRequestTimeout(120000).get map { resp =>
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
