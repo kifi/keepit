@@ -27,6 +27,11 @@ angular.module('util', [])
         Array.prototype.push.apply(oldArray, newArray);
         return oldArray;
       },
+      completeObjectInPlace: function (oldObj, newObj) {
+        _.forOwn(newObj || {}, function (num, key) {
+          oldObj[key] = newObj[key];
+        });
+      },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
         _.forOwn(oldObj || {}, function (num, key) {
