@@ -40,16 +40,19 @@ class EventTrackingController @Inject() (
       case Success(result) => {
         try {
           result.map { sqsMessage =>
-            val event = sqsMessage.body
-            trackInternalEvent(event)
+            sqsMessage.consume { event =>
+              trackInternalEvent(event)
+            }
           }
         } catch {
           case e: Throwable => log.warn(s"Failed to read event: ${e.getMessage}")
+        } finally {
+          readIncomingEvent()
         }
-        readIncomingEvent()
       }
       case Failure(t) => {
         airbrake.notify("Failed reading incoming messages from queue", t)
+        readIncomingEvent()
       }
     }
   }

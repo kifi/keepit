@@ -42,16 +42,17 @@ class NormalizationWorker @Inject()(
         log.debug(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
         for (m <- messages) {
           log.debug(s"[consume] received msg $m")
-          val task = m.body
-          val nuri = db.readOnly { implicit ro =>
-            nuriRepo.get(task.uriId)
+          m.consume { task =>
+            val nuri = db.readOnly { implicit ro =>
+              nuriRepo.get(task.uriId)
+            }
+            val ref = NormalizationReference(nuri, task.isNew)
+            log.debug(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
+            for (nuriOpt <- normalizationService.update(ref, task.candidates: _*)) {
+              // sends out-of-band requests to scraper
+              log.debug(s"[consume] normalizationService.update result: $nuriOpt")
+            }
           }
-          val ref = NormalizationReference(nuri, task.isNew)
-          log.debug(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
-          for (nuriOpt <- normalizationService.update(ref, task.candidates:_*)) { // sends out-of-band requests to scraper
-            log.debug(s"[consume] normalizationService.update result: $nuriOpt")
-          }
-          m.consume()
         }
     }
   }
