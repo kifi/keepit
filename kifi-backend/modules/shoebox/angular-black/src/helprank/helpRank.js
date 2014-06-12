@@ -14,8 +14,8 @@ angular.module('kifi.helprank', ['util', 'kifi.keepService'])
 ])
 
 .controller('HelpRankCtrl', [
-  '$scope', 'keepService', '$routeParams', '$window',
-  function ($scope, keepService, $routeParams, $window) {
+  '$scope', 'keepService', '$routeParams',
+  function ($scope, keepService, $routeParams) {
 
     keepService.reset();
     $scope.keepService = keepService;
