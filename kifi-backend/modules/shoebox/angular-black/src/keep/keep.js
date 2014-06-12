@@ -315,6 +315,70 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         // TODO: add/remove kf-candidate-drag-target on dragenter/dragleave
         // optionally: kf-drag-target when dragging a tag
 
+        function sizeImage() {
+
+          var $sizer = element.find('.kf-keep-description-sizer');
+          var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
+          var w_c = element.find('.kf-keep-contents').width();
+
+          function calcHeightDelta(guessWidth) {
+            function tryWidth(width) {
+              return $sizer.css('width', width).height();
+            }
+            var aspR = img.w / img.h;
+            var w_t = guessWidth;
+            var w_a = w_c - w_t;
+            var w_i = w_a - 15;
+            var h_i = w_i / aspR;
+            var h_t = tryWidth(w_t);
+            return { guess: guessWidth, delta: (h_t - h_i), ht: h_t, hi: h_i };
+          }
+
+          var i = 0;
+          var low = 200, high = w_c - 120;
+          var guess = (high - low) / 2 + low;
+          var res = calcHeightDelta(guess);
+          var bestRes = res;
+
+          console.log('start')
+          while(low + i < high) {
+            res = calcHeightDelta(low + i);
+            console.log(+new Date, low + i, res.delta)
+            if (Math.abs(bestRes.delta) > Math.abs(res.delta)) {
+              bestRes = res;
+            }
+            i += 40
+          }
+
+          var asideWidth = w_c - bestRes.guess;
+          // console.log("end phase one", binGuess, binDelta, asideWidth);
+          // var lines = res.ht / 23; // line height
+          // console.log("lines:  " + lines);
+          element.find('.kf-keep-small-image').width(asideWidth);
+
+          // while (i++ < 5 && Math.abs(res.delta) > 10) {
+          //   if (res.delta > 0) { // text > image, so make text width smaller
+          //     high = guess;
+          //   } else { // text < image, so make image width bigger
+          //     low = guess;
+          //   }
+          //   guess = (high - low) / 2 + low;
+          //   res = calcHeightDelta(guess);
+          //   console.log(guess, res.delta, low, high);
+          // }
+
+        }
+
+        scope.$watch('keep', function() {
+          if (scope.keep && scope.keep.summary) {
+            var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
+            var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
+            if (hasResonableDesc && hasImage) {
+              sizeImage();
+            }
+          }
+        });
+
 
         tagDragMask.on('dragenter', function () {
           scope.$apply(function () { scope.isDragTarget = true; });

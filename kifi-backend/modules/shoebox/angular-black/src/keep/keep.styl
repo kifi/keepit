@@ -121,10 +121,16 @@ keepBorderRadius = 3px
       display: block
 
 .kf-keep-body
-  padding: 0 20px
+  padding: 0 20px 5px
 
 .kf-keep-contents
-  padding: 10px 0
+  padding: 15px 0 10px
+
+.kf-keep-who
+  padding: 3px 35px 0 0
+
+.kf-keep-tag
+  margin-top: 3px
 
 .kf-keep-footer
   background-color: #f9f9f9
@@ -187,8 +193,9 @@ keepBorderRadius = 3px
   width: 100%
 
 .kf-keep-content-line
-  padding: 10px 0
+  padding: 0
   width: 100%
+  display: table
 
 .kf-keep-big-image
   margin: 4px 0 11px
@@ -202,9 +209,10 @@ keepBorderRadius = 3px
 
 .kf-keep-small-image
   display:table-cell
-  width: 200px
-  vertical-align: middle
+  width: 150px
+  vertical-align: top
   padding-left: 15px
+  padding-top: 15px
 
   @media screen and (min-width: 1150px) and (max-width: 1250px)
     width: 150px
@@ -231,7 +239,7 @@ keepBorderRadius = 3px
 .kf-keep-title
   max-width: 100%
   font-size: 17px
-  font-weight: 400
+  font-weight: 500
   line-height: 24px
   font-smoothing: antialiased
 
@@ -242,13 +250,24 @@ keepBorderRadius = 3px
   line-height: 17px
 
 .kf-keep-description
-  font-size: 17px
-  line-height: 21px
+  font-size: 16px
+  line-height: 23px
   margin-top: 10px
   font-family: "Georgia", Arial, sans-serif
   font-smoothing: antialiased
   color: textBlackColor
   word-wrap: break-word
+
+.kf-keep-description-sizer
+  position: absolute
+  font-size: 16px
+  line-height: 23px
+  margin-top: 10px
+  font-family: "Georgia", Arial, sans-serif
+  word-wrap: break-word
+  top: 57px
+  left: 20px
+  visibility: hidden
 
 .kf-keep-url
   display: inline-block
@@ -299,11 +318,11 @@ input.kf-keep-tag-input
 
 input.kf-keep-tag-input
 .kf-keep-tag-opt
-  min-width: 40px
   long-text()
 
 input.kf-keep-tag-input
   width: 100%
+  min-width: 141px
 
 .kf-keep-tag
   display: inline-block
@@ -336,6 +355,7 @@ input.kf-keep-tag-input
   border-radius: 3px
   background-color: #fff
   z-index: 1
+  min-width: 153px
 
 .kf-keep-tag-opt
   cursor: pointer
@@ -421,9 +441,6 @@ input.kf-keep-tag-input
 
 .kf-keep.detailed .kf-keep-button-preview
   display: none
-
-.kf-keep-tag-list
-  border-top: separatorBorder
 
 .kf-tag-list>li
   display: inline-block
