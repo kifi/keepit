@@ -229,6 +229,18 @@ class PrenormalizerTest extends Specification {
       path = "http://fr.linkedin.com/pub/marc-milowski/13/640/1a8/en"
       prenormalize(path) === "http://www.linkedin.com/pub/marc-milowski/13/640/1a8/en"
 
+      path = "https://touch.www.linkedin.com/?as=false&rs=false&sessionid=1260325066244096#public-profile/https://www.linkedin.com/in/vanmendoza"
+      prenormalize(path) === "https://www.linkedin.com/in/vanmendoza"
+
+      path = "https://touch.www.linkedin.com/?as=false&can=https%253A%252F%252Fwww.linkedin.com%252Fin%252Fjackwchou&rs=false&sessionid=8282684388278272#public-profile/https://www.linkedin.com/in/jackwchou"
+      prenormalize(path) === "https://www.linkedin.com/in/jackwchou"
+
+      path = "https://touch.www.linkedin.com/mainsite?redirect_url=https://www.linkedin.com/today/post/article/20140204074411-659753-loners-can-win-at-school-they-can-t-in-the-real-world?sf22432825=1&_mSplash=1&rs=false&sessionid=5684900904566784"
+      prenormalize(path) === "https://www.linkedin.com/today/post/article/20140204074411-659753-loners-can-win-at-school-they-can-t-in-the-real-world"
+
+      path = "https://touch.www.linkedin.com/mainsite?redirect_url=https://www.linkedin.com/today/post/article/20140605083410-93094-don-t-kill-your-channels?_mSplash=1&rs=false&sessionid=2738350133870592"
+      prenormalize(path) === "https://www.linkedin.com/today/post/article/20140605083410-93094-don-t-kill-your-channels"
+
       //Wikipedia
 
       prenormalize("http://en.m.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"

@@ -105,6 +105,13 @@ angular.module('kifi.layout.main', [
       $scope.modal = 'import_bookmark_file';
       $scope.data.showBookmarkFileModal1 = true;
     }
+    
+    function initAddKeep() {
+      $scope.modal = 'add_keeps';
+      $scope.data.showAddKeeps = true;
+      $scope.addKeepCheckedPrivate = false;
+      $scope.addKeepInput = {};
+    }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
@@ -119,8 +126,7 @@ angular.module('kifi.layout.main', [
           initBookmarkFileUpload();
           break;
         case 'addKeeps':
-          $scope.modal = 'add_keeps';
-          $scope.data.showAddKeeps = true;
+          initAddKeep();
           break;
         case 'installExtension':
           $scope.modal = 'install_extension';
@@ -260,10 +266,6 @@ angular.module('kifi.layout.main', [
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
-
-    $scope.addKeepCheckedPrivate = false;
-    $scope.addKeepInput = {};
 
     $scope.addKeepTogglePrivate = function () {
       $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
