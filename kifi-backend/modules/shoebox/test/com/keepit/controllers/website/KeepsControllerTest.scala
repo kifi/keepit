@@ -394,6 +394,143 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
       }
     }
 
+    "allKeeps with helprank & before" in {
+      running(new ShoeboxApplication(controllerTestModules:_*)) {
+
+        val keep42   = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
+        val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
+        val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
+        val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
+        val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
+        val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
+
+        implicit val context = HeimdalContext.empty
+        val userRepo = inject[UserRepo]
+        val uriRepo = inject[NormalizedURIRepo]
+        val urlRepo = inject[URLRepo]
+        val keepRepo = inject[KeepRepo]
+        val keepClickRepo = inject[KeepClickRepo]
+        val rekeepRepo = inject[ReKeepRepo]
+        val userExpRepo = inject[UserExperimentRepo]
+        val keeper = KeepSource.keeper
+        val initLoad = KeepSource.bookmarkImport
+        val db = inject[Database]
+
+        val (u1, u2, u3, u4) = db.readWrite { implicit session =>
+          val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
+          val u3 = userRepo.save(User(firstName = "Clicker", lastName = "ClicketyClickyClick"))
+          val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
+
+          val helprank = ExperimentType.HELPRANK
+          userExpRepo.save(UserExperiment(userId = u1.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u2.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u3.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u4.id.get, experimentType = helprank))
+
+          (u1, u2, u3, u4)
+        }
+        val bookmarkInterner = inject[KeepInterner]
+        val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
+        val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
+        val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford))
+        val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple))
+
+        val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw1, u1.id.get, KeepSource.email, true)
+        val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw2, u2.id.get, KeepSource.default, true)
+        keeps1.size === 2
+        keeps2.size === 3
+        keeps1(1).uriId === keeps2(0).uriId
+
+        val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
+          val kifiHitCache = inject[KifiHitCache]
+          val origin = "https://www.google.com"
+          val kc0 = keepClickRepo.save(KeepClick(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
+          // u2 -> 42 (u1)
+          kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
+
+          val ts = currentDateTime
+          val uuid = ExternalId[SanitizedKifiHit]()
+          val kc1 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
+          val kc2 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
+          // u3 -> kifi (u1, u2) [rekeep]
+          kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
+
+          (kc0, kc1, kc2)
+        }
+
+        val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
+
+        val kc3 = db.readWrite { implicit rw =>
+          val kifiHitCache = inject[KifiHitCache]
+          val origin = "https://www.google.com"
+          val kc3 = keepClickRepo.save(KeepClick(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
+          // u4 -> kifi (u3) [rekeep]
+          kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
+          kc3
+        }
+
+        val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
+
+        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+          val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
+          val clickCount = keepClickRepo.getClickCountByKeeper(u1.id.get)
+          val clicks = keepClickRepo.getClickCountsByKeeper(u1.id.get)
+          val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
+          val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
+          (keeps, clickCount, rekeepCount, clicks, rekeeps)
+        }
+        keeps.size === keeps1.size
+        clickCount === 2
+        rekeepCount === 1
+        clicks.keySet.size === 2
+        rekeeps.keySet.size === 1
+
+        val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = Some(keeps1(0).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
+        path === s"/site/keeps/all?before=${keeps1(0).externalId.toString}&helprank=click"
+        inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
+        val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
+        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+
+        val controller = inject[KeepsController]
+        inject[FakeActionAuthenticator].setUser(u1)
+
+        import play.api.Play.current
+        println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
+
+        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+                  {"collection":null,
+                   "before":"${keeps1(0).externalId.toString}",
+                   "after":null,
+                   "keeps":[
+                    {
+                      "id":"${keeps1(1).externalId.toString}",
+                      "url":"${keeps1(1).url}",
+                      "isPrivate":${keeps1(1).isPrivate},
+                      "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
+                      "others":1,
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "clickCount":1,
+                      "collections":[],
+                      "tags":[],
+                      "siteName":"kifi.com",
+                      "clickCount":1,
+                      "rekeepCount":1
+                    }
+                  ],
+                  "helprank":"click"
+                  }
+                """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "allCollections" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val (user, collections) = inject[Database].readWrite { implicit session =>
