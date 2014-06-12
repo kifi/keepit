@@ -6,7 +6,7 @@ angular.module('kifi.helprank', ['util', 'kifi.keepService'])
   '$routeProvider',
   function ($routeProvider) {
     $routeProvider
-    .when('/helprank/:selector', {
+    .when('/helprank/:helprank', {
       templateUrl: 'helprank/helprank.tpl.html',
       controller: 'HelpRankCtrl'
     });
@@ -21,7 +21,7 @@ angular.module('kifi.helprank', ['util', 'kifi.keepService'])
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
 
-    var selector = $routeParams.selector || '';
+    var helprank = $routeParams.helprank || '';
 
     $scope.hasMore = function () {
       return !keepService.isEnd();
@@ -60,7 +60,7 @@ angular.module('kifi.helprank', ['util', 'kifi.keepService'])
       }
 
       $scope.loading = true;
-      return keepService.getKeepsByHelpRank(selector).then(function (list) {
+      return keepService.getKeepsByHelpRank(helprank).then(function (list) {
         $scope.loading = false;
 
         if (keepService.isEnd()) {
