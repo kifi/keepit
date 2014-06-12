@@ -331,42 +331,29 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             var w_i = w_a - 15;
             var h_i = w_i / aspR;
             var h_t = tryWidth(w_t);
-            return { guess: guessWidth, delta: (h_t - h_i), ht: h_t, hi: h_i };
+            var delta = (h_t - h_i);
+            var score = Math.abs(delta) + 0.3 * Math.abs(350 - w_i);
+            return { guess: guessWidth, delta: delta, score: score, ht: h_t, hi: h_i};
           }
 
           var i = 0;
-          var low = 200, high = w_c - 120;
+          var low = 200, high = w_c - 80;
           var guess = (high - low) / 2 + low;
           var res = calcHeightDelta(guess);
           var bestRes = res;
 
-          console.log('start')
-          while(low + i < high) {
+          var d = +new Date;
+          while(low + i < high && bestRes.score > 20) {
             res = calcHeightDelta(low + i);
-            console.log(+new Date, low + i, res.delta)
-            if (Math.abs(bestRes.delta) > Math.abs(res.delta)) {
+            if (bestRes.score > res.score) {
               bestRes = res;
             }
             i += 40
           }
+          console.log(+new Date - d);
 
           var asideWidth = w_c - bestRes.guess;
-          // console.log("end phase one", binGuess, binDelta, asideWidth);
-          // var lines = res.ht / 23; // line height
-          // console.log("lines:  " + lines);
-          element.find('.kf-keep-small-image').width(asideWidth);
-
-          // while (i++ < 5 && Math.abs(res.delta) > 10) {
-          //   if (res.delta > 0) { // text > image, so make text width smaller
-          //     high = guess;
-          //   } else { // text < image, so make image width bigger
-          //     low = guess;
-          //   }
-          //   guess = (high - low) / 2 + low;
-          //   res = calcHeightDelta(guess);
-          //   console.log(guess, res.delta, low, high);
-          // }
-
+          element.find('.kf-keep-small-image img').width(Math.floor(asideWidth));
         }
 
         scope.$watch('keep', function() {
