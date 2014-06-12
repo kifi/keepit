@@ -229,6 +229,13 @@ class PrenormalizerTest extends Specification {
       path = "http://fr.linkedin.com/pub/marc-milowski/13/640/1a8/en"
       prenormalize(path) === "http://www.linkedin.com/pub/marc-milowski/13/640/1a8/en"
 
+      path = "https://touch.www.linkedin.com/?as=false&rs=false&sessionid=1260325066244096#public-profile/https://www.linkedin.com/in/vanmendoza"
+      prenormalize(path) === "https://www.linkedin.com/in/vanmendoza"
+
+      path = "https://touch.www.linkedin.com/?as=false&can=https%253A%252F%252Fwww.linkedin.com%252Fin%252Fjackwchou&rs=false&sessionid=8282684388278272#public-profile/https://www.linkedin.com/in/jackwchou"
+      prenormalize(path) === "https://www.linkedin.com/in/jackwchou"
+
+
       //Wikipedia
 
       prenormalize("http://en.m.wikipedia.org/wiki/Douze") === "https://en.wikipedia.org/wiki/Douze"
