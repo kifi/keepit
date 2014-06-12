@@ -34,8 +34,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
-  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util) {
+  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'installService', 'util',
+  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, installService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -104,6 +104,14 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           } else {
             return [];
           }
+        };
+
+        scope.canSend = function () {
+          return installService.hasMinimumVersion('3.0.7');
+        };
+
+        scope.triggerInstall = function () {
+          $rootScope.$emit('showGlobalModal','installExtension');
         };
 
         function formatTitleFromUrl(url, matches) {
@@ -306,6 +314,55 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         // TODO: add/remove kf-candidate-drag-target on dragenter/dragleave
         // optionally: kf-drag-target when dragging a tag
+
+        function sizeImage() {
+
+          var $sizer = element.find('.kf-keep-description-sizer');
+          var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
+          var w_c = element.find('.kf-keep-contents').width();
+
+          function calcHeightDelta(guessWidth) {
+            function tryWidth(width) {
+              return $sizer.css('width', width).height();
+            }
+            var aspR = img.w / img.h;
+            var w_t = guessWidth;
+            var w_a = w_c - w_t;
+            var w_i = w_a - 15;
+            var h_i = w_i / aspR;
+            var h_t = tryWidth(w_t);
+            var delta = (h_t - h_i);
+            var score = Math.abs(delta) + 0.3 * Math.abs(350 - w_i);
+            return { guess: guessWidth, delta: delta, score: score, ht: h_t, hi: h_i};
+          }
+
+          var i = 0;
+          var low = 200, high = w_c - 80;
+          var guess = (high - low) / 2 + low;
+          var res = calcHeightDelta(guess);
+          var bestRes = res;
+
+          while(low + i < high && bestRes.score > 20) {
+            res = calcHeightDelta(low + i);
+            if (bestRes.score > res.score) {
+              bestRes = res;
+            }
+            i += 40;
+          }
+
+          var asideWidth = w_c - bestRes.guess;
+          element.find('.kf-keep-small-image img').width(Math.floor(asideWidth));
+        }
+
+        scope.$watch('keep', function() {
+          if (scope.keep && scope.keep.summary) {
+            var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
+            var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
+            if (hasResonableDesc && hasImage) {
+              sizeImage();
+            }
+          }
+        });
 
 
         tagDragMask.on('dragenter', function () {

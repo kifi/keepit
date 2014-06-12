@@ -14,10 +14,12 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
 import java.security.cert.CertificateExpiredException
 import java.nio.channels.ClosedChannelException
-import java.net.{URISyntaxException, URI, ConnectException}
+import java.net.{URISyntaxException, ConnectException}
+import com.keepit.common.net.URI
 import org.jboss.netty.channel.ConnectTimeoutException
 import java.security.GeneralSecurityException
 import java.io.IOException
+import java.util.concurrent.TimeoutException
 
 @ImplementedBy(classOf[ImageFetcherImpl])
 trait ImageFetcher {
@@ -43,16 +45,14 @@ class ImageFetcherImpl @Inject() (
   override def fetchRawImage(url: String): Future[Option[BufferedImage]] = {
     val trace = new StackTrace()
     val timer = accessLog.timer(Access.HTTP_OUT)
-    try {
-      URI.create(url)
-    } catch {
-      case e @ (
-        _ : URISyntaxException |
-        _ : IllegalArgumentException) =>
+    val uriObj = URI.parse(url) match {
+      case Success(uriObj) => uriObj
+      case Failure(e) => {
         log.error(s"Url [$url] parsing error, ignoring image", e)
-        Future.successful(None)//just ignore
+        return Future.successful(None)//just ignore
+      }
     }
-    WS.url(url).withRequestTimeout(120000).get map { resp =>
+    WS.url(uriObj.toString).withRequestTimeout(120000).get map { resp =>
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
@@ -73,6 +73,7 @@ class ImageFetcherImpl @Inject() (
       }
     } recover {
       case e @ (
+        _ : TimeoutException |
         _ : ConnectTimeoutException |
         _ : GeneralSecurityException |
         _ : IOException) => {
