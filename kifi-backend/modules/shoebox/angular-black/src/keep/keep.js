@@ -316,18 +316,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         // optionally: kf-drag-target when dragging a tag
 
         function sizeImage() {
-          if (!scope.keep || !scope.keep.summary) {
+          if (!scope.keep || !scope.keep.summary || !scope.keep.summary.description) {
             return;
           }
 
-          var $sizer = element.find('.kf-keep-description-sizer');
+          var $sizer = angular.element('.kf-keep-description-sizer').text(scope.keep.summary.description);
           var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
           var w_c = element.find('.kf-keep-contents').width();
           var optimalWidth = Math.floor(w_c * 0.45);
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
-              return $sizer.css('width', width).height();
+              return $sizer.css('width', width).outerHeight(true);
             }
             var aspR = img.w / img.h;
             var w_t = guessWidth;
@@ -364,7 +364,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           element.find('.kf-keep-small-image').width(Math.floor((asideWidth / w_c) * 100) + '%');
           // element.find('.kf-keep-small-image').width('auto');
           // element.find('.kf-keep-small-image img').width(asideWidth);
-
         }
 
         scope.$on('resizeImage', function() {
