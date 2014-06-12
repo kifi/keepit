@@ -522,9 +522,9 @@ angular.module('kifi.keepService', [
         return api.getList(params);
       },
 
-      getKeepsByHelpRank: function(selector, params) {
+      getKeepsByHelpRank: function(helprank, params) {
         params = params || {};
-        params.selector = selector;
+        params.helprank = helprank;
         return api.getList(params);
       }
     };
