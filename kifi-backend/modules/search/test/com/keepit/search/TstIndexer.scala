@@ -2,6 +2,7 @@ package com.keepit.search
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
@@ -21,6 +22,7 @@ class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIn
 
   def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher.indexReader, ids, null)
 
+  override val airbrake: AirbrakeNotifier = null
   def update(): Int = ???
 }
 

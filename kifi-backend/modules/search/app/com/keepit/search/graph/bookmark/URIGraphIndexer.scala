@@ -49,7 +49,7 @@ object URIGraphFields {
 class URIGraphIndexer(
     indexDirectory: IndexDirectory,
     val bookmarkStore: BookmarkStore,
-    airbrake: AirbrakeNotifier)
+    val airbrake: AirbrakeNotifier)
   extends Indexer[User, Keep, URIGraphIndexer](indexDirectory, URIGraphFields.decoders) {
 
   import URIGraphIndexer.URIGraphIndexable

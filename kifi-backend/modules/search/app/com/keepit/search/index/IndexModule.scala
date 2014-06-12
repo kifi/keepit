@@ -104,7 +104,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map{ shard => (shard, articleIndexer(shard)) }
-    new ShardedArticleIndexer(indexShards.toMap, articleStore, shoeboxClient)
+    new ShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -122,7 +122,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
-    new ShardedURIGraphIndexer(indexShards.toMap, shoeboxClient)
+    new ShardedURIGraphIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -140,7 +140,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map{ shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
-    new ShardedCollectionIndexer(indexShards.toMap, shoeboxClient)
+    new ShardedCollectionIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton

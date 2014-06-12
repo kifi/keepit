@@ -21,7 +21,7 @@ object SearchFriendFields {
 
 class SearchFriendIndexer (
   indexDirectory: IndexDirectory,
-  airbrake: AirbrakeNotifier,
+  override val airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
 ) extends Indexer[User, SearchFriend, SearchFriendIndexer](indexDirectory){
 

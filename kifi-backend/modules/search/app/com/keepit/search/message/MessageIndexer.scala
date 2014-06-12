@@ -134,7 +134,7 @@ class MessageContentIndexable(
 class MessageIndexer(
     indexDirectory: IndexDirectory,
     eliza: ElizaServiceClient,
-    airbrake: AirbrakeNotifier)
+    override val airbrake: AirbrakeNotifier)
   extends Indexer[ThreadContent, ThreadContent, MessageIndexer](indexDirectory) {
 
     val loadBatchSize : Int = 100
