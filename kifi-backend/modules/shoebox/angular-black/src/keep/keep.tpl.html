@@ -12,6 +12,7 @@
       <div class="kf-keep-content-line">
         <div class="kf-keep-info">
           <div class="kf-keep-title">
+            <div class="kf-keep-loader" ng-show="keep.isLoading"></div>
             <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
             </a>
           </div>

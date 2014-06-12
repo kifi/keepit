@@ -155,6 +155,7 @@ angular.module('kifi.keepService', [
     }
 
     function fetchFullKeepInfo(keep) {
+      keep.isLoading = true;
       var url = routeService.getKeep(keep.id);
       var config = {
         params: { withFullInfo: true }
@@ -163,6 +164,7 @@ angular.module('kifi.keepService', [
       return $http.get(url, config).then(function (result) {
         util.completeObjectInPlace(keep, result.data);
         buildKeep(keep);
+        keep.isLoading = false;
         return keep;
       });
     }
