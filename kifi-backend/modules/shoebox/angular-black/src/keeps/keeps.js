@@ -38,8 +38,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService',
-  function (keepService) {
+  'keepService', '$window',
+  function (keepService, $window) {
 
     return {
       restrict: 'A',
@@ -147,6 +147,21 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         }, function () {
           scope.disableEditTags();
         });
+
+        var lastSizedAt = $window.innerWidth;
+        function resizeWindowListener() {
+          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
+            lastSizedAt = $window.innerWidth;
+            scope.$broadcast('resizeImage');
+          }
+        }
+
+        var lazyResizeListener = _.debounce(resizeWindowListener, 250);
+        $window.addEventListener('resize', lazyResizeListener);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', lazyResizeListener);
+        });
+
       }
     };
   }
