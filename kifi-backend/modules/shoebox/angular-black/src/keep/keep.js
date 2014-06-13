@@ -368,7 +368,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
         scope.$on('resizeImage', function() {
           sizeImage();
-        })
+        });
 
         scope.$watch('keep', function() {
           if (scope.keep && scope.keep.summary) {

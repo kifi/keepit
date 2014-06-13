@@ -18,7 +18,8 @@ angular.module('kifi.installService', [])
     }
 
     function installedVersion() {
-      return $('html').attr('data-kifi-ext');
+      var htmlElement = document.getElementsByTagName('html')[0];
+      return angular.element(htmlElement).attr('data-kifi-ext');
     }
 
     var api = {
