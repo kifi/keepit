@@ -57,22 +57,5 @@ class EventTrackingController @Inject() (
     }
   }
 
-  @deprecated(message = "use queue new, remove then all clients are upgraded", since = "event queue was introduced")
-  def trackInternalEventAction = Action(parse.tolerantJson) { request =>
-    SafeFuture{
-      trackInternalEvent(request.body)
-    }(SlowRunningExecutionContext.ec)
-    Status(ACCEPTED)
-  }
-
   private[controllers] def trackInternalEvents(eventsJs: JsValue) = eventsJs.as[JsArray].value.map(trackInternalEvent)
-
-  val TenMB = 1024 * 1024 * 10
-
-  def trackInternalEventsAction = Action(parse.json(maxLength = TenMB)) { request =>
-    SafeFuture{
-      trackInternalEvents(request.body)
-    }(SlowRunningExecutionContext.ec)
-    Status(ACCEPTED)
-  }
 }
