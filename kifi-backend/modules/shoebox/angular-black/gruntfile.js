@@ -68,6 +68,7 @@ module.exports = function (grunt) {
           'lib/angular-facebook-api/dist/angular-facebook-api.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js',
           'managed-lib/ui-slider/slider.js',
+          'managed-lib/libs.js',
           'lib/angulartics/dist/angulartics.min.js'
         ],
         libMinJs: [
@@ -92,6 +93,7 @@ module.exports = function (grunt) {
           'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
           'managed-lib/ui-slider/slider.js',
+          'managed-lib/libs.js',
           'lib/angulartics/dist/angulartics.min.js'
         ],
         src: 'src',

@@ -7,9 +7,9 @@ angular.module('kifi.layout.main', [
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'injectedState', '$rootScope', '$analytics', 'keepService',
+  'injectedState', '$rootScope', '$analytics', 'keepService', 'installService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, keepService) {
+    injectedState, $rootScope, $analytics, keepService, installService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -105,6 +105,13 @@ angular.module('kifi.layout.main', [
       $scope.modal = 'import_bookmark_file';
       $scope.data.showBookmarkFileModal1 = true;
     }
+    
+    function initAddKeep() {
+      $scope.modal = 'add_keeps';
+      $scope.data.showAddKeeps = true;
+      $scope.addKeepCheckedPrivate = false;
+      $scope.addKeepInput = {};
+    }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
@@ -119,9 +126,15 @@ angular.module('kifi.layout.main', [
           initBookmarkFileUpload();
           break;
         case 'addKeeps':
-          $scope.modal = 'add_keeps';
-          $scope.data.showAddKeeps = true;
+          initAddKeep();
           break;
+        case 'installExtension':
+          $scope.modal = 'install_extension';
+          $scope.data.showInstallExtension = true;
+          break;
+        case 'installExtensionError':
+          $scope.modal = 'install_extension_error';
+          $scope.data.showInstallErrorModal = true;
       }
     });
 
@@ -253,5 +266,24 @@ angular.module('kifi.layout.main', [
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
+
+    $scope.addKeepTogglePrivate = function () {
+      $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
+    };
+
+    $scope.keepUrl = function () {
+      if ($scope.addKeepInput.url) {
+        keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
+      } else {
+        //todo(martin): Tell the user something went wrong
+        return null; // silence jshint
+      }
+    };
+
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $rootScope.$emit('showGlobalModal','installExtensionError');
+      });
+    };
   }
 ]);

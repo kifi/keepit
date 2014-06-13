@@ -21,6 +21,7 @@ import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.search.ArticleStore
+import com.keepit.scraper.embedly.EmbedlyKeyword
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
@@ -225,9 +226,9 @@ class URISummaryCommander @Inject()(
     false
   }
 
-  def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[String] = {
+  def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
     embedlyStore.get(id) match {
-      case Some(info) => info.info.keywords.sortBy(-1 * _.score).map{_.name}
+      case Some(info) => info.info.keywords.sortBy(-1 * _.score)
       case None => Seq()
     }
   }
@@ -254,7 +255,8 @@ class URISummaryCommander @Inject()(
 
   def getKeywordsSummary(uri: Id[NormalizedURI]): Future[KeywordsSummary] = {
     val word2vecKeywordsFut = getWord2VecKeywords(uri)
-    val embedlyKeywords = getStoredEmbedlyKeywords(uri).toSet
+    val embedlyKeywords = getStoredEmbedlyKeywords(uri)
+    val embedlyKeywordsStr = embedlyKeywords.map{_.name}.toSet
     val articleKeywords = getArticleKeywords(uri).toSet
 
     for {
@@ -266,16 +268,16 @@ class URISummaryCommander @Inject()(
       val w2vFreq = word2vecKeys.map{ _.freq.toSet} getOrElse Set()
 
       val bestGuess = if (!articleKeywords.isEmpty){
-        articleKeywords intersect ( embedlyKeywords union w2vCos union w2vFreq )
+        articleKeywords intersect ( embedlyKeywordsStr union w2vCos union w2vFreq )
       } else {
         if (embedlyKeywords.isEmpty){
           w2vCos intersect w2vFreq
         } else {
-          embedlyKeywords intersect (w2vCos union w2vFreq)
+          embedlyKeywordsStr intersect (w2vCos union w2vFreq)
         }
       }
 
-      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords.toSeq, w2vCos.toSeq, w2vFreq.toSeq, word2vecCount, bestGuess.toSeq)
+      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords, w2vCos.toSeq, w2vFreq.toSeq, word2vecCount, bestGuess.toSeq)
     }
 
   }

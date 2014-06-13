@@ -3,17 +3,19 @@
 
     <div class="kf-helprank" ng-if="me.clickCount > 0">
       <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
-      <div class="kf-footer-help-rank-item">
-        <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
-        <span class="kf-footer-help-rank-description">
-          You have helped friends discover new things {{me.clickCount}} times in the last month
-        </span>
-      </div>
-      <div class="kf-footer-help-rank-item">
-        <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
-        <span class="kf-footer-help-rank-description">
-          {{me.rekeepCount}} people have kept new discoveries into their libraries because of you
-        </span>
+      <div class="kf-footer-help-rank-wrapper">
+        <div class="kf-footer-help-rank-item">
+          <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
+          <span class="kf-footer-help-rank-description">
+            You've helped friends discover keeps <a class="kifi-footer-item-link" href="/helprank/click">{{me.clickCount}} times</a> this month
+          </span>
+        </div>
+        <div class="kf-footer-help-rank-item">
+          <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
+          <span class="kf-footer-help-rank-description">
+            Your keeps have been rekept by others <a class="kifi-footer-item-link" href="/helprank/rekeep">{{me.rekeepCount}} times</a>
+          </span>
+        </div>
       </div>
       <div class="kf-horizontal-separator"></div>
     </div>
@@ -50,13 +52,6 @@
         </a>
       </li>
     </ul>
-
-    <div kf-modal show="data.showInstallErrorModal" ng-if="data.showInstallErrorModal">
-      <div kf-basic-modal-content>
-        <div>Something seems to have gone wrong installing the browser extension.</div>
-        <div>Please try again later, or <a href="http://support.kifi.com/customer/portal/emails/new">contact us</a>.</div>
-      </div>
-    </div>
 
     <div class="kf-horizontal-separator"></div>
 

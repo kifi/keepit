@@ -19,7 +19,7 @@
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
-    <div ng-repeat="keep in keeps track by $index" kf-keep is-selected="!!isSelected(keep)"
+    <div ng-repeat="keep in keeps track by keep.id" kf-keep is-selected="!!isSelected(keep)"
       keep="keep" me="me" toggle-select="toggleSelect(keep)" click-action="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode"></div>
     <div class="kf-shadow-dragged-keeps" ng-class="{ two: draggedTwo(), three: draggedThree(), more: draggedMore() }">
       <span class="kf-shadow-keep-first" ng-show="data.draggedKeeps.length >= 1">
@@ -41,4 +41,5 @@
   <div class="kf-keep-group-title-fixed"></div>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
   <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()">Show more</a>
+  <div class="kf-keep-description-sizer kf-keep-description"></div>
 </div>

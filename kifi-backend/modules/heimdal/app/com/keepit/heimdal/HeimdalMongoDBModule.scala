@@ -17,7 +17,6 @@ import reactivemongo.core.nodeset.Authenticate
 
 trait MongoModule extends ScalaModule
 
-
 case class ProdMongoModule() extends MongoModule {
 
   def configure() = {}

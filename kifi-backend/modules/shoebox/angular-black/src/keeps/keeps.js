@@ -26,6 +26,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       event.dataTransfer.setData('Text', sendData);
       //event.dataTransfer.setData('text/plain', '');
       var draggedKeepsElement = $scope.getDraggedKeepsElement();
+      draggedKeepsElement.find('.kf-keep').css('background', 'rgba(255,255,255,.7)');
       event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
       //event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
     };
@@ -37,8 +38,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService',
-  function (keepService) {
+  'keepService', '$window',
+  function (keepService, $window) {
 
     return {
       restrict: 'A',
@@ -64,7 +65,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.addingTag = {enabled: false};
 
         scope.keepClickAction = function (event, keep) {
-          if (event.metaKey) {
+          if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
             if (!scope.editMode.enabled) {
               scope.toggleEdit(true);
             }
@@ -146,6 +147,21 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         }, function () {
           scope.disableEditTags();
         });
+
+        var lastSizedAt = $window.innerWidth;
+        function resizeWindowListener() {
+          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
+            lastSizedAt = $window.innerWidth;
+            scope.$broadcast('resizeImage');
+          }
+        }
+
+        var lazyResizeListener = _.debounce(resizeWindowListener, 250);
+        $window.addEventListener('resize', lazyResizeListener);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', lazyResizeListener);
+        });
+
       }
     };
   }

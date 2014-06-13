@@ -121,10 +121,16 @@ keepBorderRadius = 3px
       display: block
 
 .kf-keep-body
-  padding: 0 20px
+  padding: 0 20px 5px
 
 .kf-keep-contents
-  padding: 10px 0
+  padding: 25px 0 10px
+
+.kf-keep-who
+  padding: 3px 35px 5px 0
+
+.kf-keep-tag
+  margin-top: 3px
 
 .kf-keep-footer
   background-color: #f9f9f9
@@ -142,6 +148,12 @@ keepBorderRadius = 3px
 
 .kf-keep-footer-link a
   cursor: pointer
+
+  &:hover
+    text-decoration: underline
+
+  &:active
+    text-decoration: underline
 
 .kf-keep-footer-link + .kf-keep-footer-link:before
     content: "·"
@@ -181,8 +193,10 @@ keepBorderRadius = 3px
   width: 100%
 
 .kf-keep-content-line
-  padding: 10px 0
+  padding: 0
   width: 100%
+  display: table
+  padding-top: 14px
 
 .kf-keep-big-image
   margin: 4px 0 11px
@@ -196,8 +210,10 @@ keepBorderRadius = 3px
 
 .kf-keep-small-image
   display:table-cell
-  width: 200px
-  vertical-align: middle
+  width: 150px
+  vertical-align: top
+  padding-top: 5px
+  min-width: 90px
 
   @media screen and (min-width: 1150px) and (max-width: 1250px)
     width: 150px
@@ -223,26 +239,42 @@ keepBorderRadius = 3px
 
 .kf-keep-title
   max-width: 100%
-  font-size: 15px
-  font-weight: 200
+  font-size: 20px
+  font-weight: 500
   line-height: 24px
   font-smoothing: antialiased
+  word-break: break-word
 
   a[href]
     color: textBlackColor
+
+.kf-keep-loading
+  padding-right: 5px
 
 .kf-keep-subtitle
   line-height: 17px
 
 .kf-keep-description
-  font-size: 17px
-  line-height: 21px
-  margin-top: 10px
+  font-size: 16px
+  line-height: 23px
+  margin-top: 5px
   font-family: "Georgia", Arial, sans-serif
   font-smoothing: antialiased
   color: textBlackColor
   word-wrap: break-word
-  text-align: justify
+  word-break: break-word
+
+.kf-dyn-positioned
+  position: absolute
+  overflow: hidden
+  margin-right: 50px
+
+.kf-keep-description-sizer
+  position: absolute
+  visibility: hidden
+  z-index: -1
+  top: -999px
+  left: -999px
 
 .kf-keep-url
   display: inline-block
@@ -250,6 +282,7 @@ keepBorderRadius = 3px
   color: #99a3b3
   vertical-align: middle
   font-smoothing: antialiased
+  font-weight: 500
   long-text()
 
   .kf-keep.example &
@@ -292,11 +325,11 @@ input.kf-keep-tag-input
 
 input.kf-keep-tag-input
 .kf-keep-tag-opt
-  min-width: 40px
   long-text()
 
 input.kf-keep-tag-input
   width: 100%
+  min-width: 141px
 
 .kf-keep-tag
   display: inline-block
@@ -329,6 +362,7 @@ input.kf-keep-tag-input
   border-radius: 3px
   background-color: #fff
   z-index: 1
+  min-width: 153px
 
 .kf-keep-tag-opt
   cursor: pointer
@@ -415,11 +449,47 @@ input.kf-keep-tag-input
 .kf-keep.detailed .kf-keep-button-preview
   display: none
 
-.kf-keep-tag-list
-  border-top: separatorBorder
-
 .kf-tag-list>li
   display: inline-block
 
 .kf-keep-add-tag-button
   cursor: pointer
+
+.kf-keep-loader
+  position: relative
+  top: 2px
+  width: 16px
+  height: 16px
+  border-radius: 50%
+  display: inline-block
+  vertical-align: middle
+  background-color: #6fa6ef
+  margin: 0 8px 5px 0
+
+.kf-keep-loader
+.kf-keep-loader:before
+.kf-keep-loader:after
+    animation: 1s infinite linear
+
+.kf-keep-loader:before
+.kf-keep-loader:after
+    width: 100%
+    height: 100%
+    border-radius: 50%
+    position: absolute
+    top: 0
+    left: 0
+
+.kf-keep-loader
+  animation-name: kf-keep-loader
+
+@keyframes kf-keep-loader {
+  from {
+    transform: scale(0)
+    opacity: 1
+  }
+  to {
+    transform: scale(1)
+    opacity: 0
+  }
+}

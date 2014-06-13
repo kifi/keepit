@@ -140,6 +140,64 @@ angular.module('kifi.keepService', [
       });
     });
 
+    function processKeepAction(url, data, existingKeeps) {
+      $log.log('keepService.keep()', data);
+
+      return $http.post(url, data).then(function (res) {
+        var keeps = existingKeeps || res.data.keeps;
+        _.forEach(keeps, buildKeep);
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'keep'
+        });
+        prependKeeps(keeps);
+        return keeps;
+      });
+    }
+
+    function fetchFullKeepInfo(keep) {
+      keep.isLoading = true;
+      var url = routeService.getKeep(keep.id);
+      var config = {
+        params: { withFullInfo: true }
+      };
+
+      return $http.get(url, config).then(function (result) {
+        util.completeObjectInPlace(keep, result.data);
+        buildKeep(keep);
+        keep.isLoading = false;
+        return keep;
+      });
+    }
+
+    function insertKeeps(keeps, insertFn) {
+      // Check which keeps are already in the list
+      var existing = [];
+      var nonExisting = [];
+      keeps.forEach(function (keep) {
+        var isExisting = !!_.find(list, function (existingKeep) {
+          return keep.id === existingKeep.id;
+        });
+        if (isExisting) {
+          existing.push(keep);
+        } else {
+          nonExisting.push(keep);
+        }
+      });
+      insertFn.apply(list, nonExisting);
+      existing.forEach(function (keep) {
+        keep.unkept = false;
+      });
+      before = list.length ? list[list.length - 1].id : null;
+
+    }
+
+    function prependKeeps(keeps) {
+      insertKeeps(keeps, list.unshift);
+    }
+
+    function appendKeeps(keeps) {
+      insertKeeps(keeps, list.push);
+    }
 
     var api = {
       list: list,
@@ -147,7 +205,7 @@ angular.module('kifi.keepService', [
       buildKeep: buildKeep,
       
       lastSearchContext: function () {
-        return lastSearchContext;
+      return lastSearchContext;
       },
 
       getHighlighted: function () {
@@ -269,8 +327,7 @@ angular.module('kifi.keepService', [
             list.length = 0;
           }
 
-          list.push.apply(list, keeps);
-          before = list.length ? list[list.length - 1].id : null;
+          appendKeeps(keeps);
           return keeps;
         });
       },
@@ -322,38 +379,48 @@ angular.module('kifi.keepService', [
         });
       },
 
+      keepUrl: function (keepUrls, isPrivate) {
+        var url = env.xhrBase + '/keeps/add',
+          data = {
+            keeps: keepUrls.map(function (keepUrl) {
+              return {
+                url: keepUrl,
+                isPrivate: !!isPrivate
+              };
+            })
+          };
+
+        processKeepAction(url, data).then(function (keeps) {
+          var keep = keeps[0];
+          fetchFullKeepInfo(keep);
+          return keep;
+        });
+      },
+
       keep: function (keeps, isPrivate) {
         if (!(keeps && keeps.length)) {
           return $q.when(keeps || []);
         }
 
+        // true if we should override the current keeps' privacy settings
         var keepPrivacy = isPrivate == null;
-        isPrivate = !! isPrivate;
 
         var url = env.xhrBase + '/keeps/add',
           data = {
             keeps: keeps.map(function (keep) {
+              if (!keepPrivacy) {
+                // updated before the actual call
+                keep.isPrivate = !!isPrivate;
+              }
               return {
                 title: keep.title,
                 url: keep.url,
-                isPrivate: keepPrivacy ? !! keep.isPrivate : isPrivate
+                isPrivate: !!keep.isPrivate
               };
             })
           };
 
-        $log.log('keepService.keep()', data);
-
-        return $http.post(url, data).then(function () {
-          _.forEach(keeps, function (keep) {
-            keep.isMyBookmark = true;
-            keep.isPrivate = keepPrivacy ? !! keep.isPrivate : isPrivate;
-            keep.unkept = false;
-          });
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'keep'
-          });
-          return keeps;
-        });
+        return processKeepAction(url, data, keeps);
       },
 
       unkeep: function (keeps) {
@@ -495,6 +562,12 @@ angular.module('kifi.keepService', [
       getKeepsByTagId: function (tagId, params) {
         params = params || {};
         params.collection = tagId;
+        return api.getList(params);
+      },
+
+      getKeepsByHelpRank: function(helprank, params) {
+        params = params || {};
+        params.helprank = helprank;
         return api.getList(params);
       }
     };

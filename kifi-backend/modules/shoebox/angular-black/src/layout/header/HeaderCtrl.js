@@ -3,8 +3,8 @@
 angular.module('kifi.layout.header', ['kifi.profileService'])
 
 .controller('HeaderCtrl', [
-  '$scope', '$rootElement', 'profileService', '$location', 'util',
-  function ($scope, $rootElement, profileService, $location, util) {
+  '$scope', '$rootElement', '$rootScope', 'profileService', '$location', 'util',
+  function ($scope, $rootElement, $rootScope, profileService, $location, util) {
 
     $scope.toggleMenu = function () {
       $rootElement.toggleClass('kf-sidebar-active');
@@ -20,6 +20,10 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
 
     $scope.logout = function () {
       profileService.logout();
+    };
+
+    $scope.addKeeps = function () {
+      $rootScope.$emit('showGlobalModal', 'addKeeps');
     };
   }
 ]);

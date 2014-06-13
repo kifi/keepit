@@ -55,7 +55,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
-        $scope.data.showInstallErrorModal = true;
+        $rootScope.$emit('showGlobalModal', 'installExtensionError');
       });
     };
 

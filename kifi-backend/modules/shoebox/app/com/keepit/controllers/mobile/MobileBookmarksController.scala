@@ -30,8 +30,6 @@ class MobileBookmarksController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  implicit val writesKeepInfo = new FullKeepInfoWriter(sanitize = true)
-
   def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
     // todo(ray/eduardo): mobile helprank UI
     bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], None, count, request.userId, withPageInfo) map { res =>
@@ -39,7 +37,7 @@ class MobileBookmarksController @Inject() (
         "collection" -> res._1,
         "before" -> before,
         "after" -> after,
-        "keeps" -> res._2
+        "keeps" -> res._2.map(KeepInfo.fromFullKeepInfo(_, true))
       ))
     }
   }

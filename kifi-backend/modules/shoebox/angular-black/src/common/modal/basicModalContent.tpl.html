@@ -1,7 +1,7 @@
 <div class="dialog-content">
   <a class="dialog-x sprite-close-x-icon" ng-click="hideAndCancel()"></a>
   <div class="dialog-body-wrap">
-    <div class="dialog-header" ng-if="title.length" ng-bind-html="title"></div>
+    <h1 class="dialog-header" ng-if="title.length" ng-bind-html="title"></h1>
     <div class="dialog-body" ng-transclude ng-class="{'dialog-centered': centered}"></div>
   </div>
   <div class="dialog-buttons" ng-if="singleAction">

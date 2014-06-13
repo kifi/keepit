@@ -86,14 +86,9 @@
     color: #73787f
 
 .dialog-header
-  font-size: 18px
-  font-weight: 300
   padding: 9px 6px 8px
-  color: #3a495b
-  overflow: hidden
-  text-overflow: ellipsis
-  white-space: nowrap
   text-align: center
+  word-wrap: break-word
 
   &.dialog-warning
     color: #ce6159
@@ -109,16 +104,19 @@
 
 .dialog-buttons
   text-align: center
-  margin: 24px auto 30px
+  margin: 0px auto 20px
 
 .dialog-body-wrap
   min-width: 300px
-  margin: 40px 35px
+  max-width: 800px
+  margin: 40px 0px 5px
+  padding: 0px 35px
   color: #333
   font-size: 14px
 
   .dialog-body
     margin: 0 auto
+    padding: 0 0 20px
 
   .dialog-buttons
     margin-bottom: 0px

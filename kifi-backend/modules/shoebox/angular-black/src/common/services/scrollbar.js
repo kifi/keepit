@@ -42,7 +42,7 @@ angular.module('kifi.scrollbar', [])
       return w1 - w2;
     }
 
-    var antiWidth = null
+    var antiWidth = null;
     //var $ = angular.element;
 
     function scrollbarSize() {
