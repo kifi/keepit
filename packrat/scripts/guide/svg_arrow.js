@@ -1,8 +1,9 @@
 var SvgArrow = SvgArrow || (function (window, document) {
   'use strict';
 
-  var HEAD_WIDTH = 20;
-  var HEAD_LENGTH = HEAD_WIDTH / 2 * Math.sqrt(3);
+  var TAIL_WIDTH = 2;  // on one side
+  var HEAD_WIDTH = 10; // on one side
+  var HEAD_LENGTH = HEAD_WIDTH * Math.sqrt(3);
 
   function SvgArrow(tail, head, anchor, revealMs) {
     var o = computeBoxAndCurve(tail, head);
@@ -89,8 +90,8 @@ var SvgArrow = SvgArrow || (function (window, document) {
     | tail.el |  : o o o o .,          :
     |         |  : T         `o.,      :   <- dotted cubic Bézier curve
     '---------'  :               `o    :
-                 :              ---•---:   <- arrowhead axis is tangent to arc where they meet at G
-                 :               \ G / :
+                 :              •--•--•:   <- arrowhead axis is tangent to arc where they meet at G
+                 :             E \ F / G
                  :                \ /  :   <- orientation of both head and tail are configurable
                  : . . . . . . . . V . :         __
                                    H              |
@@ -105,31 +106,33 @@ var SvgArrow = SvgArrow || (function (window, document) {
     var rHead = head.rect || head.el.getBoundingClientRect();
     var tailAngleRad = Math.PI / 180 * tail.angle;
     var headAngleRad = Math.PI / 180 * head.angle;
+    var cosHeadAngle = Math.cos(headAngleRad);
+    var sinHeadAngle = Math.sin(headAngleRad);
     var T = pointOutsideRect(rTail, tail.along, tailAngleRad, tail.gap);
     var H = pointOutsideRect(rHead, head.along, headAngleRad + Math.PI, head.gap);
+    var Fx = H.x - HEAD_LENGTH * cosHeadAngle;
+    var Fy = H.y + HEAD_LENGTH * sinHeadAngle;
+    var Ex = Fx + HEAD_WIDTH * sinHeadAngle;
+    var Ey = Fy - HEAD_WIDTH * cosHeadAngle;
+    var Gx = Fx - HEAD_WIDTH * sinHeadAngle;
+    var Gy = Fy + HEAD_WIDTH * cosHeadAngle;
     minBox = minBox || {left: 1e5, top: 1e5, right: -1e5, bottom: -1e5};
-    var box = {
-      left: Math.min(minBox.left, -1 + Math.floor(Math.min(T.x, H.x) - HEAD_WIDTH / 2)),
-      top: Math.min(minBox.top, -1 + Math.floor(Math.min(T.y, H.y) - HEAD_WIDTH / 2)),
-      right: Math.max(minBox.right, 1 + Math.ceil(Math.max(T.x, H.x) + HEAD_WIDTH / 2)),
-      bottom: Math.max(minBox.bottom, 1 + Math.ceil(Math.max(T.y, H.y) + HEAD_WIDTH / 2))
-    };
-    var G = {
-      x: H.x - HEAD_LENGTH * Math.cos(headAngleRad),
-      y: H.y + HEAD_LENGTH * Math.sin(headAngleRad)
+    var f = Math.floor, c = Math.ceil;
+    var box = {  // checking tip of tail and 3 corners of head
+      left:   Math.min(minBox.left,   f(T.x - TAIL_WIDTH - 1), f(H.x - 1), f(Ex - 1), f(Gx - 1)),
+      top:    Math.min(minBox.top,    f(T.y - TAIL_WIDTH - 1), f(H.y - 1), f(Ey - 1), f(Gy - 1)),
+      right:  Math.max(minBox.right,  c(T.x + TAIL_WIDTH + 1), c(H.x + 1), c(Ex + 1), c(Gx + 1)),
+      bottom: Math.max(minBox.bottom, c(T.y + TAIL_WIDTH + 1), c(H.x + 1), c(Ey + 1), c(Gy + 1))
     };
     var curve = chooseCurve(
-      {x: T.x - box.left, y: T.y - box.top}, tailAngleRad,
-      {x: G.x - box.left, y: G.y - box.top}, Math.PI - headAngleRad);
+      {x: T.x - box.left, y: T.y - box.top}, -tailAngleRad,
+      {x: Fx - box.left, y: Fy - box.top}, Math.PI - headAngleRad);
     return {box: box, curve: curve};
   }
 
   function pointOutsideRect(r, along, theta, d) {
-    if (along == null) {
-      along = [.5, .5];
-    }
-    var Px = r.left + (r.right - r.left) * along[0];
-    var Py = r.top + (r.bottom - r.top) * along[1];
+    var Px = r.left + (r.right - r.left) * (along ? along[0] : .5);
+    var Py = r.top + (r.bottom - r.top) * (along ? along[1] : .5);
 
     // determine the two candidate edges (x = Cx and y = Cy)
     var sinTheta = Math.sin(theta);
@@ -330,7 +333,7 @@ var SvgArrow = SvgArrow || (function (window, document) {
   }
 
   function headPathData() {
-    return ['M', 0, - HEAD_WIDTH / 2, 'l', 0, HEAD_WIDTH, 'l', HEAD_LENGTH, -HEAD_WIDTH / 2, 'z'].join(' ');
+    return ['M', 0, -HEAD_WIDTH, 'l', 0, 2 * HEAD_WIDTH, 'l', HEAD_LENGTH, -HEAD_WIDTH, 'z'].join(' ');
   }
 
   function headTransform(x, y, phi) {
