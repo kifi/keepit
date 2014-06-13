@@ -72,9 +72,9 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
 
   private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
 
-  zkClient.onConnected{ _ =>
+  zkClient.onConnected{ zk =>
     log.info(s"ZKX registering watches")
-    watches.foreach{ case (key, handler) => watch(key)(handler) }
+    watches.foreach{ case (key, handler) => watch(key, Some(zk))(handler) }
   }
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
