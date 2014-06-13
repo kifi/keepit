@@ -12,7 +12,7 @@ import com.keepit.search.user.UserSearchResult
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.BasicUser
 
-class FakeSearchServiceClient() extends SearchServiceClientImpl(null, -1, null, null) {
+class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
 
   override def updateURIGraph(): Unit = {}
 

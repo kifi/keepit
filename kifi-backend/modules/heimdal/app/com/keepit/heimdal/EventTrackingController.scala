@@ -22,7 +22,7 @@ class EventTrackingController @Inject() (
   systemEventLoggingRepo: SystemEventLoggingRepo,
   anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
   nonUserEventLoggingRepo: NonUserEventLoggingRepo,
-  heimdalEventQueue: SQSQueue[HeimdalEvent],
+  heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
   airbrake: AirbrakeNotifier
 ) extends HeimdalServiceController {
 
@@ -40,8 +40,8 @@ class EventTrackingController @Inject() (
       case Success(result) => {
         try {
           result.map { sqsMessage =>
-            sqsMessage.consume { event =>
-              trackInternalEvent(event)
+            sqsMessage.consume { events =>
+              events foreach trackInternalEvent
             }
           }
         } catch {
@@ -57,6 +57,7 @@ class EventTrackingController @Inject() (
     }
   }
 
+  @deprecated(message = "use queue new, remove then all clients are upgraded", since = "event queue was introduced")
   def trackInternalEventAction = Action(parse.tolerantJson) { request =>
     SafeFuture{
       trackInternalEvent(request.body)

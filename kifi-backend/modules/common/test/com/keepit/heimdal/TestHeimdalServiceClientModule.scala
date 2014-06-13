@@ -6,7 +6,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class TestHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
-  def configure() {}
+  def configure() {
+    install(HeimdalQueueDevModule())
+  }
 
   @Singleton
   @Provides
