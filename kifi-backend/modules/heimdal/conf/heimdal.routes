@@ -5,9 +5,6 @@
 #INTERNAL ROUTES/Eliza
 ##########################################
 
-POST  /internal/heimdal/trackEvent        @com.keepit.heimdal.controllers.EventTrackingController.trackInternalEventAction()
-POST  /internal/heimdal/trackEvents       @com.keepit.heimdal.controllers.EventTrackingController.trackInternalEventsAction()
-
 GET   /internal/heimdal/:repo/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(repo: String, from: String ?= "", to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count", filter: String ?="none", as: String?="pie")
 
 GET   /internal/heimdal/:repo/rawEvents         @com.keepit.heimdal.controllers.AnalyticsController.rawEvents(repo:String, events: String ?="all", limit: Int ?= 10, window: Int ?= 24)
