@@ -16,7 +16,6 @@ import com.keepit.search.{ActiveExperimentsCache, ActiveExperimentsKey, SearchCo
 import com.keepit.social._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
-import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
@@ -27,11 +26,9 @@ import play.api.libs.json.Json._
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
-import com.keepit.graph.manager._
 import com.keepit.model._
 import com.keepit.model.ChangedURI
 import com.keepit.social.BasicUserUserIdKey
-import com.kifi.franz.QueueName
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -101,10 +98,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveBookmark(bookmark:Keep): Future[Keep]
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def savePageInfo(pageInfo:PageInfo):Future[PageInfo]
   def getImageInfo(id:Id[ImageInfo]):Future[ImageInfo]
   def saveImageInfo(imgInfo:ImageInfo):Future[ImageInfo]
-  def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?): Future[Boolean]
+  def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def getProxy(url:String):Future[Option[HttpProxy]]
@@ -614,10 +612,15 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
-  def saveNormalizedURI(uri:NormalizedURI): Future[NormalizedURI] = {
+  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = {
     call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[NormalizedURI]
     }
+  }
+
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = {
+    val json = Json.obj("state" -> state)
+    call(Shoebox.internal.updateNormalizedURI(uriId), json, callTimeouts = longTimeout, routingStrategy = leaderPriority).imap(_ => {})
   }
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
@@ -633,7 +636,7 @@ class ShoeboxServiceClientImpl @Inject() (
                           restriction: => Option[Restriction],
                           normalization: => Option[Normalization],
                           redirect: => Option[Id[NormalizedURI]],
-                          redirectTime: => Option[DateTime]): Future[Boolean] = {
+                          redirectTime: => Option[DateTime]): Future[Unit] = {
     import com.keepit.common.strings.OptionWrappedJsObject
     val safeUrlHash = Option(urlHash).map(p => Option(p.hash)).flatten
     val safeSeq = Option(seq).map(v => if (v.value == -1L) None else Some(v)).flatten
@@ -655,9 +658,7 @@ class ShoeboxServiceClientImpl @Inject() (
     )
     val payload = Json.obj(safeJsonParams: _*)
     val stripped = payload.stripJsNulls()
-    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = leaderPriority).map { resp =>
-      resp.json.asOpt[Boolean].getOrElse(false)
-    }
+    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = leaderPriority).imap(_ => {})
   }
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
