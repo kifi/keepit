@@ -18,7 +18,9 @@ trait HeimdalServiceClientModule extends ScalaModule
 
 case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
-  def configure() {}
+  def configure() {
+    install(HeimdalQueueProdModule())
+  }
 
   @Provides
   @AppScoped

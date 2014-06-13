@@ -11,14 +11,14 @@ trait HeimdalQueueModule extends ScalaModule {
   def configure() = {}
 }
 
-case class HeimdalQueueProdModule extends HeimdalQueueModule {
+case class HeimdalQueueProdModule() extends HeimdalQueueModule {
 
   @Singleton
   @Provides
-  def heimdalEventQueue(basicAWSCreds:BasicAWSCredentials): SQSQueue[HeimdalEvent] = {
+  def heimdalEventQueue(basicAWSCreds:BasicAWSCredentials): SQSQueue[Seq[HeimdalEvent]] = {
     val queueName = QueueName(current.configuration.getString("heimdal-events-queue-name").get)
     val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
-    client.formatted[HeimdalEvent](queueName)
+    client.formatted[Seq[HeimdalEvent]](queueName)
   }
 }
 
@@ -26,8 +26,8 @@ case class HeimdalQueueDevModule() extends HeimdalQueueModule {
 
   @Singleton
   @Provides
-  def heimdalEventQueue(): SQSQueue[HeimdalEvent] = {
-    new FakeSQSQueue[HeimdalEvent]{}
+  def heimdalEventQueue(): SQSQueue[Seq[HeimdalEvent]] = {
+    new FakeSQSQueue[Seq[HeimdalEvent]]{}
   }
 
 }

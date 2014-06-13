@@ -158,7 +158,6 @@ case class ShoeboxCacheProvider @Inject() (
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
-  override val port: Int,
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier,
   cacheProvider: ShoeboxCacheProvider)
