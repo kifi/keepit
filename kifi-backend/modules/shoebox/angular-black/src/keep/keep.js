@@ -378,19 +378,19 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           // element.find('.kf-keep-small-image img').width(asideWidth);
         }
 
-        scope.$on('resizeImage', function() {
-          sizeImage();
-        })
-
-        scope.$watch('keep', function() {
+        function maybeSizeImage() {
           if (scope.keep && scope.keep.summary) {
             var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
             var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
-            if (hasResonableDesc && hasImage) {
+            if (hasImage && hasSmallImage && scope.hasSmallImage()) {
               sizeImage();
             }
           }
-        });
+        }
+
+        scope.$on('resizeImage', maybeSizeImage);
+
+        scope.$watch('keep', maybeSizeImage);
 
         tagDragMask.on('dragenter', function () {
           scope.$apply(function () { scope.isDragTarget = true; });
