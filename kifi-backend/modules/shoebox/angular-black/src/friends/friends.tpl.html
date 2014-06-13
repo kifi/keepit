@@ -2,13 +2,14 @@
   <div class="friends-wrapper">
     <div class="friends">
       <h2>Kifi Friends <span ng-show="totalFriends() > 0">({{totalFriends()}})</span></h2>
-      <div kf-social-networks-status></div>
-      <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
-        <div class="bouncy-ball">
-          <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
-        </div> Importing your contacts
+      <div class="friends-networks-status">
+        <div kf-social-networks-status ng-if="!isRefreshingSocialGraph"></div>
+        <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
+          <div class="bouncy-ball">
+            <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+          </div> Importing your contacts
+        </div>
       </div>
-
       <div kf-social-invite-well show-find-friends="true"></div>
 
       <div kf-networks-need-attention></div>

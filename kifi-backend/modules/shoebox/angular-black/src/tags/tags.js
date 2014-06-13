@@ -14,7 +14,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 
             $timeout(function () {
               delete tag.isNew;
-            }, 3000);
+            }, 2600);
 
             return tag;
           });
@@ -111,7 +111,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           if (scope.highlight) {
             return scope.viewTag(scope.highlight.id);
           }
-          return scope.create(getFilterValue()).then(function (tag) {
+          return scope.createTag().then(function (tag) {
             scope.viewTag(tag.id);
           });
         };
@@ -311,6 +311,12 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
             scope.dehighlight();
             scope.clearFilter();
           }
+        };
+
+        scope.createTag = function () {
+          var q = scope.create(getFilterValue());
+          scope.blurFilter();
+          return q;
         };
       }
     };
