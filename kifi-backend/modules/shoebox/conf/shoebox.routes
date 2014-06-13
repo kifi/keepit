@@ -181,6 +181,7 @@ GET    /m/1/discover/                           @com.keepit.controllers.mobile.M
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
 GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
+GET     /helprank/:selector         @com.keepit.controllers.website.HomeController.homeWithParam(selector: String)
 GET     /friends                    @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite/facebook    @com.keepit.controllers.website.HomeController.home
