@@ -16,13 +16,12 @@ import play.api.libs.json.{Json}
 import com.keepit.common.db.Id
 import akka.actor.ActorSystem
 import com.keepit.social.NonUserKinds
-import com.keepit.dev.HeimdalFakeQueueModule
 
 class EventTrackingTest extends Specification with TestInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
-    Seq(TestMongoModule(), StandaloneTestActorSystemModule(), HeimdalFakeQueueModule())
+    Seq(TestMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule())
   }
 
   def setup()(implicit injector: Injector) = {
