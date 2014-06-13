@@ -2,32 +2,36 @@
 // @require scripts/html/guide/step_1.js
 
 guide.step1 = guide.step1 || function () {
+  'use strict';
   var showStep, observer;
   var steps = [
     {
       lit: '.kifi-tile-card',
       pad: [20, 40],
       arrow: {from: {angle: 0, gap: 10}, to: {angle: -70, gap: 10}},
-      ev: {type: 'mouseover', target: '.kifi-tile-keep'},
+      allow: {type: 'mouseover', target: '.kifi-tile-keep'},
       pos: {bottom: 150, right: 160}
     },
     {
       lit: '.kifi-keep-card',
       pad: [10, 20, 60, 60],
       arrow: {from: {angle: 0, gap: 10}, to: {angle: -90, gap: 10}},
-      ev: {type: 'click', target: '.kifi-keep-btn', proceed: true},
+      allow: {type: 'click', target: '.kifi-keep-btn', proceed: true},
       substep: {arrow: 'move'}
     },
     {
       afterTransition: '.kifi-kept-side',
       arrow: {from: {angle: 0, gap: 10}, to: {angle: -70, gap: 10, sel: '.kifi-kept-tag'}},
-      ev: {type: 'click'}
+      allow: {type: 'click', target: '.kifi-kept-tag'}
     },
     {
       lit: '.kifi-tagbox',
       pad: [0, 10, 20],
       arrow: {from: {angle: -90, gap: 16}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-suggestion[data-name=Recipe]'}},
-      ev: {type: 'click', target: '.kifi-tagbox-suggestion', allow: 'mouse'},
+      allow: [
+        {type: 'click', target: '.kifi-tagbox-suggestion'},
+        {type: /^mouse/, target: '.kifi-tagbox-suggestion'}
+      ],
       substep: {arrow: 'new'},
       pos: {bottom: 230, right: 400}
     },

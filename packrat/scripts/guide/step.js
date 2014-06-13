@@ -20,7 +20,7 @@ guide.step = guide.step || function () {
       steps = steps_;
       opts = opts_;
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
-      $stage = $(render('html/guide/step_' + opts.page)).appendTo('body');
+      $stage = $(render('html/guide/step_' + opts.page, me)).appendTo('body');
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
       $steps.find('.kifi-guide-steps-x').click(hide);
       $(window).on('resize.guideStep', onWinResize);
@@ -201,13 +201,16 @@ guide.step = guide.step || function () {
     }, {opacity: 1, ms: ms});
   }
 
-  function onWinResize() {
-    var i = stepIdx, step, rect;
-    do {
-      step = steps[i--];
-    } while (!step.lit);
-    if (step && (rect = getRect(step.lit))) {
-      animateSpotlightTo(rect, step.pad, 1);
+  function onWinResize(e) {
+    if (spotlight.wd.w !== window.innerWidth ||
+        spotlight.wd.h !== window.innerHeight) {
+      var i = stepIdx, step, rect;
+      do {
+        step = steps[i--];
+      } while (!step.lit);
+      if (step && (rect = getRect(step.lit))) {
+        animateSpotlightTo(rect, step.pad, 1);
+      }
     }
   }
 
@@ -224,22 +227,26 @@ guide.step = guide.step || function () {
   }
 
   function screenEvent(e) {
-    var step = stepIdx != null && steps[stepIdx], className;
-    if (step && step.ev && (e.type === step.ev.type || step.ev.allow && e.type.lastIndexOf(step.ev.allow, 0) === 0) &&
-        e.target[MATCHES](step.ev.target || step.arrow.to.sel)) {
+    var step = stepIdx != null && steps[stepIdx];
+    if (step && step.allow && (proceed = allowEvent(e, step.allow)) != null) {
       // do not interfere
-      if (e.type === step.ev.type && step.ev.proceed) {
+      if (proceed) {
         showStep(stepIdx + 1);
       }
-    } else if (typeof (className = e.target.className) === 'string' && className.lastIndexOf('kifi-guide', 0) === 0) {
+    } else if (/^(?:mousedown|mouseup|click)$/.test(e.type) && e.target[MATCHES]('a[href][class^=kifi-guide]')) {
       // do not interfere
       if (e.type === 'click' && e.target.classList.contains('kifi-guide-next')) {
         (opts.next || api.noop)(e, stepIdx);
       }
     } else if (e.type === 'keydown') {
-      if (e.keyCode === 27 && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        hide();
-      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && ~[75,79,83].indexOf(e.keyCode)) {  // kifi shortcuts
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && e.keyCode !== 9) { // allow browser shortcuts, tab
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.keyCode === 27) { // esc
+          hide();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && ~[75,79,83].indexOf(e.keyCode)) {  // block kifi shortcuts
+        e.preventDefault();
         e.stopImmediatePropagation();
       }
     } else {
@@ -247,6 +254,22 @@ guide.step = guide.step || function () {
         e.preventDefault();
       }
       e.stopImmediatePropagation();
+    }
+  }
+
+  // returns true (allow and proceed), false (allow but do not proceed), or undefined (do not allow)
+  function allowEvent(e, crit) {
+    if ('length' in crit) {
+      for (var i = 0; i < crit.length; i++) {
+        var proceed = allowEvent(e, crit[i]);
+        if (proceed != null) {
+          return proceed;
+        }
+      }
+    } else if (!crit.type || crit.type.test ? crit.type.test(e.type) : crit.type === e.type) {
+      if (e.target[MATCHES](crit.target) && (!crit.unless || !crit.unless(e))) {
+        return !!crit.proceed;
+      }
     }
   }
 
