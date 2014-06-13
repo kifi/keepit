@@ -60,7 +60,7 @@ class UriNormalizationUpdater @Inject() (
           if (thereIsMore) checkAndUpdate(remoteSequenceNumberOpt)
         }
       }
-      case _ =>
+      case _ => updateLock.unlock()
     }
 
   }
