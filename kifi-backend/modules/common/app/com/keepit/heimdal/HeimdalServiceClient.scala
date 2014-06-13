@@ -75,7 +75,7 @@ class HeimdalClientActor @Inject() (
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
 
   val batchingConf = HeimdalBatchingConfiguration
-  def processBatch(events: Seq[HeimdalEvent]): Unit = call(Heimdal.internal.trackEvents, Json.toJson(events)) //heimdalEventQueue.send(events)
+  def processBatch(events: Seq[HeimdalEvent]): Unit = heimdalEventQueue.send(events)
   def getEventTime(event: HeimdalEvent): DateTime = event.time
 }
 
