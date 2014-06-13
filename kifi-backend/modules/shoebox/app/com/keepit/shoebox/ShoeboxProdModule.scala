@@ -33,11 +33,10 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   externalServiceModule = ProdExternalServiceModule()
 ) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn =
-      if (DiscoveryModule.isCanary) // canary listens on shoebox
-        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.SHOEBOX :: Nil
-      else
-        ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: Nil
-  }
+  private val servicesToListenOn =
+    if (DiscoveryModule.isCanary) // canary listens on shoebox
+      ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.SHOEBOX :: Nil
+    else
+      ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: Nil
+  val discoveryModule = new ProdDiscoveryModule(ServiceType.SHOEBOX, servicesToListenOn)
 }

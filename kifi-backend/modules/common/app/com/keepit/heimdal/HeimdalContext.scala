@@ -13,7 +13,7 @@ import com.keepit.common.mail.ElectronicMail
 import com.keepit.social.SocialNetworkType
 import scala.util.Try
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.amazon.{MyAmazonInstanceInfo, AmazonInstanceInfo}
+import com.keepit.common.amazon.{MyInstanceInfo, AmazonInstanceInfo}
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -102,7 +102,7 @@ class HeimdalContextBuilder {
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build : HeimdalContext = HeimdalContext(data.toMap)
 
-  def addServiceInfo(thisService: FortyTwoServices, myAmazonInstanceInfo: MyAmazonInstanceInfo): Unit = {
+  def addServiceInfo(thisService: FortyTwoServices, myAmazonInstanceInfo: MyInstanceInfo): Unit = {
     this += ("serviceVersion", thisService.currentVersion.value)
     this += ("serviceInstance", myAmazonInstanceInfo.info.instanceId.id)
     this += ("serviceZone", myAmazonInstanceInfo.info.availabilityZone)
@@ -192,7 +192,7 @@ class HeimdalContextBuilder {
 @Singleton
 class HeimdalContextBuilderFactory @Inject() (
     thisService: FortyTwoServices,
-    myAmazonInstanceInfo: MyAmazonInstanceInfo) {
+    myAmazonInstanceInfo: MyInstanceInfo) {
 
   def apply(): HeimdalContextBuilder = {
     val contextBuilder = new HeimdalContextBuilder()
