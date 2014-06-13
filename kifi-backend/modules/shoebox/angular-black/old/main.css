@@ -663,7 +663,7 @@ a.profile-email-address-add-save:active {
 }
 
 a.profile-change-password-title-wrapper {
-  display: block;
+  display: inline-block;
   color: #9FB1C3;
   font-size: 15px;
   padding: 5px 0;
