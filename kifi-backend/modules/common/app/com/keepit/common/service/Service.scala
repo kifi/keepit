@@ -2,7 +2,6 @@ package com.keepit.common.service
 
 import java.net.URL
 import com.keepit.common.time._
-import play.api.Play
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
@@ -10,22 +9,22 @@ import play.api.Mode
 import play.api.Mode._
 import play.api.libs.json._
 import scala.concurrent.{Future, promise}
-import com.keepit.common.amazon.{AmazonInstanceType, AmazonInstanceInfo}
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.inject.FortyTwoConfig
 
 object ServiceVersion {
   val pattern = """([0-9]{8})-([0-9]{4})-([0-9a-zA-Z_\-]*)-([0-9a-z]*)""".r
 }
 
-case class ServiceVersion(val value: String) {
-  override def toString(): String = value
+case class ServiceVersion(value: String) {
+  override def toString: String = value
   val ServiceVersion.pattern(date, time, branch, hash) = value
 }
 
-sealed abstract class ServiceType(val name: String, val shortName: String, val isCanary: Boolean = false) {
+sealed abstract class ServiceType(val name: String, val shortName: String, val loadFactor: Int = 1, val isCanary: Boolean = false) {
   def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
-  override def toString(): String = name
+  override def toString: String = name
 
   val minInstances  : Int = 1
   val warnInstances : Int = 2
@@ -34,9 +33,9 @@ sealed abstract class ServiceType(val name: String, val shortName: String, val i
 object ServiceType {
   case object SHOEBOX extends ServiceType("SHOEBOX", "SB")
   case object ELIZA extends ServiceType("ELIZA", "EZ")
-  case object HEIMDAL extends ServiceType("HEIMDAL", "HD")
+  case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2)
   case object ABOOK extends ServiceType("ABOOK", "AB")
-  case object SCRAPER extends ServiceType("SCRAPER", "SC")
+  case object SCRAPER extends ServiceType("SCRAPER", "SC", loadFactor = 5)
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")
   case object SEARCH extends ServiceType("SEARCH", "SR") {
@@ -48,7 +47,7 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
-  case object GRAPH extends ServiceType("GRAPH", "GR") {
+  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2) {
     override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
       val capabilities = instance.capabilities
       if (capabilities.contains("backup") && !capabilities.contains("discovery")) ServiceStatus.BACKING_UP else ServiceStatus.UP
@@ -57,18 +56,18 @@ object ServiceType {
     override val minInstances = 0
     override val warnInstances = 0
   }
-  case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", true) {
+  case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", loadFactor = 1, true) {
     override val minInstances = 0
     override val warnInstances = 0
   }
 
-  case object CORTEX extends ServiceType("CORTEX", "CT")
+  case object CORTEX extends ServiceType("CORTEX", "CT", loadFactor = 5)
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
   lazy val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: Nil
   lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
   lazy val all: List[ServiceType] = inProduction ::: notInProduction
-  lazy val fromString: Map[String, ServiceType] = all.map(serviceType => (serviceType.name -> serviceType)).toMap
+  lazy val fromString: Map[String, ServiceType] = all.map(serviceType => serviceType.name -> serviceType).toMap
 
   implicit def format[T]: Format[ServiceType] = Format(
     __.read[String].map(fromString),
