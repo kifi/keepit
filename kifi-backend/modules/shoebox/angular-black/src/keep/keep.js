@@ -323,20 +323,20 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var $sizer = angular.element('.kf-keep-description-sizer').text(scope.keep.summary.description);
           var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
           var w_c = element.find('.kf-keep-contents').width();
-          var optimalWidth = Math.floor(w_c * 0.45);
+          var optimalWidth = Math.floor(w_c * 0.45); // ideal image size is 45% of card
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
-              return $sizer.css('width', width).outerHeight(true);
+              return $sizer.css('width', width).outerHeight(true) + 25; // subtitle is 25px
             }
             var aspR = img.w / img.h;
             var w_t = guessWidth;
             var w_a = w_c - w_t;
-            var w_i = w_a - 15;
+            var w_i = w_a;
             var h_i = w_i / aspR;
             var h_t = tryWidth(w_t);
             var delta = (h_t - h_i);
-            var score = Math.abs(delta) + 0.3 * Math.abs(optimalWidth - w_i);
+            var score = Math.abs(delta) + 0.3 * Math.abs(optimalWidth - w_i); // 30% penalty for distance away from optimal width
             if (h_i > img.h) {
               score += (h_i - img.h);
             }
@@ -347,7 +347,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           }
 
           var i = 0;
-          var low = 200, high = w_c - 80;
+          var low = 200, high = w_c - 80; // text must be minimum 200px wide, max total-80
           var guess = (high - low) / 2 + low;
           var res = calcHeightDelta(guess);
           var bestRes = res;

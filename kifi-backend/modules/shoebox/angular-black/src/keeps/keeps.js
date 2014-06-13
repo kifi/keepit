@@ -65,7 +65,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.addingTag = {enabled: false};
 
         scope.keepClickAction = function (event, keep) {
-          if (event.metaKey && event.target.tagName !== 'A') {
+          if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
             if (!scope.editMode.enabled) {
               scope.toggleEdit(true);
             }
