@@ -116,8 +116,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
-  def getUserConnectionsChanged(seq: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
-  def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
+  def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
+  def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
@@ -552,7 +552,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = {
-    call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq)).map{ r =>
+    call(Shoebox.internal.getNormalizedUriUpdates(lowSeq, highSeq), callTimeouts = longTimeout).map{ r =>
       var m = Vector.empty[(Id[NormalizedURI], NormalizedURI)]
       r.json match {
         case jso: JsValue => {
@@ -761,8 +761,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
-    call(Shoebox.internal.getSearchFriendsChanged(seq, fetchSize), callTimeouts = longTimeout).map{ r =>
+  def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
+    call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map{ r =>
       Json.fromJson[Seq[SearchFriend]](r.json).get
     }
   }
@@ -841,12 +841,12 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = {
-    call(Shoebox.internal.getIndexableSocialConnections(seqNum, fetchSize)).map { r =>
+    call(Shoebox.internal.getIndexableSocialConnections(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[IndexableSocialConnection]]
     }
   }
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = {
-    call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize)).map { r =>
+    call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[SocialUserInfo]]
     }
   }
