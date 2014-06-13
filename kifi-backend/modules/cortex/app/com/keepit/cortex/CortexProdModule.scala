@@ -18,7 +18,5 @@ extends CortexModule(
   modelModule =  CortexProdModelModule(),
   ldaInfoModule = LDAInfoStoreProdModule()
 ) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SHOEBOX :: Nil
-  }
+  val discoveryModule = new ProdDiscoveryModule(ServiceType.CORTEX, ServiceType.SHOEBOX :: Nil)
 }

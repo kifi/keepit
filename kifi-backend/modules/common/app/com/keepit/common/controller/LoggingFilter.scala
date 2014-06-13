@@ -14,7 +14,7 @@ import play.api.Play
 import play.mvc.Http.Status
 import play.api.libs.iteratee.{Done, Iteratee, Enumerator}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.amazon.MyAmazonInstanceInfo
+import com.keepit.common.amazon.MyInstanceInfo
 
 class LoggingFilter() extends EssentialFilter {
 
@@ -22,7 +22,7 @@ class LoggingFilter() extends EssentialFilter {
   lazy val accessLog = global.injector.instance[AccessLog]
   lazy val discovery = global.injector.instance[ServiceDiscovery]
   lazy val airbrake = global.injector.instance[AirbrakeNotifier]
-  lazy val myAmazonInstanceInfo = global.injector.instance[MyAmazonInstanceInfo]
+  lazy val myAmazonInstanceInfo = global.injector.instance[MyInstanceInfo]
   lazy val midFlightRequests = global.injector.instance[MidFlightRequests]
 
   def apply(next: EssentialAction) = new EssentialAction {
