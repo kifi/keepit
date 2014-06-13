@@ -329,7 +329,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
-              return $sizer.css('width', width).outerHeight(true) + 25; // subtitle is 25px
+              $sizer[0].style.width = width;
+              return $sizer[0].offsetHeight + 25; // subtitle is 25px
             }
             var imageWidth = cardWidth - guessWidth;
             var imageHeight = imageWidth / (img.w / img.h);
@@ -364,18 +365,16 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var linesToShow = Math.floor((bestRes.hi / 23)); // line height
           var calcTextHeight = linesToShow * 23;
 
-          element.find('.kf-keep-small-image').height(bestRes.hi);
-
-          element.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-          element.find('.kf-keep-info').css({
-            'width': calcTextWidth + '%',
-            'height': calcTextHeight + 'px'
-          }).addClass('kf-dyn-positioned')
-          .find('.kf-keep-description')
-          .css('margin-right', '40px');
-
-          // element.find('.kf-keep-small-image').width('auto');
-          // element.find('.kf-keep-small-image img').width(asideWidth);
+          scope.keep.sizeCard = function () {
+            element.find('.kf-keep-small-image').height(bestRes.hi);
+            element.find('.kf-keep-small-image').width(asideWidthPercent + '%');
+            element.find('.kf-keep-info').css({
+              'width': calcTextWidth + '%',
+              'height': calcTextHeight + 'px'
+            }).addClass('kf-dyn-positioned')
+            .find('.kf-keep-description')
+            .css('margin-right', '40px');
+          };
         }
 
         scope.$on('resizeImage', function() {
@@ -387,7 +386,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
             var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
             if (hasImage && hasResonableDesc && scope.hasSmallImage()) {
-              sizeImage();
+              scope.keep.sizeCard = null;
+              scope.keep.calcSizeCard = sizeImage;
             }
           }
         }
