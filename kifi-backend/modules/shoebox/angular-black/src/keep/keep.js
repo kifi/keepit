@@ -382,7 +382,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           if (scope.keep && scope.keep.summary) {
             var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
             var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
-            if (hasImage && hasSmallImage && scope.hasSmallImage()) {
+            if (hasImage && hasResonableDesc && scope.hasSmallImage()) {
               sizeImage();
             }
           }
