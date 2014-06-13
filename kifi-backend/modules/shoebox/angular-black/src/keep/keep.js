@@ -320,11 +320,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             return;
           }
 
-          scope.keep.summary.description = scope.keep.summary.description.substring(0, 500);
-
           var $sizer = angular.element('.kf-keep-description-sizer').text(scope.keep.summary.description);
+          $sizer[0].style.width = '';
+
           var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
-          var cardWidth = element.find('.kf-keep-contents').width();
+          var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
           var optimalWidth = Math.floor(cardWidth * 0.45); // ideal image size is 45% of card
 
           function calcHeightDelta(guessWidth) {
@@ -373,7 +373,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
               'height': calcTextHeight + 'px'
             }).addClass('kf-dyn-positioned')
             .find('.kf-keep-description')
-            .css('margin-right', '40px');
+            .css('margin-right', '60px');
           };
         }
 
