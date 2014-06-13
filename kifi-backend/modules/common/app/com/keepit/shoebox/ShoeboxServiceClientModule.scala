@@ -23,7 +23,6 @@ case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
     airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
-      current.configuration.getInt("service.shoebox.port").get,
       client, airbrakeNotifier, cacheProvider
     )
   }
