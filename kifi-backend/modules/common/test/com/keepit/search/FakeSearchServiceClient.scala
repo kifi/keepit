@@ -22,9 +22,9 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def reindex(): Unit = {}
 
-  override def reindexUsers: Unit = {}
+  override def reindexUsers(): Unit = {}
 
-  override def updateUserIndex: Unit = {}
+  override def updateUserIndex(): Unit = {}
 
   override def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] =
     Future.successful(SharingUserInfo(sharingUserIds = Set(Id[User](1)), keepersEdgeSetSize = 1))
