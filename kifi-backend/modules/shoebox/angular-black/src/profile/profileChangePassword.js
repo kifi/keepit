@@ -45,7 +45,7 @@ angular.module('kifi.profileChangePassword', ['util', 'kifi.profileService'])
             scope.errorMessage = '';
             profileService.sendChangePassword(scope.inputs.oldPassword, scope.inputs.newPassword1)
               .then(function () {
-                scope.successMessage = 'Password updated!';
+                scope.successMessage = 'Your password was successfully updated!';
                 scope.inputs = {};
                 scope.toggle();
               }, function (result) {

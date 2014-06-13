@@ -89,7 +89,6 @@ a.profile-image-change
 
 .profile-input-wrapper
   padding-bottom: 1px
-  border-bottom: 1px solid #d2dae3
   margin-bottom: 19px
   margin-top: 25px
 
@@ -116,6 +115,7 @@ a.profile-image-change
 
 .profile-input-placeholder
 input.profile-input-input
+.profile-input-password
   height: 29px
   display: block
   font: inherit
@@ -127,13 +127,32 @@ input.profile-input-input
   padding: 6px 2px
   background-color: transparent
   box-sizing: border-box
-  transition: all .3s ease
 
+.profile-input-placeholder
+input.profile-input-input
+  border-bottom: 1px solid #d2dae3
+  padding-right: 58px
+  transition: all .3s ease
 
 input.profile-input-input:focus
   padding-left: 7px
-  padding-right: 7px
-  background-color: #e2edfb
+  border: 1px solid blueColor
+  border-radius: 2px
+
+input.profile-input-password
+  padding: 6px
+  border: 1px solid #d2dae3
+  border-radius: 2px
+  margin-top: 10px
+
+  &::-webkit-input-placeholder
+    font-style: normal
+  &:-moz-placeholder
+    font-style: normal
+  &::-moz-placeholder
+    font-style: normal
+  &:-ms-input-placeholder
+    font-style: normal
 
 .input-error
   position: absolute
@@ -154,7 +173,7 @@ input.profile-input-input:focus
     margin-left: -10px
     border-style: solid
     border-width: 0 10px 8px
-    border-color: transparent transparent #c1c1c1
+    border-color: transparent transparent #ed7071
     font-size: 0
 
   .error-header
@@ -211,14 +230,10 @@ a.profile-input-edit
     display: block
 
 a.profile-input-save
-  background-color: #b7ce84
+  background-color: greenColor
 
   &:hover
-  &:focus
-    background-color: #C4DB91
-
-  &:active
-    background-color: #9EB56B
+    background-color: clearGreenColor
 
   .profile-input-box &
     display: block
@@ -244,26 +259,50 @@ a.profile-email-pending-cancel
 .profile-email-addresses
   margin-top: 25px
 
-.profile-setting-arrow-right
-.profile-setting-arrow-down
-  display: block
-  background-repeat: no-repeat
-  float: left
-  width: 10px
-  height: 10px
-  padding: 4px
-  padding-right: 2px
+.profile-setting-arrow
+  position: relative
+  overflow: hidden
+  display: inline-block
+  width: 13px
+  height: 13px
   vertical-align: middle
+  top: -1px
 
-.profile-setting-arrow-right
-  background-image: url(../img/arrow-gray-right.png)
-  background-position: 4px 4px
-  background-size: 6px 10px
+  &.active
+    transform: rotate(90deg)
+    transition: all 0.3s
 
-.profile-setting-arrow-down
-  background-image: url(../img/arrow-gray-down.png)
-  background-size: 10px 6px
-  background-position: 0 7px
+    &:before
+      background-color: blueColor
+      transition: all 0.3s
+
+.profile-setting-arrow:before
+  content: ''
+  background-color: textGreyColor
+  transform: rotate(45deg)
+  width: 9px
+  height: 9px
+  position: absolute
+  top: 2px
+  left: 0
+
+.profile-setting-arrow:after
+  content: ''
+  position: absolute
+  top: 0
+  left: 0
+  width: 35%
+  height: 100%
+  background-color: #fff
+
+.profile-email-addresses-title
+.profile-change-password-title
+  display: inline-block
+  margin-left: 6px
+
+  &.active
+    color: darkBlueColor
+    transition: all 0.3s
 
 a.profile-email-addresses-title-wrapper
   display: block
@@ -273,63 +312,96 @@ a.profile-email-addresses-title-wrapper
   margin-top: 10px
   letter-spacing: 0.8px
 
+.profile-email-address-manage
+.profile-change-password-change
+
+  &.ng-hide-remove
+    transition: max-height 0.3s 0.15s linear
+    display: block !important
+    overflow: hidden
+
+  &.ng-hide-add.ng-hide-add-active
+  &.ng-hide-remove
+    max-height: 0
+
+  &.ng-hide-add
+  &.ng-hide-remove.ng-hide-remove-active
+    max-height: 400px
+
 .profile-email-address-manage-description
-  color: #c4cfd9
+  color: textDarkColor
   font-size: 13px
   font-weight: 200
   letter-spacing: 0.5px
+  padding: 20px
+  margin-top: 10px
+  line-height: 1.8em
+
+.profile-email-address-manage-footer
+  height: 5px
+  margin-top: 30px
+
+.profile-email-address-manage-description
+.profile-email-address-manage-footer
+  background-color: #fafafa
 
 .profile-email-address-list
 a.profile-email-address-add
-  font-size: 15px
+  font-size: 14px
   color: #a7aaa9
   font-weight: 200
   letter-spacing: 0.8px
 
 a.profile-email-address-add
   display: block
-  padding: 4px 0
+  padding: 10px 0 0 10px
 
 .profile-email-address-list
   margin-top: 10px
+  list-style: initial
+  line-height: 2em
+  padding-left: 20px
 
 .profile-email-address-item
   position: relative
   padding: 4px 0
 
 .profile-email-address-item-primary
+  color: greenColor
+  font-weight: 500
+
+.profile-email-address-item-primary
 .profile-email-address-item-pending-primary
   display: inline
 
+.profile-email-address-item-email
+  word-wrap: break-word
+
 .profile-email-address-item-email-important
-  font-weight: bold
+  font-weight: 500
 
 .profile-email-address-item-unverified a
   color: #a7aaa9
   text-decoration: underline
 
 .profile-email-address-item-arrow
-  position: absolute
-  display: block
-  top: 5px
-  right: 0
-  display: block
-  background-image: url(../img/arrow-gray-down.png)
-  background-repeat: no-repeat
-  background-position: 3px 6px
-  background-size: 10px 6px
-  width: 10px
-  height: 10px
-  padding: 3px
-  background-color: #FFF
-  border: 1px solid #CCC
+  display: inline-block
   vertical-align: middle
   cursor: pointer
+  margin-left: 5px
+  position: relative
+
+.profile-email-address-item-arrow-image
+  width: 15px
+  position: relative
+  top: -2px
 
 .profile-email-address-item-dropdown
+  line-height: 1.3em
+  border-radius: 3px
   position: absolute
   top: 100%
-  right: -1px
+  right: 0
   background: white
   border: 1px solid #cccccc
   z-index: 1
@@ -369,6 +441,8 @@ input.profile-email-address-add-input
   padding: 6px 7px
   box-sizing: border-box
   transition: all .3s ease
+  padding-right: 58px
+  border-radius: 2px
 
 a.profile-email-address-add-save
   position: absolute
@@ -409,27 +483,25 @@ a.profile-change-password-title-wrapper
   .profile-change-password.opened &
     display: block
 
-.profile-new-password
-  margin-bottom: 10px
-
 a.profile-change-password-save
   font-size: 12px
   line-height: 17px
   display: inline-block
   width: 132px
   padding: 6px 0
-  margin: 10px 0
+  margin: 4px 0
   color: white
-  background-color: #b8c5d1
+  background-color: greenColor
   border-radius: 2px
   text-align: center
   transition: background 0.2s ease
 
   &:hover
-    background-color: #C5D2DE
+    background-color: clearGreenColor
 
 .profile-change-password-message
 .profile-change-password-error
+  margin-top: 10px
 
 .profile-change-password-message
   color: #333
@@ -438,8 +510,9 @@ a.profile-change-password-save
   color: #ed7071
 
 .profile-change-password-success
-  margin-left: 16px
-  color: #b7ce84
+  margin-top: 5px
+  margin-left: 20px
+  color: greenColor
 
 .profile-section
   padding: 20px 0 30px 27px
