@@ -60,7 +60,7 @@ class UriNormalizationUpdater @Inject() (
           if (thereIsMore) checkAndUpdate(remoteSequenceNumberOpt)
         }
       }
-      case None => log.info(s"ZKX Renormalization: No remote sequence number available!")
+      case _ =>
     }
 
   }
