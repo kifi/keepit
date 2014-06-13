@@ -2,7 +2,7 @@
   <div class="kf-nav-group-name">TAGS</div>
   <div class="kf-tag-input-box" ng-class="{'focused': isFilterFocused}">
     <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
-    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilter()">
+    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilte()">
   </div>
   <div class="kf-tag-list-hidden"></div>
 
@@ -12,10 +12,10 @@
       <!-- this introduces entertaining bugs - commenting out for now -->
       <!--<li kf-tag-item class="kf-tag-fake-reorder-last" fake index="{{tags.length}}" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx"></li>-->
     </ul>
-    <div class="kf-tag-new" ng-show="showAddTag()" ng-click="create(filter.name)">
+    <div class="kf-tag-new" ng-show="showAddTag()" ng-click="createTag()">
       <div class="kf-tag-new-inner" ng-class="{ highlight: isHighlightNew() }">
         <div class="kf-tag-new-icon">
-          <div class="sprite sprite-tag-add-plus-default"></div>
+          <div class="sprite sprite-tag-add-plus"></div>
         </div>
         <div class="kf-tag-new-contents">
           <div class="kf-tag-caption">Add as a new tag:</div>

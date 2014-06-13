@@ -378,7 +378,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           // element.find('.kf-keep-small-image img').width(asideWidth);
         }
 
-        function maybeSizeImage() {
+        scope.$on('resizeImage', function() {
+          sizeImage();
+        });
+
+        scope.$watch('keep', function() {
           if (scope.keep && scope.keep.summary) {
             var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
             var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
