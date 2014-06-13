@@ -16,7 +16,7 @@ case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
       httpClient: HttpClient,
       serviceCluster: ServiceCluster,
       airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
-    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient, airbrakeNotifier, shoeboxCacheProvided)
+    new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided)
 }
 
 case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
