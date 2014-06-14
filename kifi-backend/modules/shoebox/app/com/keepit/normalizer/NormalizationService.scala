@@ -39,7 +39,9 @@ class NormalizationServiceImpl @Inject() (
       val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(uriWithStandardPrenormalization))
       val prenormalizedUri = uriWithPreferredSchemeOption getOrElse uriWithStandardPrenormalization
       prenormalizedUri.toString
-    }.recoverWith { case cause: Throwable => Failure(PrenormalizationException(cause)) }
+    }.recoverWith {
+      case cause: Throwable => Failure(PrenormalizationException(cause))
+    }
   }
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {
