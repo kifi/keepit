@@ -3,8 +3,8 @@
 angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
-  '$scope', '$timeout', 'profileService', 'keepService', 'tagService',
-  function ($scope, $timeout, profileService, keepService, tagService) {
+  '$scope', 'profileService', 'keepService', 'tagService',
+  function ($scope, profileService, keepService, tagService) {
     $scope.me = profileService.me;
     $scope.data = {draggedKeeps: []};
 
@@ -38,8 +38,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$window',
-  function (keepService, $window) {
+  'keepService', '$window', '$timeout',
+  function (keepService, $window, $timeout) {
 
     return {
       restrict: 'A',
@@ -152,8 +152,24 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         function resizeWindowListener() {
           if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
             lastSizedAt = $window.innerWidth;
-            scope.$broadcast('resizeImage');
+            sizeKeeps();
           }
+        }
+
+        function sizeKeeps() {
+          scope.$broadcast('resizeImage');
+          $timeout(function () {
+            scope.keeps.forEach(function (keep) {
+              if (keep.calcSizeCard) {
+                keep.calcSizeCard();
+              }
+            });
+            scope.keeps.forEach(function (keep) {
+              if (keep.sizeCard) {
+                keep.sizeCard();
+              }
+            });
+          });
         }
 
         var lazyResizeListener = _.debounce(resizeWindowListener, 250);

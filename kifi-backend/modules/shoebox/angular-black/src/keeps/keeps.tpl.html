@@ -6,7 +6,7 @@
         <span class="kf-keep-selected-count-number">{{getSelected().length}}</span>
         <span class="kf-keep-selected-count-text" ng-pluralize count="getSelected().length" when="{'1': 'keep selected', 'other': 'keeps selected'}"></span>
       </div>
-      <div class="kf-keep-selection-options" ng-class='{disabled: editingTags}' ng-if="getSelected().length">
+      <div class="kf-keep-selection-options" ng-class="{disabled: editingTags || getSelected().length === 0}">
         <div class="kf-keep-selection-option"><span ng-click="togglePrivate()">Make {{selectionPrivacyState()}}</span></div>
         <div class="kf-keep-selection-option"><span ng-click="unkeep()">Unkeep</span></div>
         <div class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
