@@ -113,6 +113,12 @@ angular.module('kifi.layout.main', [
       $scope.addKeepInput = {};
     }
 
+    function clearAddKeep() {
+      $scope.data.showAddKeeps = false;
+      $scope.addKeepCheckedPrivate = false;
+      $scope.addKeepInput = {};
+    }
+
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
         case 'addNetworks':
@@ -274,6 +280,7 @@ angular.module('kifi.layout.main', [
     $scope.keepUrl = function () {
       if ($scope.addKeepInput.url) {
         keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
+        clearAddKeep();
       } else {
         //todo(martin): Tell the user something went wrong
         return null; // silence jshint
