@@ -276,7 +276,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
               throw new UriInternException(s"could not parse or find url in db: $url", ex)
             case Some(fromDb) =>
               scrapeRepoProvider.get.getByUriId(fromDb.id.get) match {
-                case Some(scrapeInfo) => scrapeRepoProvider.get.save(scrapeInfo.withState(ScrapeInfoStates.INACTIVE))
+                case Some(scrapeInfo) => scrapeRepoProvider.get.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
                 case None => //fine...
               }
               throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
