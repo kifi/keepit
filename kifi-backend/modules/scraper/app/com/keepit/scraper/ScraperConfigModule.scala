@@ -3,6 +3,10 @@ package com.keepit.scraper
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import play.api.{Play, Configuration}
+import com.keepit.scraper.ScraperQueueConfig
+import com.keepit.scraper.ScraperIntervalConfig
+import com.keepit.scraper.ScraperHttpConfig
+import com.keepit.scraper.ScraperConfig
 
 trait ScraperConfigModule extends ScalaModule {
 
@@ -54,14 +58,10 @@ trait ScraperConfigModule extends ScalaModule {
       scrapePendingFrequency = conf.getInt("scraper.scrapePendingFrequency").get, // seconds
       queued = conf.getBoolean("scraper.queued").get,
       async = conf.getBoolean("scraper.async").get,
-      actorTimeout = conf.getInt("scraper.actorTimeout").get,
       syncAwaitTimeout = conf.getInt("scraper.syncAwaitTimeout").get,
       serviceCallTimeout = conf.getInt("scraper.serviceCallTimeout").get,
       batchSize = conf.getInt("scraper.batchSize").get,
       batchMax = conf.getInt("scraper.batchMax").get,
-      pendingOverdueThreshold = conf.getInt("scraper.pendingOverdueThreshold").get, // minutes
-      checkOverdueCountFrequency = conf.getInt("scraper.checkOverdueCountFrequency").get, // minutes
-      overdueCountThreshold = conf.getInt("scraper.overdueCountThreshold").get,
       httpConfig = httpConfig,
       queueConfig = queueConfig
     )

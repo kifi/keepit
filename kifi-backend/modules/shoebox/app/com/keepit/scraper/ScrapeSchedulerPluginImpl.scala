@@ -24,8 +24,17 @@ import scala.util.Try
 case object CheckOverdues
 case object CheckOverdueCount
 
+
+case class ScraperSchedulerConfig(
+  actorTimeout: Int,
+  scrapePendingFrequency: Int,          // seconds
+  checkOverdueCountFrequency: Int,      // minutes
+  pendingOverdueThreshold: Int,         // minutes
+  overdueCountThreshold: Int
+)
+
 private[scraper] class ScrapeScheduler @Inject() (
-    scraperConfig: ScraperConfig,
+    scraperConfig: ScraperSchedulerConfig,
     airbrake: AirbrakeNotifier,
     db: Database,
     serviceDiscovery: ServiceDiscovery,
@@ -113,7 +122,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     scrapeInfoRepo: ScrapeInfoRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     actor: ActorInstance[ScrapeScheduler],
-    scraperConfig: ScraperConfig,
+    scraperConfig: ScraperSchedulerConfig,
     scraperClient: ScraperServiceClient,
     val scheduling: SchedulingProperties) //only on leader
   extends ScrapeSchedulerPlugin with SchedulerPlugin with Logging {

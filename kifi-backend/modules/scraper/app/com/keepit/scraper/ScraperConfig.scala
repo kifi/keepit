@@ -1,7 +1,6 @@
 package com.keepit.scraper
 
 import scala.util.Random
-import play.api.Play
 
 case class ScraperQueueConfig(
   terminateThreshold: Int,
@@ -21,6 +20,14 @@ case class ScraperIntervalConfig(
   intervalDecrement: Double //hours
 )
 
+case class ScraperSchedulerConfig(
+  actorTimeout: Int,
+  scrapePendingFrequency: Int,          // seconds
+  checkOverdueCountFrequency: Int,      // minutes
+  pendingOverdueThreshold: Int,         // minutes
+  overdueCountThreshold: Int
+)
+
 case class ScraperConfig(
   intervalConfig: ScraperIntervalConfig,
   initialBackoff: Double, //hours
@@ -32,14 +39,10 @@ case class ScraperConfig(
   scrapePendingFrequency: Int, // seconds
   queued: Boolean,
   async: Boolean,
-  actorTimeout: Int,
   syncAwaitTimeout: Int,
   serviceCallTimeout: Int,
   batchSize: Int,
   batchMax: Int,
-  pendingOverdueThreshold: Int, // minutes
-  checkOverdueCountFrequency: Int, // minutes
-  overdueCountThreshold: Int,
   httpConfig: ScraperHttpConfig,
   queueConfig: ScraperQueueConfig
 ) {

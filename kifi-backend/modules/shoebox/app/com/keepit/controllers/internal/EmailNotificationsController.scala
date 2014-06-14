@@ -17,7 +17,6 @@ import org.joda.time.DateTime
 class EmailNotificationsController @Inject() (
    emailNotificationsCommander: EmailNotificationsCommander
 )  (implicit private val clock: Clock,
-    implicit private val scraperConfig: ScraperConfig,
     private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 
