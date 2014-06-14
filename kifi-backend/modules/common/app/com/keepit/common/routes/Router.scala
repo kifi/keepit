@@ -215,8 +215,6 @@ object Eliza extends Service {
 
 object Heimdal extends Service {
   object internal {
-    def trackEvent() = ServiceRoute(POST, "/internal/heimdal/trackEvent")
-    def trackEvents() = ServiceRoute(POST, "/internal/heimdal/trackEvents")
     def getMetricData(repo: String, name: String) = ServiceRoute(GET, s"/internal/heimdal/$repo/getMetricData", Param("name", name))
     def updateMetrics() = ServiceRoute(GET, "/internal/heimdal/updateMetrics")
     def getRawEvents(repo: String, eventTypes: Seq[String], limit: Int, window: Int) = ServiceRoute(GET, s"/internal/heimdal/$repo/rawEvents", Param("events", eventTypes.mkString(",")), Param("limit", limit), Param("window", window))

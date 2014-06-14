@@ -1,7 +1,7 @@
 package com.keepit.search.index
 
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.amazon.MyAmazonInstanceInfo
+import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -70,7 +70,7 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def activeShards(myAmazonInstanceInfo: MyAmazonInstanceInfo): ActiveShards = {
+  def activeShards(myAmazonInstanceInfo: MyInstanceInfo): ActiveShards = {
     val shards = (new ShardSpecParser).parse[NormalizedURI](
       myAmazonInstanceInfo.info.tags.get("ShardSpec") match {
         case Some(spec) =>

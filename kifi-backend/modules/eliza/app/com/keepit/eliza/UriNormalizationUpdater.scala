@@ -20,8 +20,6 @@ import play.api.libs.json.{Json, JsObject}
 
 import com.google.inject.{Inject, Singleton}
 
-import java.util.concurrent.locks.ReentrantLock
-
 
 @Singleton
 class UriNormalizationUpdater @Inject() (
@@ -36,14 +34,13 @@ class UriNormalizationUpdater @Inject() (
     system: ActorSystem
   ) extends Logging {
 
-  centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate)
 
-  private val updateLock = new ReentrantLock()
+
+  centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate)
 
   def localSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
-  def checkAndUpdate(remoteSequenceNumberOpt: Option[SequenceNumber[ChangedURI]]) : Unit = {
-    updateLock.lock()
+  def checkAndUpdate(remoteSequenceNumberOpt: Option[SequenceNumber[ChangedURI]]) : Unit = synchronized {
     var localSeqNum = localSequenceNumber()
     log.info(s"ZKX Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader()}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
     remoteSequenceNumberOpt match {
@@ -56,7 +53,6 @@ class UriNormalizationUpdater @Inject() (
           db.readWrite{ implicit session => renormRepo.addNew(upperBound, updates.size, updates.map{_._1}) }
         }.onComplete{ _ =>
           log.info(s"ZKX Renormalization: Finished one batch. There is more: $thereIsMore. Remote seq num: ${remoteSequenceNumberOpt}")
-          updateLock.unlock()
           if (thereIsMore) checkAndUpdate(remoteSequenceNumberOpt)
         }
       }

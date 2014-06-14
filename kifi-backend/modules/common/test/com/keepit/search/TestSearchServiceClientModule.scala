@@ -13,6 +13,6 @@ TestSearchServiceClientModule() extends SearchServiceClientModule {
   @Provides
   @Singleton
   def searchServiceClient(serviceCluster: ServiceCluster, airbrakeNotifier: AirbrakeNotifier): SearchServiceClient = {
-    new SearchServiceClientImpl(serviceCluster, -1, new FakeHttpPostClient(None, s => ()), airbrakeNotifier)
+    new SearchServiceClientImpl(serviceCluster, new FakeHttpPostClient(None, s => ()), airbrakeNotifier)
   }
 }

@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeDeploymentNotice, AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeError
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._
@@ -132,7 +132,14 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       uriWithSeq.copy(state = NormalizedURIStates.REDIRECTED)
     } else uriWithSeq
 
-    val saved = super.save(validatedUri.clean())
+    val cleaned = validatedUri.clean()
+    val saved = try {
+      super.save(cleaned)
+    } catch {
+      case e: Throwable =>
+        deleteCache(cleaned)
+        throw e
+    }
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
@@ -141,14 +148,14 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
         scrapeRepo.getByUriId(saved.id.get) match {
           case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE =>
             val savedSI = scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as INACTIVE; si=${savedSI}")
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as INACTIVE; si=$savedSI")
           case _ => // do nothing
         }
       case SCRAPE_FAILED | SCRAPED =>
         scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
-          case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
             val savedSI = scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
-            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as ACTIVE; si=${savedSI}")
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as ACTIVE; si=$savedSI")
           case _ => // do nothing
         }
       case ACTIVE => // do nothing
@@ -254,9 +261,16 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           }
         }
         case Failure(ex) => {
-          val newUri = save(NormalizedURI.withHash(normalizedUrl = url, normalization = None))
+          val uriCandidate = NormalizedURI.withHash(normalizedUrl = url, normalization = None)
+          deleteCache(uriCandidate)
+          val newUri = (for (t <- rows if t.urlHash === uriCandidate.urlHash) yield t).firstOption match {
+            case None =>
+              save(uriCandidate)
+            case Some(fromDb) =>
+              fromDb
+          }
+          airbrake.notify(AirbrakeError(ex, Some(s"Uri $newUri was interned despite a normalization failure")))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          airbrake.notify(AirbrakeError(ex, Some(s"Uri ${newUri.id.get} was interned despite a normalization failure")))
           newUri
         }
       }
