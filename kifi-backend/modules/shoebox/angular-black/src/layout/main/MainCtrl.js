@@ -278,9 +278,17 @@ angular.module('kifi.layout.main', [
     };
 
     $scope.keepUrl = function () {
-      if ($scope.addKeepInput.url) {
-        keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
-        clearAddKeep();
+      var url = ($scope.addKeepInput && $scope.addKeepInput.url) || '';
+      if ($scope.addKeepInput.url && keepService.validateUrl(url)) {
+        return keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate).then(function (keeps) {
+          if (!keeps.length) {
+            // todo(martin) Tell the user there was an error
+            clearAddKeep();
+          } else {
+            clearAddKeep();
+            keepService.fetchFullKeepInfo(keeps[0]);
+          }
+        });
       } else {
         //todo(martin): Tell the user something went wrong
         return null; // silence jshint
