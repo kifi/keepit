@@ -18,7 +18,7 @@ import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
 import scala.util.{Try, Success, Failure, Random}
 
-case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean)
+case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
 @Singleton
 class KeepInterner @Inject() (
@@ -116,14 +116,22 @@ class KeepInterner @Inject() (
   }
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (keepsWithStatus, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
+    (keepsWithStatus.map(_._1), failures)
+  }
+
+  /**
+   * Keeps are returned with their status (true if the keep is new or was inactive, false otherwise)
+   */
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[(Keep, Boolean)], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
     val newKeeps = persistedBookmarksWithUris collect {
-      case InternedUriAndKeep(bm, uri, isNewBookmark) if isNewBookmark => bm
+      case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
 
     keptAnalytics.keptPages(userId, newKeeps, context)
     keepAttribution(userId, newKeeps)
-    (persistedBookmarksWithUris.map(_.bookmark), failures)
+    (persistedBookmarksWithUris.map(obj => (obj.bookmark, obj.isNewKeep || obj.wasInactiveKeep)), failures)
   }
 
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
@@ -175,8 +183,8 @@ class KeepInterner @Inject() (
         scraper.scheduleScrape(uri, date)
       }
 
-      val (isNewKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
-      Success(InternedUriAndKeep(bookmark, uri, isNewKeep))
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
+      Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is a javascript command: ${rawBookmark.url}"))
     }
@@ -209,7 +217,7 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
     }
 
-    (isNewKeep, internedKeep)
+    (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
 }
