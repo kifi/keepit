@@ -152,24 +152,21 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         function resizeWindowListener() {
           if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
             lastSizedAt = $window.innerWidth;
-            var d1 = +new Date;
-            scope.$broadcast('resizeImage');
-            var d2 = +new Date;
-            console.log('broadcasted', d2 - d1);
-            $timeout(function () {
-              var d3 = +new Date;
-              console.log('yielded!', d3 - d2);
-              scope.keeps.forEach(function (keep) {
-                keep.calcSizeCard && keep.calcSizeCard();
-              });
-              var d4 = +new Date;
-              console.log('calced!', d4 - d3);
-              scope.keeps.forEach(function (keep) {
-                keep.sizeCard && keep.sizeCard();
-              });
-              console.log('done!', +new Date - d4);
-            });
+            sizeKeeps();
           }
+        }
+
+        function sizeKeeps() {
+          var d1 = +new Date;
+          scope.$broadcast('resizeImage');
+          $timeout(function () {
+            scope.keeps.forEach(function (keep) {
+              keep.calcSizeCard && keep.calcSizeCard();
+            });
+            scope.keeps.forEach(function (keep) {
+              keep.sizeCard && keep.sizeCard();
+            });
+          });
         }
 
         var lazyResizeListener = _.debounce(resizeWindowListener, 250);
