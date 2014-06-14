@@ -124,7 +124,12 @@ class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[Serv
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
                        amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
-    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = DiscoveryModule.isCanary, servicesToListenOn = servicesToListenOn)
+    val isCanary = DiscoveryModule.isCanary
+    if (serviceType == ServiceType.SHOEBOX && isCanary) {
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn :+ ServiceType.SHOEBOX)
+    } else {
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn)
+    }
   }
 
   @Singleton
