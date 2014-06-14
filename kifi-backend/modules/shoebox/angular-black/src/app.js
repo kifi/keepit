@@ -146,8 +146,8 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$rootScope', '$window', 'friendService', '$timeout', 'env',
-  function (profileService, $rootScope, $window, friendService, $timeout, env) {
+  'profileService', '$window', 'friendService', '$timeout', 'env',
+  function (profileService, $window, friendService, $timeout, env) {
     $timeout(function () {
       profileService.fetchPrefs().then(function (res) {
         // handle onboarding / imports
