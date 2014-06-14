@@ -3,8 +3,8 @@
 angular.module('kifi.layout.header', ['kifi.profileService'])
 
 .controller('HeaderCtrl', [
-  '$scope', '$rootElement', '$rootScope', 'profileService', '$location', 'util',
-  function ($scope, $rootElement, $rootScope, profileService, $location, util) {
+  '$scope', '$rootElement', '$rootScope', '$document', 'profileService', '$location', 'util', 'keyIndices',
+  function ($scope, $rootElement, $rootScope, $document, profileService, $location, util, keyIndices) {
 
     $scope.toggleMenu = function () {
       $rootElement.toggleClass('kf-sidebar-active');
@@ -25,5 +25,17 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
     $scope.addKeeps = function () {
       $rootScope.$emit('showGlobalModal', 'addKeeps');
     };
+
+    function addKeepsShortcut(e) {
+      $scope.$apply(function () {
+        if (e.metaKey && e.which === keyIndices.KEY_ENTER) {
+          $scope.addKeeps();
+        }
+      });
+    }
+    $document.on('keydown', addKeepsShortcut);
+    $scope.$on('$destroy', function () {
+      $document.off('keydown', addKeepsShortcut);
+    });
   }
 ]);

@@ -85,5 +85,6 @@ angular.module('util', [])
   KEY_ESC: 27,
   KEY_TAB: 9,
   KEY_DEL: 46,
-  KEY_F2: 113
+  KEY_F2: 113,
+  KEY_SPACE: 32
 });
