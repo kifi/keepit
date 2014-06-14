@@ -352,7 +352,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           if (!scope.keep.summary.trimmedDesc) {
             var trimmed = trimDesc(scope.keep.summary.description);
             if (trimmed === false) {
-              console.log('big', scope.keep.title);
               scope.keep.summary.useBigLayout = true;
               return;
             }
@@ -435,7 +434,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           if (scope.keep && scope.keep.summary && !scope.keep.calcSizeCard) {
             maybeSizeImage();
             if (scope.keep.calcSizeCard) {
-              var res = scope.keep.calcSizeCard();
+              scope.keep.calcSizeCard();
               if (scope.keep.sizeCard) {
                 scope.keep.sizeCard();
               }

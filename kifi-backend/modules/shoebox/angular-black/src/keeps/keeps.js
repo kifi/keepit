@@ -157,14 +157,17 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         }
 
         function sizeKeeps() {
-          var d1 = +new Date;
           scope.$broadcast('resizeImage');
           $timeout(function () {
             scope.keeps.forEach(function (keep) {
-              keep.calcSizeCard && keep.calcSizeCard();
+              if (keep.calcSizeCard) {
+                keep.calcSizeCard();
+              }
             });
             scope.keeps.forEach(function (keep) {
-              keep.sizeCard && keep.sizeCard();
+              if (keep.sizeCard) {
+                keep.sizeCard();
+              }
             });
           });
         }
