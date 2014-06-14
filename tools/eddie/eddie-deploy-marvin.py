@@ -237,7 +237,7 @@ if __name__=="__main__":
         time.sleep(15)
       lock.unlock()
       log("Deployment Complete")
-  except e, Exception:
+  except Exception, e:
     log("FATAL ERROR: " + str(e))
-    raise e
+    raise
 
