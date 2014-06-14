@@ -22,6 +22,8 @@ import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
 import java.sql.SQLException
 
+class UriInternException(msg: String, cause: Throwable) extends Exception(msg, cause)
+
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
@@ -243,7 +245,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
                 case sqlException: SQLException =>
                   log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
                   (for (t <- rows if t.urlHash === candidate.urlHash) yield t).firstOption match {
-                    case None => throw new Exception(s"could not find existing url $candidate in the db", sqlException)
+                    case None => throw new UriInternException(s"could not find existing url $candidate in the db", sqlException)
                     case Some(fromDb) =>
                       log.warn(s"recovered url $fromDb from the db via urlHash")
                       //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
@@ -251,7 +253,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
                       fromDb
                   }
                 case t: Throwable =>
-                  throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
+                  throw new UriInternException(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
               }
               urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
               session.onTransactionSuccess{
@@ -261,17 +263,24 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
           }
         }
         case Failure(ex) => {
+          /**
+           * if we can't parse a url we should not let it get to the db.
+           * its scraping should stop as well and it will be removed from cache.
+           * an error should be thrown so we could examine the problem.
+           * in most cases its a user error so the exceptions may be caught upper in the stack.
+           */
           val uriCandidate = NormalizedURI.withHash(normalizedUrl = url, normalization = None)
           deleteCache(uriCandidate)
-          val newUri = (for (t <- rows if t.urlHash === uriCandidate.urlHash) yield t).firstOption match {
+          (for (t <- rows if t.urlHash === uriCandidate.urlHash) yield t).firstOption match {
             case None =>
-              save(uriCandidate)
+              throw new UriInternException(s"could not parse or find url in db: $url", ex)
             case Some(fromDb) =>
-              fromDb
+              scrapeRepoProvider.get.getByUriId(fromDb.id.get) match {
+                case Some(scrapeInfo) => scrapeRepoProvider.get.save(scrapeInfo.withState(ScrapeInfoStates.INACTIVE))
+                case None => //fine...
+              }
+              throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
           }
-          airbrake.notify(AirbrakeError(ex, Some(s"Uri $newUri was interned despite a normalization failure")))
-          urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          newUri
         }
       }
       log.debug(s"[internByUri($url)] resUri=$resUri")
