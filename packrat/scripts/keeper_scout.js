@@ -152,11 +152,12 @@ var tile = tile || function() {  // idempotent for Chrome
         loadAndDo('pane', 'compose', 'key');
         e.preventDefault();
         break;
-      case 191: // ?
+      case 48: case 49: case 50: case 51: case 52: // 0,1,2,3,4
         if (e.altKey) {
+          var step = e.keyCode - 48;
           api.port.emit('guide', function () {
-            api.require('scripts/guide/step_2.js', function () {
-              guide.step2();
+            api.require('scripts/guide/step_' + step + '.js', function () {
+              guide['step' + step]();
             });
           });
           e.preventDefault();

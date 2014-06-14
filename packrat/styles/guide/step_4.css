@@ -1,0 +1,100 @@
+.kifi-guide-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 999999999993;
+}
+.kifi-guide-stage.kifi-gone {
+  opacity: 0;
+  transition: opacity .34s linear;
+}
+.kifi-guide-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: .85;
+}
+.kifi-guide-feature,
+.kifi-guide-drum-roll,
+.kifi-guide-farewell {
+  display: none;
+}
+.kifi-guide-feature-0 {
+  position: absolute;
+  top: 336px;
+  left: 336px;
+}
+.kifi-guide-feature-1 {
+  position: absolute;
+  top: 150px;
+  left: 440px;
+}
+.kifi-guide-feature-2 {
+  position: absolute;
+  top: 120px;
+  right: 120px;
+}
+
+.kifi-guide-h1 {
+  margin: 12px 0;
+  font: bold italic 26px/48px Georgia,Times,serif !important;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-ul {
+  margin: -14px 0 0 4px;
+  list-style: disc;
+  font: 16px/24px 'Helvetica Neue',Arial,sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-li {
+  display: list-item;
+  text-indent: -2px;
+  color: #f99;
+}
+.kifi-guide-li-text {
+  color: #fff;
+  font-weight: 300;
+}
+.kifi-guide-em {
+  color: #f38283;
+}
+
+.kifi-svg-arrow {
+  position: fixed;
+  z-index: 999999999993;
+}
+.kifi-svg-arrow-tail {
+  fill: none;
+  stroke: #f99;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.kifi-svg-arrow-head {
+  stroke: none;
+  fill: none;
+}
+
+.kifi-guide-next {
+  margin-top: 32px;
+  display: inline-block;
+  border: 3px solid #fff;
+  border-radius: 7px;
+  padding: 0 32px;
+  line-height: 50px;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-next:hover,
+.kifi-guide-next:focus {
+  color: #fff;
+  background-color: rgba(255,255,255,.05);
+}
+.kifi-guide-next:active {
+  color: #fff;
+  background-color: rgba(255,255,255,.15);
+}

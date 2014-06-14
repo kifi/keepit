@@ -3,21 +3,6 @@
   z-index: 999999999993;
 }
 
-.kifi-svg-arrow {
-  position: fixed;
-  z-index: 999999999993;
-}
-.kifi-svg-arrow-tail {
-  fill: none;
-  stroke: #f99;
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-.kifi-svg-arrow-head {
-  stroke: none;
-  fill: #f99;
-}
-
 .kifi-guide-stage {
   position: fixed;
   z-index: 999999999993;

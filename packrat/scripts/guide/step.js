@@ -5,7 +5,7 @@
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/guide/spotlight.js
-// @require scripts/guide/svg_arrow.js
+// @require scripts/guide/curved_arrow.js
 // @require scripts/html/guide/steps.js
 
 var guide = guide || {};
@@ -37,7 +37,7 @@ guide.step = guide.step || function () {
       $steps.one('transitionend', remove).removeClass('kifi-showing');
       var ms = spotlight.animateTo(wholeWindow(), {opacity: 0, detach: true});
       if (arrow) {
-        arrow.fadeAndDetach(ms);
+        arrow.fadeAndDetach(ms / 2);
       }
       (opts.hide || api.noop)();
 
@@ -105,7 +105,7 @@ guide.step = guide.step || function () {
           if (arr) {
             var tail = $.extend({el: this.querySelector('.kifi-guide-p.kifi-step' + stepIdx).firstElementChild}, arr.from);
             var head = $.extend({el: $(arr.to.sel || step.lit)[0]}, arr.to);
-            arrow = new SvgArrow(tail, head, opts.anchor, stepIdx === 0 ? 600 : 400);
+            arrow = new CurvedArrow(tail, head, opts.anchor, stepIdx === 0 ? 600 : 400);
           }
         }
       })
@@ -139,14 +139,8 @@ guide.step = guide.step || function () {
       });
     }
 
-    var tail = $.extend({el: $pNew[0].firstElementChild}, arr.from);
-    var head = $.extend({el: $(arr.to.sel || step.lit)[0]}, arr.to);
-    if (step.substep.arrow === 'move') {
-      arrow.animateTo(tail, head, ms);
-    } else {
-      arrow.fadeAndDetach(100);
-      arrow = null;
-    }
+    arrow.fadeAndDetach(100);
+    arrow = null;
 
     var ms_1 = 1 / ms;
     var t0 = window.performance.now();
@@ -162,9 +156,9 @@ guide.step = guide.step || function () {
         } else {
           animTick = null;
           $pOld.add($pNew).removeAttr('style');
-          if (!arrow) {
-            arrow = new SvgArrow(tail, head, opts.anchor, 400);
-          }
+          var tail = $.extend({el: $pNew[0].firstElementChild}, arr.from);
+          var head = $.extend({el: $(arr.to.sel || step.lit)[0]}, arr.to);
+          arrow = new CurvedArrow(tail, head, opts.anchor, 400);
         }
       }
     };
