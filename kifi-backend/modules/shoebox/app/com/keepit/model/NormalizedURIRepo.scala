@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeDeploymentNotice, AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeError
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._

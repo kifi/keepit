@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.concurrent.ExecutionContext
 
 import scala.concurrent.duration.Duration
 
@@ -70,7 +70,7 @@ class FriendRequestRepoImpl @Inject() (
       if (model.state == FriendRequestStates.IGNORED || model.state == FriendRequestStates.ACCEPTED) {
         model.messageHandle.foreach { id => elizaClient.unsendNotification(id) }
       }
-    }
+    }(ExecutionContext.immediate)
     super.save(model)
   }
 
