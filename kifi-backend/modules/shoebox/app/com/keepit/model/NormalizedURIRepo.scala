@@ -269,7 +269,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
             case Some(fromDb) =>
               fromDb
           }
-          airbrake.notify(AirbrakeError(ex, Some(s"Uri ${newUri.id.get} was interned despite a normalization failure")))
+          airbrake.notify(AirbrakeError(ex, Some(s"Uri $newUri was interned despite a normalization failure")))
           urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           newUri
         }
