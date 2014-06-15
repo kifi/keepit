@@ -76,10 +76,21 @@ class ScraperCallbackHelper @Inject()(
     }
   }
 
-  def savePageInfo(info:PageInfo) = {
+  def savePageInfo(info:PageInfo): PageInfo = {
     withLock(pageInfoLock) {
       db.readWrite(attempts = 3) { implicit s =>
-        pageInfoRepo.save(info)
+        try {
+          pageInfoRepo.save(info)
+        } catch {
+          case e: Exception => //typically MySQLIntegrityConstraintViolationException but any may do here
+          pageInfoRepo.getByUri(info.uriId) match {
+            case Some(fromDb) =>
+              //race condition. we lost, lets override...
+              pageInfoRepo.save(info.copy(id = fromDb.id))
+            case None =>
+              throw e
+          }
+        }
       }
     }
   }
