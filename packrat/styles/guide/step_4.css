@@ -16,10 +16,13 @@
   left: 0;
   opacity: .85;
 }
-.kifi-guide-feature,
-.kifi-guide-drum-roll,
-.kifi-guide-farewell {
+.kifi-guide-feature {
   display: none;
+  opacity: 0;
+  transition: opacity .2s linear;
+}
+.kifi-guide-feature.kifi-opaque {
+  opacity: 1;
 }
 .kifi-guide-feature-0 {
   position: absolute;
@@ -28,13 +31,13 @@
 }
 .kifi-guide-feature-1 {
   position: absolute;
-  top: 150px;
+  top: 160px;
   left: 440px;
 }
 .kifi-guide-feature-2 {
   position: absolute;
-  top: 120px;
-  right: 120px;
+  top: 124px;
+  right: 130px;
 }
 
 .kifi-guide-h1 {
@@ -42,6 +45,12 @@
   font: bold italic 26px/48px Georgia,Times,serif !important;
   -webkit-font-smoothing: antialiased;
   color: #fff;
+}
+.kifi-guide-h1+.kifi-guide-h1 {
+  margin-top: -20px;
+}
+.kifi-guide-feature>.kifi-guide-h1 {
+  margin-top: 0;
 }
 .kifi-guide-ul {
   margin: -14px 0 0 4px;
@@ -63,23 +72,22 @@
   color: #f38283;
 }
 
-.kifi-svg-arrow {
+.kifi-guide-drum-roll {
+  display: none;
   position: fixed;
-  z-index: 999999999993;
+  width: 240px;
+  bottom: 20%;
+  right: 20%;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .2s linear;
 }
-.kifi-svg-arrow-tail {
-  fill: none;
-  stroke: #f99;
-  stroke-width: 4;
-  stroke-linecap: round;
+.kifi-guide-drum-roll.kifi-opaque {
+  opacity: 1;
 }
-.kifi-svg-arrow-head {
-  stroke: none;
-  fill: none;
-}
-
 .kifi-guide-next {
-  margin-top: 32px;
+  min-width: 140px;
+  margin-top: 3px;
   display: inline-block;
   border: 3px solid #fff;
   border-radius: 7px;
@@ -97,4 +105,17 @@
 .kifi-guide-next:active {
   color: #fff;
   background-color: rgba(255,255,255,.15);
+}
+
+.kifi-guide-farewell {
+  display: none;
+  position: fixed;
+  top: 25%;
+  left: 50%;
+  width: 500px;
+  margin-left: -250px;
+  text-align: center;
+}
+.kifi-guide-farewell>.kifi-guide-next {
+  margin-top: 10px;
 }

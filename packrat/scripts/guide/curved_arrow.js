@@ -1,4 +1,5 @@
 // @require scripts/lib/jquery.js
+// @require scripts/lib/underscore.js
 
 var CurvedArrow = CurvedArrow || (function (window, document) {
   'use strict';
@@ -44,10 +45,10 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
         'height': tailWidth * 2,
         'background': '#f99',
         'border-radius': '50%',
-        'transform': tailTransform(x0, y0)
+        'transform': translatePx(x0, y0)
       })
       .appendTo(this.$el);
-    this.anchor = anchor;
+    this.onWinResize = anchor && anchor !== 'tl' ? _.throttle(getOnWinResize(this.$el, anchor), 100, {leading: false}) : null;
     this.attach();
     reveal.call(this, curve, tail.spacing || tailWidth * 4.5, revealMs);
   }
@@ -57,6 +58,9 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     attach: function () {
       if (!this.attached) {
         this.$el.appendTo('body');
+        if (this.onWinResize) {
+          window.addEventListener('resize', this.onWinResize, true);
+        }
         this.attached = true;
       }
       return this;
@@ -66,6 +70,9 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
         var self = this;
         this.$el.on('transitionend', function end() {
           $(this).remove();
+          if (this.onWinResize) {
+            window.removeEventListener('resize', this.onWinResize, true);
+          }
           self.attached = false;
         }).css({
           transition: 'opacity ' + (typeof duration === 'number' ? duration + 'ms' : duration) + ' linear',
@@ -151,7 +158,7 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
         for (var lenNextDot = dotSpacing * this.$tail.length; len >= lenNextDot; lenNextDot = dotSpacing * this.$tail.length) {
           var P = path.getPointAtLength(lenNextDot);
           var $dot = $(this.$tail[0].cloneNode())
-            .css('transform', tailTransform(P.x, P.y))
+            .css('transform', translatePx(P.x, P.y))
             .appendTo(this.$el);
           this.$tail = this.$tail.add($dot);
         }
@@ -295,23 +302,26 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
       (_4 - _3) * t * t * 3);
   }
 
-  function originPos(anchor) {
-    var names = {t: 'top', l: 'left', r: 'right', b: 'bottom'};
-    return anchor.split('').map(function (k) {return names[k] + ':0'}).join(';');
-  }
-
   function curvePathData(c) {
     return ['M', c.A.x, c.A.y, 'C', c.B.x, c.B.y, c.C.x, c.C.y, c.D.x, c.D.y].join(' ');
   }
 
   function headTransform(x, y, radians) {
-    var s = ['translate(', x, 'px,', y, 'px) rotate(', Math.round(radians * 1000) / 1000, 'rad)'].join('');
-    log('[headTransform]', s);
-    return s;
+    return ['translate(', x, 'px,', y, 'px) rotate(', Math.round(radians * 1000) / 1000, 'rad)'].join('');
   }
 
-  function tailTransform(x, y) {
+  function translatePx(x, y) {
     return ['translate(', x, 'px,', y, 'px)'].join('');
+  }
+
+  function getOnWinResize($el, anchor) {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    return function () {
+      $el.css('transform', translatePx(
+        anchor[1] === 'l' ? 0 : window.innerWidth - w,
+        anchor[0] === 't' ? 0 : window.innerHeight - h));
+    };
   }
 
   function swing(p) {

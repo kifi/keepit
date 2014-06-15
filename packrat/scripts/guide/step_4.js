@@ -11,27 +11,26 @@
 var guide = guide || {};
 guide.step4 = guide.step4 || function () {
   'use strict';
-  var $stage, screen, $feats, arrows, $steps, timeout;
+  var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
     {sel: '.kf-sidebar-nav,.kf-sidebar-tag-list', pad: [-5, -20, 30, 0], maxHeight: 246},
-    {sel: '.kf-query', pad: [10], maxWidth: 320},
+    {sel: '.kf-query', pad: [6, 8], maxWidth: 320},
     {sel: '.kf-header-right>*', pad: [-6, 24]}
   ];
   var arcs = [
-    {anchor: 'tl', from: {angle: 180, gap: 36, along: [0, .55]}, to: {angle: 100, gap: 20, along: [.95, 1], width: 0}},
-    {anchor: 'tl', from: {angle: 150, gap: 14, along: [0, .5]}, to: {angle: 50, gap: 10, along: [.35, 1], width: 0}},
-    {anchor: 'tr', from: {angle: 90, gap: 10, along: [.5, 0]}, to: {angle: 40, gap: 20, along: [.5, 1], width: 0}}
+    {anchor: 'tl', from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1], width: 0}},
+    {anchor: 'tl', from: {angle: 150, gap: 20, along: [0, .35], spacing: 7}, to: {angle: 78, gap: 12, along: [.32, 1], width: 0}},
+    {anchor: 'tr', from: {angle: 100, gap: 0, along: [.5, 0], spacing: 7}, to: {angle: 30, gap: 16, along: [.5, .7], width: 0}}
   ];
   return show;
 
   function show() {
     if (!$stage) {
       $stage = $(render('html/guide/step_4', me));
-      screen = new CutScreen([]);
-      $stage.prepend(screen.el).appendTo('body');
+      cutScreen = new CutScreen([]);
+      $stage.prepend(cutScreen.el).appendTo('body');
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
       $feats = $stage.find('.kifi-guide-feature');
-      $stage.find('.kifi-guide-next').click(next);
       $steps.find('.kifi-guide-steps-x').click(hide);
       $(document).data('esc').add(hide);
       arrows = [];
@@ -43,37 +42,56 @@ guide.step4 = guide.step4 || function () {
     if ($stage) {
       $stage.one('transitionend', remove).addClass('kifi-gone');
       $steps.one('transitionend', remove).removeClass('kifi-showing');
-      screen.detach();
+      cutScreen.fadeAndDetach(340);
       arrows.forEach(function (arrow) {
-        arrow.fadeAndDetach(300); // TODO: measure transition duration?
+        arrow.fadeAndDetach(340);
       });
       if (timeout) {
         clearTimeout(timeout);
       }
-      $stage = screen = $feats = arrows = $steps = timeout = null;
+      $stage = cutScreen = $feats = arrows = $steps = timeout = null;
       $(document).data('esc').remove(hide);
     }
   }
 
   function cutHole() {
     var i = arrows.length;
-    var rect = screen.cut(holes[i]);
-    var $f = $feats.eq(i).show();
-    var arc = arcs[i];
-    var tail = $.extend({el: $f[0]}, arc.from);
-    var head = $.extend({rect: toClientRect(rect)}, arc.to);
-    arrows.push(new CurvedArrow(tail, head, arc.anchor, 400));
-    if (arrows.length < holes.length) {
-      timeout = setTimeout(cutHole, 3000);
-    }
+    var rect = cutScreen.cut(holes[i], 200);
+    $feats.eq(i)
+      .show()
+      .each(layout)
+      .one('transitionend', function () {
+        var arc = arcs[i];
+        var tail = $.extend({el: this}, arc.from);
+        var head = $.extend({rect: toClientRect(rect)}, arc.to);
+        arrows.push(new CurvedArrow(tail, head, arc.anchor, 400));
+        timeout = setTimeout(arrows.length < holes.length ? cutHole : drumRoll, 1200);
+      })
+      .addClass('kifi-opaque');
   }
 
-  function next() {
-    if (this.parentNode.classList.contains('kifi-guide-drum-roll')) {
-      // show farewell
-    } else {
-      hide();
-    }
+  function drumRoll() {
+    $stage.find('.kifi-guide-drum-roll')
+      .show()
+      .each(layout)
+      .addClass('kifi-opaque');
+    $stage.find('.kifi-guide-next').click(farewell);
+  }
+
+  function farewell() {
+    cutScreen.fill(200);
+    arrows.forEach(function (arrow) {
+      arrow.fadeAndDetach(200);
+    });
+    $feats.add('.kifi-guide-drum-roll')
+      .on('transitionend', remove)
+      .removeClass('kifi-opaque');
+    $stage.find('.kifi-guide-farewell')
+      .show()
+      .each(layout)
+      .addClass('kifi-opaque')
+    .find('.kifi-guide-next')
+      .click(hide);
   }
 
   function toClientRect(r) {
@@ -85,6 +103,10 @@ guide.step4 = guide.step4 || function () {
       width: r.w,
       height: r.h
     };
+  }
+
+  function layout() {
+    this.clientHeight; // forces layout
   }
 
   function remove() {

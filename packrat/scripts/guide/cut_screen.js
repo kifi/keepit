@@ -40,9 +40,59 @@ var CutScreen = CutScreen || (function (window, document) {
       }
       return this;
     },
-    cut: function (hole) {
+    fadeAndDetach: function (ms) {
+      if (this.attached) {
+        var self = this;
+        this.el.addEventListener('transitionend', function end() {
+          this.removeEventListener('transitionend', end);
+          self.detach();
+        });
+        this.el.style.transition = 'opacity ' + ms + 'ms linear';
+        this.el.style.opacity = 0;
+      }
+      return this;
+    },
+    cut: function (hole, ms) {
+      var i = this.holes.length;
       this.holes.push(hole);
-      return drawHole.call(this, this.holes.length - 1);
+      if (ms > 0) {
+        var ms_1 = 1 / ms;
+        var t0 = window.performance.now();
+        var tN = t0 + ms;
+        var tick = (function (t) {
+          if (t < tN) {
+            window.requestAnimationFrame(tick);
+            var alpha = t > t0 ? (t - t0) * ms_1 : 0;
+            drawHole.call(this, i, 1 - alpha);
+          } else {
+            drawHole.call(this, i, 0);
+          }
+        }).bind(this);
+        window.requestAnimationFrame(tick);
+        return drawHole.call(this, i, 1);
+      } else {
+        return drawHole.call(this, i, 0);
+      }
+    },
+    fill: function (ms) {
+      var ms_1 = 1 / ms;
+      var o0 = this.holesDrawn.map(function (h) {return h.opacity});
+      var t0 = window.performance.now();
+      var tN = t0 + ms;
+      var tick = (function (t) {
+        if (t < tN) {
+          window.requestAnimationFrame(tick);
+          var alpha = t > t0 ? (t - t0) * ms_1 : 0;
+          for (var i = 0; i < o0.length; i++) {
+            drawHole.call(this, i, o0[i] + (1 - o0[i]) * alpha);
+          }
+        } else {
+          for (var i = 0; i < o0.length; i++) {
+            drawHole.call(this, i, 1);
+          }
+        }
+      }).bind(this);
+      window.requestAnimationFrame(tick);
     }
   };
 
@@ -79,10 +129,13 @@ var CutScreen = CutScreen || (function (window, document) {
     }
   }
 
-  function drawHole(i) {
+  function drawHole(i, opacity) {
     var gc = this.gc;
     var hole = this.holes[i];
     var holeDrawn = this.holesDrawn[i];
+    if (opacity == null) {
+      opacity = holeDrawn && holeDrawn.opacity || 0;
+    }
     var els = document.querySelectorAll(hole.sel);
     var rect = bounds(Array.prototype.slice.call(els).map(getBoundingClientRect));
     var pad = hole.pad;
@@ -90,22 +143,22 @@ var CutScreen = CutScreen || (function (window, document) {
     var padR = pad.length > 1 ? pad[1] : padT;
     var padB = pad.length > 2 ? pad[2] : padT;
     var padL = pad.length > 3 ? pad[3] : padR;
-    var holeRect = rectOnPxGrid({
+    var holeSpec = rectOnPxGrid({
       x: rect.x - padL,
       y: rect.y - padT,
       w: Math.max(hole.minWidth || 0, Math.min(hole.maxWidth || 1e9, rect.w + padL + padR)),
       h: Math.max(hole.minHeight || 0, Math.min(hole.maxHeight || 1e9, rect.h + padT + padB))
     });
+    holeSpec.opacity = opacity;
     var r = 6;
-    if (!holeDrawn || !sameRect(holeDrawn, holeRect)) {
+    if (!holeDrawn || !sameHole(holeDrawn, holeSpec)) {
       if (holeDrawn) {
         gc.fillRect(holeDrawn.x - 1, holeDrawn.y - 1, holeDrawn.w + 2, holeDrawn.h + 2);
       }
-      var x1 = holeRect.x;
-      var y1 = holeRect.y;
-      var x2 = x1 + holeRect.w;
-      var y2 = y1 + holeRect.h;;
-      gc.globalCompositeOperation = 'destination-out';
+      var x1 = holeSpec.x;
+      var y1 = holeSpec.y;
+      var x2 = x1 + holeSpec.w;
+      var y2 = y1 + holeSpec.h;;
       gc.beginPath();
       gc.moveTo(x1 + r, y1);
       gc.arcTo(x2, y1, x2, y2, r);
@@ -113,11 +166,14 @@ var CutScreen = CutScreen || (function (window, document) {
       gc.arcTo(x1, y2, x1, y1, r);
       gc.arcTo(x1, y1, x2, y1, r);
       gc.closePath();
+      gc.globalCompositeOperation = 'destination-out';
+      gc.globalAlpha = 1 - opacity;
       gc.fill();
       gc.globalCompositeOperation = 'source-over';
-      this.holesDrawn[i] = holeRect;
+      gc.globalAlpha = 1;
+      this.holesDrawn[i] = holeSpec;
     }
-    return holeRect;
+    return holeSpec;
   }
 
   function getBoundingClientRect(el) {
@@ -142,7 +198,16 @@ var CutScreen = CutScreen || (function (window, document) {
       w: Math.round(r.w),
       h: Math.round(r.h)
     };
-  };
+  }
+
+  function sameHole(h1, h2) {
+    return (
+      h1.x === h2.x &&
+      h1.y === h2.y &&
+      h1.w === h2.w &&
+      h1.h === h2.h &&
+      h1.opacity === h2.opacity);
+  }
 
   return CutScreen;
 }(window, document));
