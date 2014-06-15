@@ -3,25 +3,12 @@ package com.keepit.scraper
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import play.api.{Play, Configuration}
-import com.keepit.scraper.ScraperQueueConfig
-import com.keepit.scraper.ScraperIntervalConfig
-import com.keepit.scraper.ScraperHttpConfig
-import com.keepit.scraper.ScraperConfig
 
 trait ScraperConfigModule extends ScalaModule {
 
   protected def conf: Configuration
 
-  @Singleton
-  @Provides
-  def scraperIntervalConfig: ScraperIntervalConfig = {
-    ScraperIntervalConfig(
-      minInterval = conf.getDouble("scraper.interval.min").get, //hours
-      maxInterval = conf.getDouble("scraper.interval.max").get, //hours
-      intervalIncrement = conf.getDouble("scraper.interval.increment").get, //hours
-      intervalDecrement = conf.getDouble("scraper.interval.decrement").get //hours
-    )
-  }
+
 
   @Singleton
   @Provides
@@ -48,14 +35,9 @@ trait ScraperConfigModule extends ScalaModule {
   @Provides
   def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
     ScraperConfig(
-      intervalConfig = intervalConfig,
-      initialBackoff = conf.getDouble("scraper.initialBackoff").get, //hours
-      maxBackoff = conf.getDouble("scraper.maxBackoff").get, //hours
-      maxRandomDelay = conf.getInt("scraper.maxRandomDelay").get, // seconds
       changeThreshold = conf.getInt("scraper.changeThreshold").get,
       pullMultiplier = conf.getInt("scraper.pullMultiplier").get,
       pullFrequency = conf.getInt("scraper.pullFrequency").get, // seconds
-      scrapePendingFrequency = conf.getInt("scraper.scrapePendingFrequency").get, // seconds
       queued = conf.getBoolean("scraper.queued").get,
       async = conf.getBoolean("scraper.async").get,
       syncAwaitTimeout = conf.getInt("scraper.syncAwaitTimeout").get,
@@ -70,7 +52,9 @@ trait ScraperConfigModule extends ScalaModule {
 
 case class ProdScraperConfigModule() extends ScraperConfigModule {
 
-  def configure() {}
+  def configure() {
+    install(ProdScrapeSchedulerConfigModule())
+  }
 
   override protected def conf: Configuration = Play.current.configuration
 }

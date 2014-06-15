@@ -89,6 +89,7 @@ abstract class ScrapeCallable(val uri:NormalizedURI, val info:ScrapeInfo, val pr
 class QueuedScrapeProcessor @Inject() (
   val airbrake:AirbrakeNotifier,
   config: ScraperConfig,
+  schedulerConfig: ScraperSchedulerConfig,
   httpFetcher: HttpFetcher,
   httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
@@ -120,7 +121,7 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit scraperConfig:ScraperConfig) { // can be removed once things are settled
+  private def doNotScrape(sc:ScrapeCallable, msgOpt:Option[String])(implicit schedulerConfig: ScraperSchedulerConfig) { // can be removed once things are settled
     try {
       msgOpt.foreach{log.info(_)}
       helper.syncSaveNormalizedUri(sc.uri.withState(NormalizedURIStates.SCRAPE_FAILED)) // todo: UNSCRAPABLE where appropriate
@@ -173,7 +174,7 @@ class QueuedScrapeProcessor @Inject() (
                   log.error(s"[terminator] attempt# ${sc.killCount.get} to kill LONG ($runMillis ms) running task: $sc; stackTrace=${sc.threadRef.get.getStackTrace.mkString("|")}")
                   fjTask.cancel(true)
                   val killCount = sc.killCount.incrementAndGet()
-                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(config)
+                  doNotScrape(sc, Some(s"[terminator] deactivate LONG ($runMillis ms) running task: $sc"))(schedulerConfig)
                   if (fjTask.isDone) removeRef(iter, Some(s"[terminator] $sc is terminated; remove from q"))
                   else {
                     sc.threadRef.get.interrupt
@@ -212,7 +213,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new ScrapeWorker(airbrake, config, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, embedlyCommander)
+  private def worker = new ScrapeWorker(airbrake, config, schedulerConfig, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, embedlyCommander)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
