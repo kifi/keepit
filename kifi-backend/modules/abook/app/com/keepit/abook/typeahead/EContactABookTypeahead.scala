@@ -4,15 +4,10 @@ import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.typeahead.abook._
 import com.keepit.model.{User, EContact}
-import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.{ABookInfoRepo, EContactRepo}
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import scala.concurrent.{Promise, Future, Await}
-import com.keepit.common.akka.SafeFuture
-import com.keepit.typeahead.abook.EContactTypeaheadKey
-import com.keepit.common.performance.timing
+import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext
 
 // ABook-local; direct db access

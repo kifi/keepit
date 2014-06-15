@@ -37,6 +37,7 @@ angular.module('kifi', [
   'kifi.tags',
   'kifi.keeps',
   'kifi.keep',
+  'kifi.addKeep',
   'kifi.tagList',
   'kifi.layout.header',
   'kifi.layout.main',
@@ -146,8 +147,8 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$rootScope', '$window', 'friendService', '$timeout', 'env',
-  function (profileService, $rootScope, $window, friendService, $timeout, env) {
+  'profileService', '$window', '$rootScope', 'friendService', '$timeout', 'env',
+  function (profileService, $window, $rootScope, friendService, $timeout, env) {
     $timeout(function () {
       profileService.fetchPrefs().then(function (res) {
         // handle onboarding / imports

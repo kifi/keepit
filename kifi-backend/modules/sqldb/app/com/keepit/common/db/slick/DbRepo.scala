@@ -6,11 +6,9 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import DBSession._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
-import java.sql.{Timestamp, SQLException}
+import java.sql.SQLException
 import play.api.Logger
-import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{TypedType, ColumnOption}
-import scala.slick.driver.{JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.logging.Logging

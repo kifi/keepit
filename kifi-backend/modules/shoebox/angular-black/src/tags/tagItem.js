@@ -65,6 +65,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         scope.submitRename = function () {
           var newName = scope.renameTag.value;
           if (newName && newName !== scope.tag.name) {
+            animate();
             return tagService.rename(scope.tag.id, newName).then(function () {
               scope.cancelRename();
             });
@@ -77,27 +78,27 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         };
 
         function removeCloseDropdownHandler() {
-          $document.unbind('mousedown', applyCloseDropdown);
+          document.documentElement.removeEventListener('click', applyCloseDropdown, true);
         }
 
-        function closeDropdown() {
-          scope.isDropdownOpen = false;
+        function applyCloseDropdown(e) {
+          e.stopPropagation();
+          e.preventDefault();
           removeCloseDropdownHandler();
-        }
-
-        function applyCloseDropdown() {
-          scope.$apply(closeDropdown);
+          scope.$apply(function () {
+            scope.isDropdownOpen = false;
+          });
         }
 
         scope.toggleDropdown = function (e) {
           e.stopPropagation();
           e.preventDefault();
-          if (!scope.isDropdownOpen) {
-            scope.isDropdownOpen = true;
-            $document.bind('mousedown', applyCloseDropdown);
-          } else {
-            closeDropdown();
-          }
+          scope.isDropdownOpen = true;
+          document.documentElement.addEventListener('click', applyCloseDropdown, true);
+        };
+
+        scope.cancelNavigation = function (e) {
+          e.stopPropagation();
         };
 
         scope.$on('$destroy', function () {

@@ -56,28 +56,20 @@ highlightColor = #eeeeee
   z-index: 1
   display: none
 
-.kf-tag.animate
-  -webkit-animation: tag-blink 0.2s 3
-  animation: tag-blink 0.2s 3
+.kf-tag
+  &.animate
+  &.new
+    animation: tag-blink 0.1s linear 6 alternate
 
 @keyframes tag-blink {
-  0% {
+  from {
+    background-color: transparent
+    border-color: transparent
+  }
+  to {
     background-color: editYellowColor
     border-color: #cccccc
   }
-  50% {
-    background-color: editYellowColor
-    border-color: #cccccc
-  }
-  51% {
-    background-color: appBackgroundColor
-    border-color: transparent
-  }
-  100% {
-    background-color: appBackgroundColor
-    border-color: transparent
-  }
-
 }
 
 .kf-dragged-clone
@@ -95,6 +87,7 @@ highlightColor = #eeeeee
   color: textDarkColor
   vertical-align: middle
   border-top: 1px solid separatorColor
+  width: calc(100% - 50px)
 
   .kf-tag-caption
     font-style: italic
@@ -192,6 +185,7 @@ highlightColor = #eeeeee
   font-size: 13px
   color: textDarkColor
   vertical-align: middle
+  width: 100%
 
 .kf-tag-icon
   sprite2x($tag-blue-default)
@@ -204,8 +198,13 @@ highlightColor = #eeeeee
   overflow: hidden
   text-overflow: ellipsis
 
+.kf-tag-rename-container
+  overflow: hidden
+
 input.kf-tag-rename
   background-color: transparent
+  box-sizing: border-box
+  width: 100%
 
 .kf-tag-count
   font-size: 12px

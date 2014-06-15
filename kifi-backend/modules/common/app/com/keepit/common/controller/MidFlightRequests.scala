@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.mvc.RequestHeader
 import java.util.concurrent.ConcurrentMap
 import scala.collection.JavaConversions._
-import com.keepit.common.amazon.MyAmazonInstanceInfo
+import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.logging.Logging
 import java.util.concurrent.atomic.AtomicLong
 
@@ -14,14 +14,15 @@ import java.util.concurrent.atomic.AtomicLong
 @Singleton
 class MidFlightRequests @Inject() (
     airbrake: Provider[AirbrakeNotifier],
-    myInstanceInfo: Provider[MyAmazonInstanceInfo]) extends Logging {
+    myInstanceInfo: Provider[MyInstanceInfo]) extends Logging {
   private val currentRequests: ConcurrentMap[RequestHeader, Long] = new MapMaker().concurrencyLevel(4).weakKeys().makeMap()
 
   def count: Int = currentRequests.size()
   private[this] val lastAlert = new AtomicLong(-1)
 
   private lazy val MaxMidFlightRequests = {
-    val max = myInstanceInfo.get.info.instantTypeInfo.ecu * 5
+    val me = myInstanceInfo.get
+    val max = me.info.instantTypeInfo.ecu * me.serviceType.loadFactor * 5
     log.info(s"allowing $max mid flight requests before blowing the whistle")
     max
   }

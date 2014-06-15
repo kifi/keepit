@@ -113,6 +113,12 @@ angular.module('kifi.layout.main', [
       $scope.addKeepInput = {};
     }
 
+    function clearAddKeep() {
+      $scope.data.showAddKeeps = false;
+      $scope.addKeepCheckedPrivate = false;
+      $scope.addKeepInput = {};
+    }
+
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
         case 'addNetworks':
@@ -274,6 +280,7 @@ angular.module('kifi.layout.main', [
     $scope.keepUrl = function () {
       if ($scope.addKeepInput.url) {
         keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
+        clearAddKeep();
       } else {
         //todo(martin): Tell the user something went wrong
         return null; // silence jshint
@@ -285,5 +292,43 @@ angular.module('kifi.layout.main', [
         $rootScope.$emit('showGlobalModal','installExtensionError');
       });
     };
+
+    /**
+     * Make the page "extension-friendly"
+     */
+    var htmlElement = angular.element(document.getElementsByTagName('html')[0]);
+    // override right margin to always be 0
+    htmlElement.css({marginRight: 0});
+    $rootScope.$watch(function () {
+      return htmlElement[0].getAttribute('kifi-pane-parent') !== null;
+    }, function (res) {
+      var mainElement = $rootElement.find('.kf-main');
+      var rightCol = $rootElement.find('.kf-col-right');
+      var header = $rootElement.find('.kf-header-inner');
+      if (res) {
+        // find the margin-right rule that should have been applied
+        var fakeHtml = angular.element(document.createElement('html'));
+        fakeHtml.attr({
+          'kifi-pane-parent':'',
+          'kifi-with-pane':''
+        });
+        fakeHtml.hide().appendTo('html');
+        var marginRight = fakeHtml.css('margin-right');
+        fakeHtml.remove();
+
+        var currentRightColWidth = rightCol.width();
+        if (Math.abs(parseInt(marginRight,10) - currentRightColWidth) < 15) {
+          // avoid resizing if the width difference would be too small
+          marginRight = currentRightColWidth + 'px';
+        }
+        mainElement.css('width', 'calc(100% - ' + marginRight + ')');
+        rightCol.css('width', fakeHtml.css('margin-right'));
+        header.css('padding-right', marginRight);
+      } else {
+        mainElement.css('width', '');
+        rightCol.css('width', '');
+        header.css('padding-right', '');
+      }
+    });
   }
 ]);

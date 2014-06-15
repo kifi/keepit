@@ -225,7 +225,7 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple()
+POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(returnExisting: Boolean ?= true)
 POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
 POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()

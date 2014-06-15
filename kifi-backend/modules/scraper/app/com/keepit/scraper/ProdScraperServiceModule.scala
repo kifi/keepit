@@ -17,7 +17,5 @@ case class ProdScraperServiceModule() extends ScraperServiceModule(
   scrapeProcessorModule = ProdScraperProcessorModule(),
   embedlyModule = ProdEmbedlyModule()
 ) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SHOEBOX :: Nil
-  }
+  val discoveryModule = new ProdDiscoveryModule(ServiceType.SCRAPER, ServiceType.SHOEBOX :: Nil)
 }

@@ -261,13 +261,14 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         }
 
         scope.hasBigImage = function () {
-          var keep = scope.keep;
-          return keep && keep.summary && !shouldShowSmallImage(keep.summary) && hasSaneAspectRatio(keep.summary);
+          var summary = scope.keep && scope.keep.summary;
+          var forceBig = summary && summary.useBigLayout;
+          return scope.keep && summary && (forceBig || (!shouldShowSmallImage(summary) && hasSaneAspectRatio(summary)));
         };
 
         scope.hasSmallImage = function () {
           var keep = scope.keep;
-          return keep && keep.summary && shouldShowSmallImage(keep.summary) && hasSaneAspectRatio(keep.summary);
+          return keep && keep.summary && !keep.summary.useBigLayout && shouldShowSmallImage(keep.summary) && hasSaneAspectRatio(keep.summary);
         };
 
         scope.hasKeepers = function () {
@@ -320,29 +321,66 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             return;
           }
 
-          scope.keep.summary.description = scope.keep.summary.description.substring(0, 500);
-
-          var $sizer = angular.element('.kf-keep-description-sizer').text(scope.keep.summary.description);
+          var $sizer = angular.element('.kf-keep-description-sizer');
           var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
-          var cardWidth = element.find('.kf-keep-contents').width();
-          var optimalWidth = Math.floor(cardWidth * 0.45); // ideal image size is 45% of card
+          var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
+          var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
+
+          $sizer[0].style.width = '';
+
+          function trimDesc(desc) {
+            $sizer.text(desc);
+            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / 23);
+
+            if (desc.length > 150) {
+              // If description is quite long, trim it. We're drawing it, because for non-latin
+              // languages, character length is very misleading regarding how long the text
+              // will be.
+              if (singleLineWidthPx > 5000) { // Roughly 8 lines at max text width
+                var showRatio = 5000 / singleLineWidthPx;
+                return desc.substr(0, Math.floor(showRatio * desc.length));
+              }
+            } else {
+              if (singleLineWidthPx < cardWidth && img.w > 0.75 * cardWidth) {
+                // If the text draws as one line, we may be interested in using the big image layout.
+                return false;
+              }
+            }
+            return desc;
+          }
+
+          if (!scope.keep.summary.trimmedDesc) {
+            var trimmed = trimDesc(scope.keep.summary.description);
+            if (trimmed === false) {
+              scope.keep.summary.useBigLayout = true;
+              return;
+            }
+            scope.keep.summary.trimmedDesc = trimmed;
+          }
+
+          $sizer.text(scope.keep.summary.trimmedDesc);
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
-              return $sizer.css('width', width).outerHeight(true) + 25; // subtitle is 25px
+              $sizer[0].style.width = width + 'px';
+              //$sizer.width(width);
+              var height = $sizer[0].offsetHeight + 25; // subtitle is 25px
+              return height;
             }
             var imageWidth = cardWidth - guessWidth;
             var imageHeight = imageWidth / (img.w / img.h);
             var textHeight = tryWidth(guessWidth);
-            var delta = (textHeight - imageHeight);
-            var score = Math.abs(delta) + 0.3 * Math.abs(optimalWidth - imageWidth); // 30% penalty for distance away from optimal width
+            var delta = textHeight - imageHeight;
+            var score = Math.abs(delta) + 0.5 * Math.abs(optimalWidth - imageWidth); // 30% penalty for distance away from optimal width
+
             if (imageHeight > img.h) {
               score += (imageHeight - img.h);
             }
             if (imageWidth > img.w) {
               score += (imageWidth - img.w);
             }
-            return { guess: guessWidth, delta: delta, score: score, ht: textHeight, hi: imageHeight};
+
+            return { guess: guessWidth, delta: delta, score: score, ht: Math.ceil(textHeight), hi: imageHeight};
           }
 
           var i = 0;
@@ -362,32 +400,40 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
           var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.floor((bestRes.hi / 23)); // line height
-          var calcTextHeight = linesToShow * 23;
+          var calcTextHeight = linesToShow * 23 + 25; // 25px subtitle
 
-          element.find('.kf-keep-small-image').height(bestRes.hi);
-
-          element.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-          element.find('.kf-keep-info').css({
-            'width': calcTextWidth + '%',
-            'height': calcTextHeight + 'px'
-          }).addClass('kf-dyn-positioned')
-          .find('.kf-keep-description')
-          .css('margin-right', '40px');
-
-          // element.find('.kf-keep-small-image').width('auto');
-          // element.find('.kf-keep-small-image img').width(asideWidth);
+          scope.keep.sizeCard = function () {
+            element.find('.kf-keep-small-image').height(Math.round(bestRes.hi));
+            element.find('.kf-keep-small-image').width(asideWidthPercent + '%');
+            element.find('.kf-keep-info').css({
+              'width': calcTextWidth + '%',
+              'height': calcTextHeight + 'px'
+            }).addClass('kf-dyn-positioned')
+            .find('.kf-keep-description')
+            .css('margin-right', '30px');
+          };
         }
 
-        scope.$on('resizeImage', function() {
-          sizeImage();
-        })
-
-        scope.$watch('keep', function() {
+        function maybeSizeImage() {
           if (scope.keep && scope.keep.summary) {
-            var hasResonableDesc = scope.keep.summary.description && scope.keep.summary.description.length > 60;
             var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
-            if (hasResonableDesc && hasImage) {
-              sizeImage();
+            if (hasImage && scope.keep.summary.description && scope.hasSmallImage()) {
+              scope.keep.sizeCard = null;
+              scope.keep.calcSizeCard = sizeImage;
+            }
+          }
+        }
+
+        scope.$on('resizeImage', maybeSizeImage);
+
+        scope.$watch('keep', function () {
+          if (scope.keep && scope.keep.summary && !scope.keep.calcSizeCard) {
+            maybeSizeImage();
+            if (scope.keep.calcSizeCard) {
+              scope.keep.calcSizeCard();
+              if (scope.keep.sizeCard) {
+                scope.keep.sizeCard();
+              }
             }
           }
         });
