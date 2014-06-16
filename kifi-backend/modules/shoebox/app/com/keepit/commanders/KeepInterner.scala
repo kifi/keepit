@@ -12,7 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.normalizer.NormalizationCandidate
+import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
@@ -23,7 +23,7 @@ case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boo
 @Singleton
 class KeepInterner @Inject() (
   db: Database,
-  uriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   scraper: ScrapeSchedulerPlugin,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -170,7 +170,7 @@ class KeepInterner @Inject() (
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = try {
-        uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+        normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
       }

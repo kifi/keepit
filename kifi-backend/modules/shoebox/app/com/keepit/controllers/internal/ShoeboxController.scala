@@ -40,6 +40,7 @@ class ShoeboxController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   normUriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   normalizationServiceProvider:Provider[NormalizationService],
   urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -244,7 +245,7 @@ class ShoeboxController @Inject() (
             uri match {
               case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
               case _ => db.readWrite { implicit session =>
-                normUriRepo.internByUri(alternateUrl, bestCandidate)
+                normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
               }
             }
           }
@@ -327,7 +328,7 @@ class ShoeboxController @Inject() (
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uri = db.readWrite(attempts = 1) { implicit s =>  //using cache
-      normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
+      normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
     if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }}

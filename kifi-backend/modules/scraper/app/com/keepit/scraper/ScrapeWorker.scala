@@ -104,11 +104,11 @@ class ScrapeWorker(
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     val count = article match {
-      case Some(a) => a.content.split(" ").filter(!_.isEmpty).size
+      case Some(a) => a.content.split(" ").count(!_.isEmpty)
       case None => -1
     }
 
-    log.info(s"updating wordCount cache for uriId = ${uriId}, word count = ${count}")
+    log.info(s"updating wordCount cache for uriId = $uriId, word count = $count")
     wordCountCache.set(NormalizedURIWordCountKey(uriId), count)
   }
 
@@ -144,7 +144,7 @@ class ScrapeWorker(
       log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
       if (shouldUpdateScreenshot(scrapedURI)) {
-        scrapedURI.id map (shoeboxClient.updateScreenshots(_))
+        scrapedURI.id map shoeboxClient.updateScreenshots
       }
 
       if (shouldUpdateImage(latestUri, scrapedURI, pageInfoOpt)) {
