@@ -49,7 +49,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
-  def getEmailAddressById(id: Id[EmailAddress]): Future[String]
+  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -326,7 +326,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getEmailAddressById(id: Id[EmailAddress]): Future[String] = {
+  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String] = {
     call(Shoebox.internal.getEmailAddressById(id)).map{ r =>
       r.json.as[String]
     }

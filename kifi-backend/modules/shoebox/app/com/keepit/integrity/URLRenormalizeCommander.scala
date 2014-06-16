@@ -65,9 +65,9 @@ class URLRenormalizeCommander @Inject()(
 
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
-      val msg = s"regex = $regex, scanning ${urls.size} urls. readOnly = $readOnly"
-      systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-        subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
+      val msg = s"regex = ${regex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
+      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+      subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     }
 
     def sendEmail(changes: Vector[(URL, Option[NormalizedURI])], readOnly: Boolean)(implicit session: RWSession) = {
@@ -75,7 +75,7 @@ class URLRenormalizeCommander @Inject()(
       batchChanges.zipWithIndex.map{ case (batch, i) =>
         val title = "Renormalization Report: " + s"part ${i+1} of ${batchChanges.size}. ReadOnly Mode = $readOnly. Num of affected URL: ${changes.size}"
         val msg = batch.map( x => x._1.url + s"\ncurrent uri: ${ uriRepo.get(x._1.normalizedUriId).url }" + "\n--->\n" + x._2.map{_.url}).mkString("\n\n")
-        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+        systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
           subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN))
       }
     }
@@ -84,7 +84,7 @@ class URLRenormalizeCommander @Inject()(
 
     def sendSplitEmail(splits: Map[Id[NormalizedURI], SplittedURIs], readOnly: Boolean)(implicit session: RWSession) = {
       if (splits.size == 0){
-        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+        systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
           subject = "Renormalization Split Cases Report: no split cases found", htmlBody = "", category = NotificationCategory.System.ADMIN))
       }
 
@@ -100,7 +100,7 @@ class URLRenormalizeCommander @Inject()(
           "<<<----- Start of Split \n" + line1 + lines + "\nEnd of Split------>>>"
         }.mkString("\n\n===========================\n\n")
         //println(msg)
-        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+        systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
           subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN))
       }
     }

@@ -580,7 +580,7 @@ GET     /internal/shoebox/database/userIdsByExternalIds                @com.keep
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
 POST    /internal/shoebox/database/getBasicUsersNoCache                @com.keepit.controllers.internal.ShoeboxController.getBasicUsersNoCache()
 POST    /internal/shoebox/database/getEmailAddressesForUsers           @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
-GET     /internal/shoebox/database/getEmailAddressById                 @com.keepit.controllers.internal.ShoeboxController.getEmailAddressById(id: Id[EmailAddress])
+GET     /internal/shoebox/database/getEmailAddressById                 @com.keepit.controllers.internal.ShoeboxController.getEmailAddressById(id: Id[UserEmailAddress])
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.internal.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt                          @com.keepit.controllers.internal.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments                  @com.keepit.controllers.internal.ShoeboxController.getUserExperiments(id: Id[User])

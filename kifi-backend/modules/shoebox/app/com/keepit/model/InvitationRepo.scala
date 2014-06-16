@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 import scala.collection.mutable
 import scala.slick.jdbc.{StaticQuery => Q}
 import scala.slick.util.CloseableIterator
+import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] with SeqNumberFunction[Invitation] {
@@ -21,12 +22,12 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
   def countByUser(urlId: Id[User])(implicit session: RSession): Int
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
-  def getByRecipientEmailAddress(emailAddress: String)(implicit session: RSession): Seq[Invitation]
+  def getByRecipientEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[Invitation]
   def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
   def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
-  def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: String)(implicit session: RSession): Option[Invitation]
+  def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation]
   def getLastInvitedAtBySenderIdAndRecipientSocialUserIds(senderId: Id[User], socialUserInfoIds: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], DateTime]
-  def getLastInvitedAtBySenderIdAndRecipientEmailAddresses(senderId: Id[User], emailAddresses: Seq[String])(implicit session: RSession): Map[String, DateTime]
+  def getLastInvitedAtBySenderIdAndRecipientEmailAddresses(senderId: Id[User], emailAddresses: Seq[EmailAddress])(implicit session: RSession): Map[EmailAddress, DateTime]
   def getBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
   def getBySenderIdIter(senderId:Id[User], max:Int)(implicit session: RSession):CloseableIterator[Invitation]
   def getSocialInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
@@ -50,7 +51,7 @@ class InvitationRepoImpl @Inject() (
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
     def recipientEContactId  = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
-    def recipientEmailAddress  = column[String]("recipient_email_address", O.Nullable)
+    def recipientEmailAddress  = column[EmailAddress]("recipient_email_address", O.Nullable)
     def lastSentAt = column[DateTime]("last_sent_at", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, lastSentAt.?, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, recipientEmailAddress.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
@@ -117,7 +118,7 @@ class InvitationRepoImpl @Inject() (
     (for(b <- rows if b.recipientSocialUserId === socialUserInfoId) yield b).list
   }
 
-  def getByRecipientEmailAddress(emailAddress: String)(implicit session: RSession): Seq[Invitation] = {
+  def getByRecipientEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[Invitation] = {
     (for { row <- rows if row.recipientEmailAddress === emailAddress } yield row).list
   }
 
@@ -129,7 +130,7 @@ class InvitationRepoImpl @Inject() (
     (for(b <- rows if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
   }
 
-  def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: String)(implicit session: RSession): Option[Invitation] = {
+  def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation] = {
     (for(b <- rows if b.senderUserId === senderId && b.recipientEmailAddress === emailAddress) yield b).firstOption
   }
 
@@ -143,7 +144,7 @@ class InvitationRepoImpl @Inject() (
     }
   }
 
-  def getLastInvitedAtBySenderIdAndRecipientEmailAddresses(senderId: Id[User], emailAddresses: Seq[String])(implicit session: RSession): Map[String, DateTime] = {
+  def getLastInvitedAtBySenderIdAndRecipientEmailAddresses(senderId: Id[User], emailAddresses: Seq[EmailAddress])(implicit session: RSession): Map[EmailAddress, DateTime] = {
     if (emailAddresses.isEmpty) {
       Map.empty
     } else {

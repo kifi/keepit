@@ -95,7 +95,7 @@ class AuthCommander @Inject()(
   userRepo: UserRepo,
   userCredRepo: UserCredRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   userValueRepo: UserValueRepo,
   passwordResetRepo: PasswordResetRepo,
   s3ImageStore: S3ImageStore,

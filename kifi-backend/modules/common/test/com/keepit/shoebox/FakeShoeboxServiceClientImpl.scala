@@ -55,7 +55,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private def nextUserExperimentId() = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
 
   private val emailIdCounter = new AtomicInteger(0)
-  private def nextEmailId = Id[EmailAddress](emailIdCounter.incrementAndGet())
+  private def nextEmailId = Id[UserEmailAddress](emailIdCounter.incrementAndGet())
 
   private val friendRequestIdCounter = new AtomicInteger(0)
   private def nextFriendRequestId = Id[FriendRequest](friendRequestIdCounter.incrementAndGet())
@@ -102,8 +102,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allCollections = MutableMap[Id[Collection], Collection]()
   val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Keep]]]()
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
-  val allEmails = MutableMap[Id[EmailAddress], EmailAddress]()
-  val allUserEmails = MutableMap[Id[User], Seq[EmailAddress]]()
+  val allEmails = MutableMap[Id[UserEmailAddress], UserEmailAddress]()
+  val allUserEmails = MutableMap[Id[User], Seq[UserEmailAddress]]()
   val allUserValues = MutableMap[(Id[User], String), String]()
   val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
@@ -249,7 +249,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     experimentWithId
   }
 
-  def saveEmails(emails: EmailAddress*) = {
+  def saveEmails(emails: UserEmailAddress*) = {
     emails.map{ email =>
       val id = email.id.getOrElse(nextEmailId)
       val emailWithId = email.copy(id = Some(id))
@@ -361,16 +361,16 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address.address}}.toMap
     Future.successful(m)
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address.address}}.toMap
     Future.successful(m)
   }
 
-  def getEmailAddressById(id: Id[EmailAddress]): Future[String] = ???
+  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String] = ???
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???

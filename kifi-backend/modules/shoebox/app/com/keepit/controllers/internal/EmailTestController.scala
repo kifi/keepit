@@ -3,7 +3,7 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 
 import com.keepit.common.controller.ShoeboxServiceController
-import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, EmailAddresses, GenericEmailAddress}
+import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, SystemEmailAddress, EmailAddress}
 import com.keepit.common.db.slick.Database
 
 
@@ -20,9 +20,9 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
       db.readWrite{ implicit session =>
         postOffice.sendMail(ElectronicMail(
           senderUserId = None,
-          from = EmailAddresses.ENG,
+          from = SystemEmailAddress.ENG,
           fromName = Some("Email Test"),
-          to = Seq(GenericEmailAddress(email)),
+          to = Seq(EmailAddress(email)),
           subject = "Email Template Test: " + name,
           htmlBody = result.body,
           category = NotificationCategory.ALL)

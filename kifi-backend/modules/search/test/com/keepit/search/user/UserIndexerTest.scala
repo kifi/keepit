@@ -12,6 +12,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.typeahead.PrefixFilter
+import com.keepit.common.mail.EmailAddress
 
 
 class UserIndexerTest extends Specification with ApplicationInjector {
@@ -23,9 +24,9 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     val usersWithId = client.saveUsers(users: _*)
 
     val emails = (0 until 4).map{ i =>
-      EmailAddress(userId = usersWithId(i).id.get, address = s"user${i}@42go.com")
-    } ++ Seq(EmailAddress(userId = usersWithId(4).id.get, address = "woody@fox.com"),
-     EmailAddress(userId = usersWithId(4).id.get, address = "Woody.Allen@GMAIL.com"))
+      UserEmailAddress(userId = usersWithId(i).id.get, address = EmailAddress(s"user${i}@42go.com"))
+    } ++ Seq(UserEmailAddress(userId = usersWithId(4).id.get, address = EmailAddress("woody@fox.com")),
+     UserEmailAddress(userId = usersWithId(4).id.get, address = EmailAddress("Woody.Allen@GMAIL.com")))
 
     val exps = Seq( UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
         UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can_connect")),
@@ -55,7 +56,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         indexer.sequenceNumber.value === 5
 
         val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz"))
-        client.saveEmails(EmailAddress(userId = newUsers(0).id.get, address = "abc@xyz.com"))
+        client.saveEmails(UserEmailAddress(userId = newUsers(0).id.get, address = EmailAddress("abc@xyz.com")))
         indexer.update()
         indexer.sequenceNumber.value === 6
       }

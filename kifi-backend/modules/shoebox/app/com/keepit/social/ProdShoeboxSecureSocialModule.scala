@@ -40,7 +40,7 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     userCredRepo: UserCredRepo,
     imageStore: S3ImageStore,
     airbrake: AirbrakeNotifier,
-    emailRepo: EmailAddressRepo,
+    emailRepo: UserEmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
     userCommander: UserCommander,
     userExperimentCommander: LocalUserExperimentCommander,

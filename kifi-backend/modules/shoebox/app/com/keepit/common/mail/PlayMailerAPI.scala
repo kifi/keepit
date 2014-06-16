@@ -14,7 +14,7 @@ class PlayMailerAPI @Inject()(
     airbrake: AirbrakeNotifier
     ) extends MailerAPI {
   private val mail = new DynamicVariable(ElectronicMail(
-    from = EmailAddresses.NOTIFICATIONS,
+    from = SystemEmailAddress.NOTIFICATIONS,
     subject = "",
     htmlBody = "",
     category = NotificationCategory.System.PLAY))
@@ -48,30 +48,30 @@ class PlayMailerAPI @Inject()(
   }
 
   def setCc(ccs: String*): com.typesafe.plugin.MailerAPI = reportErrors {
-    mail.value = mail.value.copy(cc = ccs.map(GenericEmailAddress))
+    mail.value = mail.value.copy(cc = ccs.map(EmailAddress(_)))
     this
   }
 
   def setRecipient(tos: String *): com.typesafe.plugin.MailerAPI = {
-    mail.value = mail.value.copy(to = tos.map(GenericEmailAddress))
+    mail.value = mail.value.copy(to = tos.map(EmailAddress(_)))
     this
   }
 
   def setFrom(from: String ): com.typesafe.plugin.MailerAPI = {
-    mail.value = mail.value.copy(from = EmailAddresses(from))
+    mail.value = mail.value.copy(from = EmailAddress(from))
     this
   }
 
   def addFrom(from: String): MailerAPI = reportErrors {
-    mail.value = mail.value.copy(from = EmailAddresses(from))
+    mail.value = mail.value.copy(from = EmailAddress(from))
     this
   }
   def addRecipient(recipients: String*): MailerAPI = reportErrors {
-    mail.value = mail.value.copy(to = recipients.map { r => new EmailAddressHolder { val address = r } })
+    mail.value = mail.value.copy(to = recipients.map(EmailAddress(_)))
     this
   }
   def addCc(ccs: String*): MailerAPI = reportErrors {
-    mail.value = mail.value.copy(cc = ccs.map { r => new EmailAddressHolder { val address = r } })
+    mail.value = mail.value.copy(cc = ccs.map(EmailAddress(_)))
     this
   }
   def addBcc(bccs: String*): MailerAPI = notImplemented
