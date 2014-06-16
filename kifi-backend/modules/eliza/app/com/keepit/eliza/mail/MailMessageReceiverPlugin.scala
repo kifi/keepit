@@ -91,6 +91,7 @@ class MailDiscussionReceiverActor @Inject() (
 class MailDiscussionMessageParser @Inject() (
   db: Database,
   settings: MailDiscussionServerSettings,
+  airbrake: AirbrakeNotifier,
   implicit val publicIdConfiguration: PublicIdConfiguration
   ) extends GenericMailParser {
 
@@ -107,12 +108,19 @@ class MailDiscussionMessageParser @Inject() (
   }
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
-    getPublicId(message) flatMap { publicId =>
-      val contents = getText(message).map(MailDiscussionMessageParser.extractMessage)
-      if (contents.nonEmpty) {
-        Some(MailNotificationReply(getTimestamp(message), contents, publicId))
-      } else None
-    }
+    try {
+      getPublicId(message) flatMap { publicId =>
+        val contents = getText(message).map(MailDiscussionMessageParser.extractMessage)
+        if (contents.nonEmpty) {
+          Some(MailNotificationReply(getTimestamp(message), contents, publicId))
+        } else None
+      }
+      } catch {
+        case e: java.io.UnsupportedEncodingException => {
+          airbrake.notify("Unsupported Encoding in External Messaging Reply Email.", e)
+          None
+        }
+      }
 
   }
 }
