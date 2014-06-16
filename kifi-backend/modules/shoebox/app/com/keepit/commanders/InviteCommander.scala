@@ -43,7 +43,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.commanders.emails.EmailOptOutCommander
 
-case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, String]) {
+case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress]) {
   override def toString(): String = s"${network.name}/${identifier.left.map(_.id).merge}"
 }
 
@@ -52,7 +52,7 @@ object FullSocialId {
     val Array(networkName, idString) = fullSocialId.split("/")
     val network = SocialNetworkType(networkName)
     val identifier = network match {
-      case SocialNetworks.EMAIL => Right(idString)
+      case SocialNetworks.EMAIL => Right(EmailAddress(idString))
       case _ => Left(SocialId(idString))
     }
     new FullSocialId(network, identifier)
@@ -184,7 +184,7 @@ class InviteCommander @Inject() (
 
       val otherEmailInvites = for {
         emailAccount <- userEmailAccounts if emailAccount.verified
-        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address.address)
+        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address)
       } yield (invite, SocialNetworks.EMAIL)
 
       val existingInvites = otherSocialInvites.toSet ++ otherEmailInvites.toSet ++ cookieInvite.toSet
@@ -398,7 +398,7 @@ class InviteCommander @Inject() (
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
-        val friendEContactFuture = abook.getOrCreateEContact(userId, emailAddress).map(eContactTry => Right(eContactTry.get))
+        val friendEContactFuture = abook.getOrCreateEContact(userId, emailAddress.address).map(eContactTry => Right(eContactTry.get))
         val invitationsSentFuture = countInvitationsSent(userId, Right(emailAddress))
         (friendEContactFuture, invitationsSentFuture)
       }
@@ -410,7 +410,7 @@ class InviteCommander @Inject() (
     } yield InviteInfo(userId, friend, invitationsSent + 1, subject, message, source)
   }
 
-  private def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], knownInvitation: Option[Invitation] = None): Future[Int] = {
+  private def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress], knownInvitation: Option[Invitation] = None): Future[Int] = {
     // Optimization to avoid calling ABook in the most common cases (ie first time social invites)
     val mayHaveBeenInvitedAlready = friendId match {
       case Left(socialUserId) => (knownInvitation orElse db.readOnly { implicit session =>
@@ -433,7 +433,7 @@ class InviteCommander @Inject() (
       senderUserId = Some(inviteInfo.userId),
       recipientSocialUserId = inviteInfo.friend.left.toOption.map(_.id.get),
       recipientEContactId = inviteInfo.friend.right.toOption.map(_.id.get),
-      recipientEmailAddress = inviteInfo.friend.right.toOption.map(_.email),
+      recipientEmailAddress = inviteInfo.friend.right.toOption.map(_.email).map(EmailAddress(_)),
       state = InvitationStates.INACTIVE
     )
   }
@@ -502,7 +502,7 @@ class InviteCommander @Inject() (
         ripestFruits.map { richConnection => richConnection.connectionType match {
           case SocialNetworks.EMAIL =>
             val emailAddress = richConnection.friendEmailAddress.get
-            val name = richConnection.friendName getOrElse emailAddress
+            val name = richConnection.friendName getOrElse emailAddress.address
             val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
             val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
             Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))

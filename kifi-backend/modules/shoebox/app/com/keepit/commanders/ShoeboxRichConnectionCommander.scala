@@ -139,7 +139,7 @@ class ShoeboxRichConnectionCommander @Inject() (
 
     if (emails.nonEmpty) {
       emails.collect { case verifiedEmail if verifiedEmail.state == EmailAddressStates.VERIFIED =>
-        processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address.address))
+        processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address))
       }
 
       db.readWrite { implicit session =>

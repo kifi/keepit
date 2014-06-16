@@ -298,7 +298,7 @@ class AdminUserController @Inject() (
       invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
     } flatten
     val byEmail: Seq[Id[User]] = emails map { email =>
-      invitationRepo.getByRecipientEmailAddress(email.address.address).map(_.senderUserId).flatten
+      invitationRepo.getByRecipientEmailAddress(email.address).map(_.senderUserId).flatten
     } flatten
     val all: Seq[Id[User]] = (byEmail ++ bySocial).toSet.toSeq
     all map { userId =>

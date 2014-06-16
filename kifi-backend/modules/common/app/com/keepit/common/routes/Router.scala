@@ -9,6 +9,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{StatModel, ModelVersion}
 import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.common.mail.EmailAddress
 
 trait Service
 
@@ -35,6 +36,7 @@ object ParamValue {
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if(i.nonEmpty) e(i.get) else ParamValue("")
   implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(seqNum.value.toString)
   implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(modelVersion.version.toString)
+  implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(emailAddress.address)
 }
 
 abstract class Method(name: String)
@@ -258,7 +260,7 @@ object ABook extends Service {
     def richConnectionUpdate() = ServiceRoute(POST, s"/internal/abook/richConnectionUpdate")
     def blockRichConnection() = ServiceRoute(POST, s"/internal/abook/blockRichConnection")
     def ripestFruit(userId:Id[User], howMany:Int) = ServiceRoute(GET, s"/internal/abook/ripestFruit?userId=${userId.id}&howMany=$howMany")
-    def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]) = ServiceRoute(GET, s"/internal/abook/${userId}/countInvitationsSent", friend match {
+    def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]) = ServiceRoute(GET, s"/internal/abook/${userId}/countInvitationsSent", friend match {
       case Left(friendSocialId) => Param("friendSocialId", friendSocialId)
       case Right(friendEmailAddress) => Param("friendEmailAddress", friendEmailAddress)
     })

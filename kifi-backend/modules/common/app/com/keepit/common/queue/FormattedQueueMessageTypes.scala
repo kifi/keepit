@@ -7,6 +7,7 @@ import com.keepit.social.SocialNetworkType
 
 import play.api.libs.json.{Reads, Json, Format, JsValue}
 import com.keepit.common.reflection.CompanionTypeSystem
+import com.keepit.common.mail.EmailAddress
 
 
 sealed trait RichConnectionUpdateMessage { self =>
@@ -81,7 +82,7 @@ case object RemoveKifiConnection extends RichConnectionUpdateMessageKind[RemoveK
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
-case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String], invitationNumber: Int = 1) extends RichConnectionUpdateMessage {
+case class RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[EmailAddress], invitationNumber: Int = 1) extends RichConnectionUpdateMessage {
   type M = RecordInvitation
   def kind = RecordInvitation
 }
@@ -93,7 +94,7 @@ case object RecordInvitation extends RichConnectionUpdateMessageKind[RecordInvit
 }
 
 //Propages changes to InvitationRepo (needs sequence number).
-case class CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String]) extends RichConnectionUpdateMessage {
+case class CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[EmailAddress]) extends RichConnectionUpdateMessage {
   type M = CancelInvitation
   def kind = CancelInvitation
 }
@@ -105,7 +106,7 @@ case object CancelInvitation extends RichConnectionUpdateMessageKind[CancelInvit
 }
 
 //Propages changes to SocialUserInfoRepo (needs sequence number). Will usually be a direct call.
-case class RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) extends RichConnectionUpdateMessage {
+case class RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress], friendUserId: Id[User]) extends RichConnectionUpdateMessage {
   type M = RecordFriendUserId
   def kind = RecordFriendUserId
 }
@@ -118,7 +119,7 @@ case object RecordFriendUserId extends RichConnectionUpdateMessageKind[RecordFri
 
 
 //Caused by direct user action. Will usually be a direcrt call.
-case class Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) extends RichConnectionUpdateMessage {
+case class Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress]) extends RichConnectionUpdateMessage {
   type M = Block
   def kind = Block
 }
@@ -130,7 +131,7 @@ case object Block extends RichConnectionUpdateMessageKind[Block] {
 }
 
 //Propages changes to EmailAddressRepo (needs sequence number).
-case class RecordVerifiedEmail(userId: Id[User], email: String) extends RichConnectionUpdateMessage {
+case class RecordVerifiedEmail(userId: Id[User], email: EmailAddress) extends RichConnectionUpdateMessage {
   type M = RecordVerifiedEmail
   def kind = RecordVerifiedEmail
 }

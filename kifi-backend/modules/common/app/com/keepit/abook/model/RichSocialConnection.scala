@@ -8,6 +8,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.mail.EmailAddress
 
 object RichSocialConnectionStates extends States[RichSocialConnection]
 
@@ -21,7 +22,7 @@ case class RichSocialConnection(
   userSocialId: Option[Id[SocialUserInfo]],
   connectionType: SocialNetworkType,
   friendSocialId: Option[Id[SocialUserInfo]],
-  friendEmailAddress: Option[String],
+  friendEmailAddress: Option[EmailAddress],
   friendName: Option[String],
   friendUserId: Option[Id[User]],
   commonKifiFriendsCount: Int,
@@ -45,7 +46,7 @@ object RichSocialConnection {
     (__ \ 'userSocialId).formatNullable(Id.format[SocialUserInfo]) and
     (__ \ 'connectionType).format[SocialNetworkType] and
     (__ \ 'friendSocialId).formatNullable(Id.format[SocialUserInfo]) and
-    (__ \ 'friendEmailAddress).formatNullable[String] and
+    (__ \ 'friendEmailAddress).formatNullable[EmailAddress] and
     (__ \ 'friendName).formatNullable[String] and
     (__ \ 'friendUserId).formatNullable((Id.format[User])) and
     (__ \ 'commonKifiFriendsCount).format[Int] and
