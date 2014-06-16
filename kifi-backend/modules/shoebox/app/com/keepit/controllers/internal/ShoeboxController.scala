@@ -148,20 +148,20 @@ class ShoeboxController @Inject() (
       val newNormalizedUriResult = Json.fromJson[NormalizedURI](originalJson ++ request.body.as[JsObject])
 
       newNormalizedUriResult.fold({ invalid =>
-        log.error(s"Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}")
-        airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update: $invalid. See logs for more.")
-        None
+        val error = "Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}"
+        airbrake.notify(error)
+        throw new Exception(error)
       }, { normalizedUri =>
-        Some(scraperHelper.saveNormalizedURI(normalizedUri))
-      }).nonEmpty
+        scraperHelper.saveNormalizedURI(normalizedUri)
+      })
     }
     saveResult match {
       case Success(res) =>
-        Ok(Json.toJson(res))
+        Ok
       case Failure(ex) =>
         log.error(s"Could not deserialize NormalizedURI ($uriId) update: $ex\nbody: ${request.body}")
         airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update", ex)
-        Ok(Json.toJson(false))
+        throw ex
     }
   }
 
@@ -230,14 +230,21 @@ class ShoeboxController @Inject() (
     normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
 
       (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
-        val bestReference = newReferenceOption.map { newReferenceId => db.readOnly { implicit session => normUriRepo.get(newReferenceId) } } getOrElse scrapedUri
+        val bestReference = newReferenceOption.map { newReferenceId =>
+          db.readOnly { implicit session =>
+            normUriRepo.get(newReferenceId)
+          }
+        } getOrElse scrapedUri
         // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
         bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
           alternateUrls.foreach { alternateUrl =>
-            db.readWrite { implicit session =>
-              normUriRepo.getByUri(alternateUrl) match {
-                case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
-                case _ => normUriRepo.internByUri(alternateUrl, bestCandidate)
+            val uri = db.readOnly { implicit session =>
+              normUriRepo.getByUri(alternateUrl)
+            }
+            uri match {
+              case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
+              case _ => db.readWrite { implicit session =>
+                normUriRepo.internByUri(alternateUrl, bestCandidate)
               }
             }
           }

@@ -3,8 +3,8 @@
 angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
 .controller('KeepsCtrl', [
-  '$scope', '$timeout', 'profileService', 'keepService', 'tagService',
-  function ($scope, $timeout, profileService, keepService, tagService) {
+  '$scope', 'profileService', 'keepService', 'tagService',
+  function ($scope, profileService, keepService, tagService) {
     $scope.me = profileService.me;
     $scope.data = {draggedKeeps: []};
 
@@ -38,8 +38,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService',
-  function (keepService) {
+  'keepService', '$window', '$timeout',
+  function (keepService, $window, $timeout) {
 
     return {
       restrict: 'A',
@@ -65,7 +65,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         scope.addingTag = {enabled: false};
 
         scope.keepClickAction = function (event, keep) {
-          if (event.metaKey && event.target.tagName !== 'A') {
+          if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
             if (!scope.editMode.enabled) {
               scope.toggleEdit(true);
             }
@@ -147,6 +147,37 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
         }, function () {
           scope.disableEditTags();
         });
+
+        var lastSizedAt = $window.innerWidth;
+        function resizeWindowListener() {
+          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
+            lastSizedAt = $window.innerWidth;
+            sizeKeeps();
+          }
+        }
+
+        function sizeKeeps() {
+          scope.$broadcast('resizeImage');
+          $timeout(function () {
+            scope.keeps.forEach(function (keep) {
+              if (keep.calcSizeCard) {
+                keep.calcSizeCard();
+              }
+            });
+            scope.keeps.forEach(function (keep) {
+              if (keep.sizeCard) {
+                keep.sizeCard();
+              }
+            });
+          });
+        }
+
+        var lazyResizeListener = _.debounce(resizeWindowListener, 250);
+        $window.addEventListener('resize', lazyResizeListener);
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', lazyResizeListener);
+        });
+
       }
     };
   }

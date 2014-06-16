@@ -21,7 +21,6 @@ import play.api.libs.json.{Json, JsObject}
 import com.google.inject.{Inject, Singleton}
 
 
-
 @Singleton
 class UriNormalizationUpdater @Inject() (
     threadRepo: MessageThreadRepo,
@@ -34,6 +33,8 @@ class UriNormalizationUpdater @Inject() (
     serviceDiscovery: ServiceDiscovery,
     system: ActorSystem
   ) extends Logging {
+
+
 
   centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate)
 

@@ -64,7 +64,7 @@ trait SequenceNumberCentralConfigKey[T] {
 trait ConfigStore {
   def get(key: CentralConfigKey): Option[String]
   def set(key: CentralConfigKey, value: String): Unit
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit)
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit)
 }
 
 class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
@@ -72,9 +72,9 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
 
   private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
 
-  zkClient.onConnected{ _ =>
+  zkClient.onConnected{ zk =>
     log.info(s"ZKX registering watches")
-    watches.foreach{ case (key, handler) => watch(key)(handler) }
+    watches.foreach{ case (key, handler) => watch(key, Some(zk))(handler) }
   }
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
@@ -102,10 +102,13 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
     }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit): Unit = zkClient.session{ zk =>
-    log.info(s"ZKX registering watch $key => $handler")
-    watches += ((key, handler))
-    zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit): Unit = {
+    zkClient.session{ zkM =>
+      val zk = sessionOverride.getOrElse(zkM)
+      log.info(s"ZKX registering watch $key")
+      watches += ((key, handler))
+      zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
+    }
   }
 }
 
@@ -125,7 +128,7 @@ class InMemoryConfigStore extends ConfigStore {
     }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit) : Unit = {
     if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
     watches(key.toNode.name) += handler
   }

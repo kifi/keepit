@@ -21,7 +21,7 @@ class EventTrackingTest extends Specification with TestInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
-    Seq(TestMongoModule(), StandaloneTestActorSystemModule())
+    Seq(TestMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule())
   }
 
   def setup()(implicit injector: Injector) = {

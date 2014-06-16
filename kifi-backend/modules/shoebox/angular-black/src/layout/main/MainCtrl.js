@@ -7,9 +7,9 @@ angular.module('kifi.layout.main', [
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'injectedState', '$rootScope', '$analytics', 'keepService',
+  'injectedState', '$rootScope', '$analytics', 'keepService', 'installService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, keepService) {
+    injectedState, $rootScope, $analytics, keepService, installService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -105,6 +105,19 @@ angular.module('kifi.layout.main', [
       $scope.modal = 'import_bookmark_file';
       $scope.data.showBookmarkFileModal1 = true;
     }
+    
+    function initAddKeep() {
+      $scope.modal = 'add_keeps';
+      $scope.data.showAddKeeps = true;
+      $scope.addKeepCheckedPrivate = false;
+      $scope.addKeepInput = {};
+    }
+
+    function clearAddKeep() {
+      $scope.data.showAddKeeps = false;
+      $scope.addKeepCheckedPrivate = false;
+      $scope.addKeepInput = {};
+    }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
@@ -119,9 +132,15 @@ angular.module('kifi.layout.main', [
           initBookmarkFileUpload();
           break;
         case 'addKeeps':
-          $scope.modal = 'add_keeps';
-          $scope.data.showAddKeeps = true;
+          initAddKeep();
           break;
+        case 'installExtension':
+          $scope.modal = 'install_extension';
+          $scope.data.showInstallExtension = true;
+          break;
+        case 'installExtensionError':
+          $scope.modal = 'install_extension_error';
+          $scope.data.showInstallErrorModal = true;
       }
     });
 
@@ -254,10 +273,6 @@ angular.module('kifi.layout.main', [
       $rootElement.find('body').addClass('mac');
     }
 
-
-    $scope.addKeepCheckedPrivate = false;
-    $scope.addKeepInput = {};
-
     $scope.addKeepTogglePrivate = function () {
       $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
     };
@@ -265,10 +280,55 @@ angular.module('kifi.layout.main', [
     $scope.keepUrl = function () {
       if ($scope.addKeepInput.url) {
         keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
+        clearAddKeep();
       } else {
         //todo(martin): Tell the user something went wrong
         return null; // silence jshint
       }
     };
+
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $rootScope.$emit('showGlobalModal','installExtensionError');
+      });
+    };
+
+    /**
+     * Make the page "extension-friendly"
+     */
+    var htmlElement = angular.element(document.getElementsByTagName('html')[0]);
+    // override right margin to always be 0
+    htmlElement.css({marginRight: 0});
+    $rootScope.$watch(function () {
+      return htmlElement[0].getAttribute('kifi-pane-parent') !== null;
+    }, function (res) {
+      var mainElement = $rootElement.find('.kf-main');
+      var rightCol = $rootElement.find('.kf-col-right');
+      var header = $rootElement.find('.kf-header-inner');
+      if (res) {
+        // find the margin-right rule that should have been applied
+        var fakeHtml = angular.element(document.createElement('html'));
+        fakeHtml.attr({
+          'kifi-pane-parent':'',
+          'kifi-with-pane':''
+        });
+        fakeHtml.hide().appendTo('html');
+        var marginRight = fakeHtml.css('margin-right');
+        fakeHtml.remove();
+
+        var currentRightColWidth = rightCol.width();
+        if (Math.abs(parseInt(marginRight,10) - currentRightColWidth) < 15) {
+          // avoid resizing if the width difference would be too small
+          marginRight = currentRightColWidth + 'px';
+        }
+        mainElement.css('width', 'calc(100% - ' + marginRight + ')');
+        rightCol.css('width', fakeHtml.css('margin-right'));
+        header.css('padding-right', marginRight);
+      } else {
+        mainElement.css('width', '');
+        rightCol.css('width', '');
+        header.css('padding-right', '');
+      }
+    });
   }
 ]);

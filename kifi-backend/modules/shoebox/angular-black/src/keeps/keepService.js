@@ -149,21 +149,54 @@ angular.module('kifi.keepService', [
         $analytics.eventTrack('user_clicked_page', {
           'action': 'keep'
         });
-        if (!existingKeeps) {
-          prependKeeps(keeps);
-        }
+        prependKeeps(keeps);
         return keeps;
       });
     }
 
-    function prependKeeps(keeps) {
-      list.unshift.apply(list, keeps);
+    function fetchFullKeepInfo(keep) {
+      keep.isLoading = true;
+      var url = routeService.getKeep(keep.id);
+      var config = {
+        params: { withFullInfo: true }
+      };
+
+      return $http.get(url, config).then(function (result) {
+        util.completeObjectInPlace(keep, result.data);
+        buildKeep(keep);
+        keep.isLoading = false;
+        return keep;
+      });
+    }
+
+    function insertKeeps(keeps, insertFn) {
+      // Check which keeps are already in the list
+      var existing = [];
+      var nonExisting = [];
+      keeps.forEach(function (keep) {
+        var isExisting = !!_.find(list, function (existingKeep) {
+          return keep.id === existingKeep.id;
+        });
+        if (isExisting) {
+          existing.push(keep);
+        } else {
+          nonExisting.push(keep);
+        }
+      });
+      insertFn.apply(list, nonExisting);
+      existing.forEach(function (keep) {
+        keep.unkept = false;
+      });
       before = list.length ? list[list.length - 1].id : null;
+
+    }
+
+    function prependKeeps(keeps) {
+      insertKeeps(keeps, list.unshift);
     }
 
     function appendKeeps(keeps) {
-      list.push.apply(list, keeps);
-      before = list.length ? list[list.length - 1].id : null;
+      insertKeeps(keeps, list.push);
     }
 
     var api = {
@@ -357,7 +390,11 @@ angular.module('kifi.keepService', [
             })
           };
 
-        return processKeepAction(url, data);
+        processKeepAction(url, data).then(function (keeps) {
+          var keep = keeps[0];
+          fetchFullKeepInfo(keep);
+          return keep;
+        });
       },
 
       keep: function (keeps, isPrivate) {

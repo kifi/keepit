@@ -152,17 +152,17 @@ class KeepsCommander @Inject() (
         case Some(beforeExtId) =>
           keepRepo.getByExtIdAndUser(beforeExtId, userId) match {
             case None => uriIds
-            case Some(beforeKeep) => uriIds.takeWhile(_.id != beforeKeep.uriId)
+            case Some(beforeKeep) => uriIds.dropWhile(_ != beforeKeep.uriId).drop(1)
           }
       }
       val after = afterOpt match {
         case None => before
         case Some(afterExtId) => keepRepo.getByExtIdAndUser(afterExtId, userId) match {
           case None => before
-          case Some(afterKeep) => uriIds.dropWhile(_.id != afterKeep.uriId)
+          case Some(afterKeep) => uriIds.takeWhile(_ != afterKeep.uriId)
         }
       }
-      after
+      if (count > 0) after.take(count) else after
     }
 
     db.readOnly { implicit ro =>
@@ -276,10 +276,11 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, returnExisting: Boolean = true)(implicit context: HeimdalContext):
       (Seq[KeepInfo], Option[Int]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+    val (keepsWithStatus, _) = keepInterner.internRawBookmarksWithStatus(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+    val keeps = keepsWithStatus.map(_._1)
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -290,7 +291,8 @@ class KeepsCommander @Inject() (
     SafeFuture{
       searchClient.updateURIGraph()
     }
-    (keeps.map(KeepInfo.fromBookmark), addedToCollection)
+    val returnedKeeps = if (returnExisting) keeps else keepsWithStatus collect { case (keep,true) => keep }
+    (returnedKeeps.map(KeepInfo.fromBookmark), addedToCollection)
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {

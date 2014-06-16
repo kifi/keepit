@@ -56,6 +56,7 @@
     cursor: pointer
     transition: background-color .1s
 
+    &:focus
     &:hover
       background-color: #5382C1
 
@@ -88,7 +89,7 @@
 .dialog-header
   padding: 9px 6px 8px
   text-align: center
-  long-text()
+  word-wrap: break-word
 
   &.dialog-warning
     color: #ce6159
@@ -108,6 +109,7 @@
 
 .dialog-body-wrap
   min-width: 300px
+  max-width: 800px
   margin: 40px 0px 5px
   padding: 0px 35px
   color: #333
@@ -132,4 +134,3 @@
   z-index: 1030
   background-color: #000000
   opacity: 0.3
-

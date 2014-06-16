@@ -105,135 +105,139 @@ def getAllInstances():
   return [ServiceInstance(instance) for instance in ec2.get_only_instances()]
 
 if __name__=="__main__":
-  parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
-  parser.add_argument(
-    'serviceType',
-    action = 'store',
-    help = "Which service type (shoebox, search, etc.) you wish to deploy",
-    metavar = "ServiceType"
-  )
-  parser.add_argument(
-    '--host',
-    action = 'store',
-    help = "Which host (EC2 machine name) to deploy to. (default: all for service type)",
-    metavar = "Host"
-  )
-  parser.add_argument(
-    '--mode',
-    action = 'store',
-    help = "Wait for machines to come up or not. Options: 'safe' or 'force'. (default: 'safe').",
-    metavar = "Mode",
-    default = 'safe',
-    choices = ['safe', 'force']
-  )
-  parser.add_argument(
-    '--version',
-    action = 'store',
-    help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
-    metavar = "Version"
-  )
-  parser.add_argument(
-    '--iam',
-    action = 'store',
-    help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
-    metavar = "Name"
-  )
-  parser.add_argument(
-    '--nolock',
-    action = 'store_true',
-    help = "Do *not* try to prevent simultaneous deploys with a local lock",
-  )
+  try:
+    parser = argparse.ArgumentParser(prog="deploy", description="Your friendly FortyTwo Deployment Service v0.42")
+    parser.add_argument(
+      'serviceType',
+      action = 'store',
+      help = "Which service type (shoebox, search, etc.) you wish to deploy",
+      metavar = "ServiceType"
+    )
+    parser.add_argument(
+      '--host',
+      action = 'store',
+      help = "Which host (EC2 machine name) to deploy to. (default: all for service type)",
+      metavar = "Host"
+    )
+    parser.add_argument(
+      '--mode',
+      action = 'store',
+      help = "Wait for machines to come up or not. Options: 'safe' or 'force'. (default: 'safe').",
+      metavar = "Mode",
+      default = 'safe',
+      choices = ['safe', 'force']
+    )
+    parser.add_argument(
+      '--version',
+      action = 'store',
+      help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
+      metavar = "Version"
+    )
+    parser.add_argument(
+      '--iam',
+      action = 'store',
+      help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
+      metavar = "Name"
+    )
+    parser.add_argument(
+      '--nolock',
+      action = 'store_true',
+      help = "Do *not* try to prevent simultaneous deploys with a local lock",
+    )
 
 
-  args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(sys.argv[1:])
 
-  if args.iam:
-    userName = args.iam
-  else:
-    userName = getpass.getuser()
-    if userName=="fortytwo":
-      print "Yo, dude, set your name! ('--iam' option)"
+    if args.iam:
+      userName = args.iam
+    else:
+      userName = getpass.getuser()
+      if userName=="fortytwo":
+        print "Yo, dude, set your name! ('--iam' option)"
 
-  lock = FileLock("/home/fortytwo/" + args.serviceType + ".lock")
+    lock = FileLock("/home/fortytwo/" + args.serviceType + ".lock")
 
-  instances = getAllInstances()
+    instances = getAllInstances()
 
-  if args.host:
-    instances = [instance for instance in instances if instance.name==args.host]
-  else:
-    instances = [instance for instance in instances if instance.service==args.serviceType and instance.mode!="canary"]
+    if args.host:
+      instances = [instance for instance in instances if instance.name==args.host]
+    else:
+      instances = [instance for instance in instances if instance.service==args.serviceType and instance.mode!="canary"]
 
-  assets = S3Assets(args.serviceType, "fortytwo-builds")
+    assets = S3Assets(args.serviceType, "fortytwo-builds")
 
-  command = ["python", "/home/fortytwo/eddie/eddie-self-deploy.py"]
+    command = ["python", "/home/fortytwo/eddie/eddie-self-deploy.py"]
 
-  assets = S3Assets(args.serviceType, "fortytwo-builds")
+    assets = S3Assets(args.serviceType, "fortytwo-builds")
 
-  version = 'latest'
-  full_version = 'latest'
-  if args.version:
-    version = args.version
-    try:
-      full_version = assets.byHash(version).name
-    except:
-      full_version = version
-  else:
-    version = assets.latest().hash
-    full_version = assets.latest().name + " (latest)"
-
-  command.append(version)
-
-  if args.mode and args.mode=="force":
-    command.append("force")
-  else:
-    if (not args.nolock) and (not lock.lock()):
-      print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
-      sys.exit(0)
-
-  log("Triggered deploy of %s to %s in %s mode with version %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, full_version))
-
-  if args.mode and args.mode=="force":
-    try:
-      inpt = raw_input("Warning: Force Mode! You sure? [Y,N,Ctrl+C]")
-      if inpt=="Y":
-        remoteProcs = []
-        for instance in instances:
-          shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/fortytwo/.ssh/id_rsa")
-          remoteProcs.append(shell.spawn(command, store_pid=True, stdout=sys.stdout))
-        log("Deploy Triggered on all instances. Waiting for them to finish.")
-        try:
-          for remoteProc in remoteProcs:
-            while remoteProc.is_running():
-              time.sleep(0.1)
-            remoteProc.wait_for_result()
-        except KeyboardInterrupt:
-          log("Manual Abort. Might be too late (force mode).")
-          for remoteProc in remoteProcs:
-            try:
-              remoteProc.send_signal(2)
-            except:
-              pass
-          sys.exit(1)
-      else:
-        log("Manual Abort.")
-    except KeyboardInterrupt:
-      log("Manual Abort.")
-  else:
-    for instance in instances:
-      shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/fortytwo/.ssh/id_rsa")
-      remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
-      log("Deploy triggered on " + instance.name + ". Waiting for the machine to finish.")
+    version = 'latest'
+    full_version = 'latest'
+    if args.version:
+      version = args.version
       try:
-        while remoteProc.is_running():
-          time.sleep(0.1)
-        remoteProc.wait_for_result()
-        log("Done with " + instance.name + ".")
+        full_version = assets.byHash(version).name
+      except:
+        full_version = version
+    else:
+      version = assets.latest().hash
+      full_version = assets.latest().name + " (latest)"
+
+    command.append(version)
+
+    if args.mode and args.mode=="force":
+      command.append("force")
+    else:
+      if (not args.nolock) and (not lock.lock()):
+        print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
+        sys.exit(0)
+
+    log("Triggered deploy of %s to %s in %s mode with version %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, full_version))
+
+    if args.mode and args.mode=="force":
+      try:
+        inpt = raw_input("Warning: Force Mode! You sure? [Y,N,Ctrl+C]")
+        if inpt=="Y":
+          remoteProcs = []
+          for instance in instances:
+            shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/fortytwo/.ssh/id_rsa")
+            remoteProcs.append(shell.spawn(command, store_pid=True, stdout=sys.stdout))
+          log("Deploy Triggered on all instances. Waiting for them to finish.")
+          try:
+            for remoteProc in remoteProcs:
+              while remoteProc.is_running():
+                time.sleep(0.1)
+              remoteProc.wait_for_result()
+          except KeyboardInterrupt:
+            log("Manual Abort. Might be too late (force mode).")
+            for remoteProc in remoteProcs:
+              try:
+                remoteProc.send_signal(2)
+              except:
+                pass
+            sys.exit(1)
+        else:
+          log("Manual Abort.")
       except KeyboardInterrupt:
         log("Manual Abort.")
-        remoteProc.send_signal(2)
-        lock.unlock()
-        sys.exit(1)
-      time.sleep(15)
-    lock.unlock()
-    log("Deployment Complete")
+    else:
+      for instance in instances:
+        shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/fortytwo/.ssh/id_rsa")
+        remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
+        log("Deploy triggered on " + instance.name + ". Waiting for the machine to finish.")
+        try:
+          while remoteProc.is_running():
+            time.sleep(0.1)
+          remoteProc.wait_for_result()
+          log("Done with " + instance.name + ".")
+        except KeyboardInterrupt:
+          log("Manual Abort.")
+          remoteProc.send_signal(2)
+          lock.unlock()
+          sys.exit(1)
+        time.sleep(15)
+      lock.unlock()
+      log("Deployment Complete")
+  except Exception, e:
+    log("FATAL ERROR: " + str(e))
+    raise
 

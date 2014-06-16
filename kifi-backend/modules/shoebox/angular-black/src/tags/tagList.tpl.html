@@ -1,8 +1,8 @@
 <div class="kf-keep-tags">
   <ul class="kf-tag-list">
     <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in getCommonTags()">
-      <div class="kf-keep-tag-x-container"><a class="keep-tag-x" href="javascript:" ng-click="removeTag(tag)">×</a></div>
-      <div class="kf-keep-tag-link-container"><a class="kf-keep-tag-link" href="/tag/{{tag.id}}">{{tag.name}}</a></div>
+      <div class="kf-keep-tag-link"><a href="/tag/{{tag.id}}">{{tag.name}}</a></div>
+      <div class="kf-keep-tag-x" ng-click="removeTag(tag)">×</div>
     </li>
     <li class="kf-keep-tag-new">
       <span class="kf-keep-add-tag-button sprite sprite-add-a-tag-button" ng-click="showAddTagDropdown()" ng-if="!addingTag.enabled"></span>
