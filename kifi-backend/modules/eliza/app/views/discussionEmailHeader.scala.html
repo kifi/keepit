@@ -13,6 +13,6 @@
     @smartEmailParticipantsList(threadInfo.participants, Seq(threadInfo.conversationStarter))
     using <a class="txt_p" href="https://www.kifi.com/?utm_source=extmsg" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a>
   } else {
-    @smartEmailParticipantsList(messages.map(_.senderFullName).distinct) commented on <a class="txt_p" href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> using <a class="txt_p" href="https://www.kifi.com/?utm_source=extmsg" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a>
+    @smartEmailParticipantsList(messages.map(_.senderFullName).distinct) commented on <a class="txt_p" href="@threadInfo.pageUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">this page</a> with @smartEmailParticipantsList(threadInfo.participants, messages.map(_.senderFullName).distinct) using <a class="txt_p" href="https://www.kifi.com/?utm_source=extmsg" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;text-decoration:underline;">Kifi</a>
   }
 }</td>

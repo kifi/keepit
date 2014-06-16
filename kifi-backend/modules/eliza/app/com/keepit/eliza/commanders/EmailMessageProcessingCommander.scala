@@ -26,32 +26,32 @@ class EmailMessageProcessingCommander @Inject() (
   implicit val config: PublicIdConfiguration) extends Logging {
 
   def readIncomingMessages(): Unit = {
-    import NonUserThread._
     mailNotificationReplyQueue.nextWithLock(1 minute).onComplete{
       case Success(result) => {
         try {
           result.map { sqsMessage =>
-            val message = sqsMessage.body
-            val token = ThreadAccessToken(message.token)
-            // look for associated non user thread
-            val nutOpt = messagingCommander.getNonUserThreadOptByAccessToken(token)
-            nutOpt.map {
-              sendToNonUserThread(message, _)
-            } getOrElse {
-              // look for associated user thread
-              val userThreadOpt = messagingCommander.getUserThreadOptByAccessToken(token)
-              userThreadOpt.map {
-                sendToUserThread(message, _)
+            sqsMessage.consume { message =>
+              val token = ThreadAccessToken(message.token)
+              // look for associated non user thread
+              val nutOpt = messagingCommander.getNonUserThreadOptByAccessToken(token)
+              nutOpt.map {
+                sendToNonUserThread(message, _)
               } getOrElse {
-                airbrake.notify(s"Invalid Access Token ${message.token}")
+                // look for associated user thread
+                val userThreadOpt = messagingCommander.getUserThreadOptByAccessToken(token)
+                userThreadOpt.map {
+                  sendToUserThread(message, _)
+                } getOrElse {
+                  airbrake.notify(s"Invalid Access Token ${message.token}")
+                }
               }
             }
-            sqsMessage.consume()
           }
         } catch {
-          case e:Throwable => log.warn(s"Failed to read messages: ${e.getMessage()}")
+          case e: Throwable => log.warn(s"Failed to read messages: ${e.getMessage}")
+        } finally {
+          readIncomingMessages()
         }
-        readIncomingMessages()
       }
       case Failure(t) => {
         log.info("RConn: Queue call failed")

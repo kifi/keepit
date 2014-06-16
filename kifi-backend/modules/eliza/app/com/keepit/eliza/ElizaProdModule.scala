@@ -6,7 +6,6 @@ import com.keepit.realtime.ElizaUrbanAirshipModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 import com.keepit.common.service.ServiceType
 import com.keepit.common.store.ElizaProdStoreModule
-import com.keepit.common.queue.ProdSimpleQueueModule
 
 case class ElizaProdModule() extends ElizaModule(
   cacheModule = ElizaCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
@@ -14,8 +13,6 @@ case class ElizaProdModule() extends ElizaModule(
   storeModule = ElizaProdStoreModule()
 ) with CommonProdModule {
 
-  val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
-  }
+  val discoveryModule = new ProdDiscoveryModule(ServiceType.ELIZA, ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil)
   val elizaExternalEmailModule = ProdElizaExternalEmailModule()
 }

@@ -1,0 +1,830 @@
+.profile-wrapper
+  top: 70px
+  left: 0
+  right: 0
+  bottom: 0
+  font-size: 14px
+  font-weight: 300
+  color: #566278
+
+  h2
+    clear: both
+    font-size: 26px
+    line-height: 1.2
+    font-smoothing: antialiased
+    margin-bottom: 20px
+
+.profile
+  padding: 18px 32px 20px 32px
+  position: relative
+
+a.profile-logout
+  position: absolute
+  top: 32px
+  right: 50px
+  color: #557DB6
+  font-size: 12px
+  font-weight: 200
+
+.profile-container
+  position: relative
+  padding: 20px 88px 40px 167px
+  margin-top: 1px
+  background-color: #ffffff
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  border-radius: 3px
+
+.profile-image-wrapper
+  position: absolute
+  top: 33px
+  left: 27px
+  width: 103px
+  text-align: center
+  cursor: pointer
+
+.profile-image-file
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  z-index: -1
+
+.profile-image
+  display: block
+  width: 72px
+  height: 72px
+  border: 6px solid #e3e6ee
+  border-radius: 100%
+  margin: 0 auto 6px
+  background-color: #b8c5d1
+  background-size: 100%
+
+a.profile-image-change
+  display: inline-block
+  padding: 4px 10px
+  border-radius: 2px
+  background: #b8c5d1
+  color: white
+  font-size: 12px
+  letter-spacing: .5px
+  transition: background 0.2s ease
+
+  &:hover
+  &:focus
+    background-color: #C5D2DE
+
+  &:active
+    background-color: #9FACB8
+
+.profile-input-title
+  color: #c1c1c1
+  font-size: 20px
+  font-weight: 200
+  letter-spacing: 1px
+  margin-bottom: 4px
+  font-family: "Georgia", Arial, sans-serif
+  font-style: italic
+
+.profile-input-wrapper
+  padding-bottom: 1px
+  margin-bottom: 19px
+  margin-top: 25px
+
+  &:last-child
+    margin-bottom: 0
+
+   &.profile-email
+    margin-bottom: 5px
+
+.profile-input-box
+  position: relative
+  transition: padding .25s ease
+
+  & + &
+    padding-top: 3px
+    position: relative
+    transition: padding .25s ease
+
+  &.edit
+    padding-right: 58px
+
+    .profile-input-edit
+      display: none
+
+.profile-input-placeholder
+input.profile-input-input
+.profile-input-password
+  height: 29px
+  display: block
+  font: inherit
+  letter-spacing: 0.5px
+  border: 0
+  margin: 0
+  width: 100%
+  color: textBlackColor
+  padding: 6px 2px
+  background-color: transparent
+  box-sizing: border-box
+
+.profile-input-placeholder
+input.profile-input-input
+  border-bottom: 1px solid #d2dae3
+  padding-right: 58px
+  transition: all .3s ease
+
+input.profile-input-input:focus
+  padding-left: 7px
+  border: 1px solid blueColor
+  border-radius: 2px
+
+input.profile-input-password
+  padding: 6px
+  border: 1px solid #d2dae3
+  border-radius: 2px
+  margin-top: 10px
+
+  &::-webkit-input-placeholder
+    font-style: normal
+  &:-moz-placeholder
+    font-style: normal
+  &::-moz-placeholder
+    font-style: normal
+  &:-ms-input-placeholder
+    font-style: normal
+
+.input-error
+  position: absolute
+  top: 35px
+  left: 0
+  font-size: 13px
+  background: #ed7071
+  color: white
+  text-align: center
+  padding: 9px 12px
+
+  &:before
+    content: ' '
+    position: absolute
+    top: -8px
+    width: 0
+    left: 50%
+    margin-left: -10px
+    border-style: solid
+    border-width: 0 10px 8px
+    border-color: transparent transparent #ed7071
+    font-size: 0
+
+  .error-header
+    font-weight: 500
+
+  .error-body
+    font-weight: 200
+    font-size: .9em
+
+.profile-input-box.edit .profile-input-placeholder
+  display: none
+  overflow: hidden
+  white-space: nowrap
+  text-overflow: ellipsis
+
+input.profile-first-name
+input.profile-last-name
+  display: none
+  width: 0
+
+.profile-input-box.edit input.profile-first-name
+.profile-input-box.edit input.profile-last-name
+  display: inline-block
+
+.profile-input-box.edit input.profile-first-name
+  margin-right: 8px
+
+a.profile-input-edit
+a.profile-input-save
+  position: absolute
+  bottom: 0
+  right: 0
+  font-size: 12px
+  line-height: 17px
+  display: inline-block
+  width: 58px
+  padding: 6px 0
+  color: white
+  background-color: #b8c5d1
+  border-radius: 2px
+  text-align: center
+  transition: background 0.2s ease
+  display: none
+
+a.profile-input-edit
+  &:hover
+  &:focus
+    background-color: #C5D2DE
+
+  &:active
+    background-color: #9FACB8
+
+  .profile-input-box:hover &
+    display: block
+
+a.profile-input-save
+  background-color: greenColor
+
+  &:hover
+    background-color: clearGreenColor
+
+  .profile-input-box &
+    display: block
+
+.profile-input-remaining-chars
+  font-size: 14px
+  color: #B7CE84
+  margin-left: 2px
+
+.profile-email-address-unverified
+.profile-email-address-pending
+  color: #a7aaa9
+  font-size: 13px
+
+a.profile-email-pending-resend
+a.profile-email-pending-cancel
+  color: #777c87
+  text-decoration: underline
+
+.profile-email-address-pending-email
+  color: #777c87
+
+.profile-email-addresses
+  margin-top: 25px
+
+.profile-setting-arrow
+  position: relative
+  overflow: hidden
+  display: inline-block
+  width: 13px
+  height: 13px
+  vertical-align: middle
+  top: -1px
+
+  &.active
+    transform: rotate(90deg)
+    transition: all 0.3s
+
+    &:before
+      background-color: blueColor
+      transition: all 0.3s
+
+.profile-setting-arrow:before
+  content: ''
+  background-color: textGreyColor
+  transform: rotate(45deg)
+  width: 9px
+  height: 9px
+  position: absolute
+  top: 2px
+  left: 0
+
+.profile-setting-arrow:after
+  content: ''
+  position: absolute
+  top: 0
+  left: 0
+  width: 35%
+  height: 100%
+  background-color: #fff
+
+.profile-email-addresses-title
+.profile-change-password-title
+  display: inline-block
+  margin-left: 6px
+
+  &.active
+    color: darkBlueColor
+    transition: all 0.3s
+
+a.profile-email-addresses-title-wrapper
+  display: block
+  color: textBlackColor
+  font-size: 15px
+  padding: 5px 0
+  margin-top: 10px
+  letter-spacing: 0.8px
+
+.profile-email-address-manage
+.profile-change-password-change
+
+  &.ng-hide-remove
+    transition: max-height 0.3s 0.15s linear
+    display: block !important
+    overflow: hidden
+
+  &.ng-hide-add.ng-hide-add-active
+  &.ng-hide-remove
+    max-height: 0
+
+  &.ng-hide-add
+  &.ng-hide-remove.ng-hide-remove-active
+    max-height: 400px
+
+.profile-email-address-manage-description
+  color: textDarkColor
+  font-size: 13px
+  font-weight: 200
+  letter-spacing: 0.5px
+  padding: 20px
+  margin-top: 10px
+  line-height: 1.8em
+
+.profile-email-address-manage-footer
+  height: 5px
+  margin-top: 30px
+
+.profile-email-address-manage-description
+.profile-email-address-manage-footer
+  background-color: #fafafa
+
+.profile-email-address-list
+a.profile-email-address-add
+  font-size: 14px
+  color: #a7aaa9
+  font-weight: 200
+  letter-spacing: 0.8px
+
+a.profile-email-address-add
+  display: block
+  padding: 10px 0 0 10px
+
+.profile-email-address-list
+  margin-top: 10px
+  list-style: initial
+  line-height: 2em
+  padding-left: 20px
+
+.profile-email-address-item
+  position: relative
+  padding: 4px 0
+
+.profile-email-address-item-primary
+  color: greenColor
+  font-weight: 500
+
+.profile-email-address-item-primary
+.profile-email-address-item-pending-primary
+  display: inline
+
+.profile-email-address-item-email
+  word-wrap: break-word
+
+.profile-email-address-item-email-important
+  font-weight: 500
+
+.profile-email-address-item-unverified a
+  color: #a7aaa9
+  text-decoration: underline
+
+.profile-email-address-item-arrow
+  display: inline-block
+  vertical-align: middle
+  cursor: pointer
+  margin-left: 5px
+  position: relative
+
+.profile-email-address-item-arrow-image
+  width: 15px
+  position: relative
+  top: -2px
+
+.profile-email-address-item-dropdown
+  line-height: 1.3em
+  border-radius: 3px
+  position: absolute
+  top: 100%
+  right: 0
+  background: white
+  border: 1px solid #cccccc
+  z-index: 1
+  display: block
+
+  & a
+    display: block
+    padding: 2px 8px
+    color: #a7aaa9
+    transition: background .2s ease
+    white-space: nowrap
+
+    &:hover
+      background: #eeeeee
+
+    &:active
+      background: #cccccc
+
+a.profile-email-address-add
+  font-size: 14px
+  font-weight: 300
+  color: #566278
+  text-decoration: underline
+
+.profile-email-address-add-box
+  position: relative
+
+input.profile-email-address-add-input
+  display: block
+  font: inherit
+  letter-spacing: 0.5px
+  border: 0
+  margin: 0
+  width: 100%
+  color: #818691
+  background-color: #e2edfb
+  padding: 6px 7px
+  box-sizing: border-box
+  transition: all .3s ease
+  padding-right: 58px
+  border-radius: 2px
+
+a.profile-email-address-add-save
+  position: absolute
+  bottom: 0
+  right: 0
+  font-size: 12px
+  line-height: 17px
+  display: inline-block
+  width: 58px
+  padding: 6px 0
+  color: white
+  background-color: #b8c5d1
+  border-radius: 2px
+  text-align: center
+  transition: background 0.2s ease
+
+a.profile-email-address-add-save
+  background-color: #b7ce84
+
+  &:hover
+  &:focus
+    background-color: #C4DB91
+
+  &:active
+    background-color: #9EB56B
+
+a.profile-change-password-title-wrapper
+  display: block
+  color: textBlackColor
+  font-size: 15px
+  padding: 5px 0
+  margin-top: 10px
+  letter-spacing: 0.8px
+
+.profile-change-password-change
+  margin-left: 17px
+
+  .profile-change-password.opened &
+    display: block
+
+a.profile-change-password-save
+  font-size: 12px
+  line-height: 17px
+  display: inline-block
+  width: 132px
+  padding: 6px 0
+  margin: 4px 0
+  color: white
+  background-color: greenColor
+  border-radius: 2px
+  text-align: center
+  transition: background 0.2s ease
+
+  &:hover
+    background-color: clearGreenColor
+
+.profile-change-password-message
+.profile-change-password-error
+  margin-top: 10px
+
+.profile-change-password-message
+  color: #333
+
+.profile-change-password-error
+  color: #ed7071
+
+.profile-change-password-success
+  margin-top: 5px
+  margin-left: 20px
+  color: greenColor
+
+.profile-section
+  padding: 20px 0 30px 27px
+  background-color: #ffffff
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  border-radius: 3px
+  margin-top: 10px
+  text-align: center
+
+  & h3
+    font-size: 20px
+    font-weight: 300
+    letter-spacing: .5px
+    color: textBlackColor
+    margin-bottom: 3px
+    font-family: "Georgia", Arial, sans-serif
+    font-style: italic
+    margin-bottom: 20px
+
+  & h5
+    color: #C6C6C6
+    font-weight: 200
+    letter-spacing: .5px
+    margin-bottom: 28px
+    font-size: 13px
+
+.profile .networks
+  position: relative
+  font-size: 0
+  background-size: 62px
+  margin: 20px 0
+  padding: 0
+  text-align: center
+
+  & > ul
+    margin: 0
+    padding: 60px 0 0 72px
+    user-select: none
+
+    & > li
+      display: block
+      float: left
+      margin: 0 5px
+      width: 60px
+      height: auto
+      font-size: 0
+
+      & > .connect
+      & > .disconnect
+        display: block
+        font-size: 12px
+        padding: 5px 0
+
+  & > .kifi-k:before
+    position: absolute
+    display: block
+    content: "."
+    background: url(../img/kifi-k.png) no-repeat
+    background-size: 100%
+    top: -6px
+    left: -6px
+    border: 6px solid white
+    width: 62px
+    height: 62px
+    border-radius: 50%
+    z-index: 1
+
+  & > .kifi-k:after
+    position: absolute
+    display: block
+    content: "."
+    z-index: 5
+    left: 40px
+    top: 0
+    width: 286px
+    height: 58px
+
+  &:before
+    position: absolute
+    display: block
+    content: "."
+    top: 24px
+    left: 54px
+    width: 9px
+    width: 9px
+    height: 9px
+    background: #accc98
+    border: 2px solid white
+    border-radius: 50%
+    z-index: 2
+
+  &:after
+    position: absolute
+    display: block
+    content: "."
+    top: 21px
+    left: 63px
+    width: 284px
+    height: 20px
+    background: #eff2f7
+    z-index: 0
+
+.profile-networks li
+  display: inline-block
+  margin-right: 10px
+
+.profile-nw
+  position: relative
+  display: block
+
+a.profile-nw
+  display: inline-block
+  color: white
+  padding: 8px 16px
+  padding-left: 39px
+  font-size: 13px
+  letter-spacing: .5px
+  border-radius: 2px
+  transition: background 0.2s ease
+
+.profile-nw:before
+  display: block
+  position: absolute
+  top: 0
+  left: 0
+  content: ' '
+  background-image: url(../img/networks2.png)
+  background-size: auto 32px
+  width: 32px
+  height: 32px
+
+.profile-nw.nw-linkedin:before
+  background-position: -32px 0
+
+.profile-nw.nw-twitter:before
+  background-position: -60px 0
+
+.profile-nw.nw-email:before
+  background-position: -128px 0
+
+.profile-nw.nw-facebook
+  background-color: #dbdee3
+
+.profile-nw.nw-facebook:hover
+.profile-nw.nw-facebook:focus
+  background-color: #7087C5
+
+.connected .nw-facebook
+  background-color: #637ab8
+
+.profile-nw.nw-facebook:active
+  background-color: #4A619F
+
+.profile-nw.nw-linkedin
+  background-position: -60px 0
+  background-color: #dbdee3
+
+.connected .nw-linkedin
+  background-color: #4f83c3
+
+
+.profile-nw.nw-linkedin:hover
+.profile-nw.nw-linkedin:focus
+  background-color: #5C90D0
+
+.profile-nw.nw-linkedin:active
+  background-color: #366AAA
+
+.profile-nw.nw-twitter
+  background-color: #dbdee3
+  //0da2d9
+  background-position: -120px 0
+
+.profile-nw.nw-google
+  background-color: #dbdee3
+  //dd4c39
+  background-position: -180px 0
+
+.profile-nw.nw-email
+  background-color: #e16869
+
+.profile-nw.nw-email:hover
+.profile-nw.nw-email:focus
+  background-color: #EE7576
+
+.profile-nw.nw-email:active
+  background-color: #C84F50
+
+.connected .profile-nw-connected
+  visibility: visible
+
+.profile-nw-connected
+  visibility: hidden
+  position: relative
+  display: block
+  color: #818691
+  margin-top: 8px
+  padding-left: 16px
+  font-size: 12px
+  line-height: 15px
+  font-weight: 200
+  letter-spacing: .8px
+  background-image: url(../img/check-green.png)
+  background-repeat: no-repeat
+  background-size: auto 15px
+  background-position: 0
+  overflow: hidden
+  text-align: left
+
+.profile-connected
+  position: absolute
+  top: 0
+  color: #818691
+  transition: top .3s ease
+  cursor: pointer
+
+.profile-disconnect
+  position: absolute
+  top: 100%
+  background-color: white
+  transition: top .3s ease
+
+.profile-disconnect:hover
+  text-decoration: underline
+
+.profile-networks li:hover
+  & .profile-connected
+    top: -100%
+
+  & .profile-disconnect
+    top: 0
+
+.profile-email-accounts
+  margin-top: 6px
+  border-collapse: collapse
+  border-spacing: 0
+
+  & td
+  & th
+    padding: 0
+
+.profile-email-accounts-refresh
+  margin-left: 5px
+  font-size: 12px
+
+  &:hover
+    text-decoration: underline
+
+.profile-email-account
+  font-size: 12px
+  line-height: 22px
+  font-weight: 200
+
+td.profile-email-status
+  width: 15px
+  background-image: url(../img/check-green.png)
+  background-repeat: no-repeat
+  background-size: auto 15px
+  background-position: 0
+  padding-right: 8px
+
+.profile-email-address
+  color: #818691
+
+td.profile-email-separator
+  color: #9fb1c3
+  padding: 0 8px
+
+.profile-email-remove a:hover
+  text-decoration: underline
+
+.profile-email-contact-count
+  color: #9fb1c3
+
+.profile-section-divider
+  border: 0
+  border-bottom: 5px solid #f7f8fb
+  margin: 0
+  margin-left: 20px
+
+.networks>ul>li:hover:not([data-network]):after
+  content: "Coming soon"
+  display: block
+  font-size: 11px
+  padding: 5px 0
+
+.profile-email-accounts-wrapper
+  text-align: center
+  margin-top: 5px
+
+.profile-email-accounts-overview
+  color: #9FB1C3
+  margin-top: 12px
+  letter-spacing: .5px
+  display: inline-block
+  text-align: left
+
+.kf-profile-image-dialog-image
+  width: 280px
+  height: 280px
+  margin: 10px auto
+
+.kf-profile-image-dialog-mask
+  position: relative
+  width: 100%
+  height: 100%
+  box-shadow: inset 0 0 0 40px #ffffff, inset 0 0 0 41px rgba(0, 0, 0, 0.1), inset 0 0 20px 42px rgba(0, 0, 0, 0.2)
+  opacity: .75
+  cursor: move
+
+.kf-profile-image-dialog-slider
+  margin-left: auto
+  margin-right: auto
+  width: 280px

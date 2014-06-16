@@ -32,7 +32,7 @@ case class ProdElizaExternalEmailModule() extends ElizaExternalEmailModule {
 
   @Singleton
   @Provides
-  def mailNotificationReplyQueue(basicAWSCreds:BasicAWSCredentials): SQSQueue[MailNotificationReply] = {
+  def mailNotificationReplyQueue(basicAWSCreds: BasicAWSCredentials): SQSQueue[MailNotificationReply] = {
     val queueName = QueueName(current.configuration.getString("mail-notifications.queue-name").get)
     val client = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered=false)
     client.formatted[MailNotificationReply](queueName)

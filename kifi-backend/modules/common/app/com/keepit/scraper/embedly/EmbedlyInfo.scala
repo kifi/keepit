@@ -37,7 +37,9 @@ object EmbedlyImage {
 // field names must match embedly json field so that js.validate[EmbedlyInfo] works
 
 case class EmbedlyEntity(count: Int, name: String)
-case class EmbedlyKeyword(score: Int, name: String)
+case class EmbedlyKeyword(score: Int, name: String) {
+  override def toString(): String = s"($name, $score)"
+}
 
 case class EmbedlyInfo(
   originalUrl: String,

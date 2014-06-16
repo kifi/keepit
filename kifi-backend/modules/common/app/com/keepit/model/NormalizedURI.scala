@@ -44,7 +44,7 @@ case class NormalizedURI (
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
   def clean(): NormalizedURI = copy(title = title.map(_.trimAndRemoveLineBreaks().abbreviate(NormalizedURI.TitleMaxLen)))
-  def toShortString = s"NormalizedUri($id,$seq,$state,${url.take(50)})"
+  def toShortString = s"NormalizedUri($id,$seq,${state.toString.toUpperCase},${restriction.getOrElse("N/A")},${normalization},${redirect},${url.take(50)})"
 }
 
 object NormalizedURI {

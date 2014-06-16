@@ -390,9 +390,9 @@ var pane = pane || function () {  // idempotent for Chrome
       return !!$pane;
     },
     show: function (o) {
-      log('[pane.show]', o.locator, o.trigger || '', o.redirected || '', o.composeTo || '');
-      if (o.composeTo) {
-        pane.compose(o.trigger, o.composeTo);
+      log('[pane.show]', o.locator, o.trigger || '', o.redirected || '', o.compose || '');
+      if (o.compose) {
+        pane.compose(o.trigger, o.locator, o.to);
       } else {
         showPane(o.locator, false, o.redirected);
       }
@@ -415,14 +415,14 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(locator);
       }
     },
-    compose: function(trigger, recipient) {
+    compose: function (trigger, locator, recipient) {
       log('[pane:compose]', trigger);
       api.require('scripts/compose_toaster.js', function () {
         if (!$pane) {
-          showPane('/messages:all');
+          showPane(locator || '/messages:all');
         }
         if ($pane.data('state') !== 'closing') {
-          if (recipient && toaster.showing()) return;  // don't clobber form
+          if (trigger === 'deepLink' && toaster.showing()) return;  // don't clobber form
           toaster.toggle($pane).done(function (compose) {
             if (compose) {
               if (recipient) {

@@ -8,7 +8,7 @@ case class BasicArticle(
   media: Option[String] = None,
   httpContentType: Option[String] = None, // from http header
   httpOriginalContentCharset: Option[String] = None, // from EntityUtils.getContentCharSet
-  destinationUrl: Option[String] = None,
+  destinationUrl: String,
   signature: Signature
 )
 
@@ -25,7 +25,7 @@ object BasicArticle {
     (__ \ 'media).formatNullable[String] and
     (__ \ 'httpContentType).formatNullable[String] and
     (__ \ 'httpOriginalContentCharset).formatNullable[String] and
-    (__ \ 'destinationUrl).formatNullable[String] and
+    (__ \ 'destinationUrl).format[String] and
     (__ \ 'signature).format[Signature]
   )(BasicArticle.apply, unlift(BasicArticle.unapply))
 

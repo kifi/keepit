@@ -24,8 +24,11 @@ import scala.util.Try
 case object CheckOverdues
 case object CheckOverdueCount
 
+
+
+
 private[scraper] class ScrapeScheduler @Inject() (
-    scraperConfig: ScraperConfig,
+    scraperConfig: ScraperSchedulerConfig,
     airbrake: AirbrakeNotifier,
     db: Database,
     serviceDiscovery: ServiceDiscovery,
@@ -113,7 +116,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     scrapeInfoRepo: ScrapeInfoRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     actor: ActorInstance[ScrapeScheduler],
-    scraperConfig: ScraperConfig,
+    scraperConfig: ScraperSchedulerConfig,
     scraperClient: ScraperServiceClient,
     val scheduling: SchedulingProperties) //only on leader
   extends ScrapeSchedulerPlugin with SchedulerPlugin with Logging {
@@ -142,12 +145,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
           case ScrapeInfoStates.ACTIVE   => s.withNextScrape(date)
           case ScrapeInfoStates.ASSIGNED => s // no change
           case ScrapeInfoStates.INACTIVE => {
-            val msg = s"[scheduleScrape($uri.url)] scheduling an INACTIVE ($s) for scraping"
-            log.warn(msg)
-//            systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.RAY),
-//              subject = s"ScrapeScheduler.scheduleScrape($uri)",
-//              htmlBody = s"$msg\n${Thread.currentThread.getStackTrace.mkString("\n")}",
-//              category = NotificationCategory.System.ADMIN))
+            log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
             s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // dangerous; revisit
           }
         }
@@ -176,10 +174,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     } recover {
       case t:Throwable =>
         val msg = s"Caught exception $t while parsing $url for getSignature; Cause=${t.getCause}"
-//        systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.RAY, to = List(EmailAddresses.ENG), // sorry about the spam -- will tweak
-//          subject = s"ScrapeScheduler.getSignature($url) -- $msg",
-//          htmlBody = s"$msg\n${t.getStackTraceString}",
-//          category = NotificationCategory.System.ADMIN))
+        log.warn(msg, t)
         Future.successful(None)
     } getOrElse Future.successful(None)
   }

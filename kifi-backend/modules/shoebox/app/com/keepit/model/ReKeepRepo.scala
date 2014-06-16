@@ -11,12 +11,14 @@ import Q.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
-  def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
-  def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusWeeks(2))(implicit r:RSession):Seq[ReKeep]
+  def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByReKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
   def getReKeepCountByKeeper(userId:Id[User])(implicit r:RSession):Int
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int]
+  def getReKeepCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Int]
+  def getUriReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[NormalizedURI], Int]
   def getReKeeps(keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Seq[ReKeep]]
   def getAllReKeepCountsByUser()(implicit r:RSession):Map[Id[User], Int]
   def getAllReKeepCountsByURI()(implicit r:RSession):Map[Id[NormalizedURI], Int]
@@ -70,6 +72,20 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r)
       .groupBy(_.keepId)
       .map{ case(kId, rk) => (kId, rk.length)}
+    q.toMap()
+  }
+
+  def getReKeepCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Int] = {
+    val q = (for (r <- rows if (r.keeperId === userId && r.keepId.inSet(keepIds) && r.state === ReKeepState.ACTIVE)) yield r)
+      .groupBy(_.keepId)
+      .map{ case(kId, rk) => (kId, rk.length)}
+    q.toMap()
+  }
+
+  def getUriReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[NormalizedURI], Int] = {
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r)
+      .groupBy(_.uriId)
+      .map{ case(uriId, rk) => (uriId, rk.length)}
     q.toMap()
   }
 

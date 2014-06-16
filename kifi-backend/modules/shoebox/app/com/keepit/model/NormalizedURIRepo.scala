@@ -12,15 +12,14 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.feijoas.mango.common.cache._
 import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeDeploymentNotice, AirbrakeNotifier}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._
 import scala.util.{Failure, Success, Try}
-import com.kifi.franz.SQSQueue
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
-import java.sql.SQLException
+
+class UriInternException(msg: String, cause: Throwable) extends Exception(msg, cause)
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberFunction[NormalizedURI]{
@@ -34,7 +33,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def getByUriOrPrenormalize(url: String)(implicit session: RSession): Try[Either[NormalizedURI, String]]
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
-  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
@@ -50,8 +48,6 @@ class NormalizedURIRepoImpl @Inject() (
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
   normalizationServiceProvider: Provider[NormalizationService],
-  urlRepoProvider: Provider[URLRepo],
-  updateQueue:SQSQueue[NormalizationUpdateTask],
   airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 
@@ -132,26 +128,35 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       uriWithSeq.copy(state = NormalizedURIStates.REDIRECTED)
     } else uriWithSeq
 
-    val saved = super.save(validatedUri.clean())
+    val cleaned = validatedUri.clean()
+    val saved = try {
+      super.save(cleaned)
+    } catch {
+      case e: Throwable =>
+        deleteCache(cleaned)
+        throw e
+    }
 
     // todo: move out the logic modifying scrapeInfo table
     lazy val scrapeRepo = scrapeRepoProvider.get
-    uri.state match {
+    saved.state match {
       case e:State[NormalizedURI] if DO_NOT_SCRAPE.contains(e) => // ensure no ACTIVE scrapeInfo records
         scrapeRepo.getByUriId(saved.id.get) match {
-          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
-            scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+          case Some(scrapeInfo) if scrapeInfo.state != ScrapeInfoStates.INACTIVE =>
+            val savedSI = scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as INACTIVE; si=$savedSI")
           case _ => // do nothing
         }
       case SCRAPE_FAILED | SCRAPED =>
         scrapeRepo.getByUriId(saved.id.get) match { // do NOT use saveStateAndNextScrape
-          case Some(scrapeInfo) if (scrapeInfo.state == ScrapeInfoStates.INACTIVE) =>
-            scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+          case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+            val savedSI = scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+            log.info(s"[save(${saved.toShortString})] mark scrapeInfo as ACTIVE; si=$savedSI")
           case _ => // do nothing
         }
       case ACTIVE => // do nothing
       case _ =>
-        throw new IllegalStateException(s"Unhandled state=${uri.state}; uri=$uri")
+        throw new IllegalStateException(s"Unhandled state=${saved.state}; uri=$uri")
     }
     saved
   }
@@ -189,78 +194,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByUri", ALWAYS) {
-      getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
-    }
-  }
-
-  /**
-   * if a stack trace will dump the lock we'll at least know what it belongs to
-   */
-  private def newUrlLock = (str: String) => new String(str)
-
-  /**
-   * We don't want to aggregate locks for ever, its no likely that a lock is still locked after one second
-   */
-  private val urlLocks = CacheBuilder.newBuilder().maximumSize(10000).weakKeys().expireAfterWrite(30, TimeUnit.MINUTES).build(newUrlLock)
-
-  /**
-   * Locking since there may be few calls coming at the same time from the client with the same url (e.g. get page info, and record visited).
-   * The lock is on the exact same url and using intern so we can have a globaly unique object of the url.
-   * Possible downside is that the permgen will fill up with these urls
-   *
-   * todo(eishay): use RequestConsolidator on a controller level that calls the repo level instead of locking.
-   */
-  def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
-    log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
-    statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_HUNDRED) {
-      val resUri = getByUriOrPrenormalize(url) match {
-        case Success(Left(uri)) =>
-          session.onTransactionSuccess {
-            updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
-          }
-          uri
-        case Success(Right(prenormalizedUrl)) => {
-          val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
-          urlHashCache.get(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(prenormalizedUrl))) match {
-            case Some(cached) =>
-              airbrake.notify(s"prenormalizedUrl [$prenormalizedUrl] already in cache [$cached] skipping save")
-              cached
-            case None =>
-              val candidate = NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization)
-              val newUri = try {
-                save(candidate)
-              } catch {
-                case sqlException: SQLException =>
-                  log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
-                  (for (t <- rows if t.urlHash === candidate.urlHash) yield t).firstOption match {
-                    case None => throw new Exception(s"could not find existing url $candidate in the db", sqlException)
-                    case Some(fromDb) =>
-                      log.warn(s"recovered url $fromDb from the db via urlHash")
-                      //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
-                      deleteCache(fromDb)
-                      fromDb
-                  }
-                case t: Throwable =>
-                  throw new Exception(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
-              }
-              urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-              session.onTransactionSuccess{
-                updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
-              }
-              newUri
-          }
-        }
-        case Failure(ex) => {
-          val newUri = save(NormalizedURI.withHash(normalizedUrl = url, normalization = None))
-          urlRepoProvider.get.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-          airbrake.notify(AirbrakeError(ex, Some(s"Uri ${newUri.id.get} was interned despite a normalization failure")))
-          newUri
-        }
-      }
-      log.debug(s"[internByUri($url)] resUri=$resUri")
-      resUri
-    }
+    getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
   }
 
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =

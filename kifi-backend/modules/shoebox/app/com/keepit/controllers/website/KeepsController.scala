@@ -42,8 +42,6 @@ class KeepsController @Inject() (
   )
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  implicit val writesKeepInfo = new FullKeepInfoWriter()
-
   def updateCollectionOrdering() = JsonAction.authenticatedParseJson { request =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
@@ -148,17 +146,18 @@ class KeepsController @Inject() (
     }
   }
 
-  def keepMultiple() = JsonAction.authenticated { request =>
+  def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
         val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
-        log.info(s"kept ${keeps.size} new keeps")
+        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, separateExisting)
+        log.info(s"kept ${keeps.size} keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
+          "failures" -> failures,
           "addedToCollection" -> addedToCollection
-        ))
+        ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> keeps)) getOrElse Json.obj()))
       } getOrElse {
         log.error(s"can't parse object from request ${request.body} for user ${request.user}")
         BadRequest(Json.obj("error" -> "Could not parse object from request body"))
@@ -197,12 +196,19 @@ class KeepsController @Inject() (
     }
   }
 
-  def getKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
-      Ok(Json.toJson(KeepInfo.fromBookmark(b)))
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
+  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+    val resOpt = if (withFullInfo) {
+      bookmarksCommander.getFullKeepInfo(id, request.userId, true) map { infoFut =>
+        infoFut map { info =>
+          Ok(Json.toJson(KeepInfo.fromFullKeepInfo(info)))
+        }
+      }
+    } else {
+      db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
+        Future.successful(Ok(Json.toJson(KeepInfo.fromBookmark(b))))
+      }
     }
+    resOpt.getOrElse(Future.successful(NotFound(Json.obj("error" -> "not_found"))))
   }
 
   def updateKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
@@ -233,14 +239,15 @@ class KeepsController @Inject() (
     }
   }
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
-    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], count, request.userId, withPageInfo) map { res =>
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId, withPageInfo) map { res =>
+      val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
       Ok(Json.obj(
         "collection" -> res._1,
         "before" -> before,
         "after" -> after,
-        "keeps" -> res._2
-      ))
+        "keeps" -> res._2.map(KeepInfo.fromFullKeepInfo(_))
+      ) ++ helprank)
     }
   }
 

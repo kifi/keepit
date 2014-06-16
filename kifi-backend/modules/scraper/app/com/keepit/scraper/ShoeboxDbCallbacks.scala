@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock
 import com.keepit.common.logging.Logging
 
 @Singleton
-class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceClient:ShoeboxServiceClient) extends SyncShoeboxDbCallbacks with ShoeboxDbCallbacks with Logging {
+class ShoeboxDbCallbackHelper @Inject() (config: ScraperConfig, shoeboxServiceClient: ShoeboxServiceClient) extends SyncShoeboxDbCallbacks with ShoeboxDbCallbacks with Logging {
   implicit val serviceCallTimeout = config.serviceCallTimeout
   implicit val fjCtx = ExecutionContext.fj
 
@@ -30,6 +30,16 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
       val saved = await(saveNormalizedUri(uri))
       log.info(s"[${normalizedUriLock.getQueueLength}] done with persist $uri")
       saved
+    } finally {
+      normalizedUriLock.unlock()
+    }
+  }
+  def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit = {
+    try {
+      normalizedUriLock.lock()
+      log.info(s"[${normalizedUriLock.getQueueLength}] about to update $uriId")
+      await(updateNormalizedURIState(uriId, state))
+      log.info(s"[${normalizedUriLock.getQueueLength}] done with update $uriId")
     } finally {
       normalizedUriLock.unlock()
     }
@@ -63,6 +73,7 @@ class ShoeboxDbCallbackHelper @Inject() (config:ScraperConfig, shoeboxServiceCli
     }
   }
   def saveNormalizedUri(uri:NormalizedURI):Future[NormalizedURI] = shoeboxServiceClient.saveNormalizedURI(uri)
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = shoeboxServiceClient.updateNormalizedURIState(uriId, state)
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo] = shoeboxServiceClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
   def savePageInfo(info:PageInfo):Future[PageInfo] = shoeboxServiceClient.savePageInfo(info)
   def saveImageInfo(info:ImageInfo):Future[ImageInfo] = shoeboxServiceClient.saveImageInfo(info)
@@ -84,6 +95,7 @@ trait SyncShoeboxDbCallbacks {
   def syncIsUnscrapableP(url: String, destinationUrl: Option[String]):Boolean
   def syncGetNormalizedUri(uri:NormalizedURI):Option[NormalizedURI]
   def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI
+  def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
   def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo
   def syncSavePageInfo(info:PageInfo):PageInfo
   def syncSaveImageInfo(info:ImageInfo):ImageInfo

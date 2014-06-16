@@ -7,7 +7,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.TestSlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
-import com.keepit.normalizer.NormalizationService
+import com.keepit.normalizer.{NormalizedURIInterner, NormalizationService}
 
 trait ShoeboxInjectionHelpers { self: InjectorProvider =>
 
@@ -21,6 +21,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def friendRequestRepo(implicit injector: Injector) = inject[FriendRequestRepo]
   def searchFriendRepo(implicit injector: Injector) = inject[SearchFriendRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
+  def normalizedURIInterner(implicit injector: Injector) = inject[NormalizedURIInterner]
   def normalizationService(implicit injector: Injector) = inject[NormalizationService]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def keepRepo(implicit injector: Injector) = inject[KeepRepo]

@@ -81,6 +81,12 @@ angular.module('kifi.detail',
           return keepService.togglePrivate(keeps);
         };
 
+        scope.selectionHasBookmark = function () {
+          return _.some(keepService.getSelected(), function (keep) {
+            return keep.isMyBookmark;
+          });
+        }
+
         scope.refreshScroll = scope.refreshScroll || angular.noop;
         var scrollRefresh = _.throttle(function () {
           scope.refreshScroll();

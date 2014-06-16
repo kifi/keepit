@@ -25,6 +25,7 @@ import com.google.inject.Inject
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 import org.joda.time.DateTime
+import com.kifi.franz.SQSQueue
 
 trait HeimdalServiceClient extends ServiceClient {
   final val serviceType = ServiceType.HEIMDAL
@@ -54,7 +55,7 @@ object FlushEventQueue
 object FlushEventQueueAndClose
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
-  val MaxBatchSize = 500
+  val MaxBatchSize = 20
   val LowWatermarkBatchSize = 10
   val MaxBatchFlushInterval = 10 seconds
   val StaleEventAddTime = 40 seconds
@@ -66,14 +67,15 @@ class HeimdalClientActor @Inject() (
     val httpClient: HttpClient,
     serviceDiscovery: ServiceDiscovery,
     val clock: Clock,
-    val scheduler: Scheduler
+    val scheduler: Scheduler,
+    heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]]
 ) extends BatchingActor[HeimdalEvent](airbrakeNotifier) with ServiceClient with Logging {
 
   private final val serviceType = ServiceType.HEIMDAL
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
 
   val batchingConf = HeimdalBatchingConfiguration
-  def processBatch(events: Seq[HeimdalEvent]): Unit = call(Heimdal.internal.trackEvents, Json.toJson(events))
+  def processBatch(events: Seq[HeimdalEvent]): Unit = heimdalEventQueue.send(events)
   def getEventTime(event: HeimdalEvent): DateTime = event.time
 }
 

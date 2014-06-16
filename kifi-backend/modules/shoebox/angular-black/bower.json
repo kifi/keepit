@@ -1,0 +1,43 @@
+{
+  "name": "kifi",
+  "version": "0.0.0",
+  "homepage": "https://github.com/FortyTwoEng/keepit",
+  "authors": [],
+  "description": "keep it find it",
+  "main": "index.html",
+  "keywords": [
+    "kifi"
+  ],
+  "license": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "normalize-css": "2.x.x",
+    "jquery": ">=1.9.0",
+    "angular": "1.2.x",
+    "angular-cookies": "1.2.x",
+    "angular-resource": "1.2.x",
+    "angular-route": "1.2.x",
+    "angular-bootstrap": "~0.10.0",
+    "bootstrap": "~3.0.3",
+    "angular-moment": "~0.6.1",
+    "angular-sanitize": "~1.2.11",
+    "lodash": "~2.4.1",
+    "angular-animate": "~1.2.12",
+    "jquery-mousewheel": "~3.1.9",
+    "antiscroll": "*",
+    "angular-smart-scroll": "*",
+    "underscore.string": "~2.3.3",
+    "angular-dragdrop": "ganarajpr/angular-dragdrop#5afbe485eae3f28f6ed29a1cd79cf314e2162441",
+    "angulartics": "~0.14.15"
+  },
+  "devDependencies": {
+    "angular-mocks": "1.2.x"
+  }
+}

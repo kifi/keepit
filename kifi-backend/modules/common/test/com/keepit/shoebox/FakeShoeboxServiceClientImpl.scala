@@ -231,11 +231,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     saveBookmarksByEdges(edges, isPrivate, source)
   }
 
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit timeout:Int): Future[Seq[Keep]] = ???
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
 
-  def getLatestKeep(url: String)(implicit timeout:Int): Future[Option[Keep]] = ???
+  def getLatestKeep(url: String): Future[Option[Keep]] = ???
 
-  def saveBookmark(bookmark: Keep)(implicit timeout:Int): Future[Keep] = ???
+  def saveBookmark(bookmark: Keep): Future[Keep] = ???
 
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
@@ -519,15 +519,17 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
-  def saveScrapeInfo(info: ScrapeInfo)(implicit timeout:Int): Future[ScrapeInfo] = ???
+  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
 
-  def savePageInfo(pageInfo: PageInfo)(implicit timeout: Int): Future[PageInfo] = ???
+  def savePageInfo(pageInfo: PageInfo): Future[PageInfo] = ???
 
-  def getImageInfo(id: Id[ImageInfo])(implicit timeout: Int): Future[ImageInfo] = ???
+  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
 
-  def saveImageInfo(imageInfo: ImageInfo)(implicit timeout: Int): Future[ImageInfo] = ???
+  def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
 
-  def saveNormalizedURI(uri: NormalizedURI)(implicit timeout:Int): Future[NormalizedURI] = ???
+  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
+
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
                           createdAt: => DateTime,
@@ -542,13 +544,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
                           restriction: => Option[Restriction],
                           normalization: => Option[Normalization],
                           redirect: => Option[Id[NormalizedURI]],
-                          redirectTime: => Option[DateTime])(implicit timeout:Int): Future[Boolean] = Future.successful(true)
+                          redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
 
   def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
 
   def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
 
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect)(implicit timeout:Int): Future[NormalizedURI] = ???
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
 
   def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
 

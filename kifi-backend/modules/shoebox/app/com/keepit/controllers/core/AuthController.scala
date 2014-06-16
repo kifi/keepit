@@ -160,9 +160,7 @@ class AuthController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (agent.name == "IE" || agent.name == "Safari") {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
+      if (agent.isMobile) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))

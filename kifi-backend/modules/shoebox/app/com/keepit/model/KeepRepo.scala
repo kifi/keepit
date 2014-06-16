@@ -24,6 +24,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
+  def bulkGetByUserAndUriIds(userId: Id[User], uriIds:Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI],Keep]
   def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
@@ -42,6 +43,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
   def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
+  def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -202,6 +204,15 @@ class KeepRepoImpl @Inject() (
     }
   }
 
+  def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep] = {
+    val res = bookmarkUriUserCache.bulkGetOrElse(uriIds.map(KeepUriUserKey(_, userId))) { keys =>
+      val missing = keys.map(_.uriId)
+      val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list()
+      keeps.map{ k => KeepUriUserKey(k.uriId, userId) -> k }.toMap
+    }
+    res.map{ case(key, keep) => key.uriId -> keep }
+  }
+
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
     import StaticQuery.interpolation
 
@@ -335,5 +346,14 @@ class KeepRepoImpl @Inject() (
     val min = bookmarks.map(_.createdAt).min
     val oldest = for { bookmark <- bookmarks if bookmark.createdAt <= min } yield bookmark
     oldest.sortBy(_.createdAt asc).firstOption
+  }
+
+  def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    import StaticQuery.interpolation
+
+    val sql = if (includePrivate) sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} order by created_at DESC limit ${limit}"
+    else sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} and is_private = false order by created_at DESC limit ${limit}"
+
+    sql.as[Id[NormalizedURI]].list
   }
 }

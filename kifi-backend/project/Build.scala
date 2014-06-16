@@ -57,6 +57,7 @@ object ApplicationBuild extends Build {
     }
 
   val angularDirectory = SettingKey[File]("angular-directory")
+  val angularBlackDirectory = SettingKey[File]("angular-black-directory")
 
   private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
     Command.args(name, "<" + name + "-command>") { (state, args) =>
@@ -81,7 +82,7 @@ object ApplicationBuild extends Build {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "com.kifi" % "franz_2.10" % "0.3.4",
+    "com.kifi" % "franz_2.10" % "0.3.5",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "3.0",
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
@@ -232,6 +233,7 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
   ).settings(
     playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular"),
+    playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular-black"),
     angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
@@ -271,10 +273,12 @@ object ApplicationBuild extends Build {
     .settings(
       aggregate in update := false,
       angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
+      angularBlackDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular-black" },
       commands <++= angularDirectory { base =>
         Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
       },
-      commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
+      commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) },
+      commands <+= angularBlackDirectory { base => cmd("ng-black", "grunt", base, List("dev")) }
     )
     .dependsOn(
       common % "test->test;compile->compile",

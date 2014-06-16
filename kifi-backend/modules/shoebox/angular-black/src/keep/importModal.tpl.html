@@ -1,0 +1,23 @@
+<div kf-modal show="data.showImportModal" kf-width="540px" class="import-modal">
+  <div kf-basic-modal-content centered="true" title="Privately add your bookmarks to Kifi?" single-action="false" cancel="cancelImport()">
+    <img src="/img/bookmark-to-kifi@2x.png" class="import-star-to-kifi">
+    <p>Your bookmarks will be securely kept as private keeps and will never appear in your friends’ search results.</p>
+    <p>You also can find, organize, and remove them anytime at Kifi.com.</p>
+    <div class="dialog-buttons">
+      <a class="dialog-cancel" ng-click="cancelImport()" href="javascript:">Cancel</a>
+      <button ng-click="importBookmarks()">Import bookmarks</button>
+    </div>
+  </div>
+</div>
+<div kf-modal show="data.showImportModal2" kf-width="540px" class="import-modal">
+  <div kf-basic-modal-content centered="true" title="Importing your bookmarks to Kifi" action-text="Awesome">
+    <img src="/img/bookmark-to-kifi@2x.png" class="import-star-to-kifi">
+    <p>This might take a few minutes (especially if you have a lot of bookmarks). Feel free to browse around — we’re syncing in the background.</p>
+  </div>
+</div>
+<div kf-modal show="data.showImportError" kf-width="540px" class="import-modal">
+  <div kf-basic-modal-content title="Whoops! We're having a problem." action-text="Done">
+    <p>We're having trouble importing your bookmarks because it seems that you aren't running an up-to-date Kifi extension.</p>
+    <p>If you think this is an error, <a href="http://support.kifi.com/customer/portal/emails/new">contact support</a> and we'll sort things out. Thanks!</p>
+  </div>
+</div>

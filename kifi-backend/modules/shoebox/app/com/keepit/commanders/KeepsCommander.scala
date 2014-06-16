@@ -27,52 +27,75 @@ import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance._
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.db.slick.DBSession.RSession
+import org.joda.time.DateTime
 
-case class KeepInfo(id: Option[ExternalId[Keep]] = None, title: Option[String], url: String, isPrivate: Boolean)
-
-case class FullKeepInfo(
-  bookmark: Keep,
-  users: Set[BasicUser],
-  collections: Set[ExternalId[Collection]],
-  others: Int,
-  siteName: Option[String] = None,
+case class KeepInfo(
+  id: Option[ExternalId[Keep]] = None,
+  title: Option[String],
+  url: String,
+  isPrivate: Boolean,
+  createdAt: Option[DateTime] = None,
+  others: Option[Int] = None,
+  keepers: Option[Set[BasicUser]] = None,
+  collections: Option[Set[String]] = None,
+  tags: Option[Set[BasicCollection]] = None,
   uriSummary: Option[URISummary] = None,
-  clickCount:Int = -1,
-  rekeepCount:Int = -1)
-
-class FullKeepInfoWriter(sanitize: Boolean = false) extends Writes[FullKeepInfo] {
-  def writes(info: FullKeepInfo) = {
-    val uriSummary = info.uriSummary map { clientPageInfo =>
-      Json.obj("summary" -> Json.toJson(clientPageInfo))
-    } getOrElse Json.obj()
-    val siteName = info.siteName map (name => Json.obj("siteName" -> Json.toJson(name))) getOrElse Json.obj()
-    Json.obj(
-      "id" -> info.bookmark.externalId.id,
-      "title" -> info.bookmark.title,
-      "url" -> (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
-      "isPrivate" -> info.bookmark.isPrivate,
-      "createdAt" -> info.bookmark.createdAt,
-      "others" -> info.others,
-      "keepers" -> info.users,
-      "clickCount" -> info.clickCount,
-      "rekeepCount" -> info.rekeepCount,
-      "collections" -> info.collections.map(_.id)
-    ) ++ uriSummary ++ siteName
-  }
-}
+  siteName: Option[String] = None,
+  clickCount: Option[Int] = None,
+  rekeepCount: Option[Int] = None)
 
 object KeepInfo {
+
   implicit val format = (
     (__ \ 'id).formatNullable(ExternalId.format[Keep]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_))
+    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_)) and
+    (__ \ 'createdAt).formatNullable[DateTime] and
+    (__ \ 'others).formatNullable[Int] and
+    (__ \ 'keepers).formatNullable[Set[BasicUser]] and
+    (__ \ 'collections).formatNullable[Set[String]] and
+    (__ \ 'tags).formatNullable[Set[BasicCollection]] and
+    (__ \ 'summary).formatNullable[URISummary] and
+    (__ \ 'siteName).formatNullable[String] and
+    (__ \ 'clickCount).formatNullable[Int] and
+    (__ \ 'rekeepCount).formatNullable[Int]
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
+
+  def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
+    KeepInfo(
+      Some(info.bookmark.externalId),
+      info.bookmark.title,
+      (if(sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
+      info.bookmark.isPrivate,
+      Some(info.bookmark.createdAt),
+      Some(info.others),
+      Some(info.users),
+      Some(info.collections.map(_.id)),
+      Some(info.tags),
+      info.uriSummary,
+      info.siteName,
+      info.clickCount,
+      info.rekeepCount
+    )
+  }
 
   def fromBookmark(bookmark: Keep): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
   }
 }
+
+case class FullKeepInfo(
+  bookmark: Keep,
+  users: Set[BasicUser],
+  collections: Set[ExternalId[Collection]], //deprecated, will be removed in favor off tags once site transition is complete
+  tags: Set[BasicCollection],
+  others: Int,
+  siteName: Option[String] = None,
+  uriSummary: Option[URISummary] = None,
+  clickCount: Option[Int] = None,
+  rekeepCount: Option[Int] = None)
 
 case class KeepInfosWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
@@ -109,51 +132,94 @@ class KeepsCommander @Inject() (
     imageRepo: ImageInfoRepo,
     imageStore: S3ImageStore,
     airbrake: AirbrakeNotifier,
-    uriSummaryCommander: URISummaryCommander
+    uriSummaryCommander: URISummaryCommander,
+    collectionCommander: CollectionCommander,
+    clock: Clock
  ) extends Logging {
+
+  private def getKeeps(
+    beforeOpt: Option[ExternalId[Keep]],
+    afterOpt: Option[ExternalId[Keep]],
+    collectionId: Option[ExternalId[Collection]],
+    helprankOpt: Option[String],
+    count: Int,
+    userId: Id[User]): (Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int]) = {
+
+    @inline def filter(counts:Map[Id[NormalizedURI], Int])(implicit r:RSession):Seq[Id[NormalizedURI]] = {
+      val uriIds = counts.toSeq.sortBy(_._2)(Ordering[Int].reverse).map(_._1)
+      val before = beforeOpt match {
+        case None => uriIds
+        case Some(beforeExtId) =>
+          keepRepo.getByExtIdAndUser(beforeExtId, userId) match {
+            case None => uriIds
+            case Some(beforeKeep) => uriIds.dropWhile(_ != beforeKeep.uriId).drop(1)
+          }
+      }
+      val after = afterOpt match {
+        case None => before
+        case Some(afterExtId) => keepRepo.getByExtIdAndUser(afterExtId, userId) match {
+          case None => before
+          case Some(afterKeep) => uriIds.takeWhile(_ != afterKeep.uriId)
+        }
+      }
+      if (count > 0) after.take(count) else after
+    }
+
+    db.readOnly { implicit ro =>
+      val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
+      val keeps = collectionOpt match {
+        case Some(collection) =>
+          keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count)
+        case None =>
+          helprankOpt match {
+            case Some(selector) =>
+              val keepIds = selector.trim match {
+                case "rekeep" => filter(rekeepRepo.getUriReKeepCountsByKeeper(userId))
+                case _  => filter(keepClicksRepo.getUriClickCountsByKeeper(userId)) // click
+              }
+              val km = keepRepo.bulkGetByUserAndUriIds(userId, keepIds.toSet)
+              log.info(s"[getKeeps($beforeOpt,$afterOpt,${helprankOpt.get},$count,$userId)] keeps=$km")
+              km.valuesIterator.toList
+            case _ => keepRepo.getByUser(userId, beforeOpt, afterOpt, count)
+          }
+      }
+      val (clkCount, rkCount) = helprankOpt match {
+        case None => (Map.empty[Id[Keep], Int], Map.empty[Id[Keep], Int])
+        case Some(s) => (keepClicksRepo.getClickCountsByKeepIds(userId, keeps.map(_.id.get).toSet), rekeepRepo.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet))
+      }
+      (keeps, collectionOpt, clkCount, rkCount)
+    }
+  }
+
+  private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
+    val request = URISummaryRequest(
+      url = keep.url,
+      imageType = ImageType.ANY,
+      withDescription = true,
+      waiting = waiting,
+      silent = false
+    )
+    uriSummaryCommander.getURISummaryForRequest(request)
+  }
 
   def allKeeps(
     before: Option[ExternalId[Keep]],
     after: Option[ExternalId[Keep]],
     collectionId: Option[ExternalId[Collection]],
+    helprankOpt: Option[String],
     count: Int,
     userId: Id[User],
     withPageInfo: Boolean): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    val (keeps, collectionOpt) = db.readOnly { implicit s =>
-      val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
-      val keeps = collectionOpt match {
-        case Some(collection) =>
-          keepRepo.getByUserAndCollection(userId, collection.id.get, before, after, count)
-        case None =>
-          keepRepo.getByUser(userId, before, after, count)
-      }
-      val helpRankEnabled = localUserExperimentCommander.getExperimentsByUser(userId).contains(ExperimentType.HELPRANK)
-      // todo(ray?) - this appears to be unused, should we remove it?
-      //val clickCount = if (helpRankEnabled) keepClicksRepo.getClickCountByKeeper(userId) else -1
-      //val rekeepCount = if (helpRankEnabled) rekeepRepo.getReKeepCountByKeeper(userId) else -1
-      (keeps, collectionOpt)
-    }
+    val (keeps, collectionOpt, clkCounts, rkCounts) = getKeeps(before, after, collectionId, helprankOpt, count, userId)
     val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
-      if (withPageInfo) {
-        val request = URISummaryRequest(
-          url = keep.url,
-          imageType = ImageType.ANY,
-          withDescription = true,
-          waiting = false,
-          silent = false
-        )
-        uriSummaryCommander.getURISummaryForRequest(request).map(Some(_))
-      } else {
-        Future.successful(None)
-      }
+      if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
     })
 
-    val keepsWithCollIds = db.readOnly { implicit s =>
-      val collIdToExternalId = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId).map(c => c.id -> c.externalId).toMap
+    val colls = db.readOnly { implicit s =>
       keeps.map{ keep =>
-        val collIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).flatMap(collIdToExternalId.get).toSet
-        (keep, collIds)
+        val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+        collectionCommander.getBasicCollections(collIds)
       }
     }
 
@@ -164,11 +230,35 @@ class KeepsCommander @Inject() (
       val idToBasicUser = db.readOnly { implicit s =>
         basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
       }
-      val keepsInfo = (keepsWithCollIds, sharingInfos, pageInfos).zipped.map { case ((keep, collIds), sharingInfos, pageInfos) =>
+      val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map { case ((keep, colls), sharingInfos, pageInfos) =>
         val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, collIds, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos)
+        FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos, clkCounts.get(keep.id.get), rkCounts.get(keep.id.get))
       }
       (collectionOpt.map{ c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
+    }
+  }
+
+  /**
+   * This function currently does not return help rank info (can be added if necessary)
+   * Waiting is enabled for URISummary fetching
+   */
+  def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
+    db.readOnly { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
+      val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
+      val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
+      for {
+        sharingInfo <- sharingInfoFuture
+        pageInfo <- pageInfoFuture
+      } yield {
+        val (idToBasicUser, colls) = db.readOnly { implicit s =>
+          val idToBasicUser = basicUserRepo.loadAll(sharingInfo.sharingUserIds)
+          val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+          val colls : Seq[BasicCollection] = collectionCommander.getBasicCollections(collIds)
+          (idToBasicUser, colls)
+        }
+        val others = sharingInfo.keepersEdgeSetSize - sharingInfo.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+        FullKeepInfo(keep, sharingInfo.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfo)
+      }
     }
   }
 
@@ -186,10 +276,11 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
-      (Seq[KeepInfo], Option[Int]) = {
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, separateExisting: Boolean = false)(implicit context: HeimdalContext):
+      (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+    val (newKeeps, existingKeeps, failures) = keepInterner.internRawBookmarksWithStatus(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+    val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -200,7 +291,12 @@ class KeepsCommander @Inject() (
     SafeFuture{
       searchClient.updateURIGraph()
     }
-    (keeps.map(KeepInfo.fromBookmark), addedToCollection)
+    val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
+      (newKeeps, Some(existingKeeps))
+    } else {
+      (newKeeps ++ existingKeeps, None)
+    }
+    (returnedKeeps.map(KeepInfo.fromBookmark), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromBookmark)))
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
@@ -274,7 +370,7 @@ class KeepsCommander @Inject() (
       }
       val activated = existing collect {
         case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
-          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
       }
 
       timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
@@ -319,7 +415,7 @@ class KeepsCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE)) } tap(keptAnalytics.createdTag(_, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, createdAt = clock.now())) } tap(keptAnalytics.createdTag(_, context))
       case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap(keptAnalytics.createdTag(_, context))
     }
   }

@@ -1,0 +1,82 @@
+'use strict';
+
+angular.module('kifi.installService', [])
+
+.factory('installService', ['$window', '$log', '$rootScope', '$timeout',
+  function ($window, $log, $rootScope, $timeout) {
+    var isChrome = $window.chrome && $window.chrome.webstore && $window.chrome.webstore.install;
+    var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ($window.navigator.userAgent.indexOf('Firefox') > -1);
+    var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [null, 999])[1];
+    var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
+
+    if (isChrome && supported) {
+      var elem = $window.document.createElement('link');
+      elem.rel = 'chrome-webstore-item';
+      elem.href = 'https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin';
+      var other = $window.document.getElementsByTagName('link')[0];
+      other.parentNode.insertBefore(elem, other);
+    }
+
+    function installedVersion() {
+      var htmlElement = document.getElementsByTagName('html')[0];
+      return angular.element(htmlElement).attr('data-kifi-ext');
+    }
+
+    var api = {
+      triggerInstall: function (onError) {
+        if (isChrome && supported) {
+          api.installInProgress = true;
+          $window.chrome.webstore.install('https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin', function () {
+            api.installed = true;
+            api.installInProgress = false;
+            api.error = false;
+            $rootScope.$digest();
+          }, function (e) {
+            $log.log(e);
+            api.installed = false;
+            api.installInProgress = false;
+            api.error = true;
+            if (onError) {
+              onError();
+            }
+            $rootScope.$digest();
+            $timeout(function () {
+              api.error = false;
+              $rootScope.$digest();
+            }, 10000);
+          });
+        } else if (isFirefox && supported) {
+          $window.location.href = '//www.kifi.com/assets/plugins/kifi.xpi';
+        } else {
+          $window.location.href = '//www.kifi.com/unsupported';
+        }
+      },
+      canInstall: supported,
+      installInProgress: false,
+      installed: false,
+      error: false,
+      installedVersion: installedVersion,
+      hasMinimumVersion: function (minVersion) {
+        var version = installedVersion();
+        if (!version) {
+          return false;
+        }
+        function parseVersion(version) {
+          return version.split('.').map(function (num) {
+            return parseInt(num, 10);
+          });
+        }
+        var nums = parseVersion(version);
+        var minNums = parseVersion(minVersion);
+        for (var i = 0; i < minNums.length; i++) {
+          if (i >= nums.length || nums[i] < minNums[i]) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+
+    return api;
+  }
+]);

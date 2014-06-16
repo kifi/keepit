@@ -1,0 +1,44 @@
+<div ng-controller="InviteCtrl">
+  <div class="invite-wrapper" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
+    <div class="invite">
+      <h2 class="invite-title">Find people to invite</h2>
+      <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
+        <div class="bouncy-ball">
+          <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+        </div> Importing your contacts
+      </div>
+      <div kf-social-networks-status></div>
+
+      <div kf-social-invite-well></div>
+
+      <div kf-networks-need-attention></div>
+
+      <div class="invite-list-header">Recommended people to invite</div>
+
+      <div class="kf-connection-card-container">
+        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
+        <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
+      </div>
+
+      <div ng-if="whoToInvite.length < 6 && wtiLoaded" class="social-connect-friends">
+        <div kf-social-connect-networks></div>
+      </div>
+
+      <div kf-modal show="data.showGenericInviteError">
+        <div kf-basic-modal-content action-text="Ok" title="Sorry, an error occurred, please try again later."></div>
+      </div>
+
+      <div kf-modal show="data.showLinkedinHitRateLimitModal">
+        <div kf-basic-modal-content action-text="Ok">
+          <h3>LinkedIn limits the number of messages users can send through Kifi each day.</h3>
+          <h3>Please retry inviting this connection again, tomorrow.</h3>
+        </div>
+      </div>
+
+      <div kf-modal show="data.showLinkedinTokenExpiredModal">
+        <div kf-basic-modal-content with-cancel action-text="Ok" action="showAddNetworksModal()" title="Your session has expired, you need to reconnect to LinkedIn."></div>
+      </div>
+
+    </div>
+  </div>
+</div>

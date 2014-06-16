@@ -50,7 +50,7 @@ object DiscoveryModule {
     tags = Map("Capabilities" -> "foo, bar", "ShardSpec" -> "0/1"))
 }
 
-abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
+class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[ServiceType]) extends DiscoveryModule with Logging {
 
   def configure() {
     install(ProdActorSystemModule())
@@ -61,7 +61,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   def amazonEC2Client(basicAWSCredentials: BasicAWSCredentials): AmazonEC2 = {
     val conf = current.configuration.getConfig("amazon").get
     val ec2Client = new AmazonEC2Client(basicAWSCredentials)
-    conf.getString("ec2.endpoint") map { ec2Client.setEndpoint(_) }
+    conf.getString("ec2.endpoint") foreach ec2Client.setEndpoint
     ec2Client
   }
 
@@ -76,7 +76,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
         Await.result(WS.url("http://169.254.169.254/latest/meta-data/" + path).get(), 1 minute).body
       }
       val instanceId: String = get("instance-id")
-      val request = new DescribeInstancesRequest
+      val request = new DescribeInstancesRequest()
       request.setInstanceIds(Seq(instanceId))
       val result = amazonEC2Client.describeInstances(request)
       val tags = for {
@@ -84,9 +84,9 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
         instance <- reservation.getInstances.headOption.toSeq
         tag <- instance.getTags
       } yield tag
-      val name = tags.filter(_.getKey == "Name").headOption map { _.getValue }
-      val service = tags.filter(_.getKey == "Service").headOption map { _.getValue }
-      val loadBalancer = tags.filter(_.getKey == "ELB").headOption map { _.getValue }
+      val name = tags.find(_.getKey == "Name") map (_.getValue)
+      val service = tags.find(_.getKey == "Service") map (_.getValue )
+      val loadBalancer = tags.find(_.getKey == "ELB") map (_.getValue)
 
       AmazonInstanceInfo(
         instanceId = AmazonInstanceId(instanceId),
@@ -111,7 +111,7 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyAmazonInstanceInfo = MyAmazonInstanceInfo(info)
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyInstanceInfo = MyInstanceInfo(info, serviceType)
 
   @Singleton
   @Provides
@@ -124,10 +124,13 @@ abstract class ProdDiscoveryModule extends DiscoveryModule with Logging {
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
                        amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
-    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = DiscoveryModule.isCanary, servicesToListenOn = servicesToListenOn)
+    val isCanary = DiscoveryModule.isCanary
+    if (serviceType == ServiceType.SHOEBOX && isCanary) {
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn :+ ServiceType.SHOEBOX)
+    } else {
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn)
+    }
   }
-
-  def servicesToListenOn: Seq[ServiceType]
 
   @Singleton
   @Provides
@@ -141,7 +144,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Singleton
   @Provides
-  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyAmazonInstanceInfo = MyAmazonInstanceInfo(info)
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyInstanceInfo = MyInstanceInfo(info, serviceType)
 
   @Singleton
   @Provides

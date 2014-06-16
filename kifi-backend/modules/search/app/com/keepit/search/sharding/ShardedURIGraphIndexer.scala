@@ -1,6 +1,7 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{Keep, NormalizedURI}
 import com.keepit.search.graph.bookmark.URIGraphIndexer
 import com.keepit.search.index.Indexer
@@ -10,6 +11,7 @@ import scala.concurrent.duration._
 
 class ShardedURIGraphIndexer(
   override val indexShards: Map[Shard[NormalizedURI], URIGraphIndexer],
+  override val airbrake: AirbrakeNotifier,
   shoeboxClient : ShoeboxServiceClient
 ) extends ShardedIndexer[NormalizedURI, Keep, URIGraphIndexer] {
 

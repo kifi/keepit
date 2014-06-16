@@ -172,6 +172,8 @@ GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.M
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
+GET    /m/1/discover/                           @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
+
 ##########################################
 # Website
 ##########################################
@@ -179,6 +181,7 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
 GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
+GET     /helprank/:selector         @com.keepit.controllers.website.HomeController.homeWithParam(selector: String)
 GET     /friends                    @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
 GET     /friends/invite/facebook    @com.keepit.controllers.website.HomeController.home
@@ -221,13 +224,13 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 ##########################################
 
 
-GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple()
+GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
+POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)
 POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsController.unkeepMultiple()
 POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
-GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep])
+GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
@@ -313,6 +316,7 @@ POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
+GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 
 GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
 GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
@@ -539,10 +543,12 @@ GET     /adimin/cortex/lda                                 @com.keepit.controlle
 POST    /admin/cortex/lda/showTopics                       @com.keepit.controllers.admin.AdminLDAController.showTopics
 POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
+POST    /admin/cortex/lda/saveEdits                        @com.keepit.controllers.admin.AdminLDAController.saveEdits
 
-GET     /admin/graph/statistics                             @com.keepit.controllers.admin.GraphAdminController.statistics
+GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
+GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
 ##########################################
 # Common Healthcheck / service routes

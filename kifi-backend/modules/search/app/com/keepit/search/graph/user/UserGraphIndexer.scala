@@ -23,7 +23,7 @@ object UserGraphFields {
 
 class UserGraphIndexer(
   indexDirectory: IndexDirectory,
-  airbrake: AirbrakeNotifier,
+  override val airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
 ) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory){
 

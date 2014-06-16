@@ -90,9 +90,9 @@ class MailToKeepActor @Inject() (
                     |Hi There, <br><br>
                     |We are unable to securely keep this page for you because it was sent from an unverified email address ($senderAddress) or it is not associated with a Kifi account. <br>
                     |Let us help you get set up so this doesn’t happen again. <br><br>
-                    |<u>Get verified</u>
+                    |<u>Get verified</u><br>
                     |If you are a registered Kifi user, log in and visit <a href="https://www.kifi.com/profile">your profile</a>. Click to "Manage your email addresses". If the email address isn’t listed, add it and we’ll send you an email to verify it. If it is listed, you can resend a verification email. <br><br>
-                    |<u>Not a Kifi user?</u>
+                    |<u>Not a Kifi user?</u><br>
                     |If you are not a Kifi user someone may have accidentally added your email,  if you think this is the case please contact us. If you tried to keep something, but haven’t registered for Kifi yet, you can <a href="https://www.kifi.com">sign up for free</a>. <br><br>
                     |Thanks! <br>
                     |The Kifi Team

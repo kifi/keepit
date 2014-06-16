@@ -7,6 +7,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.logging.Logging
 
 // //Sample Usage****************************************
 //
@@ -37,6 +38,8 @@ trait CentralConfigKey {
 
   val rootPath = "/fortytwo/config"
   def toNode : Node = Node(rootPath + "/" + fullKey)
+
+  override def toString = fullKey
 }
 
 
@@ -61,15 +64,18 @@ trait SequenceNumberCentralConfigKey[T] {
 trait ConfigStore {
   def get(key: CentralConfigKey): Option[String]
   def set(key: CentralConfigKey, value: String): Unit
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit)
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit)
 }
 
-class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
+class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
   import com.keepit.common.strings.{fromByteArray, toByteArray}
 
   private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
 
-  zkClient.onConnected{ _ => watches.foreach{ case (key, handler) => watch(key)(handler) } }
+  zkClient.onConnected{ zk =>
+    log.info(s"ZKX registering watches")
+    watches.foreach{ case (key, handler) => watch(key, Some(zk))(handler) }
+  }
 
   def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
     try {
@@ -96,9 +102,13 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore{
     }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit): Unit = zkClient.session{ zk =>
-    watches += ((key, handler))
-    zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit): Unit = {
+    zkClient.session{ zkM =>
+      val zk = sessionOverride.getOrElse(zkM)
+      log.info(s"ZKX registering watch $key")
+      watches += ((key, handler))
+      zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
+    }
   }
 }
 
@@ -118,7 +128,7 @@ class InMemoryConfigStore extends ConfigStore {
     }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit) : Unit = {
     if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
     watches(key.toNode.name) += handler
   }
@@ -126,7 +136,7 @@ class InMemoryConfigStore extends ConfigStore {
 
 
 @Singleton
-class CentralConfig @Inject() (cs: ConfigStore){
+class CentralConfig @Inject() (cs: ConfigStore) extends Logging{
 
   def apply(key: BooleanCentralConfigKey) : Option[Boolean] = cs.get(key).map(_.toBoolean)
 
@@ -150,21 +160,25 @@ class CentralConfig @Inject() (cs: ConfigStore){
 
   def onChange(key: BooleanCentralConfigKey)(handler: Option[Boolean] => Unit) : Unit =
     cs.watch(key){ stringValueOpt =>
+      log.info(s"ZKX Central Config watch fired on $key with boolean value $stringValueOpt")
       handler(stringValueOpt.map(_.toBoolean))
     }
 
   def onChange(key: LongCentralConfigKey)(handler: Option[Long] => Unit) : Unit =
     cs.watch(key){ stringValueOpt =>
+      log.info(s"ZKX Central Config watch fired on $key with long value $stringValueOpt")
       handler(stringValueOpt.map(_.toLong))
     }
 
   def onChange(key: DoubleCentralConfigKey)(handler: Option[Double] => Unit) : Unit =
     cs.watch(key){ stringValueOpt =>
+      log.info(s"ZKX Central Config watch fired on $key with double value $stringValueOpt")
       handler(stringValueOpt.map(_.toDouble))
     }
 
   def onChange(key: StringCentralConfigKey)(handler: Option[String] => Unit) : Unit =
     cs.watch(key){ stringValueOpt =>
+      log.info(s"ZKX Central Config watch fired on $key with string value $stringValueOpt")
       handler(stringValueOpt)
     }
 

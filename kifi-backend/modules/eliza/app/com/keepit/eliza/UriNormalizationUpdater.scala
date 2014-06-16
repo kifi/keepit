@@ -21,7 +21,6 @@ import play.api.libs.json.{Json, JsObject}
 import com.google.inject.{Inject, Singleton}
 
 
-
 @Singleton
 class UriNormalizationUpdater @Inject() (
     threadRepo: MessageThreadRepo,
@@ -35,13 +34,15 @@ class UriNormalizationUpdater @Inject() (
     system: ActorSystem
   ) extends Logging {
 
+
+
   centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate)
 
   def localSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
   def checkAndUpdate(remoteSequenceNumberOpt: Option[SequenceNumber[ChangedURI]]) : Unit = synchronized {
     var localSeqNum = localSequenceNumber()
-    log.info(s"Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader()}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
+    log.info(s"ZKX Renormalization: Checking if I need to update. Leader: ${serviceDiscovery.isLeader()}. seqNum: ${remoteSequenceNumberOpt}. locSeqNum: ${localSeqNum}")
     remoteSequenceNumberOpt match {
       case Some(remoteSequenceNumber) if (remoteSequenceNumber>localSeqNum && serviceDiscovery.isLeader()) => {
         val upperBound = if (remoteSequenceNumber - localSequenceNumber > 500) localSequenceNumber + 500 else remoteSequenceNumber
@@ -51,6 +52,7 @@ class UriNormalizationUpdater @Inject() (
           applyUpdates(updates, reapply=true)
           db.readWrite{ implicit session => renormRepo.addNew(upperBound, updates.size, updates.map{_._1}) }
         }.onComplete{ _ =>
+          log.info(s"ZKX Renormalization: Finished one batch. There is more: $thereIsMore. Remote seq num: ${remoteSequenceNumberOpt}")
           if (thereIsMore) checkAndUpdate(remoteSequenceNumberOpt)
         }
       }
