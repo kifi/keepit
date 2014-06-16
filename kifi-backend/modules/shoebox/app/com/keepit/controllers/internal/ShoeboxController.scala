@@ -70,7 +70,6 @@ class ShoeboxController @Inject() (
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache
 )
   (implicit private val clock: Clock,
-   implicit private val scraperConfig: ScraperConfig,
    private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 

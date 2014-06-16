@@ -14,7 +14,7 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
   "Signature" should {
 
     "find similar documents of different thresholds" in {
-      withDb(TestMailModule(), FakeScrapeSchedulerModule(), TestScraperConfigModule()) { implicit injector: Injector =>
+      withDb(TestMailModule(), FakeScrapeSchedulerModule()) { implicit injector: Injector =>
 
         val builder1 = new SignatureBuilder(3)
         val builder2 = new SignatureBuilder(3)
@@ -38,8 +38,6 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
           scrapeRepo.save(ScrapeInfo(uriId = nuri3.id.get))
           scrapeRepo.save(ScrapeInfo(uriId = nuri4.id.get))
           scrapeRepo.save(ScrapeInfo(uriId = nuri5.id.get))
-
-          implicit val conf = inject[ScraperConfig]
 
           scrapeRepo.save(scrapeRepo.getByUriId(nuri1.id.get).get.copy(signature = sig1.toBase64))
           scrapeRepo.save(scrapeRepo.getByUriId(nuri2.id.get).get.copy(signature = sig1.toBase64))
