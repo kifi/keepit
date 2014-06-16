@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
 import com.keepit.model.{User, UserEmailAddressRepo, UserRepo, UserEmailAddress, UserConnectionRepo}
-import com.keepit.common.mail.{FakeMailModule, FakeOutbox}
+import com.keepit.common.mail.{EmailAddress, FakeMailModule, FakeOutbox}
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -39,9 +39,9 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
       ))
 
 
-      val email1 = emailRepo.save(UserEmailAddress(userId=user1.id.get, address="username@42go.com"))
-      val email2 = emailRepo.save(UserEmailAddress(userId=user2.id.get, address="peteG@42go.com"))
-      val email3 = emailRepo.save(UserEmailAddress(userId=user3.id.get, address="superreporter@42go.com"))
+      val email1 = emailRepo.save(UserEmailAddress(userId=user1.id.get, address=EmailAddress("username@42go.com")))
+      val email2 = emailRepo.save(UserEmailAddress(userId=user2.id.get, address=EmailAddress("peteG@42go.com")))
+      val email3 = emailRepo.save(UserEmailAddress(userId=user3.id.get, address=EmailAddress("superreporter@42go.com")))
 
       user1 = userRepo.save(user1.copy(primaryEmailId = Some(email1.id.get), pictureName = Some("dfkjiyert")))
       user2 = userRepo.save(user2.copy(primaryEmailId = Some(email2.id.get)))

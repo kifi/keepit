@@ -68,8 +68,8 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
               userRepo.save(User(firstName = "Greg", lastName = "Methvin")))
         }
         db.readWrite { implicit s =>
-          emailAddressRepo.save(UserEmailAddress(address = "eishay@42go.com", userId = eishay.id.get, state = EmailAddressStates.VERIFIED))
-          emailAddressRepo.save(UserEmailAddress(address = "greg@42go.com", userId = greg.id.get))
+          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, state = EmailAddressStates.VERIFIED))
+          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("greg@42go.com"), userId = greg.id.get))
         }
         val parser = new MailToKeepMessageParser(db, emailAddressRepo, userRepo)
         val session = Session.getDefaultInstance(new Properties())

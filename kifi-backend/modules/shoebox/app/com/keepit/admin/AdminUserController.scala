@@ -298,7 +298,7 @@ class AdminUserController @Inject() (
       invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
     } flatten
     val byEmail: Seq[Id[User]] = emails map { email =>
-      invitationRepo.getByRecipientEmailAddress(email.address).map(_.senderUserId).flatten
+      invitationRepo.getByRecipientEmailAddress(email.address.address).map(_.senderUserId).flatten
     } flatten
     val all: Seq[Id[User]] = (byEmail ++ bySocial).toSet.toSeq
     all map { userId =>
@@ -393,7 +393,7 @@ class AdminUserController @Inject() (
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
     val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
-      case s if s.length > 5 => Some(s)
+      case s if s.length > 5 => Some(EmailAddress(s))
       case _ => None
     }).flatten
 
@@ -645,7 +645,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
-        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address) }
+        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address.address) }
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -769,13 +769,13 @@ class AdminUserController @Inject() (
             val currentEmail = emailRepo.getByUser(user.id.get)
             if (currentEmail.verified) currentEmail.address
             else {
-              val socialEmail = socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get
+              val socialEmail = EmailAddress(socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get)
               require(currentEmail.address == socialEmail, "No verified email")
               val updatedEmail = emailRepo.save(currentEmail.withState(EmailAddressStates.VERIFIED))
               userCommander.updateUserPrimaryEmail(updatedEmail)
               updatedEmail.address
             }
-          },
+          }.address,
           passwordInfo = pInfo,
           firstName = user.firstName,
           lastName = user.lastName,

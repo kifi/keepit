@@ -75,7 +75,7 @@ class SendgridCommander @Inject() (
       if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
         heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, event.timestamp))
       } else if (NotificationCategory.NonUser.all.contains(email.category)) {
-        heimdalClient.trackEvent(NonUserEvent(address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
+        heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
       }
     }
   }

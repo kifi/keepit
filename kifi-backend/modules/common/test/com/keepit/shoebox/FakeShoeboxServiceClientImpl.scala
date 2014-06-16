@@ -361,12 +361,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address.address}}.toMap
     Future.successful(m)
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address}}.toMap
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address.address}}.toMap
     Future.successful(m)
   }
 

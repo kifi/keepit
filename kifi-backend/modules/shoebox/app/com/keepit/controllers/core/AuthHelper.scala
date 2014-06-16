@@ -73,10 +73,11 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(emailAddress: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
+  private def checkForExistingUser(emailString: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
+    val email = EmailAddress(emailString)
     db.readOnly { implicit s =>
-      socialRepo.getOpt(SocialId(emailAddress), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
-        emailAddressRepo.getByAddressOpt(emailAddress).map {
+      socialRepo.getOpt(SocialId(emailString), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
+        emailAddressRepo.getByAddressOpt(email).map {
           case emailAddr if emailAddr.state == EmailAddressStates.VERIFIED =>
             (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
           case emailAddr =>
@@ -162,10 +163,11 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  def finishSignup(user: User, emailAddress: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
+  def finishSignup(user: User, emailString: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailString}]") {
+    val emailAddress = EmailAddress(emailString)
     if (!emailConfirmedAlready) {
-      val emailAddrStr = newIdentity.email.getOrElse(emailAddress)
-      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(EmailAddress(emailAddrStr))) }
+      val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(unverifiedEmail)) }
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -244,14 +246,15 @@ class AuthHelper @Inject() (
   }
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {
+    val email = EmailAddress(emailAddrStr)
     db.readOnly { implicit s =>
-      val emailAddrOpt = emailAddressRepo.getByAddressOpt(emailAddrStr, excludeState = None)  // TODO: exclude INACTIVE records
+      val emailAddrOpt = emailAddressRepo.getByAddressOpt(email, excludeState = None)  // TODO: exclude INACTIVE records
       emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
         emailAddrOpt.filter(_.verified) map { _ =>
           (userId, None)
         } getOrElse {
           // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified).map(_.address).map(EmailAddress(_)))
+          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified).map(_.address))
         }
       }
     }
@@ -341,7 +344,7 @@ class AuthHelper @Inject() (
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         lazy val isPendingPrimaryEmail = {
-          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, "pending_primary_email")
+          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, "pending_primary_email").map(EmailAddress(_))
           pendingEmail.isDefined && address.address == pendingEmail.get
         }
         val user = userRepo.get(address.userId)
@@ -371,7 +374,7 @@ class AuthHelper @Inject() (
           case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
             Redirect(s"/?m=3&email=${address.address}")
           case (true, _) =>
-            Ok(views.html.website.verifyEmailThanks(address.address, user.firstName, secureSocialClientIds))
+            Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
         }
       }.getOrElse {
         BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))

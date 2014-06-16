@@ -28,6 +28,7 @@ import com.keepit.model.UserCred
 import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.mail.EmailAddress
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
@@ -57,8 +58,9 @@ class SecureSocialUserPluginImpl @Inject() (
         // Email social accounts are only tied to one email address
         // Since we support multiple email addresses, if we do not
         // find a SUI with the correct email address, we go searching.
+        val email = EmailAddress(id.userId)
         db.readOnly { implicit session =>
-          emailRepo.getByAddressOpt(id.userId).flatMap { emailAddr =>
+          emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
               sui.credentials
@@ -136,7 +138,8 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
-    for (email <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
+    for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
+      val email = EmailAddress(emailString)
       val emailAddress = emailRepo.getByAddressOpt(address = email) match {
         case Some(e) if e.state == EmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
           emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
@@ -160,7 +163,7 @@ class SecureSocialUserPluginImpl @Inject() (
       socialUserInfoRepo.getOpt(socialId, socialNetworkType),
       userId orElse {
       // Automatically connect accounts with existing emails
-        socialUser.email flatMap (emailRepo.getByAddressOpt(_)) collect {
+        socialUser.email.map(EmailAddress(_)) flatMap (emailRepo.getByAddressOpt(_)) collect {
           case e if e.state == EmailAddressStates.VERIFIED => e.userId
         }
       } flatMap userRepo.getOpt
@@ -238,14 +241,14 @@ class SecureSocialUserPluginImpl @Inject() (
           db.readWrite(attempts = 3) { implicit session =>
             for (user <- userOpt) {
               if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
-                val email = socialUser.email.getOrElse(throw new IllegalStateException("user has no email"))
+                val email = EmailAddress(socialUser.email.getOrElse(throw new IllegalStateException("user has no email")))
                 val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
                   emailRepo.save(UserEmailAddress(userId = user.id.get, address = email))
                 }
                 val cred =
                   UserCred(
                     userId = user.id.get,
-                    loginName = email,
+                    loginName = email.address,
                     provider = "bcrypt" /* hard-coded */,
                     credentials = socialUser.passwordInfo.get.password,
                     salt = socialUser.passwordInfo.get.salt.getOrElse(""))

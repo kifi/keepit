@@ -184,7 +184,7 @@ class InviteCommander @Inject() (
 
       val otherEmailInvites = for {
         emailAccount <- userEmailAccounts if emailAccount.verified
-        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address)
+        invite <- invitationRepo.getByRecipientEmailAddress(emailAccount.address.address)
       } yield (invite, SocialNetworks.EMAIL)
 
       val existingInvites = otherSocialInvites.toSet ++ otherEmailInvites.toSet ++ cookieInvite.toSet
@@ -284,7 +284,7 @@ class InviteCommander @Inject() (
         htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
         textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
         category = NotificationCategory.User.INVITATION,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address))
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address.address))
       )
       postOffice.sendMail(electronicMail)
       val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))

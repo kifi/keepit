@@ -60,12 +60,12 @@ object BasicSocialUser {
 
 case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
 
-case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
+case class EmailInfo(address: EmailAddress, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
   implicit val format = new Format[EmailInfo] {
     def reads(json: JsValue): JsResult[EmailInfo] = {
       Try(new EmailInfo(
-        (json \ "address").as[String],
+        (json \ "address").as[EmailAddress],
         (json \ "isPrimary").asOpt[Boolean].getOrElse(false),
         (json \ "isVerified").asOpt[Boolean].getOrElse(false),
         (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false)
@@ -131,7 +131,7 @@ class UserCommander @Inject() (
 
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def validateEmails(addresses: EmailInfo*): Boolean = {
-    !addresses.map(em => emailRegex.findFirstIn(em.address).isDefined).contains(false)
+    !addresses.map(em => emailRegex.findFirstIn(em.address.address).isDefined).contains(false)
   }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
@@ -209,7 +209,7 @@ class UserCommander @Inject() (
       val basicUser = basicUserRepo.load(user.id.get)
       val description =  userValueRepo.getValueStringOpt(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
-      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email").map(EmailAddress(_))
       val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
@@ -322,7 +322,7 @@ class UserCommander @Inject() (
       if (withVerification) {
         val url = fortytwoConfig.applicationBaseUrl
         db.readWrite { implicit session =>
-          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
+          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
 
@@ -715,7 +715,7 @@ class UserCommander @Inject() (
 
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[UserEmailAddress]], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
-      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email").map(EmailAddress(_))
       val uniqueEmailStrings = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmailStrings contains em.address)
       // Remove missing emails
@@ -739,7 +739,7 @@ class UserCommander @Inject() (
 
           postOffice.sendMail(ElectronicMail(
             from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(EmailAddress(address)),
+            to = Seq(address),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(firstName, verifyUrl).body,
             category = NotificationCategory.User.EMAIL_CONFIRMATION
@@ -763,7 +763,7 @@ class UserCommander @Inject() (
       }
 
       userValueRepo.getValueStringOpt(userId, "pending_primary_email").map { pp =>
-        emailRepo.getByAddressOpt(pp) match {
+        emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
             if (em.verified && em.address == pp) {
               updateUserPrimaryEmail(em)
@@ -779,7 +779,7 @@ class UserCommander @Inject() (
     userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
     val currentUser = userRepo.get(primaryEmail.userId)
     userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get)))
-    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address))
+    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {

@@ -196,7 +196,8 @@ class UserController @Inject() (
     }
   }
 
-  def getEmailInfo(email: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
+  def getEmailInfo(emailString: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
+    val email = EmailAddress(emailString)
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
@@ -363,7 +364,8 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(email: String) = HtmlAction.authenticated { implicit request =>
+  def resendVerificationEmail(emailString: String) = HtmlAction.authenticated { implicit request =>
+    val email = EmailAddress(emailString)
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
@@ -371,7 +373,7 @@ class UserController @Inject() (
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           postOffice.sendMail(ElectronicMail(
             from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(EmailAddress(email)),
+            to = Seq(email),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
             category = NotificationCategory.User.EMAIL_CONFIRMATION

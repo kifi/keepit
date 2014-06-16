@@ -156,7 +156,7 @@ class MailToKeepMessageParser @Inject() (
 
   private val Url = """(?i)(?<![@.])\b(https?://)?(([a-z0-9\-]+\.)+[a-z]{2,3}(/\S*)?)\b""".r
 
-  def getSenderAddress(m: Message): String = { getAddr(m.getFrom.head) }
+  def getSenderAddress(m: Message): EmailAddress = { EmailAddress(getAddr(m.getFrom.head)) }
 
   def getUris(m: Message): Seq[URI] = {
     Url.findAllMatchIn(m.getSubject + " " + getText(m).getOrElse("")).map { m =>
@@ -164,7 +164,7 @@ class MailToKeepMessageParser @Inject() (
     }.flatten.toList.distinct
   }
 
-  def getUser(senderAddress: String): Option[User] = {
+  def getUser(senderAddress: EmailAddress): Option[User] = {
     db.readOnly { implicit s =>
       emailAddressRepo.getVerifiedOwner(senderAddress).map { userId =>
         userRepo.get(userId)

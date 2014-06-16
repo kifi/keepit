@@ -104,7 +104,7 @@ private[mail] class MailSenderActor @Inject() (
 
   def addressHasOptedOut(address: EmailAddress, category: ElectronicMailCategory)(implicit session: RSession) = {
     emailOptOutRepo.hasOptedOut(address, category) || {
-      emailAddressRepo.getByAddressOpt(address.address).map(_.userId) match {
+      emailAddressRepo.getByAddressOpt(address).map(_.userId) match {
         case None => // Email isn't owned by any user, send away!
           false
         case Some(userId) =>
@@ -122,12 +122,12 @@ private[mail] class MailSenderActor @Inject() (
         contextBuilder.addEmailInfo(email)
 
         val (to, cc) = db.readOnly { implicit session =>
-          val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address => emailAddressRepo.getByAddress(address.address) match {
+          val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address => emailAddressRepo.getByAddress(address) match {
             case Seq() => Seq(Right(address.address))
             case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
           }}
 
-          val to: Seq[Either[Id[User], String]] = email.to.flatMap { address => emailAddressRepo.getByAddress(address.address) match {
+          val to: Seq[Either[Id[User], String]] = email.to.flatMap { address => emailAddressRepo.getByAddress(address) match {
             case Seq() => Seq(Right(address.address))
             case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
           }}
