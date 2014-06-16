@@ -37,7 +37,7 @@ object CollectionFields {
 class CollectionIndexer(
     indexDirectory: IndexDirectory,
     collectionNameIndexer: CollectionNameIndexer,
-    airbrake: AirbrakeNotifier)
+    override val airbrake: AirbrakeNotifier)
   extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, CollectionFields.decoders) {
 
   import CollectionFields._

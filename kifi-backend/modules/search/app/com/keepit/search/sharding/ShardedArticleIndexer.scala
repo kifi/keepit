@@ -1,5 +1,6 @@
 package com.keepit.search.sharding
 
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
 import com.keepit.search.article.ArticleIndexer
@@ -13,6 +14,7 @@ import com.keepit.common.logging.Logging
 class ShardedArticleIndexer(
   override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
   articleStore: ArticleStore,
+  override val airbrake: AirbrakeNotifier,
   shoeboxClient : ShoeboxServiceClient
 ) extends ShardedIndexer[NormalizedURI, NormalizedURI, ArticleIndexer] with Logging{
 
