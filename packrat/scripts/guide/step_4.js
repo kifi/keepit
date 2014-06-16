@@ -8,7 +8,6 @@
 // @require scripts/html/guide/step_4.js
 // @require scripts/html/guide/steps.js
 
-var guide = guide || {};
 guide.step4 = guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;

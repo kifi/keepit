@@ -5,7 +5,7 @@
 var me, tags = [];
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
-  log("[keeper_scout]", location.hostname);
+  log('[keeper_scout]', location.hostname);
 
   var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount, onScroll;
   while ((tile = document.getElementById('kifi-tile'))) {
@@ -16,7 +16,7 @@ var tile = tile || function() {  // idempotent for Chrome
     return tile;  // no kifi DOM in XML viewer
   }
   tile.id = 'kifi-tile';
-  tile.className = "kifi-root kifi-tile";
+  tile.className = 'kifi-tile kifi-root';
   tile.style.display = "none";
   tile.dataset.t0 = Date.now();
   tile.innerHTML =
@@ -32,7 +32,7 @@ var tile = tile || function() {  // idempotent for Chrome
 
   tileCard = tile.firstChild;
   tileCount = document.createElement("span");
-  tileCount.className = "kifi-count";
+  tileCount.className = 'kifi-count';
 
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener(('mozHidden' in document ? 'moz' : 'webkit') + 'fullscreenchange', onFullScreenChange);
@@ -40,6 +40,7 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.emit('me', onMeChange);
   api.port.on({
     me_change: onMeChange,
+    guide: loadAndDo.bind(null, 'guide', 'show'),
     open_to: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
     auto_engage: loadAndDo.bind(null, 'keeper', 'engage', 'auto'),
@@ -58,7 +59,7 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.removeAttribute('data-kept');
       }
       tags = o.tags || [];
-      window.addEventListener("resize", onResize);
+      window.addEventListener('resize', onResize);
       api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
         if (!o.hide) {
           tile.style.display = "";
@@ -67,7 +68,7 @@ var tile = tile || function() {  // idempotent for Chrome
           }
         }
         tile.offsetHeight;
-        tileCard.classList.remove("kifi-0s");
+        tileCard.classList.remove('kifi-0s');
       });
     },
     show_keeper: function(show) {
@@ -154,12 +155,7 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 48: case 49: case 50: case 51: case 52: // 0,1,2,3,4
         if (e.altKey) {
-          var step = e.keyCode - 48;
-          api.port.emit('guide', function () {
-            api.require('scripts/guide/step_' + step + '.js', function () {
-              guide['step' + step]();
-            });
-          });
+          loadAndDo('guide', 'show', e.keyCode - 48);
           e.preventDefault();
         }
         break;

@@ -19,10 +19,21 @@ guide.step2 = guide.step2 || function () {
     if (!showStep) {
       showStep = guide.step(steps, {page: 2, anchor: 'tl', hide: onHide});
       showStep(0);
+      window.addEventListener('click', onClick, true);
     }
   }
 
   function onHide() {
     showStep = null;
+    window.removeEventListener('click', onClick, true);
+  }
+
+  function onClick(e) {
+    if (e.which === 1 && e.target.classList.contains('kifi-res-title')) {
+      e.preventDefault();
+      var url = e.target.href;
+      api.port.emit('await_deep_link', {locator: '#guide/3', url: url});
+      window.location = url;
+    }
   }
 }();

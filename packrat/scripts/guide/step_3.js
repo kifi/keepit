@@ -113,10 +113,11 @@ guide.step3 = guide.step3 || function () {
 
   function onClickNext(e, stepIdx) {
     if (stepIdx === 4) {
-      // e.closeKeeper = true;
       showStep(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
     } else {
-      window.location = 'https://www.kifi.com';
+      var url = 'https://preview.kifi.com';
+      api.port.emit('await_deep_link', {locator: '#guide/4', url: url});
+      window.location = url;
     }
   }
 

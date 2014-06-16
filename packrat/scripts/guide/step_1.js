@@ -81,7 +81,9 @@ guide.step1 = guide.step1 || function () {
       e.closeKeeper = true;
       showStep(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
     } else {
-      window.location = 'https://www.google.com/#q=recipe';
+      var url = 'https://www.google.com/#q=recipe';
+      api.port.emit('await_deep_link', {locator: '#guide/2', url: url});
+      window.location = url;
     }
   }
 

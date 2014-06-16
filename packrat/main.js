@@ -16,7 +16,7 @@ var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
 var tabsTagging = []; // [tab]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
-var deepLinkTimers = {}; // tabId => timeout identifier
+var timeouts = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
@@ -38,10 +38,10 @@ function clearDataCache() {
   tabsByLocator = {};
   tabsTagging = [];
   threadReadAt = {};
-  for (var tabId in deepLinkTimers) {
-    api.timers.clearTimeout(deepLinkTimers[tabId]);
+  for (var tabId in timeouts) {
+    api.timers.clearTimeout(timeouts[tabId]);
   }
-  deepLinkTimers = {};
+  timeouts = {};
 
   pageData = {};
   threadLists = {};
@@ -1225,10 +1225,8 @@ api.port.on({
       api.mode.toggle();
     }
   },
-  guide: function (_, respond) {
-    if (me && ~experiments.indexOf('guide')) {
-      respond(null);
-    }
+  has: function (experiment, respond) {
+    respond(me && ~experiments.indexOf(experiment));
   }
 });
 
@@ -1508,20 +1506,24 @@ function sendPageThreadCount(tab, tl, load) {
 function awaitDeepLink(link, tabId, retrySec) {
   var loc = link.locator;
   if (loc) {
-    api.timers.clearTimeout(deepLinkTimers[tabId]);
-    delete deepLinkTimers[tabId];
+    api.timers.clearTimeout(timeouts[tabId]);
+    delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log('[awaitDeepLink]', tabId, link);
-      api.tabs.emit(tab, 'open_to', {
-        trigger: 'deepLink',
-        locator: loc.replace(/#.*/, ''),
-        compose: loc.indexOf('#compose') >= 0,
-        redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
-      }, {queue: 1});
+      if (loc.lastIndexOf('#guide/', 0) === 0) {
+        api.tabs.emit(tab, 'guide', +loc.substr(7), {queue: 1});
+      } else {
+        api.tabs.emit(tab, 'open_to', {
+          trigger: 'deepLink',
+          locator: loc.replace(/#.*/, ''),
+          compose: loc.indexOf('#compose') >= 0,
+          redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
+        }, {queue: 1});
+      }
     } else if ((retrySec = retrySec || .5) < 5) {
       log('[awaitDeepLink]', tabId, 'retrying in', retrySec, 'sec');
-      deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      timeouts[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
     if (loc.lastIndexOf('/messages/', 0) === 0) {
       var threadId = loc.substr(10);
@@ -1534,11 +1536,10 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-var kifiSiteRe = /^https?:\/\/(?:www\.)?kifi\.com/;
 function updateKifiAppTabs() {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (url.lastIndexOf(prefix, 0) === 0 || kifiSiteRe.test(url)) {
+    if (url.lastIndexOf(prefix, 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
         api.tabs.emit(tab, 'update_keeps');
       });
@@ -2417,11 +2418,14 @@ api.timers.setTimeout(api.errors.wrap(function() {
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
-    var tab = api.tabs.anyAt(webBaseUri() + '/install');
-    if (tab) {
-      api.tabs.navigate(tab.id, webBaseUri() + '/');
+    var tab, siteUrl = 'https://preview.kifi.com'; //webBaseUri();
+    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: siteUrl});
+    if ((tab = api.tabs.anyAt(webBaseUri() + '/install'))) {
+      api.tabs.select(tab.id);
+      api.tabs.navigate(tab.id, siteUrl);
+      await(tab.id);
     } else {
-      api.tabs.open(webBaseUri() + '/');
+      api.tabs.open(siteUrl, await);
     }
   }
 }, 3000))();

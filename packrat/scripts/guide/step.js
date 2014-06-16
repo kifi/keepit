@@ -8,7 +8,6 @@
 // @require scripts/guide/curved_arrow.js
 // @require scripts/html/guide/steps.js
 
-var guide = guide || {};
 guide.step = guide.step || function () {
   var $stage, $steps, spotlight, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
