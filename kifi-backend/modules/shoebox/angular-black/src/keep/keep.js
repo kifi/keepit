@@ -414,11 +414,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           };
         }
 
-        scope.$on('resizeImage', function() {
-          sizeImage();
-        });
-
-        scope.$watch('keep', function() {
+        function maybeSizeImage() {
           if (scope.keep && scope.keep.summary) {
             var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
             if (hasImage && scope.keep.summary.description && scope.hasSmallImage()) {
