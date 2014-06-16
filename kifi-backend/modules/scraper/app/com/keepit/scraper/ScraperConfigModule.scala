@@ -8,8 +8,6 @@ trait ScraperConfigModule extends ScalaModule {
 
   protected def conf: Configuration
 
-
-
   @Singleton
   @Provides
   def scraperQueueConfig: ScraperQueueConfig = {

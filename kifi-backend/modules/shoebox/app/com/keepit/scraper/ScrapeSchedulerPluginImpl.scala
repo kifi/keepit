@@ -25,13 +25,7 @@ case object CheckOverdues
 case object CheckOverdueCount
 
 
-case class ScraperSchedulerConfig(
-  actorTimeout: Int,
-  scrapePendingFrequency: Int,          // seconds
-  checkOverdueCountFrequency: Int,      // minutes
-  pendingOverdueThreshold: Int,         // minutes
-  overdueCountThreshold: Int
-)
+
 
 private[scraper] class ScrapeScheduler @Inject() (
     scraperConfig: ScraperSchedulerConfig,

@@ -18,12 +18,12 @@ case class ScraperIntervalConfig(
 )
 
 case class ScraperSchedulerConfig(
-  intervalConfig: ScraperIntervalConfig,
   actorTimeout: Int,
   scrapePendingFrequency: Int,          // seconds
   checkOverdueCountFrequency: Int,      // minutes
   pendingOverdueThreshold: Int,         // minutes
-  overdueCountThreshold: Int
+  overdueCountThreshold: Int,
+  intervalConfig: ScraperIntervalConfig
 ) {
   private[this] val rnd = new Random
   def randomDelay(): Int = rnd.nextInt(intervalConfig.maxRandomDelay)     // seconds
@@ -31,16 +31,11 @@ case class ScraperSchedulerConfig(
 
 trait ScrapeSchedulerConfigModule extends ScalaModule {
   protected def conf: Configuration
-}
-
-case class ProdScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule {
-  def configure() {}
-
-  override protected def conf: Configuration = Play.current.configuration
 
   @Singleton
   @Provides
-  def scraperIntervalConfig: ScraperIntervalConfig = {
+  def intervalConfig(): ScraperIntervalConfig = {
+
     ScraperIntervalConfig(
       initialBackoff = conf.getDouble("scraper.initialBackoff").get, //hours
       maxBackoff = conf.getDouble("scraper.maxBackoff").get, //hours
@@ -50,20 +45,28 @@ case class ProdScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule
       intervalIncrement = conf.getDouble("scraper.interval.increment").get, //hours
       intervalDecrement = conf.getDouble("scraper.interval.decrement").get //hours
     )
+
   }
 
   @Singleton
   @Provides
   def schedulerConfig(intervalConfig: ScraperIntervalConfig): ScraperSchedulerConfig = {
-    ScraperSchedulerConfig(
-      intervalConfig,
+
+    new ScraperSchedulerConfig(
       actorTimeout = conf.getInt("scraper.actorTimeout").get,
       scrapePendingFrequency = conf.getInt("scraper.scrapePendingFrequency").get,
       checkOverdueCountFrequency = conf.getInt("scraper.checkOverdueCountFrequency").get,
       pendingOverdueThreshold = conf.getInt("scraper.pendingOverdueThreshold").get,
-      overdueCountThreshold = conf.getInt("scraper.overdueCountThreshold").get
+      overdueCountThreshold = conf.getInt("scraper.overdueCountThreshold").get,
+      intervalConfig = intervalConfig
     )
+
   }
+}
+
+case class ProdScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule {
+  def configure() {}
+  override protected def conf: Configuration = Play.current.configuration
 }
 
 case class TestScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule {

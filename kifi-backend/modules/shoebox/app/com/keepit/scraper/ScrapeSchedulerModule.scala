@@ -14,6 +14,7 @@ case class ProdScrapeSchedulerModule() extends ScrapeSchedulerModule {
     bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
     install(ProdScrapeSchedulerConfigModule())
   }
+
 }
 
 case class DevScrapeSchedulerModule() extends ScrapeSchedulerModule {
@@ -23,4 +24,3 @@ case class DevScrapeSchedulerModule() extends ScrapeSchedulerModule {
     install(ProdScrapeSchedulerConfigModule())
   }
 }
-

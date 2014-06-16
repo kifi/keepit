@@ -15,6 +15,7 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
     install(TestScraperConfigModule())
+    install(TestScrapeSchedulerConfigModule())
   }
 
   @Singleton
