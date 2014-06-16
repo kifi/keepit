@@ -9,7 +9,7 @@ trait RecurringTaskManager {
   def doTask(): Unit
   def onError(e: Throwable): Unit
 
-  private[this] val state = new AtomicInteger(0) // 0: idle, 1: updating, 2-or-greater: pending
+  private[this] val state = new AtomicInteger(0) // 0: idle, 1: running, 2-or-greater: pending
 
   def request(): Unit = {
     if (state.getAndAdd(2) == 0) {
