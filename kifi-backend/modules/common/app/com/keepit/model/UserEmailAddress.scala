@@ -6,8 +6,8 @@ import java.security.SecureRandom
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.mail.{EmailAddressHolder, EmailAddress}
-import com.keepit.abook.{EmailParserUtils, EmailParser}
+import com.keepit.common.mail.{EmailAddress}
+import com.keepit.abook.{EmailParserUtils}
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
@@ -23,22 +23,23 @@ case class UserEmailAddress (
   lastVerificationSent: Option[DateTime] = None,
   verificationCode: Option[String] = None,
   seq: SequenceNumber[UserEmailAddress] = SequenceNumber.ZERO
-) extends ModelWithState[UserEmailAddress] with EmailAddressHolder with ModelWithSeqNumber[UserEmailAddress] {
+) extends ModelWithState[UserEmailAddress] with ModelWithSeqNumber[UserEmailAddress] {
   def withId(id: Id[UserEmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def sameAddress(otherAddress: String) = otherAddress == address
   def withState(state: State[UserEmailAddress]) = copy(state = state)
   def withVerificationCode(now: DateTime) = this.copy(
     lastVerificationSent = Some(now),
-    verificationCode = Some(new BigInteger(128, EmailAddressObject.random).toString(36)))
+    verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
   def verified: Boolean = state == EmailAddressStates.VERIFIED
   def isTestEmail() = EmailParserUtils.isTestEmail(address)
   def isFakeEmail() = EmailParserUtils.isFakeEmail(address) // +test
   def isAutoGenEmail() = EmailParserUtils.isAutoGenEmail(address)  // +autogen
 }
 
-object EmailAddressObject {
+object UserEmailAddress {
   lazy val random = new SecureRandom()
+  implicit def toEmailAddress(userEmailAddress: UserEmailAddress): EmailAddress = EmailAddress(userEmailAddress.address)
 }
 
 object EmailAddressStates {

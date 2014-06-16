@@ -33,7 +33,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
       .map(em => inject[SocialUserImportEmail].importEmail(user.id.get, em)).head
     email.address === emailString
     db.readOnly{ implicit session =>
-      emailAddressRepo.get(email.id.get) === email
+      emailAddressRepo.get(email.id.get).address === emailString
     }
   }
 

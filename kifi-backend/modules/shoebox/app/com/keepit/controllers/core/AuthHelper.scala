@@ -251,7 +251,7 @@ class AuthHelper @Inject() (
           (userId, None)
         } getOrElse {
           // TODO: use user's primary email address once hooked up
-          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified).map(EmailAddressHolder.toEmailAddress))
+          (userId, emailAddressRepo.getAllByUser(userId).find(_.verified).map(_.address).map(EmailAddress(_)))
         }
       }
     }

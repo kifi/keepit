@@ -23,7 +23,7 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
   type RepoImpl = ElectronicMailTable
   class ElectronicMailTable(tag: Tag) extends RepoTable[ElectronicMail](db, tag, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
     def senderUserId = column[Id[User]]("user_id", O.Nullable)
-    def from = column[SystemEmailAddress]("from_addr", O.NotNull)
+    def from = column[EmailAddress]("from_addr", O.NotNull)
     def fromName = column[String]("from_name", O.Nullable)
     def to = column[Seq[EmailAddress]]("to_addr", O.Nullable)
     def cc = column[Seq[EmailAddress]]("cc_addr", O.Nullable)

@@ -55,7 +55,6 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[KeepSource, String](_.value, KeepSource.apply)
-  implicit val systemEmailAddressMapper = MappedColumnType.base[SystemEmailAddress, String](_.address, SystemEmailAddress.apply)
   implicit val domainTagNameMapper = MappedColumnType.base[DomainTagName, String](_.name, DomainTagName.apply)
   implicit val socialIdMapper = MappedColumnType.base[SocialId, String](_.id, SocialId.apply)
   implicit val socialNetworkTypeMapper = MappedColumnType.base[SocialNetworkType, String](SocialNetworkType.unapply(_).get, SocialNetworkType.apply)
