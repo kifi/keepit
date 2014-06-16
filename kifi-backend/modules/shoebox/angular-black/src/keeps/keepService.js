@@ -145,7 +145,7 @@ angular.module('kifi.keepService', [
 
       var url = env.xhrBase + '/keeps/add';
       var config = {
-        params: { returnExisting: false }
+        params: { separateExisting: true }
       };
       return $http.post(url, data, config).then(function (res) {
         var keeps = (existingKeeps || []).concat(res.data.keeps || []);
@@ -155,7 +155,7 @@ angular.module('kifi.keepService', [
           'action': 'keep'
         });
         prependKeeps(keeps);
-        return keeps;
+        return res.data;
       });
     }
 
@@ -433,7 +433,8 @@ angular.module('kifi.keepService', [
           })
         };
 
-        return processKeepAction(data, keeps);
+        var result = processKeepAction(data, keeps);
+        return result.keeps;
       },
 
       unkeep: function (keeps) {

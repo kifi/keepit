@@ -108,15 +108,8 @@ angular.module('kifi.layout.main', [
     
     function initAddKeep() {
       $scope.modal = 'add_keeps';
+      $scope.data.initAddKeeps = true;
       $scope.data.showAddKeeps = true;
-      $scope.addKeepCheckedPrivate = false;
-      $scope.addKeepInput = {};
-    }
-
-    function clearAddKeep() {
-      $scope.data.showAddKeeps = false;
-      $scope.addKeepCheckedPrivate = false;
-      $scope.addKeepInput = {};
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
@@ -133,6 +126,10 @@ angular.module('kifi.layout.main', [
           break;
         case 'addKeeps':
           initAddKeep();
+          break;
+        case 'genericError':
+          $scope.modal = 'generic_error';
+          $scope.data.showGenericErrorModal = true;
           break;
         case 'installExtension':
           $scope.modal = 'install_extension';
@@ -272,28 +269,6 @@ angular.module('kifi.layout.main', [
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
-    $scope.addKeepTogglePrivate = function () {
-      $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
-    };
-
-    $scope.keepUrl = function () {
-      var url = ($scope.addKeepInput && $scope.addKeepInput.url) || '';
-      if ($scope.addKeepInput.url && keepService.validateUrl(url)) {
-        return keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate).then(function (keeps) {
-          if (!keeps.length) {
-            // todo(martin) Tell the user there was an error
-            clearAddKeep();
-          } else {
-            clearAddKeep();
-            keepService.fetchFullKeepInfo(keeps[0]);
-          }
-        });
-      } else {
-        //todo(martin): Tell the user something went wrong
-        return null; // silence jshint
-      }
-    };
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
