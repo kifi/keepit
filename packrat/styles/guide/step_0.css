@@ -93,47 +93,49 @@
   font-size: 24px;
 }
 .kifi-guide-site-a {
-  display: inline-block;
+  display: inline-table;
   position: relative;
   width: 158px;
-  height: 220px;
+  height: 280px;
+  vertical-align: top;
   background: #fff top/158px 155px no-repeat;
   border-radius: 4px;
   margin: 0 10px;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  padding-top: 155px;
-  font-size: 11px;
-  color: #bcbfc2;
-  -webkit-font-smoothing: antialiased;
 }
 .kifi-guide-site-a:hover,
 .kifi-guide-site-a:focus {
   color: #868b91;
 }
-.kifi-guide-site-a[kifi-n="1"] {
+.kifi-guide-site-a:nth-of-type(1) {
   background-image: url(/images/guide/site_1.jpg);
 }
-.kifi-guide-site-a[kifi-n="2"] {
+.kifi-guide-site-a:nth-of-type(2) {
   background-image: url(/images/guide/site_2.jpg);
 }
-.kifi-guide-site-a[kifi-n="3"] {
-  background-image: url(/images/guide/site_2.jpg);
+.kifi-guide-site-a:nth-of-type(3) {
+  background-image: url(/images/guide/site_3.jpg);
 }
-.kifi-guide-site-a[kifi-n="4"] {
-  background-image: url(/images/guide/site_2.jpg);
+.kifi-guide-site-a:nth-of-type(4) {
+  background-image: url(/images/guide/site_4.jpg);
 }
-.kifi-guide-site-a::before {
-  content: 'Site ' attr(kifi-n);
-  display: block;
-  margin: 16px 0 5px;
+.kifi-guide-site-title {
+  display: table-cell;
+  padding: 155px 8px 20px;
+  vertical-align: middle;
   color: #444;
-  font-family: Georgia, Times, sans-serif !important;
-  font-size: 16px;
-  font-style: italic;
+  font: italic 16px Georgia, Times, sans-serif !important;
   -webkit-font-smoothing: antialiased;
 }
-.kifi-guide-site-a:not(:hover):not(:focus)::after {
+.kifi-guide-site {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  color: #bcbfc2;
+  font-size: 11px;
+  -webkit-font-smoothing: antialiased;
+}
+.kifi-guide-site-a:not(:hover):not(:focus)::before {
   content: ' ';
   position: absolute;
   top: 0;
