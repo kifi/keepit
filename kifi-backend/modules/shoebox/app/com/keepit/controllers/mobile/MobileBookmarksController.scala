@@ -59,7 +59,7 @@ class MobileBookmarksController @Inject() (
     val fromJson = request.body.as[KeepInfosWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
+    val (keeps, addedToCollection, _, _) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
     Ok(Json.obj(
       "keeps" -> keeps,
       "addedToCollection" -> addedToCollection
@@ -70,7 +70,7 @@ class MobileBookmarksController @Inject() (
     val fromJson = request.body.as[KeepInfosWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
+    val (keeps, addedToCollection, _, _) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
     Ok(Json.obj(
       "keepCount" -> keeps.size,
       "addedToCollection" -> addedToCollection

@@ -116,22 +116,22 @@ class KeepInterner @Inject() (
   }
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (keepsWithStatus, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
-    (keepsWithStatus.map(_._1), failures)
+    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
+    (newKeeps ++ existingKeeps, failures)
   }
 
-  /**
-   * Keeps are returned with their status (true if the keep is new or was inactive, false otherwise)
-   */
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[(Keep, Boolean)], Seq[RawBookmarkRepresentation]) = {
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
-    val newKeeps = persistedBookmarksWithUris collect {
+    val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
+    val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
+      case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
+    }
 
-    keptAnalytics.keptPages(userId, newKeeps, context)
-    keepAttribution(userId, newKeeps)
-    (persistedBookmarksWithUris.map(obj => (obj.bookmark, obj.isNewKeep || obj.wasInactiveKeep)), failures)
+    keptAnalytics.keptPages(userId, createdKeeps, context)
+    keepAttribution(userId, createdKeeps)
+    (newKeeps, existingKeeps, failures)
   }
 
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
