@@ -27,6 +27,7 @@ import com.keepit.scraper.embedly.EmbedlyCommander
 class ScrapeWorker(
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
+  schedulerConfig: ScraperSchedulerConfig,
   httpFetcher: HttpFetcher,
   httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
@@ -39,6 +40,7 @@ class ScrapeWorker(
 ) extends Logging {
 
   implicit val myConfig = config
+  implicit val scheduleConfig = schedulerConfig
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
   private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = try {
@@ -95,7 +97,7 @@ class ScrapeWorker(
     def restrictionChanged = latestUri.restriction != redirectProcessedUri.restriction
     def scrapeFailed = latestUri.state == NormalizedURIStates.SCRAPE_FAILED
     def activeURI = latestUri.state == NormalizedURIStates.ACTIVE
-    def signatureChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
+    def signatureChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (schedulerConfig.intervalConfig.minInterval / info.interval))
 
     titleChanged || restrictionChanged || scrapeFailed || activeURI || signatureChanged
   }

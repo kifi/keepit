@@ -2,10 +2,10 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.scraper.ScraperConfig
 import org.joda.time.DateTime
 import scala.math._
 import com.keepit.common.logging.Logging
+import com.keepit.scraper.ScraperSchedulerConfig
 
 object ScrapeInfoStates extends States[ScrapeInfo] {
   val ASSIGNED = State[ScrapeInfo]("assigned") // pull
@@ -49,8 +49,8 @@ case class ScrapeInfo(
 
   def withDestinationUrl(destinationUrl: Option[String]) = copy(destinationUrl = destinationUrl)
 
-  def withFailure()(implicit config: ScraperConfig) = {
-    val backoff = min(config.maxBackoff, (config.initialBackoff * (1 << failures).toDouble))
+  def withFailure()(implicit config: ScraperSchedulerConfig) = {
+    val backoff = min(config.intervalConfig.maxBackoff, (config.intervalConfig.initialBackoff * (1 << failures).toDouble))
     val newInterval = min(config.intervalConfig.maxInterval, (interval + config.intervalConfig.intervalIncrement))
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(backoff) + config.randomDelay),
@@ -58,7 +58,7 @@ case class ScrapeInfo(
          failures = this.failures + 1)
   }
 
-  def withDocumentUnchanged()(implicit config: ScraperConfig) = {
+  def withDocumentUnchanged()(implicit config: ScraperSchedulerConfig) = {
     val newInterval = min(config.intervalConfig.maxInterval, (interval + config.intervalConfig.intervalIncrement))
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),
@@ -66,7 +66,7 @@ case class ScrapeInfo(
          failures = 0)
   }
 
-  def withDocumentChanged(newSignature: String)(implicit config: ScraperConfig) = {
+  def withDocumentChanged(newSignature: String)(implicit config: ScraperSchedulerConfig) = {
     val newInterval = max(config.intervalConfig.minInterval, interval - config.intervalConfig.intervalDecrement)
     val now = currentDateTime
     copy(lastScrape = now,

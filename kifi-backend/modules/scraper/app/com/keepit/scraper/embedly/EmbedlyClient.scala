@@ -82,6 +82,6 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
 class DevEmbedlyClient extends EmbedlyClient {
   override def embedlyUrl(url: String): String = "http://dev.ezkeep.com"
-  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = ???
+  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(None)
   override def getImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq())
 }
