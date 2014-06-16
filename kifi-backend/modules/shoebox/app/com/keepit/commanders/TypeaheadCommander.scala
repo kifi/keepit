@@ -231,23 +231,6 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def buildEmailSet(kifiHits: Seq[(SocialNetworkType, TypeaheadHit[User])]) = timing(s"buildEmailSet(ids=${kifiHits.map(_._2.info.id.get).mkString(",")})") {
-    if (kifiHits.isEmpty) TreeSet.empty[String] // use map if need to track userId -> emails
-    else {
-      val emailSet = new TreeSet[String]
-      kifiHits.foreach { h =>
-        val uId = h._2.info.id.get
-        val emails = db.readOnly {
-          implicit ro =>
-            emailAddressRepo.getAllByUser(uId) // todo: +cache
-        }
-        emailSet ++= emails.map { _.address }
-      }
-      log.info(s"[buildEmailSet(ids=${kifiHits.map(_._2.info.id.get).mkString(",")})] res=${emailSet.mkString(",")}")
-      emailSet
-    }
-  }
-
   private def aggregate(userId: Id[User], q: String, limit: Option[Int], dedupEmail:Boolean): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
     val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
