@@ -28,6 +28,7 @@ class URLRenormalizeCommander @Inject()(
   airbrake: AirbrakeNotifier,
   systemAdminMailSender: SystemAdminMailSender,
   uriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   urlRepo: URLRepo,
   changedUriRepo: ChangedURIRepo,
   renormRepo: RenormalizedURLRepo,
@@ -50,8 +51,8 @@ class URLRenormalizeCommander @Inject()(
 
     def needRenormalization(url: URL)(implicit session: RWSession): (Boolean, Option[NormalizedURI]) = {
       uriRepo.getByUri(url.url) match {
-        case None => if (!readOnly) (true, Some(uriRepo.internByUri(url.url))) else (true, None)
-        case Some(uri) if (url.normalizedUriId != uri.id.get) => (true, Some(uri))
+        case None => if (!readOnly) (true, Some(normalizedURIInterner.internByUri(url.url))) else (true, None)
+        case Some(uri) if url.normalizedUriId != uri.id.get => (true, Some(uri))
         case _ => (false, None)
       }
     }
@@ -64,7 +65,7 @@ class URLRenormalizeCommander @Inject()(
 
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
-      val msg = s"regex = ${regex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
+      val msg = s"regex = $regex, scanning ${urls.size} urls. readOnly = $readOnly"
       systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     }
@@ -91,10 +92,10 @@ class URLRenormalizeCommander @Inject()(
       batches.zipWithIndex.map{ case (batch, i) =>
         val title = "Renormalization Split Cases Report: " + s"part ${i+1} of ${batches.size}. ReadOnly Mode = $readOnly. Num of splits: ${splits.size}"
         val msg = batch.map{ case (oldUri, splitted) =>
-          val line1 = s"oldUriId: ${oldUri} uri:${uriRepo.get(oldUri).url}\tsplitted into ${splitted.value.size} parts\n"
+          val line1 = s"oldUriId: $oldUri uri:${uriRepo.get(oldUri).url}\tsplitted into ${splitted.value.size} parts\n"
           val lines = splitted.value.map{ case (newUri, urls) =>
             val urlsInfo = urls.map{id => urlRepo.get(id)}.map{url => s"urlId: ${url.id.get}, url: ${url.url}"}.mkString("\n\n") + "\n"
-            s"<---\nuriId: ${newUri}, uri: ${uriRepo.get(newUri).url} \nis referenced by following urls:\n\n" + urlsInfo + "--->\n"
+            s"<---\nuriId: $newUri, uri: ${uriRepo.get(newUri).url} \nis referenced by following urls:\n\n" + urlsInfo + "--->\n"
           }.mkString("\n")
           "<<<----- Start of Split \n" + line1 + lines + "\nEnd of Split------>>>"
         }.mkString("\n\n===========================\n\n")
@@ -136,18 +137,17 @@ class URLRenormalizeCommander @Inject()(
         urls.foreach { url =>
           try {
             needRenormalization(url) match {
-              case (true, newUriOpt) => {
+              case (true, newUriOpt) =>
                 changes = changes :+ (url, newUriOpt)
                 newUriOpt.foreach { uri =>
                   potentialUriMigrations += url.normalizedUriId -> (potentialUriMigrations.getOrElse(url.normalizedUriId, Set()) + uri.id.get)
                   migratedRef += uri.id.get -> (migratedRef.getOrElse(uri.id.get, Set()) + url.id.get)
                 }
                 if (!readOnly) newUriOpt.map { uri => renormRepo.save(RenormalizedURL(urlId = url.id.get, oldUriId = url.normalizedUriId, newUriId = uri.id.get)) }
-              }
               case _ =>
             }
           } catch {
-            case ex: Throwable => airbrake.notify(s"skipped renormalizing ${url}", ex)
+            case ex: Throwable => airbrake.notify(s"skipped renormalizing $url", ex)
           }
         }
       }
