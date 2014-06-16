@@ -1,12 +1,12 @@
 <div class="dialog-content">
-  <a class="dialog-x sprite-close-x-icon" ng-click="hideAndCancel()"></a>
+  <a class="dialog-x sprite-close-x-icon" ng-click="resetAndHide()"></a>
   <div class="dialog-body-wrap">
     <h1>Add a keep</h1>
     <div class="dialog-body dialog-centered">
       <div class="kf-add-keep-body">
         <div class="kf-add-keep-hint" ng-show="!state.invalidUrl">Did you know: You can easily keep any page using the kifi keeper</div>
         <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL</div>
-        <input kf-autofocus class="kf-add-keep-input" placeholder="http://..." ng-model="state.input"></input>
+        <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
         <div class="kf-add-keep-private-container" tabindex="0"><span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !state.checkedPrivate, 'sprite-checkbox-icon-active': state.checkedPrivate }" ng-click="togglePrivate()"></span><span class="kf-add-keep-private-label">Private</span></div>
       </div>
     </div>

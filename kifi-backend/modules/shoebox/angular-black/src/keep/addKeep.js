@@ -30,28 +30,30 @@ angular.module('kifi.addKeep', [])
         function processKey(e) {
           switch (e.which) {
             case keyIndices.KEY_ENTER:
-              scope.$apply(function () {
-                scope.keepUrl();
-              });
+              scope.keepUrl();
               break;
             case keyIndices.KEY_TAB:
-              scope.$apply(function () {
-                focusState = (focusState + 1) % 3;
-              });
+              focusState = (focusState + 1) % 3;
               if (focusState === 0) {
                 e.preventDefault();
                 e.stopPropagation();
-                input.focus();
+                safeFocus();
               }
               break;
           }
         }
 
-        input.on('focus', function () {
-          scope.$apply(function () {
-            focusState = 0;
-          });
-        });
+        scope.resetFocusState = function () {
+          focusState = 0;
+        }
+
+        // Seems like calling input.focus() inside a $digest may cause an error
+        // if input has an ng-focus attribute ??
+        function safeFocus() {
+          setTimeout(function () {
+            input.focus();
+          })
+        }
 
         privateSwitch.on('keydown', function (e) {
           scope.$apply(function () {
@@ -75,8 +77,7 @@ angular.module('kifi.addKeep', [])
           var url = (scope.state.input) || '';
           if (url && keepService.validateUrl(url)) {
             return keepService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
-              reset();
-              kfModalCtrl.hideModal();
+              scope.resetAndHide();
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal','genericError');
               } else if (result.alreadyKept && result.alreadyKept.length) {
@@ -93,11 +94,16 @@ angular.module('kifi.addKeep', [])
         scope.$watch('shown', function (shown) {
           if (shown) {
             $document.on('keydown', processKey);
-            input.focus();
+            safeFocus();
           } else {
             $document.off('keydown', processKey);
           }
         });
+
+        scope.resetAndHide = function () {
+          reset();
+          kfModalCtrl.hideModal();
+        }
       }
     };
   }
