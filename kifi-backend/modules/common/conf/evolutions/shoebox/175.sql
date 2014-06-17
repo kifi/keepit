@@ -5,14 +5,10 @@
 alter table normalized_uri modify seq bigint(20);
 
 alter table bookmark modify seq bigint(20);
-alter table changed_uri modify seq bigint(20);
 alter table collection modify seq bigint(20);
 alter table email_address modify seq bigint(20);
-alter table image_info modify seq bigint(20);
 alter table invitation modify seq bigint(20);
-alter table page_info modify seq bigint(20);
 alter table phrase modify seq bigint(20);
-alter table renormalized_url modify seq bigint(20);
 alter table search_friend modify seq bigint(20);
 alter table social_connection modify seq bigint(20);
 alter table social_user_info modify seq bigint(20);
