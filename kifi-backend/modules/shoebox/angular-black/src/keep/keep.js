@@ -400,14 +400,15 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
           var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.floor((bestRes.hi / 23)); // line height
-          var calcTextHeight = linesToShow * 23 + 25; // 25px subtitle
+          var calcTextHeight = linesToShow * 23 + 22; // 22px subtitle
 
           scope.keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
             $content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
             element.find('.kf-keep-info').css({
-              'height': calcTextHeight + 'px'
+              'height': calcTextHeight + 'px',
+              'width': 'calc(100% - 30px)'
             }).addClass('kf-dyn-positioned');
 
             $content.find('.kf-keep-image').on('error', function () {

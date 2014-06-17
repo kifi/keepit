@@ -270,7 +270,6 @@ keepBorderRadius = 3px
 .kf-dyn-positioned
   position: absolute
   overflow: hidden
-  margin-right: 30px
 
 .kf-keep-description-sizer
   position: absolute
@@ -287,7 +286,7 @@ keepBorderRadius = 3px
   font-smoothing: antialiased
   font-weight: 500
   long-text()
-  max-width: 340px
+  max-width: calc(100% - 100px)
   overflow: hidden
 
   .kf-keep.example &
