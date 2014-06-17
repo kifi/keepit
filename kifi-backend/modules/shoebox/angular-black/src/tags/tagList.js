@@ -30,7 +30,7 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
         scope.shouldGiveFocus = false;
 
         tagService.fetchAll().then(function (res) {
-          scope.allTags = res;
+          scope.allTags = tagService.allTags;
           filterTags(null);
         });
 
