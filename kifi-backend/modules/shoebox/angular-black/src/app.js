@@ -6,7 +6,6 @@ angular.module('kifi', [
   'ngRoute',
   'ngSanitize',
   'ngAnimate',
-  'ui.bootstrap',
   //'ui.router',
   'util',
   'dom',

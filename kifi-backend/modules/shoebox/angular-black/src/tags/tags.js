@@ -51,6 +51,19 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         var preventClearFilter = false;
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
+        var tagList = element.find('.kf-sidebar-tag-list');
+        var antiscroll = element.find('.antiscroll-inner');
+
+        tagList.on('mousewheel', function(e, d) {
+            var d = e.originalEvent.deltaY;
+            var visibleHeight = scrollableTagList.innerHeight();
+            var totalHeight = tagList.innerHeight();
+            var maxScroll = totalHeight - visibleHeight;
+            var scroll = antiscroll.scrollTop();
+            if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
+              e.preventDefault();
+            }
+        });
 
         w.bind('resize', function () {
           scope.$apply(function () {
@@ -164,7 +177,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.isHighlight = function (tag) {
-          return scope.highlight === tag;
+          return tag && scope.highlight === tag;
         };
 
         scope.isHighlightNew = function () {

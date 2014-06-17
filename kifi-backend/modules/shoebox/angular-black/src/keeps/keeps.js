@@ -174,8 +174,10 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         var lazyResizeListener = _.debounce(resizeWindowListener, 250);
         $window.addEventListener('resize', lazyResizeListener);
+
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', lazyResizeListener);
+          scope.editMode.enabled = false;
         });
 
       }

@@ -3,7 +3,6 @@ highlightColor = #eeeeee
 
 .kf-tag
   position: relative
-  margin-right: 20px
   border-radius: 2px
   height: kfTagHeight
   border: 1px dashed transparent
@@ -34,7 +33,7 @@ highlightColor = #eeeeee
     .hover
       background-color: transparent
     &.kf-dragged
-      background-color: editYellowColor
+      background-color: yellowColor
       border-color: #cccccc
     .kf-tag-tool
       display: none
@@ -44,7 +43,7 @@ highlightColor = #eeeeee
 
 .kf-tag-list-reordering.kf-dragged
 .kf-keep-dragover-tag
-  background-color: editYellowColor
+  background-color: yellowColor
   border-color: #cccccc
 
 .kf-tag-drag-mask
@@ -67,13 +66,13 @@ highlightColor = #eeeeee
     border-color: transparent
   }
   to {
-    background-color: editYellowColor
+    background-color: yellowColor
     border-color: #cccccc
   }
 }
 
 .kf-dragged-clone
-  background-color: editYellowColor
+  background-color: yellowColor
 
 .kf-dragged-clone-mask
   background-color: appBackgroundColor
@@ -108,6 +107,10 @@ highlightColor = #eeeeee
 
 .kf-sidebar-tag-list
   user-select: none
+
+.kf-dragging-keep
+  .kf-sidebar-tag-list
+    background-color: clearYellowColor
 
 .kf-sidebar-tag-list:not(:hover) .highlight
 .kf-tag-new-inner:hover
@@ -207,7 +210,7 @@ input.kf-tag-rename
   overflow: hidden
   .antiscroll-inner
     .kf-sidebar-tag-list
-      width: calc(100% - 30px)
+      width: calc(100% - 50px)
 
 .kf-tag-tool
   position: absolute
