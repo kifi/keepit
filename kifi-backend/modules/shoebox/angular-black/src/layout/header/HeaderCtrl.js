@@ -3,8 +3,8 @@
 angular.module('kifi.layout.header', ['kifi.profileService'])
 
 .controller('HeaderCtrl', [
-  '$scope', '$rootElement', '$rootScope', '$document', 'profileService', '$location', 'util', 'keyIndices',
-  function ($scope, $rootElement, $rootScope, $document, profileService, $location, util, keyIndices) {
+  '$scope', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices',
+  function ($scope, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices) {
 
     $scope.toggleMenu = function () {
       $rootElement.toggleClass('kf-sidebar-active');
@@ -37,5 +37,16 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
     $scope.$on('$destroy', function () {
       $document.off('keydown', addKeepsShortcut);
     });
+
+    friendService.getRequests();
+    $scope.friendRequests = friendService.requests;
+
+    $scope.navigateToFriends = function () {
+      $location.path('/friends');
+    };
+
+    $scope.navigateToInvite = function () {
+      $location.path('/invite');
+    };
   }
 ]);

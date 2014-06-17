@@ -102,8 +102,15 @@ a.kf-header-callout:hover
   .kf-dropdown-menu
     display: none
 
-    .active
+    /*.active
+      background-color: #f8f8f8*/ // maybe find something better
+    :hover
       background-color: #eee
+    :active
+      background-color: #ccc
+
+    .kf-dropdown-menu-item
+      cursor: pointer
 
   .sprite
     cursor: pointer
@@ -119,7 +126,38 @@ a.kf-header-callout:hover
 .kf-header-icon-hover-container
   display: inline-block
 
-  &:hover .kf-dropdown-menu
-    display: block
-    margin-top: -10px
-    margin-left: -128px
+  &:hover
+    .kf-dropdown-menu
+      display: block
+      margin-top: -10px
+      margin-left: -128px
+    .on-icon
+      display: none
+
+.kf-header-icon-friends
+  position: relative
+
+.kf-friend-invite-badge
+  width: 12px
+  height: 12px
+  border-radius: 50%
+  background-color: redColor
+  animation: badge-zoom 1s infinite linear alternate
+
+.kf-friend-invite-badge.on-icon
+  position: absolute
+  top: -2px
+  left: 21px
+.kf-friend-invite-badge.on-item
+  float: left
+  margin-left: 16px
+  margin-top: 9px
+
+@keyframes badge-zoom {
+  from {
+    transform: scale(0.8)
+  }
+  to {
+    transform: scale(1)
+  }
+}

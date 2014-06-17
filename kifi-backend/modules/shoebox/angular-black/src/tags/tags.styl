@@ -152,19 +152,6 @@ highlightColor = #eeeeee
     line-height: 18px
     box-sizing: border-box
 
-::-webkit-input-placeholder
-  color: #aaaaaa
-  font-style: italic
-:-moz-placeholder
-  color: #aaaaaa
-  font-style: italic
-::-moz-placeholder
-  color: #aaaaaa
-  font-style: italic
-:-ms-input-placeholder
-  color: #aaaaaa
-  font-style: italic
-
 .kf-tag-input-clear
   float: right
   width: 20px
@@ -238,3 +225,12 @@ input.kf-tag-rename
   left: 0
   cursor: move
   background: url(../img/drag-handle-tag.png) center/10px no-repeat
+
+.kf-fake-tag-item
+  .kf-tag-container
+    visibility: hidden
+
+.kf-add-tag-shown
+  .kf-fake-tag-item
+    display: none
+  

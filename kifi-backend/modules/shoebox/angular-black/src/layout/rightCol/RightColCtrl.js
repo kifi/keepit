@@ -86,6 +86,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
+        $rootScope.$emit('showGlobalModal','installExtension');
         return;
       }
 
