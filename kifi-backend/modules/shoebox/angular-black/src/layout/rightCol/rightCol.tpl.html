@@ -1,16 +1,16 @@
 <footer class="kf-col-inner" ng-controller="RightColCtrl">
   <div class="kf-footer" ng-show="readyToDraw()">
 
-    <div class="kf-helprank" ng-if="me.clickCount > 0">
+    <div class="kf-helprank" ng-if="me.clickCount > 0 || me.rekeepCount > 0">
       <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
-      <div class="kf-footer-help-rank-wrapper">
+      <div class="kf-footer-help-rank-wrapper" ng-if="me.clickCount > 0">
         <div class="kf-footer-help-rank-item">
           <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
           <span class="kf-footer-help-rank-description">
             You've helped friends discover keeps <a class="kifi-footer-item-link" href="/helprank/click">{{me.clickCount}} times</a> this month
           </span>
         </div>
-        <div class="kf-footer-help-rank-item">
+        <div class="kf-footer-help-rank-item" ng-if="me.rekeepCount > 0">
           <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
           <span class="kf-footer-help-rank-description">
             Your keeps have been rekept by others <a class="kifi-footer-item-link" href="/helprank/rekeep">{{me.rekeepCount}} times</a>
