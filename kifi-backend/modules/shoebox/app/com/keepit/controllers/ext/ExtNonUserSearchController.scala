@@ -8,7 +8,7 @@ import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionC
 import com.keepit.model.EContact
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsArray, JsObject, JsString}
+import play.api.libs.json.{Json, JsArray, JsObject, JsString, JsValue}
 
 import scala.Some
 
