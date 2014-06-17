@@ -54,7 +54,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         var tagList = element.find('.kf-sidebar-tag-list');
         var antiscroll = element.find('.antiscroll-inner');
 
-        tagList.on('mousewheel', function(e, d) {
+        tagList.on('mousewheel', function(e) {
             var d = e.originalEvent.deltaY;
             var visibleHeight = scrollableTagList.innerHeight();
             var totalHeight = tagList.innerHeight();
