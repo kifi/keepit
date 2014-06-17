@@ -407,8 +407,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
             $content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
             element.find('.kf-keep-info').css({
-              'height': calcTextHeight + 'px',
-              'width': 'calc(100% - 30px)'
+              'height': calcTextHeight + 'px'
             }).addClass('kf-dyn-positioned');
 
             $content.find('.kf-keep-image').on('error', function () {
