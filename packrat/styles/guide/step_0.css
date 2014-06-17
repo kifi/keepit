@@ -94,6 +94,7 @@
 }
 .kifi-guide-site-a {
   display: inline-table;
+  table-layout: fixed;
   position: relative;
   width: 158px;
   height: 280px;
@@ -120,6 +121,9 @@
 }
 .kifi-guide-site-title {
   display: table-cell;
+  width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
   padding: 155px 8px 20px;
   vertical-align: middle;
   color: #444;

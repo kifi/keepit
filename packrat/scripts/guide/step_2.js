@@ -3,7 +3,7 @@
 
 guide.step2 = guide.step2 || function () {
   'use strict';
-  var showStep;
+  var step;
   var steps = [
     {
       lit: '#kifi-res-list .r',
@@ -15,25 +15,23 @@ guide.step2 = guide.step2 || function () {
   ];
   return show;
 
-  function show() {
-    if (!showStep) {
-      showStep = guide.step(steps, {page: 2, anchor: 'tl', hide: onHide});
-      showStep(0);
+  function show(siteIdx) {
+    if (!step) {
+      step = guide.step(steps, {site: siteIdx, page: 2, anchor: 'tl', hide: onHide});
+      step.show(0);
       window.addEventListener('click', onClick, true);
     }
   }
 
   function onHide() {
-    showStep = null;
+    step = null;
     window.removeEventListener('click', onClick, true);
   }
 
   function onClick(e) {
     if (e.which === 1 && e.target.classList.contains('kifi-res-title')) {
       e.preventDefault();
-      var url = e.target.href;
-      api.port.emit('await_deep_link', {locator: '#guide/3', url: url});
-      window.location = url;
+      step.nav(e.target.href);
     }
   }
 }();

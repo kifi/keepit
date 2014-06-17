@@ -12,6 +12,11 @@ guide.step = guide.step || function () {
   var $stage, $steps, spotlight, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
+  var sites = [
+    {noun: 'recipe', tag: 'Recipe', query: 'cake+recipe'},
+    {noun: 'tote', tag: 'Shopping Wishlist', query: 'tote'},
+    {noun: 'article', tag: 'Read Later', query: 'love+life'},
+    {noun: 'video', tag: 'Inspiration', query: 'steve+jobs'}];
   return show;
 
   function show(steps_, opts_) {
@@ -19,14 +24,18 @@ guide.step = guide.step || function () {
       steps = steps_;
       opts = opts_;
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
-      $stage = $(render('html/guide/step_' + opts.page, me)).appendTo('body');
+      $stage = $(render('html/guide/step_' + opts.page, {me: me, site: sites[opts_.site]})).appendTo('body');
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
       $steps.find('.kifi-guide-steps-x').click(hide);
       $(window).on('resize.guideStep', onWinResize);
       eventsToScreen.forEach(function (type) {
         window.addEventListener(type, screenEvent, true);
       });
-      return showStep;
+      return {
+        show: showStep,
+        nav: navTo,
+        site: sites[opts_.site]
+      };
     }
   }
 
@@ -205,6 +214,11 @@ guide.step = guide.step || function () {
         animateSpotlightTo(rect, step.pad, 1);
       }
     }
+  }
+
+  function navTo(url) {
+    api.port.emit('await_deep_link', {locator: '#guide/' + (opts.page + 1) + '/' + opts.site, url: url});
+    window.location = url;
   }
 
   function getRect(sel) {

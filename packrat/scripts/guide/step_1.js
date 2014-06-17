@@ -3,7 +3,7 @@
 
 guide.step1 = guide.step1 || function () {
   'use strict';
-  var showStep, observer;
+  var step, observer;
   var steps = [
     {
       lit: '.kifi-tile-card',
@@ -27,7 +27,7 @@ guide.step1 = guide.step1 || function () {
     {
       lit: '.kifi-tagbox',
       pad: [0, 10, 20],
-      arrow: {from: {angle: -90, gap: 16}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-suggestion[data-name=Recipe]'}},
+      arrow: {from: {angle: -90, gap: 16}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-suggestion[data-name="{{tag}}"]'}},
       allow: [
         {type: 'click', target: '.kifi-tagbox-suggestion'},
         {type: /^mouse/, target: '.kifi-tagbox-suggestion'}
@@ -47,12 +47,15 @@ guide.step1 = guide.step1 || function () {
       pos: {top: '20%', left: 'auto', right: 'auto'}
     }
   ];
+  var steps_3_arrow_to_sel = steps[3].arrow.to.sel;
   return show;
 
-  function show() {
-    if (!showStep) {
-      showStep = guide.step(steps, {page: 1, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
-      showStep(0);  // TODO: handle already kept case well
+  function show(siteIdx) {
+    if (!step) {
+      // TODO: handle already kept case well (different steps)
+      step = guide.step(steps, {site: siteIdx, page: 1, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
+      steps[3].arrow.to.sel = steps_3_arrow_to_sel.replace('{{tag}}', step.site.tag);
+      step.show(0);
     }
   }
 
@@ -73,24 +76,22 @@ guide.step1 = guide.step1 || function () {
       observer.disconnect();
       observer = null;
     }
-    showStep = null;
+    step = null;
   }
 
   function onClickNext(e, stepIdx) {
     if (stepIdx === 4) {
       e.closeKeeper = true;
-      showStep(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
+      step.show(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
     } else {
-      var url = 'https://www.google.com/#q=recipe';
-      api.port.emit('await_deep_link', {locator: '#guide/2', url: url});
-      window.location = url;
+      step.nav(e.target.href);
     }
   }
 
   function onTileChildChange(records) {
     var tagbox;
     if (elementAdded(records, 'kifi-keeper')) {
-      showStep(1);
+      step.show(1);
     } else if ((tagbox = elementAdded(records, 'kifi-tagbox'))) {
       var recipeTag = tagbox.querySelector(steps[3].arrow.to.sel);
       if (recipeTag) {
@@ -104,7 +105,7 @@ guide.step1 = guide.step1 || function () {
       var w = getDeclaredWidth(cs);
       var h = getDeclaredHeight(cs);
       var ms = getTransitionDurationMs(cs);
-      showStep(3, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
+      step.show(3, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
 
       observer.disconnect();
       observer = new MutationObserver(onTagboxClassChange);
@@ -120,7 +121,7 @@ guide.step1 = guide.step1 || function () {
       var h = 180;//getDeclaredHeight(cs);
       var ms = getTransitionDurationMs(cs);
       var r = tagbox.getBoundingClientRect();
-      showStep(4, {left: r.left, top: r.top - h, width: r.width, height: r.height + h}, ms);
+      step.show(4, {left: r.left, top: r.top - h, width: r.width, height: r.height + h}, ms);
       observer.disconnect();
       observer = null;
     }

@@ -3,7 +3,7 @@
 
 guide.step3 = guide.step3 || function () {
   'use strict';
-  var showStep, observer;
+  var step, observer;
   var steps = [
     {
       lit: '.kifi-tile-card',
@@ -54,10 +54,10 @@ guide.step3 = guide.step3 || function () {
   ];
   return show;
 
-  function show() {
-    if (!showStep) {
-      showStep = guide.step(steps, {page: 3, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
-      showStep(0);
+  function show(siteIdx) {
+    if (!step) {
+      step = guide.step(steps, {site: siteIdx, page: 3, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
+      step.show(0);
     }
   }
 
@@ -68,7 +68,7 @@ guide.step3 = guide.step3 || function () {
           if (elementAdded(records, 'kifi-keeper')) {
             observer.disconnect();
             observer = null;
-            showStep(1);
+            step.show(1);
           }
         });
         observer.observe(tile, {childList: true});
@@ -78,7 +78,7 @@ guide.step3 = guide.step3 || function () {
           if (elementAdded(records, 'kifi-ti-token')) {
             observer.disconnect();
             observer = null;
-            showStep(3);
+            step.show(3);
           }
         });
         setTimeout(function observeTokens() {
@@ -95,7 +95,7 @@ guide.step3 = guide.step3 || function () {
           if (classAdded(records, 'kifi-active')) {
             observer.disconnect();
             observer = null;
-            showStep(4);
+            step.show(4);
           }
         });
         observer.observe(document.querySelector('.kifi-compose-submit'), {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
@@ -108,16 +108,14 @@ guide.step3 = guide.step3 || function () {
       observer.disconnect();
       observer = null;
     }
-    showStep = null;
+    step = null;
   }
 
   function onClickNext(e, stepIdx) {
     if (stepIdx === 4) {
-      showStep(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
+      step.show(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
     } else {
-      var url = 'https://preview.kifi.com';
-      api.port.emit('await_deep_link', {locator: '#guide/4', url: url});
-      window.location = url;
+      step.nav('https://preview.kifi.com');
     }
   }
 

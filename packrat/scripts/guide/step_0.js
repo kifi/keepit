@@ -40,7 +40,8 @@ guide.step0 = guide.step0 || function () {
     if (e.which === 1) {
       e.preventDefault();
       var url = this.href;
-      api.port.emit('await_deep_link', {locator: '#guide/1', url: url});
+      var siteIdx = $(this).index('.kifi-guide-site-a');
+      api.port.emit('await_deep_link', {locator: '#guide/1/' + siteIdx, url: url});
       window.location = url;
     }
   }
