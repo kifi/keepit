@@ -173,7 +173,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) {
+    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) { timer =>
       val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
         (for (t <- rows if t.urlHash === hash) yield t).firstOption
@@ -185,7 +185,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     prenormalize(url).map { prenormalizedUrl =>
       log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
       val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
-          case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
+          case uri if uri.state == NormalizedURIStates.REDIRECTED =>
+            log.info(s"following a redirection path for $url on uri $normalizedUri")
+            get(uri.redirect.get)
           case uri => uri
         }
       log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
@@ -204,7 +206,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (for(t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
-  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ONE_IN_HUNDRED) {
+  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ONE_IN_HUNDRED) { timer =>
     normalizationServiceProvider.get.prenormalize(uriString)
   }
 
