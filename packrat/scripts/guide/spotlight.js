@@ -10,19 +10,22 @@ var Spotlight = Spotlight || (function (window, document) {
     this.onResize = _.throttle(onResize.bind(null, this), 100, {leading: false});
     this.maxOpacity = sanitizeOpacity(opts.maxOpacity);
     show(dc, wd, ri, Math.min(this.maxOpacity, sanitizeOpacity(opts.opacity)));
-    this.attach();
   }
 
   Spotlight.prototype = {
     attached: false,
-    attach: function () {
+    attach: function (attach) {
       if (!this.attached) {
         // TODO: call this.onResize if window has resized while detached
         var f = document.createDocumentFragment();
         this.dc.forEach(function (dc) {
           f.appendChild(dc.el);
         });
-        document.body.appendChild(f);
+        if (attach) {
+          attach(f)
+        } else {
+          document.body.appendChild(f);
+        }
         window.addEventListener('resize', this.onResize, true);
         this.attached = true;
       }

@@ -57,7 +57,6 @@ guide.step3 = guide.step3 || function () {
   function show(siteIdx) {
     if (!step) {
       step = guide.step(steps, {site: siteIdx, page: 3, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
-      step.show(0);
     }
   }
 

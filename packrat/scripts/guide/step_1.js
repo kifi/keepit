@@ -55,7 +55,6 @@ guide.step1 = guide.step1 || function () {
       // TODO: handle already kept case well (different steps)
       step = guide.step(steps, {site: siteIdx, page: 1, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
       steps[3].arrow.to.sel = steps_3_arrow_to_sel.replace('{{tag}}', step.site.tag);
-      step.show(0);
     }
   }
 

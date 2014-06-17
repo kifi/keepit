@@ -9,13 +9,13 @@
 // @require scripts/html/guide/steps.js
 
 guide.step = guide.step || function () {
-  var $stage, $steps, spotlight, arrow, steps, opts, stepIdx, animTick;
+  var $stage, $steps, spotlight, timeout, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
   var sites = [
     {noun: 'recipe', tag: 'Recipe', query: 'cake+recipe'},
     {noun: 'tote', tag: 'Shopping Wishlist', query: 'tote'},
-    {noun: 'article', tag: 'Read Later', query: 'love+life'},
+    {noun: 'article', tag: 'Read Later', query: 'truly+love+life'},
     {noun: 'video', tag: 'Inspiration', query: 'steve+jobs'}];
   return show;
 
@@ -24,19 +24,26 @@ guide.step = guide.step || function () {
       steps = steps_;
       opts = opts_;
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
-      $stage = $(render('html/guide/step_' + opts.page, {me: me, site: sites[opts_.site]})).appendTo('body');
-      $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
-      $steps.find('.kifi-guide-steps-x').click(hide);
-      $(window).on('resize.guideStep', onWinResize);
-      eventsToScreen.forEach(function (type) {
-        window.addEventListener(type, screenEvent, true);
-      });
+      $stage = $(render('html/guide/step_' + opts.page, {me: me, site: sites[opts_.site]}));
+      $steps = $(render('html/guide/steps', {showing: true})).appendTo('body')
+        .on('click', '.kifi-guide-steps-x', hide);
+      timeout = setTimeout(show2, 2000);
       return {
         show: showStep,
         nav: navTo,
         site: sites[opts_.site]
       };
     }
+  }
+
+  function show2() {
+    spotlight.attach($.fn.before.bind($steps));
+    $stage.insertBefore($steps);
+    $(window).on('resize.guideStep', onWinResize);
+    eventsToScreen.forEach(function (type) {
+      window.addEventListener(type, screenEvent, true);
+    });
+    showStep(0);
   }
 
   function hide() {
@@ -47,13 +54,15 @@ guide.step = guide.step || function () {
       if (arrow) {
         arrow.fadeAndDetach(ms / 2);
       }
-      (opts.hide || api.noop)();
-
-      $stage = $steps = spotlight = arrow = steps = opts = stepIdx = animTick = null;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      $stage = $steps = spotlight = timeout = arrow = steps = opts = stepIdx = animTick = null;
       $(window).off('resize.guideStep');
       eventsToScreen.forEach(function (type) {
         window.removeEventListener(type, screenEvent, true);
       });
+      (opts.hide || api.noop)();
       return ms;
     } else {
       return 0;
