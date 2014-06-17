@@ -400,7 +400,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
           var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.floor((bestRes.hi / 23)); // line height
-          var calcTextHeight = linesToShow * 23 + 25; // 25px subtitle
+          var calcTextHeight = linesToShow * 23 + 22; // 22px subtitle
 
           scope.keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
