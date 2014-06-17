@@ -4,7 +4,7 @@ var CutScreen = CutScreen || (function (window, document) {
   'use strict';
 
   function CutScreen(holes) {
-    this.holes = holes.slice();
+    this.holes = holes.map(copyHole);
     this.holesDrawn = [];
     var wd = this.wd = {w: window.innerWidth, h: window.innerHeight};
     var el = this.el = document.createElement('canvas');
@@ -54,7 +54,7 @@ var CutScreen = CutScreen || (function (window, document) {
     },
     cut: function (hole, ms) {
       var i = this.holes.length;
-      this.holes.push(hole);
+      this.holes.push(copyHole(hole));
       if (ms > 0) {
         var ms_1 = 1 / ms;
         var t0 = window.performance.now();
@@ -120,7 +120,7 @@ var CutScreen = CutScreen || (function (window, document) {
       gc.scale(scale, scale);
     }
     gc.fillRect(0, 0, w, h);
-    this.holesDrawn.length = 0;
+    this.holesDrawn.forEach(function (h) { h.cleared = true; });
   }
 
   function draw() {
@@ -149,10 +149,10 @@ var CutScreen = CutScreen || (function (window, document) {
       w: Math.max(hole.minWidth || 0, Math.min(hole.maxWidth || 1e9, rect.w + padL + padR)),
       h: Math.max(hole.minHeight || 0, Math.min(hole.maxHeight || 1e9, rect.h + padT + padB))
     });
-    holeSpec.opacity = opacity;
+    hole.opacity = holeSpec.opacity = opacity;
     var r = 6;
-    if (!holeDrawn || !sameHole(holeDrawn, holeSpec)) {
-      if (holeDrawn) {
+    if (!holeDrawn || holeNeedsRedraw(holeDrawn, holeSpec)) {
+      if (holeDrawn && !holeDrawn.cleared) {
         gc.fillRect(holeDrawn.x - 1, holeDrawn.y - 1, holeDrawn.w + 2, holeDrawn.h + 2);
       }
       var x1 = holeSpec.x;
@@ -200,13 +200,24 @@ var CutScreen = CutScreen || (function (window, document) {
     };
   }
 
-  function sameHole(h1, h2) {
+  function holeNeedsRedraw(holeDrawn, holeSpec) {
     return (
-      h1.x === h2.x &&
-      h1.y === h2.y &&
-      h1.w === h2.w &&
-      h1.h === h2.h &&
-      h1.opacity === h2.opacity);
+      holeDrawn.x !== holeSpec.x ||
+      holeDrawn.y !== holeSpec.y ||
+      holeDrawn.w !== holeSpec.w ||
+      holeDrawn.h !== holeSpec.h ||
+      holeDrawn.opacity !== holeSpec.opacity ||
+      holeDrawn.cleared);
+  }
+
+  function copyHole(h) {
+    return {
+      sel: h.sel,
+      pad: h.pad,
+      maxWidth: h.maxWidth,
+      maxHeight: h.maxHeight,
+      opacity: h.opacity || 0
+    };
   }
 
   return CutScreen;

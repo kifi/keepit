@@ -8,8 +8,9 @@ var Spotlight = Spotlight || (function (window, document) {
     var wd = this.wd = {w: window.innerWidth, h: window.innerHeight};
     var dc = this.dc = [0,0,0,0].map(newDarkCanvas.bind(null, wd.w, wd.h, 'kifi-spotlight kifi-root'));
     this.onResize = _.throttle(onResize.bind(null, this), 100, {leading: false});
-    this.maxOpacity = sanitizeOpacity(opts.maxOpacity);
-    show(dc, wd, ri, Math.min(this.maxOpacity, sanitizeOpacity(opts.opacity)));
+    this.maxOpacity = clamp01(opts.maxOpacity);
+    this.brightness = clamp01(opts.brightness);
+    show(dc, wd, ri, Math.min(this.maxOpacity, clamp01(opts.opacity)), this.brightness);
   }
 
   Spotlight.prototype = {
@@ -40,11 +41,13 @@ var Spotlight = Spotlight || (function (window, document) {
       return this;
     },
     animateTo: function (rectToCircumscribe, opts) {
+      var b0 = this.brightness;
+      var bN = opts.brightness == null ? b0 : clamp01(opts.brightness);
       var o0 = this.dc[0].styleCache.opacity;
-      var oN = Math.min(this.maxOpacity, sanitizeOpacity(opts.opacity));
+      var oN = Math.min(this.maxOpacity, clamp01(opts.opacity));
       var ease = opts.ease || swing;
       var r0 = this.ri;
-      var rN = rectOnPxGrid(rectToCircumscribe);
+      var rN = rectOnPxGrid(rectToCircumscribe || centeredInWindow(this.ri, this.wd));
       var ms = opts.ms || calcDurationMs(r0, rN);
       var ms_1 = 1 / ms;
       var t0 = window.performance.now();
@@ -54,7 +57,8 @@ var Spotlight = Spotlight || (function (window, document) {
           if (t < tN) {
             window.requestAnimationFrame(tick);
             var alpha = t > t0 ? (t - t0) * ms_1 : 0;
-            show(this.dc, this.wd, this.ri = interpolateRect(ease(alpha), r0, rN), o0 + (oN - o0) * alpha);
+            var easedAlpha = ease(alpha);
+            show(this.dc, this.wd, this.ri = interpolateRect(easedAlpha, r0, rN), o0 + (oN - o0) * alpha, this.brightness = b0 + (bN - b0) * easedAlpha);
           } else {
             this.tick = null;
             if (opts.detach) {
@@ -63,7 +67,7 @@ var Spotlight = Spotlight || (function (window, document) {
                 dc.setOpacity(oN);
               });
             } else {
-              show(this.dc, this.wd, this.ri = rN, oN);
+              show(this.dc, this.wd, this.ri = rN, oN, this.brightness = bN);
             }
           }
         }
@@ -109,9 +113,10 @@ var Spotlight = Spotlight || (function (window, document) {
       }
       this.gc.fillRect(0, 0, w, h);
       this.spotBounds = {x: 0, y: 0, w: 0, h: 0};
+
       this.clipHeight = null;
     },
-    draw: function(wd, r, cx, cy, x, y, opacity, clipHeight) {
+    draw: function(wd, r, cx, cy, x, y, opacity, brightness, clipHeight) {
       if (x + wd.w > 0 && y + (clipHeight || wd.h) > 0 && x < wd.w && y < wd.h) {
         var cs = this.styleCache;
         var es = this.el.style;
@@ -141,11 +146,13 @@ var Spotlight = Spotlight || (function (window, document) {
         sB.w = 2 * r + 4,
         sB.h = 2 * r + 4;
         gc.globalCompositeOperation = 'destination-out';
+        gc.globalAlpha = brightness;
         gc.beginPath();
         gc.arc(cx - x, cy - y, r, 0, 2 * Math.PI);
         gc.closePath();
         gc.fill();
         gc.globalCompositeOperation = 'source-over';
+        gc.globalAlpha = 1;
       } else {
         this.hide();
       }
@@ -158,17 +165,17 @@ var Spotlight = Spotlight || (function (window, document) {
     }
   };
 
-  function show(dc, wd, ri, opacity) {
+  function show(dc, wd, ri, opacity, brightness) {
     var r = Math.round(Math.sqrt(ri.w * ri.w + ri.h * ri.h) / 2);
-    if (r > 0) {
-      var cx = Math.round(ri.x + ri.w / 2);
-      var cy = Math.round(ri.y + ri.h / 2);
-      dc[0].draw(wd, r, cx, cy, 0, ri.y - wd.h, opacity);
-      dc[1].draw(wd, r, cx, cy, ri.x - wd.w, ri.y, opacity, ri.h);
-      dc[2].draw(wd, r, cx, cy, ri.x + ri.w, ri.y, opacity, ri.h);
-      dc[3].draw(wd, r, cx, cy, 0, ri.y + ri.h, opacity);
+    var cx = Math.round(ri.x + ri.w / 2);
+    var cy = Math.round(ri.y + ri.h / 2);
+    if (r > 0 && brightness === 1) {
+      dc[0].draw(wd, r, cx, cy, 0, ri.y - wd.h, opacity, brightness);
+      dc[1].draw(wd, r, cx, cy, ri.x - wd.w, ri.y, opacity, brightness, ri.h);
+      dc[2].draw(wd, r, cx, cy, ri.x + ri.w, ri.y, opacity, brightness, ri.h);
+      dc[3].draw(wd, r, cx, cy, 0, ri.y + ri.h, opacity, brightness);
     } else {
-      dc[0].draw(wd, 0, 0, 0, 0, 0, opacity);
+      dc[0].draw(wd, r, cx, cy, 0, 0, opacity, brightness);
       dc[1].hide();
       dc[2].hide();
       dc[3].hide();
@@ -180,7 +187,7 @@ var Spotlight = Spotlight || (function (window, document) {
     spotlight.dc.forEach(function (dc) {
       dc.size(wd.w, wd.h);
     });
-    show(spotlight.dc, spotlight.wd = wd, spotlight.ri, null);
+    show(spotlight.dc, spotlight.wd = wd, spotlight.ri, null, spotlight.brightness);
   }
 
   function updateStyle(elementStyle, styleCache, name, val) {
@@ -195,7 +202,7 @@ var Spotlight = Spotlight || (function (window, document) {
     }
   }
 
-  function sanitizeOpacity(val) {
+  function clamp01(val) {
     return typeof val === 'number' ? (val < 0 ? 0 : (val > 1 ? 1 : val)) : 1;
   }
 
@@ -211,6 +218,17 @@ var Spotlight = Spotlight || (function (window, document) {
       w: r1.w + (r2.w - r1.w) * alpha,
       h: r1.h + (r2.h - r1.h) * alpha
     });
+  }
+
+  function centeredInWindow(r, wd) {
+    var w = Math.min(200, r.w);
+    var h = Math.min(200, r.h);
+    return {
+      x: (wd.w - w) / 2,
+      y: (wd.h - h) / 2,
+      w: w,
+      h: h
+    };
   }
 
   function rectOnPxGrid(r) {

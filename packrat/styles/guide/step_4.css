@@ -19,7 +19,7 @@
 .kifi-guide-feature {
   display: none;
   opacity: 0;
-  transition: opacity .2s linear;
+  transition: opacity .26s linear;
 }
 .kifi-guide-feature.kifi-opaque {
   opacity: 1;
@@ -80,7 +80,7 @@
   right: 20%;
   text-align: center;
   opacity: 0;
-  transition: opacity .2s linear;
+  transition: opacity .26s linear;
 }
 .kifi-guide-drum-roll.kifi-opaque {
   opacity: 1;
@@ -115,6 +115,11 @@
   width: 500px;
   margin-left: -250px;
   text-align: center;
+  opacity: 0;
+  transition: opacity .2s linear;
+}
+.kifi-guide-farewell.kifi-opaque {
+  opacity: 1;
 }
 .kifi-guide-farewell>.kifi-guide-next {
   margin-top: 10px;

@@ -8,31 +8,33 @@ guide.step1 = guide.step1 || function () {
     {
       lit: '.kifi-tile-card',
       pad: [20, 40],
-      arrow: {from: {angle: 0, gap: 10, along: [1, .55]}, to: {angle: -70, gap: 10}},
+      arrow: {from: {angle: -84, gap: 16}, to: {angle: 0, gap: 12}},
       allow: {type: 'mouseover', target: '.kifi-tile-keep'},
-      pos: {bottom: 150, right: 160}
+      pos: {bottom: 150, right: 70}
     },
     {
       lit: '.kifi-keep-card',
       pad: [10, 20, 60, 60],
-      arrow: {from: {angle: 0, gap: 10}, to: {angle: -90, gap: 10}},
+      arrow: {from: {angle: 0, gap: 12}, to: {angle: -80, gap: 10}},
       allow: {type: 'click', target: '.kifi-keep-btn', proceed: true},
-      substep: {arrow: 'move'}
+      pos: {bottom: 160, right: 160},
+      substep: true
     },
     {
       afterTransition: '.kifi-kept-side',
-      arrow: {from: {angle: 0, gap: 10}, to: {angle: -70, gap: 10, sel: '.kifi-kept-tag'}},
-      allow: {type: 'click', target: '.kifi-kept-tag'}
+      arrow: {from: {angle: 0, gap: 10}, to: {angle: -70, gap: 10, along: [.5, 0], sel: '.kifi-kept-tag'}},
+      allow: {type: 'click', target: '.kifi-kept-tag'},
+      pos: {bottom: 170, right: 140}
     },
     {
       lit: '.kifi-tagbox',
       pad: [0, 10, 20],
-      arrow: {from: {angle: -90, gap: 16}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-suggestion[data-name="{{tag}}"]'}},
+      arrow: {from: {angle: -84, gap: 16}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-suggestion[data-name="{{tag}}"]'}},
       allow: [
         {type: 'click', target: '.kifi-tagbox-suggestion'},
         {type: /^mouse/, target: '.kifi-tagbox-suggestion'}
       ],
-      substep: {arrow: 'new'},
+      substep: true,
       pos: {bottom: 230, right: 400}
     },
     {
@@ -43,8 +45,7 @@ guide.step1 = guide.step1 || function () {
       transition: 'opacity'
     },
     {
-      pad: [0],
-      pos: {top: '20%', left: 'auto', right: 'auto'}
+      pos: 'center'
     }
   ];
   var steps_3_arrow_to_sel = steps[3].arrow.to.sel;
@@ -81,7 +82,7 @@ guide.step1 = guide.step1 || function () {
   function onClickNext(e, stepIdx) {
     if (stepIdx === 4) {
       e.closeKeeper = true;
-      step.show(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
+      step.show(5);
     } else {
       step.nav(e.target.href);
     }

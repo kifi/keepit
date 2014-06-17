@@ -6,7 +6,7 @@ var guide = guide || {
         what = String(what);
         var step = what[0];
         api.require('scripts/guide/step_' + step + '.js', function () {
-          guide['step' + step](+what[2]);
+          guide['step' + step](+what[2] || 0);
         });
       }
     });

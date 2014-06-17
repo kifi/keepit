@@ -10,14 +10,15 @@ guide.step3 = guide.step3 || function () {
       pad: [20, 40],
       arrow: {from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -70, gap: 10}},
       allow: {type: 'mouseover', target: '.kifi-tile-keep,.kifi-tile-kept'},
-      pos: {bottom: 150, right: 130}
+      pos: {bottom: 150, right: 70}
     },
     {
       lit: '.kifi-dock-compose',
       pad: [2, 188, 90, 70],
       arrow: {from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -90, gap: 10}},
       allow: {type: 'click', target: '.kifi-dock-compose', proceed: true},
-      substep: {arrow: 'move'}
+      pos: {bottom: 150, right: 190},
+      substep: true
     },
     {
       lit: '.kifi-keeper',
@@ -28,7 +29,8 @@ guide.step3 = guide.step3 || function () {
         {type: /^key/, target: '.kifi-compose-draft', unless: function (e) {return e.keyCode === 27}},  // esc
         {type: 'mousedown', target: '.kifi-ti-dropdown-item'}
       ],
-      pos: {bottom: 250, right: 260}
+      pos: {bottom: 250, right: 260},
+      afterTransition: '.kifi-toast'
     },
     {
       lit: '.kifi-keeper',
@@ -38,9 +40,9 @@ guide.step3 = guide.step3 || function () {
       arrow: {from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit', unless: function (e) {return e.keyCode === 27}},  // esc
-        {type: /^(?:mouse|click)/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit'}
+        {type: /^(?:mouse|click)/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit,.kifi-ti-token-x'}
       ],
-      pos: {bottom: 330, right: 130}
+      pos: {bottom: 280, right: 300}
     },
     {
       afterTransition: '.kifi-pane-box-cart',
@@ -48,8 +50,7 @@ guide.step3 = guide.step3 || function () {
       transition: 'opacity'
     },
     {
-      pad: [0],
-      pos: {top: '20%', left: 'auto', right: 'auto'}
+      pos: 'center'
     }
   ];
   return show;
@@ -112,7 +113,7 @@ guide.step3 = guide.step3 || function () {
 
   function onClickNext(e, stepIdx) {
     if (stepIdx === 4) {
-      step.show(5, {left: window.innerWidth - 31, top: window.innerHeight - 31, width: 0, height: 0});
+      step.show(5);
     } else {
       step.nav('https://preview.kifi.com');
     }

@@ -78,19 +78,25 @@ guide.step4 = guide.step4 || function () {
   }
 
   function farewell() {
-    cutScreen.fill(200);
+    cutScreen.fill(260);
     arrows.forEach(function (arrow) {
-      arrow.fadeAndDetach(200);
+      arrow.fadeAndDetach(260);
     });
+    var farewellShown;
     $feats.add('.kifi-guide-drum-roll')
-      .on('transitionend', remove)
+      .on('transitionend', function () {
+        $(this).remove();
+        if (!farewellShown) {
+          farewellShown = true;
+          $stage.find('.kifi-guide-farewell')
+            .show()
+            .each(layout)
+            .addClass('kifi-opaque')
+          .find('.kifi-guide-next')
+            .click(hide);
+        }
+      })
       .removeClass('kifi-opaque');
-    $stage.find('.kifi-guide-farewell')
-      .show()
-      .each(layout)
-      .addClass('kifi-opaque')
-    .find('.kifi-guide-next')
-      .click(hide);
   }
 
   function toClientRect(r) {
