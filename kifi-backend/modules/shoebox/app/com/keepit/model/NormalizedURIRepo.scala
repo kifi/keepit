@@ -186,8 +186,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
       log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
       val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
           case uri if uri.state == NormalizedURIStates.REDIRECTED =>
-            log.info(s"following a redirection path for $url on uri $normalizedUri")
-            get(uri.redirect.get)
+            val nuri = get(uri.redirect.get)
+            log.info(s"following a redirection path for $url on uri $nuri")
+            nuri
           case uri => uri
         }
       log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
