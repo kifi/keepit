@@ -122,7 +122,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     log.info(s"about to persist $uri")
 
     // setting a negative sequence number for deferred assignment
-    val num = SequenceNumber[NormalizedURI](-1L) // (clock.now.getMillis() - Long.MaxValue)
+    val num = SequenceNumber[NormalizedURI](clock.now.getMillis() - Long.MaxValue)
     val uriWithSeq = uri.copy(seq = num)
 
     val validatedUri = if ( uri.state != NormalizedURIStates.REDIRECTED && (uri.redirect.isDefined || uri.redirectTime.isDefined) ){
