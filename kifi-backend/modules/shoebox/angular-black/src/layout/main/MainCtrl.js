@@ -241,7 +241,7 @@ angular.module('kifi.layout.main', [
     };
 
 
-    $scope.openBookmarkFileSelector = function ($event) {
+    $scope.openBookmarkFileSelector = function () {
       // not great, but trying to fix an IE bug
       var bookmarkFileUpload = $rootElement.find('.bookmark-file-upload');
       bookmarkFileUpload.click();

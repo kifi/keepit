@@ -86,7 +86,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.isActiveTag = function (tag) {
-          return util.startsWith($location.path(), '/tag/' + tag.id);
+          return tag && util.startsWith($location.path(), '/tag/' + tag.id);
         };
 
         scope.getShownTags = function () {
@@ -276,6 +276,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 
         scope.$watch('tags.length', function () {
           scope.refreshScroll();
+          scope.tagsWithFakeLast = scope.tags.concat([null]);
         });
 
         tagService.fetchAll();
