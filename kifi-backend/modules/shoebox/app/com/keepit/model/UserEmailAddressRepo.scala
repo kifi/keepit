@@ -11,9 +11,9 @@ import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[UserEmailAddressRepoImpl])
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[UserEmailAddress]
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): UserEmailAddress
@@ -67,18 +67,18 @@ class UserEmailAddressRepoImpl @Inject() (
     }
   }
 
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
     (implicit session: RSession): Seq[UserEmailAddress] =
     (for(f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
 
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(EmailAddressStates.INACTIVE))
+  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[UserEmailAddress] = {
     val allAddresses = getByAddress(address, excludeState)
-    allAddresses.find(_.state == EmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == EmailAddressStates.UNVERIFIED).headOption)
+    allAddresses.find(_.state == UserEmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == UserEmailAddressStates.UNVERIFIED).headOption)
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
-    (for(f <- rows if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
+    (for(f <- rows if f.userId === userId && f.state =!= UserEmailAddressStates.INACTIVE) yield f).list
 
   def getByUser(userId: Id[User])(implicit session: RSession): UserEmailAddress = {
     if (userRepo.get(userId).primaryEmailId.isDefined) {
@@ -95,19 +95,19 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] =
-    (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
+    (for (e <- rows if e.userId === userId && e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
 
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) = {
     // returns (verifiedEmailOption, isFirstTimeUsed)
     getByUserAndCode(userId, verificationCode) match {
-      case Some(verifiedAddress) if verifiedAddress.state == EmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
-      case Some(unverifiedAddress) if unverifiedAddress.state == EmailAddressStates.UNVERIFIED => (Some(save(unverifiedAddress.withState(EmailAddressStates.VERIFIED))), true)
+      case Some(verifiedAddress) if verifiedAddress.state == UserEmailAddressStates.VERIFIED => (Some(verifiedAddress), false)
+      case Some(unverifiedAddress) if unverifiedAddress.state == UserEmailAddressStates.UNVERIFIED => (Some(save(unverifiedAddress.withState(UserEmailAddressStates.VERIFIED))), true)
       case None => (None, false)
     }
   }
 
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] = {
-    (for (e <- rows if e.verificationCode === verificationCode && e.state =!= EmailAddressStates.INACTIVE) yield e).firstOption
+    (for (e <- rows if e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
   }
 
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {

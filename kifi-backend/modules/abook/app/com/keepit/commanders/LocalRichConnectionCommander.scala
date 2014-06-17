@@ -139,7 +139,7 @@ class LocalRichConnectionCommander @Inject() (
         case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => // Ignore
 
         case RecordVerifiedEmail(userId: Id[User], email: EmailAddress) => {
-          db.readWrite { implicit session => eContactRepo.get.recordVerifiedEmail(email.address, userId) }
+          db.readWrite { implicit session => eContactRepo.get.recordVerifiedEmail(email, userId) }
         }
       }
       Future.successful(())
@@ -152,7 +152,7 @@ class LocalRichConnectionCommander @Inject() (
     db.readWrite { implicit session =>
       repo.internRichConnection(eContact.userId, None, Right(eContact))
       eContact.contactUserId.foreach{ contactUserId =>
-        repo.recordFriendUserId(Right(EmailAddress(eContact.email)), contactUserId)
+        repo.recordFriendUserId(Right(eContact.email), contactUserId)
       }
     }
   }

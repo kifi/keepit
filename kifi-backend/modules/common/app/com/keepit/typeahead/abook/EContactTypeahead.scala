@@ -30,12 +30,12 @@ abstract class EContactTypeaheadBase(
 
   override protected def extractName(info: EContact):String = {
   val name = info.name.getOrElse("").trim
-    val pres = EmailParser.parse(EmailParser.email, info.email)
+    val pres = EmailParser.parse(EmailParser.email, info.email.address)
     if (pres.successful) {
       s"$name ${pres.get.toStrictString}"
     } else {
       airbrake.notify(s"[EContactTypeahead.extractName($info)] Failed to parse email ${info.email}")
-      val email = info.email.trim
+      val email = info.email.address.trim
       s"$name $email"
     }
   }

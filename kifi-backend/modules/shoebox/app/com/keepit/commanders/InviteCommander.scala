@@ -271,7 +271,7 @@ class InviteCommander @Inject() (
     val subject = inviteInfo.subject.getOrElse("Join me on kifi")
     log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] sending with subject=$subject message=$message")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
-    val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(EmailAddress(c.email)))}"
+    val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(c.email))}"
 
 
     db.readWrite { implicit session =>
@@ -279,7 +279,7 @@ class InviteCommander @Inject() (
         senderUserId = None,
         from = SystemEmailAddress.INVITATION,
         fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
-        to = Seq(EmailAddress(c.email)),
+        to = Seq(c.email),
         subject = subject,
         htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
         textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
@@ -433,7 +433,7 @@ class InviteCommander @Inject() (
       senderUserId = Some(inviteInfo.userId),
       recipientSocialUserId = inviteInfo.friend.left.toOption.map(_.id.get),
       recipientEContactId = inviteInfo.friend.right.toOption.map(_.id.get),
-      recipientEmailAddress = inviteInfo.friend.right.toOption.map(_.email).map(EmailAddress(_)),
+      recipientEmailAddress = inviteInfo.friend.right.toOption.map(_.email),
       state = InvitationStates.INACTIVE
     )
   }

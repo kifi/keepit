@@ -16,10 +16,10 @@ class SocialUserImportEmail @Inject() (
       val emails = emailRepo.getByAddress(emailAddress, excludeState = None)
       emails.map { email =>
         if (email.userId != userId) {
-          if (email.state == EmailAddressStates.VERIFIED) {
+          if (email.state == UserEmailAddressStates.VERIFIED) {
             throw new IllegalStateException(s"email ${email.address} of user ${email.userId} is VERIFIED but not associated with user $userId")
-          } else if (email.state == EmailAddressStates.UNVERIFIED) {
-            emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+          } else if (email.state == UserEmailAddressStates.UNVERIFIED) {
+            emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
           }
           None
         } else {
@@ -27,7 +27,7 @@ class SocialUserImportEmail @Inject() (
         }
       }.flatten.headOption.getOrElse {
         log.info(s"creating new email $emailAddress for user $userId")
-        emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = EmailAddressStates.VERIFIED))
+        emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = UserEmailAddressStates.VERIFIED))
       }
     }
   }

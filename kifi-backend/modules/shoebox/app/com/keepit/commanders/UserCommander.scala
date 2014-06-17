@@ -394,7 +394,7 @@ class UserCommander @Inject() (
   }
 
   def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
-    @inline def mkId(email:String) = s"email/$email"
+    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
     @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
       contactIdOpt flatMap { contactId =>
         db.readOnly { implicit s =>
@@ -727,7 +727,7 @@ class UserCommander @Inject() (
           if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
             userValueRepo.clearValue(userId, "pending_primary_email")
           }
-          emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+          emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
         }
       }
       // Add new emails

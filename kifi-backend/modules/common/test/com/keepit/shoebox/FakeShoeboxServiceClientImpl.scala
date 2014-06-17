@@ -10,7 +10,7 @@ import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
 import com.keepit.social.{SocialNetworkType, BasicUser}
-import com.keepit.common.mail.{ElectronicMail}
+import com.keepit.common.mail.{EmailAddress, ElectronicMail}
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
@@ -595,7 +595,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
 
-  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = Future.successful(Map.empty)
+  def getVerifiedAddressOwners(emailAddresses: Seq[EmailAddress]): Future[Map[EmailAddress, Id[User]]] = Future.successful(Map.empty)
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
 

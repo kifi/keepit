@@ -19,7 +19,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
+import com.keepit.common.mail.{EmailAddress, SystemEmailAddress, ElectronicMail}
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.{TreeSet, ArrayBuffer}
 import org.joda.time.DateTime
@@ -59,7 +59,7 @@ class TypeaheadCommander @Inject()(
 
   implicit val fj = ExecutionContext.fj
 
-  private def emailId(email:String) = s"email/$email"
+  private def emailId(email: EmailAddress) = s"email/${email.address}"
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
   def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[EContact]] = {
