@@ -9,7 +9,7 @@
 // @require scripts/html/guide/steps.js
 
 guide.step = guide.step || function () {
-  var $stage, $steps, spotlight, timeout, arrow, steps, opts, stepIdx, animTick;
+  var spotlight, $stage, $steps, timeout, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
   var sites = [
@@ -27,7 +27,12 @@ guide.step = guide.step || function () {
       $stage = $(render('html/guide/step_' + opts.page, {me: me, site: sites[opts_.site]}));
       $steps = $(render('html/guide/steps', {showing: true})).appendTo('body')
         .on('click', '.kifi-guide-steps-x', hide);
-      timeout = setTimeout(show2, 2000);
+      if (document.readyState === 'complete') {
+        timeout = setTimeout(show2, 2000);
+      } else {
+        timeout = setTimeout(show2, 6000);
+        window.addEventListener('load', onDocumentComplete, true);
+      }
       return {
         show: showStep,
         nav: navTo,
@@ -36,7 +41,13 @@ guide.step = guide.step || function () {
     }
   }
 
+  function onDocumentComplete() {
+    clearTimeout(timeout);
+    timeout = setTimeout(show2, 500);
+  }
+
   function show2() {
+    window.removeEventListener('load', onDocumentComplete, true);
     spotlight.attach($.fn.before.bind($steps));
     $stage.insertBefore($steps);
     $(window).on('resize.guideStep', onWinResize);
@@ -48,14 +59,15 @@ guide.step = guide.step || function () {
 
   function hide() {
     if ($stage) {
+      var ms = spotlight.animateTo(wholeWindow(), {opacity: 0, detach: true});
       $stage.one('transitionend', remove).css('transition-delay', '').removeClass('kifi-open');
       $steps.one('transitionend', remove).removeClass('kifi-showing');
-      var ms = spotlight.animateTo(wholeWindow(), {opacity: 0, detach: true});
       if (arrow) {
         arrow.fadeAndDetach(ms / 2);
       }
       if (timeout) {
         clearTimeout(timeout);
+        window.removeEventListener('load', onDocumentComplete, true);
       }
       $stage = $steps = spotlight = timeout = arrow = steps = opts = stepIdx = animTick = null;
       $(window).off('resize.guideStep');
