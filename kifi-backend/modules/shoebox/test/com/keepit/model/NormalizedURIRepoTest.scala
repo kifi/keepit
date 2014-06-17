@@ -208,7 +208,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           uriRepo.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
         }
         db.readWrite { implicit s =>
-          uriRepo.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
+          normalizedURIInterner.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
         }
         db.readOnly { implicit s =>
           uriRepo.count === 1
@@ -221,7 +221,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         val blowup = db.readWrite { implicit s =>
           uriRepo.count === 0
           uriRepo.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
-          uriRepo.internByUri("http://www.arte.tv/fr/3482046.html")
+          normalizedURIInterner.internByUri("http://www.arte.tv/fr/3482046.html")
         }
         db.readOnly { implicit s =>
           uriRepo.count === 1

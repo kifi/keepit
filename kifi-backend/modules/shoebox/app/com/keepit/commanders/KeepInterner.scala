@@ -12,7 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.normalizer.NormalizationCandidate
+import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
@@ -23,7 +23,7 @@ case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boo
 @Singleton
 class KeepInterner @Inject() (
   db: Database,
-  uriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   scraper: ScrapeSchedulerPlugin,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -116,22 +116,22 @@ class KeepInterner @Inject() (
   }
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (keepsWithStatus, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
-    (keepsWithStatus.map(_._1), failures)
+    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
+    (newKeeps ++ existingKeeps, failures)
   }
 
-  /**
-   * Keeps are returned with their status (true if the keep is new or was inactive, false otherwise)
-   */
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[(Keep, Boolean)], Seq[RawBookmarkRepresentation]) = {
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
-    val newKeeps = persistedBookmarksWithUris collect {
+    val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
+    val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
+      case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
+    }
 
-    keptAnalytics.keptPages(userId, newKeeps, context)
-    keepAttribution(userId, newKeeps)
-    (persistedBookmarksWithUris.map(obj => (obj.bookmark, obj.isNewKeep || obj.wasInactiveKeep)), failures)
+    keptAnalytics.keptPages(userId, createdKeeps, context)
+    keepAttribution(userId, createdKeeps)
+    (newKeeps, existingKeeps, failures)
   }
 
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
@@ -170,7 +170,7 @@ class KeepInterner @Inject() (
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = try {
-        uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+        normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
       }

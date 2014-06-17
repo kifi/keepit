@@ -26,6 +26,7 @@ import play.api.libs.ws.{Response, WS}
 
 import securesocial.core.{IdentityId, OAuth2Settings}
 import securesocial.core.providers.LinkedInProvider.LinkedIn
+import com.keepit.common.mail.EmailAddress
 
 object LinkedInSocialGraph {
   val ProfileFields = Seq("id","firstName","lastName","picture-urls::(original);secure=true","publicProfileUrl")
@@ -85,7 +86,7 @@ class LinkedInSocialGraph @Inject() (
     }
   }
 
-  def extractEmails(parentJson: JsValue): Seq[String] = (parentJson \ "emailAddress").asOpt[String].toSeq
+  def extractEmails(parentJson: JsValue): Seq[EmailAddress] = (parentJson \ "emailAddress").asOpt[EmailAddress].toSeq
 
   def extractFriends(parentJson: JsValue): Seq[SocialUserInfo] =
     ((parentJson \ "values").asOpt[JsArray] getOrElse JsArray()).value collect {

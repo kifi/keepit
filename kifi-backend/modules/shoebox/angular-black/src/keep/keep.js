@@ -400,17 +400,19 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
           var calcTextWidth = 100 - asideWidthPercent;
           var linesToShow = Math.floor((bestRes.hi / 23)); // line height
-          var calcTextHeight = linesToShow * 23 + 25; // 25px subtitle
+          var calcTextHeight = linesToShow * 23 + 22; // 22px subtitle
 
           scope.keep.sizeCard = function () {
-            element.find('.kf-keep-small-image').height(Math.round(bestRes.hi));
-            element.find('.kf-keep-small-image').width(asideWidthPercent + '%');
+            var $content = element.find('.kf-keep-content-line');
+            $content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
+            $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
             element.find('.kf-keep-info').css({
-              'width': calcTextWidth + '%',
               'height': calcTextHeight + 'px'
-            }).addClass('kf-dyn-positioned')
-            .find('.kf-keep-description')
-            .css('margin-right', '30px');
+            }).addClass('kf-dyn-positioned');
+
+            $content.find('.kf-keep-image').on('error', function () {
+              $content.find('.kf-keep-small-image').hide();
+            });
           };
         }
 
@@ -427,10 +429,11 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         scope.$on('resizeImage', maybeSizeImage);
 
         scope.$watch('keep', function () {
-          if (scope.keep && scope.keep.summary && !scope.keep.calcSizeCard) {
+          if (scope.keep && scope.keep.summary) {
             maybeSizeImage();
             if (scope.keep.calcSizeCard) {
               scope.keep.calcSizeCard();
+              scope.keep.calcSizeCard = null; // only want it called once.
               if (scope.keep.sizeCard) {
                 scope.keep.sizeCard();
               }

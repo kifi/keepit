@@ -14,7 +14,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.db.slick.Database.Slave
@@ -64,7 +64,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!orphaned.isEmpty) {
           val msg = s"[checkOverdues] orphaned scraper tasks(${orphaned.length}): ${orphaned.mkString(",")}"
           log.error(msg) // shouldn't happen -- airbrake
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-orphaned", htmlBody = msg))
+          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-orphaned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- orphaned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime))
@@ -76,7 +76,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!abandoned.isEmpty) {
           val msg = s"[checkOverdues] abandoned scraper tasks(${abandoned.length}): ${abandoned.mkString(",")}"
           log.warn(msg)
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-abandoned", htmlBody = msg))
+          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-abandoned", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- abandoned) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime)) // todo(ray): ask worker for status
@@ -86,7 +86,7 @@ private[scraper] class ScrapeScheduler @Inject() (
         if (!stalled.isEmpty) { // likely due to failed db updates
           val msg = s"[checkOverdues] stalled scraper tasks(${stalled.length}): ${stalled.mkString(",")}"
           log.warn(msg)
-          systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-stalled", htmlBody = msg))
+          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-scheduler-stalled", htmlBody = msg))
           db.readWrite(attempts = 2) { implicit rw =>
             for (info <- stalled) {
               scrapeInfoRepo.save(info.withState(ScrapeInfoStates.ACTIVE).withNextScrape(currentDateTime.plusMinutes(util.Random.nextInt(30)))) // todo(ray): ask worker for status
@@ -102,7 +102,7 @@ private[scraper] class ScrapeScheduler @Inject() (
     val msg = s"[checkOverdueCount]: overdue-count=${overdueCount}"
     if (overdueCount > config.overdueCountThreshold) {
       log.warn(msg)
-      systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = Seq(EmailAddresses.RAY, EmailAddresses.MARTIN), category = NotificationCategory.System.SCRAPER, subject = "scraper-many-overdues", htmlBody = msg))
+      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY, SystemEmailAddress.MARTIN), category = NotificationCategory.System.SCRAPER, subject = "scraper-many-overdues", htmlBody = msg))
     } else {
       log.info(msg)
     }

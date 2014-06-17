@@ -5,6 +5,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.mail.EmailAddress
 
 case class Invitation(
   id: Option[Id[Invitation]] = None,
@@ -15,7 +16,7 @@ case class Invitation(
   senderUserId: Option[Id[User]],
   recipientSocialUserId: Option[Id[SocialUserInfo]],
   recipientEContactId: Option[Id[EContact]] = None,
-  recipientEmailAddress: Option[String] = None,
+  recipientEmailAddress: Option[EmailAddress] = None,
   state: State[Invitation] = InvitationStates.ACTIVE,
   seq: SequenceNumber[Invitation] = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Invitation] with ModelWithState[Invitation] with ModelWithSeqNumber[Invitation] {
@@ -44,7 +45,7 @@ object Invitation {
       (__ \ 'sendUserId).formatNullable(Id.format[User]) and
       (__ \ 'recipientSocialUserId).formatNullable(Id.format[SocialUserInfo]) and
       (__ \ 'recipientEContactId).formatNullable(Id.format[EContact]) and
-      (__ \ 'recipientEmailAddress).formatNullable[String] and
+      (__ \ 'recipientEmailAddress).formatNullable[EmailAddress] and
       (__ \ 'state).format(State.format[Invitation]) and
       (__ \ 'seq).format(SequenceNumber.format[Invitation])
     )(Invitation.apply, unlift(Invitation.unapply))

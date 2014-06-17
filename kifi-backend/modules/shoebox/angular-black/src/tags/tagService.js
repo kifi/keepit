@@ -118,6 +118,10 @@ angular.module('kifi.tagService', [
         api.filterList(prevFilter);
       },
 
+      /**
+       * Fetches all tags, but only returns the listLength first tags.
+       * The complete list of tags is exposed via allTags
+       */
       fetchAll: function (force) {
         if (!force && fetchAllPromise) {
           return fetchAllPromise.then(function () {

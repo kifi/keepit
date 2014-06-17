@@ -1,7 +1,7 @@
 package com.keepit.common.logging
 
 import com.keepit.macros.Location
-import play.modules.statsd.api.{StatsdClientCake, StatsdClient, Statsd}
+import play.modules.statsd.api.Statsd
 import play.api.Logger
 import scala.util.Random
 
@@ -22,6 +22,10 @@ trait Logging {
   implicit lazy val statsd = new LoggingStatsdClient(Logger(s"statsd.${getClass.getCanonicalName}"))
 
   implicit def captureLocation: Location = macro Location.locationMacro
+}
+
+class Timer(startTime: Long = System.currentTimeMillis()) {
+  def timeSinceStarted: Long = System.currentTimeMillis() - startTime
 }
 
 /**
@@ -59,6 +63,8 @@ class LoggingStatsdClient(log: Logger)  {
     Statsd.timing(key, millis, samplingRate)
   }
 
+  def timing(key: String, timer: Timer, samplingRate: Double): Unit = timing(key, timer.timeSinceStarted, samplingRate)
+
   /**
    * Time a given operation and send the resulting stat.
    *
@@ -67,9 +73,13 @@ class LoggingStatsdClient(log: Logger)  {
    * @param timed An arbitrary block of code to be timed.
    * @return The result of the timed operation.
    */
-  def time[T](key: String, samplingRate: Double)(timed: => T): T = {
+  def time[T](key: String, samplingRate: Double)(timed: Timer => T): T = {
     maybeLog(s"[time] key: $key, samplingRate: $samplingRate", samplingRate)
-    Statsd.time(key, samplingRate)(timed)
+    val timer = new Timer()
+    val result = timed(timer)
+    val timeSinceStarted = timer.timeSinceStarted
+    timing(key, timeSinceStarted, samplingRate)
+    result
   }
 
   /**

@@ -32,14 +32,14 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
 import scala.util.{Failure, Success}
-import com.keepit.model.EmailAddress
+import com.keepit.model.UserEmailAddress
 import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
 import play.api.libs.json.JsUndefined
 import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
 import com.keepit.inject.FortyTwoConfig
@@ -50,7 +50,7 @@ class UserController @Inject() (
   userExperimentCommander: LocalUserExperimentCommander,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   userValueRepo: UserValueRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
@@ -196,7 +196,8 @@ class UserController @Inject() (
     }
   }
 
-  def getEmailInfo(email: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
+  def getEmailInfo(emailString: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
+    val email = EmailAddress(emailString)
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
@@ -301,8 +302,8 @@ class UserController @Inject() (
   def needMoreInvites() = JsonAction.authenticated { request =>
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
-        from = EmailAddresses.INVITATION,
-        to = Seq(EmailAddresses.EFFI),
+        from = SystemEmailAddress.INVITATION,
+        to = Seq(SystemEmailAddress.EFFI),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
         category = NotificationCategory.System.ADMIN))
@@ -363,15 +364,16 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(email: String) = HtmlAction.authenticated { implicit request =>
+  def resendVerificationEmail(emailString: String) = HtmlAction.authenticated { implicit request =>
+    val email = EmailAddress(emailString)
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(email)),
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Seq(email),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
             category = NotificationCategory.User.EMAIL_CONFIRMATION

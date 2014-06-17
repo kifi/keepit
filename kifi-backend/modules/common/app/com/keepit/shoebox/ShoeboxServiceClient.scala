@@ -49,7 +49,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
-  def getEmailAddressById(id: Id[EmailAddress]): Future[String]
+  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -326,7 +326,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getEmailAddressById(id: Id[EmailAddress]): Future[String] = {
+  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String] = {
     call(Shoebox.internal.getEmailAddressById(id)).map{ r =>
       r.json.as[String]
     }
@@ -485,13 +485,15 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+    val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
+    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = timeout).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 
   def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[UriIdAndSeq]] = {
-    call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+    val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
+    call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = timeout).map { r =>
       ScalaMessagePack.read[UriIdAndSeqBatch](r.bytes).batch
     }
   }

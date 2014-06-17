@@ -3,7 +3,7 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.mail.EmailAddressHolder
+import com.keepit.common.mail.EmailAddress
 
 case class PasswordReset (
   id: Option[Id[PasswordReset]] = None,

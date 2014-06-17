@@ -28,6 +28,7 @@ import scala.util.Failure
 import scala.util.Right
 import scala.util.Success
 import scala.math
+import com.keepit.common.mail.EmailAddress
 
 
 @Singleton
@@ -109,23 +110,23 @@ class LocalRichConnectionCommander @Inject() (
         }
         case RecordKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) => // Ignore
 
-        case RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String], invitationNumber: Int) => {
+        case RecordInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[EmailAddress], invitationNumber: Int) => {
           db.readWrite { implicit session =>
             val friend = friendSocialId.map(Left(_)).getOrElse(Right(friendEmailAddress.get))
             repo.recordInvitation(userId, friend, invitationNumber) }
         }
 
-        case CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[String]) => {
+        case CancelInvitation(userId: Id[User], friendSocialId: Option[Id[SocialUserInfo]], friendEmailAddress: Option[EmailAddress]) => {
           db.readWrite { implicit session =>
             val friend = friendSocialId.map(Left(_)).getOrElse(Right(friendEmailAddress.get))
             repo.cancelInvitation(userId, friend) }
         }
 
-        case RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String], friendUserId: Id[User]) => {
+        case RecordFriendUserId(networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress], friendUserId: Id[User]) => {
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.recordFriendUserId(friendId, friendUserId) }
         }
-        case Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[String]) => {
+        case Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress]) => {
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.block(userId, friendId) }
         }
@@ -137,8 +138,8 @@ class LocalRichConnectionCommander @Inject() (
         }
         case RemoveKifiConnection(user1: Id[User], user2: Id[User]) => // Ignore
 
-        case RecordVerifiedEmail(userId: Id[User], email: String) => {
-          db.readWrite { implicit session => eContactRepo.get.recordVerifiedEmail(email: String, userId) }
+        case RecordVerifiedEmail(userId: Id[User], email: EmailAddress) => {
+          db.readWrite { implicit session => eContactRepo.get.recordVerifiedEmail(email.address, userId) }
         }
       }
       Future.successful(())
@@ -151,7 +152,7 @@ class LocalRichConnectionCommander @Inject() (
     db.readWrite { implicit session =>
       repo.internRichConnection(eContact.userId, None, Right(eContact))
       eContact.contactUserId.foreach{ contactUserId =>
-        repo.recordFriendUserId(Right(eContact.email), contactUserId)
+        repo.recordFriendUserId(Right(EmailAddress(eContact.email)), contactUserId)
       }
     }
   }

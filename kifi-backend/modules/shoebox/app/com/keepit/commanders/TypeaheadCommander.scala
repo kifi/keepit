@@ -19,7 +19,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.{TreeSet, ArrayBuffer}
 import org.joda.time.DateTime
@@ -46,7 +46,7 @@ class TypeaheadCommander @Inject()(
   socialConnectionRepo: SocialConnectionRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   userRepo: UserRepo,
   friendRequestRepo: FriendRequestRepo,
   abookServiceClient: ABookServiceClient,
@@ -228,23 +228,6 @@ class TypeaheadCommander @Inject()(
       val sorted = (socialHitsTup ++ kifiHitsTup ++ abookHitsTup ++ nfUserHitsTup).sorted(hitOrd)
       log.infoP(s"all.sorted(len=${sorted.length}):${sorted.take(10).mkString(",")}")
       Some(sorted)
-    }
-  }
-
-  private def buildEmailSet(kifiHits: Seq[(SocialNetworkType, TypeaheadHit[User])]) = timing(s"buildEmailSet(ids=${kifiHits.map(_._2.info.id.get).mkString(",")})") {
-    if (kifiHits.isEmpty) TreeSet.empty[String] // use map if need to track userId -> emails
-    else {
-      val emailSet = new TreeSet[String]
-      kifiHits.foreach { h =>
-        val uId = h._2.info.id.get
-        val emails = db.readOnly {
-          implicit ro =>
-            emailAddressRepo.getAllByUser(uId) // todo: +cache
-        }
-        emailSet ++= emails.map { _.address }
-      }
-      log.info(s"[buildEmailSet(ids=${kifiHits.map(_._2.info.id.get).mkString(",")})] res=${emailSet.mkString(",")}")
-      emailSet
     }
   }
 

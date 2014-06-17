@@ -6,8 +6,7 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.mail.LocalPostOffice
+import com.keepit.common.mail.{EmailAddress, ElectronicMail, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
@@ -40,6 +39,7 @@ class ShoeboxController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   normUriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   normalizationServiceProvider:Provider[NormalizationService],
   urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -54,7 +54,7 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   keepsCommander: KeepsCommander,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
@@ -243,7 +243,7 @@ class ShoeboxController @Inject() (
             uri match {
               case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
               case _ => db.readWrite { implicit session =>
-                normUriRepo.internByUri(alternateUrl, bestCandidate)
+                normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
               }
             }
           }
@@ -326,7 +326,7 @@ class ShoeboxController @Inject() (
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uri = db.readWrite(attempts = 1) { implicit s =>  //using cache
-      normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
+      normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
     if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }}
@@ -475,7 +475,7 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
-  def getEmailAddressById(id: Id[EmailAddress]) = Action { request =>
+  def getEmailAddressById(id: Id[UserEmailAddress]) = Action { request =>
     val address = db.readOnly { implicit s => emailAddressRepo.get(id).address }
     Ok(Json.toJson(address))
   }
@@ -633,7 +633,7 @@ class ShoeboxController @Inject() (
   }
 
   def getVerifiedAddressOwners() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val addresses = (request.body \ "addresses").as[Seq[String]]
+    val addresses = (request.body \ "addresses").as[Seq[EmailAddress]]
     val owners = db.readOnly { implicit session =>
       for {
         address <- addresses
@@ -642,8 +642,8 @@ class ShoeboxController @Inject() (
         }
       } yield (address -> userId)
     }
-    implicit val userIdFormat = Id.format[User]
-    Ok(Json.toJson(owners.toMap))
+    val json = Json.toJson(owners.map { case (address, userId) => address.address -> userId }.toMap)
+    Ok(json)
   }
 
   def getAllURLPatternRules() = Action { request =>

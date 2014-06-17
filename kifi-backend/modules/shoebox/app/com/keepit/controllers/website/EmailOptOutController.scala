@@ -5,7 +5,7 @@ import play.api.mvc._
 import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.google.inject.Inject
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import scala.util.{Success, Failure}
 import play.api.data.Form
 import play.api.data.Forms.{tuple, text, optional}
@@ -65,12 +65,12 @@ class EmailOptOutController @Inject() (
   }
 
   def getUnsubscribeUrlForEmail(email: String) = Action { implicit request =>
-    Ok(s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(commander.generateOptOutToken(GenericEmailAddress(email)))}")
+    Ok(s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(commander.generateOptOutToken(EmailAddress(email)))}")
   }
 
   // for development only
   def getToken(email: String) = Action {
-    Ok(commander.generateOptOutToken(GenericEmailAddress(email)))
+    Ok(commander.generateOptOutToken(EmailAddress(email)))
   }
 
 

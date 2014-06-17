@@ -7,7 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationCandidate
+import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 
 abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends Logging {
   def onEvent: PartialFunction[Event, Unit]
@@ -42,6 +42,7 @@ class EventHelperActor @Inject() (
 class SliderShownListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   db: Database,
   sliderHistoryTracker: SliderHistoryTracker)
   extends EventListener(userRepo, normalizedURIRepo) {
@@ -51,7 +52,7 @@ class SliderShownListener @Inject() (
       val (user, normUri) = db.readWrite(attempts = 2) { implicit s =>
         val user = userRepo.get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
-          normalizedURIRepo.internByUri(url, NormalizationCandidate(metaData): _*)
+          normalizedURIInterner.internByUri(url, NormalizationCandidate(metaData): _*)
         }
         (user, normUri)
       }

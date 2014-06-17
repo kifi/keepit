@@ -39,10 +39,10 @@ case class ElectronicMail (
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[ElectronicMail] = ExternalId(),
   senderUserId: Option[Id[User]] = None,
-  from: SystemEmailAddress,
+  from: EmailAddress,
   fromName: Option[String] = None,
-  to: Seq[EmailAddressHolder] = Seq[EmailAddressHolder](),
-  cc: Seq[EmailAddressHolder] = Seq[EmailAddressHolder](),
+  to: Seq[EmailAddress] = Seq[EmailAddress](),
+  cc: Seq[EmailAddress] = Seq[EmailAddress](),
   subject: String,
   state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
   htmlBody: LargeString,
@@ -59,6 +59,10 @@ case class ElectronicMail (
 
   if (subject.length > 1024) {
     throw new IllegalArgumentException(s"email subject length is ${subject.length} (more then 1024 chars): $subject")
+  }
+
+  if (!SystemEmailAddress.validate(from)) {
+    throw new IllegalArgumentException(s"$from is not a system email.")
   }
 
   def withId(id: Id[ElectronicMail]) = this.copy(id = Some(id))
@@ -100,10 +104,6 @@ object ElectronicMail {
   implicit val userExternalIdFormat = ExternalId.format[User]
   implicit val emailExternalIdFormat = ExternalId.format[ElectronicMail]
   implicit val idFormat = Id.format[ElectronicMail]
-  implicit val fromFormat: Format[SystemEmailAddress] =
-    Format(__.read[String].map(s => EmailAddresses(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
-  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] =
-    Format(__.read[String].map(s => GenericEmailAddress(s)), new Writes[EmailAddressHolder]{ def writes(o: EmailAddressHolder) = JsString(o.address) })
   implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] =
     Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId]{ def writes(o: ElectronicMailMessageId) = JsString(o.id) })
   implicit val emailCategoryFormat: Format[ElectronicMailCategory] =
@@ -115,10 +115,10 @@ object ElectronicMail {
       (__ \ 'updatedAt).format(DateTimeJsonFormat) and
       (__ \ 'externalId).format(ExternalId.format[ElectronicMail]) and
       (__ \ 'senderUserId).formatNullable(Id.format[User]) and
-      (__ \ 'from).format[SystemEmailAddress] and
+      (__ \ 'from).format[EmailAddress] and
       (__ \ 'fromName).formatNullable[String] and
-      (__ \ 'to).format[Seq[EmailAddressHolder]] and
-      (__ \ 'cc).format[Seq[EmailAddressHolder]] and
+      (__ \ 'to).format[Seq[EmailAddress]] and
+      (__ \ 'cc).format[Seq[EmailAddress]] and
       (__ \ 'subject).format[String] and
       (__ \ 'state).format(State.format[ElectronicMail]) and
       (__ \ 'htmlBody).format[LargeString] and

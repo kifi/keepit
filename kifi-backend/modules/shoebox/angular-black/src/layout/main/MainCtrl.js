@@ -108,15 +108,8 @@ angular.module('kifi.layout.main', [
     
     function initAddKeep() {
       $scope.modal = 'add_keeps';
+      $scope.data.initAddKeeps = true;
       $scope.data.showAddKeeps = true;
-      $scope.addKeepCheckedPrivate = false;
-      $scope.addKeepInput = {};
-    }
-
-    function clearAddKeep() {
-      $scope.data.showAddKeeps = false;
-      $scope.addKeepCheckedPrivate = false;
-      $scope.addKeepInput = {};
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
@@ -133,6 +126,10 @@ angular.module('kifi.layout.main', [
           break;
         case 'addKeeps':
           initAddKeep();
+          break;
+        case 'genericError':
+          $scope.modal = 'generic_error';
+          $scope.data.showGenericErrorModal = true;
           break;
         case 'installExtension':
           $scope.modal = 'install_extension';
@@ -243,11 +240,11 @@ angular.module('kifi.layout.main', [
       $scope.importFileStatus = '';
     };
 
+
     $scope.openBookmarkFileSelector = function ($event) {
-      var $file = angular.element($event.target).parent().parent().find('input:file');
-      $timeout(function () {
-        $file.click();
-      });
+      // not great, but trying to fix an IE bug
+      var bookmarkFileUpload = $rootElement.find('.bookmark-file-upload');
+      bookmarkFileUpload.click();
     };
 
     $scope.editKeepsLabel = function () {
@@ -272,20 +269,6 @@ angular.module('kifi.layout.main', [
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
-    $scope.addKeepTogglePrivate = function () {
-      $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
-    };
-
-    $scope.keepUrl = function () {
-      if ($scope.addKeepInput.url) {
-        keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
-        clearAddKeep();
-      } else {
-        //todo(martin): Tell the user something went wrong
-        return null; // silence jshint
-      }
-    };
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {

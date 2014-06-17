@@ -9,6 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.EmailAddress
 
 class ExtInviteController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -18,7 +19,7 @@ class ExtInviteController @Inject() (
 
   def invite() = JsonAction.authenticatedParseJsonAsync { request =>
     val fullSocialIdOption = (request.body \ "id").asOpt[FullSocialId] orElse {
-      (request.body \ "email").asOpt[String].map(email => FullSocialId(SocialNetworks.EMAIL, Right(email)))
+      (request.body \ "email").asOpt[EmailAddress].map(email => FullSocialId(SocialNetworks.EMAIL, Right(email)))
     }
 
     fullSocialIdOption match {

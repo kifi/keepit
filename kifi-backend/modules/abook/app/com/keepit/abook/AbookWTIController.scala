@@ -10,6 +10,7 @@ import play.api.mvc.Action
 
 import com.google.inject.Inject
 import com.keepit.abook.model.RichSocialConnection
+import com.keepit.common.mail.EmailAddress
 
 class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookServiceController {
 
@@ -19,14 +20,14 @@ class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookSer
   }
 
   def countInvitationsSent(userId: Id[User], friendSocialId: Option[Long], friendEmailAddress: Option[String]) = Action { request =>
-    val friendId = friendSocialId.map(id => Left(Id[SocialUserInfo](id))) getOrElse Right(friendEmailAddress.get)
+    val friendId = friendSocialId.map(id => Left(Id[SocialUserInfo](id))) getOrElse Right(EmailAddress(friendEmailAddress.get))
     Ok(JsNumber(wtiCommander.countInvitationsSent(userId, friendId)))
   }
 
   def blockRichConnection() = Action(parse.tolerantJson) { request =>
     val o = request.body
     val userId = (o \ "userId").as(Id.format[User])
-    val friendId = (o \ "friendSocialId").asOpt(Id.format[SocialUserInfo]).map(Left(_)) getOrElse Right((o \ "friendEmailAddress").as[String])
+    val friendId = (o \ "friendSocialId").asOpt(Id.format[SocialUserInfo]).map(Left(_)) getOrElse Right((o \ "friendEmailAddress").as[EmailAddress])
     wtiCommander.blockRichConnection(userId, friendId)
     Ok
   }

@@ -21,15 +21,15 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{
   ElectronicMail,
-  EmailAddresses,
-  EmailAddressHolder,
+  SystemEmailAddress,
+  EmailAddress,
   PostOffice
 }
 import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.util.{MessageFormatter, TextSegment}
 import com.keepit.common.strings.AbbreviateString
@@ -249,11 +249,11 @@ class ElizaEmailCommander @Inject() (
     }
 
     protoEmailFut.flatMap { protoEmail =>
-      val magicAddress = EmailAddresses.discussion(nonUserThread.accessToken.token)
+      val magicAddress = SystemEmailAddress.discussion(nonUserThread.accessToken.token)
       val email = ElectronicMail (
         from = magicAddress,
         fromName = Some(protoEmail.starterName + " (via Kifi)"),
-        to = Seq[EmailAddressHolder](GenericEmailAddress(nonUserThread.participant.identifier)),
+        to = Seq[EmailAddress](EmailAddress(nonUserThread.participant.identifier)),
         subject = protoEmail.pageTitle,
         htmlBody = htmlBodyMaker(protoEmail),
         category = category,

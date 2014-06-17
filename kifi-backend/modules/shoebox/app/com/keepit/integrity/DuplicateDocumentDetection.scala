@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import play.api.Play.current
 import com.google.inject.Inject
 import com.keepit.scraper.SignatureBuilder
@@ -111,8 +111,8 @@ class DuplicateDocumentDetection @Inject() (
      val elapsedTimeMs = System.currentTimeMillis - startTime
      val result = "Runtime: %sms, Dupes found: %s. See admin panel for details.".format(elapsedTimeMs, dupeDocumentsCount)
 
-     val toAddr = if (play.api.Play.isDev) EmailAddresses.ANDREW else EmailAddresses.ENG
-     systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(toAddr), subject = "Duplication Report",
+     val toAddr = if (play.api.Play.isDev) SystemEmailAddress.ANDREW else SystemEmailAddress.ENG
+     systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(toAddr), subject = "Duplication Report",
        htmlBody = result, category = NotificationCategory.System.ADMIN))
    }
  }

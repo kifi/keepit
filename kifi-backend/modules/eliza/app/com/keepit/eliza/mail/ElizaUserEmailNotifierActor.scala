@@ -6,7 +6,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.{GenericEmailAddress, ElectronicMail, EmailAddresses}
+import com.keepit.common.mail.{EmailAddress, ElectronicMail, SystemEmailAddress}
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.ExtendedThreadItem
@@ -121,11 +121,11 @@ class ElizaUserEmailNotifierActor @Inject() (
             unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
           } yield {
             val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, false, allUsers, allUserImageUrls, None, Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
-            val magicAddress = EmailAddresses.discussion(userThread.accessToken.token)
+            val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
             ElectronicMail(
               from = magicAddress,
               fromName = Some("Kifi Notifications"),
-              to = Seq(GenericEmailAddress(destinationEmail)),
+              to = Seq(EmailAddress(destinationEmail)),
               subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
               htmlBody = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, true, false, true).body,
               category = NotificationCategory.User.MESSAGE

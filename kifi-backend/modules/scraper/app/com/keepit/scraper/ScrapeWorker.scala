@@ -106,7 +106,7 @@ class ScrapeWorker(
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     val count = article match {
-      case Some(a) => a.content.split(" ").filter(!_.isEmpty).size
+      case Some(a) => a.content.split(" ").count(!_.isEmpty)
       case None => -1
     }
 
