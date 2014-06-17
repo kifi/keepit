@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
-import com.keepit.common.mail.LocalPostOffice
+import com.keepit.common.mail.{EmailAddress, LocalPostOffice}
 import com.keepit.common.net.{CallTimeouts, DirectUrl, HttpClient, NonOKResponseException, Request}
 import com.keepit.common.time._
 import com.keepit.model._
@@ -140,7 +140,7 @@ class FacebookSocialGraph @Inject() (
     }
   }
 
-  def extractEmails(parentJson: JsValue): Seq[String] = (parentJson \ "email").asOpt[String].toSeq
+  def extractEmails(parentJson: JsValue): Seq[EmailAddress] = (parentJson \ "email").asOpt[EmailAddress].toSeq
 
   def extractFriends(parentJson: JsValue): Seq[SocialUserInfo] = {
     val friendsArr = ((parentJson \ "friends" \ "data").asOpt[JsArray]

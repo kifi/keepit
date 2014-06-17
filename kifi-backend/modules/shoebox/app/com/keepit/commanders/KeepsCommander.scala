@@ -276,10 +276,11 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource)(implicit context: HeimdalContext):
-      (Seq[KeepInfo], Option[Int]) = {
+  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, separateExisting: Boolean = false)(implicit context: HeimdalContext):
+      (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
     val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (keeps, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+    val (newKeeps, existingKeeps, failures) = keepInterner.internRawBookmarksWithStatus(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+    val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
       case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
@@ -290,7 +291,12 @@ class KeepsCommander @Inject() (
     SafeFuture{
       searchClient.updateURIGraph()
     }
-    (keeps.map(KeepInfo.fromBookmark), addedToCollection)
+    val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
+      (newKeeps, Some(existingKeeps))
+    } else {
+      (newKeeps ++ existingKeeps, None)
+    }
+    (returnedKeeps.map(KeepInfo.fromBookmark), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromBookmark)))
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {

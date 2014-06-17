@@ -6,8 +6,7 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.mail.LocalPostOffice
+import com.keepit.common.mail.{EmailAddress, ElectronicMail, LocalPostOffice}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
@@ -40,6 +39,7 @@ class ShoeboxController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   normUriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   normalizationServiceProvider:Provider[NormalizationService],
   urlPatternRuleRepo: UrlPatternRuleRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -54,7 +54,7 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   keepsCommander: KeepsCommander,
   scrapeInfoRepo:ScrapeInfoRepo,
   imageInfoRepo:ImageInfoRepo,
@@ -70,7 +70,6 @@ class ShoeboxController @Inject() (
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache
 )
   (implicit private val clock: Clock,
-   implicit private val scraperConfig: ScraperConfig,
    private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 
@@ -148,20 +147,20 @@ class ShoeboxController @Inject() (
       val newNormalizedUriResult = Json.fromJson[NormalizedURI](originalJson ++ request.body.as[JsObject])
 
       newNormalizedUriResult.fold({ invalid =>
-        log.error(s"Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}")
-        airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update: $invalid. See logs for more.")
-        None
+        val error = "Could not deserialize NormalizedURI ($uriId) update: $invalid\nOriginal: $originalNormalizedUri\nbody: ${request.body}"
+        airbrake.notify(error)
+        throw new Exception(error)
       }, { normalizedUri =>
-        Some(scraperHelper.saveNormalizedURI(normalizedUri))
-      }).nonEmpty
+        scraperHelper.saveNormalizedURI(normalizedUri)
+      })
     }
     saveResult match {
       case Success(res) =>
-        Ok(Json.toJson(res))
+        Ok
       case Failure(ex) =>
         log.error(s"Could not deserialize NormalizedURI ($uriId) update: $ex\nbody: ${request.body}")
         airbrake.notify(s"Could not deserialize NormalizedURI ($uriId) update", ex)
-        Ok(Json.toJson(false))
+        throw ex
     }
   }
 
@@ -230,14 +229,21 @@ class ShoeboxController @Inject() (
     normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
 
       (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
-        val bestReference = newReferenceOption.map { newReferenceId => db.readOnly { implicit session => normUriRepo.get(newReferenceId) } } getOrElse scrapedUri
+        val bestReference = newReferenceOption.map { newReferenceId =>
+          db.readOnly { implicit session =>
+            normUriRepo.get(newReferenceId)
+          }
+        } getOrElse scrapedUri
         // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
         bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
           alternateUrls.foreach { alternateUrl =>
-            db.readWrite { implicit session =>
-              normUriRepo.getByUri(alternateUrl) match {
-                case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
-                case _ => normUriRepo.internByUri(alternateUrl, bestCandidate)
+            val uri = db.readOnly { implicit session =>
+              normUriRepo.getByUri(alternateUrl)
+            }
+            uri match {
+              case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
+              case _ => db.readWrite { implicit session =>
+                normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
               }
             }
           }
@@ -320,7 +326,7 @@ class ShoeboxController @Inject() (
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     val uri = db.readWrite(attempts = 1) { implicit s =>  //using cache
-      normUriRepo.internByUri(url, NormalizationCandidate(o): _*)
+      normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
     if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }}
@@ -469,7 +475,7 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
-  def getEmailAddressById(id: Id[EmailAddress]) = Action { request =>
+  def getEmailAddressById(id: Id[UserEmailAddress]) = Action { request =>
     val address = db.readOnly { implicit s => emailAddressRepo.get(id).address }
     Ok(Json.toJson(address))
   }
@@ -627,7 +633,7 @@ class ShoeboxController @Inject() (
   }
 
   def getVerifiedAddressOwners() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val addresses = (request.body \ "addresses").as[Seq[String]]
+    val addresses = (request.body \ "addresses").as[Seq[EmailAddress]]
     val owners = db.readOnly { implicit session =>
       for {
         address <- addresses
@@ -636,8 +642,8 @@ class ShoeboxController @Inject() (
         }
       } yield (address -> userId)
     }
-    implicit val userIdFormat = Id.format[User]
-    Ok(Json.toJson(owners.toMap))
+    val json = Json.toJson(owners.map { case (address, userId) => address.address -> userId }.toMap)
+    Ok(json)
   }
 
   def getAllURLPatternRules() = Action { request =>

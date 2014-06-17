@@ -25,6 +25,7 @@ import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.commanders.LocalRichConnectionCommander
+import com.keepit.common.mail.EmailAddress
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -136,7 +137,7 @@ class ABookController @Inject() (
 
   def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
     // todo: parse email
-    abookCommander.getEContactByEmailDirect(userId, email) match {
+    abookCommander.getEContactByEmailDirect(userId, EmailAddress(email)) match {
       case Some(js) => Ok(js)
       case _ => Ok(JsNull)
     }
@@ -305,7 +306,7 @@ class ABookController @Inject() (
 
   // todo(ray): move to commander
   def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
-    @inline def mkId(email:String) = s"email/$email"
+    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
     val contacts = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getByUserId(userId)
     }

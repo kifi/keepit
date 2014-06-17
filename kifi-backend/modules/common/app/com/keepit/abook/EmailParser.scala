@@ -2,6 +2,7 @@ package com.keepit.abook
 
 import com.keepit.common.net.Host
 import scala.util.parsing.combinator.RegexParsers
+import com.keepit.common.mail.EmailAddress
 
 case class Email(local:LocalPart, host:Host) {
   val domain = host.domain.mkString(".").trim
@@ -36,6 +37,8 @@ object Email {
   def apply(s:String) = {
     EmailParser.parse[Email](EmailParser.email, s).getOrElse(throw new IllegalArgumentException(s"Cannot parse $s"))
   }
+
+  implicit def toEmailAddress(email: Email): EmailAddress = EmailAddress(email.toString)
 }
 
 case class EComment(c:String) {

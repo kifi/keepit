@@ -29,7 +29,7 @@ object BookmarkStore {
 
 class BookmarkStore(
     indexDirectory: IndexDirectory,
-    airbrake: AirbrakeNotifier)
+    val airbrake: AirbrakeNotifier)
   extends Indexer[Keep, Keep, BookmarkStore](indexDirectory) {
 
   import BookmarkStoreFields._

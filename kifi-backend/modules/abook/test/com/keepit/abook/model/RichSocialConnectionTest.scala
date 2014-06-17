@@ -5,6 +5,7 @@ import com.keepit.abook.ABookTestInjector
 import com.keepit.model.{Invitation, EContact, SocialUserInfo, User}
 import com.keepit.common.db.Id
 import com.keepit.social.{SocialId, SocialNetworks}
+import com.keepit.common.mail.EmailAddress
 
 class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
@@ -44,7 +45,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       fullName = "Marvin"
     )
 
-    val contact42 = EContact(userId = kifiLéo, email = "grassfed42@organicintegers.com", name = Some("FortyTwo"))
+    val contact42 = EContact(userId = kifiLéo, email = EmailAddress("grassfed42@organicintegers.com"), name = Some("FortyTwo"))
 
     "intern and retrieve rich social network connections" in {
       val léoToMarvin = db.readWrite { implicit session =>

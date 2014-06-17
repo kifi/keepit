@@ -146,17 +146,18 @@ class KeepsController @Inject() (
     }
   }
 
-  def keepMultiple() = JsonAction.authenticated { request =>
+  def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
         val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
-        log.info(s"kept ${keeps.size} new keeps")
+        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, separateExisting)
+        log.info(s"kept ${keeps.size} keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
+          "failures" -> failures,
           "addedToCollection" -> addedToCollection
-        ))
+        ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> keeps)) getOrElse Json.obj()))
       } getOrElse {
         log.error(s"can't parse object from request ${request.body} for user ${request.user}")
         BadRequest(Json.obj("error" -> "Could not parse object from request body"))

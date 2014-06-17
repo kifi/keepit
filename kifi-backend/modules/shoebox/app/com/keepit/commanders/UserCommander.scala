@@ -39,13 +39,13 @@ import com.keepit.model.SocialConnection
 import play.api.libs.json.JsString
 import com.keepit.model.SocialUserInfoUserKey
 import scala.Some
-import com.keepit.model.EmailAddress
+import com.keepit.model.UserEmailAddress
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.UserIdentity
 import com.keepit.heimdal.ContextStringData
 import play.api.libs.json.JsSuccess
 import com.keepit.model.SocialUserConnectionsKey
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.commanders.emails.EmailOptOutCommander
@@ -60,12 +60,12 @@ object BasicSocialUser {
 
 case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
 
-case class EmailInfo(address: String, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
+case class EmailInfo(address: EmailAddress, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
 object EmailInfo {
   implicit val format = new Format[EmailInfo] {
     def reads(json: JsValue): JsResult[EmailInfo] = {
       Try(new EmailInfo(
-        (json \ "address").as[String],
+        (json \ "address").as[EmailAddress],
         (json \ "isPrimary").asOpt[Boolean].getOrElse(false),
         (json \ "isVerified").asOpt[Boolean].getOrElse(false),
         (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false)
@@ -94,7 +94,7 @@ case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthe
 class UserCommander @Inject() (
   db: Database,
   userRepo: UserRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   userValueRepo: UserValueRepo,
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
@@ -131,7 +131,7 @@ class UserCommander @Inject() (
 
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def validateEmails(addresses: EmailInfo*): Boolean = {
-    !addresses.map(em => emailRegex.findFirstIn(em.address).isDefined).contains(false)
+    !addresses.map(em => emailRegex.findFirstIn(em.address.address).isDefined).contains(false)
   }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
@@ -157,7 +157,7 @@ class UserCommander @Inject() (
         ConnectionInfo(basicUserRepo.load(friendId), friendId, unfriended, searchFriends.contains(friendId))
       }
     }
-    (infos.drop(page * pageSize).take(pageSize), infos.size)
+    (infos.drop(page * pageSize).take(pageSize), infos.filterNot(_.unfriended).size)
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
@@ -209,7 +209,7 @@ class UserCommander @Inject() (
       val basicUser = basicUserRepo.load(user.id.get)
       val description =  userValueRepo.getValueStringOpt(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
-      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email").map(EmailAddress(_))
       val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
@@ -284,7 +284,7 @@ class UserCommander @Inject() (
           val user = userRepo.get(userId)
           postOffice.sendMail(ElectronicMail(
             senderUserId = None,
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
             to = List(id2Email(userId)),
             subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
@@ -314,7 +314,7 @@ class UserCommander @Inject() (
     }}
   }
 
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddressHolder] = None): Unit = {
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
     val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
     if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
@@ -322,7 +322,7 @@ class UserCommander @Inject() (
       if (withVerification) {
         val url = fortytwoConfig.applicationBaseUrl
         db.readWrite { implicit session =>
-          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get.address).get.withVerificationCode(clock.now))
+          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
 
@@ -338,7 +338,7 @@ class UserCommander @Inject() (
               if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(targetEmailOpt.get),
             category = category,
             subject = subj,
@@ -352,7 +352,7 @@ class UserCommander @Inject() (
           val emailAddr = emailRepo.getByUser(newUser.id.get)
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
           val mail = ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
+            from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(emailAddr),
             category = NotificationCategory.User.WELCOME,
             subject = "Let's get started with Kifi",
@@ -394,7 +394,7 @@ class UserCommander @Inject() (
   }
 
   def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
-    @inline def mkId(email:String) = s"email/$email"
+    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
     @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
       contactIdOpt flatMap { contactId =>
         db.readOnly { implicit s =>
@@ -496,7 +496,7 @@ class UserCommander @Inject() (
 
       postOffice.sendMail(ElectronicMail(
         senderUserId = None,
-        from = EmailAddresses.NOTIFICATIONS,
+        from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName} (via Kifi)"),
         to = List(destinationEmail),
         subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
@@ -531,7 +531,7 @@ class UserCommander @Inject() (
       val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
       postOffice.sendMail(ElectronicMail(
         senderUserId = None,
-        from = EmailAddresses.NOTIFICATIONS,
+        from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName} (via Kifi)"),
         to = List(destinationEmail),
         subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
@@ -713,9 +713,9 @@ class UserCommander @Inject() (
   }
 
 
-  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[EmailAddress]], emails: Seq[EmailInfo]): Unit = {
+  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[UserEmailAddress]], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
-      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email")
+      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email").map(EmailAddress(_))
       val uniqueEmailStrings = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmailStrings contains em.address)
       // Remove missing emails
@@ -727,19 +727,19 @@ class UserCommander @Inject() (
           if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
             userValueRepo.clearValue(userId, "pending_primary_email")
           }
-          emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+          emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
         }
       }
       // Add new emails
       for (address <- uniqueEmailStrings -- existing.map(_.address)) {
         if (emailRepo.getByAddressOpt(address).isEmpty) {
-          val emailAddr = emailRepo.save(EmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
+          val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
           val siteUrl = fortytwoConfig.applicationBaseUrl
           val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
           postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS,
-            to = Seq(GenericEmailAddress(address)),
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Seq(address),
             subject = "Kifi.com | Please confirm your email address",
             htmlBody = views.html.email.verifyEmail(firstName, verifyUrl).body,
             category = NotificationCategory.User.EMAIL_CONFIRMATION
@@ -763,7 +763,7 @@ class UserCommander @Inject() (
       }
 
       userValueRepo.getValueStringOpt(userId, "pending_primary_email").map { pp =>
-        emailRepo.getByAddressOpt(pp) match {
+        emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
             if (em.verified && em.address == pp) {
               updateUserPrimaryEmail(em)
@@ -774,12 +774,12 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUserPrimaryEmail(primaryEmail: EmailAddress)(implicit session: RWSession) = {
+  def updateUserPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession) = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
     val currentUser = userRepo.get(primaryEmail.userId)
     userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get)))
-    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address))
+    heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {

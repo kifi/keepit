@@ -34,7 +34,7 @@ object UserIndexer {
 
 class UserIndexer(
   indexDirectory: IndexDirectory,
-  airbrake: AirbrakeNotifier,
+  override val airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient
   ) extends Indexer[User, User, UserIndexer](indexDirectory) {
 

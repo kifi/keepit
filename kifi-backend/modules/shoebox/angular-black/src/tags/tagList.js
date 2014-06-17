@@ -29,8 +29,8 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
         scope.tagTypeAheadResults = [];
         scope.shouldGiveFocus = false;
 
-        tagService.fetchAll().then(function (res) {
-          scope.allTags = res;
+        tagService.fetchAll().then(function () {
+          scope.allTags = tagService.allTags;
           filterTags(null);
         });
 

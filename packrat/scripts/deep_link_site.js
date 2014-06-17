@@ -1,4 +1,4 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|(www\.)?kifi\.com)\/(?!r\/).*/
+// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|(?:www|preview)\.kifi\.com)\/(?!r\/).*/
 // @require scripts/api.js
 
 document.addEventListener('click', function (e) {

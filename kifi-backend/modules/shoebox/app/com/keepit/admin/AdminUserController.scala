@@ -20,7 +20,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.model.{EmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
+import com.keepit.model.{UserEmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
 
@@ -83,7 +83,7 @@ class AdminUserController @Inject() (
     searchFriendRepo: SearchFriendRepo,
     userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
-    emailRepo: EmailAddressRepo,
+    emailRepo: UserEmailAddressRepo,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
@@ -293,7 +293,7 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[EmailAddress])(implicit s: RSession): Seq[User] = {
+  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val bySocial: Seq[Id[User]] = socialUserInfos map { info =>
       invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
     } flatten
@@ -393,7 +393,7 @@ class AdminUserController @Inject() (
 
     // We want to throw an exception (.get) if `emails' was not passed in. As we expand this, we should add Play! form validation
     val emailList = form.get("emails").get.split(",").map(_.toLowerCase().trim()).toList.distinct.map(em => em match {
-      case s if s.length > 5 => Some(s)
+      case s if s.length > 5 => Some(EmailAddress(s))
       case _ => None
     }).flatten
 
@@ -405,14 +405,14 @@ class AdminUserController @Inject() (
           case Some(addr) => addr // We're good! It already exists
           case None => // Create a new one
             log.info("Adding email address %s to userId %s".format(address, userId.toString))
-            emailRepo.save(EmailAddress(address = address, userId = userId))
+            emailRepo.save(UserEmailAddress(address = address, userId = userId))
         }
       }).toSet
 
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        emailRepo.save(removedEmail.withState(EmailAddressStates.INACTIVE))
+        emailRepo.save(removedEmail.withState(UserEmailAddressStates.INACTIVE))
       }
     }
 
@@ -645,7 +645,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
-        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address) }
+        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address.address) }
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -769,13 +769,13 @@ class AdminUserController @Inject() (
             val currentEmail = emailRepo.getByUser(user.id.get)
             if (currentEmail.verified) currentEmail.address
             else {
-              val socialEmail = socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get
+              val socialEmail = EmailAddress(socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get)
               require(currentEmail.address == socialEmail, "No verified email")
-              val updatedEmail = emailRepo.save(currentEmail.withState(EmailAddressStates.VERIFIED))
+              val updatedEmail = emailRepo.save(currentEmail.withState(UserEmailAddressStates.VERIFIED))
               userCommander.updateUserPrimaryEmail(updatedEmail)
               updatedEmail.address
             }
-          },
+          }.address,
           passwordInfo = pInfo,
           firstName = user.firstName,
           lastName = user.lastName,
@@ -807,7 +807,7 @@ class AdminUserController @Inject() (
     val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
     val title = "FortyTwo Connections to be created"
     val msg = toBeCreated.mkString("\n")
-    systemAdminMailSender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.LÉO),
+    systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
       subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     Ok(json)
   }}
@@ -835,7 +835,7 @@ class AdminUserController @Inject() (
         userSessionRepo.invalidateByUser(userId) // User Session
         kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
         userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
-        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(EmailAddressStates.INACTIVE)) } // Email addresses
+        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
         userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmailId = None)) // User
       }
 

@@ -27,6 +27,7 @@ import com.keepit.scraper.embedly.EmbedlyCommander
 class ScrapeWorker(
   airbrake: AirbrakeNotifier,
   config: ScraperConfig,
+  schedulerConfig: ScraperSchedulerConfig,
   httpFetcher: HttpFetcher,
   httpClient: HttpClient,
   extractorFactory: ExtractorFactory,
@@ -39,6 +40,7 @@ class ScrapeWorker(
 ) extends Logging {
 
   implicit val myConfig = config
+  implicit val scheduleConfig = schedulerConfig
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
   private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = try {
@@ -57,7 +59,7 @@ class ScrapeWorker(
   private def recordScrapeFailed(uri: NormalizedURI): Unit = {
     helper.syncGetNormalizedUri(uri).foreach { latestUri =>
       if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
-        helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
+        helper.syncUpdateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
       }
     }
   }
@@ -85,9 +87,9 @@ class ScrapeWorker(
   }
 
   private def shouldUpdateScreenshot(uri: NormalizedURI) = {
-    uri.screenshotUpdatedAt map { update =>
-      Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays() >= 5
-    } getOrElse true
+    uri.screenshotUpdatedAt exists { update =>
+      Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays >= 5
+    }
   }
 
   private def needReIndex(latestUri: NormalizedURI, redirectProcessedUri: NormalizedURI, article: Article, signature: Signature, info: ScrapeInfo): Boolean = {
@@ -95,7 +97,7 @@ class ScrapeWorker(
     def restrictionChanged = latestUri.restriction != redirectProcessedUri.restriction
     def scrapeFailed = latestUri.state == NormalizedURIStates.SCRAPE_FAILED
     def activeURI = latestUri.state == NormalizedURIStates.ACTIVE
-    def signatureChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.intervalConfig.minInterval / info.interval))
+    def signatureChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (schedulerConfig.intervalConfig.minInterval / info.interval))
 
     titleChanged || restrictionChanged || scrapeFailed || activeURI || signatureChanged
   }
@@ -104,11 +106,11 @@ class ScrapeWorker(
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     val count = article match {
-      case Some(a) => a.content.split(" ").filter(!_.isEmpty).size
+      case Some(a) => a.content.split(" ").count(!_.isEmpty)
       case None => -1
     }
 
-    log.info(s"updating wordCount cache for uriId = ${uriId}, word count = ${count}")
+    log.info(s"updating wordCount cache for uriId = $uriId, word count = $count")
     wordCountCache.set(NormalizedURIWordCountKey(uriId), count)
   }
 
@@ -144,7 +146,7 @@ class ScrapeWorker(
       log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
       if (shouldUpdateScreenshot(scrapedURI)) {
-        scrapedURI.id map (shoeboxClient.updateScreenshots(_))
+        scrapedURI.id map shoeboxClient.updateScreenshots
       }
 
       if (shouldUpdateImage(latestUri, scrapedURI, pageInfoOpt)) {
@@ -166,7 +168,11 @@ class ScrapeWorker(
     val unscrapableURI = {
       helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
       val updatedUri = processRedirects(latestUri, redirects)
-      if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) updatedUri else helper.syncSaveNormalizedUri(updatedUri.withState(NormalizedURIStates.UNSCRAPABLE))
+      if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) updatedUri
+      else {
+        helper.syncUpdateNormalizedURIState(updatedUri.id.get, NormalizedURIStates.UNSCRAPABLE)
+        updatedUri.withState(NormalizedURIStates.UNSCRAPABLE)
+      }
     }
     log.debug(s"[processURI] (${latestUri.url}) not scrapable; unscrapableURI=(${unscrapableURI.id}, ${unscrapableURI.state}, ${unscrapableURI.url}})")
 
@@ -178,7 +184,7 @@ class ScrapeWorker(
   private def handleNotModified(url: String, info: ScrapeInfo): Option[Article] = {
     // update the scrape schedule, uri is not changed
     val updatedInfo = helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
-    log.debug(s"[processURI] (${url} not modified; updatedInfo=(${updatedInfo})")
+    log.debug(s"[processURI] ($url not modified; updatedInfo=($updatedInfo)")
     None
   }
 
@@ -205,14 +211,10 @@ class ScrapeWorker(
       destinationUrl = None)
     articleStore += (latestUri.id.get -> article)
     // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-    val errorURI = {
-      helper.syncSaveScrapeInfo(info.withFailure())
-      helper.syncSaveNormalizedUri(latestUri.withState(NormalizedURIStates.SCRAPE_FAILED))
-    }
-    log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${errorURI.id}, ${errorURI.state}, ${errorURI.url})")
-
-    updateWordCountCache(errorURI.id.get, None)
-
+    helper.syncSaveScrapeInfo(info.withFailure())
+    helper.syncUpdateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
+    log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${latestUri.id}, ${latestUri.state}, ${latestUri.url})")
+    updateWordCountCache(latestUri.id.get, None)
     None
   }
 
@@ -275,7 +277,7 @@ class ScrapeWorker(
           }
         }
       } else {
-        log.debug(s"uri ${normalizedUri} is exempted from sensitive check!")
+        log.debug(s"uri $normalizedUri is exempted from sensitive check!")
       }
     }
   }
@@ -381,11 +383,10 @@ class ScrapeWorker(
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
     redirects.dropWhile(!_.isLocatedAt(uri.url)) match {
-      case Seq(redirect, _*) if !redirect.isPermanent || hasFishy301(uri) => {
+      case Seq(redirect, _*) if !redirect.isPermanent || hasFishy301(uri) =>
         if (redirect.isPermanent) log.warn(s"Found fishy $redirect for $uri") else log.warn(s"Found non permanent $redirect for $uri")
         updateRedirectRestriction(uri, redirect)
-      }
-      case permanentsRedirects => {
+      case permanentsRedirects =>
         HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
           val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
           log.debug(s"Found permanent $validRedirect for $uri")
@@ -394,7 +395,6 @@ class ScrapeWorker(
           permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
           removeRedirectRestriction(uri)
         }
-      }
     }
   }
 
@@ -412,10 +412,9 @@ class ScrapeWorker(
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
     lazy val isFishy = helper.syncGetLatestKeep(movedUri.url).filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
       case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
-      case Some(importedBookmark) => {
+      case Some(importedBookmark) =>
         val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString()
         (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)
-      }
       case None => false
     }
     hasFishy301Restriction || isFishy
@@ -444,7 +443,7 @@ class ScrapeWorker(
   private def isNonSensitive(url: String): Future[Boolean] = {
     shoeboxClient.getAllURLPatterns().map{ patterns =>
       val pat = patterns.find(rule => url.matches(rule.pattern))
-      pat.map{_.nonSensitive}.getOrElse(false)
+      pat.exists(_.nonSensitive)
     }
   }
 }

@@ -35,11 +35,11 @@ class HomeController @Inject() (
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
-  emailRepo: EmailAddressRepo,
+  emailRepo: UserEmailAddressRepo,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices,
@@ -225,7 +225,7 @@ class HomeController @Inject() (
     }
     Ok(views.html.website.onboarding.userRequestReceived2(
       user = user,
-      email = email,
+      email = email.map(_.address),
       justVerified = request.queryString.get("m").exists(_.headOption == Some("1")),
       friendsOnKifi = friendsOnKifi)).discardingCookies(DiscardingCookie("inv"))
   }

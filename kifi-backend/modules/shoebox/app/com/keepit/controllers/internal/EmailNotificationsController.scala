@@ -3,7 +3,6 @@ package com.keepit.controllers.internal
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.google.inject.Inject
 import com.keepit.common.time.Clock
-import com.keepit.scraper.ScraperConfig
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
@@ -17,7 +16,6 @@ import org.joda.time.DateTime
 class EmailNotificationsController @Inject() (
    emailNotificationsCommander: EmailNotificationsCommander
 )  (implicit private val clock: Clock,
-    implicit private val scraperConfig: ScraperConfig,
     private val fortyTwoServices: FortyTwoServices)
   extends ShoeboxServiceController with Logging {
 

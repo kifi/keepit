@@ -13,9 +13,9 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val mail = inject[Database].readWrite { implicit s =>
           inject[ElectronicMailRepo].save(ElectronicMail(
-              from = EmailAddresses.ENG,
+              from = SystemEmailAddress.ENG,
               fromName = Some("Marvin"),
-              to = List(EmailAddresses.ENG),
+              to = List(SystemEmailAddress.ENG),
               subject = "Email from test case",
               htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
               category = NotificationCategory.System.HEALTHCHECK))

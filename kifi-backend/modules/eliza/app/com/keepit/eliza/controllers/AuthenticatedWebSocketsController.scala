@@ -216,7 +216,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     asyncIteratee(streamSession, versionOpt) { jsArr =>
       Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
         val action = jsArr.value(0).as[String]
-        statsd.time(s"websocket.handler.$action", ALWAYS) {
+        statsd.time(s"websocket.handler.$action", ALWAYS) { t =>
           val timer = accessLog.timer(WS_IN)
           val payload = jsArr.value.tail
           try {

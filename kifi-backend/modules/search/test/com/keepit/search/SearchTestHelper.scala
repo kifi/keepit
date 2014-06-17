@@ -53,21 +53,21 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
-    val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[ShoeboxServiceClient])
+    val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val uriGraphIndexers = activeShards.local.map{ shard =>
       val bookmarkStore = new BookmarkStore(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectory, bookmarkStore, inject[AirbrakeNotifier])
       (shard -> uriGraphIndexer)
     }
-    val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[ShoeboxServiceClient])
+    val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val collectionIndexers = activeShards.local.map{ shard =>
       val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, collectionNameIndexer, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)
     }
-    val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[ShoeboxServiceClient])
+    val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val userIndexer = new UserIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphIndexer = new UserGraphIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
@@ -83,7 +83,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       userGraphsSearcherFactory,
       shardedUriGraphIndexer,
       shardedCollectionIndexer,
-      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait]),
+      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier])), inject[MonitoredAwait]),
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],

@@ -77,7 +77,7 @@ class ServiceInstance(object):
   def __init__(self, instance):
     self.aws_instance = instance
 
-    self.name = instance.tags["Name"]
+    self.name = instance.tags.get("Name", None)
     self.service = instance.tags.get("Service", None)
     self.mode = instance.tags.get("Mode", "primary?")
     self.type = instance.instance_type
@@ -237,7 +237,7 @@ if __name__=="__main__":
         time.sleep(15)
       lock.unlock()
       log("Deployment Complete")
-  except e, Exception:
+  except Exception, e:
     log("FATAL ERROR: " + str(e))
-    raise e
+    raise
 

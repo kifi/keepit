@@ -1,11 +1,11 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, ElectronicMailRepo}
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal._
 import com.keepit.common.performance.timing
-import com.keepit.model.{NotificationCategory, EmailAddressRepo}
+import com.keepit.model.{NotificationCategory, UserEmailAddressRepo}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.social.NonUserKinds
@@ -14,7 +14,7 @@ class SendgridCommander @Inject() (
   db: Database,
   systemAdminMailSender: SystemAdminMailSender,
   heimdalClient: HeimdalServiceClient,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   electronicMailRepo: ElectronicMailRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory
 ) extends Logging {
@@ -43,8 +43,8 @@ class SendgridCommander @Inject() (
         }
         systemAdminMailSender.sendMail(
           ElectronicMail(
-            from = EmailAddresses.ENG,
-            to = List(EmailAddresses.SUPPORT, EmailAddresses.SENDGRID),
+            from = SystemEmailAddress.ENG,
+            to = List(SystemEmailAddress.SUPPORT, SystemEmailAddress.SENDGRID),
             subject = s"Sendgrid event [$eventType]",
             htmlBody = htmlBody,
             category = NotificationCategory.System.ADMIN))
@@ -75,7 +75,7 @@ class SendgridCommander @Inject() (
       if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
         heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, event.timestamp))
       } else if (NotificationCategory.NonUser.all.contains(email.category)) {
-        heimdalClient.trackEvent(NonUserEvent(address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
+        heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
       }
     }
   }

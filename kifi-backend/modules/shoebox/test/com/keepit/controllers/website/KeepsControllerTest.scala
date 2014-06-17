@@ -603,6 +603,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
             "keeps":[{"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false},
                      {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true},
                      {"id":"${externalIdForTitle("title 31")}","title":"title 31","url":"http://www.hi.com31","isPrivate":false}],
+            "failures":[],
             "addedToCollection":3
           }
         """)

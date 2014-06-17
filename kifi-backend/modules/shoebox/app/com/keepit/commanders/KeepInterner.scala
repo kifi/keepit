@@ -12,18 +12,18 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.normalizer.NormalizationCandidate
+import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 import play.api.libs.json.Json
 import scala.util.{Try, Success, Failure, Random}
 
-case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean)
+case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
 @Singleton
 class KeepInterner @Inject() (
   db: Database,
-  uriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   scraper: ScrapeSchedulerPlugin,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -116,14 +116,22 @@ class KeepInterner @Inject() (
   }
 
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
+    (newKeeps ++ existingKeeps, failures)
+  }
+
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
-    val newKeeps = persistedBookmarksWithUris collect {
-      case InternedUriAndKeep(bm, uri, isNewBookmark) if isNewBookmark => bm
+    val createdKeeps = persistedBookmarksWithUris collect {
+      case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
+    }
+    val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
+      case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
     }
 
-    keptAnalytics.keptPages(userId, newKeeps, context)
-    keepAttribution(userId, newKeeps)
-    (persistedBookmarksWithUris.map(_.bookmark), failures)
+    keptAnalytics.keptPages(userId, createdKeeps, context)
+    keepAttribution(userId, createdKeeps)
+    (newKeeps, existingKeeps, failures)
   }
 
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
@@ -162,7 +170,7 @@ class KeepInterner @Inject() (
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = try {
-        uriRepo.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+        normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
       }
@@ -175,8 +183,8 @@ class KeepInterner @Inject() (
         scraper.scheduleScrape(uri, date)
       }
 
-      val (isNewKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
-      Success(InternedUriAndKeep(bookmark, uri, isNewKeep))
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
+      Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is a javascript command: ${rawBookmark.url}"))
     }
@@ -209,7 +217,7 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
     }
 
-    (isNewKeep, internedKeep)
+    (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
 }

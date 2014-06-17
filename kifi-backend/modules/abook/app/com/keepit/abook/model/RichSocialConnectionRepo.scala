@@ -10,19 +10,20 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType}
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import scala.slick.jdbc.StaticQuery.interpolation
 import com.keepit.common.KestrelCombinator
+import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])
 trait RichSocialConnectionRepo extends Repo[RichSocialConnection] {
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection
-  def recordInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String], invitationNumber: Int = 1)(implicit session: RWSession): Unit
-  def cancelInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
-  def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit
-  def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit
-  def getByUserAndSocialFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection]
+  def recordInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress], invitationNumber: Int = 1)(implicit session: RWSession): Unit
+  def cancelInvitation(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RWSession): Unit
+  def recordFriendUserId(friendId: Either[Id[SocialUserInfo], EmailAddress], friendUserId: Id[User])(implicit session: RWSession): Unit
+  def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RWSession): Unit
+  def getByUserAndSocialFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RSession): Option[RichSocialConnection]
   def getByUserAndKifiFriend(userId: Id[User], kifiFriendId: Id[User])(implicit session: RSession): Seq[RichSocialConnection]
   def dedupedWTIForUser(user: Id[User], howMany: Int)(implicit session: RSession): Seq[Id[SocialUserInfo]]
   def removeRichConnection(userId: Id[User], userSocialId: Id[SocialUserInfo], friend: Id[SocialUserInfo])(implicit session: RWSession): Unit
-  def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int
+  def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RSession): Int
   def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int)(implicit session: RSession): Seq[RichSocialConnection]
   def getKifiFriends(userId: Id[User])(implicit session: RSession): Set[RichSocialConnection]
 }
@@ -42,7 +43,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     def userSocialId = column[Id[SocialUserInfo]]("user_social_id", O.Nullable)
     def connectionType = column[SocialNetworkType]("connection_type", O.NotNull)
     def friendSocialId = column[Id[SocialUserInfo]]("friend_social_id", O.Nullable)
-    def friendEmailAddress = column[String]("friend_email_address", O.Nullable)
+    def friendEmailAddress = column[EmailAddress]("friend_email_address", O.Nullable)
     def friendUserId = column[Id[User]]("friend_user_id", O.Nullable)
     def friendName = column[String]("friend_name", O.Nullable)
     def commonKifiFriendsCount = column[Int]("common_kifi_friends_count", O.NotNull)
@@ -62,7 +63,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   private val Email: SocialNetworkType = SocialNetworks.EMAIL
   private val FortyTwo: SocialNetworkType = SocialNetworks.FORTYTWO
 
-  def getByUserAndSocialFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Option[RichSocialConnection] = friendId match {
+  def getByUserAndSocialFriend(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RSession): Option[RichSocialConnection] = friendId match {
     case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row).firstOption()
     case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row).firstOption()
   }
@@ -119,7 +120,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   } tap { _ => sanityCheck(userId) }
 
-  private def incrementFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], friendUserId: Option[Id[User]], connectionType: SocialNetworkType)(implicit session: RWSession): (Int, Int) = {
+  private def incrementFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress], friendUserId: Option[Id[User]], connectionType: SocialNetworkType)(implicit session: RWSession): (Int, Int) = {
     if (connectionType == FortyTwo) {
       recordDirectedKifiConnection(userId, friendUserId.get)
       val userKifiFriends = getKifiFriends(userId).flatMap(_.friendUserId)
@@ -148,12 +149,12 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
-  private def countInviters(friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = friendId match {
+  private def countInviters(friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RSession): Int = friendId match {
     case Left(friendSocialId) => (for { row <- rows if row.state === RichSocialConnectionStates.ACTIVE && row.friendSocialId === friendSocialId } yield row.invitedBy).firstOption() getOrElse 0
     case Right(friendEmailAddress) => (for { row <- rows if row.state === RichSocialConnectionStates.ACTIVE && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitedBy).firstOption() getOrElse 0
   }
 
-  private def incrementKifiFriendsCounts(friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
+  private def incrementKifiFriendsCounts(friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RWSession): Int = {
     val kifiFriendsCount = friendId match {
       case Left(friendSocialId) => sqlu"UPDATE rich_social_connection SET kifi_friends_count = kifi_friends_count + 1 WHERE friend_social_id = $friendSocialId AND state='active'"
       case Right(friendEmailAddress) => sqlu"UPDATE rich_social_connection SET kifi_friends_count = kifi_friends_count + 1 WHERE connection_type = '#${Email}' AND friend_email_address = $friendEmailAddress AND state='active'"
@@ -164,7 +165,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     sqlu"UPDATE rich_social_connection SET kifi_friends_count = kifi_friends_count - 1 WHERE friend_social_id = $friendId AND state='active'".first()
   }
 
-  private def incrementCommonKifiFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Int = {
+  private def incrementCommonKifiFriendsCounts(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RWSession): Int = {
     val kifiFriendsIdSet: Set[Id[User]] = getKifiFriends(userId).flatMap(_.friendUserId)
     if (kifiFriendsIdSet.isEmpty) {
       0
@@ -252,7 +253,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
-  def recordInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String], invitationNumber: Int)(implicit session: RWSession): Unit = {
+  def recordInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress], invitationNumber: Int)(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => {
         val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent === invitationNumber - 1 } yield row.invitationsSent).update(invitationNumber)
@@ -269,7 +270,7 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
-  def cancelInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
+  def cancelInvitation(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => {
         val updated = (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId && row.invitationsSent > 0} yield row.invitationsSent).update(0)
@@ -286,21 +287,21 @@ class RichSocialConnectionRepoImpl @Inject() (
     }
   }
 
-  def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RSession): Int = {
+  def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RSession): Int = {
     friendId match {
       case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId} yield row.invitationsSent)
       case Right(friendEmailAddress) => (for { row <- rows if row.userId === userId && row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.invitationsSent)
     }
   }.firstOption getOrElse 0
 
-  def recordFriendUserId(friendId: Either[Id[SocialUserInfo], String], friendUserId: Id[User])(implicit session: RWSession): Unit = {
+  def recordFriendUserId(friendId: Either[Id[SocialUserInfo], EmailAddress], friendUserId: Id[User])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => (for { row <- rows if row.friendSocialId === friendSocialId } yield row.friendUserId).update(friendUserId)
       case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.friendEmailAddress === friendEmailAddress } yield row.friendUserId).update(friendUserId)
     }
   }
 
-  def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], String])(implicit session: RWSession): Unit = {
+  def block(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress])(implicit session: RWSession): Unit = {
     friendId match {
       case Left(friendSocialId) => (for { row <- rows if row.userId === userId && row.friendSocialId === friendSocialId } yield row.blocked).update(true)
       case Right(friendEmailAddress) => (for { row <- rows if row.connectionType === Email && row.userId === userId && row.friendEmailAddress === friendEmailAddress } yield row.blocked).update(true)

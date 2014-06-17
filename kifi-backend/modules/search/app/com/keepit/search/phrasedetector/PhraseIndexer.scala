@@ -17,7 +17,7 @@ abstract class PhraseIndexer(indexDirectory: IndexDirectory) extends Indexer[Phr
 
 class PhraseIndexerImpl(
   indexDirectory: IndexDirectory,
-  airbrake: AirbrakeNotifier,
+  override val airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory) with Logging  {
 
   override val commitBatchSize = 1000
