@@ -57,7 +57,7 @@ class NormalizedURIInterner @Inject() (
           }
           statsd.timing("normalizedURIRepo.internByUri.in_db", timer, ALWAYS)
           uri
-        case Success(Right(prenormalizedUrl)) => {
+        case Success(Right(prenormalizedUrl)) =>
           val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
           urlHashCache.get(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(prenormalizedUrl))) match {
             case Some(cached) =>
@@ -94,8 +94,7 @@ class NormalizedURIInterner @Inject() (
               statsd.timing("normalizedURIRepo.internByUri.new.url_save", timer, ALWAYS)
               newUri
           }
-        }
-        case Failure(ex) => {
+        case Failure(ex) =>
           /**
            * if we can't parse a url we should not let it get to the db.
            * its scraping should stop as well and it will be removed from cache.
@@ -119,7 +118,6 @@ class NormalizedURIInterner @Inject() (
               }
               throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
           }
-        }
       }
       log.debug(s"[internByUri($url)] resUri=$resUri")
       resUri
