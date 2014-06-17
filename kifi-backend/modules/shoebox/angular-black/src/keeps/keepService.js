@@ -192,19 +192,18 @@ angular.module('kifi.keepService', [
       var existing = [];
       var nonExisting = [];
       keeps.forEach(function (keep) {
-        var isExisting = !!_.find(list, function (existingKeep) {
+        var existingKeep = _.find(list, function (existingKeep) {
           return keep.id === existingKeep.id;
         });
-        if (isExisting) {
-          existing.push(keep);
+        if (existingKeep) {
+          // todo(martin) should we update the existingKeep info?
+          existing.push(existingKeep);
         } else {
           nonExisting.push(keep);
         }
       });
       insertFn.apply(list, nonExisting);
-      existing.forEach(function (keep) {
-        keep.unkept = false;
-      });
+      existing.forEach(makeKept);
       before = list.length ? list[list.length - 1].id : null;
 
     }
@@ -224,6 +223,16 @@ angular.module('kifi.keepService', [
       } else {
         return url;
       }
+    }
+
+    function makeKept(keep) {
+      keep.unkept = false;
+      keep.isMyBookmark = true;
+    }
+
+    function makeUnkept(keep) {
+      keep.unkept = true;
+      keep.isMyBookmark = false;
     }
 
     var api = {
@@ -473,8 +482,7 @@ angular.module('kifi.keepService', [
 
         return $http.post(url, data).then(function () {
           _.forEach(keeps, function (keep) {
-            keep.unkept = true;
-            keep.isMyBookmark = false;
+            makeUnkept(keep);
             if (api.isSelected(keep)) {
               api.unselect(keep);
             }
