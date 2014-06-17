@@ -546,6 +546,7 @@ POST    /admin/cortex/lda/showTopics                       @com.keepit.controlle
 POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 POST    /admin/cortex/lda/saveEdits                        @com.keepit.controllers.admin.AdminLDAController.saveEdits
+GET     /admin/cortex/lda/userTopicDump                    @com.keepit.controllers.admin.AdminLDAController.userTopicDump(userId: Id[User], limit: Int)
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()

@@ -9,6 +9,10 @@ import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
 import com.keepit.cortex.models.lda.LDATopicConfiguration
 import com.keepit.cortex.models.lda.LDATopicInfo
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
+import com.keepit.model.NormalizedURI
+import com.keepit.common.db.Id
 
 
 class LDAController @Inject()(
@@ -50,4 +54,13 @@ extends CortexServiceController {
     Ok
   }
 
+  def getLDAFeatures() = Action.async(parse.tolerantJson) { request =>
+    implicit val format = Id.format[NormalizedURI]
+    val ids = (request.body).as[Seq[Id[NormalizedURI]]]
+    Future {
+      val feats = lda.getLDAFeatures(ids)
+      val vecs = feats.flatMap{ featOpt => featOpt.map{_.vectorize}}
+      Ok(Json.toJson(vecs))
+    }
+  }
 }
