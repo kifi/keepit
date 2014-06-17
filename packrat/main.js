@@ -1226,7 +1226,7 @@ api.port.on({
     }
   },
   has: function (experiment, respond) {
-    respond(me && ~experiments.indexOf(experiment));
+    respond(me && ~experiments.indexOf(experiment) || /\d+\.\d+\.\d+\.\d+/.test(api.version));
   }
 });
 
