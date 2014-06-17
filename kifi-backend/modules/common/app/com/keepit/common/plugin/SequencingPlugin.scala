@@ -8,13 +8,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.util.RecurringTaskManager
 import scala.concurrent.duration._
 
-object DbSequencingPluginMessages {
+object SequencingPluginMessages {
   case object Process
 }
 
-trait DbSequencingPlugin[M] extends SchedulerPlugin {
+trait SequencingPlugin extends SchedulerPlugin {
 
-  val actor: ActorInstance[DbSequencingActor[M]]
+  val actor: ActorInstance[SequencingActor]
 
   val name: String = getClass.toString
 
@@ -25,7 +25,7 @@ trait DbSequencingPlugin[M] extends SchedulerPlugin {
 
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 5 seconds, actor.ref, DbSequencingPluginMessages.Process)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 5 seconds, actor.ref, SequencingPluginMessages.Process)
   }
 
   override def onStop() {
@@ -33,33 +33,35 @@ trait DbSequencingPlugin[M] extends SchedulerPlugin {
   }
 }
 
-abstract class DbSequenceAssigner[M](airbrake: AirbrakeNotifier) extends RecurringTaskManager {
+trait SequenceAssigner extends RecurringTaskManager {
   private[this] val assignerClassName = this.getClass().getSimpleName()
   private[this] var reportedUnsupported = false
 
+  val airbrake: AirbrakeNotifier
+
+  def assignSequenceNumbers(): Unit
+
   override def doTask(): Unit = {
     try {
-      while (assignSequenceNumbers(20) > 0) {}
+      assignSequenceNumbers()
     } catch {
       case e: UnsupportedOperationException =>
         if (!reportedUnsupported) {
-          reportedUnsupported = true
-          airbrake.notify(s"Deferred sequence assignment is not supported", e)
+          reportedUnsupported = true // report only once
+          airbrake.notify(s"FATAL: deferred sequence assignment is not supported", e)
         }
         throw e
     }
   }
   override def onError(e: Throwable): Unit = { airbrake.notify(s"Error in $assignerClassName", e) }
-
-  protected def assignSequenceNumbers(limit: Int): Int
 }
 
-abstract class DbSequencingActor[M](
-  assigner: DbSequenceAssigner[M],
+abstract class SequencingActor(
+  assigner: SequenceAssigner,
   airbrake: AirbrakeNotifier
 ) extends FortyTwoActor(airbrake) with Logging {
 
-  import DbSequencingPluginMessages._
+  import SequencingPluginMessages._
 
   def receive() = {
     case Process => assigner.request()
