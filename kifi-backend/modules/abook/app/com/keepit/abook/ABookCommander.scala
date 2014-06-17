@@ -24,6 +24,7 @@ import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.common.mail.EmailAddress
 
 class ABookCommander @Inject() (
   db:Database,
@@ -203,7 +204,7 @@ class ABookCommander @Inject() (
     econtactOpt map { Json.toJson(_) }
   }
 
-  def getEContactByEmailDirect(userId:Id[User], email:String):Option[JsValue] = {
+  def getEContactByEmailDirect(userId:Id[User], email: EmailAddress):Option[JsValue] = {
     val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getByUserIdAndEmail(userId, email)
     }
@@ -242,7 +243,7 @@ class ABookCommander @Inject() (
     json
   }
 
-  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Try[EContact] = {
+  def getOrCreateEContact(userId:Id[User], email: String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Try[EContact] = {
     val res = db.readWrite(attempts = 2) { implicit s =>
       econtactRepo.getOrCreate(userId, email, name, firstName, lastName)
     }
@@ -277,9 +278,9 @@ class ABookCommander @Inject() (
     val contacts = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getByUserId(userId)
     }
-    val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email) > 0)))
+    val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email.address) > 0)))
     val paged = after match {
-      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
+      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email.address) != a)) match { // todo: revisit Option param handling
         case hd +: tl => tl
         case tl => tl
       }

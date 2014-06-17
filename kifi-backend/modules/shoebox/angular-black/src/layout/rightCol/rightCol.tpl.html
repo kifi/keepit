@@ -1,16 +1,16 @@
 <footer class="kf-col-inner" ng-controller="RightColCtrl">
   <div class="kf-footer" ng-show="readyToDraw()">
 
-    <div class="kf-helprank" ng-if="me.clickCount > 0">
+    <div class="kf-helprank" ng-if="me.clickCount > 0 || me.rekeepCount > 0">
       <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
-      <div class="kf-footer-help-rank-wrapper">
+      <div class="kf-footer-help-rank-wrapper" ng-if="me.clickCount > 0">
         <div class="kf-footer-help-rank-item">
           <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
           <span class="kf-footer-help-rank-description">
             You've helped friends discover keeps <a class="kifi-footer-item-link" href="/helprank/click">{{me.clickCount}} times</a> this month
           </span>
         </div>
-        <div class="kf-footer-help-rank-item">
+        <div class="kf-footer-help-rank-item" ng-if="me.rekeepCount > 0">
           <span class="kf-footer-help-rank-number">{{me.rekeepCount}}</span>
           <span class="kf-footer-help-rank-description">
             Your keeps have been rekept by others <a class="kifi-footer-item-link" href="/helprank/rekeep">{{me.rekeepCount}} times</a>
@@ -28,8 +28,8 @@
 
     <h2 class="kf-footer-header">Essentials</h2>
     <ul class="kf-footer-essentials-list about-kifi">
-      <li>
-        <a class="kf-footer-item-link kifi-tutorial" href="#" ng-click="data.showGettingStarted = true">
+      <li class="start-guide">
+        <a class="kf-footer-item-link kifi-tutorial" href="javascript:" ng-click="triggerOnboarding()">
           <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
         </a>
         <div ng-if="data.showGettingStarted">
@@ -48,7 +48,7 @@
       </li>
       <li class="import-bookmark-file">
         <a class="kf-footer-item-link" href="javascript:" ng-click="importBookmarkFile()">
-          <span class="sprite sprite-import-from-other-services-icon"></span>Import Delicious / Kippt / Pocket
+          <span class="sprite sprite-import-from-other-services-icon"></span>Import Delicious/Kippt/Pocket/...
         </a>
       </li>
     </ul>

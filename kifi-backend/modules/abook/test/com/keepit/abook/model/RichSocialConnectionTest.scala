@@ -45,7 +45,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       fullName = "Marvin"
     )
 
-    val contact42 = EContact(userId = kifiLéo, email = "grassfed42@organicintegers.com", name = Some("FortyTwo"))
+    val contact42 = EContact(userId = kifiLéo, email = EmailAddress("grassfed42@organicintegers.com"), name = Some("FortyTwo"))
 
     "intern and retrieve rich social network connections" in {
       val léoToMarvin = db.readWrite { implicit session =>
@@ -122,7 +122,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
       léoToGrassfed42.userId === kifiLéo
       léoToGrassfed42.userSocialId === None
-      léoToGrassfed42.friendEmailAddress === Some(EmailAddress(contact42.email))
+      léoToGrassfed42.friendEmailAddress === Some(contact42.email)
       léoToGrassfed42.friendName === contact42.name
       léoToGrassfed42.connectionType === SocialNetworks.EMAIL
       léoToGrassfed42.kifiFriendsCount === 1
@@ -132,7 +132,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
 
       db.readWrite { implicit session =>
         richConnectionRepo.internRichConnection(kifiLéo, None, Right(contact42)) === léoToGrassfed42
-        richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(EmailAddress(contact42.email))) === Some(léoToGrassfed42)
+        richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(contact42.email)) === Some(léoToGrassfed42)
       }
     }
 
@@ -161,10 +161,10 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
         léoToMarvin.invitedBy === 2
       }
 
-      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, Right(EmailAddress(contact42.email))) }
+      db.readWrite { implicit session => richConnectionRepo.recordInvitation(kifiLéo, Right(contact42.email)) }
 
       db.readOnly { implicit session =>
-        val léoToGrassfed42 = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(EmailAddress(contact42.email))).get
+        val léoToGrassfed42 = richConnectionRepo.getByUserAndSocialFriend(kifiLéo, Right(contact42.email)).get
         léoToGrassfed42.invitationsSent === 1
         léoToGrassfed42.invitedBy === 1
 

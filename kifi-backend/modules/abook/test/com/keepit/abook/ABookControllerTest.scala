@@ -124,7 +124,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
         println(s"[query-after] result(${econtacts.length}):${econtacts.mkString(",")}")
         econtacts.isEmpty !== true
-        econtacts.find(_.email == "bar@42go.com").isDefined !== true
+        econtacts.find(_.email.address == "bar@42go.com").isDefined !== true
         econtacts !== null
       }
     }

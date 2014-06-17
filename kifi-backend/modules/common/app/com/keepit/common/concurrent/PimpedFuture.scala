@@ -62,13 +62,11 @@ object FutureHelpers {
     Future.sequence(seq).map(_.toMap)
   }
 
-
-  // generic (make few assumptions) but a bit more work for clients
-  def sequentialExec[T](futures:Seq[() => Future[T]]): Future[Seq[T]] = {
-    if (futures.isEmpty) Future.successful(List.empty)
-    else {
-      futures.head.apply.flatMap { h =>
-        sequentialExec(futures.tail) map { t => h +: t }
+  def sequentialExec[I,T](items: Iterable[I])(f:I => Future[T]):Future[Unit] = {
+    items.headOption match {
+      case None => Future.successful[Unit]()
+      case Some(item) => f(item).flatMap { h =>
+        sequentialExec(items.tail)(f)
       }
     }
   }

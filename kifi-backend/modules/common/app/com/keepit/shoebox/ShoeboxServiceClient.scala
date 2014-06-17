@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.db.{State, ExternalId, Id, SequenceNumber}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.mail.{EmailAddress, ElectronicMail}
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
@@ -118,7 +118,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
-  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]]
+  def getVerifiedAddressOwners(emailAddresses: Seq[EmailAddress]): Future[Map[EmailAddress, Id[User]]]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
   def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit]
@@ -785,10 +785,13 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.updateURIRestriction(), payload).map{ r => }
   }
 
-  def getVerifiedAddressOwners(emailAddresses: Seq[String]): Future[Map[String, Id[User]]] = {
+  def getVerifiedAddressOwners(emailAddresses: Seq[EmailAddress]): Future[Map[EmailAddress, Id[User]]] = {
     val payload = Json.obj("addresses" -> emailAddresses)
-    implicit val userIdFormat = Id.format[User]
-    call(Shoebox.internal.getVerifiedAddressOwners(), payload).map(_.json.as[Map[String, Id[User]]])
+    call(Shoebox.internal.getVerifiedAddressOwners(), payload).map { response =>
+      response.json.as[JsObject].value.map { case (address, id) =>
+        EmailAddress(address) -> id.as[Id[User]]
+      }.toMap
+    }
   }
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String,

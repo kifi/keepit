@@ -138,7 +138,7 @@ class ShoeboxRichConnectionCommander @Inject() (
     }
 
     if (emails.nonEmpty) {
-      emails.collect { case verifiedEmail if verifiedEmail.state == EmailAddressStates.VERIFIED =>
+      emails.collect { case verifiedEmail if verifiedEmail.state == UserEmailAddressStates.VERIFIED =>
         processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address))
       }
 

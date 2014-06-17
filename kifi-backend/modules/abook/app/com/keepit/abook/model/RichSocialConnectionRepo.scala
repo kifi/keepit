@@ -80,7 +80,7 @@ class RichSocialConnectionRepoImpl @Inject() (
   def internRichConnection(userId: Id[User], userSocialId: Option[Id[SocialUserInfo]], friend: Either[SocialUserInfo, EContact])(implicit session: RWSession): RichSocialConnection = {
     val (connectionType, friendName, friendUserId, friendId) = friend match {
       case Left(socialUserInfo) => (socialUserInfo.networkType, Some(socialUserInfo.fullName), socialUserInfo.userId, Left(socialUserInfo.id.get))
-      case Right(eContact) => (Email, eContact.name, eContact.contactUserId, Right(EmailAddress(eContact.email)))
+      case Right(eContact) => (Email, eContact.name, eContact.contactUserId, Right(eContact.email))
     }
 
     getByUserAndSocialFriend(userId, friendId) match {

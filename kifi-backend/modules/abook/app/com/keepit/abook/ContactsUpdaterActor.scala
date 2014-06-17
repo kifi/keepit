@@ -25,6 +25,7 @@ import com.keepit.common.performance._
 import scala.util.{Try, Failure, Success}
 import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.mail.EmailAddress
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -95,7 +96,7 @@ class ContactsUpdater @Inject() (
     }
     val existingEmailSet = new mutable.TreeSet[String] // todo: use parsed email
     for (e <- existingContacts) {
-      val parseResult = EmailParser.parseAll(EmailParser.email, e.email) // handle 'dirty' data
+      val parseResult = EmailParser.parseAll(EmailParser.email, e.email.address) // handle 'dirty' data
       if (parseResult.successful) {
         existingEmailSet += parseResult.get.toString
       } else {
@@ -106,7 +107,7 @@ class ContactsUpdater @Inject() (
     existingEmailSet
   }
 
-  private def recordContactUserIds(contactAddresses: Seq[String]): Unit = {
+  private def recordContactUserIds(contactAddresses: Seq[EmailAddress]): Unit = {
     shoeboxClient.getVerifiedAddressOwners(contactAddresses).foreach { case owners =>
       if (owners.nonEmpty) db.readWrite { implicit session =>
         owners.foreach { case (address, contactUserId) =>
@@ -158,7 +159,7 @@ class ContactsUpdater @Inject() (
                     log.infoP(s"DUP $email; discarded")
                   } else {
                     val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
-                    val e = EContact(userId = userId, email = parsedEmail.toString, name = nameOpt, firstName = fName, lastName = lName)
+                    val e = EContact(userId = userId, email = parsedEmail, name = nameOpt, firstName = fName, lastName = lName)
                     existingEmails += parsedEmail.toString
                     econtactsToAddBuilder += e
                   }
