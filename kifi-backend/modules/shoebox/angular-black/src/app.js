@@ -17,6 +17,7 @@ angular.module('kifi', [
   'kifi.home',
   'kifi.search',
   'kifi.tagKeeps',
+  'kifi.keepView',
   'kifi.helprank',
   'kifi.profile',
   'kifi.friends',
