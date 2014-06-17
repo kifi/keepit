@@ -126,7 +126,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     log.info(s"about to persist $uri")
-    val num = sequence.incrementAndGet()
+
+    // setting a negative sequence number for deferred assignment
+    val num = SequenceNumber[NormalizedURI](-1L) // (clock.now.getMillis() - Long.MaxValue)
     val uriWithSeq = uri.copy(seq = num)
 
     val validatedUri = if ( uri.state != NormalizedURIStates.REDIRECTED && (uri.redirect.isDefined || uri.redirectTime.isDefined) ){
@@ -316,4 +318,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     {for( r <- rows if r.restriction === targetRestriction) yield r}.list
   }
 
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "normalized_uri", limit)
+  }
 }

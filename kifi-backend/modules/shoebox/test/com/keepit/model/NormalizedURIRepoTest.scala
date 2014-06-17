@@ -21,7 +21,9 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
       val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.SCRAPED)
+      uriRepo.assignSequenceNumbers(1000)
       val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
+      uriRepo.assignSequenceNumbers(1000)
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
       keepRepo.save(KeepFactory(url1.url, uri = uri1, userId = user1.id.get, title = Some("my title is short"), url = url1, source = KeepSource("NA")))
@@ -271,14 +273,11 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         db.readWrite{ implicit s =>
           val uri1 = createUri(title = "old", url = "http://www.keepit.com/bad")
-          uriRepo.get(uri1.id.get).seq === SequenceNumber(1)
           uriRepo.updateURIRestriction(uri1.id.get, Some(Restriction.ADULT))
           uriRepo.get(uri1.id.get).restriction === Some(Restriction.ADULT)
-          uriRepo.get(uri1.id.get).seq === SequenceNumber(2)
           uriRepo.getRestrictedURIs(Restriction.ADULT).size === 1
           uriRepo.updateURIRestriction(uri1.id.get, None)
           uriRepo.get(uri1.id.get).restriction === None
-          uriRepo.get(uri1.id.get).seq === SequenceNumber(3)
           uriRepo.getRestrictedURIs(Restriction.ADULT).size === 0
         }
       }
