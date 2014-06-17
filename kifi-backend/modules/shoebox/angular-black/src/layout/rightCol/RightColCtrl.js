@@ -59,6 +59,10 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       });
     };
 
+    $scope.triggerOnboarding = function () {
+      $window.postMessage('start_guide', '*');
+    };
+
     // onboarding.js is using these functions
     $window.getMe = function () {
       return (profileService.me ? $q.when(profileService.me) : profileService.getMe()).then(function (me) {
