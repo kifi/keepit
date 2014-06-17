@@ -159,6 +159,19 @@ angular.module('kifi.keepService', [
       });
     }
 
+    function fetchKeepInfo(keepId) {
+      var url = routeService.getKeep(keepId);
+      var config = {
+        params: { withFullInfo: true }
+      };
+
+      return $http.get(url, config).then(function (result) {
+        var keep = result.data;
+        buildKeep(keep);
+        return keep;
+      });
+    }
+
     function fetchFullKeepInfo(keep) {
       keep.isLoading = true;
       var url = routeService.getKeep(keep.id);
@@ -492,6 +505,8 @@ angular.module('kifi.keepService', [
       togglePrivate: function (keeps) {
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
       },
+
+      fetchKeepInfo: fetchKeepInfo,
 
       fetchFullKeepInfo: fetchFullKeepInfo,
 

@@ -3,8 +3,8 @@
 angular.module('kifi.addKeep', [])
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', 'keyIndices', 'keepService',
-  function ($document, $rootScope, keyIndices, keepService) {
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepService',
+  function ($document, $rootScope, $location, keyIndices, keepService) {
 
     return {
       restrict: 'A',
@@ -28,31 +28,33 @@ angular.module('kifi.addKeep', [])
         reset();
 
         function processKey(e) {
-          switch (e.which) {
-            case keyIndices.KEY_ENTER:
-              scope.keepUrl();
-              break;
-            case keyIndices.KEY_TAB:
-              focusState = (focusState + 1) % 3;
-              if (focusState === 0) {
-                e.preventDefault();
-                e.stopPropagation();
-                safeFocus();
-              }
-              break;
-          }
+          scope.$apply(function () {
+            switch (e.which) {
+              case keyIndices.KEY_ENTER:
+                scope.keepUrl();
+                break;
+              case keyIndices.KEY_TAB:
+                focusState = (focusState + 1) % 3;
+                if (focusState === 0) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  safeFocus();
+                }
+                break;
+            }
+          });
         }
 
         scope.resetFocusState = function () {
           focusState = 0;
-        }
+        };
 
         // Seems like calling input.focus() inside a $digest may cause an error
         // if input has an ng-focus attribute ??
         function safeFocus() {
           setTimeout(function () {
             input.focus();
-          })
+          });
         }
 
         privateSwitch.on('keydown', function (e) {
@@ -76,12 +78,13 @@ angular.module('kifi.addKeep', [])
         scope.keepUrl = function () {
           var url = (scope.state.input) || '';
           if (url && keepService.validateUrl(url)) {
+            $location.path('/');
             return keepService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               scope.resetAndHide();
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal','genericError');
               } else if (result.alreadyKept && result.alreadyKept.length) {
-                console.log('already kept!');
+                $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
                 keepService.fetchFullKeepInfo(result.keeps[0]);
               }
@@ -103,7 +106,7 @@ angular.module('kifi.addKeep', [])
         scope.resetAndHide = function () {
           reset();
           kfModalCtrl.hideModal();
-        }
+        };
       }
     };
   }
