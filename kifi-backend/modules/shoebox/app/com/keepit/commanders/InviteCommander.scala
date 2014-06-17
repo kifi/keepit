@@ -44,7 +44,7 @@ import com.keepit.social.SocialId
 import com.keepit.commanders.emails.EmailOptOutCommander
 
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress]) {
-  override def toString(): String = s"${network.name}/${identifier.left.map(_.id).merge}"
+  override def toString(): String = s"${network.name}/${identifier.left.map(_.id).right.map(_.address).merge}"
 }
 
 object FullSocialId {
