@@ -141,12 +141,12 @@ class SecureSocialUserPluginImpl @Inject() (
     for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
       val email = EmailAddress(emailString)
       val emailAddress = emailRepo.getByAddressOpt(address = email) match {
-        case Some(e) if e.state == EmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
+        case Some(e) if e.state == UserEmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
           emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
-        case Some(e) if e.state == EmailAddressStates.VERIFIED => e
-        case Some(e) => emailRepo.save(e.withState(EmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
+        case Some(e) if e.state == UserEmailAddressStates.VERIFIED => e
+        case Some(e) => emailRepo.save(e.withState(UserEmailAddressStates.VERIFIED).copy(verifiedAt = Some(clock.now)))
         case None => emailRepo.save(
-          UserEmailAddress(userId = userId, address = email, state = EmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
+          UserEmailAddress(userId = userId, address = email, state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
       }
       log.info(s"[save] Saved email is $emailAddress")
       emailAddress
@@ -164,7 +164,7 @@ class SecureSocialUserPluginImpl @Inject() (
       userId orElse {
       // Automatically connect accounts with existing emails
         socialUser.email.map(EmailAddress(_)) flatMap (emailRepo.getByAddressOpt(_)) collect {
-          case e if e.state == EmailAddressStates.VERIFIED => e.userId
+          case e if e.state == UserEmailAddressStates.VERIFIED => e.userId
         }
       } flatMap userRepo.getOpt
     )}

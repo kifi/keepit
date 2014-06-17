@@ -131,12 +131,12 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
         val e3 = "Douglas Adams <doug@kifi.com>"
         val e3Res = commander.getOrCreateEContact(u42, e3)
-        e3Res.get.email === "doug@kifi.com"
+        e3Res.get.email.address === "doug@kifi.com"
         e3Res.get.name must beSome("Douglas Adams")
 
         val e4 = "Marvin Adams <marvin@kifi.com>"
         val e4Res = commander.getOrCreateEContact(u42, e4, Some("Smada Nivram"))
-        e4Res.get.email === "marvin@kifi.com"
+        e4Res.get.email.address === "marvin@kifi.com"
         e4Res.get.name must beSome("Smada Nivram")
       }
     }

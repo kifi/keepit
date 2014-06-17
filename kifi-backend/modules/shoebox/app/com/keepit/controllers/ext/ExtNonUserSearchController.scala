@@ -8,7 +8,11 @@ import com.keepit.model.EContact
 import com.keepit.commanders.TypeaheadCommander
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsArray, JsObject, JsString, JsValue}
+import play.api.libs.json._
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
+import scala.Some
 
 class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -29,7 +33,7 @@ class ExtNonUserSearchController @Inject() (
 
   def serializeContact(contact: EContact): JsObject = {
     JsObject(Seq[(String, JsValue)](
-      "email" -> JsString(contact.email)) ++
+      "email" -> Json.toJson(contact.email)) ++
       contact.name.map {name => "name" -> JsString(name)})
   }
 

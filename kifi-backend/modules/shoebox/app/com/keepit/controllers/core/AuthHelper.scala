@@ -78,7 +78,7 @@ class AuthHelper @Inject() (
     db.readOnly { implicit s =>
       socialRepo.getOpt(SocialId(emailString), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
-          case emailAddr if emailAddr.state == EmailAddressStates.VERIFIED =>
+          case emailAddr if emailAddr.state == UserEmailAddressStates.VERIFIED =>
             (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
           case emailAddr =>
             // Someone is trying to register with someone else's unverified + non-login email address.

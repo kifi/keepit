@@ -17,7 +17,7 @@ case class UserEmailAddress (
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId: Id[User],
-  state: State[UserEmailAddress] = EmailAddressStates.UNVERIFIED,
+  state: State[UserEmailAddress] = UserEmailAddressStates.UNVERIFIED,
   address: EmailAddress,
   verifiedAt: Option[DateTime] = None,
   lastVerificationSent: Option[DateTime] = None,
@@ -30,7 +30,7 @@ case class UserEmailAddress (
   def withVerificationCode(now: DateTime) = this.copy(
     lastVerificationSent = Some(now),
     verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
-  def verified: Boolean = state == EmailAddressStates.VERIFIED
+  def verified: Boolean = state == UserEmailAddressStates.VERIFIED
   def isTestEmail() = EmailParserUtils.isTestEmail(address.address)
   def isFakeEmail() = EmailParserUtils.isFakeEmail(address.address) // +test
   def isAutoGenEmail() = EmailParserUtils.isAutoGenEmail(address.address)  // +autogen
@@ -41,7 +41,7 @@ object UserEmailAddress {
   implicit def toEmailAddress(userEmailAddress: UserEmailAddress): EmailAddress = userEmailAddress.address
 }
 
-object EmailAddressStates {
+object UserEmailAddressStates {
   val VERIFIED = State[UserEmailAddress]("verified")
   val UNVERIFIED = State[UserEmailAddress]("unverified")
   val INACTIVE = State[UserEmailAddress]("inactive")

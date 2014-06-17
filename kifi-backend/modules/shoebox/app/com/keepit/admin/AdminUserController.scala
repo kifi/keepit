@@ -412,7 +412,7 @@ class AdminUserController @Inject() (
       // Set state of removed email addresses to INACTIVE
       (oldEmails -- newEmails) map { removedEmail =>
         log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
-        emailRepo.save(removedEmail.withState(EmailAddressStates.INACTIVE))
+        emailRepo.save(removedEmail.withState(UserEmailAddressStates.INACTIVE))
       }
     }
 
@@ -771,7 +771,7 @@ class AdminUserController @Inject() (
             else {
               val socialEmail = EmailAddress(socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get)
               require(currentEmail.address == socialEmail, "No verified email")
-              val updatedEmail = emailRepo.save(currentEmail.withState(EmailAddressStates.VERIFIED))
+              val updatedEmail = emailRepo.save(currentEmail.withState(UserEmailAddressStates.VERIFIED))
               userCommander.updateUserPrimaryEmail(updatedEmail)
               updatedEmail.address
             }
@@ -835,7 +835,7 @@ class AdminUserController @Inject() (
         userSessionRepo.invalidateByUser(userId) // User Session
         kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
         userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
-        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(EmailAddressStates.INACTIVE)) } // Email addresses
+        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
         userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmailId = None)) // User
       }
 
