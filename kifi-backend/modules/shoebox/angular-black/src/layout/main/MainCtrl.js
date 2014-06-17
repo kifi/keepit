@@ -240,11 +240,11 @@ angular.module('kifi.layout.main', [
       $scope.importFileStatus = '';
     };
 
+
     $scope.openBookmarkFileSelector = function ($event) {
-      var $file = angular.element($event.target).parent().parent().find('input:file');
-      $timeout(function () {
-        $file.click();
-      });
+      // not great, but trying to fix an IE bug
+      var bookmarkFileUpload = $rootElement.find('.bookmark-file-upload');
+      bookmarkFileUpload.click();
     };
 
     $scope.editKeepsLabel = function () {
