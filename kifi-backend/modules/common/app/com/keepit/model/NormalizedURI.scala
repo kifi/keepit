@@ -115,9 +115,9 @@ case class NormalizedURIWordCountKey(id: Id[NormalizedURI]) extends Key[Int] {
   def toKey(): String = id.id.toString
 }
 
-case class NormalizedURIExternalIDKey(val id: Id[NormalizedURI]) extends Key[URISummary] {
+case class URISummaryKey(val id: Id[NormalizedURI]) extends Key[URISummary] {
   override val version = 1
-  val namespace = "uri_ext_id_by_id"
+  val namespace = "uri_summary_by_id"
   def toKey(): String = id.id.toString
 }
 
@@ -131,7 +131,7 @@ class NormalizedURIWordCountCache(stats: CacheStatistics, accessLog: AccessLog, 
   extends PrimitiveCacheImpl[NormalizedURIWordCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 class URISummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[NormalizedURIExternalIDKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[URISummaryKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")

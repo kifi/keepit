@@ -836,7 +836,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],URISummary]] = {
     redundantDBConnectionCheck(uriIds)
-    val keys = uriIds.map(NormalizedURIExternalIDKey)
+    val keys = uriIds.map(URISummaryKey)
     cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
       val missingKeysSeq = missing.toSeq
       val request = Json.obj("uriIds" ->  missingKeysSeq.map(_.id))
