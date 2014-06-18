@@ -74,7 +74,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
         val latestHttpUri = db.readOnly { implicit session => uriRepo.get(httpUri.id.get) }
         latestHttpUri.redirect === Some(latestHttpsUri.id.get)
         latestHttpUri.state === NormalizedURIStates.REDIRECTED
-        db.readOnly { implicit session => uriRepo.getByUri("http://vimeo.com/48578814") } === Some(latestHttpsUri)
+        db.readOnly { implicit session => normalizedURIInterner.getByUri("http://vimeo.com/48578814") } === Some(latestHttpsUri)
       }
 
       "redirect a new http://www url to an existing https:// url" in {
@@ -86,7 +86,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
         latestHttpWWWUri.normalization === Some(Normalization.HTTPWWW)
         latestHttpWWWUri.redirect === Some(httpsUri.id.get)
         latestHttpWWWUri.state === NormalizedURIStates.REDIRECTED
-        db.readOnly { implicit session => uriRepo.getByUri("http://www.vimeo.com/48578814") }.map(_.id) === Some(httpsUri.id)
+        db.readOnly { implicit session => normalizedURIInterner.getByUri("http://www.vimeo.com/48578814") }.map(_.id) === Some(httpsUri.id)
       }
 
       "upgrade an existing https:// url to a better normalization" in {
