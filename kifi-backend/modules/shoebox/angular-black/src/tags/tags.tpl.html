@@ -2,13 +2,15 @@
   <div class="kf-nav-group-name">TAGS</div>
   <div class="kf-tag-input-box" ng-class="{'focused': isFilterFocused}">
     <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
-    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilter()">
+    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilte()">
   </div>
   <div class="kf-tag-list-hidden"></div>
 
-  <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }" ng-class="{'kf-add-tag-shown': showAddTag()}">
+  <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }">
     <ul class="kf-sidebar-tag-list">
-      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tagsWithFakeLast" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
+      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tags" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
+      <!-- this introduces entertaining bugs - commenting out for now -->
+      <!--<li kf-tag-item class="kf-tag-fake-reorder-last" fake index="{{tags.length}}" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx"></li>-->
     </ul>
     <div class="kf-tag-new" ng-show="showAddTag()" ng-click="createTag()">
       <div class="kf-tag-new-inner" ng-class="{ highlight: isHighlightNew() }">

@@ -753,37 +753,17 @@ class AdminUserController @Inject() (
     }
   }
 
-  def fixMissingFortyTwoSocialUsers(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    val problematicUsers = db.readOnly { implicit s =>
-      userRepo.all().filter(user => user.state == UserStates.ACTIVE && !socialUserInfoRepo.getByUser(user.id.get).exists(_.networkType == SocialNetworks.FORTYTWO))
-    }
-
-    if (!readOnly) {
-      problematicUsers.foreach { user =>
-        val currentHasher = Registry.hashers.currentHasher
-        val pInfo = currentHasher.hash(ExternalId[Nothing]().toString)
-        authCommander.saveUserPasswordIdentity(
-          userIdOpt = Some(user.id.get),
-          identityOpt = None,
-          email = db.readWrite { implicit session =>
-            val currentEmail = emailRepo.getByUser(user.id.get)
-            if (currentEmail.verified) currentEmail.address
-            else {
-              val socialEmail = EmailAddress(socialUserInfoRepo.getByUser(user.id.get).find(sui => sui.networkType == SocialNetworks.FACEBOOK || sui.networkType == SocialNetworks.LINKEDIN).get.credentials.get.email.get)
-              require(currentEmail.address == socialEmail, "No verified email")
-              val updatedEmail = emailRepo.save(currentEmail.withState(UserEmailAddressStates.VERIFIED))
-              userCommander.updateUserPrimaryEmail(updatedEmail)
-              updatedEmail.address
-            }
-          }.address,
-          passwordInfo = pInfo,
-          firstName = user.firstName,
-          lastName = user.lastName,
-          isComplete = true
-        )
+  def fillInPrimaryEmails() = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    var primaryEmailsAdded = 0
+    db.readWrite { implicit session =>
+      userRepo.all().foreach { user =>
+        if (user.primaryEmailId.isDefined && user.primaryEmail.isEmpty) {
+          userRepo.save(user.copy(primaryEmail = Some(emailRepo.get(user.primaryEmailId.get).address)))
+          primaryEmailsAdded += 1
+        }
       }
     }
-    Ok(Json.toJson(problematicUsers))
+    Ok(JsNumber(primaryEmailsAdded))
   }}
 
   def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {

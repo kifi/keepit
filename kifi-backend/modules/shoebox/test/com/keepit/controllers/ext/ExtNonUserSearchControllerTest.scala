@@ -1,12 +1,12 @@
 package com.keepit.controllers.ext
 
 import com.keepit.common.db.Id
-import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{EContact, User}
 
 import org.specs2.mutable.Specification
 
 import play.api.libs.json.Json
+import com.keepit.common.mail.EmailAddress
 
 class ExtNonUserSearchControllerTest extends Specification {
 

@@ -4,8 +4,6 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.MiscPrefix
-import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
 
 
 @Singleton
@@ -14,8 +12,7 @@ class LDACommander @Inject()(
   docRep: LDADocRepresenter,
   ldaTopicWords: DenseLDATopicWords,
   ldaConfigs: LDATopicConfigurations,
-  configStore: LDAConfigStore,
-  ldaRetriever: LDAURIFeatureRetriever
+  configStore: LDAConfigStore
 ){
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
@@ -56,9 +53,5 @@ class LDACommander @Inject()(
     val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
     currentConfig = newConfig
     configStore.+= (MiscPrefix.LDA.topicConfigsJsonFile, wordRep.version, newConfig)
-  }
-
-  def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
-    ldaRetriever.getByKeys(ids, wordRep.version)
   }
 }

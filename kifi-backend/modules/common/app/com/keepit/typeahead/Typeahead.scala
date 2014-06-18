@@ -140,12 +140,20 @@ trait Typeahead[E, I] extends Logging {
     implicit val fj = ExecutionContext.fj
 
     log.infoP(s"begin re-indexing users ...")
-    FutureHelpers.sequentialExec(userIds) { userId =>
-      refresh(userId) map { filter =>
-        log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
+    val grouped = userIds.grouped(50).toSeq
+    val groupedF = grouped.zipWithIndex.map { case (batch, i) =>
+      log.infoP(s"begin re-indexing for batch $i/${grouped.length} ...")
+      val futures = batch.map { userId =>
+        () => refresh(userId).map { filter =>
+          log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
+        }
       }
-    } map { _ =>
-      log.infoP(s"done with re-indexing for ${userIds.length} users: ${userIds.take(3).toString} ... ${userIds.takeRight(3).toString}")
+      () => FutureHelpers.sequentialExec(futures).map{ res =>
+        log.infoP(s"done with re-indexing for batch $i/${grouped.length}")
+      }
+    }
+    FutureHelpers.sequentialExec(groupedF).map{ u =>
+      log.infoP(s"done with re-indexing all ${userIds.length} users.")
     }
   }
 

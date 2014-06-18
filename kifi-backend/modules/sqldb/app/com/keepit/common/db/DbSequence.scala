@@ -23,7 +23,6 @@ abstract class DbSequence[T](val name: String) {
     throw new IllegalArgumentException(s"Sequence name $name is invalid")
   def incrementAndGet()(implicit session: RWSession): SequenceNumber[T]
   def getLastGeneratedSeq()(implicit session: RSession): SequenceNumber[T]
-  def reserve(n: Int)(implicit session: RWSession): SequenceNumberRange[T]
 }
 
 object DbSequence {

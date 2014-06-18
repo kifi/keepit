@@ -13,14 +13,12 @@ case class SequenceNumber[T](value: Long) extends Ordered[SequenceNumber[T]] {
   override def toString = value.toString
 }
 
-case class SequenceNumberRange[T](start: Long, end: Long) extends Iterable[SequenceNumber[T]] {
-  def iterator: Iterator[SequenceNumber[T]] = (start to end).iterator.map(SequenceNumber[T](_))
-}
+
 
 object SequenceNumber {
   ScalaMessagePack.messagePack.register(classOf[SequenceNumber[Any]], new MsgPackSequenceNumberTemplate[Any]())
   def ZERO[T] = SequenceNumber[T](0)
-  def MinValue[T] = SequenceNumber[T](-1L)
+  def MinValue[T] = SequenceNumber[T](Long.MinValue)
   implicit def format[T] = new Format[SequenceNumber[T]] {
     def reads(json: JsValue): JsResult[SequenceNumber[T]] = __.read[Long].reads(json).map(SequenceNumber[T](_))
     def writes(o: SequenceNumber[T]): JsValue = JsNumber(o.value)

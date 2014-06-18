@@ -13,11 +13,10 @@
         <div class="import-inset">
           <p>Step 1: Export your links from
           <a href="https://getpocket.com/export" ng-click="openExportPopup($event)">Pocket</a>,
-          <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event)">Delicious</a>,
-          <a href="https://kippt.com/export/" ng-click="openExportPopup($event)">Kippt</a>,
-          <a href="https://www.instapaper.com/user/export" ng-click="openExportPopup($event)">Instapaper</a>, or
-          <a href="https://pinboard.in/export/" ng-click="openExportPopup($event)">Pinboard</a> (the format should be HTML).</p>
-          <p class="import-file-link">Step 2: <a ng-click="openBookmarkFileSelector($event)" href="javascript:">Click here to select the file you downloaded</a>.
+          <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event)">Delicious</a>, or
+          <a ng-click="openExportPopup($event)" href="https://kippt.com/export/">Kippt</a>, or
+          <a href="https://kippt.com/export/" ng-click="openExportPopup($event)">Kippt</a>.</p>
+          <p ng-click="openBookmarkFileSelector($event)" class="import-file-link">Step 2: <a href="javascript:">Click here to select the file you downloaded</a>.
           <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)"></p>
           <div class="dialog-buttons">
             <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }" ng-show="importFilename">Step 3: Upload your bookmarks</button>

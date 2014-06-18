@@ -111,14 +111,10 @@ class AttributionCommander @Inject() (
   }
 
   def updateUsersReKeepStats(keepers:Seq[Id[User]], n:Int = 3):Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
-    val builder = mutable.ArrayBuilder.make[Seq[UserBookmarkClicks]]
-    FutureHelpers.sequentialExec(keepers) { keeperId =>
-      updateUserReKeepStatus(keeperId, n) map { res =>
-        builder += res
-      }
-    } map { _ =>
-      builder.result()
+    val futures = keepers.map { keeper =>
+      () => updateUserReKeepStatus(keeper, n)
     }
+    FutureHelpers.sequentialExec(futures)
   }
 
   def updateAllReKeepStats(n:Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only

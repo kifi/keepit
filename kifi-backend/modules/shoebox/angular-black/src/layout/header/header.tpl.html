@@ -9,12 +9,10 @@
   <div class="kf-header-right">
     <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
     <div class="kf-header-icon-hover-container">
-      <div class="kf-header-icon-friends sprite sprite-friends">
-        Friends
-        <!--<div class="kf-friend-invite-badge on-icon" ng-if="friendRequests.length && !isActive('/friends')"></div>--></div>
+      <div class="sprite sprite-friends">Friends</div>
       <ul class="kf-dropdown-menu">
-        <li class="kf-dropdown-menu-item" ng-click="navigateToFriends()"><!--<div class="kf-friend-invite-badge on-item" ng-if="friendRequests.length && !isActive('/friends')"></div>--><a class="kf-your-friends-header-link" href="javascript:" ng-class="{'active': isActive('/friends') }">Your Kifi Friends</a></li>
-        <li class="kf-dropdown-menu-item" ng-click="navigateToInvite()"><a href="javascript:" ng-class="{'active': isActive('/invite') }">Invite a friend to Kifi</a></li>
+        <li><a href="/friends" ng-class="{'active': isActive('/friends') }">Your Kifi Friends</a></li>
+        <li><a href="/invite" ng-class="{'active': isActive('/invite') }">Invite a friend to Kifi</a></li>
       </ul>
     </div>
     <a href="/profile" class="sprite sprite-settings">Settings</div>
