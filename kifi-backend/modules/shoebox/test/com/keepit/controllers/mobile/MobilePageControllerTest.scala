@@ -74,7 +74,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
         }
 
         db.readOnly {implicit s =>
-          uriRepo.getByUri(googleUrl) match {
+          normalizedURIInterner.getByUri(googleUrl) match {
             case Some(nUri) =>
               nUri === uri
             case None =>
