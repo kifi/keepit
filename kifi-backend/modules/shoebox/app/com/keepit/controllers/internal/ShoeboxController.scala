@@ -475,11 +475,6 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
-  def getEmailAddressById(id: Id[UserEmailAddress]) = Action { request =>
-    val address = db.readOnly { implicit s => emailAddressRepo.get(id).address }
-    Ok(Json.toJson(address))
-  }
-
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
     val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
     val collectionIds = db.readOnly(2, Slave) { implicit s => //no cache used
