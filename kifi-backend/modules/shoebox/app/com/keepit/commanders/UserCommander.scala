@@ -231,11 +231,11 @@ class UserCommander @Inject() (
     db.readOnly { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
-  def getKeepAttributionCounts(userId: Id[User]): (Int, Int) = { // (clickCount, rekeepCount)
+  def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (clickCount, rekeepCount, rekeepTotalCount)
     db.readOnly(dbMasterSlave = Slave) { implicit ro =>
       val clickCount = keepClickRepo.getClickCountByKeeper(userId)
-      val rekeepCount = rekeepRepo.getReKeepCountByKeeper(userId)
-      (clickCount, rekeepCount)
+      val (rekeepCount, rekeepTotalCount) = bookmarkClicksRepo.getReKeepCounts(userId)
+      (clickCount, rekeepCount, rekeepTotalCount)
     }
   }
 
