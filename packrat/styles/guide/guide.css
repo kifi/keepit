@@ -30,24 +30,30 @@
   text-align: center;
 }
 .kifi-gs-ol {
-  list-style-type: decimal;
-  padding: 0 18px 16px 48px;
-  font-size: 14px;
+  padding: 10px 10px 16px;
+  counter-reset: guide-step;
 }
 .kifi-gs-li {
-  display: list-item;
-  white-space: nowrap;
   line-height: 30px;
   font-size: 13px;
-  -webkit-font-smoothing: antialiased;
   color: #686767;
 }
 .kifi-gs-li.kifi-current {
   position: relative;
   color: #bebebe;
 }
+.kifi-gs-li::before {
+  counter-increment: guide-step;
+  content: counter(guide-step) '.';
+  display: inline-block;
+  width: 30px;
+  text-align: right;
+  margin-right: 8px;
+}
 .kifi-gs-name {
+  white-space: nowrap;
   color: #6cf;
+  -webkit-font-smoothing: antialiased;
 }
 .kifi-current:not(.kifi-complete)>.kifi-gs-name,
 .kifi-current~*>.kifi-gs-name {
@@ -68,7 +74,7 @@
 }
 .kifi-gs-bar {
   position: absolute;
-  left: 0;
+  left: 38px;
   bottom: 2px;
   box-sizing: border-box;
   width: 110px;
