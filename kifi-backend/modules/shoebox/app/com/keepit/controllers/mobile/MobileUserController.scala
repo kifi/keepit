@@ -79,10 +79,17 @@ class MobileUserController @Inject() (
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
     val user = userCommander.getUserInfo(request.user)
+    val (clickCount, rekeepCount, rekeepTotalCount) = userCommander.getKeepAttributionCounts(request.userId)
     Ok(toJson(user.basicUser).as[JsObject] ++
        toJson(user.info).as[JsObject] ++
-       Json.obj("notAuthed" -> user.notAuthed).as[JsObject] ++
-       Json.obj("experiments" -> request.experiments.map(_.value)))
+       Json.obj(
+         "notAuthed" -> user.notAuthed,
+         "experiments" -> request.experiments.map(_.value),
+         "clickCount" -> clickCount,
+         "rekeepCount" -> rekeepCount,
+         "rekeepTotalCount" -> rekeepTotalCount
+       )
+    )
   }
 
   def changePassword = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
