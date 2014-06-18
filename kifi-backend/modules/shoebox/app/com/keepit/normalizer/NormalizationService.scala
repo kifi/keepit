@@ -30,9 +30,10 @@ class NormalizationServiceImpl @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   uriIntegrityPlugin: UriIntegrityPlugin,
   priorKnowledge: PriorKnowledge,
+  normalizedURIInterner: NormalizedURIInterner,
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  def normalize(uriString: String)(implicit session: RSession): Try[String] = normalizedURIRepo.getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
+  def normalize(uriString: String)(implicit session: RSession): Try[String] = normalizedURIInterner.getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
   def prenormalize(uriString: String)(implicit session: RSession): Try[String] = {
     URI.parse(uriString).map { uri =>
       val uriWithStandardPrenormalization = Prenormalizer(uri)

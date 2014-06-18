@@ -238,7 +238,7 @@ class ShoeboxController @Inject() (
         bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
           alternateUrls.foreach { alternateUrl =>
             val uri = db.readOnly { implicit session =>
-              normUriRepo.getByUri(alternateUrl)
+              normalizedURIInterner.getByUri(alternateUrl)
             }
             uri match {
               case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
@@ -299,7 +299,7 @@ class ShoeboxController @Inject() (
   def getNormalizedURIByURL() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val url : String = Json.fromJson[String](request.body).get
     val uriOpt = db.readOnly { implicit s =>
-      normUriRepo.getByUri(url) //using cache
+      normalizedURIInterner.getByUri(url) //using cache
     }
     uriOpt match {
       case Some(uri) => Ok(Json.toJson(uri))
@@ -310,7 +310,7 @@ class ShoeboxController @Inject() (
   def getNormalizedUriByUrlOrPrenormalize() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val url = Json.fromJson[String](request.body).get
     val normalizedUriOrPrenormStr = db.readOnly { implicit s => //using cache
-      normUriRepo.getByUriOrPrenormalize(url) match {
+      normalizedURIInterner.getByUriOrPrenormalize(url) match {
         case Success(Right(prenormalizedUrl)) => Json.obj("url" -> prenormalizedUrl)
         case Success(Left(nuri)) => Json.obj("normalizedURI" -> nuri)
         case Failure(ex) => {

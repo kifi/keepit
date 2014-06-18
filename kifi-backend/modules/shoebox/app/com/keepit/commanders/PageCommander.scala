@@ -8,7 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationService
+import com.keepit.normalizer.{NormalizedURIInterner, NormalizationService}
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
@@ -32,6 +32,7 @@ class PageCommander @Inject() (
     domainClassifier: DomainClassifier,
     basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
+    normalizedURIInterner: NormalizedURIInterner,
     searchClient: SearchServiceClient) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -47,7 +48,7 @@ class PageCommander @Inject() (
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
     val (nUriStr, nUri, keepersFutureOpt, domain, keep, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
-      val (nUriStr, nUri) = normalizedURIRepo.getByUriOrPrenormalize(url) match {
+      val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(url) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
         case Failure(ex) => (url, None)

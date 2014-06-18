@@ -10,12 +10,10 @@ import org.joda.time.DateTime
 import com.keepit.normalizer._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.feijoas.mango.common.cache._
-import java.util.concurrent.TimeUnit
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.queue._
-import scala.util.{Failure, Success, Try}
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
 
@@ -31,8 +29,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
-  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Try[Either[NormalizedURI, String]]
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
@@ -47,7 +43,6 @@ class NormalizedURIRepoImpl @Inject() (
   idCache: NormalizedURICache,
   urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo],
-  normalizationServiceProvider: Provider[NormalizationService],
   airbrake: AirbrakeNotifier)
 extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] with SeqNumberDbFunction[NormalizedURI] with Logging {
 
@@ -183,37 +178,11 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Try[Either[NormalizedURI, String]] = statsd.time(key = "normalizedURIRepo.getByUriOrPrenormalize", ALWAYS) { timer =>
-    prenormalize(url).map { prenormalizedUrl =>
-      log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
-      val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
-        case uri if uri.state == NormalizedURIStates.REDIRECTED =>
-          val nuri = get(uri.redirect.get)
-          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.redirected", timer, ALWAYS)
-          log.info(s"following a redirection path for $url on uri $nuri")
-          nuri
-        case uri =>
-          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.not_redirected", timer, ALWAYS)
-          uri
-      }
-      log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
-      normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
-    }
-  }
-
-  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    getByUriOrPrenormalize(url: String).map(_.left.toOption).toOption.flatten
-  }
-
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =
     (for(t <- rows if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
 
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
     (for(t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
-  }
-
-  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ONE_IN_HUNDRED) { timer =>
-    normalizationServiceProvider.get.prenormalize(uriString)
   }
 
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession) = {

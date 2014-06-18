@@ -39,6 +39,7 @@ class UrlController @Inject() (
   centralConfig: CentralConfig,
   httpProxyRepo: HttpProxyRepo,
   monitoredAwait: MonitoredAwait,
+  normalizedURIInterner: NormalizedURIInterner,
   airbrake: AirbrakeNotifier) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -184,7 +185,7 @@ class UrlController @Inject() (
       val readOnly = if (mode == "readWrite") false else true
       asyncSafelyRenormalize(readOnly, clearSeq = false, regex = regex)
 
-      Ok(s"Started! readOnlyMode = ${readOnly}")
+      Ok(s"Started! readOnlyMode = $readOnly")
     }
 
   }
@@ -210,7 +211,7 @@ class UrlController @Inject() (
     val candidateUrl = body("candidateUrl")
     val verified = body.contains("verified")
     val candidateOpt = body.get("candidateNormalization").collect {
-      case normalizationStr: String if normalizationStr.nonEmpty => (Normalization(normalizationStr))
+      case normalizationStr: String if normalizationStr.nonEmpty => Normalization(normalizationStr)
     } orElse SchemeNormalizer.findSchemeNormalization(candidateUrl) map {
       case normalization if verified => VerifiedCandidate(candidateUrl, normalization)
       case normalization => ScrapedCandidate(candidateUrl, normalization)
@@ -218,11 +219,11 @@ class UrlController @Inject() (
 
     candidateOpt match {
       case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"A normalization candidate could not be constructed for $candidateUrl."))
-      case Some(candidate) => {
+      case Some(candidate) =>
         val referenceUrl = body("referenceUrl")
-        db.readOnly { implicit session => uriRepo.getByUri(referenceUrl) } match {
-          case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${referenceUrl} could not be found."))
-          case Some(oldUri) => {
+        db.readOnly { implicit session => normalizedURIInterner.getByUri(referenceUrl) } match {
+          case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"$referenceUrl could not be found."))
+          case Some(oldUri) =>
             val correctedNormalization = body.get("correctNormalization").flatMap {
               case "reset" => SchemeNormalizer.findSchemeNormalization(referenceUrl)
               case normalization if normalization.nonEmpty => Some(Normalization(normalization))
@@ -231,12 +232,10 @@ class UrlController @Inject() (
 
             val reference = NormalizationReference(oldUri, isNew = false, correctedNormalization = correctedNormalization)
             normalizationService.update(reference, candidate).map {
-              case Some(newUriId) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to ${newUriId}")
+              case Some(newUriId) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to $newUriId")
               case None => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} could not be redirected to $candidateUrl")
             }
           }
-        }
-      }
     }
   }
 
