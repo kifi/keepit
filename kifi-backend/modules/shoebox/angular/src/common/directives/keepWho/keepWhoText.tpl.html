@@ -8,7 +8,4 @@
   <span class="kf-keep-others" ng-show="hasOthers()">{{getOthersText()}}</span>
   <span class="kf-keep-kept-this">kept this</span>
   <span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-if="!hasKeepers() && !hasOthers()">Private</span>
-  <div class="kf-help-rank" ng-if="helprankEnabled && keep.clickCount > 0">
-  	<div><span class="kf-heart">♥</span> Your keep helped friends {{keep.clickCount}} times!</div>
-  </div>
 </span>
