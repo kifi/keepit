@@ -125,17 +125,21 @@ class InviteCommander @Inject() (
       Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)
     }
     db.readWrite { implicit s =>
-      anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId.isDefined =>
+      val actuallyInvitedUser = anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId.isDefined =>
         val user = userRepo.get(userId)
         if (user.state == UserStates.PENDING) {
           userRepo.save(user.withState(UserStates.ACTIVE))
-        }
+        } else user
       }
+
       for ((invite, originalSocialNetwork) <- anyPendingInvites) {
-        connectInvitedUsers(userId, invite)
-        if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
-          val acceptedInvite = invitationRepo.save(invite.withState(InvitationStates.ACCEPTED))
-          reportReceivedInvitation(userId, originalSocialNetwork, acceptedInvite, invId == Some(invite.externalId))
+        if (actuallyInvitedUser.isDefined && invite.createdAt.isAfter(actuallyInvitedUser.get.createdAt)) {
+          invitationRepo.save(invite.withState(InvitationStates.INACTIVE))
+        } else {
+          if (Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)) {
+            val acceptedInvite = invitationRepo.save(invite.withState(InvitationStates.ACCEPTED))
+            reportReceivedInvitation(userId, originalSocialNetwork, acceptedInvite, invId == Some(invite.externalId))
+          }
         }
       }
     }

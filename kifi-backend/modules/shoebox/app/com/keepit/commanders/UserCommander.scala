@@ -157,7 +157,7 @@ class UserCommander @Inject() (
         ConnectionInfo(basicUserRepo.load(friendId), friendId, unfriended, searchFriends.contains(friendId))
       }
     }
-    (infos.drop(page * pageSize).take(pageSize), infos.size)
+    (infos.drop(page * pageSize).take(pageSize), infos.filterNot(_.unfriended).size)
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {

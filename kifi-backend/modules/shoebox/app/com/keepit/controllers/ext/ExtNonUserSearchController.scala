@@ -2,16 +2,14 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 
+import com.keepit.commanders.TypeaheadCommander
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.model.EContact
-import com.keepit.commanders.TypeaheadCommander
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
+import play.api.libs.json.{Json, JsArray, JsObject, JsString, JsValue}
+
 import scala.Some
 
 class ExtNonUserSearchController @Inject() (

@@ -40,6 +40,8 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           val nuri6 = uriRepo.save(NormalizedURI.withHash("http://www.infoseek.com/", Some("Infoseek")).withState(NormalizedURIStates.ACTIVE))
           val nuri7 = uriRepo.save(NormalizedURI.withHash("http://www.altavista.com/", Some("AltaVista")).withState(NormalizedURIStates.INACTIVE))
 
+          uriRepo.assignSequenceNumbers(1000)
+
           scrapeInfoRepo.save(ScrapeInfo(uriId = nuri0.id.get))
           scrapeInfoRepo.save(ScrapeInfo(uriId = nuri1.id.get))
 
@@ -136,6 +138,8 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.altavista.com/", Some("AltaVista")).withState(NormalizedURIStates.INACTIVE))
           val nuri4 = uriRepo.save(NormalizedURI.withHash("http://www.inktomi.com/", Some("Inktomi")).withState(NormalizedURIStates.REDIRECTED))
 
+          uriRepo.assignSequenceNumbers(1000)
+
           Seq(nuri0, nuri1, nuri2, nuri3, nuri4)
         }
         val urls =  db.readWrite { implicit session =>
@@ -189,6 +193,9 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         bms ++= db.readWrite { implicit session =>
           uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
           uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
+
+          uriRepo.assignSequenceNumbers(1000)
+
           Seq(bmRepo.save(Keep(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,  uriId = uris(2).id.get, source = hover)))
         }
         cleaner.clean(readOnly = false)
@@ -251,6 +258,9 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val obms = db.readWrite{ implicit s =>
           uriRepo.save(uris(0).withState(NormalizedURIStates.SCRAPED))
           uriRepo.save(uris(1).withState(NormalizedURIStates.SCRAPE_FAILED))
+
+          uriRepo.assignSequenceNumbers(1000)
+
           Seq(
             bmRepo.save(Keep(title = Some("google"), userId = other.id.get, url = urls(0).url, urlId = urls(0).id.get,  uriId = uris(0).id.get, source = hover)),
             bmRepo.save(Keep(title = Some("bing"), userId = other.id.get, url = urls(1).url, urlId = urls(1).id.get, uriId = uris(1).id.get, source = hover))
@@ -337,6 +347,8 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           val nuri5 = uriRepo.save(NormalizedURI.withHash("http://www.lycos.com/", Some("Lycos")).withState(NormalizedURIStates.SCRAPE_FAILED))
           val nuri6 = uriRepo.save(NormalizedURI.withHash("http://www.infoseek.com/", Some("Infoseek")).withState(NormalizedURIStates.ACTIVE))
           val nuri7 = uriRepo.save(NormalizedURI.withHash("http://www.altavista.com/", Some("AltaVista")).withState(NormalizedURIStates.INACTIVE))
+
+          uriRepo.assignSequenceNumbers(1000)
 
           Seq(nuri0, nuri1, nuri2, nuri3, nuri4, nuri5, nuri6, nuri7)
         }
