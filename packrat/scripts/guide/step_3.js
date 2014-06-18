@@ -55,9 +55,9 @@ guide.step3 = guide.step3 || function () {
   ];
   return show;
 
-  function show(siteIdx) {
+  function show(siteIdx, $guide) {
     if (!step) {
-      step = guide.step(steps, {site: siteIdx, page: 3, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
+      step = guide.step(steps, {$guide: $guide, site: siteIdx, page: 3, done: .2, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
     }
   }
 

@@ -4,17 +4,16 @@
 // @require scripts/keeper.js
 // @require scripts/render.js
 // @require scripts/html/guide/step_0.js
-// @require scripts/html/guide/steps.js
 
 guide.step0 = guide.step0 || function () {
   var $stage, $pages, $steps;
   return show;
 
-  function show() {
+  function show(__, $guide) {
     if (!$stage) {
       $stage = $(render('html/guide/step_0', me)).appendTo('body').layout().addClass('kifi-open');
-      $steps = $(render('html/guide/steps')).appendTo('body')
-        .on('click', '.kifi-guide-steps-x', hide);
+      $steps = $guide.appendTo('body')
+        .on('click', '.kifi-gs-x', hide);
       $pages = $stage.find('.kifi-guide-pages')
         .on('click', '.kifi-guide-next', onClickNext)
         .on('click', '.kifi-guide-site-a', onClickSite);
@@ -33,7 +32,10 @@ guide.step0 = guide.step0 || function () {
 
   function onClickNext() {
     $pages.attr('kifi-p', '2');
-    $steps.addClass('kifi-showing');
+    $steps.on('transitionend', function end() {
+      $(this).off('transitionend', end)
+        .data().updateProgress(.2);
+    }).addClass('kifi-showing');
   }
 
   function onClickSite(e) {

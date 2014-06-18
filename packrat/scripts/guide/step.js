@@ -6,7 +6,6 @@
 // @require scripts/render.js
 // @require scripts/guide/spotlight.js
 // @require scripts/guide/curved_arrow.js
-// @require scripts/html/guide/steps.js
 
 guide.step = guide.step || function () {
   var spotlight, $stage, $steps, timeout, arrow, steps, opts, stepIdx, animTick;
@@ -25,8 +24,9 @@ guide.step = guide.step || function () {
       opts = opts_;
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
       $stage = $(render('html/guide/step_' + opts.page, {me: me, site: sites[opts_.site]}));
-      $steps = $(render('html/guide/steps', {showing: true})).appendTo('body')
-        .on('click', '.kifi-guide-steps-x', hide);
+      $steps = opts_.$guide.appendTo('body')
+        .on('click', '.kifi-gs-x', hide);
+      $steps.each(layout).data().updateProgress(opts_.done);
       if (document.readyState === 'complete') {
         timeout = setTimeout(show2, 2000);
       } else {
@@ -105,6 +105,7 @@ guide.step = guide.step || function () {
         ms -= Date.now() - t0;
         stepIdx = idx;
         (opts.step || api.noop)(idx);
+        $steps.data().updateProgress(opts.done + (1 - opts.done) * (idx + 1) / steps.length);
         if (step.substep) {
           showSubstep(ms);
         } else {
@@ -316,5 +317,10 @@ guide.step = guide.step || function () {
 
   function layout() {
     this.clientHeight;
+  }
+
+  function setProp(o, k, v) {
+    o[k] = v;
+    return o;
   }
 }();

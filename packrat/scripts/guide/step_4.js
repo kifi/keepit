@@ -6,7 +6,6 @@
 // @require scripts/guide/cut_screen.js
 // @require scripts/guide/curved_arrow.js
 // @require scripts/html/guide/step_4.js
-// @require scripts/html/guide/steps.js
 
 guide.step4 = guide.step4 || function () {
   'use strict';
@@ -23,14 +22,15 @@ guide.step4 = guide.step4 || function () {
   ];
   return show;
 
-  function show() {
+  function show(__, $guide) {
     if (!$stage) {
       $stage = $(render('html/guide/step_4', me));
       cutScreen = new CutScreen([]);
       $stage.prepend(cutScreen.el).appendTo('body');
-      $steps = $(render('html/guide/steps', {showing: true})).appendTo('body');
+      $steps = $guide.appendTo('body')
+        .on('click', '.kifi-gs-x', hide);
+      $steps.layout().data().updateProgress(.2);
       $feats = $stage.find('.kifi-guide-feature');
-      $steps.find('.kifi-guide-steps-x').click(hide);
       $(document).data('esc').add(hide);
       arrows = [];
       timeout = setTimeout(cutHole, 600);
@@ -65,6 +65,7 @@ guide.step4 = guide.step4 || function () {
         var head = $.extend({rect: toClientRect(rect)}, arc.to);
         arrows.push(new CurvedArrow(tail, head, arc.anchor, 400));
         timeout = setTimeout(arrows.length < holes.length ? cutHole : drumRoll, 1200);
+        $steps.data().updateProgress((i + 2) / (arcs.length + 2));
       })
       .addClass('kifi-opaque');
   }
@@ -97,6 +98,7 @@ guide.step4 = guide.step4 || function () {
         }
       })
       .removeClass('kifi-opaque');
+    $steps.data().updateProgress(1);
   }
 
   function toClientRect(r) {

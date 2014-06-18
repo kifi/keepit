@@ -5,7 +5,7 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
   'use strict';
 
   function CurvedArrow(tail, head, anchor, revealMs) {
-    this.$el = $('<div class="kifi-curved-arrow kifi-root"/>');
+    this.$el = $('<div class="kifi-curved-arrow kifi-root"/>').hide();
     this.$head = head.draw === false ? $() : $('<div class="kifi-curved-arrow-head"/>').appendTo(this.$el);
     this.$tail = $('<div class="kifi-curved-arrow-tail"/>').appendTo(this.$el);
     this.attach();
@@ -15,7 +15,8 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     var x0 = curve.x(0);
     var y0 = curve.y(0);
     this.$head.css('transform', headTransform(x0, y0, curve.phi(0)));
-    this.$tail.css('transform', translatePx(x0, y0))
+    this.$tail.css('transform', translatePx(x0, y0));
+    this.$el.removeAttr('style');
     this.onWinResize = anchor && anchor !== 'tl' ? _.throttle(getOnWinResize(this.$el, anchor), 100, {leading: false}) : null;
     reveal.call(this, curve, tail.spacing || tailWidth * 4.5, revealMs);
   }

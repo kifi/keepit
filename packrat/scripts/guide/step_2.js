@@ -15,9 +15,9 @@ guide.step2 = guide.step2 || function () {
   ];
   return show;
 
-  function show(siteIdx) {
+  function show(siteIdx, $guide) {
     if (!step) {
-      step = guide.step(steps, {site: siteIdx, page: 2, anchor: 'tl', hide: onHide});
+      step = guide.step(steps, {$guide: $guide, site: siteIdx, page: 2, done: .5, anchor: 'tl', hide: onHide});
       window.addEventListener('click', onClick, true);
     }
   }
