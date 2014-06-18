@@ -10,6 +10,7 @@ import scala.concurrent.duration._
 
 object SequencingPluginMessages {
   case object Process
+  case object SanityCheck
 }
 
 trait SequencingPlugin extends SchedulerPlugin {
@@ -26,6 +27,7 @@ trait SequencingPlugin extends SchedulerPlugin {
   override def onStart() {
     log.info(s"starting $name")
     scheduleTaskOnLeader(actor.system, 30 seconds, 5 seconds, actor.ref, SequencingPluginMessages.Process)
+    scheduleTaskOnAllMachines(actor.system, 100 seconds, 180 seconds, actor.ref, SequencingPluginMessages.SanityCheck)
   }
 
   override def onStop() {
@@ -34,27 +36,14 @@ trait SequencingPlugin extends SchedulerPlugin {
 }
 
 trait SequenceAssigner extends RecurringTaskManager {
-  private[this] val assignerClassName = this.getClass().getSimpleName()
-  private[this] var reportedUnsupported = false
-
-  val airbrake: AirbrakeNotifier
 
   def assignSequenceNumbers(): Unit
+  def sanityCheck(): Unit
 
-  override def doTask(): Unit = {
-    try {
-      assignSequenceNumbers()
-    } catch {
-      case e: UnsupportedOperationException =>
-        if (!reportedUnsupported) {
-          reportedUnsupported = true // report only once
-          airbrake.notify(s"FATAL: deferred sequence assignment is not supported", e)
-        }
-        throw e
-    }
-  }
-  override def onError(e: Throwable): Unit = { airbrake.notify(s"Error in $assignerClassName", e) }
+  override def doTask(): Unit = assignSequenceNumbers()
 }
+
+class SequenceNumberAssignmentStalling(seq: Long) extends Exception(s"sequence number assignment may be stalling: $seq")
 
 abstract class SequencingActor(
   assigner: SequenceAssigner,
@@ -65,6 +54,7 @@ abstract class SequencingActor(
 
   def receive() = {
     case Process => assigner.request()
+    case SanityCheck => assigner.sanityCheck()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
