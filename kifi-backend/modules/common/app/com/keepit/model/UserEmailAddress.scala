@@ -39,6 +39,14 @@ case class UserEmailAddress (
 object UserEmailAddress {
   lazy val random = new SecureRandom()
   implicit def toEmailAddress(userEmailAddress: UserEmailAddress): EmailAddress = userEmailAddress.address
+
+  def getTestExperiments(email: UserEmailAddress): Set[ExperimentType] = {
+    if (email.isTestEmail()) {
+      if (email.isAutoGenEmail()) Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
+      else Set(ExperimentType.FAKE)
+    } else
+      Set.empty
+  }
 }
 
 object UserEmailAddressStates {
