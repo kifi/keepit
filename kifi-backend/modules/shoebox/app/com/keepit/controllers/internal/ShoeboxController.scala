@@ -296,6 +296,12 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
+  def getNormalizedURIExternalIDs(ids: String) = SafeAsyncAction { request =>
+    val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
+    val uris = db.readOnly { implicit s => uriIds.map(id => normUriRepo.get(id).externalId) }  //using cache
+    Ok(Json.toJson(uris))
+  }
+
   def getNormalizedURIByURL() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val url : String = Json.fromJson[String](request.body).get
     val uriOpt = db.readOnly { implicit s =>

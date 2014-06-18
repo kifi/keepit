@@ -289,6 +289,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(uris)
   }
 
+  def getNormalizedURIExternalIDs(ids: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],ExternalId[NormalizedURI]]] = {
+    val externalIds = ids.map(allNormalizedURIs(_).externalId)
+    Future.successful((ids zip externalIds) toMap)
+  }
+
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] = Future.successful(allNormalizedURIs.values.find(_.url == url))
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???

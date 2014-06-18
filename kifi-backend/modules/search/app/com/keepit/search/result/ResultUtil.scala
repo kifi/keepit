@@ -12,31 +12,27 @@ import com.keepit.search.SearchConfig
 
 object ResultUtil {
 
+  private def jsonToKifiSearchHit(json: JsObject): KifiSearchHit = {
+    val externalUriId = (json \ "externalUriId").asOpt[JsString].map("externalUriId" -> _).toList
+    KifiSearchHit(JsObject(List(
+      "count" -> (json \ "bookmarkCount"),
+      "bookmark" -> (json \ "bookmark"),
+      "users" -> (json \ "basicUsers"),
+      "score" -> (json \ "score"),
+      "isMyBookmark" -> (json \ "isMyBookmark"),
+      "isPrivate" -> (json \ "isPrivate")
+    ) ++ externalUriId))
+  }
+
   def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
     hits.map{ h =>
-      val json = h.json
-      KifiSearchHit(JsObject(List(
-        "count" -> (json \ "bookmarkCount"),
-        "bookmark" -> (json \ "bookmark"),
-        "users" -> (json \ "basicUsers"),
-        "score" -> (json \ "score"),
-        "isMyBookmark" -> (json \ "isMyBookmark"),
-        "isPrivate" -> (json \ "isPrivate")
-      )))
+      jsonToKifiSearchHit(h.json)
     }
   }
 
   def toSanitizedKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
     hits.map{ h =>
-      val json = h.sanitized.json
-      KifiSearchHit(JsObject(List(
-        "count" -> (json \ "bookmarkCount"),
-        "bookmark" -> (json \ "bookmark"),
-        "users" -> (json \ "basicUsers"),
-        "score" -> (json \ "score"),
-        "isMyBookmark" -> (json \ "isMyBookmark"),
-        "isPrivate" -> (json \ "isPrivate")
-      )))
+      jsonToKifiSearchHit(h.sanitized.json)
     }
   }
 

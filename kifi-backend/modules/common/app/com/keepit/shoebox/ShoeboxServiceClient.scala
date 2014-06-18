@@ -52,6 +52,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getEmailAddressById(id: Id[UserEmailAddress]): Future[String]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
+  def getNormalizedURIExternalIDs(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],ExternalId[NormalizedURI]]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
   def internNormalizedURI(url: String, scrapeWanted: Boolean = false): Future[NormalizedURI]
@@ -133,6 +134,7 @@ trait ShoeboxServiceClient extends ServiceClient {
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
+    uriExternalIdCache: NormalizedURIExternalIDCache,
     bookmarkUriUserCache: KeepUriUserCache,
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
@@ -369,6 +371,21 @@ class ShoeboxServiceClientImpl @Inject() (
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
+    }
+  }
+
+  def getNormalizedURIExternalIDs(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],ExternalId[NormalizedURI]]] = {
+    redundantDBConnectionCheck(uriIds)
+    val keys = uriIds.map(NormalizedURIExternalIDKey)
+    cacheProvider.uriExternalIdCache.bulkGetOrElseFuture(keys.toSet) { missing =>
+      val missingKeysSeq = missing.toSeq
+      call(Shoebox.internal.getNormalizedURIExternalIDs(missingKeysSeq.map(_.id).mkString(","))).map { r =>
+        Json.fromJson[Seq[ExternalId[NormalizedURI]]](r.json).get
+      } map { externalIds =>
+        (missingKeysSeq zip externalIds.map(_.id)) toMap
+      }
+    } map { externalIdMap =>
+      externalIdMap map { case (k,v) => (k.id,ExternalId[NormalizedURI](v)) }
     }
   }
 

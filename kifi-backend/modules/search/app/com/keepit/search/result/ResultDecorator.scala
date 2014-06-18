@@ -42,6 +42,9 @@ class ResultDecorator(
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], JsObject]) else {
       shoeboxClient.getBasicUsers(users.toSeq).map{ _.map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) } }
     }
+    val uriExternalIdsFuture = if (hits.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], ExternalId[NormalizedURI]]) else {
+      shoeboxClient.getNormalizedURIExternalIDs(hits.map(_.uriId))
+    }
     val expertsFuture = Promise.successful(List.empty[Id[User]]).future  // TODO: revisit
 
     val highlightedHits = highlight(hits)
@@ -53,8 +56,9 @@ class ResultDecorator(
 
     val idFilter = result.hits.foldLeft(searchFilter.idFilter.toSet){ (s, h) => s + h.uriId.id }
 
-    val basicUserJsonMap = monitoredAwait.result(usersFuture, 5 seconds, s"getting basic users")
-    val decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
+    val (basicUserJsonMap, uriExternalIdMap) = monitoredAwait.result(usersFuture zip uriExternalIdsFuture, 5 seconds, s"getting basic users and uri external ids")
+    var decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
+    decoratedHits = addUriExternalIds(decoratedHits, uriExternalIdMap)
 
     val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val experts = expertIds.flatMap{ expert => basicUserJsonMap.get(expert) }
@@ -88,6 +92,12 @@ class ResultDecorator(
     hits.map{ h =>
       val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
       h.set("basicUsers", JsArray(basicUsers))
+    }
+  }
+
+  private def addUriExternalIds(hits: Seq[DetailedSearchHit], uriExternalIdMap: Map[Id[NormalizedURI], ExternalId[NormalizedURI]]): Seq[DetailedSearchHit] = {
+    hits.map{ h =>
+      uriExternalIdMap.get(h.uriId).map(externalId => h.set("externalUriId", JsString(externalId.toString))).getOrElse(h)
     }
   }
 }

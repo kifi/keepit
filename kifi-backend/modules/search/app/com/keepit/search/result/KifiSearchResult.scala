@@ -149,6 +149,7 @@ object PartialSearchResult extends Logging {
 
 class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def uriId: Id[NormalizedURI] = Id[NormalizedURI]((json \ "uriId").as[Long])
+  def externalUriId: Option[ExternalId[NormalizedURI]] = (json \ "externalUriId").asOpt[ExternalId[NormalizedURI]]
   def isMyBookmark: Boolean = (json \ "isMyBookmark").as[Boolean]
   def isFriendsBookmark: Boolean = (json \ "isFriendsBookmark").as[Boolean]
   def isPrivate: Boolean = (json \ "isPrivate").as[Boolean]
