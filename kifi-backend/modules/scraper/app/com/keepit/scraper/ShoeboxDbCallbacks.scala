@@ -45,8 +45,6 @@ class ShoeboxDbCallbackHelper @Inject() (config: ScraperConfig, shoeboxServiceCl
     }
   }
   def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo = await(saveScrapeInfo(info))
-  def syncSavePageInfo(info:PageInfo):PageInfo = await(savePageInfo(info))
-  def syncSaveImageInfo(info:ImageInfo):ImageInfo = await(saveImageInfo(info))
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Keep] = await(getBookmarksByUriWithoutTitle(uriId))
   def syncGetLatestKeep(url: String): Option[Keep] = await(getLatestKeep(url))
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
@@ -97,8 +95,6 @@ trait SyncShoeboxDbCallbacks {
   def syncSaveNormalizedUri(uri:NormalizedURI):NormalizedURI
   def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
   def syncSaveScrapeInfo(info:ScrapeInfo):ScrapeInfo
-  def syncSavePageInfo(info:PageInfo):PageInfo
-  def syncSaveImageInfo(info:ImageInfo):ImageInfo
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]):Seq[Keep]
   def syncGetLatestKeep(url: String): Option[Keep]
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
