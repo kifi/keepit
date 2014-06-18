@@ -171,7 +171,7 @@ class AuthHelper @Inject() (
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
-          userRepo.save(user.copy(primaryEmailId = Some(emailAddr.id.get)))
+          userRepo.save(user.copy(primaryEmail = Some(emailAddr.address)))
         }
         userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
@@ -349,7 +349,7 @@ class AuthHelper @Inject() (
         }
         val user = userRepo.get(address.userId)
         val (verifiedEmailOpt, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
-        verifiedEmailOpt.collect { case verifiedEmail if isVerifiedForTheFirstTime && (user.primaryEmailId.isEmpty || isPendingPrimaryEmail) =>
+        verifiedEmailOpt.collect { case verifiedEmail if isVerifiedForTheFirstTime && (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
           userCommander.updateUserPrimaryEmail(verifiedEmail)
         }
 

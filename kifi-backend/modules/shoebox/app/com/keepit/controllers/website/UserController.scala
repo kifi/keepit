@@ -206,7 +206,7 @@ class UserController @Inject() (
             Ok(Json.toJson(EmailInfo(
               address = emailRecord.address,
               isVerified = emailRecord.verified,
-              isPrimary = request.user.primaryEmailId.isDefined && request.user.primaryEmailId.get.id == emailRecord.id.get.id,
+              isPrimary = request.user.primaryEmail.isDefined && request.user.primaryEmail.get == emailRecord.address,
               isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == emailRecord.address
             )))
           } else {
@@ -225,7 +225,7 @@ class UserController @Inject() (
       if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
-        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmailId, _))
+        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
         userData.description.foreach{ description =>
           userCommander.updateUserDescription(request.userId, description)
         }

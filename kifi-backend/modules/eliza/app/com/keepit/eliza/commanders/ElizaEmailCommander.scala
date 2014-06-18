@@ -236,7 +236,11 @@ class ElizaEmailCommander @Inject() (
   }
 
   private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
-    val unsubUrlFut = shoebox.getUnsubscribeUrlForEmail(nonUserThread.participant.identifier)
+    val unsubUrlFut = nonUserThread.participant match {
+      case emailParticipant: NonUserEmailParticipant => shoebox.getUnsubscribeUrlForEmail(emailParticipant.address)
+      case _ => throw new IllegalArgumentException(s"Unknown non user participant: ${nonUserThread.participant}")
+    }
+
     val protoEmailFut = unsubUrlFut map { unsubUrl =>
       assembleEmail(
         threadEmailData,

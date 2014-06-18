@@ -66,7 +66,7 @@ class MobileUserController @Inject() (
       if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
         BadRequest(Json.obj("error" -> "bad email addresses"))
       } else {
-        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmailId, _))
+        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
         userData.description.foreach{ description =>
           userCommander.updateUserDescription(request.userId, description)
         }

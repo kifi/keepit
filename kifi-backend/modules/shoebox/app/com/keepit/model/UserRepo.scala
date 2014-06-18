@@ -63,9 +63,8 @@ class UserRepoImpl @Inject() (
     def lastName = column[String]("last_name", O.NotNull)
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
-    def primaryEmailId = column[Id[UserEmailAddress]]("primary_email_id", O.Nullable)
     def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmailId.?, primaryEmail.?) <> ((User.apply _).tupled, User.unapply)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)

@@ -16,7 +16,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
       (implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
-  def getByUser(userId: Id[User])(implicit session: RSession): UserEmailAddress
+  def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
@@ -80,16 +80,13 @@ class UserEmailAddressRepoImpl @Inject() (
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
     (for(f <- rows if f.userId === userId && f.state =!= UserEmailAddressStates.INACTIVE) yield f).list
 
-  def getByUser(userId: Id[User])(implicit session: RSession): UserEmailAddress = {
-    if (userRepo.get(userId).primaryEmailId.isDefined) {
-      get(userRepo.get(userId).primaryEmailId.get)
-    } else {
+  def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
+    val user = userRepo.get(userId)
+    user.primaryEmail getOrElse {
       val all = getAllByUser(userId)
       all.find(_.verified) match {
-        case Some(em) =>
-          em
-        case None =>
-          all.headOption.getOrElse(throw new Exception(s"no emails for user $userId"))
+        case Some(verifiedEmail) => verifiedEmail.address
+        case None => all.headOption.getOrElse(throw new Exception(s"no emails for user $userId")).address
       }
     }
   }

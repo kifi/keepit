@@ -24,7 +24,6 @@ case class User(
   pictureName: Option[String] = None, // denormalized UserPicture.name
   userPictureId: Option[Id[UserPicture]] = None,
   seq: SequenceNumber[User] = SequenceNumber.ZERO,
-  primaryEmailId: Option[Id[UserEmailAddress]] = None,
   primaryEmail: Option[EmailAddress] = None
 ) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User]{
   def withId(id: Id[User]) = this.copy(id = Some(id))
@@ -51,7 +50,6 @@ object User {
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
     (__ \ 'seq).format(SequenceNumber.format[User]) and
-    (__ \ 'primaryEmailId).formatNullable[Id[UserEmailAddress]] and
     (__ \ 'primaryEmail).formatNullable[EmailAddress]
   )(User.apply, unlift(User.unapply))
 
