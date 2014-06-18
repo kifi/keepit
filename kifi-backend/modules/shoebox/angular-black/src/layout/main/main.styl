@@ -52,7 +52,6 @@
     margin-right: 5px
 
 .kf-main-keeps
-  overflow: hidden
   position: relative
 
   & > .antiscroll-inner
@@ -109,11 +108,14 @@
   &::-moz-placeholder
     color: #99a3b3
 
-  &::placeholder
+  &:-moz-placeholder
     color: #99a3b3
 
-  &::-ms-clear
-    display: none
+  &::-ms-input-placeholder
+    color: #99a3b3
+
+input::-ms-clear
+  display: none
 
 .kf-query + .kf-query-icon
   position: absolute

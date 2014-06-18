@@ -36,10 +36,10 @@ case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientR
   override def toString(): String = getMessage
 }
 
-case class LongWaitException(request: Request, response: ClientResponse, waitTime: Int, duration: Int, remoteTime: Int, midFlightRequestCount: Int, listOfMidFlightRequests: String, remoteMidFlightRequestCount: Option[Int])
+case class LongWaitException(request: Request, response: ClientResponse, initTime: Int, waitTime: Int, duration: Int, remoteTime: Int, midFlightRequestCount: Int, listOfMidFlightRequests: String, remoteMidFlightRequestCount: Option[Int])
     extends Exception(
       s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
-      s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms remote-time:${remoteTime}ms " +
+      s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms init-time:${initTime}ms remote-time:${remoteTime}ms " +
       s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status} remoteMidFlight[$remoteMidFlightRequestCount] localMidFlight[$midFlightRequestCount]:$listOfMidFlightRequests"){
   override def toString(): String = getMessage
 }
@@ -243,7 +243,8 @@ case class HttpClientImpl(
 
     e.waitTime map { waitTime =>
       if (waitTime > callTimeouts.maxWaitTime.get) {
-        val exception = request.tracer.withCause(LongWaitException(request, res, waitTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
+        val initTime = request.initTime.toInt
+        val exception = request.tracer.withCause(LongWaitException(request, res, initTime, waitTime - initTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(
           AirbrakeError.outgoing(
             request = request.req,
@@ -278,16 +279,20 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
 
   var timer: AccessLogTimer = _
   var tracer: StackTrace = _
+  var initTime: Long = _
 
   @inline private[this] def startTimer() = {
     timer = accessLog.timer(HTTP_OUT)
   }
+  @inline private[this] def timeInitiation() = {
+    initTime = timer.laps
+  }
 
-  def get() =               try { startTimer(); wsRequest.get()      } finally { tracer = new StackTrace() }
-  def put(body: JsValue) =  try { startTimer(); wsRequest.put(body)  } finally { tracer = new StackTrace() }
-  def post(body: String) =  try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
-  def post(body: JsValue) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
-  def post(body: NodeSeq) = try { startTimer(); wsRequest.post(body) } finally { tracer = new StackTrace() }
-  def delete() =            try { startTimer(); wsRequest.delete()   } finally { tracer = new StackTrace() }
+  def get() =               try { startTimer(); wsRequest.get()      } finally { timeInitiation(); tracer = new StackTrace() }
+  def put(body: JsValue) =  try { startTimer(); wsRequest.put(body)  } finally { timeInitiation(); tracer = new StackTrace() }
+  def post(body: String) =  try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
+  def post(body: JsValue) = try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
+  def post(body: NodeSeq) = try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
+  def delete() =            try { startTimer(); wsRequest.delete()   } finally { timeInitiation(); tracer = new StackTrace() }
 }
 
