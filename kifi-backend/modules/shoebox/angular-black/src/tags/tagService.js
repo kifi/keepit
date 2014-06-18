@@ -118,6 +118,10 @@ angular.module('kifi.tagService', [
         api.filterList(prevFilter);
       },
 
+      /**
+       * Fetches all tags, but only returns the listLength first tags.
+       * The complete list of tags is exposed via allTags
+       */
       fetchAll: function (force) {
         if (!force && fetchAllPromise) {
           return fetchAllPromise.then(function () {
@@ -255,7 +259,7 @@ angular.module('kifi.tagService', [
 
       removeKeepsFromTag: function (tagId, keeps) {
         var url = env.xhrBase + '/collections/' + tagId + '/removeKeeps';
-        $http.post(url, _.pluck(keeps, 'id')).then(function (res) {
+        return $http.post(url, _.pluck(keeps, 'id')).then(function (res) {
           updateKeepCount(tagId, -keeps.length);
           keeps.forEach(function (keep) {
             keep.removeTag(tagId);

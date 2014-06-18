@@ -5,23 +5,31 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import com.keepit.common.logging.Logging
+import scala.collection.mutable
+import java.util.concurrent.locks.ReentrantLock
 
 class FutureHelpersTest extends Specification with Logging {
 
   implicit val execCtx = ExecutionContext.fj
 
-  val counter = new AtomicInteger(0)
-  def incAndGet:Future[Int] = Future {
-    Thread.sleep(util.Random.nextInt(100))
-    counter.incrementAndGet
-  }
-
   "sequentialExec" should {
-    "execute futures sequentially" in {
-      val futures = Seq.fill[() => Future[Int]](20) { () => incAndGet }
-      val res = Await.result(FutureHelpers.sequentialExec(futures), Duration.Inf)
-      res.sorted === res
+
+    "sequentially execute" in {
+      val lock = new ReentrantLock()
+      val builder = mutable.ArrayBuilder.make[Int]
+      val input = Seq.fill(100) { util.Random.nextInt(Int.MaxValue) }
+      val resF = FutureHelpers.sequentialExec(input) { id =>
+        Future {
+          val held = lock.tryLock()
+          if (!held) throw new IllegalStateException(s"There should be no concurrent access! lock=${lock}")
+          builder += id
+          lock.unlock()
+        }
+      }
+      Await.result(resF, Duration.Inf)
+      builder.result().toSeq === input
     }
   }
 
 }
+

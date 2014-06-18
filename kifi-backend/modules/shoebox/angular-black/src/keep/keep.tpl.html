@@ -15,13 +15,15 @@
         </a>
       </div>
       <div class="kf-keep-content-line">
-        <div class="kf-keep-info">
-          <div class="kf-keep-subtitle">
-            <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-            <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
-          </div>
-          <div class="kf-keep-description">
-            {{keep.summary.description}}
+        <div class="kf-keep-info-wrap">
+          <div class="kf-keep-info">
+            <div class="kf-keep-subtitle">
+              <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
+              <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+            </div>
+            <div class="kf-keep-description">
+              {{keep.summary.description}}
+            </div>
           </div>
         </div>
         <div class="kf-keep-small-image" ng-if="hasSmallImage()">
@@ -35,7 +37,7 @@
       <span class="kf-keep-who-others" ng-if="showOthers()"></span>
       <span kf-keep-who-text keep="keep"></span>
     </div>
-    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" ng-show="showTags()"></div>
+    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
   </div>
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link">

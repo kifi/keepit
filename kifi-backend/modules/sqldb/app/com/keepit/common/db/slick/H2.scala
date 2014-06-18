@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.db.{DbSequence, SequenceNumber, H2DatabaseDialect}
+import com.keepit.common.db.{SequenceNumberRange, DbSequence, SequenceNumber, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
 import scala.slick.driver.JdbcDriver.DDL
@@ -40,6 +40,17 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
       val rs = stmt.executeQuery()
       rs.next()
       SequenceNumber[T](rs.getLong(1))
+    }
+
+    def reserve(n: Int)(implicit session: RWSession): SequenceNumberRange[T] = {
+      if (n > 0) {
+        val start = incrementAndGet()
+        for (i <- 1 until n) { incrementAndGet() }
+        val end = getLastGeneratedSeq()
+        SequenceNumberRange[T](start.value, end.value)
+      } else {
+        throw new IllegalArgumentException("non-positive size is specified")
+      }
     }
   }
 
