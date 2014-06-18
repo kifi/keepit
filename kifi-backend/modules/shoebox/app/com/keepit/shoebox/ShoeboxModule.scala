@@ -23,6 +23,7 @@ import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.common.external.ExternalServiceModule
 import com.keepit.graph.ProdGraphServiceClientModule
+import com.keepit.signal.ReKeepStatsUpdaterModule
 
 abstract class ShoeboxModule(
   //these are modules that inheriting modules need to provide
@@ -39,7 +40,8 @@ abstract class ShoeboxModule(
   val cacheModule: ShoeboxCacheModule,
   val scrapeSchedulerModule: ScrapeSchedulerModule,
   val fjMonitorModule: ForkJoinContextMonitorModule,
-  val externalServiceModule: ExternalServiceModule
+  val externalServiceModule: ExternalServiceModule,
+  val rekeepStatsUpdaterModule: ReKeepStatsUpdaterModule
 ) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
@@ -62,6 +64,8 @@ abstract class ShoeboxModule(
   val keepImportsModule = KeepImportsModule()
 
   val repoChangeListenerModule = ShoeboxRepoChangeListenerModule()
+
+  val dbSequencingModule = ShoeboxDbSequencingModule()
 
   val mailerModule = PlayMailerModule()
 }

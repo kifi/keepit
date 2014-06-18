@@ -22,7 +22,6 @@ case class ProdSearchServiceClientModule() extends SearchServiceClientModule {
     airbrakeNotifier: AirbrakeNotifier): SearchServiceClient = {
     new SearchServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.SEARCH),
-      current.configuration.getInt("service.search.port").get,
       client,
       airbrakeNotifier
     )

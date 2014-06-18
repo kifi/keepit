@@ -12,6 +12,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.test.ShoeboxApplication
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.normalizer.NormalizedURIInterner
 
 class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationInjector{
   "renormalizer" should {
@@ -20,11 +21,12 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
+        val normalizedURIInterner = inject[NormalizedURIInterner]
         val changedUriRepo = inject[ChangedURIRepo]
         val renormRepo = inject[RenormalizedURLRepo]
         val centralConfig = inject[CentralConfig]
         val mailSender = inject[SystemAdminMailSender]
-        val commander = new URLRenormalizeCommander(db, null, mailSender, uriRepo, urlRepo, changedUriRepo, renormRepo, centralConfig )
+        val commander = new URLRenormalizeCommander(db, null, mailSender, uriRepo, normalizedURIInterner, urlRepo, changedUriRepo, renormRepo, centralConfig )
 
         val (uri0, uri1, url0, url1, url2, url3) = db.readWrite{ implicit s =>
           val uri0 = uriRepo.save(NormalizedURI.withHash("http://kifi.com/wrong", Some("kifi")).withState(NormalizedURIStates.SCRAPED))   // trigger 1 migration

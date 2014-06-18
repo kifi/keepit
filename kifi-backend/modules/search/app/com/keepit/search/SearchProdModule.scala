@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, SearchCacheModule}
 import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.inject.CommonProdModule
@@ -20,8 +19,6 @@ case class SearchProdModule() extends SearchModule(
   trackingModule = ProdTrackingModule(),
   spellModule = SpellCorrectorModule()
 ) with CommonProdModule  {
-  val discoveryModule = new ProdDiscoveryModule {
-    def servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil
-  }
+  val discoveryModule = new ProdDiscoveryModule(ServiceType.SEARCH, ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil)
 }
 

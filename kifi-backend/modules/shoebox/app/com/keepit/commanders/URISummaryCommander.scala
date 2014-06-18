@@ -22,9 +22,11 @@ import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.search.ArticleStore
 import com.keepit.scraper.embedly.EmbedlyKeyword
+import com.keepit.normalizer.NormalizedURIInterner
 
 class URISummaryCommander @Inject()(
   normalizedUriRepo: NormalizedURIRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   imageInfoRepo: ImageInfoRepo,
   pageInfoRepo: PageInfoRepo,
   db: Database,
@@ -79,9 +81,9 @@ class URISummaryCommander @Inject()(
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
     if (request.silent)
-      db.readOnly { implicit session => normalizedUriRepo.getByUri(request.url) }
+      db.readOnly { implicit session => normalizedURIInterner.getByUri(request.url) }
     else
-      db.readWrite { implicit session => Some(normalizedUriRepo.internByUri(request.url)) }
+      db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }
 
   /**

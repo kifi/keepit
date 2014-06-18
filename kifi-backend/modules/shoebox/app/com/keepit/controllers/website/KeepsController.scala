@@ -23,6 +23,7 @@ import play.api.libs.json.JsString
 import scala.Some
 import play.api.libs.json.JsObject
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.normalizer.NormalizedURIInterner
 
 class KeepsController @Inject() (
     db: Database,
@@ -38,6 +39,7 @@ class KeepsController @Inject() (
     bookmarksCommander: KeepsCommander,
     userValueRepo: UserValueRepo,
     clock: Clock,
+    normalizedURIInterner: NormalizedURIInterner,
     heimdalContextBuilder: HeimdalContextBuilderFactory
   )
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
@@ -56,7 +58,7 @@ class KeepsController @Inject() (
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     urlOpt.map { url =>
       db.readOnlyAsync { implicit session =>
-        uriRepo.getByUri(url)
+        normalizedURIInterner.getByUri(url)
       } map { uriOpt =>
         uriOpt flatMap { uriSummaryCommander.getScreenshotURL(_) } match {
           case Some(url) => Ok(Json.obj("url" -> url))
@@ -66,7 +68,7 @@ class KeepsController @Inject() (
     }.orElse {
       urlsOpt.map { urls =>
         db.readOnlyAsync { implicit session =>
-          urls.map( url => url -> uriRepo.getByUri(url) )
+          urls.map( url => url -> normalizedURIInterner.getByUri(url) )
         } map { case uris =>
           val results = uris.map { case (uri, ssOpt) =>
             uri -> (ssOpt.flatMap{uriSummaryCommander.getScreenshotURL(_)}.map(JsString).getOrElse(JsNull): JsValue)
@@ -101,7 +103,7 @@ class KeepsController @Inject() (
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
       case Some(url) => {
         val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
-          val uriOpt = uriRepo.getByUri(url)
+          val uriOpt = normalizedURIInterner.getByUri(url)
           val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
           (uriOpt, pageInfoOpt)
         }
@@ -123,20 +125,19 @@ class KeepsController @Inject() (
       case Some(urls) => {
         val tuples = db.readOnly { implicit ro =>
           urls.map { s =>
-            s -> uriRepo.getByUri(s)
+            s -> normalizedURIInterner.getByUri(s)
           }
         }
         val tuplesF = tuples map { case (url, uriOpt) =>
           val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
-            val uriOpt = uriRepo.getByUri(url)
+            val uriOpt = normalizedURIInterner.getByUri(url)
             val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
             (uriOpt, pageInfoOpt)
           }
           uriOpt match {
             case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-            case Some(uri) => {
+            case Some(uri) =>
               toJsObject(url, uri, pageInfoOpt) // todo: batch
-            }
           }
         }
         Future.sequence(tuplesF) map { res =>
@@ -146,17 +147,18 @@ class KeepsController @Inject() (
     }
   }
 
-  def keepMultiple() = JsonAction.authenticated { request =>
+  def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
         val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        val (keeps, addedToCollection) = bookmarksCommander.keepMultiple(fromJson, request.userId, source)
-        log.info(s"kept ${keeps.size} new keeps")
+        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, separateExisting)
+        log.info(s"kept ${keeps.size} keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
+          "failures" -> failures,
           "addedToCollection" -> addedToCollection
-        ))
+        ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> keeps)) getOrElse Json.obj()))
       } getOrElse {
         log.error(s"can't parse object from request ${request.body} for user ${request.user}")
         BadRequest(Json.obj("error" -> "Could not parse object from request body"))

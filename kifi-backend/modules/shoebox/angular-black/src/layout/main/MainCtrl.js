@@ -108,9 +108,8 @@ angular.module('kifi.layout.main', [
     
     function initAddKeep() {
       $scope.modal = 'add_keeps';
+      $scope.data.initAddKeeps = true;
       $scope.data.showAddKeeps = true;
-      $scope.addKeepCheckedPrivate = false;
-      $scope.addKeepInput = {};
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
@@ -127,6 +126,10 @@ angular.module('kifi.layout.main', [
           break;
         case 'addKeeps':
           initAddKeep();
+          break;
+        case 'genericError':
+          $scope.modal = 'generic_error';
+          $scope.data.showGenericErrorModal = true;
           break;
         case 'installExtension':
           $scope.modal = 'install_extension';
@@ -237,11 +240,11 @@ angular.module('kifi.layout.main', [
       $scope.importFileStatus = '';
     };
 
-    $scope.openBookmarkFileSelector = function ($event) {
-      var $file = angular.element($event.target).parent().parent().find('input:file');
-      $timeout(function () {
-        $file.click();
-      });
+
+    $scope.openBookmarkFileSelector = function () {
+      // not great, but trying to fix an IE bug
+      var bookmarkFileUpload = $rootElement.find('.bookmark-file-upload');
+      bookmarkFileUpload.click();
     };
 
     $scope.editKeepsLabel = function () {
@@ -267,23 +270,48 @@ angular.module('kifi.layout.main', [
       $rootElement.find('body').addClass('mac');
     }
 
-    $scope.addKeepTogglePrivate = function () {
-      $scope.addKeepCheckedPrivate = !$scope.addKeepCheckedPrivate;
-    };
-
-    $scope.keepUrl = function () {
-      if ($scope.addKeepInput.url) {
-        keepService.keepUrl([$scope.addKeepInput.url], $scope.addKeepCheckedPrivate);
-      } else {
-        //todo(martin): Tell the user something went wrong
-        return null; // silence jshint
-      }
-    };
-
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
         $rootScope.$emit('showGlobalModal','installExtensionError');
       });
     };
+
+    /**
+     * Make the page "extension-friendly"
+     */
+    var htmlElement = angular.element(document.getElementsByTagName('html')[0]);
+    // override right margin to always be 0
+    htmlElement.css({marginRight: 0});
+    $rootScope.$watch(function () {
+      return htmlElement[0].getAttribute('kifi-pane-parent') !== null;
+    }, function (res) {
+      var mainElement = $rootElement.find('.kf-main');
+      var rightCol = $rootElement.find('.kf-col-right');
+      var header = $rootElement.find('.kf-header-inner');
+      if (res) {
+        // find the margin-right rule that should have been applied
+        var fakeHtml = angular.element(document.createElement('html'));
+        fakeHtml.attr({
+          'kifi-pane-parent':'',
+          'kifi-with-pane':''
+        });
+        fakeHtml.hide().appendTo('html');
+        var marginRight = fakeHtml.css('margin-right');
+        fakeHtml.remove();
+
+        var currentRightColWidth = rightCol.width();
+        if (Math.abs(parseInt(marginRight,10) - currentRightColWidth) < 15) {
+          // avoid resizing if the width difference would be too small
+          marginRight = currentRightColWidth + 'px';
+        }
+        mainElement.css('width', 'calc(100% - ' + marginRight + ')');
+        rightCol.css('width', fakeHtml.css('margin-right'));
+        header.css('padding-right', marginRight);
+      } else {
+        mainElement.css('width', '');
+        rightCol.css('width', '');
+        header.css('padding-right', '');
+      }
+    });
   }
 ]);

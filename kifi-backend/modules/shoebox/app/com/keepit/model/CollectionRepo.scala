@@ -2,9 +2,6 @@ package com.keepit.model
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-
-
-
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{SequenceNumber, State, ExternalId, Id}

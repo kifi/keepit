@@ -11,13 +11,13 @@ import javax.mail.Message.RecipientType
 import javax.mail.Session
 import javax.mail.internet.{MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage}
 import com.keepit.test.ShoeboxTestInjector
-import com.keepit.model.EmailAddress
+import com.keepit.model.UserEmailAddress
 
 class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector {
   "MailToKeepMessageParser" should {
     "parse out the text from multipart emails" in {
       withDb() { implicit injector =>
-        val parser = new MailToKeepMessageParser(inject[Database], inject[EmailAddressRepo], inject[UserRepo])
+        val parser = new MailToKeepMessageParser(inject[Database], inject[UserEmailAddressRepo], inject[UserRepo])
 
         val session = Session.getDefaultInstance(new Properties())
         val message = new MimeMessage(session)
@@ -41,7 +41,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
     }
     "parse out uris correctly from HTML" in {
       withDb() { implicit injector =>
-        val parser = new MailToKeepMessageParser(inject[Database], inject[EmailAddressRepo], inject[UserRepo])
+        val parser = new MailToKeepMessageParser(inject[Database], inject[UserEmailAddressRepo], inject[UserRepo])
 
         val session = Session.getDefaultInstance(new Properties())
         val message = new MimeMessage(session)
@@ -61,15 +61,15 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
     "parse out users correctly" in {
       withDb() { implicit injector =>
         val db = inject[Database]
-        val emailAddressRepo = inject[EmailAddressRepo]
+        val emailAddressRepo = inject[UserEmailAddressRepo]
         val userRepo = inject[UserRepo]
         val (eishay, greg) = db.readWrite { implicit s =>
           (userRepo.save(User(firstName = "Eishay", lastName = "Smith")),
               userRepo.save(User(firstName = "Greg", lastName = "Methvin")))
         }
         db.readWrite { implicit s =>
-          emailAddressRepo.save(EmailAddress(address = "eishay@42go.com", userId = eishay.id.get, state = EmailAddressStates.VERIFIED))
-          emailAddressRepo.save(EmailAddress(address = "greg@42go.com", userId = greg.id.get))
+          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, state = UserEmailAddressStates.VERIFIED))
+          emailAddressRepo.save(UserEmailAddress(address = EmailAddress("greg@42go.com"), userId = greg.id.get))
         }
         val parser = new MailToKeepMessageParser(db, emailAddressRepo, userRepo)
         val session = Session.getDefaultInstance(new Properties())

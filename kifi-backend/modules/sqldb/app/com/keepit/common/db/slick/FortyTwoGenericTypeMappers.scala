@@ -19,7 +19,7 @@ import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
 import play.api.libs.json.JsObject
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
@@ -46,16 +46,15 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
   implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
-  implicit val emailAddressHolderMapper = MappedColumnType.base[EmailAddressHolder, String](_.address, GenericEmailAddress.apply)
-  implicit val seqEmailAddressHolderMapper = MappedColumnType.base[Seq[EmailAddressHolder], String](v => v.map {e => e.address} mkString(","), v => v.trim match {
+  implicit val emailAddressMapper = MappedColumnType.base[EmailAddress, String](_.address, EmailAddress.apply)
+  implicit val seqEmailAddressMapper = MappedColumnType.base[Seq[EmailAddress], String](v => v.map {e => e.address} mkString(","), v => v.trim match {
     case "" => Nil
-    case trimmed => trimmed.split(",") map { addr => new GenericEmailAddress(addr.trim) }
+    case trimmed => trimmed.split(",") map { addr => EmailAddress(addr.trim) }
   })
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[KeepSource, String](_.value, KeepSource.apply)
-  implicit val systemEmailAddressMapper = MappedColumnType.base[SystemEmailAddress, String](_.address, EmailAddresses.apply)
   implicit val domainTagNameMapper = MappedColumnType.base[DomainTagName, String](_.name, DomainTagName.apply)
   implicit val socialIdMapper = MappedColumnType.base[SocialId, String](_.id, SocialId.apply)
   implicit val socialNetworkTypeMapper = MappedColumnType.base[SocialNetworkType, String](SocialNetworkType.unapply(_).get, SocialNetworkType.apply)
@@ -137,6 +136,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]
   implicit def setStateParameter[M <: Model[M]] = setParameterFromMapper[State[M]]
   implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
+  implicit val setEmailAddressParameter = setParameterFromMapper[EmailAddress]
 
   // GetResult mappers to be used for interpolated query results
 
@@ -151,4 +151,5 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit def getStateResult[M <: Model[M]] = getResultFromMapper[State[M]]
   implicit def getExtIdResult[M <: Model[M]] = getResultFromMapper[ExternalId[M]]
   implicit def getOptExtIdResult[M <: Model[M]] = getResultOptionFromMapper[ExternalId[M]]
+  implicit val getEmailAddressResult = getResultFromMapper[EmailAddress]
 }

@@ -47,7 +47,7 @@ class AuthController @Inject() (
     userValueRepo: UserValueRepo,
     s3ImageStore: S3ImageStore,
     airbrakeNotifier: AirbrakeNotifier,
-    emailAddressRepo: EmailAddressRepo,
+    emailAddressRepo: UserEmailAddressRepo,
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,
@@ -92,7 +92,7 @@ class AuthController @Inject() (
   }, unauthenticatedAction = { implicit request =>
     if (request.identityOpt.isDefined) {
       // User tried to log in (not sign up) with social network.
-      request.identityOpt.get.email.flatMap(e => db.readOnly(emailAddressRepo.getByAddressOpt(e)(_))) match {
+      request.identityOpt.get.email.flatMap(e => db.readOnly(emailAddressRepo.getByAddressOpt(EmailAddress(e))(_))) match {
         case Some(addr) =>
           // A user with this email address exists in the system, but it is not yet linked to this social identity.
           Ok(views.html.auth.connectToAuthenticate(
@@ -185,7 +185,7 @@ class AuthController @Inject() (
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
       identity.email.flatMap { addr =>
         db.readOnly { implicit s =>
-          emailAddressRepo.getByAddressOpt(addr)
+          emailAddressRepo.getByAddressOpt(EmailAddress(addr))
         }
       }.isDefined
     }

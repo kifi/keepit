@@ -3,7 +3,6 @@ highlightColor = #eeeeee
 
 .kf-tag
   position: relative
-  margin-right: 20px
   border-radius: 2px
   height: kfTagHeight
   border: 1px dashed transparent
@@ -34,7 +33,7 @@ highlightColor = #eeeeee
     .hover
       background-color: transparent
     &.kf-dragged
-      background-color: editYellowColor
+      background-color: yellowColor
       border-color: #cccccc
     .kf-tag-tool
       display: none
@@ -44,7 +43,7 @@ highlightColor = #eeeeee
 
 .kf-tag-list-reordering.kf-dragged
 .kf-keep-dragover-tag
-  background-color: editYellowColor
+  background-color: yellowColor
   border-color: #cccccc
 
 .kf-tag-drag-mask
@@ -56,32 +55,24 @@ highlightColor = #eeeeee
   z-index: 1
   display: none
 
-.kf-tag.animate
-  -webkit-animation: tag-blink 0.2s 3
-  animation: tag-blink 0.2s 3
+.kf-tag
+  &.animate
+  &.new
+    animation: tag-blink 0.1s linear 6 alternate
 
 @keyframes tag-blink {
-  0% {
-    background-color: editYellowColor
-    border-color: #cccccc
-  }
-  50% {
-    background-color: editYellowColor
-    border-color: #cccccc
-  }
-  51% {
-    background-color: appBackgroundColor
+  from {
+    background-color: transparent
     border-color: transparent
   }
-  100% {
-    background-color: appBackgroundColor
-    border-color: transparent
+  to {
+    background-color: yellowColor
+    border-color: #cccccc
   }
-
 }
 
 .kf-dragged-clone
-  background-color: editYellowColor
+  background-color: yellowColor
 
 .kf-dragged-clone-mask
   background-color: appBackgroundColor
@@ -95,6 +86,7 @@ highlightColor = #eeeeee
   color: textDarkColor
   vertical-align: middle
   border-top: 1px solid separatorColor
+  width: calc(100% - 50px)
 
   .kf-tag-caption
     font-style: italic
@@ -115,6 +107,10 @@ highlightColor = #eeeeee
 
 .kf-sidebar-tag-list
   user-select: none
+
+.kf-dragging-keep
+  .kf-sidebar-tag-list
+    background-color: clearYellowColor
 
 .kf-sidebar-tag-list:not(:hover) .highlight
 .kf-tag-new-inner:hover
@@ -159,19 +155,6 @@ highlightColor = #eeeeee
     line-height: 18px
     box-sizing: border-box
 
-::-webkit-input-placeholder
-  color: #aaaaaa
-  font-style: italic
-:-moz-placeholder
-  color: #aaaaaa
-  font-style: italic
-::-moz-placeholder
-  color: #aaaaaa
-  font-style: italic
-:-ms-input-placeholder
-  color: #aaaaaa
-  font-style: italic
-
 .kf-tag-input-clear
   float: right
   width: 20px
@@ -192,6 +175,7 @@ highlightColor = #eeeeee
   font-size: 13px
   color: textDarkColor
   vertical-align: middle
+  width: 100%
 
 .kf-tag-icon
   sprite2x($tag-blue-default)
@@ -204,8 +188,13 @@ highlightColor = #eeeeee
   overflow: hidden
   text-overflow: ellipsis
 
+.kf-tag-rename-container
+  overflow: hidden
+
 input.kf-tag-rename
   background-color: transparent
+  box-sizing: border-box
+  width: 100%
 
 .kf-tag-count
   font-size: 12px
@@ -221,7 +210,7 @@ input.kf-tag-rename
   overflow: hidden
   .antiscroll-inner
     .kf-sidebar-tag-list
-      width: calc(100% - 30px)
+      width: calc(100% - 50px)
 
 .kf-tag-tool
   position: absolute
@@ -239,3 +228,12 @@ input.kf-tag-rename
   left: 0
   cursor: move
   background: url(../img/drag-handle-tag.png) center/10px no-repeat
+
+.kf-fake-tag-item
+  .kf-tag-container
+    visibility: hidden
+
+.kf-add-tag-shown
+  .kf-fake-tag-item
+    display: none
+  

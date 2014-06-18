@@ -24,7 +24,7 @@ object CollectionNameFields {
 
 class CollectionNameIndexer(
     indexDirectory: IndexDirectory,
-    airbrake: AirbrakeNotifier)
+    override val airbrake: AirbrakeNotifier)
   extends Indexer[User, Collection, CollectionNameIndexer](indexDirectory, CollectionNameFields.decoders) {
 
   override val commitBatchSize = 100

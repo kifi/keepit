@@ -127,7 +127,7 @@ keepBorderRadius = 3px
   padding: 25px 0 10px
 
 .kf-keep-who
-  padding: 3px 35px 5px 0
+  padding: 6px 35px 5px 0
 
 .kf-keep-tag
   margin-top: 3px
@@ -197,6 +197,7 @@ keepBorderRadius = 3px
   width: 100%
   display: table
   padding-top: 14px
+  position: relative
 
 .kf-keep-big-image
   margin: 4px 0 11px
@@ -233,9 +234,14 @@ keepBorderRadius = 3px
 .kf-keep-small-image + .kf-keep-info
   padding-left: 20px
 
+.kf-keep-info-wrap
+  position: relative
+  margin-right: 30px
+
 .kf-keep-info
   vertical-align: top
   display: table-cell
+  width: 100%
 
 .kf-keep-title
   max-width: 100%
@@ -261,13 +267,11 @@ keepBorderRadius = 3px
   font-family: "Georgia", Arial, sans-serif
   font-smoothing: antialiased
   color: textBlackColor
-  word-wrap: break-word
   word-break: break-word
 
 .kf-dyn-positioned
   position: absolute
   overflow: hidden
-  margin-right: 50px
 
 .kf-keep-description-sizer
   position: absolute
@@ -284,6 +288,8 @@ keepBorderRadius = 3px
   font-smoothing: antialiased
   font-weight: 500
   long-text()
+  max-width: calc(100% - 100px)
+  overflow: hidden
 
   .kf-keep.example &
     color: #c6cbd3
@@ -342,15 +348,18 @@ input.kf-keep-tag-input
     transition: width .12s ease-in-out
 
 .kf-keep-tag-link
-  padding: 0 5px
+  padding: 0 11px 0 0
   font-smoothing: antialiased
+  long-text()
 
   &:active
     color: clearBlueColor
 
-.kf-keep-tag-x-container
-  float: right
-  margin-left: 3px
+.kf-keep-tag-x
+  position: absolute
+  right: 5px
+  top: 1px
+  cursor: pointer
 
 .kf-keep-tag-opts-container
   position: absolute
@@ -373,9 +382,7 @@ input.kf-keep-tag-input
 .kf-keep-tag-opt-new
   padding: 2px 3px 1px 6px
 
-.kf-keep-tag-link-container
 .kf-keep-tag-opt-new-text
-  text-overflow: ellipsis
   long-text()
 
 .kf-keep-tag-opt-new-label

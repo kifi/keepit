@@ -1,7 +1,7 @@
 package com.keepit.search.index
 
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.amazon.MyAmazonInstanceInfo
+import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -70,7 +70,7 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def activeShards(myAmazonInstanceInfo: MyAmazonInstanceInfo): ActiveShards = {
+  def activeShards(myAmazonInstanceInfo: MyInstanceInfo): ActiveShards = {
     val shards = (new ShardSpecParser).parse[NormalizedURI](
       myAmazonInstanceInfo.info.tags.get("ShardSpec") match {
         case Some(spec) =>
@@ -104,7 +104,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map{ shard => (shard, articleIndexer(shard)) }
-    new ShardedArticleIndexer(indexShards.toMap, articleStore, shoeboxClient)
+    new ShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -122,7 +122,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
-    new ShardedURIGraphIndexer(indexShards.toMap, shoeboxClient)
+    new ShardedURIGraphIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -140,7 +140,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
 
     val indexShards = activeShards.local.map{ shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
-    new ShardedCollectionIndexer(indexShards.toMap, shoeboxClient)
+    new ShardedCollectionIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton

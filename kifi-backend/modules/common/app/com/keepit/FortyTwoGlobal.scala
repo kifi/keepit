@@ -5,7 +5,7 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.strings._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
+import com.keepit.common.healthcheck.{HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
@@ -20,13 +20,11 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.modules.statsd.api.{Statsd, StatsdFilter}
+import play.modules.statsd.api.StatsdFilter
 import play.utils.Threads
 import scala.util.control.NonFatal
 import com.amazonaws.services.elasticloadbalancing.model._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
-import com.amazonaws.AmazonClientException
-import com.amazonaws.services.ec2.AmazonEC2Client
 import com.keepit.common.shutdown.ShutdownCommander
 import java.util.concurrent.atomic.AtomicLong
 
@@ -64,14 +62,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         elbClient.registerInstancesWithLoadBalancer(request)
         println(s"[${currentDateTime.toStandardTimeString}] Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
-        case t:Throwable => {
+        case t:Throwable =>
           //todo(martin): find a solution
           //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           println(s"[${currentDateTime.toStandardTimeString}] Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           Play.stop()
           Thread.sleep(10000)
           System.exit(1)
-        }
       }
     } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
@@ -178,10 +175,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       }
       allowCrossOrigin(request, InternalServerError(message))
     } catch {
-      case NonFatal(e) => {
+      case NonFatal(e) =>
         Logger.error("Error while rendering default error page", e)
         InternalServerError
-      }
     }
   }
 
@@ -209,7 +205,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         case e: Throwable =>
           val errorMessage = "====================== error during onStop ==============================="
           println(errorMessage)
-          e.printStackTrace
+          e.printStackTrace()
           log.error(errorMessage, e)
       } finally {
         if (mode == Mode.Prod) {

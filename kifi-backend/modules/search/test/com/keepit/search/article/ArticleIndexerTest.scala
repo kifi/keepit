@@ -35,7 +35,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     val ramDir = new VolatileIndexDirectory()
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
-    val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()), inject[MonitoredAwait])
+    val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier])), inject[MonitoredAwait])
     var indexer = new StandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))

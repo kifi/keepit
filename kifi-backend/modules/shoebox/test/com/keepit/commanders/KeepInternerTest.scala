@@ -194,7 +194,6 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           ck2.size === 1
 
           val counts1 = keepClickRepo.getClickCountsByKeeper(u1.id.get)
-          println(s"counts1=${counts1.mkString(",")}")
           counts1.keySet.size === 2
           counts1.get(keeps1(0).id.get) === Some(1)
           counts1.get(keeps1(1).id.get) === Some(1)
@@ -207,7 +206,6 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           } === true
 
           val counts2 = keepClickRepo.getClickCountsByKeeper(u2.id.get)
-          println(s"counts2=${counts2.mkString(",")}")
           counts2.keySet.size === 1
           counts2.get(keeps2(0).id.get) === Some(1)
           counts2.get(keeps2(1).id.get) === None
@@ -219,12 +217,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           keepClickRepo.getClickCountByKeeper(u4.id.get) === keepClickRepo.getClicksByKeeper(u4.id.get).length
 
           val cm1 = keepClickRepo.getClickCountsByKeepIds(u1.id.get, keeps1.map(_.id.get).toSet)
-          println(s"cm1=${cm1.mkString(",")}")
           cm1.get(keeps1(0).id.get) === Some(1)
           cm1.get(keeps1(1).id.get) === Some(1)
 
           val cm2 = keepClickRepo.getClickCountsByKeepIds(u2.id.get, keeps2.map(_.id.get).toSet)
-          println(s"cm2=${cm2.mkString(",")}")
 
           val rekeeps = rekeepRepo.all
           rekeeps.size === 3
@@ -336,6 +332,17 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
         bc3(0).rekeepCount === 1
         bc3(0).rekeepTotalCount === 1
+
+        val users = Seq(u1, u2, u3, u4)
+        val allStats = Await.result(attrCmdr.updateUsersReKeepStats(users.map(_.id.get)), Duration.Inf)
+        allStats.foreach { s => println(s"(len=${s.length}); ${s.mkString(",")})") }
+        allStats(0).length === bc1.length
+        allStats(0)(0).rekeepCount === bc1(0).rekeepCount
+        allStats(0)(0).rekeepTotalCount === bc1(0).rekeepTotalCount
+
+        allStats(2).length === bc3.length
+        allStats(2)(0).rekeepCount === bc3(0).rekeepCount
+        allStats(2)(0).rekeepTotalCount === bc3(0).rekeepTotalCount
       }
     }
 

@@ -5,12 +5,12 @@ import com.keepit.common.time._
 import com.keepit.common.db._
 import com.keepit.model.{User, EContact, NormalizedURI}
 import play.api.libs.json._
-import com.keepit.common.mail.EmailAddressHolder
+import com.keepit.common.mail.EmailAddress
 import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind}
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
-import com.keepit.common.mail.GenericEmailAddress
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.crypto.ModelWithPublicId
 
 sealed trait NonUserParticipant {
@@ -32,7 +32,7 @@ object NonUserParticipant {
       // r == "referenceId"
       ((json \ "k").asOpt[String], (json \ "i").asOpt[String]) match {
         case (Some(NonUserKinds.email.name), Some(emailAddress)) =>
-          val addr = GenericEmailAddress(emailAddress)
+          val addr = EmailAddress(emailAddress)
           val id = (json \ "r").asOpt[String].map(i => Id[EContact](i.toLong))
           JsSuccess(NonUserEmailParticipant(addr, id))
         case _ => JsError()
@@ -49,7 +49,7 @@ object NonUserParticipant {
   }
 }
 
-case class NonUserEmailParticipant(address: EmailAddressHolder, econtactId: Option[Id[EContact]]) extends NonUserParticipant {
+case class NonUserEmailParticipant(address: EmailAddress, econtactId: Option[Id[EContact]]) extends NonUserParticipant {
   val identifier = address.address
   val referenceId = econtactId.map(_.id.toString)
   val kind = NonUserKinds.email

@@ -25,7 +25,7 @@ import com.keepit.search.util.MultiStringReader
 class ArticleIndexer(
     indexDirectory: IndexDirectory,
     articleStore: ArticleStore,
-    airbrake: AirbrakeNotifier)
+    override val airbrake: AirbrakeNotifier)
   extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
 
   import ArticleIndexer.ArticleIndexable

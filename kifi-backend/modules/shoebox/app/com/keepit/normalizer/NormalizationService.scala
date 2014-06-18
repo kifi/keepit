@@ -19,7 +19,6 @@ case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
-  def normalize(uriString: String)(implicit session: RSession): Try[String]
   def prenormalize(uriString: String)(implicit session: RSession): Try[String]
 }
 
@@ -32,14 +31,15 @@ class NormalizationServiceImpl @Inject() (
   priorKnowledge: PriorKnowledge,
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  def normalize(uriString: String)(implicit session: RSession): Try[String] = normalizedURIRepo.getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
   def prenormalize(uriString: String)(implicit session: RSession): Try[String] = {
     URI.parse(uriString).map { uri =>
       val uriWithStandardPrenormalization = Prenormalizer(uri)
       val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(uriWithStandardPrenormalization))
       val prenormalizedUri = uriWithPreferredSchemeOption getOrElse uriWithStandardPrenormalization
       prenormalizedUri.toString
-    }.recoverWith { case cause: Throwable => Failure(PrenormalizationException(cause)) }
+    }.recoverWith {
+      case cause: Throwable => Failure(PrenormalizationException(cause))
+    }
   }
 
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = {

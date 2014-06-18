@@ -22,7 +22,7 @@ class EventTrackingController @Inject() (
   systemEventLoggingRepo: SystemEventLoggingRepo,
   anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
   nonUserEventLoggingRepo: NonUserEventLoggingRepo,
-  heimdalEventQueue: SQSQueue[HeimdalEvent],
+  heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
   airbrake: AirbrakeNotifier
 ) extends HeimdalServiceController {
 
@@ -40,8 +40,8 @@ class EventTrackingController @Inject() (
       case Success(result) => {
         try {
           result.map { sqsMessage =>
-            sqsMessage.consume { event =>
-              trackInternalEvent(event)
+            sqsMessage.consume { events =>
+              events foreach trackInternalEvent
             }
           }
         } catch {
@@ -57,21 +57,5 @@ class EventTrackingController @Inject() (
     }
   }
 
-  def trackInternalEventAction = Action(parse.tolerantJson) { request =>
-    SafeFuture{
-      trackInternalEvent(request.body)
-    }(SlowRunningExecutionContext.ec)
-    Status(ACCEPTED)
-  }
-
   private[controllers] def trackInternalEvents(eventsJs: JsValue) = eventsJs.as[JsArray].value.map(trackInternalEvent)
-
-  val TenMB = 1024 * 1024 * 10
-
-  def trackInternalEventsAction = Action(parse.json(maxLength = TenMB)) { request =>
-    SafeFuture{
-      trackInternalEvents(request.body)
-    }(SlowRunningExecutionContext.ec)
-    Status(ACCEPTED)
-  }
 }

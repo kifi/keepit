@@ -59,6 +59,10 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       });
     };
 
+    $scope.triggerOnboarding = function () {
+      $window.postMessage('start_guide', '*');
+    };
+
     // onboarding.js is using these functions
     $window.getMe = function () {
       return (profileService.me ? $q.when(profileService.me) : profileService.getMe()).then(function (me) {
@@ -86,6 +90,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
+        $rootScope.$emit('showGlobalModal','installExtension');
         return;
       }
 

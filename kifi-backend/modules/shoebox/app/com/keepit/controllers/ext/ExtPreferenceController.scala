@@ -9,7 +9,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.social.BasicUser
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationService
+import com.keepit.normalizer.NormalizedURIInterner
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
@@ -29,7 +29,7 @@ class ExtPreferenceController @Inject() (
   notifyPreferenceRepo: UserNotifyPreferenceRepo,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
-  normalizationService: NormalizationService)
+  normalizedURIInterner: NormalizedURIInterner)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private case class UserPrefs(
@@ -57,7 +57,7 @@ class ExtPreferenceController @Inject() (
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = JsonAction.authenticated { request =>
-    val normalizedUrl: String = db.readOnly { implicit session => normalizationService.normalize(url) getOrElse url }
+    val normalizedUrl: String = db.readOnly { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
     val json = Json.arr(normalizedUrl)
     Ok(json)
   }

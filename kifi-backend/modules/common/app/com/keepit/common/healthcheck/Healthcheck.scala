@@ -24,6 +24,7 @@ import akka.util.Timeout
 import play.api.Mode._
 import play.api.templates.Html
 import com.keepit.model.NotificationCategory
+import java.io.File
 
 
 object Healthcheck {
@@ -40,6 +41,7 @@ object Healthcheck {
 }
 
 case object ReportErrorsAction
+case object CheckDiskSpace
 case object ErrorCount
 case object ResetErrorCount
 case object GetErrors
@@ -67,7 +69,7 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
     val subject = "([0-9]+)".r.replaceAllIn(subjectWithNumerics, "*").abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
-    sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
 }
@@ -112,7 +114,14 @@ class HealthcheckActor @Inject() (
       }
       errors(signature) = history
     case email: ElectronicMail => emailSender.sendMail(email)
-
+    case CheckDiskSpace =>
+      val GB = 1024 * 1024 * 1024
+      val usableDiskSpace = new File(".").getUsableSpace
+      if (usableDiskSpace < 1 * GB) { // less then 2gb of available disk space
+        self ! AirbrakeError(message = Some(s"machine has only ${(usableDiskSpace * 1d) / GB}gb free of usable disk space !!!"), panic = true)
+      } else if (usableDiskSpace < 2 * GB) { // less then 2gb of available disk space
+        self ! AirbrakeError(message = Some(s"machine has only ${(usableDiskSpace * 1d) / GB}gb free of usable disk space"))
+      }
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -145,6 +154,7 @@ class HealthcheckPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
+    scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
@@ -164,7 +174,7 @@ class HealthcheckPluginImpl @Inject() (
   override def reportStart() = {
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
-    val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
         subject = subject, htmlBody = message.body,
         category = NotificationCategory.System.HEALTHCHECK)
 
@@ -177,7 +187,7 @@ class HealthcheckPluginImpl @Inject() (
   override def reportStop() = {
     val subject = s"Service ${services.currentService} stopped"
     val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
-    val email = ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
         subject = subject, htmlBody = message.body,
         category = NotificationCategory.System.HEALTHCHECK)
     if (!isCanary) {

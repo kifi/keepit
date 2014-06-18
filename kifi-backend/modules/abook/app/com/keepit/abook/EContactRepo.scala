@@ -16,6 +16,7 @@ import play.api.Play
 import scala.util.{Success, Try, Failure}
 import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
 import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.common.mail.EmailAddress
 
 
 @ImplementedBy(classOf[EContactRepoImpl])
@@ -24,14 +25,14 @@ trait EContactRepo extends Repo[EContact] {
   def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact]
   def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession): CloseableIterator[EContact]
-  def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact]
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
-  def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int
+  def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int
 
   //used only for full resync
   def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
@@ -52,7 +53,7 @@ class EContactRepoImpl @Inject() (
   type RepoImpl = EContactTable
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
     def userId     = column[Id[User]]("user_id", O.NotNull)
-    def email      = column[String]("email", O.NotNull)
+    def email      = column[EmailAddress]("email", O.NotNull)
     def name       = column[String]("name", O.Nullable)
     def firstName  = column[String]("first_name", O.Nullable)
     def lastName   = column[String]("last_name", O.Nullable)
@@ -117,7 +118,7 @@ class EContactRepoImpl @Inject() (
     }
   }
 
-  def getByUserIdAndEmail(userId: Id[User], email:String)(implicit session: RSession): Option[EContact] = {
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact] = {
     (for(f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
   }
 
@@ -177,9 +178,9 @@ class EContactRepoImpl @Inject() (
     if (!parsedResult.successful) throw new IllegalArgumentException(s"Invalid email: $address")
 
     val parsedEmail = parsedResult.get
-    val c = EContact(userId = userId, email = parsedEmail.toString, name = emailName, firstName = firstName, lastName = lastName)
+    val c = EContact(userId = userId, email = parsedEmail, name = emailName, firstName = firstName, lastName = lastName)
     insertOnDupUpdate(userId, c) // todo: optimize (if needed)
-    val cOpt = getByUserIdAndEmail(userId, parsedEmail.toString)
+    val cOpt = getByUserIdAndEmail(userId, parsedEmail)
     cOpt match {
       case Some(e) => {
         invalidateCache(e)
@@ -189,7 +190,7 @@ class EContactRepoImpl @Inject() (
     }
   }
 
-  def recordVerifiedEmail(email: String, contactUserId: Id[User])(implicit session: RWSession): Int = {
+  def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int = {
     (for { row <- rows if row.email === email && row.contactUserId.isNull } yield row.contactUserId).update(contactUserId)
   }
 

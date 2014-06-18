@@ -16,6 +16,7 @@ import scala.slick.lifted.{TableQuery, Tag}
 import scala.slick.jdbc.{StaticQuery => Q}
 import Q.interpolation
 import scalax.io.CloseableIterator
+import com.keepit.common.mail.EmailAddress
 
 
 @ImplementedBy(classOf[UserRepoImpl])
@@ -62,8 +63,9 @@ class UserRepoImpl @Inject() (
     def lastName = column[String]("last_name", O.NotNull)
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
-    def primaryEmailId = column[Id[EmailAddress]]("primary_email_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmailId.?) <> ((User.apply _).tupled, User.unapply)
+    def primaryEmailId = column[Id[UserEmailAddress]]("primary_email_id", O.Nullable)
+    def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmailId.?, primaryEmail.?) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)

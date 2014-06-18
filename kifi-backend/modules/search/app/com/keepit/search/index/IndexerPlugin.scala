@@ -8,14 +8,12 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
+import com.keepit.common.util.RecurringTaskManager
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.service.ServiceStatus
 import com.keepit.search.IndexInfo
-import scala.concurrent.Future
 import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import java.util.concurrent.atomic.AtomicInteger
 
 object IndexerPluginMessages {
   case object UpdateIndex
@@ -40,32 +38,14 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
   def indexInfos(name: String): Seq[IndexInfo]
   def lastBackup: Long
 
-  private[this] val updateTaskManager = new IndexUpdateTaskManager[S, I]()
-  def updateAsync(onError: Throwable=>Unit): Unit = updateTaskManager.requestUpdate(this, onError)
+  val airbrake: AirbrakeNotifier
+  private[this] val updateTaskManager = new IndexUpdateTaskManager[S, I](this, airbrake)
+  def updateAsync(): Unit = updateTaskManager.request()
 }
 
-class IndexUpdateTaskManager[S, I <: Indexer[_, S, I]] {
-  private[this] val state = new AtomicInteger(0) // 0: idle, 1: updating, 2-or-greater: pending
-
-  def requestUpdate(indexer: IndexManager[S, I], onError: Throwable=>Unit) = {
-    if (state.getAndAdd(2) == 0) {
-      // the state was 0, we need to start the update task
-      Future {
-        try {
-          while (state.decrementAndGet() > 0) {
-            // the state was 2-or-greater, there are pending requests, start the update task
-            // all pending requests are consumed by this
-            state.set(1)
-            indexer.update()
-          }
-        } catch {
-          case e: Throwable =>
-            state.set(0) // go to the idle state so that the next request will start the update task
-            onError(e)
-        }
-      }
-    }
-  }
+class IndexUpdateTaskManager[S, I <: Indexer[_, S, I]](indexer: IndexManager[S, I], airbrake: AirbrakeNotifier) extends RecurringTaskManager {
+  override def doTask(): Unit = { indexer.update() }
+  override def onError(e: Throwable): Unit = { airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e) }
 }
 
 trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
@@ -156,9 +136,7 @@ class IndexerActor[S, I <: Indexer[_, S, I]](
 
   def receive() = {
     case UpdateIndex =>
-      indexer.updateAsync(
-        onError = { e => airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e) }
-      )
+      indexer.updateAsync()
     case BackUpIndex => {
       val minBackupInterval = 600000 // 10 minutes
       if (System.currentTimeMillis - indexer.lastBackup > minBackupInterval) indexer.backup()

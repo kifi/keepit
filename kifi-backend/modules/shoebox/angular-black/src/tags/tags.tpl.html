@@ -6,16 +6,14 @@
   </div>
   <div class="kf-tag-list-hidden"></div>
 
-  <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }">
+  <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }" ng-class="{'kf-add-tag-shown': showAddTag()}">
     <ul class="kf-sidebar-tag-list">
-      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tags" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
-      <!-- this introduces entertaining bugs - commenting out for now -->
-      <!--<li kf-tag-item class="kf-tag-fake-reorder-last" fake index="{{tags.length}}" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx"></li>-->
+      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tagsWithFakeLast" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
     </ul>
-    <div class="kf-tag-new" ng-show="showAddTag()" ng-click="create(filter.name)">
+    <div class="kf-tag-new" ng-show="showAddTag()" ng-click="createTag()">
       <div class="kf-tag-new-inner" ng-class="{ highlight: isHighlightNew() }">
         <div class="kf-tag-new-icon">
-          <div class="sprite sprite-tag-add-plus-default"></div>
+          <div class="sprite sprite-tag-add-plus"></div>
         </div>
         <div class="kf-tag-new-contents">
           <div class="kf-tag-caption">Add as a new tag:</div>

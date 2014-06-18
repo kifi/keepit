@@ -25,13 +25,15 @@ import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.scraper.{TestScraperConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
+import com.keepit.signal.TestReKeepStatsUpdaterModule
+import com.keepit.normalizer.{NormalizationServiceImpl, NormalizedURIInterner}
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -67,9 +69,9 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestHeimdalServiceClientModule(),
         TestABookServiceClientModule(),
         TestScraperServiceClientModule(),
-        TestScraperConfigModule(),
         KeepImportsModule(),
-        FakeExternalServiceModule()
+        FakeExternalServiceModule(),
+        TestReKeepStatsUpdaterModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
@@ -97,6 +99,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         injector.getInstance(classOf[ServiceDiscovery])
         injector.getInstance(classOf[ServiceCluster])
         injector.getInstance(classOf[GeckoboardReporterPlugin])
+        injector.getInstance(classOf[NormalizedURIInterner])
+        injector.getInstance(classOf[NormalizationServiceImpl])
         true
       }
     }

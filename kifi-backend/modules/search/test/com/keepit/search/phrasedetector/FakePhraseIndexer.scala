@@ -1,12 +1,10 @@
 package com.keepit.search.phrasedetector
 
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.db.Id
-import com.keepit.model.Phrase
-import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectory
 
-class FakePhraseIndexer extends PhraseIndexer(new VolatileIndexDirectory) {
+class FakePhraseIndexer(override val airbrake: AirbrakeNotifier) extends PhraseIndexer(new VolatileIndexDirectory) {
   def update() = 0
   def getCommitBatchSize() = 0
 }

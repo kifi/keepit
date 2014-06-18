@@ -11,7 +11,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
 import com.keepit.common.strings
-import com.keepit.common.mail.EmailAddressHolder
+import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[PasswordResetRepoImpl])
 trait PasswordResetRepo extends Repo[PasswordReset] {
@@ -19,7 +19,7 @@ trait PasswordResetRepo extends Repo[PasswordReset] {
   def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean
   def getByToken(passwordResetToken: String)(implicit session: RSession): Option[PasswordReset]
   def tokenIsNotExpired(passwordReset: PasswordReset): Boolean
-  def createNewResetToken(userId: Id[User], sentTo: EmailAddressHolder)(implicit session: RWSession): PasswordReset
+  def createNewResetToken(userId: Id[User], sentTo: EmailAddress)(implicit session: RWSession): PasswordReset
 }
 
 @Singleton
@@ -71,7 +71,7 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     passwordReset.state == PasswordResetStates.ACTIVE && passwordReset.createdAt.plus(EXPIRATION_TIME).isAfter(clock.now)
   }
 
-  def createNewResetToken(userId: Id[User], sentTo: EmailAddressHolder)(implicit session: RWSession): PasswordReset = {
+  def createNewResetToken(userId: Id[User], sentTo: EmailAddress)(implicit session: RWSession): PasswordReset = {
     saveWithNewToken(PasswordReset(userId = userId, state = PasswordResetStates.ACTIVE, token = "", sentTo = Some(sentTo.address)))
   }
 

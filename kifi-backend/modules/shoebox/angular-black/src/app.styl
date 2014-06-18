@@ -1,6 +1,6 @@
 html
   height: 100%
-  text-align: center
+  text-align: left
   overflow: visible
 
 body
@@ -46,16 +46,17 @@ a[href]
   font-smoothing: antialiased
 
 ::-webkit-input-placeholder
-  color: #b6c3cc
-
+  color: #aaaaaa
+  font-style: italic
 :-moz-placeholder
-  color: #b6c3cc
-
+  color: #aaaaaa
+  font-style: italic
 ::-moz-placeholder
-  color: #b6c3cc
-
+  color: #aaaaaa
+  font-style: italic
 :-ms-input-placeholder
-  color: #b6c3cc
+  color: #aaaaaa
+  font-style: italic
 
 :focus
   outline: none
@@ -72,15 +73,12 @@ a[href]
   zoom: 1
 
 .kf-cols
-  position: absolute
-  top: 0
-  left: 0
-  min-width: 100%
-  min-height: 100%
-  overflow: hidden
-  text-align: left
   text-align: start
   background-color: appBackgroundColor
+
+.kf-col-island
+  max-width: appMaxWidth
+  margin: 0 auto
 
 .kf-col
   display: inline-block

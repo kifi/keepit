@@ -30,6 +30,7 @@ import scala.Some
 import com.keepit.common.net.HttpClientImpl
 import scala.util.Success
 import com.keepit.abook.model.RichSocialConnection
+import com.keepit.common.mail.EmailAddress
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -61,9 +62,9 @@ trait ABookServiceClient extends ServiceClient {
   def refreshPrefixFiltersByIds(userIds:Seq[Id[User]]):Future[Unit]
   def refreshAllFilters():Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit]
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit]
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int]
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
 }
 
@@ -255,7 +256,7 @@ class ABookServiceClientImpl @Inject() (
     callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map{r => ()}
   }
 
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit] = {
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = {
     implicit val userIdFormat = Id.format[User]
     implicit val socialIdFormat = Id.format[SocialUserInfo]
     val json = Json.obj("userId" -> userId, "friendSocialId" -> friend.left.toOption, "friendEmailAddress" -> friend.right.toOption)
@@ -270,7 +271,7 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = {
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int] = {
     call(ABook.internal.countInvitationsSent(userId, friend)).map(_.json.as[Int])
   }
 
@@ -335,11 +336,11 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage) : Future[Unit] =  ???
 
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Unit] = ???
+  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = ???
 
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
 
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], String]): Future[Int] = ???
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int] = ???
 
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
 

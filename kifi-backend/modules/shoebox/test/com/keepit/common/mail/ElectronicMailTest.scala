@@ -8,8 +8,8 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 
   "ElectronicMail" should {
     "long title" in {
-      ElectronicMail(from = EmailAddresses.TEAM,
-        to = List(EmailAddresses.ENG),
+      ElectronicMail(from = SystemEmailAddress.TEAM,
+        to = List(SystemEmailAddress.ENG),
         subject = new StringBuilder("foo") * 500,
         htmlBody = "body",
         category = NotificationCategory.System.HEALTHCHECK) must throwA[IllegalArgumentException]
@@ -17,9 +17,9 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
     "user filters" in {
       withDb(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>
-          val mails = ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.ENG), subject = "foo 1", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
-                      ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.TEAM), cc = EmailAddresses.EISHAY :: EmailAddresses.JARED :: Nil, subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = NotificationCategory.System.HEALTHCHECK) ::
-                      ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.EISHAY), subject = "foo 3", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
+          val mails = ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.ENG), subject = "foo 1", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
+                      ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.TEAM), cc = Seq(SystemEmailAddress.EISHAY, SystemEmailAddress.JARED), subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = NotificationCategory.System.HEALTHCHECK) ::
+                      ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.EISHAY), subject = "foo 3", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
                       Nil
           mails map {mail => electronicMailRepo.save(mail) }
         }

@@ -6,7 +6,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import DBSession._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
-import java.sql.{Timestamp, SQLException}
+import java.sql.{PreparedStatement, Statement, Timestamp, SQLException}
 import play.api.Logger
 import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{TypedType, ColumnOption}
@@ -206,6 +206,7 @@ trait DbRepoWithDelete[M <: Model[M]] extends RepoWithDelete[M] { self:DbRepo[M]
 trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
   def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M]
   def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M]
+  def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
@@ -224,8 +225,41 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
     else if (lowerBound == upperBound) Seq()
     else (for(t <- rowsWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list
   }
-}
 
+  def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int = {
+    throw new UnsupportedOperationException("deferred sequence number assignment is not supported")
+  }
+
+  protected def assignSequenceNumbers(sequence: DbSequence[M], tableName: String, limit: Int)(implicit session: RWSession): Int = {
+    val zero = SequenceNumber.ZERO[M]
+    val ids = (for(t <- rowsWithSeq if t.seq < zero) yield t).sortBy(_.seq).map(_.id).take(limit).list
+    val numIds = ids.size
+
+    val totalUpdates = if (numIds > 0) {
+      val iterator = sequence.reserve(numIds).iterator
+      val stmt = session.getPreparedStatement(s"update $tableName set seq = ? where id = ?")
+      ids.foreach{ id =>
+        if (!iterator.hasNext) throw new IllegalStateException("ran out of reserved sequence number")
+        stmt.setLong(1, iterator.next.value)
+        stmt.setLong(2, id.id)
+        stmt.addBatch()
+      }
+      if (iterator.hasNext) throw new IllegalStateException("not all reserved sequence numbers were used")
+
+      stmt.executeBatch().map{
+        case numUpdates if (numUpdates == Statement.EXECUTE_FAILED) => throw new IllegalStateException("one of sequence number updates failed")
+        case numUpdates if (numUpdates == Statement.SUCCESS_NO_INFO) => 1
+        case numUpdates => numUpdates
+      }.sum
+    } else {
+      0
+    }
+
+    if (totalUpdates != numIds) throw new IllegalStateException(s"total update counts did not match: total=$totalUpdates numIds=$numIds]")
+
+    numIds
+  }
+}
 
 trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] { self: Repo[M] =>
   def get(id: ExternalId[M])(implicit session: RSession): M

@@ -13,6 +13,7 @@ import scala.collection.JavaConversions._
 import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import net.spy.memcached.MemcachedClient
 import scala.reflect.ManifestFactory.classType
+import com.keepit.heimdal.HeimdalQueueDevModule
 
 class SearchModuleTest extends Specification with Logging with SearchApplicationInjector {
 
@@ -26,13 +27,13 @@ class SearchModuleTest extends Specification with Logging with SearchApplication
 
   "Module" should {
     "instantiate controllers" in {
-      running(new DeprecatedSearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
+      running(new DeprecatedSearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient).overrideWith(HeimdalQueueDevModule())) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)
         }.distinct.filter(isSearchController)
         for (c <- classes) inject(classType[Controller](c), injector)
-        val bindings = injector.getAllBindings()
+        val bindings = injector.getAllBindings
         val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[akka.actor.Actor], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType

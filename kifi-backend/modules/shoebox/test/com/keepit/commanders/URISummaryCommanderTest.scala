@@ -75,8 +75,8 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
   def setup()(implicit injector: Injector) = {
 
     db.readWrite { implicit session =>
-      val nUri1 = uriRepo.internByUri("http://www.adomain.com")
-      val nUri2 = uriRepo.internByUri("http://www.anotherdomain.com")
+      val nUri1 = normalizedURIInterner.internByUri("http://www.adomain.com")
+      val nUri2 = normalizedURIInterner.internByUri("http://www.anotherdomain.com")
       val image1 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
         url = Some("http://www.google.com/test1.jpg"),

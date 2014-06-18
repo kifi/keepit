@@ -37,6 +37,7 @@ trait CortexServiceClient extends ServiceClient{
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
+  def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -135,6 +136,13 @@ class CortexServiceClientImpl(
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = {
     val payload = Json.toJson(configs)
     broadcast(Cortex.internal.saveEdits(), payload)
+  }
+
+  def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]] = {
+    val payload = Json.toJson(uris)
+    call(Cortex.internal.getLDAFeatures, payload).map{ r =>
+      (r.json).as[Seq[Array[Float]]]
+    }
   }
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = {

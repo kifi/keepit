@@ -10,17 +10,6 @@ trait ScraperConfigModule extends ScalaModule {
 
   @Singleton
   @Provides
-  def scraperIntervalConfig: ScraperIntervalConfig = {
-    ScraperIntervalConfig(
-      minInterval = conf.getDouble("scraper.interval.min").get, //hours
-      maxInterval = conf.getDouble("scraper.interval.max").get, //hours
-      intervalIncrement = conf.getDouble("scraper.interval.increment").get, //hours
-      intervalDecrement = conf.getDouble("scraper.interval.decrement").get //hours
-    )
-  }
-
-  @Singleton
-  @Provides
   def scraperQueueConfig: ScraperQueueConfig = {
     ScraperQueueConfig(
       terminateThreshold = conf.getInt("scraper.queue.terminateThreshold").get,
@@ -44,24 +33,15 @@ trait ScraperConfigModule extends ScalaModule {
   @Provides
   def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
     ScraperConfig(
-      intervalConfig = intervalConfig,
-      initialBackoff = conf.getDouble("scraper.initialBackoff").get, //hours
-      maxBackoff = conf.getDouble("scraper.maxBackoff").get, //hours
-      maxRandomDelay = conf.getInt("scraper.maxRandomDelay").get, // seconds
       changeThreshold = conf.getInt("scraper.changeThreshold").get,
       pullMultiplier = conf.getInt("scraper.pullMultiplier").get,
       pullFrequency = conf.getInt("scraper.pullFrequency").get, // seconds
-      scrapePendingFrequency = conf.getInt("scraper.scrapePendingFrequency").get, // seconds
       queued = conf.getBoolean("scraper.queued").get,
       async = conf.getBoolean("scraper.async").get,
-      actorTimeout = conf.getInt("scraper.actorTimeout").get,
       syncAwaitTimeout = conf.getInt("scraper.syncAwaitTimeout").get,
       serviceCallTimeout = conf.getInt("scraper.serviceCallTimeout").get,
       batchSize = conf.getInt("scraper.batchSize").get,
       batchMax = conf.getInt("scraper.batchMax").get,
-      pendingOverdueThreshold = conf.getInt("scraper.pendingOverdueThreshold").get, // minutes
-      checkOverdueCountFrequency = conf.getInt("scraper.checkOverdueCountFrequency").get, // minutes
-      overdueCountThreshold = conf.getInt("scraper.overdueCountThreshold").get,
       httpConfig = httpConfig,
       queueConfig = queueConfig
     )
@@ -70,7 +50,9 @@ trait ScraperConfigModule extends ScalaModule {
 
 case class ProdScraperConfigModule() extends ScraperConfigModule {
 
-  def configure() {}
+  def configure() {
+    install(ProdScrapeSchedulerConfigModule())
+  }
 
   override protected def conf: Configuration = Play.current.configuration
 }

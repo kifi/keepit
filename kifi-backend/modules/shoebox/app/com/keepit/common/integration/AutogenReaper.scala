@@ -55,7 +55,7 @@ private[integration] class AutogenReaper @Inject() (
   userSessionRepo: UserSessionRepo,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  emailAddressRepo: EmailAddressRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
   k2cRepo: KeepToCollectionRepo,
