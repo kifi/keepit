@@ -77,7 +77,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           thumb: '/img/guide/leather_tote.jpg',
           noun: 'tote',
           tag: 'Shopping Wishlist',
-          query: 'leather+tote+bag'
+          query: 'large+leather+everyday+tote+bag'
         }, {
           url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
           title: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
