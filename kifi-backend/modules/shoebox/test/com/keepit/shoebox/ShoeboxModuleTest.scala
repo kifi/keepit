@@ -33,6 +33,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
 import com.keepit.signal.TestReKeepStatsUpdaterModule
+import com.keepit.normalizer.{NormalizationServiceImpl, NormalizedURIInterner}
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -98,6 +99,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         injector.getInstance(classOf[ServiceDiscovery])
         injector.getInstance(classOf[ServiceCluster])
         injector.getInstance(classOf[GeckoboardReporterPlugin])
+        injector.getInstance(classOf[NormalizedURIInterner])
+        injector.getInstance(classOf[NormalizationServiceImpl])
         true
       }
     }

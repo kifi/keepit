@@ -26,7 +26,7 @@ class NormalizedURIInterner @Inject() (
     db: Database,
     normalizedURIRepo: NormalizedURIRepo,
     urlHashCache: NormalizedURIUrlHashCache,
-    updateQueue:SQSQueue[NormalizationUpdateTask],
+    updateQueue: SQSQueue[NormalizationUpdateTask],
     urlRepo: URLRepo,
     scrapeRepo: ScrapeInfoRepo,
     normalizationService: NormalizationService,
@@ -145,6 +145,8 @@ class NormalizedURIInterner @Inject() (
       normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
     }
   }
+
+  def normalize(uriString: String)(implicit session: RSession): Try[String] = getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
 
   private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ALWAYS) { timer =>
     normalizationService.prenormalize(uriString)
