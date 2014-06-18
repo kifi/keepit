@@ -50,7 +50,7 @@ class URLRenormalizeCommander @Inject()(
     }
 
     def needRenormalization(url: URL)(implicit session: RWSession): (Boolean, Option[NormalizedURI]) = {
-      uriRepo.getByUri(url.url) match {
+      normalizedURIInterner.getByUri(url.url) match {
         case None => if (!readOnly) (true, Some(normalizedURIInterner.internByUri(url.url))) else (true, None)
         case Some(uri) if url.normalizedUriId != uri.id.get => (true, Some(uri))
         case _ => (false, None)
@@ -65,7 +65,7 @@ class URLRenormalizeCommander @Inject()(
 
     def sendStartEmail(urls: Seq[URL]) = {
       val title = "Renormalization Begins"
-      val msg = s"regex = ${regex}, scanning ${urls.size} urls. readOnly = ${readOnly}"
+      val msg = s"regex = $regex, scanning ${urls.size} urls. readOnly = $readOnly"
       systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
     }
