@@ -47,7 +47,7 @@ class NormalizedURIInterner @Inject() (
    */
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
-    statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_HUNDRED) {
+    statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_TEN) { timer =>
       val resUri = normalizedURIRepo.getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           if (candidates.nonEmpty) {
@@ -55,26 +55,33 @@ class NormalizedURIInterner @Inject() (
               updateQueue.send(NormalizationUpdateTask(uri.id.get, false, candidates))
             }
           }
+          statsd.timing("normalizedURIRepo.internByUri.in_db", timer, ALWAYS)
           uri
-        case Success(Right(prenormalizedUrl)) => {
+        case Success(Right(prenormalizedUrl)) =>
           val normalization = SchemeNormalizer.findSchemeNormalization(prenormalizedUrl)
           urlHashCache.get(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(prenormalizedUrl))) match {
             case Some(cached) =>
               airbrake.notify(s"prenormalizedUrl [$prenormalizedUrl] already in cache [$cached] skipping save")
+              statsd.timing("normalizedURIRepo.internByUri.in_cache", timer, ALWAYS)
               cached
             case None =>
               val candidate = NormalizedURI.withHash(normalizedUrl = prenormalizedUrl, normalization = normalization)
               val newUri = try {
-                normalizedURIRepo.save(candidate)
+                val saved = normalizedURIRepo.save(candidate)
+                statsd.timing("normalizedURIRepo.internByUri.new", timer, ALWAYS)
+                saved
               } catch {
                 case sqlException: SQLException =>
                   log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
                   normalizedURIRepo.deleteCache(candidate)
                   normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) match {
-                    case None => throw new UriInternException(s"could not find existing url $candidate in the db", sqlException)
+                    case None =>
+                      statsd.timing("normalizedURIRepo.internByUri.new.error.not_recovered", timer, ALWAYS)
+                      throw new UriInternException(s"could not find existing url $candidate in the db", sqlException)
                     case Some(fromDb) =>
                       log.warn(s"recovered url $fromDb from the db via urlHash")
                       //This situation is likely a race condition. In this case we better clear out the cache and let the next call go the the source of truth (the db)
+                      statsd.timing("normalizedURIRepo.internByUri.new.error.recovered", timer, ALWAYS)
                       fromDb
                   }
                 case t: Throwable =>
@@ -84,10 +91,10 @@ class NormalizedURIInterner @Inject() (
               session.onTransactionSuccess{
                 updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
               }
+              statsd.timing("normalizedURIRepo.internByUri.new.url_save", timer, ALWAYS)
               newUri
           }
-        }
-        case Failure(ex) => {
+        case Failure(ex) =>
           /**
            * if we can't parse a url we should not let it get to the db.
            * its scraping should stop as well and it will be removed from cache.
@@ -98,15 +105,19 @@ class NormalizedURIInterner @Inject() (
           normalizedURIRepo.deleteCache(uriCandidate)
           normalizedURIRepo.getByNormalizedUrl(url) match {
             case None =>
+              statsd.timing("normalizedURIRepo.internByUri.fail.not_found", timer, ALWAYS)
               throw new UriInternException(s"could not parse or find url in db: $url", ex)
             case Some(fromDb) =>
               scrapeRepo.getByUriId(fromDb.id.get) match {
-                case Some(scrapeInfo) => scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-                case None => //fine...
+                case Some(scrapeInfo) =>
+                  scrapeRepo.save(scrapeInfo.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+                  statsd.timing("normalizedURIRepo.internByUri.fail.found.scraped", timer, ALWAYS)
+                case None =>
+                  statsd.timing("normalizedURIRepo.internByUri.fail.found.not_scraped", timer, ALWAYS)
+                  //fine...
               }
               throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
           }
-        }
       }
       log.debug(s"[internByUri($url)] resUri=$resUri")
       resUri
