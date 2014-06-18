@@ -778,7 +778,7 @@ class UserCommander @Inject() (
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
     val currentUser = userRepo.get(primaryEmail.userId)
-    userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get)))
+    userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get), primaryEmail = Some(primaryEmail.address)))
     heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
   }
 
