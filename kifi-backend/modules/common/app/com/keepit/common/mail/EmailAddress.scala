@@ -2,7 +2,9 @@ package com.keepit.common.mail
 
 import play.api.libs.json._
 
-case class EmailAddress(address: String) extends AnyVal
+case class EmailAddress(address: String) extends AnyVal {
+  override def toString = address
+}
 
 object EmailAddress {
   implicit val format: Format[EmailAddress] =
