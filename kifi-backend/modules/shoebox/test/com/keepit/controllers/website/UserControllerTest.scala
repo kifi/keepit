@@ -83,7 +83,8 @@ class UserControllerTest extends Specification with ApplicationInjector {
               "uniqueKeepsClicked":0,
               "totalKeepsClicked":0,
               "clickCount":0,
-              "rekeepCount":0
+              "rekeepCount":0,
+              "rekeepTotalCount":0
             }
           """)
 
