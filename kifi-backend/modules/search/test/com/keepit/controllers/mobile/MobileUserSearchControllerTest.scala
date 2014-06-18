@@ -32,12 +32,12 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
 
     val usersWithId = client.saveUsers(users: _*)
 
-    val emails = (0 until 4).map{ i =>
-      UserEmailAddress(userId = usersWithId(i).id.get, address = EmailAddress(s"user${i}@42go.com"))
-    } ++ Seq(UserEmailAddress(userId = usersWithId(4).id.get, address = EmailAddress("woody@fox.com")),
-     UserEmailAddress(userId = usersWithId(4).id.get, address = EmailAddress("Woody.Allen@GMAIL.com")))
+    val emails = (0 until 4).map { i => usersWithId(i).id.get -> EmailAddress(s"user${i}@42go.com") } ++ Seq(
+      usersWithId(4).id.get -> EmailAddress("woody@fox.com"),
+      usersWithId(4).id.get -> EmailAddress("Woody.Allen@GMAIL.com")
+    )
 
-    client.saveEmails(emails: _*)
+    client.addEmails(emails: _*)
 
     val friendRequests = Seq(FriendRequest(senderId = Id[User](1), recipientId = Id[User](2), messageHandle = None))
     client.saveFriendRequests(friendRequests: _*)

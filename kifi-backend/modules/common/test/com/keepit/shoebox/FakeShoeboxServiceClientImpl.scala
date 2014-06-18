@@ -54,9 +54,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val userExpIdCounter = new AtomicInteger(0)
   private def nextUserExperimentId() = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
 
-  private val emailIdCounter = new AtomicInteger(0)
-  private def nextEmailId = Id[UserEmailAddress](emailIdCounter.incrementAndGet())
-
   private val friendRequestIdCounter = new AtomicInteger(0)
   private def nextFriendRequestId = Id[FriendRequest](friendRequestIdCounter.incrementAndGet())
 
@@ -102,8 +99,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allCollections = MutableMap[Id[Collection], Collection]()
   val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Keep]]]()
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
-  val allEmails = MutableMap[Id[UserEmailAddress], UserEmailAddress]()
-  val allUserEmails = MutableMap[Id[User], Seq[UserEmailAddress]]()
+  val allUserEmails = MutableMap[Id[User], Set[EmailAddress]]()
   val allUserValues = MutableMap[(Id[User], String), String]()
   val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
@@ -249,12 +245,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     experimentWithId
   }
 
-  def saveEmails(emails: UserEmailAddress*) = {
-    emails.map{ email =>
-      val id = email.id.getOrElse(nextEmailId)
-      val emailWithId = email.copy(id = Some(id))
-      allEmails(id) = emailWithId
-      allUserEmails(emailWithId.userId) = allUserEmails.getOrElse(emailWithId.userId, Nil) :+ emailWithId
+  def addEmails(emails: (Id[User], EmailAddress)*) = {
+    emails.foreach { case (userId, emailAddress) =>
+      allUserEmails(userId) = allUserEmails.getOrElse(userId, Set.empty) + emailAddress
     }
   }
 
@@ -360,13 +353,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(basicUsers)
   }
 
-  def getEmailsForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address.address}}.toMap
-    Future.successful(m)
-  }
-
-  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Nil).map{_.address.address}}.toMap
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
+    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Set.empty).toSeq}.toMap
     Future.successful(m)
   }
 
