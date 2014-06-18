@@ -75,6 +75,7 @@ guide.step = guide.step || function () {
       eventsToScreen.forEach(function (type) {
         window.removeEventListener(type, screenEvent, true);
       });
+      api.port.emit('end_guide');
       return ms;
     } else {
       return 0;

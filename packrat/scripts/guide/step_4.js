@@ -50,6 +50,7 @@ guide.step4 = guide.step4 || function () {
       }
       $stage = cutScreen = $feats = arrows = $steps = timeout = null;
       $(document).data('esc').remove(hide);
+      api.port.emit('end_guide');
     }
   }
 

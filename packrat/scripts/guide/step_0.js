@@ -27,6 +27,7 @@ guide.step0 = guide.step0 || function () {
       $steps.one('transitionend', remove).removeClass('kifi-showing');
       $stage = $pages = $steps = null;
       $(document).data('esc').remove(hide);
+      api.port.emit('end_guide');
     }
   }
 
