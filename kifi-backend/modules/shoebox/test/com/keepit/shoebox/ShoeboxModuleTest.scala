@@ -32,6 +32,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
+import com.keepit.signal.TestReKeepStatsUpdaterModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -68,7 +69,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestABookServiceClientModule(),
         TestScraperServiceClientModule(),
         KeepImportsModule(),
-        FakeExternalServiceModule()
+        FakeExternalServiceModule(),
+        TestReKeepStatsUpdaterModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

@@ -15,6 +15,7 @@ import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.common.external.ProdExternalServiceModule
+import com.keepit.signal.ProdReKeepStatsUpdaterModule
 
 case class ShoeboxProdModule() extends ShoeboxModule (
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -31,7 +32,8 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   scrapeSchedulerModule = ProdScrapeSchedulerModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  externalServiceModule = ProdExternalServiceModule()
+  externalServiceModule = ProdExternalServiceModule(),
+  rekeepStatsUpdaterModule = ProdReKeepStatsUpdaterModule()
 ) with CommonProdModule {
   private val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: Nil
   val discoveryModule = new ProdDiscoveryModule(ServiceType.SHOEBOX, servicesToListenOn)

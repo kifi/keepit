@@ -26,8 +26,8 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null)
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)
-    require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
-    require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
+//    require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
+//    require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
     require(injector.instance[DenseLDATopicWords] != null)
     require(POSTagger.enabled)
   }
