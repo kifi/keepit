@@ -615,14 +615,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.","2014-01-30")
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = {
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
+    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout).map { r =>
       r.json.as[NormalizedURI]
     }
   }
 
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = {
     val json = Json.obj("state" -> state)
-    call(Shoebox.internal.updateNormalizedURI(uriId), json, callTimeouts = longTimeout, routingStrategy = leaderPriority).imap(_ => {})
+    call(Shoebox.internal.updateNormalizedURI(uriId), json, callTimeouts = longTimeout).imap(_ => {})
   }
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
