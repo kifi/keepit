@@ -58,7 +58,6 @@ object Shoebox extends Service {
   object internal {
     def getNormalizedURI(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIs", Param("ids", ids))
-    def getNormalizedURIExternalIDs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIExternalIDs", Param("ids", ids))
     def getNormalizedURIByURL() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedURIByURL")
     def getNormalizedUriByUrlOrPrenormalize() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize")
     def internNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/internNormalizedURI")
@@ -143,6 +142,7 @@ object Shoebox extends Service {
     def updateScreenshots(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/screenshots/update", Param("id", id))
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummary")
+    def getUriSummaries() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummaries")
     def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
     def getUnsubscribeUrlForEmail(email: String) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email",email))
     def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))

@@ -52,7 +52,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getEmailAddressById(id: Id[UserEmailAddress]): Future[String]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
-  def getNormalizedURIExternalIDs(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],ExternalId[NormalizedURI]]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
   def internNormalizedURI(url: String, scrapeWanted: Boolean = false): Future[NormalizedURI]
@@ -125,6 +124,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
+  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],URISummary]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: String): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
@@ -134,7 +134,7 @@ trait ShoeboxServiceClient extends ServiceClient {
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
-    uriExternalIdCache: NormalizedURIExternalIDCache,
+    uriSummaryCache: URISummaryCache,
     bookmarkUriUserCache: KeepUriUserCache,
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
@@ -371,21 +371,6 @@ class ShoeboxServiceClientImpl @Inject() (
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
       Json.fromJson[Seq[NormalizedURI]](r.json).get
-    }
-  }
-
-  def getNormalizedURIExternalIDs(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],ExternalId[NormalizedURI]]] = {
-    redundantDBConnectionCheck(uriIds)
-    val keys = uriIds.map(NormalizedURIExternalIDKey)
-    cacheProvider.uriExternalIdCache.bulkGetOrElseFuture(keys.toSet) { missing =>
-      val missingKeysSeq = missing.toSeq
-      call(Shoebox.internal.getNormalizedURIExternalIDs(missingKeysSeq.map(_.id).mkString(","))).map { r =>
-        Json.fromJson[Seq[ExternalId[NormalizedURI]]](r.json).get
-      } map { externalIds =>
-        (missingKeysSeq zip externalIds.map(_.id)) toMap
-      }
-    } map { externalIdMap =>
-      externalIdMap map { case (k,v) => (k.id,ExternalId[NormalizedURI](v)) }
     }
   }
 
@@ -847,6 +832,20 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = longTimeout).map{ r =>
       r.json.as[URISummary]
     }
+  }
+
+  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],URISummary]] = {
+    redundantDBConnectionCheck(uriIds)
+    val keys = uriIds.map(NormalizedURIExternalIDKey)
+    cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
+      val missingKeysSeq = missing.toSeq
+      val request = Json.obj("uriIds" ->  missingKeysSeq.map(_.id))
+      call(Shoebox.internal.getUriSummaries, request, callTimeouts = longTimeout).map { r =>
+        Json.fromJson[Seq[URISummary]](r.json).get
+      } map { uriSummaries =>
+        (missingKeysSeq zip uriSummaries) toMap
+      }
+    }.map(_ map { case (k,v) => (k.id,v) })
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {

@@ -56,7 +56,8 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
             start = None,
             end = None,
             tz = None,
-            coll = None)
+            coll = None,
+            withUriSummary = false)
 
         res.myTotal === 1
         res.friendsTotal === 1
@@ -77,8 +78,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
                 "id":"${myBookmarkExternalId}",
                 "matches":{"url":[[11,6]]}
               },
-              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}],
-              "externalUriId":"${uris(0).externalId}"
+              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}]
             }
           """),
           Json.parse(s"""
@@ -94,8 +94,7 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
                 "url":"http://www.keepit.com/article1",
                 "matches":{"url":[[11,6]]}
               },
-              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}],
-              "externalUriId":"${uris(1).externalId}"
+              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}]
             }
           """)
         )

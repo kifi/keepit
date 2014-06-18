@@ -9,11 +9,16 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.search.Lang
 import com.keepit.search.Scoring
 import com.keepit.search.SearchConfig
+import com.keepit.model.URISummary
 
 object ResultUtil {
 
   private def jsonToKifiSearchHit(json: JsObject): KifiSearchHit = {
-    val externalUriId = (json \ "externalUriId").asOpt[JsString].map("externalUriId" -> _).toList
+    val uriSummaryJson = (json \ "uriSummary")
+    // All the fields of URISummary are nullable so we want to distinguish between "null" and an empty URI summary
+    val uriSummary = if (!uriSummaryJson.isInstanceOf[JsUndefined]) {
+      uriSummaryJson.asOpt[URISummary].map("uriSummary" -> Json.toJson(_)).toList
+    } else List()
     KifiSearchHit(JsObject(List(
       "count" -> (json \ "bookmarkCount"),
       "bookmark" -> (json \ "bookmark"),
@@ -21,7 +26,7 @@ object ResultUtil {
       "score" -> (json \ "score"),
       "isMyBookmark" -> (json \ "isMyBookmark"),
       "isPrivate" -> (json \ "isPrivate")
-    ) ++ externalUriId))
+    ) ++ uriSummary))
   }
 
   def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {

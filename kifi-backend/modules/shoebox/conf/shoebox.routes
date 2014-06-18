@@ -574,7 +574,6 @@ GET     /internal/version                             @com.keepit.controllers.we
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)
-GET     /internal/shoebox/database/getNormalizedURIExternalIDs         @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIExternalIDs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
 POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.internal.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
 POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.internal.ShoeboxController.internNormalizedURI()
@@ -667,6 +666,7 @@ GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controll
 GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateUriScreenshotsForUriId(id: Id[NormalizedURI])
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
 POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
+POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getURISummaries()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: String)

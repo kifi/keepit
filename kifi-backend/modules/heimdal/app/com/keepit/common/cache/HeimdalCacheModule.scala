@@ -43,8 +43,8 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def normalizedURIExternalIDCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIExternalIDCache(stats, accessLog, (outerRepo, 7 days))
+  def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
