@@ -23,6 +23,7 @@ import play.api.mvc.{AnyContent, Action}
 import com.keepit.commanders.URISummaryCommander
 import com.keepit.commanders.RichWhoKeptMyKeeps
 import com.keepit.model.KeywordsSummary
+import com.keepit.model.KeepStates
 
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -139,6 +140,14 @@ class AdminBookmarksController @Inject() (
     }
     log.info("updating changed users")
     Redirect(request.request.referer)
+  }
+
+  def inactive(id: Id[Keep]) = AdminHtmlAction.authenticated { request =>
+    db.readWrite{ implicit s =>
+      val keep = keepRepo.get(id)
+      keepRepo.save(keep.copy(state = KeepStates.INACTIVE))
+      Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
+    }
   }
 
   //this is an admin only task!!!
