@@ -15,7 +15,7 @@ guide.step = guide.step || function () {
   var sites = [
     {noun: 'recipe', tag: 'Recipe', query: 'cake+recipe'},
     {noun: 'tote', tag: 'Shopping Wishlist', query: 'tote'},
-    {noun: 'article', tag: 'Read Later', query: 'truly+love+life'},
+    {noun: 'article', tag: 'Read Later', query: 'lifehack+truly+love'},
     {noun: 'video', tag: 'Inspiration', query: 'steve+jobs'}];
   return show;
 

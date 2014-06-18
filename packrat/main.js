@@ -1226,7 +1226,7 @@ api.port.on({
     }
   },
   has: function (experiment, respond) {
-    respond(me && ~experiments.indexOf(experiment) || /\d+\.\d+\.\d+\.\d+/.test(api.version));
+    respond(experiment === 'guide' ? guideEnabled() : (experiments || []).indexOf(experiment) >= 0);
   }
 });
 
@@ -1752,7 +1752,7 @@ function kififyWithPageData(tab, d) {
     position: d.position,
     hide: hide,
     tags: d.tags,
-    showKeeperIntro: prefs && prefs.showKeeperIntro
+    showKeeperIntro: prefs && prefs.showKeeperIntro && !guideEnabled()
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
@@ -1875,6 +1875,10 @@ function paneIsOpen(tabId) {
       return true;
     }
   }
+}
+
+function guideEnabled() {
+  return (experiments || []).indexOf('guide') >= 0 || /\d+\.\d+\.\d+\.\d+/.test(api.version);
 }
 
 function setIcon(tab, kept) {

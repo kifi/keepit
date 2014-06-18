@@ -7,7 +7,7 @@ var searchIntro = searchIntro || (function () {
   var $el, shownTimeout;
   return {
     show: function show($parent) {
-      if (!$el && document.hasFocus()) {
+      if (!$el && document.hasFocus() && !window.guide) {
         log('[searchIntro.show]');
         $el = $(render('html/search/search_intro'))
           .appendTo($parent)
