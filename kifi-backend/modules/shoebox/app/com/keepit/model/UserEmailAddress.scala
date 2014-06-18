@@ -6,8 +6,8 @@ import java.security.SecureRandom
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.mail.{EmailAddress}
-import com.keepit.abook.{EmailParserUtils}
+import com.keepit.common.mail.EmailAddress
+import com.keepit.abook.EmailParserUtils
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
@@ -54,12 +54,3 @@ object UserEmailAddressStates {
   val UNVERIFIED = State[UserEmailAddress]("unverified")
   val INACTIVE = State[UserEmailAddress]("inactive")
 }
-
-case class VerifiedEmailUserIdKey(address: EmailAddress) extends Key[Id[User]] {
-  override val version = 1
-  val namespace = "user_id_by_verified_email"
-  def toKey(): String = address.address
-}
-
-class VerifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[VerifiedEmailUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])

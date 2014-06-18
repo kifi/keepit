@@ -148,7 +148,6 @@ case class ShoeboxCacheProvider @Inject() (
     userBookmarkCountCache: KeepCountCache,
     userSegmentCache: UserSegmentCache,
     extensionVersionCache: ExtensionVersionInstallationIdCache,
-    verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
     urlPatternRuleAllCache: UrlPatternRuleAllCache,
     userImageUrlCache: UserImageUrlCache
   )

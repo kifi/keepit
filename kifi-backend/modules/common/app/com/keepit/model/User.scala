@@ -38,7 +38,6 @@ case class User(
 
 object User {
   implicit val userPicIdFormat = Id.format[UserPicture]
-  implicit val emailAddressIdFormat = Id.format[UserEmailAddress]
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -99,3 +98,11 @@ object UserStates extends States[User] {
   val INCOMPLETE_SIGNUP = State[User]("incomplete_signup")
 }
 
+case class VerifiedEmailUserIdKey(address: EmailAddress) extends Key[Id[User]] {
+  override val version = 1
+  val namespace = "user_id_by_verified_email"
+  def toKey(): String = address.address
+}
+
+class VerifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[VerifiedEmailUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])
