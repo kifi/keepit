@@ -1,5 +1,5 @@
 // @require styles/guide/step.css
-// @require styles/guide/steps.css
+// @require styles/guide/guide.css
 // @require scripts/lib/jquery.js
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js

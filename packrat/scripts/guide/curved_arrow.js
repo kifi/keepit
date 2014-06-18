@@ -5,51 +5,18 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
   'use strict';
 
   function CurvedArrow(tail, head, anchor, revealMs) {
-    var tailWidth = tail.width || 2;
-    if (head.width == null) {
-      head.width = 10;
-    }
-    head.length = head.width * Math.sqrt(3);
-    var curve = computeCurve(tail, head);
-    this.$el = $('<div class="kifi-curved-arrow kifi-root"/>')
-      .css({
-        'position': 'fixed',
-        'z-index': 999999999993,
-        'top': 0,
-        'left': 0,
-        'width': 0,
-        'height': 0
-      });
+    this.$el = $('<div class="kifi-curved-arrow kifi-root"/>');
+    this.$head = head.draw === false ? $() : $('<div class="kifi-curved-arrow-head"/>').appendTo(this.$el);
+    this.$tail = $('<div class="kifi-curved-arrow-tail"/>').appendTo(this.$el);
+    this.attach();
+    var headLength = parseFloat(this.$head.css('border-left-width') || 0);
+    var tailWidth = parseFloat(this.$tail.css('width') || 0) / 2;
+    var curve = computeCurve(tail, head, headLength);
     var x0 = curve.x(0);
     var y0 = curve.y(0);
-    this.$head = head.width === 0 ? null : $('<div class="kifi-curved-arrow-head"/>')
-      .css({
-        'position': 'absolute',
-        'top': -head.width,
-        'left': 0,
-        'width': 0,
-        'height': 0,
-        'border-style': 'solid',
-        'border-color': 'transparent transparent transparent #f99',
-        'border-width': [head.width, 'px 0 ', head.width, 'px ', head.length, 'px'].join(''),
-        'transform-origin': '0 center',
-        'transform': headTransform(x0, y0, curve.phi(0))
-      })
-      .appendTo(this.$el);
-    this.$tail = $('<div class="kifi-curved-arrow-tail"/>')
-      .css({
-        'position': 'absolute',
-        'top': -tailWidth,
-        'left': -tailWidth,
-        'width': tailWidth * 2,
-        'height': tailWidth * 2,
-        'background': '#f99',
-        'border-radius': '50%',
-        'transform': translatePx(x0, y0)
-      })
-      .appendTo(this.$el);
+    this.$head.css('transform', headTransform(x0, y0, curve.phi(0)));
+    this.$tail.css('transform', translatePx(x0, y0))
     this.onWinResize = anchor && anchor !== 'tl' ? _.throttle(getOnWinResize(this.$el, anchor), 100, {leading: false}) : null;
-    this.attach();
     reveal.call(this, curve, tail.spacing || tailWidth * 4.5, revealMs);
   }
 
@@ -83,7 +50,7 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     }
   };
 
-  function computeCurve(tail, head) {
+  function computeCurve(tail, head, headLength) {
     /*
     ,---------,
     |         |
@@ -108,8 +75,8 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     var headAngleRad = Math.PI / 180 * head.angle;
     var T = pointOutsideRect(rTail, tail.along, tailAngleRad, tail.gap);
     var H = pointOutsideRect(rHead, head.along, headAngleRad + Math.PI, head.gap);
-    var Gx = H.x - head.length * Math.cos(headAngleRad);
-    var Gy = H.y + head.length * Math.sin(headAngleRad);
+    var Gx = H.x - headLength * Math.cos(headAngleRad);
+    var Gy = H.y + headLength * Math.sin(headAngleRad);
     return chooseCurve(T, -tailAngleRad, {x: Gx, y: Gy}, -headAngleRad + Math.PI);
   }
 

@@ -1,5 +1,5 @@
 // @require styles/guide/step_4.css
-// @require styles/guide/steps.css
+// @require styles/guide/guide.css
 // @require scripts/lib/jquery.js
 // @require scripts/keeper.js
 // @require scripts/render.js
@@ -17,9 +17,9 @@ guide.step4 = guide.step4 || function () {
     {sel: '.kf-header-right>*', pad: [-6, 24]}
   ];
   var arcs = [
-    {anchor: 'tl', from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1], width: 0}},
-    {anchor: 'tl', from: {angle: 150, gap: 20, along: [0, .35], spacing: 7}, to: {angle: 78, gap: 12, along: [.32, 1], width: 0}},
-    {anchor: 'tr', from: {angle: 100, gap: 0, along: [.5, 0], spacing: 7}, to: {angle: 30, gap: 16, along: [.5, .7], width: 0}}
+    {anchor: 'tl', from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1], draw: false}},
+    {anchor: 'tl', from: {angle: 150, gap: 20, along: [0, .35], spacing: 7}, to: {angle: 78, gap: 12, along: [.32, 1], draw: false}},
+    {anchor: 'tr', from: {angle: 100, gap: 0, along: [.5, 0], spacing: 7}, to: {angle: 30, gap: 16, along: [.5, .7], draw: false}}
   ];
   return show;
 

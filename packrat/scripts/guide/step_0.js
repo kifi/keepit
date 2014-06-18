@@ -1,5 +1,5 @@
 // @require styles/guide/step_0.css
-// @require styles/guide/steps.css
+// @require styles/guide/guide.css
 // @require scripts/lib/jquery.js
 // @require scripts/keeper.js
 // @require scripts/render.js
