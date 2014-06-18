@@ -48,14 +48,24 @@ guide.step1 = guide.step1 || function () {
       pos: 'center'
     }
   ];
-  var steps_3_arrow_to_sel = steps[3].arrow.to.sel;
+  var origSteps3ArrowToSel = steps[3].arrow.to.sel;
   return show;
 
-  function show(siteIdx, $guide) {
+  function show($guide, page, pageIdx) {
     if (!step) {
-      // TODO: handle already kept case well (different steps)
-      step = guide.step(steps, {$guide: $guide, site: siteIdx, page: 1, done: .3, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
-      steps[3].arrow.to.sel = steps_3_arrow_to_sel.replace('{{tag}}', step.site.tag);
+      // TODO: handle already kept case well (different steps?)
+      steps[3].arrow.to.sel = origSteps3ArrowToSel.replace('{{tag}}', page.tag);
+      step = guide.step(steps, {
+        $guide: $guide,
+        page: page,
+        pageIdx: pageIdx,
+        index: 1,
+        done: .3,
+        anchor: 'br',
+        step: onStep,
+        next: onClickNext,
+        hide: onHide
+      });
     }
   }
 

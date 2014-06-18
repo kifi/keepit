@@ -11,11 +11,11 @@ guide.step = guide.step || function () {
   var spotlight, $stage, $steps, timeout, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
-  var sites = [
-    {noun: 'recipe', tag: 'Recipe', query: 'cake+recipe'},
-    {noun: 'tote', tag: 'Shopping Wishlist', query: 'tote'},
-    {noun: 'article', tag: 'Read Later', query: 'lifehack+truly+love'},
-    {noun: 'video', tag: 'Inspiration', query: 'steve+jobs'}];
+  // var sites = [
+  //   {noun: 'recipe', tag: 'Recipe', query: 'cake+recipe'},
+  //   {noun: 'tote', tag: 'Shopping Wishlist', query: 'tote'},
+  //   {noun: 'article', tag: 'Read Later', query: 'lifehack+truly+love'},
+  //   {noun: 'video', tag: 'Inspiration', query: 'steve+jobs'}];
   return show;
 
   function show(steps_, opts_) {
@@ -23,7 +23,7 @@ guide.step = guide.step || function () {
       steps = steps_;
       opts = opts_;
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
-      $stage = $(render('html/guide/step_' + opts.page, {me: me, site: sites[opts_.site]}));
+      $stage = $(render('html/guide/step_' + opts.index, {me: me, page: opts_.page}));
       $steps = opts_.$guide.appendTo('body')
         .on('click', '.kifi-gs-x', hide);
       $steps.each(layout).data().updateProgress(opts_.done);
@@ -35,8 +35,7 @@ guide.step = guide.step || function () {
       }
       return {
         show: showStep,
-        nav: navTo,
-        site: sites[opts_.site]
+        nav: navTo
       };
     }
   }
@@ -241,7 +240,7 @@ guide.step = guide.step || function () {
   }
 
   function navTo(url) {
-    api.port.emit('await_deep_link', {locator: '#guide/' + (opts.page + 1) + '/' + opts.site, url: url});
+    api.port.emit('await_deep_link', {locator: '#guide/' + (opts.index + 1) + '/' + opts.pageIdx, url: url});
     window.location = url;
   }
 
@@ -261,7 +260,11 @@ guide.step = guide.step || function () {
     if (step && step.allow && (proceed = allowEvent(e, step.allow)) != null) {
       // do not interfere
       if (proceed) {
-        showStep(stepIdx + 1);
+        if (stepIdx + 1 < steps.length) {
+          showStep(stepIdx + 1);
+        } else {
+          navTo($(e.target).closest('[href]').prop('href'));
+        }
       }
     } else if (/^(?:mousedown|mouseup|click)$/.test(e.type) && e.target[MATCHES]('a[href][class^=kifi-guide]')) {
       // do not interfere

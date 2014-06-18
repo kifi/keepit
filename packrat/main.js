@@ -31,6 +31,7 @@ var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
 var tagsById;
+var guidePages;
 
 function clearDataCache() {
   log('[clearDataCache]');
@@ -54,6 +55,7 @@ function clearDataCache() {
   urlPatterns = null;
   tags = null;
   tagsById = null;
+  guidePages = null;
 }
 
 // ===== Error reporting
@@ -1225,8 +1227,14 @@ api.port.on({
       api.mode.toggle();
     }
   },
-  has: function (experiment, respond) {
-    respond(experiment === 'guide' ? guideEnabled() : (experiments || []).indexOf(experiment) >= 0);
+  start_guide: function (pages) {
+    guidePages = pages;
+  },
+  end_guide: function () {
+    guidePages = null;
+  },
+  guide_pages: function (_, respond) {
+    respond(guideEnabled() && guidePages);
   }
 });
 

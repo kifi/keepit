@@ -25,8 +25,15 @@
 
   function onMessage(event) {
     if (event.origin === origin) {
-      log('[onMessage]', event.data);
-      switch (event.data) {
+      var data = event.data;
+      log('[onMessage]', data);
+      switch (data && data.type || data) {
+      case 'start_guide':
+        api.require('scripts/guide.js', function () {
+          api.port.emit('start_guide', data.pages);
+          guide.show(0, data.pages);
+        });
+        break;
       case 'get_bookmark_count_if_should_import':
         api.port.emit('get_bookmark_count_if_should_import', function (count) {
           event.source.postMessage({bookmarkCount: count}, event.origin);

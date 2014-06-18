@@ -153,7 +153,7 @@ var tile = tile || function() {  // idempotent for Chrome
         loadAndDo('pane', 'compose', 'key');
         e.preventDefault();
         break;
-      case 48: case 49: case 50: case 51: case 52: // 0,1,2,3,4
+      case 49: case 50: case 51: case 52: // 1,2,3,4
         if (e.altKey) {
           loadAndDo('guide', 'show', e.keyCode - 48);
           e.preventDefault();

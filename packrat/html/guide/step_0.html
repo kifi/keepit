@@ -1,29 +1,19 @@
 <kifi class="kifi-guide-stage kifi-root">
   <div class="kifi-guide-pages" kifi-p="1">
     <div class="kifi-guide-page kifi-guide-page-1">
-      <img class="kifi-guide-pic" src="{{cdnBase}}/users/{{id}}/pics/200/{{pictureName}}">
-      <div class="kifi-guide-h1">Hi {{firstName}}, welcome to Kifi</div>
+      <img class="kifi-guide-pic" src="{{cdnBase}}/users/{{me.id}}/pics/200/{{me.pictureName}}">
+      <div class="kifi-guide-h1">Hi {{me.firstName}}, welcome to Kifi</div>
       <div class="kifi-guide-p">This interactive guide will walk you through<br/>how to use Kifi. It’s easy and fun.</div>
       <a class="kifi-guide-next" href="javascript:">Let’s get started</a>
     </div>
     <div class="kifi-guide-page kifi-guide-page-2">
       <div class="kifi-guide-h1">Start by <span class="kifi-guide-em">choosing</span> an<br/>example web page</div>
-      <a class="kifi-guide-site-a" href="http://realhealthyrecipes.com/2013/09/25/frosted-watermelon-cake/">
-        <span class="kifi-guide-site-title">Frosted<br/>Watermelon<br/>Cake</span>
-        <span class="kifi-guide-site">realhealthyrecipes.com</span>
+      {{#pages}}
+      <a class="kifi-guide-site-a" href="{{url}}" style="background-image:url({{thumb}})">
+        <div class="kifi-guide-site-title">{{#title}}<div class="kifi-guide-site-title-part">{{.}}</div>{{/title}}</div>
+        <div class="kifi-guide-site">{{site}}</div>
       </a>
-      <a class="kifi-guide-site-a" href="https://www.etsy.com/listing/163215077/large-leather-tote-everyday-tote-bag">
-        <span class="kifi-guide-site-title">Large<br/>Leather<br/>Tote</span>
-        <span class="kifi-guide-site">etsy.com</span>
-      </a>
-      <a class="kifi-guide-site-a" href="http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html">
-        <span class="kifi-guide-site-title">10 Things<br/>People Who Truly<br/>Love Their Lives<br/>Do Differently</span>
-        <span class="kifi-guide-site">lifehack.org</span>
-      </a>
-      <a class="kifi-guide-site-a" href="http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die">
-        <span class="kifi-guide-site-title">Steve Jobs:<br/>How to Live<br/>Before You Die</span>
-        <span class="kifi-guide-site">ted.com</span>
-      </a>
+      {{/pages}}
     </div>
   </div>
 </kifi>

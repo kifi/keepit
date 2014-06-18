@@ -94,25 +94,13 @@
   width: 158px;
   height: 280px;
   vertical-align: top;
-  background: #fff top/158px 155px no-repeat;
+  background: #fff center top/auto 155px no-repeat;
   border-radius: 4px;
   margin: 0 10px;
 }
 .kifi-guide-site-a:hover,
 .kifi-guide-site-a:focus {
   color: #868b91;
-}
-.kifi-guide-site-a:nth-of-type(1) {
-  background-image: url(/images/guide/site_1.jpg);
-}
-.kifi-guide-site-a:nth-of-type(2) {
-  background-image: url(/images/guide/site_2.jpg);
-}
-.kifi-guide-site-a:nth-of-type(3) {
-  background-image: url(/images/guide/site_3.jpg);
-}
-.kifi-guide-site-a:nth-of-type(4) {
-  background-image: url(/images/guide/site_4.jpg);
 }
 .kifi-guide-site-title {
   display: table-cell;

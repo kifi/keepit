@@ -22,7 +22,7 @@ guide.step4 = guide.step4 || function () {
   ];
   return show;
 
-  function show(__, $guide) {
+  function show($guide) {
     if (!$stage) {
       $stage = $(render('html/guide/step_4', me));
       cutScreen = new CutScreen([]);

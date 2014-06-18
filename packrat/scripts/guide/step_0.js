@@ -9,9 +9,9 @@ guide.step0 = guide.step0 || function () {
   var $stage, $pages, $steps;
   return show;
 
-  function show(__, $guide) {
+  function show($guide, pages) {
     if (!$stage) {
-      $stage = $(render('html/guide/step_0', me)).appendTo('body').layout().addClass('kifi-open');
+      $stage = $(render('html/guide/step_0', {me: me, pages: pages})).appendTo('body').layout().addClass('kifi-open');
       $steps = $guide.appendTo('body')
         .on('click', '.kifi-gs-x', hide);
       $pages = $stage.find('.kifi-guide-pages')
