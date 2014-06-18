@@ -753,6 +753,19 @@ class AdminUserController @Inject() (
     }
   }
 
+  def fillInPrimaryEmails() = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
+    var primaryEmailsAdded = 0
+    db.readWrite { implicit session =>
+      userRepo.all().foreach { user =>
+        if (user.primaryEmailId.isDefined && user.primaryEmail.isEmpty) {
+          userRepo.save(user.copy(primaryEmail = Some(emailRepo.get(user.primaryEmailId.get).address)))
+          primaryEmailsAdded += 1
+        }
+      }
+    }
+    Ok(JsNumber(primaryEmailsAdded))
+  }}
+
   def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
     val toBeCreated = db.readWrite { implicit session =>
       userConnectionRepo.all().collect { case activeConnection if {
