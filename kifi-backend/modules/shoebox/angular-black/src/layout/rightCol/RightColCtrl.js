@@ -60,7 +60,42 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     };
 
     $scope.triggerOnboarding = function () {
-      $window.postMessage('start_guide', '*');
+      $window.postMessage({
+        type: 'start_guide',
+        pages: [{
+          url: 'http://realhealthyrecipes.com/2013/09/25/frosted-watermelon-cake/',
+          title: ['Frosted','Watermelon','Cake'],
+          site: 'realhealthyrecipes.com',
+          thumb: '/img/guide/watermelon_cake.jpg',
+          noun: 'recipe',
+          tag: 'Recipe',
+          query: 'watermelon+cake+recipe'
+        }, {
+          url: 'https://www.etsy.com/listing/163215077/large-leather-tote-everyday-tote-bag',
+          title: ['Large','Leather','Tote'],
+          site: 'etsy.com',
+          thumb: '/img/guide/leather_tote.jpg',
+          noun: 'tote',
+          tag: 'Shopping Wishlist',
+          query: 'leather+tote+bag'
+        }, {
+          url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
+          title: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
+          site: 'lifehack.org',
+          thumb: '/img/guide/love_life.jpg',
+          noun: 'article',
+          tag: 'Read Later',
+          query: 'lifehack+truly+love+differently'
+        }, {
+          url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
+          title: ['Steve Jobs:','How to Live','Before You Die'],
+          site: 'ted.com',
+          thumb: '/img/guide/before_you_die.jpg',
+          noun: 'video',
+          tag: 'Inspiration',
+          query: 'steve+jobs+before+you+die'
+        }]
+      }, '*');
     };
 
     // onboarding.js is using these functions
