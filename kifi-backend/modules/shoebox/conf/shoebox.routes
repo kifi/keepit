@@ -427,7 +427,6 @@ GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserCont
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 
-GET     /admin/users/fillInPrimaryEmails       @com.keepit.controllers.admin.AdminUserController.fillInPrimaryEmails()
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
