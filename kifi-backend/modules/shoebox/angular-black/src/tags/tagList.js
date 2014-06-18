@@ -16,8 +16,7 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
     return {
       scope: {
         'getSelectedKeeps': '&',
-        'addingTag': '=',
-        'isShown': '&'
+        'addingTag': '='
       },
       replace: true,
       restrict: 'A',
@@ -30,8 +29,8 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
         scope.tagTypeAheadResults = [];
         scope.shouldGiveFocus = false;
 
-        tagService.fetchAll().then(function () {
-          scope.allTags = tagService.allTags;
+        tagService.fetchAll().then(function (res) {
+          scope.allTags = res;
           filterTags(null);
         });
 
@@ -247,12 +246,6 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
           return scope.addingTag.enabled = false;
         };
 
-        // We should be able to just replace the ng-show on the directive with an ng-if and remove the code
-        // below. For some reason it is not working...
-        scope.$watch('isShown()', function () {
-          filterTags(null);
-        });
-
         scope.onKeydown = function (e) {
           switch (e.keyCode) {
           case KEY_UP:
@@ -281,9 +274,7 @@ angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
             var tagIds = _.pluck(keep.tagList, 'id');
             return _.contains(tagIds, tag.id);
           });
-          tagService.removeKeepsFromTag(tag.id, keepsWithTag).then(function () {
-            //filterTags(null);
-          });
+          tagService.removeKeepsFromTag(tag.id, keepsWithTag);
         };
 
         element.on('mousedown', '.kf-keep-tag-opt', function () {

@@ -120,9 +120,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     log.info(s"about to persist $uri")
-
-    // setting a negative sequence number for deferred assignment
-    val num = SequenceNumber[NormalizedURI](clock.now.getMillis() - Long.MaxValue)
+    val num = sequence.incrementAndGet()
     val uriWithSeq = uri.copy(seq = num)
 
     val validatedUri = if ( uri.state != NormalizedURIStates.REDIRECTED && (uri.redirect.isDefined || uri.redirectTime.isDefined) ){
@@ -175,7 +173,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) { timer =>
+    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) {
       val hash = NormalizedURI.hashUrl(normalizedUrl)
       urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
         (for (t <- rows if t.urlHash === hash) yield t).firstOption
@@ -183,19 +181,13 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     }
   }
 
-  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Try[Either[NormalizedURI, String]] = statsd.time(key = "normalizedURIRepo.getByUriOrPrenormalize", ALWAYS) { timer =>
+  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Try[Either[NormalizedURI, String]] = {
     prenormalize(url).map { prenormalizedUrl =>
       log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
       val normalizedUri = getByNormalizedUrl(prenormalizedUrl) map {
-        case uri if uri.state == NormalizedURIStates.REDIRECTED =>
-          val nuri = get(uri.redirect.get)
-          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.redirected", timer, ALWAYS)
-          log.info(s"following a redirection path for $url on uri $nuri")
-          nuri
-        case uri =>
-          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.not_redirected", timer, ALWAYS)
-          uri
-      }
+          case uri if uri.state == NormalizedURIStates.REDIRECTED => get(uri.redirect.get)
+          case uri => uri
+        }
       log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
       normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
     }
@@ -212,7 +204,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     (for(t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
   }
 
-  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ONE_IN_HUNDRED) { timer =>
+  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ONE_IN_HUNDRED) {
     normalizationServiceProvider.get.prenormalize(uriString)
   }
 
@@ -233,7 +225,4 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
     {for( r <- rows if r.restriction === targetRestriction) yield r}.list
   }
 
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "normalized_uri", limit)
-  }
 }

@@ -38,11 +38,13 @@ module.exports = function (grunt) {
         lib: 'lib',
         libCss: [
           'lib/normalize-css/normalize.css',
+          'managed-lib/bootstrap/bootstrap.css',
           'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css',
           'managed-lib/pace/pace.css'
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
+          'managed-lib/bootstrap/bootstrap.css',
           'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'
         ],
         libJs: [
@@ -62,6 +64,7 @@ module.exports = function (grunt) {
           'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
           'lib/moment/moment.js',
           'lib/angular-moment/angular-moment.js',
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js',
           'managed-lib/ui-slider/slider.js',
@@ -79,12 +82,14 @@ module.exports = function (grunt) {
           'lib/angular-route/angular-route.min.js',
           //'lib/angular-ui-router/release/angular-ui-router.min.js',
           'lib/angular-animate/angular-animate.min.js',
+          //'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
           'lib/jquery.mousewheel/jquery.mousewheel.js',
           'lib/antiscroll/antiscroll.js',
           //'lib/angular-antiscroll/angular-antiscroll.js',
           'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
           'lib/moment/min/moment.min.js',
           'lib/angular-moment/angular-moment.min.js',
+          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
           'managed-lib/ui-slider/slider.js',

@@ -77,7 +77,7 @@ class ServiceInstance(object):
   def __init__(self, instance):
     self.aws_instance = instance
 
-    self.name = instance.tags.get("Name", None)
+    self.name = instance.tags["Name"]
     self.service = instance.tags.get("Service", None)
     self.mode = instance.tags.get("Mode", "primary?")
     self.type = instance.instance_type

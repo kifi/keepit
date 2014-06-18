@@ -51,19 +51,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         var preventClearFilter = false;
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
-        var tagList = element.find('.kf-sidebar-tag-list');
-        var antiscroll = element.find('.antiscroll-inner');
-
-        tagList.on('mousewheel', function(e) {
-            var d = e.originalEvent.deltaY;
-            var visibleHeight = scrollableTagList.innerHeight();
-            var totalHeight = tagList.innerHeight();
-            var maxScroll = totalHeight - visibleHeight;
-            var scroll = antiscroll.scrollTop();
-            if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
-              e.preventDefault();
-            }
-        });
 
         w.bind('resize', function () {
           scope.$apply(function () {
@@ -99,7 +86,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.isActiveTag = function (tag) {
-          return tag && util.startsWith($location.path(), '/tag/' + tag.id);
+          return util.startsWith($location.path(), '/tag/' + tag.id);
         };
 
         scope.getShownTags = function () {
@@ -177,7 +164,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.isHighlight = function (tag) {
-          return tag && scope.highlight === tag;
+          return scope.highlight === tag;
         };
 
         scope.isHighlightNew = function () {
@@ -289,7 +276,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 
         scope.$watch('tags.length', function () {
           scope.refreshScroll();
-          scope.tagsWithFakeLast = scope.tags.concat([null]);
         });
 
         tagService.fetchAll();

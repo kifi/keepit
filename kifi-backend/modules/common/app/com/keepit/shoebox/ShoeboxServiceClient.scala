@@ -485,15 +485,13 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]] = {
-    val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
-    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = timeout).map { r =>
+    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
     }
   }
 
   def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[UriIdAndSeq]] = {
-    val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
-    call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = timeout).map { r =>
+    call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       ScalaMessagePack.read[UriIdAndSeqBatch](r.bytes).batch
     }
   }

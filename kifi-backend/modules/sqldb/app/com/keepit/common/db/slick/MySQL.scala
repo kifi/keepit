@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.db.{DbSequence, SequenceNumber, SequenceNumberRange, MySqlDatabaseDialect}
+import com.keepit.common.db.{DbSequence, SequenceNumber, MySqlDatabaseDialect}
 import scala.slick.driver.MySQLDriver
 import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 import com.keepit.common.logging.Logging
@@ -32,28 +32,6 @@ class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
       val rs = session.getPreparedStatement(s"SELECT id from $name;").executeQuery()
       rs.next()
       SequenceNumber[T](rs.getLong(1))
-    }
-
-    def reserve(n: Int)(implicit sess: RWSession): SequenceNumberRange[T] = {
-      if (n > 0) {
-        val ts = System.currentTimeMillis()
-        val stmt = sess.getPreparedStatement(s"UPDATE $name SET id=LAST_INSERT_ID(id+?);")
-        stmt.setInt(1, n)
-        stmt.execute()
-        val rs = sess.getPreparedStatement(s"SELECT LAST_INSERT_ID();").executeQuery()
-        rs.next()
-        val end = rs.getLong(1)
-        val start = end + 1 - n
-        val res = SequenceNumberRange[T](start, end)
-        val lapsed = System.currentTimeMillis - ts
-        if (lapsed > 5000) { // may add airbrake later
-        val msg = s"nextRange($name) takes too long ($lapsed ms) res=$res"
-          log.error(msg, new IllegalStateException(msg))
-        }
-        res
-      } else {
-        throw new IllegalArgumentException("non-positive size is specified")
-      }
     }
   }
 }

@@ -272,6 +272,12 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           val u3 = userRepo.save(User(firstName = "Clicker", lastName = "ClicketyClickyClick"))
           val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
 
+          val helprank = ExperimentType.HELPRANK
+          userExpRepo.save(UserExperiment(userId = u1.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u2.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u3.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u4.id.get, experimentType = helprank))
+
           (u1, u2, u3, u4)
         }
         val bookmarkInterner = inject[KeepInterner]
@@ -415,6 +421,12 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
           val u3 = userRepo.save(User(firstName = "Clicker", lastName = "ClicketyClickyClick"))
           val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
+
+          val helprank = ExperimentType.HELPRANK
+          userExpRepo.save(UserExperiment(userId = u1.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u2.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u3.id.get, experimentType = helprank))
+          userExpRepo.save(UserExperiment(userId = u4.id.get, experimentType = helprank))
 
           (u1, u2, u3, u4)
         }
