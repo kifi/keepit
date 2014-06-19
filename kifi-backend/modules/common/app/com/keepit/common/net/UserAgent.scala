@@ -15,6 +15,7 @@ case class UserAgent(
   lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiAppTypeName
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
   lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily) || isKifiIphoneApp
+  lazy val isWebsiteEnabled: Boolean = !isMobile || UserAgent.WebsiteEnabled.exists(userAgent.contains(_))
   lazy val isSupportedDesktop: Boolean = {
     !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
   }
@@ -25,6 +26,7 @@ object UserAgent extends Logging {
   val KifiAppTypeName = "kifi app"
 
   val MobileOs = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
+  val WebsiteEnabled = Set("iPad", "Tablet")
   val SupportedDesktopBrowsers = Set("Chrome", "Firefox")
 
   private val MAX_USER_AGENT_LENGTH = 512
