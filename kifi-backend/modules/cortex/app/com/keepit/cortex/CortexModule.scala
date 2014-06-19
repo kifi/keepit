@@ -19,4 +19,5 @@ abstract class CortexModule(
 ) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
+  val cortexSlickModule = CortexSlickModule()
 }
