@@ -58,7 +58,7 @@ angular.module('kifi.installService', [])
       installedVersion: installedVersion,
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
         var version = installedVersion();
-        if (minCanaryVersion && version.split('.').length === 4) {
+        if (minCanaryVersion && version && version.split('.').length === 4) {
           return version >= minCanaryVersion;
         } else {
           return version >= minVersion;

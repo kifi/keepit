@@ -67,7 +67,7 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
@@ -79,7 +79,7 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         None
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(true)
       } else {
         Some(false)
@@ -95,7 +95,7 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         None
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(true)
       } else {
         Some(false)
@@ -254,7 +254,7 @@ class HomeController @Inject() (
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else if (!agent.isSupportedDesktop) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
