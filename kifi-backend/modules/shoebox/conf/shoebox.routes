@@ -317,6 +317,7 @@ GET     /admin/bookmarks/editWithUri       @com.keepit.controllers.admin.AdminBo
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
+POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 
