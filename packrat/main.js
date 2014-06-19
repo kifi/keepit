@@ -1227,14 +1227,23 @@ api.port.on({
       api.mode.toggle();
     }
   },
-  start_guide: function (pages) {
+  start_guide: function (pages, _, tab) {
     guidePages = pages;
+    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages});
+  },
+  resume_guide: function (step, _, tab) {
+    if (guidePages) {
+      api.tabs.emit(tab, 'guide', {
+        step: step,
+        pages: guidePages,
+        page: 0 // TODO: guess based on tab.url
+      });
+    }
   },
   end_guide: function () {
-    guidePages = null;
-  },
-  guide_pages: function (_, respond) {
-    respond(guideEnabled() && guidePages);
+    if (api.isPackaged()) {
+      guidePages = null;
+    }
   }
 });
 
@@ -1520,7 +1529,13 @@ function awaitDeepLink(link, tabId, retrySec) {
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
-        api.tabs.emit(tab, 'guide', loc.substr(7), {queue: 1});
+        if (guidePages) {
+          api.tabs.emit(tab, 'guide', {
+            step: +loc.substr(7, 1),
+            pages: guidePages,
+            page: +loc.substr(9)
+          }, {queue: 1});
+        }
       } else {
         api.tabs.emit(tab, 'open_to', {
           trigger: 'deepLink',
