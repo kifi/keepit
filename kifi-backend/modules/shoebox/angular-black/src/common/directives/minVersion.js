@@ -9,7 +9,7 @@ angular.module('kifi.minVersion', ['kifi.installService'])
       restrict: 'A',
       link: function (scope, element, attrs) {
         if (!installService.hasMinimumVersion(attrs.kfMinVersion, attrs.minCanary)) {
-          element.css('display', 'none');
+          element.remove();
         }
       }
     };
