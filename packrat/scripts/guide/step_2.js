@@ -16,7 +16,14 @@ guide.step2 = guide.step2 || function () {
       pos: {top: 140, left: 520}
     }
   ];
-  return show;
+  return {
+    show: show,
+    remove: function () {
+      if (step) {
+        step.removeAll();
+      }
+    }
+  };
 
   function show($guide, page, pageIdx) {
     if (!step) {

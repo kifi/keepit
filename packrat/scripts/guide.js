@@ -31,7 +31,9 @@ var guide = guide || {
             $bar.css('border-left-width', frac * 110);
           });
         var $bar = $steps.find('.kifi-gs-bar');
-        guide['step' + step]($steps, pageIdx >= 0 ? pages[pageIdx] : pages, pageIdx);
+        var guideStep = guide['step' + step];
+        guideStep.show($steps, pageIdx >= 0 ? pages[pageIdx] : pages, pageIdx);
+        api.onEnd.push(guideStep.remove);
       });
     }
   }

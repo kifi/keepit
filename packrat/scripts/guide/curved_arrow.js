@@ -33,16 +33,19 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
       }
       return this;
     },
+    detach: function () {
+      if (this.attached) {
+        this.$el.remove();
+        if (this.onWinResize) {
+          window.removeEventListener('resize', this.onWinResize, true);
+        }
+        this.attached = false;
+      }
+      return this;
+    },
     fadeAndDetach: function (duration) {
       if (this.attached) {
-        var self = this;
-        this.$el.on('transitionend', function end() {
-          $(this).remove();
-          if (this.onWinResize) {
-            window.removeEventListener('resize', this.onWinResize, true);
-          }
-          self.attached = false;
-        }).css({
+        this.$el.on('transitionend', this.detach.bind(this)).css({
           transition: 'opacity ' + (typeof duration === 'number' ? duration + 'ms' : duration) + ' linear',
           opacity: 0
         });

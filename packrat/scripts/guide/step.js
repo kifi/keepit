@@ -35,7 +35,8 @@ guide.step = guide.step || function () {
       }
       return {
         show: showStep,
-        nav: navTo
+        nav: navTo,
+        removeAll: removeAll
       };
     }
   }
@@ -79,6 +80,28 @@ guide.step = guide.step || function () {
       return ms;
     } else {
       return 0;
+    }
+  }
+
+  function removeAll() {
+    if ($stage) {
+      spotlight.detach();
+      $stage.remove();
+      $steps.remove();
+      if (arrow) {
+        arrow.detach();
+      }
+      if (timeout) {
+        clearTimeout(timeout);
+        window.removeEventListener('load', onDocumentComplete, true);
+      }
+      (opts.hide || api.noop)();
+
+      $stage = $steps = spotlight = timeout = arrow = steps = opts = stepIdx = animTick = null;
+      $(window).off('resize.guideStep');
+      eventsToScreen.forEach(function (type) {
+        window.removeEventListener(type, screenEvent, true);
+      });
     }
   }
 

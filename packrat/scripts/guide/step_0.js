@@ -7,7 +7,7 @@
 
 guide.step0 = guide.step0 || function () {
   var $stage, $pages, $steps;
-  return show;
+  return {show: show, remove: removeAll};
 
   function show($guide, pages) {
     if (!$stage) {
@@ -28,6 +28,14 @@ guide.step0 = guide.step0 || function () {
       $stage = $pages = $steps = null;
       $(document).data('esc').remove(hide);
       api.port.emit('end_guide');
+    }
+  }
+
+  function removeAll() {
+    if ($stage) {
+      $stage.remove();
+      $steps.remove();
+      $stage = $pages = $steps = null;
     }
   }
 

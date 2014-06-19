@@ -20,7 +20,7 @@ guide.step4 = guide.step4 || function () {
     {anchor: 'tl', from: {angle: 150, gap: 20, along: [0, .35], spacing: 7}, to: {angle: 78, gap: 12, along: [.32, 1], draw: false}},
     {anchor: 'tr', from: {angle: 100, gap: 0, along: [.5, 0], spacing: 7}, to: {angle: 30, gap: 16, along: [.5, .7], draw: false}}
   ];
-  return show;
+  return {show: show, remove: removeAll};
 
   function show($guide) {
     if (!$stage) {
@@ -51,6 +51,22 @@ guide.step4 = guide.step4 || function () {
       $stage = cutScreen = $feats = arrows = $steps = timeout = null;
       $(document).data('esc').remove(hide);
       api.port.emit('end_guide');
+    }
+  }
+
+  function removeAll() {
+    if ($stage) {
+      $stage.remove();
+      $steps.remove();
+      cutScreen.detach();
+      arrows.forEach(function (arrow) {
+        arrow.detach();
+      });
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      $stage = cutScreen = $feats = arrows = $steps = timeout = null;
+      $(document).data('esc').remove(hide);
     }
   }
 

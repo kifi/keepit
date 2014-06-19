@@ -53,7 +53,14 @@ guide.step3 = guide.step3 || function () {
       pos: 'center'
     }
   ];
-  return show;
+  return {
+    show: show,
+    remove: function () {
+      if (step) {
+        step.removeAll();
+      }
+    }
+  };
 
   function show($guide, page, pageIdx) {
     if (!step) {

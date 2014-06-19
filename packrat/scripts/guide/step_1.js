@@ -49,7 +49,14 @@ guide.step1 = guide.step1 || function () {
     }
   ];
   var origSteps3ArrowToSel = steps[3].arrow.to.sel;
-  return show;
+  return {
+    show: show,
+    remove: function () {
+      if (step) {
+        step.removeAll();
+      }
+    }
+  };
 
   function show($guide, page, pageIdx) {
     if (!step) {
