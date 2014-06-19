@@ -34,10 +34,20 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         var clone, cloneMask;
         var tagList = element.parent();
 
-        element.attr('draggable', true);
         if (window.jQuery && !window.jQuery.event.props.dataTransfer) {
           window.jQuery.event.props.push('dataTransfer');
         }
+
+        /* We shouldn't need custom logic for this - it looks like the ="true" on the attribute gets 
+         * stripped off at some point (angular bug?)
+         */
+        scope.$watch('watchTagReorder()', function (res) {
+          if (res) {
+            element.attr('draggable', 'true');
+          } else {
+            element.attr('draggable', 'false');
+          }
+        });
 
         scope.navigateToTag = function (event) {
           if (scope.isRenaming || !scope.tag) {
