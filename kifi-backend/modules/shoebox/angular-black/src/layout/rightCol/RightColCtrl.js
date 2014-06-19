@@ -3,8 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService', '$location',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService, $location) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
     var friendsReady = false;
@@ -38,6 +38,26 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $scope.data.showHelpRankHelp = false;
       $analytics.eventTrack('user_clicked_page', {
         'action': 'noLikeHelpRank'
+      });
+    };
+
+    $scope.showClicks = function() {
+      $location.path('/helprank/click');
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'helpRankClicks'
+      });
+      $analytics.eventTrack('user_viewed_page', {
+        'action': 'helpRankClicks'
+      });
+    };
+
+    $scope.showReKeeps = function() {
+      $location.path('/helprank/rekeep');
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'helpRankReKeeps'
+      });
+      $analytics.eventTrack('user_viewed_page', {
+        'action': 'helpRankReKeeps'
       });
     };
 
