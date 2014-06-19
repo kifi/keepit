@@ -7,13 +7,13 @@
         <div class="kf-footer-help-rank-item">
           <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
           <span class="kf-footer-help-rank-description">
-            You've helped friends discover keeps <a class="kifi-footer-item-link" href="/helprank/click">{{me.clickCount}} times</a> this month
+            You've helped friends discover keeps <a class="kifi-footer-item-link" href="javascript:" ng-click="showClicks()">{{me.clickCount}} times</a> this month
           </span>
         </div>
         <div class="kf-footer-help-rank-item" ng-if="me.rekeepTotalCount > 0">
           <span class="kf-footer-help-rank-number">{{me.rekeepTotalCount}}</span>
           <span class="kf-footer-help-rank-description">
-            Your keeps have been rekept by others <a class="kifi-footer-item-link" href="/helprank/rekeep">{{me.rekeepTotalCount}} times</a>
+            Your keeps have been rekept by others <a class="kifi-footer-item-link" href="javascript:" ng-click="showReKeeps()">{{me.rekeepTotalCount}} times</a>
           </span>
         </div>
       </div>
