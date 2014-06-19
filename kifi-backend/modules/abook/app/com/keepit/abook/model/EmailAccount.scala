@@ -30,7 +30,9 @@ case class EmailAccount(
 object EmailAccountStates extends States[EmailAccount]
 
 @ImplementedBy(classOf[EmailAccountRepoImpl])
-trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount]
+trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount] {
+  def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAddress]
+}
 
 @Singleton
 class EmailAccountRepoImpl @Inject() (
@@ -60,4 +62,8 @@ class EmailAccountRepoImpl @Inject() (
 
   override def deleteCache(emailAccount: EmailAccount)(implicit session: RSession): Unit = {}
   override def invalidateCache(emailAccount: EmailAccount)(implicit session: RSession): Unit = {}
+
+  def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAddress] = {
+    (for(row <- rows if row.address === address) yield row).firstOption
+  }
 }
