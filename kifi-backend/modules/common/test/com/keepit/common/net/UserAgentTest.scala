@@ -91,5 +91,15 @@ class UserAgentTest extends Specification {
       agent.isIphone === false
       agent.isWebsiteEnabled === true
     }
+    "parse browser versions Firefox on Android Tablet" in {
+      val str = "Mozilla/5.0 (Android; Tablet; rv:28.0) Gecko/28.0 Firefox/28.0"
+      val agent = UserAgent.fromString(str)
+      agent === UserAgent(str, "Firefox", "Android", "Android", "Browser", "28.0")
+      agent.isMobile === true
+      agent.isSupportedDesktop === false
+      agent.isKifiIphoneApp === false
+      agent.isIphone === false
+      agent.isWebsiteEnabled === true
+    }
   }
 }
