@@ -26,7 +26,7 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
     <head>
         <title>KiFi</title>
         <link rel="stylesheet" media="screen" href="/about_us/stylesheets/main.css">
-        <link rel="shortcut icon" type="image/png" href="/assets/images/favicon.png">
+        <link rel="shortcut icon" type="image/png" href="/about_us/images/favicon.png">
         <script src="/about_us/javascripts/jquery-1.7.1.min.js" type="text/javascript"></script>
     </head>
     <body>
