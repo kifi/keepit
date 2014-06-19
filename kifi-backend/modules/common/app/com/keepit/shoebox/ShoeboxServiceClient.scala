@@ -48,8 +48,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]]
-  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String]
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -126,7 +125,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],URISummary]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
-  def getUnsubscribeUrlForEmail(email: String): Future[String]
+  def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
 }
@@ -151,7 +150,6 @@ case class ShoeboxCacheProvider @Inject() (
     userBookmarkCountCache: KeepCountCache,
     userSegmentCache: UserSegmentCache,
     extensionVersionCache: ExtensionVersionInstallationIdCache,
-    verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
     urlPatternRuleAllCache: UrlPatternRuleAllCache,
     userImageUrlCache: UserImageUrlCache
   )
@@ -318,19 +316,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[String]]] = {
+  def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
     redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map{ x => Json.toJson(x)})
     call(Shoebox.internal.getEmailAddressesForUsers(), payload).map{ res =>
       log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
-      res.json.as[Map[String, Seq[String]]].map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
-    }
-  }
-
-  def getEmailAddressById(id: Id[UserEmailAddress]): Future[String] = {
-    call(Shoebox.internal.getEmailAddressById(id)).map{ r =>
-      r.json.as[String]
+      res.json.as[Map[String, Seq[EmailAddress]]].map{ case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
   }
 
@@ -856,7 +848,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUnsubscribeUrlForEmail(email: String): Future[String] = {
+  def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String] = {
     call(Shoebox.internal.getUnsubscribeUrlForEmail(email)).map{ r =>
       r.body
     }

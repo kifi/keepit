@@ -645,7 +645,7 @@ class AdminUserController @Inject() (
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
-        user.primaryEmailId.foreach { primaryEmailId => properties += ("$email", emailRepo.get(primaryEmailId).address.address) }
+        user.primaryEmail.foreach { primaryEmail => properties += ("$email", primaryEmail.address) }
         properties += ("state", user.state.value)
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
@@ -803,7 +803,7 @@ class AdminUserController @Inject() (
         kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
         userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
         emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
-        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmailId = None)) // User
+        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
       }
 
       val user = userRepo.get(userId)

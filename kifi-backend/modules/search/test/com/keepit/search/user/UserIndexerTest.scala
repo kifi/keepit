@@ -23,10 +23,12 @@ class UserIndexerTest extends Specification with ApplicationInjector {
 
     val usersWithId = client.saveUsers(users: _*)
 
-    val emails = (0 until 4).map{ i =>
-      UserEmailAddress(userId = usersWithId(i).id.get, address = EmailAddress(s"user${i}@42go.com"))
-    } ++ Seq(UserEmailAddress(userId = usersWithId(4).id.get, address = EmailAddress("woody@fox.com")),
-     UserEmailAddress(userId = usersWithId(4).id.get, address = EmailAddress("Woody.Allen@GMAIL.com")))
+    val emails = (0 until 4).map { i => usersWithId(i).id.get -> EmailAddress(s"user${i}@42go.com") } ++ Seq(
+      usersWithId(4).id.get -> EmailAddress("woody@fox.com"),
+      usersWithId(4).id.get -> EmailAddress("Woody.Allen@GMAIL.com")
+    )
+
+    client.addEmails(emails: _*)
 
     val exps = Seq( UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
         UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can_connect")),
@@ -36,7 +38,6 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     )
     exps.foreach{client.saveUserExperiment(_)}
 
-    client.saveEmails(emails: _*)
     usersWithId
   }
 
@@ -56,7 +57,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         indexer.sequenceNumber.value === 5
 
         val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz"))
-        client.saveEmails(UserEmailAddress(userId = newUsers(0).id.get, address = EmailAddress("abc@xyz.com")))
+        client.addEmails(newUsers(0).id.get -> EmailAddress("abc@xyz.com"))
         indexer.update()
         indexer.sequenceNumber.value === 6
       }

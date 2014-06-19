@@ -17,6 +17,7 @@ import com.keepit.model.UserStates._
 import com.keepit.model.ExperimentType
 import com.keepit.search.IndexInfo
 import com.keepit.typeahead.PrefixFilter
+import com.keepit.common.mail.EmailAddress
 
 
 object UserIndexer {
@@ -63,7 +64,7 @@ class UserIndexer(
     super.indexInfos("UserIndex" + name)
   }
 
-  case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType])
+  case class UserInfo(user: User, basicUser: BasicUser, emails: Seq[EmailAddress], experiments: Seq[ExperimentType])
 
   private def getUsersInfo(fetchSize: Int): Seq[UserInfo] = {
     val usersFuture = shoeboxClient.getUserIndexable(sequenceNumber, fetchSize)
@@ -93,7 +94,7 @@ class UserIndexer(
     Await.result(infoFuture, 5 seconds)
   }
 
-  def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[String], experiments: Seq[ExperimentType]): UserIndexable = {
+  def buildIndexable(user: User, basicUser: BasicUser, emails: Seq[EmailAddress], experiments: Seq[ExperimentType]): UserIndexable = {
     new UserIndexable(
       id = user.id.get,
       sequenceNumber = user.seq,
@@ -113,7 +114,7 @@ class UserIndexer(
     override val isDeleted: Boolean,
     val user: User,
     val basicUser: BasicUser,
-    val emails: Seq[String],
+    val emails: Seq[EmailAddress],
     val experiments: Seq[ExperimentType]) extends Indexable[User, User] {
 
     private def genPrefix(user: User): Set[String] = {
@@ -128,7 +129,7 @@ class UserIndexer(
       val userNameField = buildTextField(FULLNAME_FIELD, user.firstName + " " + user.lastName, analyzer)
       doc.add(userNameField)
 
-      val emailField = buildIteratorField[String](EMAILS_FIELD, emails.map{_.toLowerCase}.toIterator)(x => x)
+      val emailField = buildIteratorField[String](EMAILS_FIELD, emails.map{_.address.toLowerCase}.toIterator)(x => x)
       doc.add(emailField)
 
       val expField = buildIteratorField[String](USER_EXPERIMENTS, experiments.map{_.value}.toIterator)(x => x)
