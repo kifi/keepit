@@ -150,7 +150,7 @@ class NormalizedURIInterner @Inject() (
     getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
   }
 
-  private def prenormalize(uriString: String)(implicit session: RSession, timer: Timer): Try[String] = {
+  private def prenormalize(uriString: String)(implicit timer: Timer): Try[String] = {
     val prenormalized = normalizationService.prenormalize(uriString)
     statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ALWAYS)
     prenormalized

@@ -10,14 +10,17 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.scraper.{TestScraperServiceClientModule, ProdScrapeSchedulerModule, FakeScrapeSchedulerModule}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.shoebox.{ShoeboxSlickModule, FakeShoeboxServiceModule}
+import com.google.inject.Module
 
 class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
+
+  val modules: Seq[Module] = Seq(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule(), ShoeboxSlickModule())
 
   "OphanCleaner" should {
 
     "clean up uris by changed uris" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(modules: _*)) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -118,7 +121,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
     }
 
     "clean up uris by bookmarks" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(modules: _*)) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -325,7 +328,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
     }
 
     "clean up uris by normalized uris" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(modules: _*)) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

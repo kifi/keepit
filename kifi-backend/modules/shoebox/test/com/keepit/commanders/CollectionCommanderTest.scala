@@ -20,7 +20,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
 
-  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
+  def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
 
   "CollectionCommander" should {
 

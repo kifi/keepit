@@ -28,7 +28,6 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
   }
 
   def preConfigure(): Unit = {}
-
 }
 
 trait CommonServiceModule {
