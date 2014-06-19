@@ -174,7 +174,8 @@ class FixedResultSearchCommander extends SearchCommander {
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    debug: Option[String] = None
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false
   ) : DecoratedResult = {
     results(query)
   }

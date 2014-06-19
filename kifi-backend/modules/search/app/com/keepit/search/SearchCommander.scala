@@ -36,7 +36,8 @@ trait SearchCommander {
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    debug: Option[String] = None) : DecoratedResult
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) : DecoratedResult
 
   def distSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -93,7 +94,8 @@ class SearchCommanderImpl @Inject() (
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    debug: Option[String] = None) : DecoratedResult = {
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) : DecoratedResult = {
 
     if (maxHits <= 0) throw new IllegalArgumentException("maxHits is zero")
 
@@ -156,7 +158,7 @@ class SearchCommanderImpl @Inject() (
 
     timing.decoration
 
-    val res = resultDecorator.decorate(mergedResult, searchFilter)
+    val res = resultDecorator.decorate(mergedResult, searchFilter, withUriSummary)
 
     timing.end
 

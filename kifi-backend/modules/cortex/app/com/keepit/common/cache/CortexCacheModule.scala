@@ -43,6 +43,11 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
+  def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def socialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoUserCache(stats, accessLog, (outerRepo, 30 days))
 

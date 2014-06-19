@@ -28,14 +28,15 @@ class ExtSearchController @Inject() (
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    debug: Option[String] = None) = JsonAction.authenticated { request =>
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debugOpt)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debugOpt, withUriSummary)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }

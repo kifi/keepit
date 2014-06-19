@@ -25,7 +25,7 @@ GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMess
 ##########################################
 # Search Website API
 ##########################################
-GET         /site/search                        @com.keepit.controllers.website.WebsiteSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
+GET         /site/search                        @com.keepit.controllers.website.WebsiteSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String], withUriSummary: Boolean ?= false)
 GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
