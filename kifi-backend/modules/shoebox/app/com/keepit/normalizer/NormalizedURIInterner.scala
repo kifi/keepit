@@ -78,7 +78,7 @@ class NormalizedURIInterner @Inject() (
                 case sqlException: SQLException =>
                   log.error(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", sqlException)
                   normalizedURIRepo.deleteCache(candidate)
-                  normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) match {
+                  normalizedURIRepo.getByNormalizedUrl(candidate) match {
                     case None =>
                       statsd.timing("normalizedURIRepo.internByUri.new.error.not_recovered", timer, ALWAYS)
                       throw new UriInternException(s"could not find existing url $candidate in the db", sqlException)
