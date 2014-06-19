@@ -2,7 +2,7 @@ package com.keepit.controllers.internal
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.model._
-import com.keepit.scraper.ScrapeRequest
+import com.keepit.scraper.{ScraperSchedulerConfig, ScrapeRequest}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -19,7 +19,8 @@ class ScraperCallbackHelper @Inject()(
   normUriRepo:NormalizedURIRepo,
   pageInfoRepo:PageInfoRepo,
   imageInfoRepo:ImageInfoRepo,
-  scrapeInfoRepo:ScrapeInfoRepo
+  scrapeInfoRepo:ScrapeInfoRepo,
+  implicit val scraperConfig: ScraperSchedulerConfig
   ) extends Logging {
 
   private val assignLock    = new ReentrantLock()
@@ -47,7 +48,8 @@ class ScraperCallbackHelper @Inject()(
           val nuri = normUriRepo.get(info.uriId)
           if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(nuri.state)) { // todo(ray): batch
             if (rules.isUnscrapable(nuri.url)) {
-              log.warn(s"[assignTasks($zkId,$max)] ${nuri.url} is considered unscrapable; skipped. uri=${nuri.toShortString}")
+              val saved = scrapeInfoRepo.save(info.withDocumentUnchanged()) // revisit later
+              log.warn(s"[assignTasks($zkId,$max)] ${nuri.url} is considered unscrapable; skipped for now. savedInfo=$saved; uri=${nuri.toShortString}")
             } else {
               val pageInfoOpt = pageInfoRepo.getByUri(nuri.id.get)
               val proxy = urlPatternRuleRepo.getProxy(nuri.url)
