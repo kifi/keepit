@@ -110,22 +110,20 @@ class ElizaUserEmailNotifierActor @Inject() (
       deepUrlFuture flatMap { deepUrl =>
       //if user is not active, skip it!
         val recipient = allUsers(recipientUserId)
-        val shouldBeEmailed = recipient.state == UserStates.ACTIVE && recipient.primaryEmailId.nonEmpty
+        val shouldBeEmailed = recipient.state == UserStates.ACTIVE && recipient.primaryEmail.isDefined
 
         if (!shouldBeEmailed) {
           log.warn(s"user $recipient is not active, not sending emails")
           Future.successful()
         } else {
-          val futureEmail = for {
-            destinationEmail <- shoebox.getEmailAddressById(recipient.primaryEmailId.get)
-            unsubUrl <- shoebox.getUnsubscribeUrlForEmail(destinationEmail)
-          } yield {
+          val destinationEmail = recipient.primaryEmail.get
+          val futureEmail = shoebox.getUnsubscribeUrlForEmail(destinationEmail).map { case unsubUrl =>
             val threadEmailInfo: ThreadEmailInfo = elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, false, allUsers, allUserImageUrls, None, Some(unsubUrl), None, readTimeMinutesOpt).copy(pageUrl = deepUrl)
             val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
             ElectronicMail(
               from = magicAddress,
               fromName = Some("Kifi Notifications"),
-              to = Seq(EmailAddress(destinationEmail)),
+              to = Seq(destinationEmail),
               subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
               htmlBody = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, true, false, true).body,
               category = NotificationCategory.User.MESSAGE

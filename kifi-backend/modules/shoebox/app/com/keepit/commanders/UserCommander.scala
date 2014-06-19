@@ -214,12 +214,12 @@ class UserCommander @Inject() (
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
 
-    val primary = user.primaryEmailId.map(_.id).getOrElse(0L)
-    val emailInfos = emails.sortBy(e => (e.id.get.id != primary, !e.verified, e.id.get.id)).map { email =>
+    def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address == user.primaryEmail.get
+    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).map { email =>
       EmailInfo(
         address = email.address,
         isVerified = email.verified,
-        isPrimary = user.primaryEmailId.isDefined && user.primaryEmailId.get.id == email.id.get.id,
+        isPrimary = isPrimary(email.address),
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == email.address
       )
     }
@@ -231,11 +231,11 @@ class UserCommander @Inject() (
     db.readOnly { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
-  def getKeepAttributionCounts(userId: Id[User]): (Int, Int) = { // (clickCount, rekeepCount)
+  def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (clickCount, rekeepCount, rekeepTotalCount)
     db.readOnly(dbMasterSlave = Slave) { implicit ro =>
       val clickCount = keepClickRepo.getClickCountByKeeper(userId)
-      val rekeepCount = rekeepRepo.getReKeepCountByKeeper(userId)
-      (clickCount, rekeepCount)
+      val (rekeepCount, rekeepTotalCount) = bookmarkClicksRepo.getReKeepCounts(userId)
+      (clickCount, rekeepCount, rekeepTotalCount)
     }
   }
 
@@ -713,14 +713,14 @@ class UserCommander @Inject() (
   }
 
 
-  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmailId: Option[Id[UserEmailAddress]], emails: Seq[EmailInfo]): Unit = {
+  def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email").map(EmailAddress(_))
-      val uniqueEmailStrings = emails.map(_.address).toSet
-      val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmailStrings contains em.address)
+      val uniqueEmails = emails.map(_.address).toSet
+      val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
       // Remove missing emails
       for (email <- toRemove) {
-        val isPrimary = primaryEmailId.isDefined && (primaryEmailId.get == email.id.get)
+        val isPrimary = primaryEmail.isDefined && (primaryEmail.get == email.address)
         val isLast = existing.isEmpty
         val isLastVerified = !existing.exists(em => em != email && em.verified)
         if (!isPrimary && !isLast && !isLastVerified) {
@@ -731,7 +731,7 @@ class UserCommander @Inject() (
         }
       }
       // Add new emails
-      for (address <- uniqueEmailStrings -- existing.map(_.address)) {
+      for (address <- uniqueEmails -- existing.map(_.address)) {
         if (emailRepo.getByAddressOpt(address).isEmpty) {
           val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
           val siteUrl = fortytwoConfig.applicationBaseUrl
@@ -752,7 +752,7 @@ class UserCommander @Inject() (
           val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
           emailRecordOpt.collect { case emailRecord if emailRecord.userId == userId =>
             if (emailRecord.verified) {
-              if (primaryEmailId.isEmpty || primaryEmailId.get != emailRecord.id.get) {
+              if (primaryEmail.isEmpty || primaryEmail.get != emailRecord.address) {
                 updateUserPrimaryEmail(emailRecord)
               }
             } else {
@@ -778,7 +778,7 @@ class UserCommander @Inject() (
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
     userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
     val currentUser = userRepo.get(primaryEmail.userId)
-    userRepo.save(currentUser.copy(primaryEmailId = Some(primaryEmail.id.get), primaryEmail = Some(primaryEmail.address)))
+    userRepo.save(currentUser.copy(primaryEmail = Some(primaryEmail.address)))
     heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
   }
 

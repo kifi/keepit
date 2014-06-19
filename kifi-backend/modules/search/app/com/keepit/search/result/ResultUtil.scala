@@ -9,34 +9,35 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.search.Lang
 import com.keepit.search.Scoring
 import com.keepit.search.SearchConfig
+import com.keepit.model.URISummary
 
 object ResultUtil {
 
+  private def jsonToKifiSearchHit(json: JsObject): KifiSearchHit = {
+    val uriSummaryJson = (json \ "uriSummary")
+    // All the fields of URISummary are nullable so we want to distinguish between "null" and an empty URI summary
+    val uriSummary = if (!uriSummaryJson.isInstanceOf[JsUndefined]) {
+      uriSummaryJson.asOpt[URISummary].map("uriSummary" -> Json.toJson(_)).toList
+    } else List()
+    KifiSearchHit(JsObject(List(
+      "count" -> (json \ "bookmarkCount"),
+      "bookmark" -> (json \ "bookmark"),
+      "users" -> (json \ "basicUsers"),
+      "score" -> (json \ "score"),
+      "isMyBookmark" -> (json \ "isMyBookmark"),
+      "isPrivate" -> (json \ "isPrivate")
+    ) ++ uriSummary))
+  }
+
   def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
     hits.map{ h =>
-      val json = h.json
-      KifiSearchHit(JsObject(List(
-        "count" -> (json \ "bookmarkCount"),
-        "bookmark" -> (json \ "bookmark"),
-        "users" -> (json \ "basicUsers"),
-        "score" -> (json \ "score"),
-        "isMyBookmark" -> (json \ "isMyBookmark"),
-        "isPrivate" -> (json \ "isPrivate")
-      )))
+      jsonToKifiSearchHit(h.json)
     }
   }
 
   def toSanitizedKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
     hits.map{ h =>
-      val json = h.sanitized.json
-      KifiSearchHit(JsObject(List(
-        "count" -> (json \ "bookmarkCount"),
-        "bookmark" -> (json \ "bookmark"),
-        "users" -> (json \ "basicUsers"),
-        "score" -> (json \ "score"),
-        "isMyBookmark" -> (json \ "isMyBookmark"),
-        "isPrivate" -> (json \ "isPrivate")
-      )))
+      jsonToKifiSearchHit(h.sanitized.json)
     }
   }
 

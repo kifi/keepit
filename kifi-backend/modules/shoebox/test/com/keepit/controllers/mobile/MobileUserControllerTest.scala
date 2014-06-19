@@ -98,7 +98,11 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
               "pictureName":"0.jpg",
               "emails":[],
               "notAuthed":[],
-              "experiments":["admin"]}
+              "experiments":["admin"],
+              "clickCount":0,
+              "rekeepCount":0,
+              "rekeepTotalCount":0
+            }
           """)
 
         Json.parse(contentAsString(result)) must equalTo(expected)

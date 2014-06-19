@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import scala.util._
 import com.keepit.queue.NormalizationUpdateTask
 import java.sql.SQLException
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{Timer, Logging}
 import org.feijoas.mango.common.cache.CacheBuilder
 import java.util.concurrent.TimeUnit
 import com.kifi.franz.SQSQueue
@@ -128,7 +128,7 @@ class NormalizedURIInterner @Inject() (
     }
   }
 
-  def getByUriOrPrenormalize(url: String)(implicit session: RSession): Try[Either[NormalizedURI, String]] = statsd.time(key = "normalizedURIRepo.getByUriOrPrenormalize", ALWAYS) { timer =>
+  def getByUriOrPrenormalize(url: String)(implicit session: RSession, timer: Timer = new Timer()): Try[Either[NormalizedURI, String]] = {
     prenormalize(url).map { prenormalizedUrl =>
       log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
       val normalizedUri = normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) map {
@@ -146,10 +146,14 @@ class NormalizedURIInterner @Inject() (
     }
   }
 
-  def normalize(uriString: String)(implicit session: RSession): Try[String] = getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
+  def normalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.normalize", ALWAYS) { implicit timer =>
+    getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
+  }
 
-  private def prenormalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.prenormalize", ALWAYS) { timer =>
-    normalizationService.prenormalize(uriString)
+  private def prenormalize(uriString: String)(implicit timer: Timer): Try[String] = {
+    val prenormalized = normalizationService.prenormalize(uriString)
+    statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ALWAYS)
+    prenormalized
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {

@@ -43,8 +43,8 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
       val email2 = emailRepo.save(UserEmailAddress(userId=user2.id.get, address=EmailAddress("peteG@42go.com")))
       val email3 = emailRepo.save(UserEmailAddress(userId=user3.id.get, address=EmailAddress("superreporter@42go.com")))
 
-      user1 = userRepo.save(user1.copy(primaryEmailId = Some(email1.id.get), pictureName = Some("dfkjiyert")))
-      user2 = userRepo.save(user2.copy(primaryEmailId = Some(email2.id.get)))
+      user1 = userRepo.save(user1.copy(primaryEmail = Some(email1.address), pictureName = Some("dfkjiyert")))
+      user2 = userRepo.save(user2.copy(primaryEmail = Some(email2.address)))
 
       connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get))
       (user1, user2, user3)

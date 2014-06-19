@@ -343,6 +343,14 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         allStats(2).length === bc3.length
         allStats(2)(0).rekeepCount === bc3(0).rekeepCount
         allStats(2)(0).rekeepTotalCount === bc3(0).rekeepTotalCount
+
+        val (rkc1, rktc1) = db.readOnly { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
+        bc1.foldLeft(0) {(a,c) => a + c.rekeepCount} === rkc1
+        bc1.foldLeft(0) {(a,c) => a + c.rekeepTotalCount} === rktc1
+
+        val (rkc3, rktc3) = db.readOnly { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
+        bc3.foldLeft(0) {(a,c) => a + c.rekeepCount} === rkc3
+        bc3.foldLeft(0) {(a,c) => a + c.rekeepTotalCount} === rktc3
       }
     }
 

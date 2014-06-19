@@ -25,7 +25,6 @@ class ScraperCallbackHelper @Inject()(
   private val assignLock    = new ReentrantLock()
   private val pageInfoLock  = new ReentrantLock()
   private val imageInfoLock = new ReentrantLock()
-  private val normalizedUriLock = new ReentrantLock()
 
   def withLock[T](lock:ReentrantLock)(f: => T) = {
     try {

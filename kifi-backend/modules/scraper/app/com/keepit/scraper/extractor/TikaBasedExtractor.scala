@@ -2,7 +2,6 @@ package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
 import com.keepit.scraper.HttpInputStream
-import com.keepit.scraper.ScraperConfig
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.metadata.HttpHeaders
@@ -11,13 +10,10 @@ import org.apache.tika.parser.html.HtmlParser
 import org.apache.tika.parser.AutoDetectParser
 import org.apache.tika.parser.ParseContext
 import org.apache.tika.parser.Parser
-import org.apache.tika.sax.ContentHandlerDecorator
 import org.apache.tika.sax.WriteOutContentHandler
-import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
-import org.xml.sax.SAXException
 import play.api.http.MimeTypes
-import com.keepit.common.net.URI
+import org.apache.tika.io.{TikaInputStream, TemporaryResources}
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
@@ -40,15 +36,19 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
 
   def process(input: HttpInputStream){
     val context = new ParseContext()
-    var parser = getParser(input.getContentType)
+    var parser = getParser(input.getContentType())
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
 
-    input.getContentType.foreach{ metadata.set(HttpHeaders.CONTENT_TYPE, _) }
+    input.getContentType().foreach{ metadata.set(HttpHeaders.CONTENT_TYPE, _) }
 
+    val tmp = new TemporaryResources()
+    // see http://tika.apache.org/1.3/api/org/apache/tika/io/TikaInputStream.html#get(java.io.InputStream, org.apache.tika.io.TemporaryResources)
+    // and http://stackoverflow.com/questions/14280128/tika-could-not-delete-temporary-files
+    val stream = TikaInputStream.get(input, tmp)
     try {
-      parser.parse(input, contentHandler, metadata, context)
+      parser.parse(stream, contentHandler, metadata, context)
     } catch {
       case e: Throwable =>
         // check if we hit our content size limit (maxContentChars)
@@ -56,6 +56,8 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
           log.warn("max number of characters reached: " + url)
         else
           log.error("extraction failed: ", e)
+    } finally {
+      stream.close()
     }
   }
 

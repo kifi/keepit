@@ -14,7 +14,7 @@ import play.api.libs.json.{Json, JsNumber, JsArray}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.shoebox.{ShoeboxSlickModule, FakeShoeboxServiceModule}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
@@ -31,6 +31,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val shoeboxControllerTestModules = Seq(
+    ShoeboxSlickModule(),
     FakeShoeboxServiceModule(),
     FakeMailModule(),
     FakeHttpClientModule(),

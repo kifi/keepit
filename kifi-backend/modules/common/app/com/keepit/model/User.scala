@@ -24,7 +24,6 @@ case class User(
   pictureName: Option[String] = None, // denormalized UserPicture.name
   userPictureId: Option[Id[UserPicture]] = None,
   seq: SequenceNumber[User] = SequenceNumber.ZERO,
-  primaryEmailId: Option[Id[UserEmailAddress]] = None,
   primaryEmail: Option[EmailAddress] = None
 ) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User]{
   def withId(id: Id[User]) = this.copy(id = Some(id))
@@ -39,7 +38,6 @@ case class User(
 
 object User {
   implicit val userPicIdFormat = Id.format[UserPicture]
-  implicit val emailAddressIdFormat = Id.format[UserEmailAddress]
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -51,7 +49,6 @@ object User {
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
     (__ \ 'seq).format(SequenceNumber.format[User]) and
-    (__ \ 'primaryEmailId).formatNullable[Id[UserEmailAddress]] and
     (__ \ 'primaryEmail).formatNullable[EmailAddress]
   )(User.apply, unlift(User.unapply))
 
@@ -101,3 +98,11 @@ object UserStates extends States[User] {
   val INCOMPLETE_SIGNUP = State[User]("incomplete_signup")
 }
 
+case class VerifiedEmailUserIdKey(address: EmailAddress) extends Key[Id[User]] {
+  override val version = 1
+  val namespace = "user_id_by_verified_email"
+  def toKey(): String = address.address
+}
+
+class VerifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[VerifiedEmailUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])

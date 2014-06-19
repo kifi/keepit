@@ -3,8 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService) {
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService', '$location',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService, $location) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
     var friendsReady = false;
@@ -41,6 +41,26 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       });
     };
 
+    $scope.showClicks = function() {
+      $location.path('/helprank/click');
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'helpRankClicks'
+      });
+      $analytics.eventTrack('user_viewed_page', {
+        'action': 'helpRankClicks'
+      });
+    };
+
+    $scope.showReKeeps = function() {
+      $location.path('/helprank/rekeep');
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'helpRankReKeeps'
+      });
+      $analytics.eventTrack('user_viewed_page', {
+        'action': 'helpRankReKeeps'
+      });
+    };
+
     $scope.installInProgress = function () {
       return installService.installInProgress;
     };
@@ -60,7 +80,42 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     };
 
     $scope.triggerOnboarding = function () {
-      $window.postMessage('start_guide', '*');
+      $window.postMessage({
+        type: 'start_guide',
+        pages: [{
+          url: 'http://realhealthyrecipes.com/2013/09/25/frosted-watermelon-cake/',
+          title: ['Frosted','Watermelon','Cake'],
+          site: 'realhealthyrecipes.com',
+          thumb: '/img/guide/watermelon_cake.jpg',
+          noun: 'recipe',
+          tag: 'Recipe',
+          query: 'watermelon+cake+recipe'
+        }, {
+          url: 'https://www.etsy.com/listing/163215077/large-leather-tote-everyday-tote-bag',
+          title: ['Large','Leather','Tote'],
+          site: 'etsy.com',
+          thumb: '/img/guide/leather_tote.jpg',
+          noun: 'tote',
+          tag: 'Shopping Wishlist',
+          query: 'large+leather+everyday+tote+bag'
+        }, {
+          url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
+          title: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
+          site: 'lifehack.org',
+          thumb: '/img/guide/love_life.jpg',
+          noun: 'article',
+          tag: 'Read Later',
+          query: 'lifehack+truly+love+differently'
+        }, {
+          url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
+          title: ['Steve Jobs:','How to Live','Before You Die'],
+          site: 'ted.com',
+          thumb: '/img/guide/before_you_die.jpg',
+          noun: 'video',
+          tag: 'Inspiration',
+          query: 'steve+jobs+before+you+die'
+        }]
+      }, '*');
     };
 
     // onboarding.js is using these functions

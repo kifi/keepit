@@ -205,4 +205,9 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
     assignSequenceNumbers(sequence, "normalized_uri", limit)
   }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from normalized_uri where seq < 0""".as[Option[Long]].first
+  }
 }

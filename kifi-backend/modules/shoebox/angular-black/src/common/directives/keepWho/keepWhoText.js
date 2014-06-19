@@ -43,8 +43,9 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
             text;
           if (len === 1) {
             text = '1 friend';
+          } else {
+            text = len + ' friends';
           }
-          text = len + ' friends';
           if (!scope.keep.isMyBookmark) {
             return text;
           }

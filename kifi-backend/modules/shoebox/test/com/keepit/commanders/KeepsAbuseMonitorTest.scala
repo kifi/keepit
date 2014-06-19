@@ -16,7 +16,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
 
   "KeepsAbuseControl" should {
 
-    def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
+    def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
 
 
     "check for global abuse not triggered" in {

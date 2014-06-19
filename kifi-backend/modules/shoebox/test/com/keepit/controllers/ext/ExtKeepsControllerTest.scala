@@ -42,7 +42,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
     TestScraperServiceClientModule()
   )
 
-  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
+  def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
 
 
   "BookmarksController" should {

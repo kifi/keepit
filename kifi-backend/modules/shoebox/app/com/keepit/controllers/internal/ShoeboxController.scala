@@ -174,8 +174,8 @@ class ShoeboxController @Inject() (
     val redirect = args(1).as[HttpRedirect]
     require(redirect.isPermanent, "HTTP redirect is not permanent.")
     require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    val verifiedCandidateOption = db.readOnly { implicit session =>
-      normalizationServiceProvider.get.prenormalize(redirect.newDestination).toOption.flatMap { prenormalizedDestination =>
+    val verifiedCandidateOption = normalizationServiceProvider.get.prenormalize(redirect.newDestination).toOption.flatMap { prenormalizedDestination =>
+      db.readWrite { implicit session =>
         val (candidateUrl, candidateNormalizationOption) = normUriRepo.getByNormalizedUrl(prenormalizedDestination) match {
           case None => (prenormalizedDestination, SchemeNormalizer.findSchemeNormalization(prenormalizedDestination))
           case Some(referenceUri) if referenceUri.state != NormalizedURIStates.REDIRECTED => (referenceUri.url, referenceUri.normalization)
@@ -270,9 +270,7 @@ class ShoeboxController @Inject() (
   }
 
   def isUnscrapable(url: String, destinationUrl: Option[String]) = SafeAsyncAction { request =>
-    val res = db.readOnly { implicit s => //using cache
-      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
-    }
+    val res = urlPatternRuleRepo.rules().isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.rules().isUnscrapable(destinationUrl.get))
     log.debug(s"[isUnscrapable($url, $destinationUrl)] result=$res")
     Ok(JsBoolean(res))
   }
@@ -283,9 +281,7 @@ class ShoeboxController @Inject() (
     require(args != null && args.length >= 1, "Expect args to be url && opt[dstUrl] ")
     val url = args(0).as[String]
     val destinationUrl = if (args.length > 1) args(1).asOpt[String] else None
-    val res = db.readOnly { implicit s => //using cache
-      (urlPatternRuleRepo.isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.isUnscrapable(destinationUrl.get)))
-    }
+    val res = urlPatternRuleRepo.rules().isUnscrapable(url) || (destinationUrl.isDefined && urlPatternRuleRepo.rules().isUnscrapable(destinationUrl.get))
     log.debug(s"[isUnscrapableP] time-lapsed:${System.currentTimeMillis - ts} url=$url dstUrl=${destinationUrl.getOrElse("")} result=$res")
     Ok(JsBoolean(res))
   }
@@ -293,6 +289,12 @@ class ShoeboxController @Inject() (
   def getNormalizedURIs(ids: String) = SafeAsyncAction { request =>
     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
     val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }  //using cache
+    Ok(Json.toJson(uris))
+  }
+
+  def getNormalizedURIExternalIDs(ids: String) = SafeAsyncAction { request =>
+    val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
+    val uris = db.readOnly { implicit s => uriIds.map(id => normUriRepo.get(id).externalId) }  //using cache
     Ok(Json.toJson(uris))
   }
 
@@ -475,11 +477,6 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
-  def getEmailAddressById(id: Id[UserEmailAddress]) = Action { request =>
-    val address = db.readOnly { implicit s => emailAddressRepo.get(id).address }
-    Ok(Json.toJson(address))
-  }
-
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
     val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
     val collectionIds = db.readOnly(2, Slave) { implicit s => //no cache used
@@ -647,7 +644,7 @@ class ShoeboxController @Inject() (
   }
 
   def getAllURLPatternRules() = Action { request =>
-    val patterns = db.readOnly{implicit s => urlPatternRuleRepo.allActive()}
+    val patterns = urlPatternRuleRepo.rules.rules
     Ok(Json.toJson(patterns))
   }
 

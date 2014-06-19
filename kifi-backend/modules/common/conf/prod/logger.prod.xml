@@ -7,7 +7,7 @@
   <appender name="app_log" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/app.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-     <fileNamePattern>log/app.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <fileNamePattern>log/app.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
 
      <!-- daily rollover -->
      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
@@ -32,7 +32,7 @@
   <appender name="statsd_log" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/statsd.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-     <fileNamePattern>log/statsd.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <fileNamePattern>log/statsd.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
      <!-- daily rollover -->
      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
          <!-- or whenever the file size reaches 50MB -->
@@ -59,7 +59,7 @@
   <appender name="db" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/db.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-     <fileNamePattern>log/db.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <fileNamePattern>log/db.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
      <!-- daily rollover -->
      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
        <!-- or whenever the file size reaches 100MB -->
@@ -86,7 +86,7 @@
   <appender name="access" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/access.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-     <fileNamePattern>log/access.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <fileNamePattern>log/access.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
      <!-- daily rollover -->
      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
        <!-- or whenever the file size reaches 100MB -->
@@ -113,7 +113,7 @@
   <appender name="cache" class="ch.qos.logback.core.rolling.RollingFileAppender">
    <file>log/cache.log</file>
    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-     <fileNamePattern>log/cache.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+     <fileNamePattern>log/cache.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
      <!-- daily rollover -->
      <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
        <!-- or whenever the file size reaches 50MB -->
@@ -140,7 +140,7 @@
   <appender name="wanderer" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <file>log/wanderer.log</file>
     <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-      <fileNamePattern>log/wanderer.%d{yyyy-MM-dd}.log.zip</fileNamePattern>
+      <fileNamePattern>log/wanderer.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
     </rollingPolicy>
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} %msg%n</pattern>

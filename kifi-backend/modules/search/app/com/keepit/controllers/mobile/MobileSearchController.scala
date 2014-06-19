@@ -26,13 +26,14 @@ class MobileSearchController @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None
+    coll: Option[String] = None,
+    withUriSummary: Boolean = false
   ) = JsonAction.authenticated { request =>
 
     val userId = request.userId
     val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None, withUriSummary)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
