@@ -196,6 +196,8 @@ GET     /profile                    @com.keepit.controllers.website.HomeControll
 GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
+GET     /about_us/*file             controllers.Assets.at(path="/public/about_us", file)
+
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted

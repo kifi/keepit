@@ -1,0 +1,455 @@
+<PUBLIC:COMPONENT lightweight=true>
+	<PUBLIC:ATTACH EVENT="oncontentready"  ONEVENT="_ie9GradientFix()"  />
+	<PUBLIC:ATTACH EVENT="onmouseover"  ONEVENT="gradientMouseOver()"  />
+	<PUBLIC:ATTACH EVENT="onmouseout"  ONEVENT="gradientMouseOut()"  />
+	
+	/*
+		Fix IE9 gradient/rounded corner issues
+		
+		Prevents gradient backgrounds from poking through rounded corners
+		
+		**Operation**
+		If the element this htc is attached to has a rounded border 
+		*and* and a gradient filter, replace the filter with a dynamically 
+		dreated SVG background image.
+		
+		**Example SVG document**
+		<svg width="10" height="10" version="1.1"
+		xmlns="http://www.w3.org/2000/svg">
+			<defs>
+				<linearGradient id="gd" x1="0%" y1="0%" x2="0%" y2="100%">
+					<stop offset="0%" style="stop-color:#feffff;stop-opacity:1"/>
+					<stop offset="100%" style="stop-color:#a0d8ef;stop-opacity:1"/>
+				</linearGradient>
+			</defs>
+			<rect x="0" y="0" width="10" height="10" style="fill:url(#gd)" />
+		</svg>
+	*/
+	
+	<script type="text/javascript">
+			
+		function _ie9GradientFix(mouseover)
+		{
+			// svg xml parts
+			var _svgOpen = '<svg width="10" height="10" version="1.1" xmlns="http://www.w3.org/2000/svg">';
+			var _svgClose = '</svg>';
+			var _defsOpen = '<defs>';
+			var _defsClose = '</defs>';
+
+			// GradientType = 0
+			var _linearGradientVertOpen = '<linearGradient id="gd" x1="0%" y1="0%" x2="0%" y2="100%">'; 
+			// GradientType = 1
+			var _linearGradientHorzOpen = '<linearGradient id="gd" x1="0%" y1="0%" x2="100%" y2="0%">'; 
+			var _linearGradientClose = '</linearGradient>';
+			// the rectangle which will form the background gradient
+			var _rectUm = '<rect x="0" y="0" width="10" height="10" style="fill:url(#gd)" />'; // damn near killed  um.
+
+			// filter mathes
+			var _filterMatch = 'progid:DXImageTransform.Microsoft.gradient';
+			// match 2 is hex color
+			var _startColorstrMatch = /(startColorstr|startColor)=[\'|\"]#(\w{6,8})[\'|\"]/i;
+			// match 2 is hex color
+			var _endColorstrMatch = /(endColorstr|endColor)=[\'|\"]#(\w{6,8})[\'|\"]/i;
+			// match 1 is type
+			var _GradientTypeMatch = /GradientType=[\'|\"]?(0|1)[\'|\"]?/i;
+			
+			// test if svg cache has been created
+			if (
+				typeof window._svgGradientReplacements == 'undefined' 
+				|| !window._svgGradientReplacements)
+			{
+				window._svgGradientReplacements = {};
+			}
+			
+			// indicate the element has been processed
+			this.setAttribute('_ie9gfx-processed',true);
+			
+			// if the current element doesn't have border radius, ignore
+			if (this.currentStyle['border-radius'] 
+				|| this.currentStyle['border-top-left-radius'] 
+				|| this.currentStyle['border-top-right-radius'] 
+				|| this.currentStyle['border-bottom-right-radius']
+				|| this.currentStyle['border-bottom-left-radius'])
+			{
+				var filter = this.currentStyle.filter;
+				// if the current element has a gradient filter applied
+				if (filter.match(_filterMatch))
+				{
+					// If the current filter definition key doesn't exist
+					// in cache, build SVG
+					if (!window._svgGradientReplacements[filter])
+					{
+						// get first color
+						var firstColor = filter.match(_startColorstrMatch)[2];
+						// get last color
+						var lastColor = filter.match(_endColorstrMatch)[2];
+						
+						// get first color stop
+						var firstStop = _getColorStop(
+							firstColor,
+							0
+						);
+						// get last color stop
+						var lastStop = _getColorStop(
+							lastColor,
+							100
+						);
+						// get vert or horz gradient declaration
+						var gradientType = filter.match(_GradientTypeMatch)[1];
+						var linearGradientOpen = (gradientType == 1) 
+							? _linearGradientHorzOpen 
+							: _linearGradientVertOpen;
+						// assemble svg
+						var svg = _svgOpen 
+							+ _defsOpen
+								+ linearGradientOpen
+									+ firstStop
+									+ lastStop
+								+ _linearGradientClose
+							+ _defsClose
+							+ _rectUm
+						+ _svgClose;
+						// encode svg
+						var b64svg = Base64.encode(svg);
+						// assemble data url
+						var dataUri = 'url(data:image/svg+xml;base64,' 
+							+ b64svg 
+							+  ')';
+						// create class name
+						var className = 'gradient' 
+							+ firstColor 
+							+ 'To' 
+							+ lastColor;
+							
+						// create new style rule with SVG data
+						var rule = 'background-image: ' 
+							+ dataUri + '; '
+							+ 'background-repeat: repeat-x; '
+							+ 'background-size: 100% 100%; '
+							+ 'background-position: 0 0; '
+							+ 'filter: none !important;';
+						// make a new stylesheet
+						var s = window.document.createStyleSheet();
+						s.addRule('.'+className,rule);
+						// cache className
+						window._svgGradientReplacements[filter] = className;
+					}
+					// store class name by event type
+					if (!mouseover)
+					{
+						/*
+						if  not a mouseover event, 
+						this is contentready event. 
+						Apply the classname
+						*/
+						this.className 
+							+= ' ' + window._svgGradientReplacements[filter];
+						
+						// store class name for easy retrieval and removal
+						this.setAttribute(
+							'_ie9gfx-gradientClassName', 
+							window._svgGradientReplacements[filter]
+						);
+					}
+					else if (mouseover)
+					{
+						// store class name for easy retrieval and removal
+						this.setAttribute(
+							'_ie9gfx-hoverGradientClassName', 
+							window._svgGradientReplacements[filter]
+						);
+							
+						// allow mouseover/mouseout event handlers to swap classes
+					}
+				};
+			}
+		}
+		
+		
+		/**
+		Check for filter gradient definition
+		Apply hover state gradient class if present
+		Remove mouseout state gradient if present
+		*/
+		function gradientMouseOver()
+		{
+			/*
+			A hover filter will not display if the gradient class name 
+			is present.
+			
+			if the standard gradient is in place,
+			and a hover class is not detected
+			remove the classname and process again.
+			
+			Replace original class when complete
+			
+			This should only happen on the first mouseover/hover event
+			*/
+			if (
+				this.getAttribute('_ie9gfx-processed')
+				&& this.getAttribute('_ie9gfx-gradientClassName')
+				&& !this.getAttribute('_ie9gfx-hoverGradientClassName')
+			)
+			{
+				this.className = this.className.replace(
+					' ' + this.getAttribute('_ie9gfx-gradientClassName'),
+					''
+				);
+				
+				_ie9GradientFix.call(this, true);
+				
+				this.className += 
+				 	' ' + this.getAttribute('_ie9gfx-gradientClassName');
+				
+			}
+			
+			// if element is unprocessed, process
+			if (!this.getAttribute('_ie9gfx-processed'))
+			{
+				_ie9GradientFix.call(this, true);
+			}
+			
+			// if processing defined a hover class name, apply
+			if (this.getAttribute('_ie9gfx-hoverGradientClassName'))
+			{
+				// remove mouseout gradient class if present
+				if (typeof this.getAttribute('_ie9gfx-gradientClassName'))
+				{
+					this.className = this.className.replace(
+						' ' + this.getAttribute('_ie9gfx-gradientClassName'),
+						''
+					);
+				}
+				
+				// add the hover class, but only once.
+				if (
+					!this.className.match(
+						this.getAttribute('_ie9gfx-hoverGradientClassName')
+					)
+				)
+				{
+					this.className += 
+						' '
+						+ this.getAttribute('_ie9gfx-hoverGradientClassName');
+				}
+			}
+		}
+		
+		/**
+		Remove hover state gradient class from the element if present
+		Restore mouseout state gradient class if present
+		*/
+		function gradientMouseOut()
+		{
+			if (this.getAttribute('_ie9gfx-gradientClassName'))
+			{
+				// remove mouseover gradient class if present
+				if (this.getAttribute('_ie9gfx-hoverGradientClassName'))
+				{
+					this.className = this.className.replace(
+						' ' + this.getAttribute(
+								'_ie9gfx-hoverGradientClassName'
+							),
+						''
+					);
+				}
+				
+				// add the class, but only once
+				if (
+					!this.className.match(
+						this.getAttribute('_ie9gfx-gradientClassName')
+					)
+				)
+				{
+					this.className += 
+						' ' + this.getAttribute('_ie9gfx-gradientClassName');
+				}
+				
+			}
+		}
+		
+		/**
+		Return  stop node for linear gradient definition
+		
+		@param hexColor string hex color extracted from filter CSS rule w/o #
+		@param offset int 0 - 100 offset for gradient color stop
+		*/
+		function _getColorStop(hexColor,offset)
+		{
+			hexColor = hexColor.replace('#','');
+			
+			if (hexColor.length == 8)
+			{
+				opacity = _hexToDec(hexColor.substring(0,2));
+				hexColor = hexColor.substring(2,8);
+			}
+			else
+			{
+				opacity = 1;
+			}
+			
+			offset = parseInt(offset);
+			
+			return '<stop offset="'+ offset + '%" style="stop-color:#' + hexColor + ';stop-opacity:' + opacity + '"/>';
+		}
+		
+		/**
+		Convert the alpha portion of an #AARRGGBB color to a decimal 
+		value (0 to 1) for use in an svg gradient color stop-opacity 
+		style rule
+		*/
+		function _hexToDec(hex)
+		{
+			var d = parseInt(hex,16); // convert hex value to int
+			var o = d / 256; //convert to decimal
+			o = Math.round(o*10)/10; // round off
+			return (o > 1) ? 1 : o; // opacity is never greater than 1.
+		}
+		
+		
+		/**
+		*
+		*  Base64 encode / decode
+		*  http://www.webtoolkit.info/
+		*  http://www.webtoolkit.info/javascript-base64.html
+		*
+		**/
+
+		var Base64 = {
+
+			// private property
+			_keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+			// public method for encoding
+			encode : function (input) {
+				var output = "";
+				var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+				var i = 0;
+
+				input = Base64._utf8_encode(input);
+
+				while (i < input.length) {
+
+					chr1 = input.charCodeAt(i++);
+					chr2 = input.charCodeAt(i++);
+					chr3 = input.charCodeAt(i++);
+
+					enc1 = chr1 >> 2;
+					enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+					enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+					enc4 = chr3 & 63;
+
+					if (isNaN(chr2)) {
+						enc3 = enc4 = 64;
+					} else if (isNaN(chr3)) {
+						enc4 = 64;
+					}
+
+					output = output +
+					this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+					this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+
+				}
+
+				return output;
+			},
+
+			// public method for decoding
+			decode : function (input) {
+				var output = "";
+				var chr1, chr2, chr3;
+				var enc1, enc2, enc3, enc4;
+				var i = 0;
+
+				input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+				while (i < input.length) {
+
+					enc1 = this._keyStr.indexOf(input.charAt(i++));
+					enc2 = this._keyStr.indexOf(input.charAt(i++));
+					enc3 = this._keyStr.indexOf(input.charAt(i++));
+					enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+					chr1 = (enc1 << 2) | (enc2 >> 4);
+					chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+					chr3 = ((enc3 & 3) << 6) | enc4;
+
+					output = output + String.fromCharCode(chr1);
+
+					if (enc3 != 64) {
+						output = output + String.fromCharCode(chr2);
+					}
+					if (enc4 != 64) {
+						output = output + String.fromCharCode(chr3);
+					}
+
+				}
+
+				output = Base64._utf8_decode(output);
+
+				return output;
+
+			},
+
+			// private method for UTF-8 encoding
+			_utf8_encode : function (string) {
+				string = string.replace(/\r\n/g,"\n");
+				var utftext = "";
+
+				for (var n = 0; n < string.length; n++) {
+
+					var c = string.charCodeAt(n);
+
+					if (c < 128) {
+						utftext += String.fromCharCode(c);
+					}
+					else if((c > 127) && (c < 2048)) {
+						utftext += String.fromCharCode((c >> 6) | 192);
+						utftext += String.fromCharCode((c & 63) | 128);
+					}
+					else {
+						utftext += String.fromCharCode((c >> 12) | 224);
+						utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+						utftext += String.fromCharCode((c & 63) | 128);
+					}
+
+				}
+
+				return utftext;
+			},
+
+			// private method for UTF-8 decoding
+			_utf8_decode : function (utftext) {
+				var string = "";
+				var i = 0;
+				var c = c1 = c2 = 0;
+
+				while ( i < utftext.length ) {
+
+					c = utftext.charCodeAt(i);
+
+					if (c < 128) {
+						string += String.fromCharCode(c);
+						i++;
+					}
+					else if((c > 191) && (c < 224)) {
+						c2 = utftext.charCodeAt(i+1);
+						string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+						i += 2;
+					}
+					else {
+						c2 = utftext.charCodeAt(i+1);
+						c3 = utftext.charCodeAt(i+2);
+						string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+						i += 3;
+					}
+
+				}
+
+				return string;
+			}
+
+		}
+		
+	</script>
+</PUBLIC:COMPONENT>
