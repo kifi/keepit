@@ -163,7 +163,7 @@ class HomeController @Inject() (
         UserAgent.fromString(agent)
       }
       temporaryReportLandingLoad()
-      if (agentOpt.exists(_.isMobile)) {
+      if (agentOpt.exists(!_.isWebsiteEnabled)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
