@@ -11,7 +11,7 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.isSupportedDesktop === false
       agent.isKifiIphoneApp === false
-      agent.isWebsiteEnabled === false
+      agent.isWebsiteEnabled === true
     }
     "parse browser versions FF Mac" in {
       val str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:20.0) Gecko/20100101 Firefox/20.0"
@@ -71,7 +71,7 @@ class UserAgentTest extends Specification {
       agent.isIphone === true
       agent.isWebsiteEnabled === false
     }
-    "parse browser versions Safary on iPhone" in {
+    "parse browser versions Safari on iPhone" in {
       val str = "Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_0 like Mac OS X; en-us) AppleWebKit/532.9 (KHTML, like Gecko) Version/4.0.5 Mobile/8A293 Safari/6531.22.7"
       val agent = UserAgent.fromString(str)
       agent === UserAgent(str, "Mobile Safari", "iOS", "iOS 4", "Mobile Browser", "4.0.5")
@@ -80,6 +80,16 @@ class UserAgentTest extends Specification {
       agent.isKifiIphoneApp === false
       agent.isIphone === true
       agent.isWebsiteEnabled === false
+    }
+    "parse browser versions Safari on iPad" in {
+      val str = "Mozilla/5.0 (iPad; CPU OS 7_0_4 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Version/7.0 Mobile/11B554a Safari/9537.53"
+      val agent = UserAgent.fromString(str)
+      agent === UserAgent(str, "Mobile Safari", "iOS", "iOS 7", "Mobile Browser", "7.0")
+      agent.isMobile === true
+      agent.isSupportedDesktop === false
+      agent.isKifiIphoneApp === false
+      agent.isIphone === false
+      agent.isWebsiteEnabled === true
     }
   }
 }
