@@ -160,7 +160,10 @@ class AuthController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (!agent.isWebsiteEnabled) {
+      // All devices for which preview website is enabled can login, however they may not be able to
+      // access kifi.com or preview.kifi.com after logging in (redirected to "unsupported" page).
+      // Remove this when preview experiment is over.
+      if (!agent.isWebsiteEnabled && !agent.isPreviewWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))

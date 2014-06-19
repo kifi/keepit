@@ -129,6 +129,9 @@ class HomeController @Inject() (
 
   private def homeAuthed(implicit request: AuthenticatedRequest[_]): SimpleResult = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
+    val agentOpt = request.headers.get("User-Agent").map { agent =>
+      UserAgent.fromString(agent)
+    }
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
         .withSession(session - AuthController.LinkWithKey)
@@ -139,11 +142,18 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-
       if ((request.experiments.contains(ExperimentType.ADMIN) || request.experiments.contains(ExperimentType.KIFI_BLACK)) && request.domain.startsWith("preview.")) {
-        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)).withSession(request.session + ("preview", "true")) as HTML
+        if (agentOpt.exists(_.isPreviewWebsiteEnabled)) {
+          Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)).withSession(request.session + ("preview", "true")) as HTML
+        } else {
+          Redirect(routes.HomeController.unsupported())
+        }
       } else {
-        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+        if (agentOpt.exists(_.isWebsiteEnabled)) {
+          Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+        } else {
+          Redirect(routes.HomeController.unsupported())
+        }
       }
     }
   }
