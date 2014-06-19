@@ -8,9 +8,6 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.EmailParserUtils
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
-import com.keepit.common.logging.AccessLog
-import scala.concurrent.duration.Duration
 
 case class UserEmailAddress (
   id: Option[Id[UserEmailAddress]] = None,
