@@ -47,8 +47,8 @@ var Spotlight = Spotlight || (function (window, document) {
       var oN = Math.min(this.maxOpacity, clamp01(opts.opacity));
       var ease = opts.ease || swing;
       var r0 = this.ri;
-      var rN = rectOnPxGrid(rectToCircumscribe || centeredInWindow(this.ri, this.wd));
-      var ms = opts.ms || calcDurationMs(r0, rN);
+      var rN = rectOnPxGrid(rectToCircumscribe || this.ri);
+      var ms = opts.ms || calcDurationMs(r0, rN, o0, oN, b0, bN);
       var ms_1 = 1 / ms;
       var t0 = window.performance.now();
       var tN = t0 + ms;
@@ -206,8 +206,15 @@ var Spotlight = Spotlight || (function (window, document) {
     return typeof val === 'number' ? (val < 0 ? 0 : (val > 1 ? 1 : val)) : 1;
   }
 
-  function calcDurationMs(r1, r2) {
-    var px = Math.max.apply(null, [r1.x - r2.x, r1.y - r2.y, r1.x + r1.w - r2.x - r2.w, r1.y + r1.h - r2.y - r2.h].map(Math.abs));
+  function calcDurationMs(r1, r2, o1, o2, b1, b2) {
+    var px = Math.max.apply(null, [
+      r1.x - r2.x,
+      r1.y - r2.y,
+      r1.x + r1.w - r2.x - r2.w,
+      r1.y + r1.h - r2.y - r2.h,
+      (o1 - o2) * 800,
+      (b1 - b2) * 600
+    ].map(Math.abs));
     return 200 * Math.log((px + 80) / 60) | 0;
   }
 
@@ -218,17 +225,6 @@ var Spotlight = Spotlight || (function (window, document) {
       w: r1.w + (r2.w - r1.w) * alpha,
       h: r1.h + (r2.h - r1.h) * alpha
     });
-  }
-
-  function centeredInWindow(r, wd) {
-    var w = Math.min(200, r.w);
-    var h = Math.min(200, r.h);
-    return {
-      x: (wd.w - w) / 2,
-      y: (wd.h - h) / 2,
-      w: w,
-      h: h
-    };
   }
 
   function rectOnPxGrid(r) {

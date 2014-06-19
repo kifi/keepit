@@ -86,7 +86,7 @@
 .kifi-complete>.kifi-gs-bar {
   display: none;
 }
-.kifi-gs-x {
+.kifi-guide-x {
   position: absolute;
   top: 9px;
   right: 8px;
@@ -94,15 +94,15 @@
   width: 18px;
   border-radius: 50%;
 }
-.kifi-gs-x:hover,
-.kifi-gs-x:focus {
+.kifi-guide-x:hover,
+.kifi-guide-x:focus {
   background-color: #333;
 }
-.kifi-gs-x:active {
+.kifi-guide-x:active {
   background-color: #282828;
 }
-.kifi-gs-x::before,
-.kifi-gs-x::after {
+.kifi-guide-x::before,
+.kifi-guide-x::after {
   content: ' ';
   position: absolute;
   top: 4px;
@@ -112,22 +112,22 @@
   background: #565859;
   font-size: 0;
 }
-.kifi-gs-x::before {
+.kifi-guide-x::before {
   -webkit-transform: translate(-1px) rotate(45deg);
   transform: translate(-1px) rotate(45deg);
 }
-.kifi-gs-x::after {
+.kifi-guide-x::after {
   -webkit-transform: translate(-1px) rotate(-45deg);
   transform: translate(-1px) rotate(-45deg);
 }
-.kifi-gs-x:hover::before,
-.kifi-gs-x:hover::after,
-.kifi-gs-x:focus::before,
-.kifi-gs-x:focus::after {
+.kifi-guide-x:hover::before,
+.kifi-guide-x:hover::after,
+.kifi-guide-x:focus::before,
+.kifi-guide-x:focus::after {
   background: #75797a;
 }
-.kifi-gs-x:active::before,
-.kifi-gs-x:active::after {
+.kifi-guide-x:active::before,
+.kifi-guide-x:active::after {
   background: #616465;
 }
 

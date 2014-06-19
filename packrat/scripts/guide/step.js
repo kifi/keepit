@@ -20,7 +20,7 @@ guide.step = guide.step || function () {
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: opts_.opacity});
       $stage = $(render('html/guide/step_' + opts.index, {me: me, page: opts_.page}));
       $steps = opts_.$guide.appendTo('body')
-        .on('click', '.kifi-gs-x', hide);
+        .on('click', '.kifi-guide-x', hide);
       $steps.each(layout).data().updateProgress(opts_.done);
       if (document.readyState === 'complete') {
         timeout = setTimeout(show2, 2000);

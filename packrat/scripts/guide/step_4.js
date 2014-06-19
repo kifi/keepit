@@ -28,7 +28,7 @@ guide.step4 = guide.step4 || function () {
       cutScreen = new CutScreen([]);
       $stage.prepend(cutScreen.el).appendTo('body');
       $steps = $guide.appendTo('body')
-        .on('click', '.kifi-gs-x', hide);
+        .on('click', '.kifi-guide-x', hide);
       $steps.layout().data().updateProgress(.2);
       $feats = $stage.find('.kifi-guide-feature');
       $(document).data('esc').add(hide);

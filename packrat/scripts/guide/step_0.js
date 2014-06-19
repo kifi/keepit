@@ -13,7 +13,7 @@ guide.step0 = guide.step0 || function () {
     if (!$stage) {
       $stage = $(render('html/guide/step_0', {me: me, pages: pages})).appendTo('body').layout().addClass('kifi-open');
       $steps = $guide.appendTo('body')
-        .on('click', '.kifi-gs-x', hide);
+        .on('click', '.kifi-guide-x', hide);
       $pages = $stage.find('.kifi-guide-pages')
         .on('click', '.kifi-guide-next', onClickNext)
         .on('click', '.kifi-guide-site-a', onClickSite);
