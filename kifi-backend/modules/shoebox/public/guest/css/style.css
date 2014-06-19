@@ -101,6 +101,9 @@ p{ font-weight:300;}
 
 .button.green:hover{ background:#a9cd7a;}
 
+.button.simple{ border-color:transparent; color:#333333;}
+
+.button.simple:hover{ color:#6fa6ef}
 
 /* Main Styles*/
 
