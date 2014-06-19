@@ -14,6 +14,7 @@ import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.service.ServiceStatus
 import com.keepit.search.IndexInfo
 import scala.concurrent.duration._
+import java.util.Random
 
 object IndexerPluginMessages {
   case object UpdateIndex
@@ -76,9 +77,14 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   // plugin lifecycle methods
   override def enabled: Boolean = true
 
+  val indexingInterval = 1 minute
+
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTaskOnAllMachines(actor.system, 30 seconds, 1 minutes, actor.ref, UpdateIndex)
+
+    val rnd = new Random
+
+    scheduleTaskOnAllMachines(actor.system, (20 + rnd.nextInt(20)) seconds, indexingInterval, actor.ref, UpdateIndex)
 
     serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP) match {
       case Some(_) => // search_backup
