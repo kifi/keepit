@@ -37,8 +37,8 @@ class ScraperCallbackHelper @Inject()(
 
   def assignTasks(zkId:Id[ScraperWorker], max:Int):Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", {r:Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}"}) {
     withLock(assignLock) {
-      val builder = Seq.newBuilder[ScrapeRequest]
       val res = db.readWrite(attempts = 1) { implicit rw =>
+        val builder = Seq.newBuilder[ScrapeRequest]
         val limit = if (max < 10) max * 2 else max
         val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList(${limit})", {r:Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}"}) { scrapeInfoRepo.getOverdueList(limit) }
         var count = 0
