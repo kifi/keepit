@@ -19,7 +19,7 @@ case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
   def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
-  def prenormalize(uriString: String)(implicit session: RSession): Try[String]
+  def prenormalize(uriString: String): Try[String]
 }
 
 @Singleton
@@ -31,7 +31,7 @@ class NormalizationServiceImpl @Inject() (
   priorKnowledge: PriorKnowledge,
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
-  def prenormalize(uriString: String)(implicit session: RSession): Try[String] = {
+  def prenormalize(uriString: String): Try[String] = {
     URI.parse(uriString).map { uri =>
       val uriWithStandardPrenormalization = Prenormalizer(uri)
       val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(uriWithStandardPrenormalization))
@@ -56,7 +56,7 @@ class NormalizationServiceImpl @Inject() (
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = {
     log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
-    val contentChecks = db.readOnly { implicit session =>
+    val contentChecks = {
       Try { java.net.URI.create(currentReference.url) } match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
         case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
         case Failure(t)   => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
@@ -75,11 +75,10 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def getRelevantCandidates(currentReference: NormalizationReference, candidates: Seq[NormalizationCandidate]) = {
-
     val prenormalizedCandidates = candidates.map {
       case verifiedCandidate: VerifiedCandidate => Success(verifiedCandidate)
-      case ScrapedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(ScrapedCandidate(_, normalization)) }
-      case UntrustedCandidate(url, normalization) => db.readOnly { implicit session => prenormalize(url).map(UntrustedCandidate(_, normalization)) }
+      case ScrapedCandidate(url, normalization) => prenormalize(url).map(ScrapedCandidate(_, normalization))
+      case UntrustedCandidate(url, normalization) => prenormalize(url).map(UntrustedCandidate(_, normalization))
     }.map(_.toOption).flatten
 
     val allCandidates =

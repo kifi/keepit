@@ -104,7 +104,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
     }
   }
 
-  def prenormalize(url: String)(implicit injector: Injector, session: RSession): String = inject[NormalizationService].prenormalize(url).get
+  def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
 
   "remove tag" in {
     running(new ShoeboxApplication(controllerTestModules:_*)) {

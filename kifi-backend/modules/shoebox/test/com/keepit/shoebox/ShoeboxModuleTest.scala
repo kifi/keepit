@@ -48,6 +48,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
   "Module" should {
     "instantiate controllers" in {
       running(new ShoeboxApplication(
+        ShoeboxSlickModule(),
         FakeMailModule(),
         FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient),
         FakeDiscoveryModule(),
