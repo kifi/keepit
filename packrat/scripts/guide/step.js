@@ -11,18 +11,13 @@ guide.step = guide.step || function () {
   var spotlight, $stage, $steps, timeout, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
-  // var sites = [
-  //   {noun: 'recipe', tag: 'Recipe', query: 'cake+recipe'},
-  //   {noun: 'tote', tag: 'Shopping Wishlist', query: 'tote'},
-  //   {noun: 'article', tag: 'Read Later', query: 'lifehack+truly+love'},
-  //   {noun: 'video', tag: 'Inspiration', query: 'steve+jobs'}];
   return show;
 
   function show(steps_, opts_) {
     if (!$stage) {
       steps = steps_;
       opts = opts_;
-      spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: .85});
+      spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: opts_.opacity});
       $stage = $(render('html/guide/step_' + opts.index, {me: me, page: opts_.page}));
       $steps = opts_.$guide.appendTo('body')
         .on('click', '.kifi-gs-x', hide);
@@ -140,15 +135,20 @@ guide.step = guide.step || function () {
 
   function showNewStep(msToEarliestCompletion) {
     var step = steps[stepIdx];
+    var $prev = $stage.prev();
     $stage
       .attr('kifi-step', stepIdx)
       .css(newStepPosCss(step.pos))
       .data('pos', step.pos || $stage.data('pos'))
+      .detach()
       .css({
         'transition-property': step.transition || '',
         'transition-duration': '',
         'transition-delay': Math.max(0, msToEarliestCompletion - 200) + 'ms'
       })
+      .toggleClass('kifi-from-right', step.fromRight)
+      .insertAfter($prev) // forces transform matrix recalc
+      .each(layout)
       .on('transitionend', function end(e) {
         if (e.target === this) {
           $(this).off('transitionend', end).css('transition-delay', '');
@@ -160,7 +160,6 @@ guide.step = guide.step || function () {
           }
         }
       })
-      .each(layout)
       .addClass('kifi-open');
   }
 

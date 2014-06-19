@@ -50,7 +50,8 @@ guide.step3 = guide.step3 || function () {
       transition: 'opacity'
     },
     {
-      pos: 'center'
+      pos: 'center',
+      transition: 'opacity'
     }
   ];
   return {
@@ -64,7 +65,18 @@ guide.step3 = guide.step3 || function () {
 
   function show($guide, page, pageIdx) {
     if (!step) {
-      step = guide.step(steps, {$guide: $guide, page: page, pageIdx: pageIdx, index: 3, done: .2, anchor: 'br', step: onStep, next: onClickNext, hide: onHide});
+      step = guide.step(steps, {
+        $guide: $guide,
+        page: page,
+        pageIdx: pageIdx,
+        index: 3,
+        done: .2,
+        anchor: 'br',
+        opacity: .8,
+        step: onStep,
+        next: onClickNext,
+        hide: onHide
+      });
     }
   }
 

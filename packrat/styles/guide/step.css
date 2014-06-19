@@ -14,6 +14,10 @@
   transition: opacity linear, transform ease-out;
   transition-duration: .3s;
 }
+.kifi-guide-stage.kifi-from-right {
+  -webkit-transform: translate3d(50px,0,0);
+  transform: translate3d(50px,0,0);
+}
 .kifi-guide-stage.kifi-open {
   opacity: 1;
   -webkit-transform: none;

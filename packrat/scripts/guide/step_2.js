@@ -13,7 +13,8 @@ guide.step2 = guide.step2 || function () {
         {type: 'click', target: '.kifi-res-title', proceed: true},
         {type: /^mouse/, target: '.kifi-res-title'}
       ],
-      pos: {top: 140, left: 520}
+      pos: {top: 140, left: 520},
+      fromRight: true
     }
   ];
   return {
@@ -27,7 +28,16 @@ guide.step2 = guide.step2 || function () {
 
   function show($guide, page, pageIdx) {
     if (!step) {
-      step = guide.step(steps, {$guide: $guide, page: page, pageIdx: pageIdx, index: 2, done: .5, anchor: 'tl', hide: onHide});
+      step = guide.step(steps, {
+        $guide: $guide,
+        page: page,
+        pageIdx: pageIdx,
+        index: 2,
+        done: .5,
+        anchor: 'tl',
+        opacity: .65,
+        hide: onHide
+      });
     }
   }
 

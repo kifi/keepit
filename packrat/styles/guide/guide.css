@@ -6,7 +6,7 @@
   z-index: 999999999993;
   border: 1px solid gray;
   border-radius: 10px;
-  background-color: rgba(0,0,0,.85);
+  background-color: rgba(0,0,0,.8);
   color: #fff;
   overflow: hidden;
   transition: -webkit-transform .5s ease-out;

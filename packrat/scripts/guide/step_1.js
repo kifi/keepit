@@ -45,7 +45,8 @@ guide.step1 = guide.step1 || function () {
       transition: 'opacity'
     },
     {
-      pos: 'center'
+      pos: 'center',
+      transition: 'opacity'
     }
   ];
   var origSteps3ArrowToSel = steps[3].arrow.to.sel;
@@ -69,6 +70,7 @@ guide.step1 = guide.step1 || function () {
         index: 1,
         done: .3,
         anchor: 'br',
+        opacity: .8,
         step: onStep,
         next: onClickNext,
         hide: onHide
