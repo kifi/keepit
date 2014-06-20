@@ -19,6 +19,10 @@ class CortexKeepTest extends Specification with CortexTestInjector{
       withDb() { implicit injector =>
         val keepRepo = inject[CortexKeepRepo]
 
+        db.readOnly{ implicit s =>
+          keepRepo.getMaxSeq.value === 0L
+        }
+
         db.readWrite{ implicit s =>
           (1 to 10).map{ i =>
             val keep = CortexKeep(
@@ -37,8 +41,10 @@ class CortexKeepTest extends Specification with CortexTestInjector{
 
         db.readOnly{ implicit s =>
           keepRepo.getSince(SequenceNumber[CortexKeep](5), 10).map{_.keepId.id} === Range(6,11).toList
+          keepRepo.getMaxSeq.value === 10L
         }
       }
     }
+
   }
 }

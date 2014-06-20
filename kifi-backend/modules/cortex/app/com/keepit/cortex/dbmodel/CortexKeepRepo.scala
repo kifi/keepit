@@ -13,11 +13,14 @@ import com.keepit.model.KeepSource
 import com.keepit.model.URL
 import com.keepit.model.User
 import com.keepit.common.db.SequenceNumber
+import scala.slick.jdbc.StaticQuery
 
 
 @ImplementedBy(classOf[CortexKeepRepoImpl])
 trait CortexKeepRepo extends DbRepo[CortexKeep] with SeqNumberFunction[CortexKeep] {
   def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep]
+  def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexKeep]
+  def getByKeepId(id: Id[Keep])(implicit session: RSession): Option[CortexKeep]
 }
 
 @Singleton
@@ -48,5 +51,20 @@ class CortexKeepRepoImpl @Inject()(
 
   override def deleteCache(uri: CortexKeep)(implicit session: RSession): Unit = {}
 
-  override def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep] = super.getBySequenceNumber(seq, limit)
+  def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep] = super.getBySequenceNumber(seq, limit)
+
+  def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexKeep] = {
+    import StaticQuery.interpolation
+
+    val sql = sql"select max(seq) from cortex_keep"
+    SequenceNumber[CortexKeep](sql.as[Long].first max 0L)
+  }
+
+  def getByKeepId(id: Id[Keep])(implicit session: RSession): Option[CortexKeep] = {
+    val q = for{
+      r <- rows if r.keepId === id
+    } yield r
+
+    q.list.headOption
+  }
 }

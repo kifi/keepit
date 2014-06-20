@@ -8,11 +8,14 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.SequenceNumber
+import scala.slick.jdbc.StaticQuery
 
 
 @ImplementedBy(classOf[CortexURIRepoImpl])
 trait CortexURIRepo extends DbRepo[CortexURI] with SeqNumberFunction[CortexURI]{
   def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI]
+  def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexURI]
+  def getByURIId(uid: Id[NormalizedURI])(implicit session: RSession): Option[CortexURI]
 }
 
 @Singleton
@@ -40,6 +43,19 @@ class CortexURIRepoImpl @Inject()(
 
   override def deleteCache(uri: CortexURI)(implicit session: RSession): Unit = {}
 
-  override def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI] = super.getBySequenceNumber(seq, limit)
+  def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI] = super.getBySequenceNumber(seq, limit)
+
+  def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexURI] = {
+    import StaticQuery.interpolation
+
+    val sql = sql"select max(seq) from cortex_uri"
+    SequenceNumber[CortexURI](sql.as[Long].first max 0L)
+  }
+
+  def getByURIId(uid: Id[NormalizedURI])(implicit session: RSession): Option[CortexURI] = {
+    val q = (for{ r <- rows if r.uriId === uid} yield r)
+    q.list.headOption
+  }
+
 }
 

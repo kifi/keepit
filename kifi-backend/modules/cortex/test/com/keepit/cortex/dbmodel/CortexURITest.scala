@@ -28,12 +28,17 @@ class CortexURITest extends Specification with CortexTestInjector{
          )
         }
 
+        db.readOnly{ implicit s =>
+          uriRepo.getMaxSeq.value === 0L
+        }
+
         db.readWrite{ implicit s =>
           uris.foreach{ uriRepo.save(_)}
         }
 
         db.readOnly{ implicit s =>
           uriRepo.getSince(SequenceNumber[CortexURI](5), 10).map{_.uriId.id} === Range(6, 11).toList
+          uriRepo.getMaxSeq.value === 10L
         }
       }
     }

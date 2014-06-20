@@ -6,9 +6,9 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.cortex.models.lda.{DenseLDATopicWords, LDAURIFeatureUpdatePlugin}
 import com.keepit.cortex.models.word2vec.RichWord2VecURIFeatureUpdatePlugin
 import com.keepit.cortex.nlp.POSTagger
-
 import play.api.Application
 import play.api.Mode.Prod
+import com.keepit.cortex.dbmodel.CortexDataIngestionPlugin
 
 object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices{
   val module = CortexProdModule()
@@ -29,6 +29,7 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
     require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
     require(injector.instance[DenseLDATopicWords] != null)
+    require(injector.instance[CortexDataIngestionPlugin] != null)
     require(POSTagger.enabled)
   }
 }
