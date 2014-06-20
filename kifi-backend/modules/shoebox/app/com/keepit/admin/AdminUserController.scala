@@ -831,12 +831,14 @@ class AdminUserController @Inject() (
     Ok(json)
   }}
 
-  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminHtmlAction.authenticated { implicit request =>
-    db.readWrite { implicit session =>
+  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminJsonAction.authenticated { request =>
+    log.info(s"About to deactivate UserEmailAddress $id")
+    val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
-      emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
       userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
+      emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
     }
-    Ok(JsString("Done!"))
+    log.info(s"Deactivated UserEmailAddress $inactiveEmail")
+    Ok(Json.toJson(inactiveEmail))
   }
 }
