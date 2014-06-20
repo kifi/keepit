@@ -326,7 +326,7 @@ class UserCommander @Inject() (
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
           userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
 
-          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
+          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr.address))}"
 
           val (category, subj, body) = if (newUser.state != UserStates.ACTIVE) {
             (NotificationCategory.User.EMAIL_CONFIRMATION,

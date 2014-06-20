@@ -119,7 +119,7 @@ class ShoeboxController @Inject() (
 
     val addrs = db.readOnly(2, Slave) { implicit session => emailAddressRepo.getAllByUser(userId) }
     for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
-      db.readWrite(attempts = 3){ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
+      db.readWrite(attempts = 3){ implicit session => postOffice.sendMail(email.copy(to=List(addr.address))) }
     }
     Ok("true")
   }
