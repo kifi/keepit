@@ -12,6 +12,8 @@ import com.keepit.common.logging.Logging
 import org.msgpack.ScalaMessagePack
 import play.api.http.ContentTypes
 import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
+import com.keepit.cortex.dbmodel.CortexURI
+import com.keepit.cortex.dbmodel.CortexKeep
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -42,6 +44,23 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
+  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
+    val uris = db.readOnly(2, Slave) { implicit s =>
+      normUriRepo.getIndexable(seq, fetchSize)
+    }
+    val cortexUris = uris.map{CortexURI.fromURI(_)}
+    Ok(Json.toJson(cortexUris))
+  }
+
+  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
+    val keeps = db.readOnly(2, Slave) { implicit s =>
+      keepRepo.getBookmarksChanged(seq, fetchSize)
+    }
+    val cortexKeeps = keeps.map{CortexKeep.fromKeep(_)}
+    Ok(Json.toJson(cortexKeeps))
+  }
+
+
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = db.readOnly(2, Slave) { implicit s =>
@@ -51,6 +70,7 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
+  // deprecate this soon
   def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)

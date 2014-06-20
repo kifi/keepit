@@ -40,4 +40,16 @@ object CortexKeep {
     (__ \ 'source).format(Json.format[KeepSource]) and
     (__ \ 'seq).format(SequenceNumber.format[CortexKeep])
   )(CortexKeep.apply, unlift(CortexKeep.unapply))
+
+  def fromKeep(keep: Keep): CortexKeep =
+    CortexKeep(
+      createdAt = keep.createdAt,
+      updatedAt = keep.updatedAt,
+      keepId = keep.id.get,
+      userId = keep.userId,
+      uriId = keep.uriId,
+      isPrivate = keep.isPrivate,
+      state = keep.state,
+      source = keep.source,
+      seq = keep.seq)
 }

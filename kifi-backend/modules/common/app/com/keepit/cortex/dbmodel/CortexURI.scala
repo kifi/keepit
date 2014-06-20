@@ -41,4 +41,6 @@ object CortexURI {
     (__ \ 'state).format(State.format[CortexURI]) and
     (__ \ 'seq).format(SequenceNumber.format[CortexURI])
   )(CortexURI.apply, unlift(CortexURI.unapply))
+
+  def fromURI(uri: NormalizedURI): CortexURI = CortexURI(uriId = uri.id.get, title = uri.title, url = uri.url, state = uri.state, seq = uri.seq)
 }

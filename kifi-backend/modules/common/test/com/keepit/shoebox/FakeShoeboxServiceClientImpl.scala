@@ -25,6 +25,7 @@ import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.UriIdAndSeq
+import com.keepit.cortex.dbmodel._
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -602,4 +603,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = Future.successful(Seq.empty)
 
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
+
+  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[CortexURI]] = Future.successful(Seq())
+
+  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CortexKeep]] = Future.successful(Seq())
 }
