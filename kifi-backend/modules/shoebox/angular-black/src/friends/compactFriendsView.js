@@ -9,8 +9,8 @@ angular.module('kifi.friends.compactFriendsView', [])
     restrict: 'A',
     templateUrl: 'friends/compactFriendsView.tpl.html',
     link: function (scope/*, element, attrs*/) {
+      scope.friendCount = friendService.totalFriends;
       friendService.getKifiFriends().then(function (data) {
-        scope.friendCount = friendService.totalFriends();
         var actualFriends = _.filter(data, function (friend) {
           friend.pictureUrl = friendService.getPictureUrlForUser(friend);
           return !friend.unfriended;
@@ -28,7 +28,13 @@ angular.module('kifi.friends.compactFriendsView', [])
         scope.friendGroups = [actualFriends.slice(0,5), actualFriends.slice(5,10)];
       });
 
-
+      scope.friendsLink = function () {
+        if (scope.friendCount() > 0) {
+          return '/friends';
+        } else {
+          return '/invite';
+        }
+      }
     }
   };
 }]);

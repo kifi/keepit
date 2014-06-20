@@ -48,14 +48,16 @@ class FastJsonParser() {
    * scala pattern matching on array is very slow using strings on small arrays.
    * There where lots of long running matches on the small strings so I switched to an if statement hoping it would make it faster.
    */
-  private def fastParse(bytes: Array[Byte]) = if (bytes.size <= 4) { //4 == "null".getBytes(UTF8).size
-    val smallString = new String(bytes, UTF8)
-    if (smallString == FastJsonParser.emptyObjectString) FastJsonParser.emptyObject
-    else if (smallString == FastJsonParser.emptyArrayString) FastJsonParser.emptyArray
-    else if (smallString == FastJsonParser.nullString) FastJsonParser.nullVal
-    else Json.parse(smallString)
-  } else {
-    Json.parse(bytes)
-  }
+  private def fastParse(bytes: Array[Byte]) =
+    if (bytes.isEmpty) FastJsonParser.nullVal
+    else if (bytes.size <= 4) { //4 == "null".getBytes(UTF8).size
+      val smallString = new String(bytes, UTF8)
+      if (smallString == FastJsonParser.emptyObjectString) FastJsonParser.emptyObject
+      else if (smallString == FastJsonParser.emptyArrayString) FastJsonParser.emptyArray
+      else if (smallString == FastJsonParser.nullString) FastJsonParser.nullVal
+      else Json.parse(smallString)
+    } else {
+      Json.parse(bytes)
+    }
 }
 

@@ -67,7 +67,7 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
@@ -79,7 +79,7 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         None
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(true)
       } else {
         Some(false)
@@ -95,7 +95,7 @@ class HomeController @Inject() (
       val agent = UserAgent.fromString(agentString)
       if (agent.name == "IE" || agent.name == "Safari") {
         None
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(true)
       } else {
         Some(false)
@@ -129,6 +129,9 @@ class HomeController @Inject() (
 
   private def homeAuthed(implicit request: AuthenticatedRequest[_]): SimpleResult = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
+    val agentOpt = request.headers.get("User-Agent").map { agent =>
+      UserAgent.fromString(agent)
+    }
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
         .withSession(session - AuthController.LinkWithKey)
@@ -139,11 +142,18 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else {
-
       if ((request.experiments.contains(ExperimentType.ADMIN) || request.experiments.contains(ExperimentType.KIFI_BLACK)) && request.domain.startsWith("preview.")) {
-        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)).withSession(request.session + ("preview", "true")) as HTML
+        if (agentOpt.exists(_.isPreviewWebsiteEnabled)) {
+          Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)).withSession(request.session + ("preview", "true")) as HTML
+        } else {
+          Redirect(routes.HomeController.unsupported())
+        }
       } else {
-        Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+        if (agentOpt.exists(_.isWebsiteEnabled)) {
+          Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+        } else {
+          Redirect(routes.HomeController.unsupported())
+        }
       }
     }
   }
@@ -163,7 +173,7 @@ class HomeController @Inject() (
         UserAgent.fromString(agent)
       }
       temporaryReportLandingLoad()
-      if (agentOpt.exists(_.isMobile)) {
+      if (agentOpt.exists(!_.isWebsiteEnabled)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
@@ -254,7 +264,7 @@ class HomeController @Inject() (
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.name == "IE" || agent.name == "Safari") {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (agent.isMobile) {
+      } else if (!agent.isWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else if (!agent.isSupportedDesktop) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))

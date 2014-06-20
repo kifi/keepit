@@ -220,10 +220,9 @@ class KeepsCommander @Inject() (
 
     val colls = db.readOnly { implicit s =>
       keeps.map{ keep =>
-        val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-        collectionCommander.getBasicCollections(collIds)
+        keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       }
-    }
+    }.map(collectionCommander.getBasicCollections)
 
     for {
       sharingInfos <- sharingInfosFuture
