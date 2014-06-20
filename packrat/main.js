@@ -100,8 +100,25 @@ function clearDataCache() {
 
 var ThreadList = ThreadList || require('./threadlist').ThreadList;
 
-function PageData() {
+function PageData(o) {
+  this.update(o);
 }
+PageData.prototype = {
+  update: function (o) {
+    this.kept = o.kept;
+    this.keepId = o.keepId;
+    this.tags = o.tags || [];
+    this.position = o.position;
+    this.neverOnSite = o.neverOnSite;
+    this.sensitive = o.sensitive;
+    this.shown = o.shown;
+    this.keepers = o.keepers || [];
+    this.keeps = o.keeps || 0;
+  },
+  otherKeeps: function () {
+    return this.keeps - this.keepers.length - (this.kept === 'public');
+  }
+};
 
 function indexOfTag(tags, tagId) {
   for (var i = 0, len = tags.length; i < len; i++) {
@@ -619,8 +636,8 @@ api.port.on({
   get_keeps: searchOnServer,
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
-    var d = pageData[tab.nUri] || {};
-    respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
+    var d = pageData[tab.nUri];
+    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: d.otherKeeps()} : {keepers: []});
   },
   keep: function(data, _, tab) {
     log('[keep]', data);
@@ -1134,7 +1151,7 @@ api.port.on({
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // pageâ€™s normalized URI may have changed
+      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page's normalized URI may have changed
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {
@@ -1158,6 +1175,45 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
+    if (guidePages && /^#guide\/\d\/\d$/.test(link.locator)) {
+      var step = +link.locator.substr(7, 1);
+      switch (step) {
+        case 1:
+          pageData[link.url] = new PageData({shown: true});
+          tabsByUrl[link.url] = tabsByUrl[link.url] || [];
+          break;
+        case 2:
+          var page = guidePages[+link.locator.substr(9)];
+          var query = page.query.replace(/\+/g, ' ');
+          var entry = searchPrefetchCache[query] = {
+            response: pimpSearchResponse({
+              uuid: '00000000-0000-0000-0000-000000000000',
+              query: query,
+              hits: [{
+                bookmark: {
+                  title: page.title.join(' '),
+                  url: page.url,
+                  tags: [/* TODO: external ID of tag user chose */],
+                  matches: page.matches || [] // TODO: page.matches
+                },
+                users: [],
+                count: 1,
+                score: 0,
+                isMyBookmark: true,
+                isPrivate: false
+              }],
+              myTotal: 1,
+              friendsTotal: 0,
+              othersTotal: 816,
+              mayHaveMore: false,
+              show: true,
+              context: 'guide'
+            })
+          };
+          entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
+          break;
+      }
+    }
   },
   get_tags: function(_, respond, tab) {
     var d = pageData[tab.nUri],
@@ -1669,24 +1725,28 @@ function searchOnServer(request, respond) {
 
   ajax('search', 'GET', '/search', params, function (resp) {
     log('[searchOnServer] response:', resp);
-    resp.filter = request.filter;
-    resp.me = me;
-    resp.prefs = prefs || {maxResults: 1};
-    resp.origin = webBaseUri();
-    resp.experiments = experiments;
-    resp.admBaseUri = admBaseUri();
-    resp.myTotal = resp.myTotal || 0;
-    resp.friendsTotal = resp.friendsTotal || 0;
-    resp.hits.forEach(processSearchHit);
-    if (resp.hits.length < params.maxHits && (params.context || params.f)) {
-      resp.mayHaveMore = false;
-    }
-    respond(resp);
+    respond(pimpSearchResponse(resp, request.filter, resp.hits.length < params.maxHits && (params.context || params.f)));
   });
   return true;
 }
 
-function processSearchHit(hit) {
+function pimpSearchResponse(o, filter, noMore) {
+  o.filter = filter;
+  o.me = me;
+  o.prefs = prefs || {maxResults: 1};
+  o.origin = webBaseUri();
+  o.experiments = experiments;
+  o.admBaseUri = admBaseUri();
+  o.myTotal = o.myTotal || 0;
+  o.friendsTotal = o.friendsTotal || 0;
+  o.hits.forEach(pimpSearchHit);
+  if (noMore) {
+    o.mayHaveMore = false;
+  }
+  return o;
+}
+
+function pimpSearchHit(hit) {
   var tagIds = hit.bookmark && hit.bookmark.tags;
   if (tagIds && tagIds.length && tagsById) {
     var tags = hit.tags = [];
@@ -1810,21 +1870,15 @@ function gotPageDetailsFor(url, tab, resp) {
   log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url, resp);
 
   var nUri = resp.normalized;
-  var d = pageData[nUri] || new PageData;
-
-  d.kept = resp.kept;
-  d.keepId = resp.keepId;
-  d.tags = resp.tags || [];
-  d.position = resp.position;
-  d.neverOnSite = resp.neverOnSite;
-  d.sensitive = resp.sensitive;
-  d.shown = resp.shown;
-  d.keepers = resp.keepers || [];
-  d.keeps = resp.keeps || 0;
-  d.otherKeeps = d.keeps - d.keepers.length - (d.kept === 'public');
+  var d = pageData[nUri];
+  if (d) {
+    d.update(resp);
+  }
 
   if (!tabIsOld) {
-    pageData[nUri] = d;
+    if (!d) {
+      pageData[nUri] = d = new PageData(resp);
+    }
     stashTabByNormUri(tab, nUri);
     kififyWithPageData(tab, d);
   }
