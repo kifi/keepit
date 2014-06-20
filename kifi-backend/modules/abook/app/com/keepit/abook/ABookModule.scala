@@ -12,6 +12,7 @@ abstract class ABookModule(
   val cacheModule: CacheModule,
   val storeModule: StoreModule,
   val contactsUpdaterPluginModule: ContactsUpdaterPluginModule,
+  val emailAccountUpdaterPluginModule: EmailAccountUpdaterPluginModule = EmailAccountUpdaterPluginModule(),
   val sqsModule: SimpleQueueModule
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients
