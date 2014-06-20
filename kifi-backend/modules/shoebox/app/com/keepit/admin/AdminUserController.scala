@@ -837,6 +837,6 @@ class AdminUserController @Inject() (
       emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
       userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
     }
-    Ok("Done!")
+    Ok(JsString("Done!"))
   }
 }
