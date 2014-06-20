@@ -14,8 +14,11 @@ import com.keepit.model.URL
 import com.keepit.model.User
 import com.keepit.common.db.SequenceNumber
 
+
 @ImplementedBy(classOf[CortexKeepRepoImpl])
-trait CortexKeepRepo extends DbRepo[CortexKeep] with SeqNumberFunction[CortexKeep]
+trait CortexKeepRepo extends DbRepo[CortexKeep] with SeqNumberFunction[CortexKeep] {
+  def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep]
+}
 
 @Singleton
 class CortexKeepRepoImpl @Inject()(
@@ -44,4 +47,6 @@ class CortexKeepRepoImpl @Inject()(
   override def invalidateCache(keep: CortexKeep)(implicit session: RSession): Unit = {}
 
   override def deleteCache(uri: CortexKeep)(implicit session: RSession): Unit = {}
+
+  override def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep] = super.getBySequenceNumber(seq, limit)
 }

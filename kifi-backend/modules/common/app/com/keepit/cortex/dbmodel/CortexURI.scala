@@ -14,7 +14,7 @@ import com.keepit.common.time._
 
 
 case class CortexURI(
-  id: Option[Id[CortexURI]],
+  id: Option[Id[CortexURI]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   uriId: Id[NormalizedURI],

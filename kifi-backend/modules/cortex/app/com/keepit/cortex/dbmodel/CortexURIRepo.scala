@@ -7,11 +7,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.SequenceNumber
 
 
 @ImplementedBy(classOf[CortexURIRepoImpl])
 trait CortexURIRepo extends DbRepo[CortexURI] with SeqNumberFunction[CortexURI]{
-
+  def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI]
 }
 
 @Singleton
@@ -39,5 +40,6 @@ class CortexURIRepoImpl @Inject()(
 
   override def deleteCache(uri: CortexURI)(implicit session: RSession): Unit = {}
 
+  override def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI] = super.getBySequenceNumber(seq, limit)
 }
 

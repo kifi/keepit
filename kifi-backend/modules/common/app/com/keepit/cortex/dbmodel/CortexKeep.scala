@@ -10,7 +10,7 @@ import play.api.libs.json._
 
 
 case class CortexKeep(
-  id: Option[Id[CortexKeep]],
+  id: Option[Id[CortexKeep]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   keepId: Id[Keep],
