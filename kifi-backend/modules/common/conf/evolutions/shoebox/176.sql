@@ -2,8 +2,8 @@
 
 # --- !Ups
 
-ALTER TABLE user
-  DROP FOREIGN KEY user_f_email
+# --- ALTER TABLE user
+# ---  DROP FOREIGN KEY user_f_email
 
 ALTER TABLE user
 	DROP COLUMN primary_email_id;
