@@ -1,7 +1,6 @@
-package com.keepit.abook.model
+package com.keepit.model
 
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.User
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
