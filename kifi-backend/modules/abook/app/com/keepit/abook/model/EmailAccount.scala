@@ -1,6 +1,6 @@
 package com.keepit.abook.model
 
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -43,11 +43,11 @@ class EmailAccountRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = EmailAccountTable
-  class EmailAccountTable(tag: Tag) extends RepoTable[EmailAccount](db, tag, "email_account") with SeqNumberColumn[EmailAccountTable] {
+  class EmailAccountTable(tag: Tag) extends RepoTable[EmailAccount](db, tag, "email_account") with SeqNumberColumn[EmailAccount] {
     def address = column[EmailAddress]("address", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def verified = column[Boolean]("verified", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, address, userId.?, verified.?, seq) <> ((EmailAccount.apply _).tupled, EmailAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, address, userId.?, verified, seq) <> ((EmailAccount.apply _).tupled, EmailAccount.unapply _)
   }
 
   def table(tag: Tag) = new EmailAccountTable(tag)
