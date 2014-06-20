@@ -830,4 +830,13 @@ class AdminUserController @Inject() (
     }
     Ok(json)
   }}
+
+  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminHtmlAction.authenticated { implicit request =>
+    db.readWrite { implicit session =>
+      val userEmail = emailRepo.get(id)
+      emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
+      userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
+    }
+    Ok("Done!")
+  }
 }
