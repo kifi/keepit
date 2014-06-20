@@ -70,7 +70,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           noun: 'recipe',
           tag: 'Recipe',
           query: 'watermelon',
-          matches: {title: [[8,10]], url: [[42,10]]}
+          matches: {title: [[8,10]], url: [[49,10]]}
         }, {
           url: 'https://www.etsy.com/listing/163215077/large-leather-tote-everyday-tote-bag',
           title: ['Large','Leather','Tote'],
@@ -79,7 +79,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           noun: 'tote',
           tag: 'Shopping Wishlist',
           query: 'tote',
-          matches: {title: [[14,4]], url: [[45,4],[59,4]]}
+          matches: {title: [[14,4]], url: [[53,4],[67,4]]}
         }, {
           url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
           title: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
@@ -88,7 +88,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           noun: 'article',
           tag: 'Read Later',
           query: 'love+life',
-          matches: {title: [[27,4]], url: [[67,4]]}
+          matches: {title: [[27,4]], url: [[74,4],[85,5]]}
         }, {
           url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
           title: ['Steve Jobs:','How to Live','Before You Die'],
@@ -97,7 +97,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           noun: 'video',
           tag: 'Inspiration',
           query: 'steve+jobs',
-          matches: {title: [[0,5],[6,4]], url: [[18,5],[24,4]]}
+          matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]}
         }]
       }, '*');
     };
