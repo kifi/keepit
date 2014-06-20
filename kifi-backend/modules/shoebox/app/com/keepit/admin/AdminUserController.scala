@@ -831,7 +831,7 @@ class AdminUserController @Inject() (
     Ok(json)
   }}
 
-  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminHtmlAction.authenticated { implicit request =>
+  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminJsonAction.authenticated { request =>
     log.info(s"About to deactivate UserEmailAddress $id")
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
