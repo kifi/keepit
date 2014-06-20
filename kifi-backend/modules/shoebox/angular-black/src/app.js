@@ -51,7 +51,8 @@ angular.module('kifi', [
   'angulartics',
   'kifi.mixpanel',
   'kifi.alertBanner',
-  'kifi.minVersion'
+  'kifi.minVersion',
+  'kifi.searchService'
 ])
 
 // fix for when ng-view is inside of ng-include:
