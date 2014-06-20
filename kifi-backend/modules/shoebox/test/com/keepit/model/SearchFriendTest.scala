@@ -49,6 +49,7 @@ class SearchFriendTest extends Specification with ShoeboxTestInjector {
           userConnRepo.unfriendConnections(users(0), Set(users(1)))
           userConnRepo.getUserConnectionChanged(SequenceNumber(3), fetchSize = 10).map{_.seq.value}.toSet === Set(4)
           userConnRepo.deactivateAllConnections(users(0))
+          userConnRepo.assignSequenceNumbers(1000)
           userConnRepo.getUserConnectionChanged(SequenceNumber(4), fetchSize = 10).map{_.seq.value}.toSet === Set(5, 6, 7)
         }
       }

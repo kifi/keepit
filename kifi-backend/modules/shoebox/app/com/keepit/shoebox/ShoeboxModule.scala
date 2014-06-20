@@ -65,7 +65,5 @@ abstract class ShoeboxModule(
 
   val repoChangeListenerModule = ShoeboxRepoChangeListenerModule()
 
-  val dbSequencingModule = ShoeboxDbSequencingModule()
-
   val mailerModule = PlayMailerModule()
 }
