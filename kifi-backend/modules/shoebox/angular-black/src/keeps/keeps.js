@@ -71,6 +71,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             }
             scope.editMode.enabled = true;
             scope.toggleSelect(keep);
+          } else if (event.target.href) {
+            keepService.trackSearchResultClick(keep);
           }
         };
 
