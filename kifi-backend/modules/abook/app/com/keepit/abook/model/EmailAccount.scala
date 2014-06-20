@@ -32,6 +32,7 @@ object EmailAccountStates extends States[EmailAccount]
 @ImplementedBy(classOf[EmailAccountRepoImpl])
 trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount] {
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount]
+  def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount
 }
 
 @Singleton
@@ -65,5 +66,12 @@ class EmailAccountRepoImpl @Inject() (
 
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount] = {
     (for(row <- rows if row.address === address) yield row).firstOption
+  }
+
+  def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount = {
+    getByAddress(address) match {
+      case None => save(EmailAccount(address = address))
+      case Some(emailAccount) => emailAccount
+    }
   }
 }
