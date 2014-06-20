@@ -5,6 +5,6 @@
     </a>
   </div>
   <div class="kf-footer-friends-links">
-    <a href="/friends">{{friendCount}} friends</a> <span class="kf-friends-links-divider">|</span> <a href="/invite">Invite more friends...</a>
+    <a ng-href="{{friendsLink()}}"><ng-pluralize count="friendCount()" when="{'one': '1 friend', 'other': '{} friends'}"></ng-pluralize></a> <span class="kf-friends-links-divider">|</span> <a href="/invite">Invite more friends...</a>
   </div>
 </div>

@@ -49,7 +49,7 @@ angular.module('kifi.keepService', [
       hit.keepers = hit.users;
       hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
       hit.summary = hit.uriSummary;
-      buildKeep(hit, false);
+      buildKeep(hit, hit.isMyBookmark);
     }
 
     function keepIdx(keep) {
@@ -104,7 +104,7 @@ angular.module('kifi.keepService', [
 
     function buildKeep(keep, isMyBookmark) {
       keep.isMyBookmark = isMyBookmark;
-      if (keep.isMyBookmark === undefined) {
+      if (typeof keep.isMyBookmark !== 'boolean') {
         keep.isMyBookmark = true;
       }
       keep.tagList = keep.tagList || [];
