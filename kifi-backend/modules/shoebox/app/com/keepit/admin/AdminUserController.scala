@@ -839,6 +839,6 @@ class AdminUserController @Inject() (
       emailRepo.save(userEmail.withState(UserEmailAddressStates.INACTIVE))
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
-    Ok(Json.toJson(inactiveEmail))
+    Ok(JsString(inactiveEmail.toString))
   }
 }
