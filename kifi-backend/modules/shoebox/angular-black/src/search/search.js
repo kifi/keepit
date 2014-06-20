@@ -225,5 +225,9 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
     };
 
     $scope.getNextKeeps();
+
+    $scope.allowEdit = function () {
+      return !$scope.isFilterSelected('f') && !$scope.isFilterSelected('a');
+    };
   }
 ]);
