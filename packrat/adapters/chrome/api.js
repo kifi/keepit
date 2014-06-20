@@ -203,6 +203,12 @@ var api = (function createApi() {
         dispatch.call(api.tabs.on.unload, page);
       }
     }
+    var port = ports[tabId];
+    if (port) {
+      log('#0a0', '[onRemoved] %i disconnecting', tabId);
+      port.disconnect();  // Chrome is sometimes slow to disconnect port
+      ports[tabId] = null;
+    }
   }
 
   chrome.windows.onCreated.addListener(errors.wrap(function (win) {
@@ -267,7 +273,7 @@ var api = (function createApi() {
   }));
 
   var ports = {}, portHandlers = {
-    "api:handling": function(data, _, page, port) {
+    'api:handling': function (data, _, page, port) {
       for (var i = 0; i < data.length; i++) {
         port.handling[data[i]] = true;
       }
@@ -276,7 +282,7 @@ var api = (function createApi() {
         for (var i = 0; i < toEmit.length;) {
           var m = toEmit[i];
           if (port.handling[m[0]]) {
-            log("#0c0", "[api:handling:emit] %i %s %o", page.id, m[0], m[1] != null ? m[1] : "");
+            log('#0c0', '[api:handling:emit] %i %s %o', page.id, m[0], m[1] != null ? m[1] : '');
             port.postMessage(m);
             toEmit.splice(i, 1);
           } else {
@@ -288,7 +294,7 @@ var api = (function createApi() {
         }
       }
     },
-    "api:iframe": function(o, _, page) {
+    'api:iframe': function (o, _, page) {
       var toUrl = chrome.runtime.getURL;
       chrome.tabs.executeScript(page.id, {
         allFrames: true,
@@ -304,7 +310,7 @@ var api = (function createApi() {
         runAt: 'document_end'
       });
     },
-    "api:require": function(data, respond, page) {
+    'api:require': function (data, respond, page) {
       injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
   chrome.runtime.onConnect.addListener(errors.wrap(function (port) {
@@ -319,7 +325,7 @@ var api = (function createApi() {
       ports[tabId] = port;
       port.handling = {};
       port.onMessage.addListener(onPortMessage.bind(null, tabId, port));
-      port.onDisconnect.addListener(onPortDisconnect.bind(null, tabId));
+      port.onDisconnect.addListener(onPortDisconnect.bind(null, tabId, port));
     }
   }));
   var onPortMessage = errors.wrap(function (tabId, port, msg) {
@@ -333,10 +339,12 @@ var api = (function createApi() {
       log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler);
     }
   });
-  var onPortDisconnect = errors.wrap(function (tabId) {
+  var onPortDisconnect = errors.wrap(function (tabId, port) {
     log('#0a0', '[onDisconnect]', tabId);
-    delete ports[tabId].handling;
-    delete ports[tabId];
+    delete port.handling;
+    if (ports[tabId] === port) {
+      delete ports[tabId];
+    }
   });
 
   function respondToTab(port, callbackId, response) {
@@ -639,7 +647,7 @@ var api = (function createApi() {
         if (page && (page === tab || page.url.match(hostRe)[0] == tab.url.match(hostRe)[0])) {
           var port = ports[tab.id];
           if (port && port.handling[type]) {
-            log("#0c0", "[api.tabs.emit] %i %s %O", tab.id, type, data);
+            log('#0c0', '[api.tabs.emit] %i %s %O', tab.id, type, data);
             port.postMessage([type, data]);
           } else if (opts && opts.queue) {
             var toEmit = page.toEmit;

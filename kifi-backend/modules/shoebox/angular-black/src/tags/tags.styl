@@ -11,13 +11,19 @@ highlightColor = #eeeeee
   &.renaming
     background-color: #f6f6f6
 
-  .hover
+  .kf-tag-inner-container.hover
   &.kf-dragged
     .kf-tag-tool
       display: block
 
-  .hover:not(.kf-dragged)
+
+  .kf-tag-inner-container.hover
     background-color: highlightColor
+
+  &.kf-dragged
+    .kf-tag-inner-container.hover
+      background-color: transparent
+    
 
   .kf-dropdown-menu
     right: 0
@@ -112,10 +118,16 @@ highlightColor = #eeeeee
   .kf-sidebar-tag-list
     background-color: clearYellowColor
 
-.kf-sidebar-tag-list:not(:hover) .highlight
 .kf-tag-new-inner:hover
+  background-color: highlightColor
+
+.kf-sidebar-tag-list .highlight .kf-tag-inner-container
 .kf-tag-new-inner.highlight
   background-color: highlightColor
+
+.kf-sidebar-tag-list .highlight .kf-tag-inner-container.hover
+.kf-tag-new-inner.highlight:hover
+  background-color: #e9e9e9
 
 .kf-tag-new-inner
   padding: 3px 20px 2px 20px

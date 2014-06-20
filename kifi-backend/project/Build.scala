@@ -263,7 +263,7 @@ object ApplicationBuild extends Build {
 
   lazy val cortex = play.Project("cortex", appVersion, cortexDependencies, path=file("modules/cortex")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-cortex.conf"): _*
-  ).dependsOn(common % "test->test;compile->compile")
+  ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val graph = play.Project("graph", appVersion, graphDependencies, path=file("modules/graph")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*

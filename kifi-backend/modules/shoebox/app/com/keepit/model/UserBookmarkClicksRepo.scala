@@ -4,6 +4,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db._
 import com.keepit.common.time._
+import scala.slick.jdbc.StaticQuery.interpolation
 import com.google.inject.{Singleton, ImplementedBy, Inject}
 
 
@@ -12,6 +13,7 @@ trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks]{
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks]
   def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks
   def getClickCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
+  def getReKeepCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
 }
 
 @Singleton
@@ -55,5 +57,9 @@ class UserBookmarkClicksRepoImpl @Inject()(
     val uniqueKeepsClicked = (for (row <- rows if row.userId === userId && row.otherClicks > 0) yield row).length.run
     val totalClicks = (for (row <- rows if row.userId === userId) yield row.otherClicks).sum.run.getOrElse(0)
     (uniqueKeepsClicked,totalClicks)
+  }
+
+  def getReKeepCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
+    sql"select sum(rekeep_count), sum(rekeep_total_count) from user_bookmark_clicks where user_id=${userId}".as[(Int, Int)].first
   }
 }

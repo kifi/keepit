@@ -48,6 +48,8 @@ angular.module('kifi.keepService', [
 
       hit.keepers = hit.users;
       hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+      hit.summary = hit.uriSummary;
+      buildKeep(hit, hit.isMyBookmark);
     }
 
     function keepIdx(keep) {
@@ -100,8 +102,11 @@ angular.module('kifi.keepService', [
       return deferred.promise;
     }
 
-    function buildKeep(keep) {
-      keep.isMyBookmark = true;
+    function buildKeep(keep, isMyBookmark) {
+      keep.isMyBookmark = isMyBookmark;
+      if (typeof keep.isMyBookmark !== 'boolean') {
+        keep.isMyBookmark = true;
+      }
       keep.tagList = keep.tagList || [];
       keep.collections = keep.collections || [];
 
@@ -556,7 +561,8 @@ angular.module('kifi.keepService', [
               q: query || void 0,
               f: filter || 'm',
               maxHits: 30,
-              context: context || void 0
+              context: context || void 0,
+              withUriSummary: true
             }
           };
 

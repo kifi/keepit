@@ -29,6 +29,7 @@ import com.keepit.common.performance._
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
+import com.keepit.normalizer.NormalizedURIInterner
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -134,6 +135,7 @@ class KeepsCommander @Inject() (
     airbrake: AirbrakeNotifier,
     uriSummaryCommander: URISummaryCommander,
     collectionCommander: CollectionCommander,
+    normalizedURIInterner: NormalizedURIInterner,
     clock: Clock
  ) extends Logging {
 
@@ -218,10 +220,9 @@ class KeepsCommander @Inject() (
 
     val colls = db.readOnly { implicit s =>
       keeps.map{ keep =>
-        val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-        collectionCommander.getBasicCollections(collIds)
+        keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       }
-    }
+    }.map(collectionCommander.getBasicCollections)
 
     for {
       sharingInfos <- sharingInfosFuture
@@ -302,7 +303,7 @@ class KeepsCommander @Inject() (
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
     val deactivatedBookmarks = db.readWrite { implicit s =>
       val bms = keepInfos.map { ki =>
-        uriRepo.getByUri(ki.url).flatMap { uri =>
+        normalizedURIInterner.getByUri(ki.url).flatMap { uri =>
           val ko = keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
             val saved = keepRepo.save(b withActive false)
             log.info(s"[unkeepMulti] DEACTIVATE $saved (uri=$uri, ki=$ki)")
@@ -423,7 +424,7 @@ class KeepsCommander @Inject() (
   def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit = {
     db.readWrite { implicit s =>
       for {
-        uri <- uriRepo.getByUri(url)
+        uri <- normalizedURIInterner.getByUri(url)
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId)
         collection <- collectionRepo.getOpt(id)
       } {
@@ -438,7 +439,7 @@ class KeepsCommander @Inject() (
   def clearTags(url: String, userId: Id[User]): Unit = {
     db.readWrite { implicit s =>
       for {
-        uri <- uriRepo.getByUri(url).toSeq
+        uri <- normalizedURIInterner.getByUri(url).toSeq
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
         ktc <- keepToCollectionRepo.getByKeep(keep.id.get)
       } {
@@ -452,7 +453,7 @@ class KeepsCommander @Inject() (
   def tagsByUrl(url: String, userId: Id[User]): Seq[Collection] = {
     db.readOnly { implicit s =>
       for {
-        uri <- uriRepo.getByUri(url).toSeq
+        uri <- normalizedURIInterner.getByUri(url).toSeq
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
         collectionId <- keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       } yield {

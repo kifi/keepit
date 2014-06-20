@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import com.keepit.common.store.ImageSize
 import com.keepit.commanders.CollectionSaveFail
 import scala.Some
+import com.keepit.normalizer.NormalizedURIInterner
 
 class MobileBookmarksController @Inject() (
   db: Database,
@@ -27,18 +28,19 @@ class MobileBookmarksController @Inject() (
   bookmarksCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
-    // todo(ray/eduardo): mobile helprank UI
-    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], None, count, request.userId, withPageInfo) map { res =>
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId, withPageInfo) map { res =>
+      val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
       Ok(Json.obj(
         "collection" -> res._1,
         "before" -> before,
         "after" -> after,
         "keeps" -> res._2.map(KeepInfo.fromFullKeepInfo(_, true))
-      ))
+      ) ++ helprank)
     }
   }
 
@@ -169,7 +171,7 @@ class MobileBookmarksController @Inject() (
           minWidth <- (request.body \ "minWidth").asOpt[Int]
           minHeight <- (request.body \ "minHeight").asOpt[Int]
         } yield ImageSize(minWidth, minHeight))
-        val uriOpt = db.readOnly{ implicit ro => uriRepo.getByUri(url) }
+        val uriOpt = db.readOnly{ implicit ro => normalizedURIInterner.getByUri(url) }
         uriOpt match {
           case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
           case Some(uri) => {
@@ -193,7 +195,7 @@ class MobileBookmarksController @Inject() (
         val uriOpts = db.readOnly { implicit ro =>
           urls flatMap { urlReq =>
             urlReq match {
-              case JsString(url) => Some((url, uriRepo.getByUri(url), None))
+              case JsString(url) => Some((url, normalizedURIInterner.getByUri(url), None))
               case _ => {
                 val urlOpt = (urlReq \ "url").asOpt[String]
                 urlOpt map { url =>
@@ -201,7 +203,7 @@ class MobileBookmarksController @Inject() (
                     minWidth <- (urlReq \ "minWidth").asOpt[Int]
                     minHeight <- (urlReq \ "minHeight").asOpt[Int]
                   } yield ImageSize(minWidth, minHeight)
-                  (url, uriRepo.getByUri(url), minSizeOpt)
+                  (url, normalizedURIInterner.getByUri(url), minSizeOpt)
                 }
               }
             }

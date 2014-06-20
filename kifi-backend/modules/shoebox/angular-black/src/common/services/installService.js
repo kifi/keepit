@@ -56,24 +56,13 @@ angular.module('kifi.installService', [])
       installed: false,
       error: false,
       installedVersion: installedVersion,
-      hasMinimumVersion: function (minVersion) {
+      hasMinimumVersion: function (minVersion, minCanaryVersion) {
         var version = installedVersion();
-        if (!version) {
-          return false;
+        if (minCanaryVersion && version && version.split('.').length === 4) {
+          return version >= minCanaryVersion;
+        } else {
+          return version >= minVersion;
         }
-        function parseVersion(version) {
-          return version.split('.').map(function (num) {
-            return parseInt(num, 10);
-          });
-        }
-        var nums = parseVersion(version);
-        var minNums = parseVersion(minVersion);
-        for (var i = 0; i < minNums.length; i++) {
-          if (i >= nums.length || nums[i] < minNums[i]) {
-            return false;
-          }
-        }
-        return true;
       }
     };
 

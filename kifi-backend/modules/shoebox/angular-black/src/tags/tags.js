@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', 'jun.smartScroll'])
+angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
 
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',

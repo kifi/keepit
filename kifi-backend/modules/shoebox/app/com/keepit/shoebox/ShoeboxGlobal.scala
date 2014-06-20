@@ -14,6 +14,8 @@ import com.keepit.integrity.{UriIntegrityPlugin, DataIntegrityPlugin}
 import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.common.concurrent.{ForkJoinExecContextPlugin}
+import com.keepit.signal.ReKeepStatsUpdaterPlugin
+import com.keepit.model.UrlPatternRuleRepo
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -45,6 +47,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[ReKeepStatsUpdaterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded
   }
 }

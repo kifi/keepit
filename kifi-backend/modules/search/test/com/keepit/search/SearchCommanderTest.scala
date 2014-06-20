@@ -56,7 +56,8 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
             start = None,
             end = None,
             tz = None,
-            coll = None)
+            coll = None,
+            withUriSummary = false)
 
         res.myTotal === 1
         res.friendsTotal === 1

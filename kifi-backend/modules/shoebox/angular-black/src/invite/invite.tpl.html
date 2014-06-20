@@ -13,7 +13,7 @@
 
       <div kf-networks-need-attention></div>
 
-      <div class="invite-list-header">Recommended people to invite</div>
+      <div class="invite-list-header" ng-show="whoToInvite.length > 0">Recommended people to invite</div>
 
       <div class="kf-connection-card-container">
         <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>

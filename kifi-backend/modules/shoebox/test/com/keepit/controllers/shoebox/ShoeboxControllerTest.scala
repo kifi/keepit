@@ -14,7 +14,7 @@ import play.api.libs.json.{Json, JsNumber, JsArray}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.shoebox.{ShoeboxSlickModule, FakeShoeboxServiceModule}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
@@ -23,7 +23,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{TestScrapeSchedulerConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -31,6 +31,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val shoeboxControllerTestModules = Seq(
+    ShoeboxSlickModule(),
     FakeShoeboxServiceModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
@@ -46,7 +47,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeScrapeSchedulerModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    TestScrapeSchedulerConfigModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

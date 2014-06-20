@@ -53,7 +53,7 @@ class ScraperURISummaryCommanderImpl @Inject()(
         val (url, size) = result
         val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
 
-        callback.saveImageInfo(imageInfoWithUrl)
+        callback.syncSaveImageInfo(imageInfoWithUrl)
         Some(imageInfoWithUrl)
       }
       case Failure(ex) => {
@@ -86,7 +86,7 @@ class ScraperURISummaryCommanderImpl @Inject()(
         embedlyInfo <- embedlyInfoOpt
       } yield {
 
-        callback.savePageInfo(embedlyInfo.toPageInfo(nUriId))
+        callback.syncSavePageInfo(embedlyInfo.toPageInfo(nUriId))
 
         if (descriptionOnly) {
           Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))

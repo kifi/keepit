@@ -123,9 +123,9 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          uriRepo.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
-          uriRepo.getByUri("http://www.keepit.com/short#lulu").get.url === "http://www.keepit.com/short"
-          uriRepo.getByUri("http://www.keepit.com/none/") === None
+          normalizedURIInterner.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
+          normalizedURIInterner.getByUri("http://www.keepit.com/short#lulu").get.url === "http://www.keepit.com/short"
+          normalizedURIInterner.getByUri("http://www.keepit.com/none/") === None
         }
       }
     }
@@ -136,7 +136,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          uriRepo.getByUri("http://www.keepit.com/med") === None
+          normalizedURIInterner.getByUri("http://www.keepit.com/med") === None
         }
       }
     }
@@ -147,7 +147,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           val all = uriRepo.all
           all.size === 2
           println(all.mkString("\n"))
-          uriRepo.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
+          normalizedURIInterner.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
         }
       }
     }
@@ -155,7 +155,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          uriRepo.getByUri("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
+          normalizedURIInterner.getByUri("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
         }
       }
     }
@@ -205,7 +205,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite { implicit s =>
           uriRepo.count === 1
-          uriRepo.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
+          normalizedURIInterner.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
         }
         db.readWrite { implicit s =>
           normalizedURIInterner.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
@@ -220,7 +220,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val blowup = db.readWrite { implicit s =>
           uriRepo.count === 0
-          uriRepo.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
+          normalizedURIInterner.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
           normalizedURIInterner.internByUri("http://www.arte.tv/fr/3482046.html")
         }
         db.readOnly { implicit s =>

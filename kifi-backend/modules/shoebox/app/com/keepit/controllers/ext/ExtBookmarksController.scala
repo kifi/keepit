@@ -19,6 +19,7 @@ import play.api.libs.json._
 import scala.Some
 import play.api.libs.json.JsNumber
 import scala.util.{Failure, Success}
+import com.keepit.normalizer.NormalizedURIInterner
 
 private case class SendableBookmark(
   id: ExternalId[Keep],
@@ -54,6 +55,7 @@ class ExtBookmarksController @Inject() (
   rawBookmarkFactory: RawBookmarkFactory,
   rawKeepFactory: RawKeepFactory,
   searchClient: SearchServiceClient,
+  normalizedURIInterner: NormalizedURIInterner,
   clock: Clock)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController{
 
@@ -107,7 +109,7 @@ class ExtBookmarksController @Inject() (
   def remove() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
     db.readOnly { implicit s =>
-      uriRepo.getByUri(url).flatMap { uri =>
+      normalizedURIInterner.getByUri(url).flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     } map { bookmark =>
@@ -146,7 +148,7 @@ class ExtBookmarksController @Inject() (
     val title = (json \ "title").asOpt[String]
 
     val bookmarkOpt = db.readOnly { implicit s =>
-      uriRepo.getByUri(url).flatMap { uri =>
+      normalizedURIInterner.getByUri(url).flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     }

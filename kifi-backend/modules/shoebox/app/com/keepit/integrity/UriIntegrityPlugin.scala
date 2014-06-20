@@ -51,7 +51,7 @@ class UriIntegrityActor @Inject()(
 
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
       val newUri = urlToUriMap.getOrElse(oldBm.url, {
-        val newUri = uriRepo.getByUri(oldBm.url).getOrElse(normalizedURIInterner.internByUri(oldBm.url))
+        val newUri = normalizedURIInterner.getByUri(oldBm.url).getOrElse(normalizedURIInterner.internByUri(oldBm.url))
         urlToUriMap += (oldBm.url -> newUri)
         newUri
       })
@@ -295,7 +295,7 @@ class UriIntegrityActor @Inject()(
       val keeps = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
       if (keeps.nonEmpty) {
         db.readWriteBatch(keeps, 3){ (session, keep) =>
-          uriRepo.getByUri(keep.url)(session) match {
+          normalizedURIInterner.getByUri(keep.url)(session) match {
             case Some(uri) =>
               if (keep.uriId != uri.id.get) {
                 log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${uri.id.get}]")

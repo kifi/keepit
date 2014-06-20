@@ -8,7 +8,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.search.index.IndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
-import com.keepit.search.index.IndexManager
+import scala.concurrent.duration._
 import com.keepit.model.Phrase
 
 trait PhraseIndexerPlugin extends IndexerPlugin[Phrase, PhraseIndexer]
@@ -18,7 +18,11 @@ class PhraseIndexerPluginImpl @Inject() (
   indexer: PhraseIndexer,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[Phrase, PhraseIndexer, PhraseIndexerActor](indexer, actor, serviceDiscovery) with PhraseIndexerPlugin
+) extends IndexerPluginImpl[Phrase, PhraseIndexer, PhraseIndexerActor](indexer, actor, serviceDiscovery) with PhraseIndexerPlugin {
+
+  override val indexingInterval = 10 minutes
+}
+
 
 class PhraseIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,

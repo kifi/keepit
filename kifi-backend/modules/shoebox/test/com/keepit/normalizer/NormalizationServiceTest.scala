@@ -5,7 +5,7 @@ import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.scraper.{Signature, BasicArticle, FakeScrapeSchedulerModule}
-import com.keepit.model.{UrlPatternRule, NormalizedURIStates, NormalizedURI, Normalization}
+import com.keepit.model._
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import com.keepit.akka.TestKitScope
@@ -16,6 +16,14 @@ import com.google.inject.Injector
 import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.shoebox.{ShoeboxSlickModule, FakeKeepImportsModule}
+import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.inject.TestFortyTwoModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import scala.Some
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.shoebox.FakeKeepImportsModule
 
 class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
@@ -29,6 +37,9 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
+    db.readWrite { implicit session =>
+      inject[UrlPatternRuleRepo].loadCache()
+    }
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
     val id = Await.result(normalizationService.update(NormalizationReference(uri), candidates: _*), 1 seconds)
     uriIntegrityPlugin.batchURIMigration()
@@ -43,7 +54,12 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
     StandaloneTestActorSystemModule(),
     FakeElizaServiceClientModule(),
     FakeKeepImportsModule(),
-    new ScalaModule { def configure() { bind[NormalizationService].to[NormalizationServiceImpl] }})
+    new ScalaModule {
+      def configure() {
+        bind[NormalizationService].to[NormalizationServiceImpl]
+        bind[UrlPatternRuleRepo].to[UrlPatternRuleRepoImpl]
+      }
+    })
 
   "NormalizationService" should {
 
@@ -74,7 +90,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
         val latestHttpUri = db.readOnly { implicit session => uriRepo.get(httpUri.id.get) }
         latestHttpUri.redirect === Some(latestHttpsUri.id.get)
         latestHttpUri.state === NormalizedURIStates.REDIRECTED
-        db.readOnly { implicit session => uriRepo.getByUri("http://vimeo.com/48578814") } === Some(latestHttpsUri)
+        db.readOnly { implicit session => normalizedURIInterner.getByUri("http://vimeo.com/48578814") } === Some(latestHttpsUri)
       }
 
       "redirect a new http://www url to an existing https:// url" in {
@@ -86,7 +102,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
         latestHttpWWWUri.normalization === Some(Normalization.HTTPWWW)
         latestHttpWWWUri.redirect === Some(httpsUri.id.get)
         latestHttpWWWUri.state === NormalizedURIStates.REDIRECTED
-        db.readOnly { implicit session => uriRepo.getByUri("http://www.vimeo.com/48578814") }.map(_.id) === Some(httpsUri.id)
+        db.readOnly { implicit session => normalizedURIInterner.getByUri("http://www.vimeo.com/48578814") }.map(_.id) === Some(httpsUri.id)
       }
 
       "upgrade an existing https:// url to a better normalization" in {

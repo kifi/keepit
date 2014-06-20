@@ -1,31 +1,35 @@
 package com.keepit.normalizer
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.{Provider, Singleton, Inject}
+import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.common.db.slick.DBSession.RWSession
-import scala.util.{Failure, Success}
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import scala.util._
 import com.keepit.queue.NormalizationUpdateTask
 import java.sql.SQLException
-import com.keepit.common.logging.Logging
-import com.keepit.model.NormalizedURIUrlHashKey
-import scala.util.Failure
-import scala.Some
-import scala.util.Success
+import com.keepit.common.logging.{Timer, Logging}
 import org.feijoas.mango.common.cache.CacheBuilder
 import java.util.concurrent.TimeUnit
 import com.kifi.franz.SQSQueue
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import scala.Left
+import com.keepit.model.NormalizedURIUrlHashKey
+import scala.util.Failure
+import scala.Right
+import scala.Some
+import scala.util.Success
+import scala.Either
 
 @Singleton
 class NormalizedURIInterner @Inject() (
     db: Database,
     normalizedURIRepo: NormalizedURIRepo,
     urlHashCache: NormalizedURIUrlHashCache,
-    updateQueue:SQSQueue[NormalizationUpdateTask],
+    updateQueue: SQSQueue[NormalizationUpdateTask],
     urlRepo: URLRepo,
     scrapeRepo: ScrapeInfoRepo,
+    normalizationService: NormalizationService,
     airbrake: AirbrakeNotifier) extends Logging {
 
   /**
@@ -48,7 +52,7 @@ class NormalizedURIInterner @Inject() (
   def internByUri(url: String, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = urlLocks.get(url).synchronized {
     log.debug(s"[internByUri($url,candidates:(sz=${candidates.length})${candidates.mkString(",")})]")
     statsd.time(key = "normalizedURIRepo.internByUri", ONE_IN_TEN) { timer =>
-      val resUri = normalizedURIRepo.getByUriOrPrenormalize(url) match {
+      val resUri = getByUriOrPrenormalize(url) match {
         case Success(Left(uri)) =>
           if (candidates.nonEmpty) {
             session.onTransactionSuccess {
@@ -123,4 +127,37 @@ class NormalizedURIInterner @Inject() (
       resUri
     }
   }
+
+  def getByUriOrPrenormalize(url: String)(implicit session: RSession, timer: Timer = new Timer()): Try[Either[NormalizedURI, String]] = {
+    prenormalize(url).map { prenormalizedUrl =>
+      log.debug(s"using prenormalizedUrl $prenormalizedUrl for url $url")
+      val normalizedUri = normalizedURIRepo.getByNormalizedUrl(prenormalizedUrl) map {
+        case uri if uri.state == NormalizedURIStates.REDIRECTED =>
+          val nuri = normalizedURIRepo.get(uri.redirect.get)
+          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.redirected", timer, ALWAYS)
+          log.info(s"following a redirection path for $url on uri $nuri")
+          nuri
+        case uri =>
+          statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.not_redirected", timer, ALWAYS)
+          uri
+      }
+      log.debug(s"[getByUriOrPrenormalize($url)] located normalized uri $normalizedUri for prenormalizedUrl $prenormalizedUrl")
+      normalizedUri.map(Left.apply).getOrElse(Right(prenormalizedUrl))
+    }
+  }
+
+  def normalize(uriString: String)(implicit session: RSession): Try[String] = statsd.time(key = "normalizedURIRepo.normalize", ALWAYS) { implicit timer =>
+    getByUri(uriString).map(uri => Success(uri.url)) getOrElse prenormalize(uriString)
+  }
+
+  private def prenormalize(uriString: String)(implicit timer: Timer): Try[String] = {
+    val prenormalized = normalizationService.prenormalize(uriString)
+    statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ALWAYS)
+    prenormalized
+  }
+
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    getByUriOrPrenormalize(url).map(_.left.toOption).toOption.flatten
+  }
+
 }

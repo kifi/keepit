@@ -67,7 +67,7 @@ trait SchedulerPlugin extends Plugin with Logging {
   def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
     val taskName = s"send message $message to actor $receiver on leader only"
     if(scheduling.enabled) {
-      log.info(s"Scheduling $taskName on leader only")
+      log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
         if (scheduling.enabledOnlyForLeader) {
           timing(s"executing scheduled task: $taskName") {
@@ -83,7 +83,7 @@ trait SchedulerPlugin extends Plugin with Logging {
   def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
     val taskName = s"send message $message to actor $receiver on all machines"
     if(scheduling.enabled) {
-      log.info(s"Scheduling $taskName on all machines")
+      log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
         timing(s"executing scheduled task: $taskName") {
           receiver ! message

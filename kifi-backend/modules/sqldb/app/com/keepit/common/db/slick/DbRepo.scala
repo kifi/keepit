@@ -207,6 +207,7 @@ trait SeqNumberFunction[M <: ModelWithSeqNumber[M]]{ self: Repo[M] =>
   def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M]
   def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M]
   def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int
+  def minDeferredSequenceNumber()(implicit session: RSession): Option[Long]
 }
 
 trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[M] { self: DbRepo[M] =>
@@ -258,6 +259,10 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
     if (totalUpdates != numIds) throw new IllegalStateException(s"total update counts did not match: total=$totalUpdates numIds=$numIds]")
 
     numIds
+  }
+
+  def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    throw new UnsupportedOperationException("deferred sequence number assignment is not supported")
   }
 }
 

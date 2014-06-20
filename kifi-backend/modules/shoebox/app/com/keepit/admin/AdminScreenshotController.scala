@@ -1,16 +1,13 @@
 package com.keepit.controllers.admin
 
-import play.api.Play.current
 import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model._
-import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration.Duration
+import scala.concurrent.Future
 import play.api.libs.json.{JsValue, JsArray, Json}
 import play.api.data._
 import play.api.data.Forms._
@@ -18,6 +15,7 @@ import views.html
 import scala.util.{Failure, Success, Try}
 import com.keepit.commanders.URISummaryCommander
 import com.keepit.scraper.ScraperServiceClient
+import com.keepit.normalizer.NormalizedURIInterner
 
 class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -28,6 +26,7 @@ class AdminScreenshotController @Inject() (
   keepRepo: KeepRepo,
   pageInfoRepo: PageInfoRepo,
   imageInfoRepo: ImageInfoRepo,
+  normalizedURIInterner: NormalizedURIInterner,
   uriRepo: NormalizedURIRepo)
   extends AdminController(actionAuthenticator) {
 
@@ -114,7 +113,7 @@ class AdminScreenshotController @Inject() (
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageInfo] body=${request.body} url=${urlOpt}")
     val resOpt = urlOpt map { url =>
-      val images = db.readOnly { implicit ro => uriRepo.getByUri(url) } match {
+      val images = db.readOnly { implicit ro => normalizedURIInterner.getByUri(url) } match {
         case Some(uri) =>
           scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
             infos.map { Json.toJson(_) }
@@ -132,7 +131,7 @@ class AdminScreenshotController @Inject() (
     urlsOpt match {
       case Some(urls) =>
         val uris = db.readOnly { implicit ro =>
-          urls.map(url => url -> uriRepo.getByUri(url))
+          urls.map(url => url -> normalizedURIInterner.getByUri(url))
         }
         val imgRes = uris map { case (url, uriOpt) =>
           uriOpt match {

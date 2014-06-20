@@ -69,7 +69,7 @@ class URISummaryCommander @Inject()(
     } getOrElse Future.successful(URISummary())
   }
 
-  private def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
+  def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
     val summary = getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
     if (!isCompleteSummary(summary, request)) {
       if (!request.silent) {
@@ -81,7 +81,7 @@ class URISummaryCommander @Inject()(
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
     if (request.silent)
-      db.readOnly { implicit session => normalizedUriRepo.getByUri(request.url) }
+      db.readOnly { implicit session => normalizedURIInterner.getByUri(request.url) }
     else
       db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }
