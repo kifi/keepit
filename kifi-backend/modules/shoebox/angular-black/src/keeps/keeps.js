@@ -38,8 +38,8 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 ])
 
 .directive('kfKeeps', [
-  'keepService', 'searchService', '$window', '$timeout',
-  function (keepService, searchService, $window, $timeout) {
+  'keepService', '$window', '$timeout',
+  function (keepService, $window, $timeout) {
 
     return {
       restrict: 'A',
@@ -71,8 +71,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
             }
             scope.editMode.enabled = true;
             scope.toggleSelect(keep);
-          } else if (event.target.href) {
-            searchService.trackSearchResultClick(keep);
           }
         };
 
