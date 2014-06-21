@@ -77,7 +77,7 @@ angular.module('kifi.search', [
           isMyBookmark: keep.isMyBookmark,
           isPrivate: keep.isPrivate,
           count: keeps.length,
-          keepers: keep.keepers,
+          keepers: keep.keepers.map(function(elem) {return elem.id; }),
           tags: keep.tags,
           title: keep.bookmark.title,
           titleMatches: (matches.title || []).length,
