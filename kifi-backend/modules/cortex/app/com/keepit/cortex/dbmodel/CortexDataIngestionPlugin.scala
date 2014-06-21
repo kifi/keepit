@@ -57,7 +57,6 @@ class CortexDataIngestionActor @Inject()(
 
   private val fetchSize = 500
   private val rng = new Random()
-  private val ONE_MIN = 60 seconds
   private def randomDelay = (5 + rng.nextInt(10)) seconds
 
   def receive = {
@@ -101,11 +100,12 @@ private[cortex] class CortexDataIngestionUpdater @Inject()(
 
   def updateKeepRepo(fetchSize: Int): Future[Int] = {
     val seq = db.readOnly{ implicit s => keepRepo.getMaxSeq}
+
     shoebox.getCortexKeeps(seq, fetchSize).map{ keeps =>
       db.readWrite { implicit s =>
         keeps.foreach{ keep =>
           keepRepo.getByKeepId(keep.keepId) match {
-            case None => keepRepo.save(_)
+            case None => keepRepo.save(keep)
             case Some(cortexKeep) => keepRepo.save(keep.copy(id = cortexKeep.id))
           }
         }
