@@ -74,9 +74,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
       case _ => invalidateCache(result)
     }
-    if (changeListener.isDefined) session.onTransactionSuccess{
-     if(newItem) changeListener.get(RepoEntryAdded(result))
-     else changeListener.get(RepoEntryUpdated(result))
+    changeListener.isDefined) session.onTransactionSuccess{
+      if(newItem) changeListener.get(RepoEntryAdded(result))
+      else changeListener.get(RepoEntryUpdated(result))
     }
     result
   } catch {
