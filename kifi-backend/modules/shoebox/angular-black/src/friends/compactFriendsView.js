@@ -34,7 +34,7 @@ angular.module('kifi.friends.compactFriendsView', [])
         } else {
           return '/invite';
         }
-      }
+      };
     }
   };
 }]);
