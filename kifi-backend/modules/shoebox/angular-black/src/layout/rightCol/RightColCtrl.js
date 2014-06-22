@@ -3,7 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService', '$location',
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
+  'installService', '$rootScope', '$analytics', 'friendService', '$location',
   function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService, $location) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
