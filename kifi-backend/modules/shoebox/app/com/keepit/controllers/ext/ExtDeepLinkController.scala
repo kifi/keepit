@@ -77,18 +77,19 @@ class ExtDeepLinkController @Inject() (
       val token = DeepLinkToken(tokenString)
       getDeepLinkAndUrl(token) map { case (deepLink, uri) =>
         val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
-        log.info(s"handling user ${request.userId} with iphone: $isIphone & app: $isKifiIphoneApp")
         if (isKifiIphoneApp) {
+          log.info(s"redirecting user ${request.userId} on iphone app")
           Redirect(uri.url)
         } else if (isIphone) {
+          log.info(s"user ${request.userId} on iphone")
           doHandleMobile(request, tokenString)
         } else {
           deepLink.recipientUserId match {
-            case Some(request.userId) =>
+            case None | Some(request.userId) =>
               log.info(s"sending user ${request.userId} to $uri")
               Ok(views.html.deeplink(uri.url, deepLink.deepLocator.value))
             case _ =>
-              log.info(s"sending unknown user to $uri with authenticated session")//is that possible ???
+              log.info(s"sending wrong user ${request.userId} to $uri")
               Redirect(uri.url)
           }
         }
@@ -99,13 +100,13 @@ class ExtDeepLinkController @Inject() (
       getDeepLinkAndUrl(token) map {
         case (deepLink, uri) =>
           val (isIphone, isKifiIphoneApp) = mobileCheck(request)
-          log.info(s"handling unknown user with iphone: $isIphone & app: $isKifiIphoneApp")
           if (isKifiIphoneApp) {
+            log.info(s"handling unknown user on iphone app")
             Redirect(uri.url)
           } else if (isIphone) {
             doHandleMobile(request, tokenString)
           } else {
-            log.info(s"sending unknown user directly to the url $uri")
+            log.info(s"sending unknown user to $uri")
             Redirect(uri.url)
           }
       } getOrElse NotFound
@@ -121,9 +122,10 @@ class ExtDeepLinkController @Inject() (
     val result: Option[SimpleResult] = getDeepLinkAndUrl(token) map {
       case (deepLink, uri) =>
         if (isKifiIphoneApp) {
+          log.info(s"handling request from iphone app")
           Redirect(uri.url)
         } else if (isIphone) {
-          log.info(s"sending user to $uri via iphone app page")
+          log.info(s"sending via iphone app page to $uri")
           Ok(views.html.iphoneDeeplink(uri.url, deepLink.deepLocator.value))
         } else throw new IllegalStateException("not mobile!")
     }

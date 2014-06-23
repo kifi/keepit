@@ -1,35 +1,27 @@
-# ABOOK
+# SHOEBOX
 
 # --- !Ups
 
+
+alter table user_connection modify seq bigint(20);
+
 -- MySQL:
--- CREATE TABLE email_account_sequence (id INT NOT NULL);
--- INSERT INTO email_account_sequence VALUES (0);
--- H2:
-CREATE SEQUENCE email_account_sequence;
+-- alter table bookmark_sequence modify id bigint(20);
+-- alter table changed_uri_sequence modify id bigint(20);
+-- alter table collection_sequence modify id bigint(20);
+-- alter table email_address_sequence modify id bigint(20);
+-- alter table image_info_sequence modify id bigint(20);
+-- alter table invitation_sequence modify id bigint(20);
+-- alter table normalized_uri_sequence modify id bigint(20);
+-- alter table page_info_sequence modify id bigint(20);
+-- alter table phrase_sequence modify id bigint(20);
+-- alter table renormalized_url_sequence modify id bigint(20);
+-- alter table search_friend_sequence modify id bigint(20);
+-- alter table social_connection_sequence modify id bigint(20);
+-- alter table social_user_info_sequence modify id bigint(20);
+-- alter table user_connection_sequence modify id bigint(20);
+-- alter table user_sequence modify id bigint(20);
 
-CREATE TABLE email_account (
-    id bigint(20) NOT NULL AUTO_INCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    state varchar(128) NOT NULL,
-    address varchar(512) NOT NULL,
-    user_id bigint(20) NULL,
-    verified bool NOT NULL,
-    seq bigint(20) NOT NULL,
-
-    PRIMARY KEY (id),
-    INDEX email_account_i_address (address),
-    INDEX email_account_i_seq (seq)
-);
-
-CREATE TABLE email_account_update_seq (
-    id bigint(20) NOT NULL AUTO_INCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    seq bigint(20) NOT NULL
-);
-
-insert into evolutions (name, description) values('177.sql', 'create email_account and email_account_update_seq tables');
+insert into evolutions (name, description) values('177.sql', 'use long for seq column of user_connection and id columns of _sequence tables');
 
 # --- !Downs
