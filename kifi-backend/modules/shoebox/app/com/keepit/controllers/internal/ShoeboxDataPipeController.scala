@@ -11,7 +11,7 @@ import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import org.msgpack.ScalaMessagePack
 import play.api.http.ContentTypes
-import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
+import com.keepit.model.serialize.UriIdAndSeqBatch
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -24,7 +24,8 @@ class ShoeboxDataPipeController @Inject() (
     userConnRepo: UserConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     socialConnectionRepo: SocialConnectionRepo,
-    socialUserInfoRepo: SocialUserInfoRepo
+    socialUserInfoRepo: SocialUserInfoRepo,
+    emailAddressRepo: UserEmailAddressRepo
   ) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
@@ -131,6 +132,15 @@ class ShoeboxDataPipeController @Inject() (
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = Action { request =>
     val socialUserInfos = db.readOnly(2, Slave) { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
     val json = Json.toJson(socialUserInfos)
+    Ok(json)
+  }
+
+  def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = Action { request =>
+    val modifiedEmails = db.readOnly(2, Slave) { implicit session => emailAddressRepo.getBySequenceNumber(SequenceNumber[UserEmailAddress](seqNum.value), fetchSize) }
+    val updates = modifiedEmails.map { email =>
+      EmailAccountUpdate(email.address, email.userId, email.verified, email.state == UserEmailAddressStates.INACTIVE, SequenceNumber(email.seq.value))
+    }
+    val json = Json.toJson(updates)
     Ok(json)
   }
 }

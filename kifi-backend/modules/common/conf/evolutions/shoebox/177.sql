@@ -8,7 +8,7 @@ alter table user_connection modify seq bigint(20);
 -- MySQL:
 -- alter table bookmark_sequence modify id bigint(20);
 -- alter table changed_uri_sequence modify id bigint(20);
--- alter table collection_sequence modify id bigint(20); 
+-- alter table collection_sequence modify id bigint(20);
 -- alter table email_address_sequence modify id bigint(20);
 -- alter table image_info_sequence modify id bigint(20);
 -- alter table invitation_sequence modify id bigint(20);
