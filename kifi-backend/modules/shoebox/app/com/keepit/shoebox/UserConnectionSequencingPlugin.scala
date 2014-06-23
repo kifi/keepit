@@ -8,7 +8,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{SequencingActor, SequencingPlugin, SchedulingProperties}
 import com.keepit.model._
 
-@ImplementedBy(classOf[UserConnectionSequencingPluginImpl])
 trait UserConnectionSequencingPlugin extends SequencingPlugin
 
 class UserConnectionSequencingPluginImpl @Inject() (
