@@ -31,10 +31,28 @@ var api = (function createApi() {
     this.forEach(function(f) {f.apply(null, args)});
   }
 
+  var gcPagesLastRun = Date.now();
+  function gcPages(now) {
+    for (var id in pages) {
+      if (!(id in normalTab)) {
+        var page = pages[id];
+        if (now - page.created > 300000) {
+          log('#666', '[gcPages]', page);
+          delete pages[id];
+        }
+      }
+    }
+  }
+
   function createPage(id, url, skipOnLoading) {
-    var page = pages[id] = {id: id, url: url};
+    var now = Date.now();
+    var page = pages[id] = {id: id, url: url, created: now};
     if (!skipOnLoading && httpRe.test(url)) {
       dispatch.call(api.tabs.on.loading, page);
+    }
+    if (now - gcPagesLastRun > 300000) {
+      gcPagesLastRun = now;
+      gcPages(now);
     }
     return page;
   }
