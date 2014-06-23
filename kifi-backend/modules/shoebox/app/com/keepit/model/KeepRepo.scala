@@ -36,7 +36,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
-  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
+  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
@@ -312,9 +312,9 @@ class KeepRepoImpl @Inject() (
     q.list.distinct
   }
 
-  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep] = {
+  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep] = {
     latestKeepUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
-      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId } yield bookmark
+      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId && bookmark.url === url } yield bookmark
       val max = bookmarks.map(_.createdAt).max
       val latest = for { bookmark <- bookmarks if bookmark.createdAt >= max } yield bookmark
       latest.sortBy(_.createdAt desc).firstOption

@@ -422,7 +422,7 @@ class ShoeboxController @Inject() (
     val bookmarkOpt = db.readOnly(2, Slave) { implicit session =>
       latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
         normUriRepo.getByNormalizedUrl(url).flatMap{ uri =>
-          keepRepo.latestKeep(uri.id.get)
+          keepRepo.latestKeep(uri.id.get, url)
         }
       }
     }
