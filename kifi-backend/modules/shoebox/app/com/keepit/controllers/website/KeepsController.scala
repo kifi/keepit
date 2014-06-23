@@ -153,8 +153,6 @@ class KeepsController @Inject() (
     Ok(msg)
   }
 
-
-
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
