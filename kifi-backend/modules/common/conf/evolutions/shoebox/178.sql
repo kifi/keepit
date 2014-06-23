@@ -27,7 +27,9 @@ CREATE TABLE email_account_update_seq (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
-    seq bigint(20) NOT NULL
+    seq bigint(20) NOT NULL,
+
+    PRIMARY KEY (id)
 );
 
 insert into evolutions (name, description) values('178.sql', 'create email_account and email_account_update_seq tables');
