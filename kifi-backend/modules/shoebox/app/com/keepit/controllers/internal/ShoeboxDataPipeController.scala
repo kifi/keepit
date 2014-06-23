@@ -44,23 +44,6 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getIndexable(seq, fetchSize)
-    }
-    val cortexUris = uris.map{CortexURI.fromURI(_)}
-    Ok(Json.toJson(cortexUris))
-  }
-
-  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
-    val keeps = db.readOnly(2, Slave) { implicit s =>
-      keepRepo.getBookmarksChanged(seq, fetchSize)
-    }
-    val cortexKeeps = keeps.map{CortexKeep.fromKeep(_)}
-    Ok(Json.toJson(cortexKeeps))
-  }
-
-
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = db.readOnly(2, Slave) { implicit s =>

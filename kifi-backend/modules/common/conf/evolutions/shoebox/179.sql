@@ -36,6 +36,6 @@ CREATE TABLE cortex_keep(
   INDEX keep_seq (seq)
 );
 
-insert into evolutions (name, description) values('177.sql', 'adding cortex_uri and cortex_keep');
+insert into evolutions (name, description) values('179.sql', 'adding cortex_uri and cortex_keep');
 
 # --- !Downs
