@@ -149,7 +149,12 @@ class KeepsController @Inject() (
 
   def exportKeeps() = HtmlAction.authenticated { request =>
     val msg = "Exporting your Kifi bookmarks"
-    // Will add Exporting features soon!
+    // Given user request (authenticated user)
+    // query from SQL database for all user's bookmarks
+    // retrieve a list of keeps & bookmarks
+    // convert list of keeps to JSON format
+
+    // send JSON result over Play to Angular front-end
     Ok(msg)
   }
 
