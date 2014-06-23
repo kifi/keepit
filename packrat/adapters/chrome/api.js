@@ -44,7 +44,7 @@ var api = (function createApi() {
     if (httpRe.test(tab.url)) {
       if (tab.status === 'complete') {
         injectContentScripts(page);
-      } else if (tab.status === "loading") {
+      } else if (tab.status === 'loading') {
         chrome.tabs.executeScript(tab.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady.bind(null, page));
       }
     }
@@ -121,8 +121,15 @@ var api = (function createApi() {
     }
   }));
 
+  chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
+    if (e.frameId || normalTab[e.tabId] === false) return;
+    log('#666', '[onCommitted]', e.tabId, normalTab[e.tabId], e);
+    onRemoved(e.tabId, {temp: true});
+    createPage(e.tabId, e.url);
+  }));
+
   chrome.webNavigation.onDOMContentLoaded.addListener(errors.wrap(function (details) {
-    if (!details.frameId && httpRe.test(details.url)) {
+    if (!details.frameId && normalTab[details.tabId] && httpRe.test(details.url)) {
       var page = pages[details.tabId];
       if (page) {
         if (page.url === details.url) {
@@ -131,21 +138,14 @@ var api = (function createApi() {
           log('#a00', '[onDOMContentLoaded] %i url mismatch:\n%s\n%s', details.tabId, details.url, page.url);
         }
         injectContentScripts(page);
-      } else if (normalTab[details.tabId]) {
+      } else {
         log('#a00', '[onDOMContentLoaded] no page for', details.tabId, details.url);
       }
     }
   }));
 
-  chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
-    if (e.frameId || !normalTab[e.tabId]) return;
-    log('#666', '[onCommitted]', e.tabId, e);
-    onRemoved(e.tabId, {temp: true});
-    createPage(e.tabId, e.url);
-  }));
-
   chrome.webNavigation.onHistoryStateUpdated.addListener(errors.wrap(function (e) {
-    if (e.frameId || !normalTab[e.tabId]) return;
+    if (e.frameId || normalTab[e.tabId] === false) return;
     log('#666', '[onHistoryStateUpdated]', e.tabId, e);
     var page = pages[e.tabId];
     if (page && page.url !== e.url) {
@@ -160,7 +160,7 @@ var api = (function createApi() {
   }));
 
   chrome.webNavigation.onReferenceFragmentUpdated.addListener(errors.wrap(function (e) {
-    if (e.frameId || !normalTab[e.tabId]) return;
+    if (e.frameId || normalTab[e.tabId] === false) return;
     log('#666', '[onReferenceFragmentUpdated]', e.tabId, e);
     var page = pages[e.tabId];
     if (page) {
@@ -176,20 +176,18 @@ var api = (function createApi() {
 
   chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
     log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId);
-    normalTab[newTabId] = normalTab[oldTabId];
+    var normal = normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
-    for (var winId in selectedTabIds) {
-      if (selectedTabIds[winId] === oldTabId) {
-        selectedTabIds[winId] = newTabId; break;
+    if (normal) {
+      var page = pages[newTabId];
+      if (page.icon) {
+        setPageAction(newTabId, page.icon);
+      }
+      if (httpRe.test(page.url)) {
+        injectContentScripts(page);
       }
     }
-    chrome.tabs.get(newTabId, safeCreatePageAndInjectContentScripts);
   }));
-  var safeCreatePageAndInjectContentScripts = errors.wrap(function (tab) {
-    if (tab) {
-      createPageAndInjectContentScripts(tab);
-    }
-  });
 
   chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
   function onRemoved(tabId, info) {
@@ -326,6 +324,9 @@ var api = (function createApi() {
       port.handling = {};
       port.onMessage.addListener(onPortMessage.bind(null, tabId, port));
       port.onDisconnect.addListener(onPortDisconnect.bind(null, tabId, port));
+      if (!pages[tabId]) {
+        log('#a00', '[onConnect] %i no page', tabId);
+      }
     }
   }));
   var onPortMessage = errors.wrap(function (tabId, port, msg) {
@@ -437,6 +438,11 @@ var api = (function createApi() {
     }
   });
 
+  function setPageAction(tabId, path) {
+    chrome.pageAction.setIcon({tabId: tabId, path: {38: path}});
+    chrome.pageAction.show(tabId);
+  }
+
   var hostRe = /^https?:\/\/[^\/]*/;
   return {
     bookmarks: {
@@ -494,8 +500,9 @@ var api = (function createApi() {
       set: function(tab, path) {
         if (tab === pages[tab.id]) {
           tab.icon = path;
-          chrome.pageAction.setIcon({tabId: tab.id, path: {"38": path}});
-          chrome.pageAction.show(tab.id);
+          if (normalTab[tab.id]) {
+            setPageAction(tab.id, path);
+          }
         }
       }},
     inspect: {
