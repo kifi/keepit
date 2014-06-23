@@ -8,7 +8,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{SequencingActor, SequencingPlugin, SchedulingProperties}
 import com.keepit.model.{NormalizedURIRepo, NormalizedURI}
 
-@ImplementedBy(classOf[NormalizedURISequencingPluginImpl])
 trait NormalizedURISequencingPlugin extends SequencingPlugin
 
 class NormalizedURISequencingPluginImpl @Inject() (
