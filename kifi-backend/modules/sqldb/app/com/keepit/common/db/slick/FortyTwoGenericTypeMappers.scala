@@ -25,6 +25,8 @@ import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.common.math.ProbabilityDensity
+import com.keepit.cortex.core.StatModel
+import com.keepit.cortex.core.ModelVersion
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -123,6 +125,8 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
       Json.parse(src)
     }
   })
+
+  implicit def modelVersionMapper[M <: StatModel] = MappedColumnType.base[ModelVersion[M], Int](_.version, ModelVersion[M])
 
   // SetParameter conversions to be used for interpolated query parameters
 
