@@ -97,7 +97,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           site: 'etsy.com',
           thumb: '/img/guide/leather_tote.jpg',
           noun: 'tote',
-          tag: 'Shopping Wishlist',
+          tag: 'Wishlist',
           query: 'tote',
           matches: {title: [[14,4]], url: [[53,4],[67,4]]}
         }, {
