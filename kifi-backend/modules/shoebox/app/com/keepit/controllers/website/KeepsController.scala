@@ -147,6 +147,14 @@ class KeepsController @Inject() (
     }
   }
 
+  def exportKeeps() = HtmlAction.authenticated { request =>
+    val msg = "Exporting your Kifi bookmarks"
+    // Will add Exporting features soon!
+    Ok(msg)
+  }
+
+
+
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>
