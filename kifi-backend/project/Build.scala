@@ -138,7 +138,7 @@ object ApplicationBuild extends Build {
 
   lazy val scraperDependencies = Seq(
     "org.apache.httpcomponents" % "httpclient" % "4.3.2",
-    "org.apache.tika" % "tika-parsers" % "1.3"
+    "org.apache.tika" % "tika-parsers" % "1.5"
   )
 
   lazy val cortexDependencies = Seq(

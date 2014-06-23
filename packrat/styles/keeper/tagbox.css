@@ -210,11 +210,11 @@ html[kifi-with-pane] .kifi-tagbox {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
 }
 .kifi-tagbox-empty {
+  padding: 64px 40px;
+  line-height: 36px;
   font-size: 24px;
   font-weight: 200;
   -webkit-font-smoothing: antialiased;
-  line-height: 30px;
-  padding: 60px 40px;
   text-align: center;
   background: #eff2f7;
   color: #b8c5d1;

@@ -53,6 +53,7 @@ class UserEmailAddressRepoImpl @Inject() (
 
   override def save(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     val toSave = emailAddress.copy(seq = sequence.incrementAndGet())
+    userRepo.save(userRepo.get(emailAddress.userId))   // just to bump up user seqNum
     super.save(toSave)
   }
 

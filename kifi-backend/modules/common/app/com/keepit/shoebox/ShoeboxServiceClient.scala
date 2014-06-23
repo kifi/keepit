@@ -27,7 +27,6 @@ import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
 import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.model._
-import com.keepit.model.ChangedURI
 import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
@@ -36,7 +35,6 @@ import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
 import org.msgpack.ScalaMessagePack
 import com.keepit.cortex.dbmodel._
-
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -129,6 +127,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
+  def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -863,6 +862,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = {
     call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[SocialUserInfo]]
+    }
+  }
+
+  def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = {
+    call(Shoebox.internal.getEmailAccountUpdates(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[EmailAccountUpdate]]
     }
   }
 }
