@@ -37,7 +37,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
   def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
-  def latestKeep(url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
@@ -321,16 +320,6 @@ class KeepRepoImpl @Inject() (
       latest.sortBy(_.createdAt desc).firstOption
     }
   }
-
-  def latestKeep(url: String)(implicit session: RSession): Option[Keep] = {
-    latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
-      val keeps = for { keep <- rows if keep.url === url } yield keep
-      val max = keeps.map(_.createdAt).max
-      val latest = for { keep <- keeps if keep.createdAt >= max } yield keep
-      latest.sortBy(_.createdAt desc).firstOption
-    }
-  }
-
 
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
