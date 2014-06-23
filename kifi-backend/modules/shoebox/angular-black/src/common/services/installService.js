@@ -18,8 +18,7 @@ angular.module('kifi.installService', [])
     }
 
     function installedVersion() {
-      var htmlElement = document.getElementsByTagName('html')[0];
-      return angular.element(htmlElement).attr('data-kifi-ext');
+      return angular.element(document.documentElement).attr('data-kifi-ext');
     }
 
     var api = {
@@ -58,11 +57,17 @@ angular.module('kifi.installService', [])
       installedVersion: installedVersion,
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
         var version = installedVersion();
-        if (minCanaryVersion && version && version.split('.').length === 4) {
-          return version >= minCanaryVersion;
-        } else {
-          return version >= minVersion;
+        if (!version) {
+          return false;
         }
+        var parts = version.split('.');
+        var minParts = (parts.length < 4 ? minVersion : minCanaryVersion).split('.');
+        for (var i = 0; i < minParts.length; i++) {
+          if (i >= parts.length || +parts[i] < +minParts[i]) {
+            return false;
+          }
+        }
+        return true;
       }
     };
 
