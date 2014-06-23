@@ -49,69 +49,69 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   def invalidateCache(model: ReKeep)(implicit session: RSession): Unit = {}
 
   def getReKeepsByKeeper(userId: Id[User], since:DateTime)(implicit r:RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).list()
   }
 
   def getAllReKeepsByKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).sortBy(_.createdAt.desc).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
   }
 
   def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepState.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepStates.ACTIVE)) yield r).list()
   }
 
   def getReKeepCountByKeeper(userId: Id[User])(implicit r: RSession): Int = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r).length.run
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r).length.run
   }
 
   def getReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[Keep], Int] = {
-    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r)
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.keepId)
       .map{ case(kId, rk) => (kId, rk.length)}
     q.toMap()
   }
 
   def getReKeepCountsByKeepIds(userId:Id[User], keepIds:Set[Id[Keep]])(implicit r:RSession):Map[Id[Keep], Int] = {
-    val q = (for (r <- rows if (r.keeperId === userId && r.keepId.inSet(keepIds) && r.state === ReKeepState.ACTIVE)) yield r)
+    val q = (for (r <- rows if (r.keeperId === userId && r.keepId.inSet(keepIds) && r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.keepId)
       .map{ case(kId, rk) => (kId, rk.length)}
     q.toMap()
   }
 
   def getUriReKeepCountsByKeeper(userId:Id[User])(implicit r:RSession):Map[Id[NormalizedURI], Int] = {
-    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepState.ACTIVE)) yield r)
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.uriId)
       .map{ case(uriId, rk) => (uriId, rk.length)}
     q.toMap()
   }
 
   def getReKeeps(keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep],Seq[ReKeep]] = {
-    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE && r.keepId.inSet(keepIds))) yield r)
+    val q = (for (r <- rows if (r.state === ReKeepStates.ACTIVE && r.keepId.inSet(keepIds))) yield r)
     q.list().foldLeft(Map.empty[Id[Keep],Seq[ReKeep]]) {(a,c) =>
       a + (c.keepId -> (a.getOrElse(c.keepId, Seq.empty[ReKeep]) ++ Seq(c)))
     }
   }
 
   def getAllReKeepCountsByUser()(implicit r: RSession): Map[Id[User], Int] = {
-    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE)) yield r)
+    val q = (for (r <- rows if (r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.keeperId)
       .map{ case(uId, rk) => (uId, rk.length)}
     q.toMap
   }
 
   def getAllReKeepCountsByURI()(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
-    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE)) yield r)
+    val q = (for (r <- rows if (r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.uriId)
       .map{ case(uriId, rk) => (uriId, rk.length)}
     q.toMap
   }
 
   def getAllDirectReKeepCountsByKeep()(implicit r: RSession): Map[Id[Keep], Int] = {
-    val q = (for (r <- rows if (r.state === ReKeepState.ACTIVE)) yield r)
+    val q = (for (r <- rows if (r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.keepId)
       .map{ case(keepId, rk) => (keepId, rk.length)}
     q.toMap

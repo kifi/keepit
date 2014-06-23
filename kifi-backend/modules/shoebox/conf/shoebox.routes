@@ -232,6 +232,7 @@ POST    /site/keeps/remove          @com.keepit.controllers.website.KeepsControl
 POST    /site/keeps/delete          @com.keepit.controllers.website.KeepsController.unkeepBatch()
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
 GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
+GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
@@ -614,6 +615,7 @@ GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.contr
 GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.controllers.internal.ShoeboxDataPipeController.getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
+GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()

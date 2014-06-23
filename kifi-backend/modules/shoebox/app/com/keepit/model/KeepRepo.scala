@@ -25,7 +25,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds:Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI],Keep]
-  def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
+  def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
@@ -244,24 +244,18 @@ class KeepRepoImpl @Inject() (
     interpolated.as[Keep].list
   }
 
-  def getCountByUser(userId: Id[User], includePrivate: Boolean)(implicit session: RSession): Int = {
+  def getCountByUser(userId: Id[User])(implicit session: RSession): Int = {
     import StaticQuery.interpolation
-    if (includePrivate) {
-      countCache.getOrElse(KeepCountKey(Some(userId))) {
-        val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-        sql.as[Int].first
-      }
-    } else {
-      val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = false"
-      sql.as[Int].first
-    }
+
+    val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
+    sql.as[Int].first
   }
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
-    val privateCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = true".as[Int].first()
-    val publicCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = false".as[Int].first()
-    (privateCount, publicCount)
+
+    val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
+    sql.as[(Int, Int)].first()
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {

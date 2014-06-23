@@ -125,6 +125,7 @@ keepBorderRadius = 3px
 
 .kf-keep-contents
   padding: 25px 0 10px
+  overflow: hidden
 
 .kf-keep-who
   padding: 6px 35px 5px 0
@@ -195,7 +196,6 @@ keepBorderRadius = 3px
 .kf-keep-content-line
   padding: 0
   width: 100%
-  display: table
   padding-top: 14px
   position: relative
 
@@ -210,10 +210,11 @@ keepBorderRadius = 3px
   margin-right: auto
 
 .kf-keep-small-image
-  display:table-cell
   width: 150px
   vertical-align: top
+  float: right
   padding-top: 5px
+  padding-left: 20px
   min-width: 90px
 
   @media screen and (min-width: 1150px) and (max-width: 1250px)
@@ -236,11 +237,12 @@ keepBorderRadius = 3px
 
 .kf-keep-info-wrap
   position: relative
+  display: block
+  overflow: hidden
   margin-right: 30px
 
 .kf-keep-info
   vertical-align: top
-  display: table-cell
   width: 100%
 
 .kf-keep-title
@@ -270,7 +272,6 @@ keepBorderRadius = 3px
   word-break: break-word
 
 .kf-dyn-positioned
-  position: absolute
   overflow: hidden
 
 .kf-keep-description-sizer
