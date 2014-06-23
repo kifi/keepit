@@ -650,9 +650,8 @@ class AdminUserController @Inject() (
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
-        val keeps = keepRepo.getCountByUser(userId)
-        val publicKeeps = keepRepo.getCountByUser(userId, includePrivate = false)
-        val privateKeeps = keeps - publicKeeps
+        val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(userId)
+        val keeps = privateKeeps + publicKeeps
         properties += ("keeps", keeps)
         properties += ("publicKeeps", publicKeeps)
         properties += ("privateKeeps", privateKeeps)
