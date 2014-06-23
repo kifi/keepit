@@ -129,8 +129,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
-  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[CortexURI]]
-  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CortexKeep]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -866,13 +864,5 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getIndexableSocialUserInfos(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[SocialUserInfo]]
     }
-  }
-
-  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[CortexURI]] = {
-    call(Shoebox.internal.getCortexURIs(seq, fetchSize)).map{ _.json.as[Seq[CortexURI]]}
-  }
-
-  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CortexKeep]] = {
-    call(Shoebox.internal.getCortexKeeps(seq, fetchSize)).map{_.json.as[Seq[CortexKeep]]}
   }
 }

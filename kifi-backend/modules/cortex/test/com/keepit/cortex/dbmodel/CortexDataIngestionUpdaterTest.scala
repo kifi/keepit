@@ -49,7 +49,6 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         changed.id.get.id === 1
         changed.uriId.id === 1
         changed.state.value === "inactive"
-        changed.url === "url1"
 
 
         shoebox.saveBookmarks(

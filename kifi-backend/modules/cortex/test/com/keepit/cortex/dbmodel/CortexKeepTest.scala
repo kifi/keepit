@@ -27,6 +27,7 @@ class CortexKeepTest extends Specification with CortexTestInjector{
           (1 to 10).map{ i =>
             val keep = CortexKeep(
               id = None,
+              keptAt = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
               keepId = Id[Keep](i),
               uriId = Id[NormalizedURI](i),
               userId = Id[User](i),

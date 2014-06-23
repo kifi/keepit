@@ -18,8 +18,6 @@ case class CortexURI(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   uriId: Id[NormalizedURI],
-  title: Option[String] = None,
-  url: String,
   state: State[CortexURI],
   seq: SequenceNumber[CortexURI]
 ) extends ModelWithState[CortexURI] with ModelWithSeqNumber[CortexURI] {
@@ -36,11 +34,9 @@ object CortexURI {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
     (__ \ 'state).format(State.format[CortexURI]) and
     (__ \ 'seq).format(SequenceNumber.format[CortexURI])
   )(CortexURI.apply, unlift(CortexURI.unapply))
 
-  def fromURI(uri: NormalizedURI): CortexURI = CortexURI(uriId = uri.id.get, title = uri.title, url = uri.url, state = uri.state, seq = uri.seq)
+  def fromURI(uri: NormalizedURI): CortexURI = CortexURI(uriId = uri.id.get, state = uri.state, seq = uri.seq)
 }

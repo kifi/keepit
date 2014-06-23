@@ -603,14 +603,4 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]] = Future.successful(Seq.empty)
 
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
-
-  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[CortexURI]] = {
-    val uris = allNormalizedURIs.values.filter(_.seq > seq).toSeq.sortBy(_.seq).take(fetchSize)
-    Future.successful(uris.map{CortexURI.fromURI(_)})
-  }
-
-  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CortexKeep]] = {
-    val bms = allBookmarks.values.filter(_.seq > seq).toSeq.sortBy(_.seq).take(fetchSize)
-    Future.successful(bms.map{CortexKeep.fromKeep(_)})
-  }
 }

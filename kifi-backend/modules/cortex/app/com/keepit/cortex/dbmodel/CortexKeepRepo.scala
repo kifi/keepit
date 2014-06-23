@@ -14,6 +14,7 @@ import com.keepit.model.URL
 import com.keepit.model.User
 import com.keepit.common.db.SequenceNumber
 import scala.slick.jdbc.StaticQuery
+import org.joda.time.DateTime
 
 
 @ImplementedBy(classOf[CortexKeepRepoImpl])
@@ -36,20 +37,21 @@ class CortexKeepRepoImpl @Inject()(
   type RepoImpl = CortexKeepTable
 
   class CortexKeepTable(tag: Tag) extends RepoTable[CortexKeep](db, tag, "cortex_keep") with SeqNumberColumn[CortexKeep]{
+    def keptAt = column[DateTime]("kept_at", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def isPrivate = column[Boolean]("is_private", O.NotNull)
     def source = column[KeepSource]("source", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, keepId, userId, uriId, isPrivate, state, source, seq) <> ((CortexKeep.apply _).tupled, CortexKeep.unapply _)
+    def * = (id.?, createdAt, updatedAt, keptAt, keepId, userId, uriId, isPrivate, state, source, seq) <> ((CortexKeep.apply _).tupled, CortexKeep.unapply _)
   }
 
   def table(tag:Tag) = new CortexKeepTable(tag)
   initTable()
 
-  override def invalidateCache(keep: CortexKeep)(implicit session: RSession): Unit = {}
+  def invalidateCache(keep: CortexKeep)(implicit session: RSession): Unit = {}
 
-  override def deleteCache(uri: CortexKeep)(implicit session: RSession): Unit = {}
+  def deleteCache(uri: CortexKeep)(implicit session: RSession): Unit = {}
 
   def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep] = super.getBySequenceNumber(seq, limit)
 
@@ -65,6 +67,6 @@ class CortexKeepRepoImpl @Inject()(
       r <- rows if r.keepId === id
     } yield r
 
-    q.list.headOption
+    q.firstOption
   }
 }
