@@ -113,11 +113,13 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =
     (for(f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
+  private def deferredSeqNum(): SequenceNumber[NormalizedURI] = SequenceNumber[NormalizedURI](clock.now.getMillis() - Long.MaxValue)
+
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     log.info(s"about to persist $uri")
 
     // setting a negative sequence number for deferred assignment
-    val num = SequenceNumber[NormalizedURI](clock.now.getMillis() - Long.MaxValue)
+    val num = deferredSeqNum()
     val uriWithSeq = uri.copy(seq = num)
 
     val validatedUri = if ( uri.state != NormalizedURIStates.REDIRECTED && (uri.redirect.isDefined || uri.redirectTime.isDefined) ){
@@ -187,7 +189,7 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
 
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession) = {
     val q = for {t <- rows if t.id === id} yield (t.restriction, t.seq)
-    val newSeq = sequence.incrementAndGet()
+    val newSeq = deferredSeqNum()
     q.update(r, newSeq)
     invalidateCache(get(id).copy(restriction = r, seq = newSeq))
   }
