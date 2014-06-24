@@ -7,7 +7,7 @@
   margin: -130px 0 0 -130px;
   background-color: rgba(0,0,0,.8);
   background-clip: content-box;
-  border: 10px solid rgba(240,240,240,.5);
+  border: 15px solid rgba(240,240,240,.2);
   border-radius: 50%;
   text-align: center;
 }
@@ -15,7 +15,7 @@
   content: 'Loading Kifi guide';
   display: block;
   padding: 92px 0 0;
-  font: bold italic 20px/36px Georgia,Times,serif !important;
+  font: bold italic 21px/36px Georgia,Times,serif !important;
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }

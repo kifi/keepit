@@ -69,6 +69,9 @@ guide.step = guide.step || function () {
         clearTimeout(timeout);
         window.removeEventListener('load', onDocumentComplete, true);
       }
+      if ($loading) {
+        $loading.remove();
+      }
       (opts.hide || api.noop)();
 
       spotlight = $stage = $steps = $loading = timeout = arrow = steps = opts = stepIdx = animTick = null;
