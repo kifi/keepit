@@ -1,3 +1,60 @@
+.kifi-guide-loading.kifi-guide-loading {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  height: 260px;
+  width: 260px;
+  margin: -130px 0 0 -130px;
+  background-color: rgba(0,0,0,.8);
+  background-clip: content-box;
+  border: 10px solid rgba(240,240,240,.5);
+  border-radius: 50%;
+  text-align: center;
+}
+.kifi-guide-loading::before {
+  content: 'Loading Kifi guide';
+  display: block;
+  padding: 92px 0 0;
+  font: bold italic 20px/36px Georgia,Times,serif !important;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin: 12px 6px;
+  background: rgba(255,255,255,.5);
+  border-radius: 50%;
+  opacity: 0;
+  -webkit-transform: scale(.5);
+  transform: scale(.5);
+  -webkit-animation: kifi-guide-spinner .4s ease-in-out infinite alternate;
+  animation: kifi-guide-spinner .4s ease-in-out infinite alternate;
+}
+.kifi-guide-spinner:nth-child(2) {
+  -webkit-animation-delay: .1s;
+  animation-delay: .1s;
+}
+.kifi-guide-spinner:nth-child(3) {
+  -webkit-animation-delay: .2s;
+  animation-delay: .2s;
+}
+.kifi-guide-spinner:nth-child(4) {
+  -webkit-animation-delay: .3s;
+  animation-delay: .3s;
+}
+.kifi-guide-spinner:last-child {
+  -webkit-animation-delay: .4s;
+  animation-delay: .4s;
+}
+@-webkit-keyframes kifi-guide-spinner {
+  100% { opacity: 1; -webkit-transform: none; }
+}
+@keyframes kifi-guide-spinner {
+  100% { opacity: 1; transform: none; }
+}
+
 .kifi-spotlight {
   position: fixed;
   z-index: 999999999993;

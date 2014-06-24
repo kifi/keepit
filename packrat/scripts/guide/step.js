@@ -8,7 +8,7 @@
 // @require scripts/guide/curved_arrow.js
 
 guide.step = guide.step || function () {
-  var spotlight, $stage, $steps, timeout, arrow, steps, opts, stepIdx, animTick;
+  var spotlight, $stage, $steps, $loading, timeout, arrow, steps, opts, stepIdx, animTick;
   var eventsToScreen = 'mouseover mouseout mouseenter mouseleave mousedown mouseup click mousewheel wheel keydown keypress keyup'.split(' ');
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
   return show;
@@ -17,6 +17,9 @@ guide.step = guide.step || function () {
     if (!$stage) {
       steps = steps_;
       opts = opts_;
+      $loading = $('<div class="kifi-guide-loading kifi-root">')
+        .append([0,0,0,0,0].map(function () {return '<span class="kifi-guide-spinner"></span>'}).join(''))
+        .appendTo('body');
       spotlight = new Spotlight(wholeWindow(), {opacity: 0, maxOpacity: opts_.opacity});
       $stage = $(render('html/guide/step_' + opts.index, {me: me, page: opts_.page}));
       $steps = opts_.$guide.appendTo('body')
@@ -48,6 +51,8 @@ guide.step = guide.step || function () {
     window.removeEventListener('load', onDocumentComplete, true);
     spotlight.attach($.fn.before.bind($steps));
     $stage.insertBefore($steps);
+    $loading.remove();
+    $loading = null;
     $(window).on('resize.guideStep', onWinResize);
     showStep(0);
   }
@@ -66,7 +71,7 @@ guide.step = guide.step || function () {
       }
       (opts.hide || api.noop)();
 
-      $stage = $steps = spotlight = timeout = arrow = steps = opts = stepIdx = animTick = null;
+      spotlight = $stage = $steps = $loading = timeout = arrow = steps = opts = stepIdx = animTick = null;
       $(window).off('resize.guideStep');
       eventsToScreen.forEach(function (type) {
         window.removeEventListener(type, screenEvent, true);
@@ -90,9 +95,12 @@ guide.step = guide.step || function () {
         clearTimeout(timeout);
         window.removeEventListener('load', onDocumentComplete, true);
       }
+      if ($loading) {
+        $loading.remove();
+      }
       (opts.hide || api.noop)();
 
-      $stage = $steps = spotlight = timeout = arrow = steps = opts = stepIdx = animTick = null;
+      $stage = $steps = spotlight = $loading = timeout = arrow = steps = opts = stepIdx = animTick = null;
       $(window).off('resize.guideStep');
       eventsToScreen.forEach(function (type) {
         window.removeEventListener(type, screenEvent, true);
@@ -285,7 +293,7 @@ guide.step = guide.step || function () {
       locator: '#guide/' + (opts.index + 1) + '/' + opts.pageIdx + (suffix ? '/' + suffix : ''),
       url: url
     });
-    window.location = url;
+    window.location.href = url;
   }
 
   function createAnchor(el) {
