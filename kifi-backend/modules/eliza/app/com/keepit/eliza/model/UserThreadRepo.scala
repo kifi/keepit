@@ -96,6 +96,8 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
+
+  def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification]
 }
 
 /**
@@ -378,5 +380,11 @@ class UserThreadRepoImpl @Inject() (
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread] = {
     (for (row <- rows if row.accessToken===token) yield row).firstOption
+  }
+
+  def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification] = {
+      (for (row <- rows if row.user === userId && row.threadId === threadId &&
+                          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+                          row.lastNotification.isNotNull) yield (row.lastNotification, row.unread)).firstOption
   }
 }

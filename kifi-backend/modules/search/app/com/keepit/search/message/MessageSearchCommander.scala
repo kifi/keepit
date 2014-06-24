@@ -12,7 +12,7 @@ import com.google.inject.Inject
 
 class MessageSearchCommander @Inject() (indexer: MessageIndexer){
 
-  val resultPageSize = 20
+  val resultPageSize = 10
 
   def search(userId: Id[User], query: String, page: Int) : Seq[JsValue] = {
     val lang = LangDetector.detect(query, Lang("en"))
