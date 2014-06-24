@@ -34,11 +34,12 @@ guide.step3 = guide.step3 || function () {
       pad: [132, 102, 116, 26],
       // lit: '.kifi-toast',
       // pad: [-28, 100, 92, 70],
-      arrow: {dx: 250, dy: 190, from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
+      arrow: {dx: 290, dy: 180, from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit', unless: function (e) {return e.keyCode === 27}},  // esc
         {type: /^(?:mouse|click)/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit,.kifi-ti-token-x'}
-      ]
+      ],
+      substep: true
     },
     {
       afterTransition: '.kifi-pane-box-cart',
