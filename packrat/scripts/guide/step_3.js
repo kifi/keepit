@@ -8,41 +8,37 @@ guide.step3 = guide.step3 || function () {
     {
       lit: '.kifi-tile-card',
       pad: [20, 40],
-      arrow: {from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -70, gap: 10}},
+      arrow: {dx: 130, dy: 87, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -70, gap: 10}},
       allow: {type: 'mouseover', target: '.kifi-tile-keep,.kifi-tile-kept'},
-      pos: {bottom: 150, right: 70}
     },
     {
       lit: '.kifi-dock-compose',
       pad: [2, 188, 90, 70],
-      arrow: {from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -90, gap: 10}},
+      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10}},
       allow: {type: 'click', target: '.kifi-dock-compose', proceed: true},
-      pos: {bottom: 150, right: 190},
       substep: true
     },
     {
       lit: '.kifi-keeper',
       pad: [128, 100, 112, 20],
-      arrow: {from: {angle: -90, gap: 10}, to: {angle: 0, gap: 5, along: [0, .45], sel: '.kifi-compose>.kifi-ti-list'}},
+      arrow: {dx: 160, dy: 80, from: {angle: -80, gap: 10}, to: {angle: 0, gap: 5, along: [0, .45], sel: '.kifi-compose>.kifi-ti-list'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input', unless: function (e) {return e.keyCode === 27 || e.keyCode >= 37 && e.keyCode <= 40}},  // esc, arrows
         {type: /^key/, target: '.kifi-compose-draft', unless: function (e) {return e.keyCode === 27}},  // esc
         {type: 'mousedown', target: '.kifi-ti-dropdown-item'}
       ],
-      pos: {bottom: 250, right: 260},
       afterTransition: '.kifi-toast'
     },
     {
       lit: '.kifi-keeper',
-      pad: [132, 104, 116, 24],
+      pad: [132, 102, 116, 26],
       // lit: '.kifi-toast',
       // pad: [-28, 100, 92, 70],
-      arrow: {from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
+      arrow: {dx: 250, dy: 190, from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit', unless: function (e) {return e.keyCode === 27}},  // esc
         {type: /^(?:mouse|click)/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit,.kifi-ti-token-x'}
-      ],
-      pos: {bottom: 280, right: 300}
+      ]
     },
     {
       afterTransition: '.kifi-pane-box-cart',

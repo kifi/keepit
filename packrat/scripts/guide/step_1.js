@@ -3,45 +3,43 @@
 
 guide.step1 = guide.step1 || function () {
   'use strict';
-  var step, observer;
+  var step, observer, tagId;
   var steps = [
     {
       lit: '.kifi-tile-card',
       pad: [20, 40],
-      arrow: {from: {angle: -84, gap: 16}, to: {angle: 0, gap: 12}},
-      allow: {type: 'mouseover', target: '.kifi-tile-keep'},
-      pos: {bottom: 150, right: 70}
+      arrow: {dx: 121, dy: 87, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -70, gap: 10}},
+      allow: {type: 'mouseover', target: '.kifi-tile-keep'}
     },
     {
+      substep: true,
       lit: '.kifi-keep-card',
       pad: [10, 20, 60, 60],
-      arrow: {from: {angle: 0, gap: 12}, to: {angle: -80, gap: 10}},
-      allow: {type: 'click', target: '.kifi-keep-btn', proceed: true},
-      pos: {bottom: 160, right: 160},
-      substep: true
+      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10}},
+      allow: {type: 'click', target: '.kifi-keep-btn', proceed: true}
     },
     {
       afterTransition: '.kifi-kept-side',
-      arrow: {from: {angle: 0, gap: 10}, to: {angle: -70, gap: 10, along: [.5, 0], sel: '.kifi-kept-tag'}},
-      allow: {type: 'click', target: '.kifi-kept-tag'},
-      pos: {bottom: 170, right: 140}
+      lit: '.kifi-kept-tag',
+      pad: [20, 20, 0, 120],
+      arrow: {dx: 136, dy: 78, from: {angle: 0, gap: 10}, to: {angle: -75, gap: 10, along: [.5, 0], sel: '.kifi-kept-tag'}},
+      allow: {type: 'click', target: '.kifi-kept-tag'}
     },
     {
+      substep: true,
       lit: '.kifi-tagbox',
       pad: [0, 10, 20],
-      arrow: {from: {angle: -84, gap: 16}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-suggestion[data-name="{{tag}}"]'}},
+      arrow: {dx: 100, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-input-box'}},
       allow: [
-        {type: 'click', target: '.kifi-tagbox-suggestion'},
-        {type: /^mouse/, target: '.kifi-tagbox-suggestion'}
-      ],
-      substep: true,
-      pos: {bottom: 230, right: 400}
+        {type: /^key/, target: '.kifi-tagbox-input', unless: function (e) {return e.keyCode === 27}},  // esc
+        {type: /^(?:mouse|click$)/, target: '.kifi-tagbox-suggestion'}
+      ]
     },
     {
-      lit: '.kifi-tagbox',
       afterTransition: '.kifi-tagbox-tagged-wrapper',
+      lit: '.kifi-tagbox',
       pad: [0, 40, 0, 10],
-      pos: {bottom: 370, right: 500},
+      pos: {bottom: 280, right: 480},  // TODO: position relative to spotlight
       transition: 'opacity'
     },
     {
@@ -84,6 +82,10 @@ guide.step1 = guide.step1 || function () {
         observer = new MutationObserver(onTileChildChange);
         observer.observe(tile, {childList: true});
         break;
+      case 4:
+        var el = document.querySelector('.kifi-tagbox-tag');
+        tagId = el && el.dataset.id;
+        break;
       case 5:
         api.port.emit('prime_search', 'g');
         break;
@@ -103,7 +105,7 @@ guide.step1 = guide.step1 || function () {
       e.closeKeeper = true;
       step.show(5);
     } else {
-      step.nav(e.target.href);
+      step.nav(e.target.href, tagId);
     }
   }
 
@@ -112,19 +114,21 @@ guide.step1 = guide.step1 || function () {
     if (elementAdded(records, 'kifi-keeper')) {
       step.show(1);
     } else if ((tagbox = elementAdded(records, 'kifi-tagbox'))) {
-      var recipeTag = tagbox.querySelector(steps[3].arrow.to.sel);
-      if (recipeTag) {
-        var fifthTag = recipeTag.parentNode.children[5];
-        if (recipeTag !== fifthTag) {
-          recipeTag.parentNode.insertBefore(recipeTag, fifthTag);
-        }
-      }
-      var r = tagbox.getBoundingClientRect();
+      var r1 = tagbox.getBoundingClientRect();
       var cs = window.getComputedStyle(tagbox);
-      var w = getDeclaredWidth(cs);
-      var h = getDeclaredHeight(cs);
-      var ms = getTransitionDurationMs(cs);
-      step.show(3, {left: r.right - w, top: r.bottom - h, width: w, height: h}, ms);
+      var bp = getBorderPlusPadding(cs);
+      var w = bp.left + parseFloat(cs.width) + bp.right;
+      var h = bp.top + parseFloat(cs.height) + bp.bottom;
+      var r2 = {left: r1.right - w, top: r1.bottom - h, width: w, height: h};
+      var elTo = tagbox.querySelector(steps[3].arrow.to.sel);
+      var elToTop = r2.top + bp.top + elTo.offsetTop;
+      var elToLeft = r2.left + bp.left + elTo.offsetLeft;
+      step.show(3, getTransitionDurationMs(cs), r2, {
+        top: elToTop,
+        left: elToLeft,
+        right: elToLeft + elTo.offsetWidth,
+        bottom: elToTop + elTo.offsetHeight
+      });
 
       observer.disconnect();
       observer = new MutationObserver(onTagboxClassChange);
@@ -140,7 +144,7 @@ guide.step1 = guide.step1 || function () {
       var h = 180;//getDeclaredHeight(cs);
       var ms = getTransitionDurationMs(cs);
       var r = tagbox.getBoundingClientRect();
-      step.show(4, {left: r.left, top: r.top - h, width: r.width, height: r.height + h}, ms);
+      step.show(4, ms, {left: r.left, top: r.top - h, width: r.width, height: r.height + h});
       observer.disconnect();
       observer = null;
     }
@@ -167,12 +171,13 @@ guide.step1 = guide.step1 || function () {
     }
   }
 
-  function getDeclaredWidth(cs) {
-    return parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft) + parseFloat(cs.width) + parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth);
-  }
-
-  function getDeclaredHeight(cs) {
-    return parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop) + parseFloat(cs.height) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
+  function getBorderPlusPadding(cs) {
+    return {
+      top: parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop),
+      left: parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft),
+      right: parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight),
+      bottom: parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom)
+    };
   }
 
   function getTransitionDurationMs(cs) {

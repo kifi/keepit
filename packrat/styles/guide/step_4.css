@@ -1,4 +1,4 @@
-.kifi-guide-stage {
+.kifi-guide-4-stage {
   position: fixed;
   top: 0;
   left: 0;
@@ -6,7 +6,7 @@
   width: 100%;
   z-index: 999999999993;
 }
-.kifi-guide-stage.kifi-gone {
+.kifi-guide-4-stage.kifi-gone {
   opacity: 0;
   transition: opacity .34s linear;
 }
@@ -17,6 +17,7 @@
   opacity: .8;
 }
 .kifi-guide-feature {
+  position: absolute;
   display: none;
   opacity: 0;
   transition: opacity .26s linear;
@@ -24,32 +25,17 @@
 .kifi-guide-feature.kifi-opaque {
   opacity: 1;
 }
-.kifi-guide-feature-0 {
-  position: absolute;
-  top: 336px;
-  left: 336px;
-}
-.kifi-guide-feature-1 {
-  position: absolute;
-  top: 160px;
-  left: 440px;
-}
-.kifi-guide-feature-2 {
-  position: absolute;
-  top: 124px;
-  right: 130px;
-}
 
-.kifi-guide-h1 {
+.kifi-guide-4-h1 {
   margin: 12px 0;
   font: bold italic 26px/48px Georgia,Times,serif !important;
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }
-.kifi-guide-h1+.kifi-guide-h1 {
+.kifi-guide-4-h1+.kifi-guide-4-h1 {
   margin-top: -20px;
 }
-.kifi-guide-feature>.kifi-guide-h1 {
+.kifi-guide-feature>.kifi-guide-4-h1 {
   margin-top: 0;
 }
 .kifi-guide-ul {
@@ -85,7 +71,7 @@
 .kifi-guide-drum-roll.kifi-opaque {
   opacity: 1;
 }
-.kifi-guide-next {
+.kifi-guide-4-next {
   min-width: 140px;
   margin-top: 3px;
   display: inline-block;
@@ -97,12 +83,12 @@
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }
-.kifi-guide-next:hover,
-.kifi-guide-next:focus {
+.kifi-guide-4-next:hover,
+.kifi-guide-4-next:focus {
   color: #fff;
   background-color: rgba(255,255,255,.05);
 }
-.kifi-guide-next:active {
+.kifi-guide-4-next:active {
   color: #fff;
   background-color: rgba(255,255,255,.15);
 }
@@ -121,6 +107,6 @@
 .kifi-guide-farewell.kifi-opaque {
   opacity: 1;
 }
-.kifi-guide-farewell>.kifi-guide-next {
+.kifi-guide-farewell>.kifi-guide-4-next {
   margin-top: 10px;
 }

@@ -4,11 +4,11 @@
 var CurvedArrow = CurvedArrow || (function (window, document) {
   'use strict';
 
-  function CurvedArrow(tail, head, anchor, revealMs) {
-    this.$el = $('<div class="kifi-curved-arrow kifi-root"/>').hide();
+  function CurvedArrow(tail, head, pos, parent) {
+    this.$el = $('<div class="kifi-curved-arrow kifi-root"/>').css(pos).hide();
     this.$head = head.draw === false ? $() : $('<div class="kifi-curved-arrow-head"/>').appendTo(this.$el);
     this.$tail = $('<div class="kifi-curved-arrow-tail"/>').appendTo(this.$el);
-    this.attach();
+    this.attach(parent);
     var headLength = parseFloat(this.$head.css('border-left-width') || 0);
     var tailWidth = parseFloat(this.$tail.css('width') || 0) / 2;
     var curve = computeCurve(tail, head, headLength);
@@ -16,19 +16,14 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     var y0 = curve.y(0);
     this.$head.css('transform', headTransform(x0, y0, curve.phi(0)));
     this.$tail.css('transform', translatePx(x0, y0));
-    this.$el.removeAttr('style');
-    this.onWinResize = anchor && anchor !== 'tl' ? _.throttle(getOnWinResize(this.$el, anchor), 100, {leading: false}) : null;
-    reveal.call(this, curve, tail.spacing || tailWidth * 4.5, revealMs);
+    this.reveal = reveal.bind(this, curve, tail.spacing || tailWidth * 4.5);
   }
 
   CurvedArrow.prototype = {
     attached: false,
-    attach: function () {
+    attach: function (parent) {
       if (!this.attached) {
-        this.$el.appendTo('body');
-        if (this.onWinResize) {
-          window.addEventListener('resize', this.onWinResize, true);
-        }
+        this.$el.appendTo(parent || 'body');
         this.attached = true;
       }
       return this;
@@ -36,9 +31,6 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     detach: function () {
       if (this.attached) {
         this.$el.remove();
-        if (this.onWinResize) {
-          window.removeEventListener('resize', this.onWinResize, true);
-        }
         this.attached = false;
       }
       return this;
@@ -54,70 +46,29 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     }
   };
 
-  function computeCurve(tail, head, headLength) {
+  function computeCurve(T, H, headLength) {
     /*
-    ,---------,
-    |         |
-    | tail.el |    o o o o
-    |         |    T        o o o          <- dotted cubic Bézier curve
-    '---------'                   o
-                                ---•---    <- arrowhead axis is tangent to arc where they meet at G
-              |____|             \ G /
-            tail.gap              \ /      <- orientation of both head and tail are configurable
-                      _            • H
-                     |             .
-            head.gap |             .
-                     '-  ,---------.---------,
-                         | head.el .         |
-                         |         •         |  <- arrowhead and tail can be oriented toward any point
-                         |                   |     in their associated rects (their centers by default)
-                         '-------------------'
+        o o o o
+        T        o o o         <- dotted cubic Bézier curve
+                       o
+                    ---•---    <- arrowhead axis is tangent to arc where they meet at G
+                     \ G /
+                      \ /      <- orientation of head and tail are configurable
+                       • H
     */
-    var rTail = tail.rect || tail.el.getBoundingClientRect();
-    var rHead = head.rect || head.el.getBoundingClientRect();
-    var tailAngleRad = Math.PI / 180 * tail.angle;
-    var headAngleRad = Math.PI / 180 * head.angle;
-    var T = pointOutsideRect(rTail, tail.along, tailAngleRad, tail.gap);
-    var H = pointOutsideRect(rHead, head.along, headAngleRad + Math.PI, head.gap);
+    var tailAngleRad = Math.PI / 180 * T.angle;
+    var headAngleRad = Math.PI / 180 * H.angle;
     var Gx = H.x - headLength * Math.cos(headAngleRad);
     var Gy = H.y + headLength * Math.sin(headAngleRad);
     return chooseCurve(T, -tailAngleRad, {x: Gx, y: Gy}, -headAngleRad + Math.PI);
   }
 
-  function pointOutsideRect(r, along, theta, d) {
-    var Px = r.left + (r.right - r.left) * (along != null ? along[0] : .5);
-    var Py = r.top + (r.bottom - r.top) * (along != null ? along[1] : .5);
-
-    // determine the two candidate edges (x = Cx and y = Cy)
-    var sinTheta = Math.sin(theta);
-    var cosTheta = Math.cos(theta);
-    var Cx = cosTheta < 0 ? r.left - d : r.right + d;
-    var Cy = sinTheta > 0 ? r.top - d : r.bottom + d;
-
-    // find where ray from P crosses: (Qx, Cy) and (Cx, Qy)
-    var tanTheta = sinTheta / cosTheta;
-    var Qx = Px + (Py - Cy) / tanTheta;
-    var Qy = Py + (Px - Cx) * tanTheta;
-
-    // choose the point closer to P
-    return dist2(Px, Py, Qx, Cy) < dist2(Px, Py, Cx, Qy) ? {x: Qx, y: Cy} : {x: Cx, y: Qy};
-  }
-
-  function dist2(x1, y1, x2, y2) {
-    var dx = x1 - x2;
-    var dy = y1 - y2;
-    return dx * dx + dy * dy;
-  }
-
   function reveal(curve, minDotSpacing, ms) {
-    var path = $svg('path').attr('d', curvePathData(curve)).el;
+    this.$el.css('display', '');
+    var path = $svg('path').attr('d', curve.pathData()).el;
     var totalLen = path.getTotalLength();
-    var totalNumDots = this.$head
-      ? Math.max(1, Math.floor(totalLen / minDotSpacing))
-      : Math.max(2, Math.floor(totalLen / minDotSpacing));
-    var dotSpacing = this.$head
-      ? (totalLen - .8 * minDotSpacing) / (totalNumDots - 1)
-      : totalLen / (totalNumDots - 1);
+    var totalNumDots = Math.max(totalLen ? this.$head ? 1 : 2 : 0, Math.floor(totalLen / minDotSpacing));
+    var dotSpacing = (totalLen - (this.$head ? .8 * minDotSpacing : 0)) / (totalNumDots - 1);
     var ease = swing;
     var ms_1 = 1 / ms;
     var t0 = window.performance.now();
@@ -126,12 +77,14 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
       if (this.tick === tick) {
         var alpha = t < tN ? t > t0 ? ease((t - t0) * ms_1) : 0 : 1;
         var len = alpha * totalLen;
-        for (var lenNextDot = dotSpacing * this.$tail.length; len >= lenNextDot; lenNextDot = dotSpacing * this.$tail.length) {
-          var P = path.getPointAtLength(lenNextDot);
-          var $dot = $(this.$tail[0].cloneNode())
-            .css('transform', translatePx(P.x, P.y))
-            .appendTo(this.$el);
-          this.$tail = this.$tail.add($dot);
+        if (dotSpacing) {
+          for (var lenNextDot = dotSpacing * this.$tail.length; lenNextDot <= len; lenNextDot = dotSpacing * this.$tail.length) {
+            var P = path.getPointAtLength(lenNextDot);
+            var $dot = $(this.$tail[0].cloneNode())
+              .css('transform', translatePx(P.x, P.y))
+              .appendTo(this.$el);
+            this.$tail = this.$tail.add($dot);
+          }
         }
         if (this.$head) {
           var P = path.getPointAtLength(len);
@@ -211,6 +164,37 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
       var dx = cubicBezierDerivativeCoordinate(this.A.x, this.B.x, this.C.x, this.D.x, t);
       var dy = cubicBezierDerivativeCoordinate(this.A.y, this.B.y, this.C.y, this.D.y, t);
       return Math.atan2(dy, dx);
+    },
+    pathData: function () {
+      var A = this.A, B = this.B, C = this.C, D = this.D;
+      return ['M', A.x, A.y, 'C', B.x, B.y, C.x, C.y, D.x, D.y].join(' ');
+    }
+  };
+
+  function Line(A, B) {
+    this.A = A;
+    this.B = B;
+    var dx = B.x - A.x;
+    var dy = B.y - A.y;
+    this.phi_ = Math.atan2(dy, dx);
+    this.t = Math.abs(dx) > Math.abs(dy)
+      ? function (x, y) { return (x - A.x) / dx }
+      : function (x, y) { return (y - A.y) / dy };
+  }
+
+  Line.prototype = {
+    x: function (t) {
+      return interpolate(this.A.x, this.B.x, t);
+    },
+    y: function (t) {
+      return interpolate(this.A.y, this.B.y, t);
+    },
+    phi: function () {
+      return this.phi_;
+    },
+    pathData: function () {
+      var A = this.A, B = this.B;
+      return ['M', A.x, A.y, 'L', B.x, B.y].join(' ');
     }
   };
 
@@ -221,9 +205,13 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     var lA = lineCoefficients(A, thetaA);
     var lD = lineCoefficients(D, thetaD);
     var P = intersectionOf(lA, lD);
-    var B = interpolatePoint(A, P, .7);
-    var C = interpolatePoint(D, P, .7);
-    return new BezierCurve(A, B, C, D);
+    if (P) {
+      var B = interpolatePoint(A, P, .7);
+      var C = interpolatePoint(D, P, .7);
+      return new BezierCurve(A, B, C, D);
+    } else {
+      return new Line(A, D);
+    }
   }
 
   // Given a point P and an angle theta, returns coefficients [a,b,c] of the line
@@ -241,7 +229,7 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
 
   function intersectionOf(lA, lB) {
     var det = lA[0] * lB[1] - lB[0] * lA[1];
-    return det ? {
+    return Math.abs(det) > 1e-5 ? {
       x: (lB[1] * lA[2] - lA[1] * lB[2]) / det,
       y: (lA[0] * lB[2] - lB[0] * lA[2]) / det
     } : null;
@@ -249,9 +237,13 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
 
   function interpolatePoint(P, Q, alpha) {
     return {
-      x: P.x * (1 - alpha) + Q.x * alpha,
-      y: P.y * (1 - alpha) + Q.y * alpha
+      x: interpolate(P.x, Q.x, alpha),
+      y: interpolate(P.y, Q.y, alpha)
     };
+  }
+
+  function interpolate(u, v, alpha) {
+    return u + (v - u) * alpha;
   }
 
   function cubicBezierCoordinate(_1, _2, _3, _4, t) {
@@ -273,26 +265,12 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
       (_4 - _3) * t * t * 3);
   }
 
-  function curvePathData(c) {
-    return ['M', c.A.x, c.A.y, 'C', c.B.x, c.B.y, c.C.x, c.C.y, c.D.x, c.D.y].join(' ');
-  }
-
   function headTransform(x, y, radians) {
     return ['translate(', x, 'px,', y, 'px) rotate(', Math.round(radians * 1000) / 1000, 'rad)'].join('');
   }
 
   function translatePx(x, y) {
     return ['translate(', x, 'px,', y, 'px)'].join('');
-  }
-
-  function getOnWinResize($el, anchor) {
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-    return function () {
-      $el.css('transform', translatePx(
-        anchor[1] === 'l' ? 0 : window.innerWidth - w,
-        anchor[0] === 't' ? 0 : window.innerHeight - h));
-    };
   }
 
   function swing(p) {

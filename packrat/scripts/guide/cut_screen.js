@@ -3,7 +3,7 @@
 var CutScreen = CutScreen || (function (window, document) {
   'use strict';
 
-  function CutScreen(holes) {
+  function CutScreen(holes, parent, nextSibling) {
     this.holes = holes.map(copyHole);
     this.holesDrawn = [];
     var wd = this.wd = {w: window.innerWidth, h: window.innerHeight};
@@ -16,19 +16,19 @@ var CutScreen = CutScreen || (function (window, document) {
        gc.mozBackingStorePixelRatio ||
        gc.backingStorePixelRatio || 1);
     size.call(this);
-    draw.call(this);
+    this.attach(parent, nextSibling);
     this.onWinResize = _.throttle(onWinResize.bind(null, this), 100, {leading: false});
-    this.attach();
   }
 
   CutScreen.prototype = {
     attached: false,
-    attach: function () {
+    attach: function (parent, nextSibling) {
       if (!this.attached) {
         // TODO: call this.onWinResize if window has resized while detached
-        document.body.appendChild(this.el);
+        (parent || document.body).insertBefore(this.el, nextSibling);
         window.addEventListener('resize', this.onWinResize, true);
         this.attached = true;
+        draw.call(this);
       }
       return this;
     },
@@ -108,7 +108,6 @@ var CutScreen = CutScreen || (function (window, document) {
 
   function size() {
     var el = this.el;
-    var gc = this.gc;
     var w = this.wd.w;
     var h = this.wd.h;
     var scale = this.scale;
@@ -117,13 +116,13 @@ var CutScreen = CutScreen || (function (window, document) {
     if (scale !== 1) {
       el.style.width = w + 'px';
       el.style.height = h + 'px';
-      gc.scale(scale, scale);
+      this.gc.scale(scale, scale);
     }
-    gc.fillRect(0, 0, w, h);
-    this.holesDrawn.forEach(function (h) { h.cleared = true; });
   }
 
   function draw() {
+    this.gc.fillRect(0, 0, this.wd.w, this.wd.h);
+    this.holesDrawn.forEach(function (h) { h.cleared = true; });
     for (var i = 0; i < this.holes.length; i++) {
       drawHole.call(this, i);
     }

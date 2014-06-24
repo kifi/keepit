@@ -134,8 +134,6 @@
 .kifi-curved-arrow {
   position: fixed;
   z-index: 999999999993;
-  top: 0;
-  left: 0;
   width: 0;
   height: 0;
 }

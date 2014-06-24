@@ -15,7 +15,7 @@ guide.step0 = guide.step0 || function () {
       $steps = $guide.appendTo('body')
         .on('click', '.kifi-guide-x', hide);
       $pages = $stage.find('.kifi-guide-pages')
-        .on('click', '.kifi-guide-next', onClickNext)
+        .on('click', '.kifi-guide-0-next', onClickNext)
         .on('click', '.kifi-guide-site-a', onClickSite);
       $(document).data('esc').add(hide);
     }

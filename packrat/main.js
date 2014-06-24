@@ -1175,7 +1175,7 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
-    if (guidePages && /^#guide\/\d\/\d$/.test(link.locator)) {
+    if (guidePages && /^#guide\/\d\/\d/.test(link.locator)) {
       var step = +link.locator.substr(7, 1);
       switch (step) {
         case 1:
@@ -1183,7 +1183,8 @@ api.port.on({
           tabsByUrl[link.url] = tabsByUrl[link.url] || [];
           break;
         case 2:
-          var page = guidePages[+link.locator.substr(9)];
+          var page = guidePages[+link.locator.substr(9, 1)];
+          var tagId = link.locator.substr(11);
           var query = page.query.replace(/\+/g, ' ');
           var entry = searchPrefetchCache[query] = {
             response: pimpSearchResponse({
@@ -1191,10 +1192,10 @@ api.port.on({
               query: query,
               hits: [{
                 bookmark: {
-                  title: page.title.join(' '),
+                  title: page.title,
                   url: page.url,
-                  tags: [/* TODO: external ID of tag user chose */],
-                  matches: page.matches || [] // TODO: page.matches
+                  tags: tagId ? [tagId] : [],
+                  matches: page.matches
                 },
                 users: [],
                 count: 1,
@@ -1589,7 +1590,7 @@ function awaitDeepLink(link, tabId, retrySec) {
           api.tabs.emit(tab, 'guide', {
             step: +loc.substr(7, 1),
             pages: guidePages,
-            page: +loc.substr(9)
+            page: +loc.substr(9, 1)
           }, {queue: 1});
         }
       } else {

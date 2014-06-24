@@ -100,13 +100,13 @@ guide.step = guide.step || function () {
     }
   }
 
-  function showStep(idx, rect, ms) {
+  function showStep(idx, ms, rectLit, rectTo) {
     if (idx > stepIdx || stepIdx == null) {
       log('[showStep] step:', stepIdx, '=>', idx);
       var step = steps[idx];
       var t0 = Date.now();
-      rect = rect || (step.lit ? getRect(step.lit) : (step.pos === 'center' ? 'center' : null));
-      ms = rect ? animateSpotlightTo(rect, step.pad, ms) : (ms || 0);
+      rectLit = rectLit || (step.lit ? getRect(step.lit) : (step.pos === 'center' ? 'center' : null));
+      ms = rectLit ? animateSpotlightTo(rectLit, step.pad, ms) : (ms || 0);
       var promises = stepIdx != null && !step.substep ? [hideStep()] : [];
       if (step.afterTransition) {
         $(document).on('transitionend', step.afterTransition, function end(e) {
@@ -124,39 +124,60 @@ guide.step = guide.step || function () {
         stepIdx = idx;
         (opts.step || api.noop)(idx);
         $steps.data().updateProgress(opts.done + (1 - opts.done) * (idx + 1) / steps.length);
-        if (step.substep) {
-          showSubstep(ms);
-        } else {
-          showNewStep(ms);
+
+        var pos;
+        var newArrow;
+        var arr = step.arrow;
+        if (arr) {
+          var hEl = $(arr.to.sel || step.lit)[0];
+          var anchor = createAnchor(hEl);
+          var rHead = anchor.translate(rectTo || hEl.getBoundingClientRect());
+          var headAngleRad = Math.PI / 180 * arr.to.angle;
+          var H = pointOutsideRect(rHead, arr.to.along, headAngleRad + Math.PI, arr.to.gap);
+          var T = {x: H.x - arr.dx, y: H.y - arr.dy};
+
+          // compute T_ (T with stage positioned at appropriate window corner)
+          var $stageClone = $stage.clone()
+            .attr('kifi-step', idx)
+            .css(anchor.css)
+            .css({visibility: 'hidden', transform: 'none'})
+            .appendTo('body');
+          var tEl = $stageClone.find('.kifi-guide-p.kifi-step' + stepIdx)[0];
+          var rTail = anchor.translate(tEl.getBoundingClientRect());
+          var tailAngleRad = Math.PI / 180 * arr.from.angle;
+          var T_ = pointOutsideRect(rTail, arr.from.along, tailAngleRad, arr.from.gap);
+          $stageClone.remove();
+
+          pos = translatePos(anchor.css, T.x - T_.x, T.y - T_.y);
+          newArrow = new CurvedArrow(
+            {x: T.x, y: T.y, angle: arr.from.angle, spacing: arr.from.spacing},
+            {x: H.x, y: H.y, angle: arr.to.angle, draw: arr.to.draw},
+            anchor.css);
         }
+
+        (step.substep ? showSubstep : showNewStep)(pos || step.pos, ms, newArrow);
       });
     }
   }
 
-  function showNewStep(msToEarliestCompletion) {
+  function showNewStep(pos, msToEarliestCompletion, newArrow) {
+    arrow = newArrow;
     var step = steps[stepIdx];
-    var $prev = $stage.prev();
     $stage
       .attr('kifi-step', stepIdx)
-      .css(newStepPosCss(step.pos))
-      .data('pos', step.pos || $stage.data('pos'))
-      .detach()
+      .css(newStepPosCss(pos))
+      .data('pos', pos || $stage.data('pos'))
       .css({
         'transition-property': step.transition || '',
         'transition-duration': '',
         'transition-delay': Math.max(0, msToEarliestCompletion - 200) + 'ms'
       })
-      .toggleClass('kifi-from-right', step.fromRight)
-      .insertAfter($prev) // forces transform matrix recalc
       .each(layout)
       .on('transitionend', function end(e) {
         if (e.target === this) {
           $(this).off('transitionend', end).css('transition-delay', '');
-          var arr = step.arrow;
-          if (arr) {
-            var tail = $.extend({el: this.querySelector('.kifi-guide-p.kifi-step' + stepIdx)}, arr.from);
-            var head = $.extend({el: $(arr.to.sel || step.lit)[0]}, arr.to);
-            arrow = new CurvedArrow(tail, head, opts.anchor, stepIdx === 0 ? 600 : 400);
+          if (arrow) {
+            arrow.reveal(stepIdx === 0 ? 600 : 400);
           }
         }
       })
@@ -164,7 +185,7 @@ guide.step = guide.step || function () {
   }
 
   // animates stage and arrow to new position and cross-fades to new action prompt
-  function showSubstep(msToEarliestCompletion) {
+  function showSubstep(pos, msToEarliestCompletion, newArrow) {
     var fadeDeferred = Q.defer();
     var promises = [fadeDeferred.promise];
     $stage.find('.kifi-guide-p.kifi-step' + (stepIdx - 1))
@@ -174,19 +195,19 @@ guide.step = guide.step || function () {
       })
       .css({opacity: 0, transition: 'opacity .1s linear'});
     arrow.fadeAndDetach(100);
-    arrow = null;
+    arrow = newArrow;
 
     var ms = Math.max(200, msToEarliestCompletion);
     var step = steps[stepIdx];
-    if (step.pos) {
+    if (pos) {
       var posDeferred = Q.defer();
       promises.push(posDeferred.promise);
-      var pos = $stage.data('pos');
-      $stage.data('pos', step.pos);
+      var prevPos = $stage.data('pos');
+      $stage.data('pos', pos);
       var tfm = {x: 0, y: 0};
-      for (var k in pos) {
+      for (var k in prevPos) {
         tfm[k === 'left' || k === 'right' ? 'x' : 'y'] =
-           (k === 'left' || k === 'top' ? 1 : -1) * (step.pos[k] - pos[k]);
+           (k === 'left' || k === 'top' ? 1 : -1) * (pos[k] - prevPos[k]);
       }
       $stage.on('transitionend', function end(e) {
         if (e.target === this) {
@@ -206,10 +227,7 @@ guide.step = guide.step || function () {
       $stage.attr('kifi-step', stepIdx);
       $pNew.each(layout)
       .one('transitionend', function () {
-        var arr = step.arrow;
-        var tail = $.extend({el: this}, arr.from);
-        var head = $.extend({el: $(arr.to.sel || step.lit)[0]}, arr.to);
-        arrow = new CurvedArrow(tail, head, opts.anchor, 400);
+        arrow.reveal(400);
       })
       .removeClass('kifi-off-left');
     });
@@ -262,9 +280,79 @@ guide.step = guide.step || function () {
     }
   }
 
-  function navTo(url) {
-    api.port.emit('await_deep_link', {locator: '#guide/' + (opts.index + 1) + '/' + opts.pageIdx, url: url});
+  function navTo(url, suffix) {
+    api.port.emit('await_deep_link', {
+      locator: '#guide/' + (opts.index + 1) + '/' + opts.pageIdx + (suffix ? '/' + suffix : ''),
+      url: url
+    });
     window.location = url;
+  }
+
+  function createAnchor(el) {
+    el = $(el).closest('.kifi-root')[0] || el;
+    var cs = window.getComputedStyle(el);
+    var dx = cs.right !== 'auto' ? -window.innerWidth : 0;
+    var dy = cs.bottom !== 'auto' ? -window.innerHeight : 0;
+    return {
+      translate: function (o) {
+        var o2 = {};
+        for (var name in o) {
+          var val = o[name];
+          if (typeof val === 'number') {
+            if (/^(?:x|left|right)$/.test(name)) {
+              o2[name] = val + dx;
+              continue;
+            }
+            if (/^(?:y|top|bottom)$/.test(name)) {
+              o2[name] = val + dy;
+              continue;
+            }
+          }
+          o2[name] = val;
+        }
+        return o2;
+      },
+      css: {
+        top: dy ? 'auto' : 0,
+        left: dx ? 'auto' : 0,
+        right: dx ? 0 : 'auto',
+        bottom: dy ? 0 : 'auto'
+      }
+    };
+  }
+
+  function translatePos(pos, dx, dy) {
+    return {
+      top: typeof pos.top === 'number' ? pos.top + dy : pos.top,
+      left: typeof pos.left === 'number' ? pos.left + dx : pos.left,
+      right: typeof pos.right === 'number' ? pos.right - dx : pos.right,
+      bottom: typeof pos.bottom === 'number' ? pos.bottom - dy : pos.bottom
+    };
+  }
+
+  function pointOutsideRect(r, along, theta, d) { // also in step_4.js
+    var Px = r.left + (r.right - r.left) * (along != null ? along[0] : .5);
+    var Py = r.top + (r.bottom - r.top) * (along != null ? along[1] : .5);
+
+    // determine the two candidate edges (x = Cx and y = Cy)
+    var sinTheta = Math.sin(theta);
+    var cosTheta = Math.cos(theta);
+    var Cx = cosTheta < 0 ? r.left - d : r.right + d;
+    var Cy = sinTheta > 0 ? r.top - d : r.bottom + d;
+
+    // find where ray from P crosses: (Qx, Cy) and (Cx, Qy)
+    var tanTheta = sinTheta / cosTheta;
+    var Qx = Px + (Py - Cy) / tanTheta;
+    var Qy = Py + (Px - Cx) * tanTheta;
+
+    // choose the point closer to P
+    return dist2(Px, Py, Qx, Cy) < dist2(Px, Py, Cx, Qy) ? {x: Qx, y: Cy} : {x: Cx, y: Qy};
+  }
+
+  function dist2(x1, y1, x2, y2) {
+    var dx = x1 - x2;
+    var dy = y1 - y2;
+    return dx * dx + dy * dy;
   }
 
   function getRect(sel) {

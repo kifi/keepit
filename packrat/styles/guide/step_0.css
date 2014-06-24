@@ -1,4 +1,4 @@
-.kifi-guide-stage {
+.kifi-guide-0-stage {
   position: fixed;
   top: 0;
   left: 0;
@@ -9,7 +9,7 @@
   opacity: 0;
   transition: opacity .34s linear;
 }
-.kifi-guide-stage.kifi-open {
+.kifi-guide-0-stage.kifi-open {
   opacity: 1;
 }
 .kifi-guide-pages {
@@ -46,13 +46,13 @@
   border-radius: 50%;
   margin-bottom: 10px;
 }
-.kifi-guide-h1 {
+.kifi-guide-0-h1 {
   margin: 12px 0;
   font: bold italic 26px/36px Georgia,Times,serif !important;
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }
-.kifi-guide-p {
+.kifi-guide-0-p {
   line-height: 24px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
@@ -61,7 +61,7 @@
 .kifi-guide-em {
   color: #f38283;
 }
-.kifi-guide-next {
+.kifi-guide-0-next {
   margin-top: 32px;
   display: inline-block;
   border: 3px solid #fff;
@@ -72,12 +72,12 @@
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }
-.kifi-guide-next:hover,
-.kifi-guide-next:focus {
+.kifi-guide-0-next:hover,
+.kifi-guide-0-next:focus {
   color: #fff;
   background-color: rgba(255,255,255,.05);
 }
-.kifi-guide-next:active {
+.kifi-guide-0-next:active {
   color: #fff;
   background-color: rgba(255,255,255,.15);
 }
