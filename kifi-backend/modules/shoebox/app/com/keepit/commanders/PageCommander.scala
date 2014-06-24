@@ -62,7 +62,7 @@ class PageCommander @Inject() (
       val tags: Seq[Collection] = keep.map { bm =>
         keepToCollectionRepo.getCollectionsForKeep(bm.id.get).map { collId =>
           collectionRepo.get(collId)
-        }
+        } filter (_.isActive)
       }.getOrElse(Seq())
 
       val host: Option[String] = URI.parse(nUriStr).get.host.map(_.name)

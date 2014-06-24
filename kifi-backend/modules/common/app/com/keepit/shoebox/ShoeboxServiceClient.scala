@@ -34,6 +34,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
 import org.msgpack.ScalaMessagePack
+import com.keepit.cortex.dbmodel._
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX

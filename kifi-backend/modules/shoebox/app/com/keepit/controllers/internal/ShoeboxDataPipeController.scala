@@ -11,6 +11,7 @@ import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import org.msgpack.ScalaMessagePack
 import play.api.http.ContentTypes
+import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
 import com.keepit.model.serialize.UriIdAndSeqBatch
 
 class ShoeboxDataPipeController @Inject() (
@@ -52,6 +53,7 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
+  // deprecate this soon
   def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)
