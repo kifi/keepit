@@ -147,6 +147,17 @@ class KeepsController @Inject() (
     }
   }
 
+  def exportKeeps() = HtmlAction.authenticated { request =>
+    val msg = "Exporting your Kifi bookmarks"
+    // Given user request (authenticated user)
+    // query from SQL database for all user's bookmarks
+    // retrieve a list of keeps & bookmarks
+    // convert list of keeps to JSON format
+
+    // send JSON result over Play to Angular front-end
+    Ok(msg)
+  }
+
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
     try {
       request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { fromJson =>

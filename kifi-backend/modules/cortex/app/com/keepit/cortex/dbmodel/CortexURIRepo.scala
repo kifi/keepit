@@ -31,17 +31,15 @@ class CortexURIRepoImpl @Inject()(
 
   class CortexURITable(tag: Tag) extends RepoTable[CortexURI](db, tag, "cortex_uri") with SeqNumberColumn[CortexURI] {
     def uriId = column[Id[NormalizedURI]]("uri_id")
-    def title = column[String]("title")
-    def url = column[String]("url", O.NotNull)
-    def * = (id.?, createdAt,updatedAt, uriId, title.?, url, state, seq)  <> ((CortexURI.apply _).tupled, CortexURI.unapply _)
+    def * = (id.?, createdAt,updatedAt, uriId, state, seq)  <> ((CortexURI.apply _).tupled, CortexURI.unapply _)
   }
 
   def table(tag:Tag) = new CortexURITable(tag)
   initTable()
 
-  override def invalidateCache(uri: CortexURI)(implicit session: RSession): Unit = {}
+  def invalidateCache(uri: CortexURI)(implicit session: RSession): Unit = {}
 
-  override def deleteCache(uri: CortexURI)(implicit session: RSession): Unit = {}
+  def deleteCache(uri: CortexURI)(implicit session: RSession): Unit = {}
 
   def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI] = super.getBySequenceNumber(seq, limit)
 
@@ -54,7 +52,7 @@ class CortexURIRepoImpl @Inject()(
 
   def getByURIId(uid: Id[NormalizedURI])(implicit session: RSession): Option[CortexURI] = {
     val q = (for{ r <- rows if r.uriId === uid} yield r)
-    q.list.headOption
+    q.firstOption
   }
 
 }

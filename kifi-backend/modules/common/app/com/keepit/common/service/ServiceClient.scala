@@ -31,7 +31,7 @@ class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: I
   override val serviceInstanceOpt = Some(serviceInstance)
   override def summary: String = s"$service:${path.abbreviate(100)}"
   override def service: String = s"${serviceInstance.remoteService.serviceType.shortName}${serviceInstance.id.id.toString}"
-  lazy val url: String = s"$protocol://${serviceInstance.instanceInfo.localHostname}:${port}$path"
+  lazy val url: String = s"$protocol://${serviceInstance.instanceInfo.localIp.ip}:${port}$path"
 }
 
 case class ServiceResponse(uri: ServiceUri, response: ClientResponse)

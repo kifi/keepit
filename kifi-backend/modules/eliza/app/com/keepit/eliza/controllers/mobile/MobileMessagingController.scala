@@ -29,7 +29,8 @@ class MobileMessagingController @Inject() (
   basicMessageCommander: MessageFetchingCommander,
   notificationCommander: NotificationCommander,
   actionAuthenticator: ActionAuthenticator,
-  heimdalContextBuilder: HeimdalContextBuilderFactory
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  messageSearchCommander: MessageSearchCommander
   ) extends MobileController(actionAuthenticator) with ElizaServiceController {
 
   def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
@@ -184,6 +185,12 @@ class MobileMessagingController @Inject() (
   def hasThreadsByUrl(url: String) = JsonAction.authenticatedAsync { request =>
     messagingCommander.hasThreads(request.userId, url).map { yesorno  =>
       Ok(Json.toJson(yesorno))
+    }
+  }
+
+  def searchMessages(query: String, page: Int) = JsonAction.authenticatedAsync { request =>
+    messageSearchCommander.searchMessages(request.userId, query, page).map{ notifs =>
+      Ok(Json.toJson(notifs.jsons))
     }
   }
 }

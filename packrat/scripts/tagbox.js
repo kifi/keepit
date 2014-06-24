@@ -177,7 +177,6 @@ this.tagbox = (function ($, win) {
 					.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
 				this.$suggestWrapper = this.$tagbox.find('.kifi-tagbox-suggest');
 				this.$suggest = this.$suggestWrapper.find('.kifi-tagbox-suggest-inner')
-					.height(util.minMax(32 * (tags.all || []).length, 164, 265))
 					.on('click', '.kifi-tagbox-suggestion', this.onClickSuggestion.bind(this))
 					.on('click', '.kifi-tagbox-new', this.onClickNewSuggestion.bind(this))
 					.on('mouseover', this.onMouseoverSuggestion.bind(this));
@@ -303,6 +302,14 @@ this.tagbox = (function ($, win) {
 				if (scroller) {
 					scroller.refresh();
 				}
+			}
+		},
+
+		updateSuggestHeight: function (force) {
+			var px = (Math.min(5, this.tags.length - win.tags.length) + 1) * 32 + 51;
+			var currPx = this.$suggest.data('height') || 0;
+			if (force || px > currPx) {
+				this.$suggest.height(px).data('height', px);
 			}
 		},
 
@@ -604,13 +611,14 @@ this.tagbox = (function ($, win) {
 			}
 
 			this.toggleClass('kifi-suggested', text || this.$suggest.children().length);
+			this.updateSuggestHeight();
 			this.updateScroll();
 
 			this.navigateTo('first', 'suggest');
 		},
 
 		/**
-		 * Updates suggestion according to the current states (tags + input).
+		 * Updates page's tag list.
 		 */
 		updateTagList: function () {
 			if (this.active) {
@@ -837,13 +845,6 @@ this.tagbox = (function ($, win) {
 			return $tag;
 		},
 
-		/**
-		 * Updates (add/remove) 'kifi-tagged' class of the tagbox.
-		 */
-		updateTaggedClass: function () {
-			return this.toggleClass('kifi-tagged', this.$tagList.children().length);
-		},
-
 		updateTagName: function (tag) {
 			addTag(this.tags, tag);
 			this.updateTagName$(tag);
@@ -892,13 +893,15 @@ this.tagbox = (function ($, win) {
 						html = this.renderTagSuggestionHtml(tags[0]);
 					if ($new.length) {
 						$new.before(html);
-					}
-					else {
+					} else {
 						$suggest.append(html);
 						this.addClass('kifi-suggested');
 					}
 				}
-				this.updateTaggedClass();
+				if (this.$tagList.is(':empty')) {
+					this.removeClass('kifi-tagged');
+					this.updateSuggestHeight(true);
+				}
 				this.updateScroll();
 			}
 			return len;
@@ -920,13 +923,13 @@ this.tagbox = (function ($, win) {
 						html = this.renderTagSuggestionsHtml(tags);
 					if ($new.length) {
 						$new.before(html);
-					}
-					else {
+					} else {
 						$suggest.append(html);
 						this.addClass('kifi-suggested');
 					}
 				}
 				this.removeClass('kifi-tagged');
+				this.updateSuggestHeight(true);
 				this.updateScroll();
 			}
 			return len;
@@ -960,7 +963,7 @@ this.tagbox = (function ($, win) {
 				throw new Error('Tag could not be created.');
 			}
 
-			this.tags.push(tag);
+			addTag(this.tags, tag);
 
 			this.removeNewSuggestionByName(tag.name);
 			this.onAddResponse(tag);

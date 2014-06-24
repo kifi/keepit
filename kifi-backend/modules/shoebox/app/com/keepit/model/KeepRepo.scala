@@ -25,7 +25,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds:Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI],Keep]
-  def getCountByUser(userId: Id[User], includePrivate: Boolean = true)(implicit session: RSession): Int
+  def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
@@ -36,8 +36,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
-  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
-  def latestKeep(url: String)(implicit session: RSession): Option[Keep]
+  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
@@ -244,24 +243,18 @@ class KeepRepoImpl @Inject() (
     interpolated.as[Keep].list
   }
 
-  def getCountByUser(userId: Id[User], includePrivate: Boolean)(implicit session: RSession): Int = {
+  def getCountByUser(userId: Id[User])(implicit session: RSession): Int = {
     import StaticQuery.interpolation
-    if (includePrivate) {
-      countCache.getOrElse(KeepCountKey(Some(userId))) {
-        val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-        sql.as[Int].first
-      }
-    } else {
-      val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = false"
-      sql.as[Int].first
-    }
+
+    val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
+    sql.as[Int].first
   }
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
-    val privateCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = true".as[Int].first()
-    val publicCount = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}' and is_private = false".as[Int].first()
-    (privateCount, publicCount)
+
+    val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
+    sql.as[(Int, Int)].first()
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
@@ -313,24 +306,14 @@ class KeepRepoImpl @Inject() (
     q.list.distinct
   }
 
-  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep] = {
+  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep] = {
     latestKeepUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
-      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId } yield bookmark
+      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId && bookmark.url === url } yield bookmark
       val max = bookmarks.map(_.createdAt).max
       val latest = for { bookmark <- bookmarks if bookmark.createdAt >= max } yield bookmark
       latest.sortBy(_.createdAt desc).firstOption
     }
   }
-
-  def latestKeep(url: String)(implicit session: RSession): Option[Keep] = {
-    latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
-      val keeps = for { keep <- rows if keep.url === url } yield keep
-      val max = keeps.map(_.createdAt).max
-      val latest = for { keep <- keeps if keep.createdAt >= max } yield keep
-      latest.sortBy(_.createdAt desc).firstOption
-    }
-  }
-
 
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined

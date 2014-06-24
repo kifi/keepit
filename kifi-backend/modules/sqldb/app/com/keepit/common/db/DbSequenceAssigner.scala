@@ -1,13 +1,13 @@
 package com.keepit.common.db
 
-import com.keepit.common.db.slick.{Database, DbRepo, SeqNumberFunction}
+import com.keepit.common.db.slick.{Database, Repo, SeqNumberFunction}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SequenceNumberAssignmentStalling, SequenceAssigner}
 
 abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
   db: Database,
-  repo: DbRepo[M] with SeqNumberFunction[M],
+  repo: Repo[M] with SeqNumberFunction[M],
   airbrake: AirbrakeNotifier
 ) extends SequenceAssigner with Logging{
 

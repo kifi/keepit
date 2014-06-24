@@ -25,7 +25,6 @@ import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.UriIdAndSeq
-import com.keepit.cortex.dbmodel._
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
@@ -604,13 +603,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 
-  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[CortexURI]] = {
-    val uris = allNormalizedURIs.values.filter(_.seq > seq).toSeq.sortBy(_.seq).take(fetchSize)
-    Future.successful(uris.map{CortexURI.fromURI(_)})
-  }
-
-  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CortexKeep]] = {
-    val bms = allBookmarks.values.filter(_.seq > seq).toSeq.sortBy(_.seq).take(fetchSize)
-    Future.successful(bms.map{CortexKeep.fromKeep(_)})
-  }
+  def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
 }

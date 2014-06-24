@@ -21,8 +21,6 @@ class CortexURITest extends Specification with CortexTestInjector{
           CortexURI(
            id = None,
            uriId = Id[NormalizedURI](i),
-           title = Some("t" + i),
-           url = "url" + i,
            state = State[CortexURI]("active"),
            seq = SequenceNumber[CortexURI](i)
          )

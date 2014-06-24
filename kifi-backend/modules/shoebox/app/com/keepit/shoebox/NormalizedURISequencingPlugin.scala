@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ImplementedBy, Singleton, Inject}
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.DbSequenceAssigner
 import com.keepit.common.db.slick.Database

@@ -17,6 +17,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
 import com.keepit.common.plugin.SchedulingProperties
+import scala.util.Success
+import scala.util.Failure
 
 object CortexDataIngestion{
   trait CortexDataIngestionMessage
@@ -27,7 +29,7 @@ object CortexDataIngestion{
 trait CortexDataIngestionPlugin
 
 @Singleton
-private[cortex] class CortexDataIngestionPluginImpl @Inject()(
+private class CortexDataIngestionPluginImpl @Inject()(
   actor: ActorInstance[CortexDataIngestionActor],
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties
@@ -58,22 +60,38 @@ class CortexDataIngestionActor @Inject()(
   private val fetchSize = 500
   private val rng = new Random()
   private def randomDelay = (5 + rng.nextInt(10)) seconds
+  private var isUpdatingURI = false
+  private var isUpdatingKeep = false
 
   def receive = {
     case UpdateURI =>
-      println("\n===\n\none round of uri ingestion")
-      val sz = Await.result(updater.updateURIRepo(fetchSize), 5 seconds)
-      if (sz == fetchSize) context.system.scheduler.scheduleOnce(randomDelay, self, UpdateURI)
+      if (!isUpdatingURI){
+        isUpdatingURI = true
+        updater.updateURIRepo(fetchSize).map{ sz =>
+          log.info(s"updated $sz uris from shoebox")
+          if (sz == fetchSize) context.system.scheduler.scheduleOnce(randomDelay, self, UpdateURI)
+        }.onComplete{
+          case Success(_) => isUpdatingURI = false
+          case Failure(fail) =>  {isUpdatingURI = false; airbrake.notify(fail.getMessage)}
+        }
+      }
 
     case UpdateKeep =>
-      println("\n===\n\none round of keep ingestion")
-      val sz = Await.result(updater.updateKeepRepo(fetchSize), 5 seconds)
-      if (sz == fetchSize) context.system.scheduler.scheduleOnce(randomDelay, self, UpdateKeep)
+      if (!isUpdatingKeep){
+        isUpdatingKeep = true
+        updater.updateKeepRepo(fetchSize).map{ sz =>
+          log.info(s"updated $sz keeps from shoebox")
+          if (sz == fetchSize) context.system.scheduler.scheduleOnce(randomDelay, self, UpdateKeep)
+        }.onComplete{
+          case Success(_) => isUpdatingKeep = false
+          case Failure(fail) => {isUpdatingKeep = false; airbrake.notify(fail.getMessage)}
+        }
+      }
   }
 }
 
 
-private[cortex] class CortexDataIngestionUpdater @Inject()(
+private class CortexDataIngestionUpdater @Inject()(
   db: Database,
   shoebox: ShoeboxServiceClient,
   uriRepo: CortexURIRepo,
@@ -85,9 +103,9 @@ private[cortex] class CortexDataIngestionUpdater @Inject()(
   def updateURIRepo(fetchSize: Int): Future[Int] = {
     val seq = db.readOnly{ implicit s => uriRepo.getMaxSeq}
 
-    shoebox.getCortexURIs(seq, fetchSize).map{ uris =>
+    shoebox.getIndexable(seq, fetchSize).map{ uris =>
       db.readWrite{ implicit s =>
-        uris.foreach{ uri =>
+        uris.map{CortexURI.fromURI(_)} foreach { uri =>
           uriRepo.getByURIId(uri.uriId) match {
             case None => uriRepo.save(uri)
             case Some(cortexUri) => uriRepo.save(uri.copy(id = cortexUri.id))
@@ -99,11 +117,12 @@ private[cortex] class CortexDataIngestionUpdater @Inject()(
   }
 
   def updateKeepRepo(fetchSize: Int): Future[Int] = {
+
     val seq = db.readOnly{ implicit s => keepRepo.getMaxSeq}
 
-    shoebox.getCortexKeeps(seq, fetchSize).map{ keeps =>
+    shoebox.getBookmarksChanged(seq, fetchSize).map{ keeps =>
       db.readWrite { implicit s =>
-        keeps.foreach{ keep =>
+        keeps.map{CortexKeep.fromKeep(_)} foreach { keep =>
           keepRepo.getByKeepId(keep.keepId) match {
             case None => keepRepo.save(keep)
             case Some(cortexKeep) => keepRepo.save(keep.copy(id = cortexKeep.id))

@@ -13,6 +13,7 @@ case class CortexKeep(
   id: Option[Id[CortexKeep]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  keptAt: DateTime,
   keepId: Id[Keep],
   userId: Id[User],
   uriId: Id[NormalizedURI],
@@ -32,6 +33,7 @@ object CortexKeep {
     (__ \ 'id).formatNullable(Id.format[CortexKeep]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'keptAt).format(DateTimeJsonFormat) and
     (__ \ 'keepId).format(Id.format[Keep]) and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
@@ -43,8 +45,7 @@ object CortexKeep {
 
   def fromKeep(keep: Keep): CortexKeep =
     CortexKeep(
-      createdAt = keep.createdAt,
-      updatedAt = keep.updatedAt,
+      keptAt = keep.createdAt,
       keepId = keep.id.get,
       userId = keep.userId,
       uriId = keep.uriId,

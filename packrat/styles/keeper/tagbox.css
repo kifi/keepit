@@ -40,17 +40,8 @@ html[kifi-with-pane] .kifi-tagbox {
   transition-timing-function: ease-out;
   transition-duration: .24s;
 }
-.kifi-tagbox.kifi-suggested .kifi-tagbox-suggest {
-  display: block;
-}
-.kifi-tagbox.kifi-suggested .kifi-tagbox-empty {
-  display: none;
-}
-.kifi-tagbox.kifi-tagged .kifi-tagbox-empty {
-  display: none;
-}
 .kifi-tagbox.kifi-tagged .kifi-tagbox-tagged-wrapper {
-  height: 180px;
+  height: 156px;
 }
 .kifi-tagbox.kifi-tagged .kifi-tagbox-suggest,
 .kifi-tagbox.kifi-tagged .kifi-tagbox-suggest-inner {
@@ -79,7 +70,6 @@ html[kifi-with-pane] .kifi-tagbox {
   position: absolute;
   top: 0;
   right: 0;
-  display: block;
   width: 13px;
   height: 13px;
   border: 6px solid transparent;
@@ -157,20 +147,23 @@ html[kifi-with-pane] .kifi-tagbox {
   transition: color .2s linear;
 }
 .kifi-tagbox-suggest {
-  display: none;
   position: relative;
   overflow: hidden;
+}
+:not(.kifi-suggested):not(.kifi-tagged) > .kifi-tagbox-suggest {
+  display: none;
 }
 .kifi-tagbox-suggest-inner {
   position: relative;
   color: #858585;
   background: #eff2f7;
-  min-height: 164px;
-  max-height: 265px;
+  min-height: 83px;
+  max-height: 243px;
   padding: 0;
   overflow-x: hidden;
   overflow-y: scroll;
   font-size: 14px;
+  transition: height .4s ease;
 }
 .kifi-tagbox-suggestion {
   display: block;
@@ -210,15 +203,19 @@ html[kifi-with-pane] .kifi-tagbox {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgCAYAAAAIXrg4AAABAUlEQVR42u3NPWoCURSG4RFEC8WfKmkiZAO6Ce3cgI2ksHENYp/CLMMimxjIDhTtAiJRwSKN6Syck/eCaYZ759xJYneLp/vOeaP3zc7XGB/Y4Mn3zmdUwAsk5RmFvwbKeIU4zFH6baCJN4giRiNvoIU1xNMKD76BDg6QnPZoa4EuvhzHIzxejbC37E7ougJDnC1HW9whSrnH1rI/Y5gOTJBALAaIHAaOmwSTn8AUkqGZEagrt1Mz+lRG1YxAVbk9mZEo+hmBvnbvE1ijYnlewcovoFugh+JVD0tIvoDuYigbLaALgRAIgRAIAUvgeMPA0QRmNwzMTKCGGAnknySIUfsGLlMukbhYQI0AAAAASUVORK5CYII=);
 }
 .kifi-tagbox-empty {
+  padding: 24px 40px 23px;
+  line-height: 36px;
   font-size: 24px;
   font-weight: 200;
   -webkit-font-smoothing: antialiased;
-  line-height: 30px;
-  padding: 60px 40px;
   text-align: center;
   background: #eff2f7;
   color: #b8c5d1;
   transition: background .3s linear;
+}
+.kifi-suggested > .kifi-tagbox-empty,
+.kifi-tagged > .kifi-tagbox-empty {
+  display: none;
 }
 .kifi-tagbox-new {
   display: block;
@@ -261,7 +258,7 @@ html[kifi-with-pane] .kifi-tagbox {
   color: #b8c5d1;
   background: white;
   padding: 15px;
-  height: 150px;
+  height: 126px;
 }
 .kifi-tagbox-tagged-title {
   font-size: 16px;
@@ -276,7 +273,7 @@ html[kifi-with-pane] .kifi-tagbox {
 }
 .kifi-tagbox-tag-list-inner {
   position: relative;
-  height: 100px;
+  height: 84px;
   overflow: scroll;
   overflow-x: hidden;
   overflow-y: scroll;
@@ -292,8 +289,8 @@ html[kifi-with-pane] .kifi-tagbox {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  -moz-transition: -moz-transform 0.3s ease;
-  -webkit-transition: -webkit-transform 0.3s ease;
+  transition: transform .3s ease;
+  transition: -webkit-transform 0.3s ease;
 }
 .kifi-tagbox-tag:hover .kifi-tagbox-tag-name {
   padding: 0 7px;
@@ -302,7 +299,7 @@ html[kifi-with-pane] .kifi-tagbox {
   width: 18px;
 }
 .kifi-tagbox-tag.kifi-busy {
-  -moz-transform: scale(1, 0);
+  transform: scale(1, 0);
   -webkit-transform: scale(1, 0);
   cursor: progress;
 }

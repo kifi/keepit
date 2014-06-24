@@ -12,8 +12,7 @@ import com.keepit.common.logging.Logging
 import org.msgpack.ScalaMessagePack
 import play.api.http.ContentTypes
 import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
-import com.keepit.cortex.dbmodel.CortexURI
-import com.keepit.cortex.dbmodel.CortexKeep
+import com.keepit.model.serialize.UriIdAndSeqBatch
 
 class ShoeboxDataPipeController @Inject() (
     db: Database,
@@ -26,7 +25,8 @@ class ShoeboxDataPipeController @Inject() (
     userConnRepo: UserConnectionRepo,
     searchFriendRepo: SearchFriendRepo,
     socialConnectionRepo: SocialConnectionRepo,
-    socialUserInfoRepo: SocialUserInfoRepo
+    socialUserInfoRepo: SocialUserInfoRepo,
+    emailAddressRepo: UserEmailAddressRepo
   ) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
@@ -43,23 +43,6 @@ class ShoeboxDataPipeController @Inject() (
     val indexables = uris map { u => IndexableUri(u) }
     Ok(Json.toJson(indexables))
   }
-
-  def getCortexURIs(seq: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getIndexable(seq, fetchSize)
-    }
-    val cortexUris = uris.map{CortexURI.fromURI(_)}
-    Ok(Json.toJson(cortexUris))
-  }
-
-  def getCortexKeeps(seq: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
-    val keeps = db.readOnly(2, Slave) { implicit s =>
-      keepRepo.getBookmarksChanged(seq, fetchSize)
-    }
-    val cortexKeeps = keeps.map{CortexKeep.fromKeep(_)}
-    Ok(Json.toJson(cortexKeeps))
-  }
-
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
@@ -151,6 +134,15 @@ class ShoeboxDataPipeController @Inject() (
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = Action { request =>
     val socialUserInfos = db.readOnly(2, Slave) { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
     val json = Json.toJson(socialUserInfos)
+    Ok(json)
+  }
+
+  def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = Action { request =>
+    val modifiedEmails = db.readOnly(2, Slave) { implicit session => emailAddressRepo.getBySequenceNumber(SequenceNumber[UserEmailAddress](seqNum.value), fetchSize) }
+    val updates = modifiedEmails.map { email =>
+      EmailAccountUpdate(email.address, email.userId, email.verified, email.state == UserEmailAddressStates.INACTIVE, SequenceNumber(email.seq.value))
+    }
+    val json = Json.toJson(updates)
     Ok(json)
   }
 }
