@@ -38,7 +38,7 @@ guide.step1 = guide.step1 || function () {
     {
       afterTransition: '.kifi-tagbox-tagged-wrapper',
       lit: '.kifi-tagbox',
-      pad: [0, 40, 0, 10],
+      pad: [0, 20, 30, 0],
       pos: {bottom: 280, right: 480},  // TODO: position relative to spotlight
       transition: 'opacity'
     },

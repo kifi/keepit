@@ -23,9 +23,9 @@ guide.step = guide.step || function () {
         .on('click', '.kifi-guide-x', hide);
       $steps.each(layout).data().updateProgress(opts_.done);
       if (document.readyState === 'complete') {
-        timeout = setTimeout(show2, 2000);
+        timeout = setTimeout(show2, 500);
       } else {
-        timeout = setTimeout(show2, 6000);
+        timeout = setTimeout(show2, 3500);
         window.addEventListener('load', onDocumentComplete, true);
       }
       return {
@@ -38,7 +38,7 @@ guide.step = guide.step || function () {
 
   function onDocumentComplete() {
     clearTimeout(timeout);
-    timeout = setTimeout(show2, 500);
+    timeout = setTimeout(show2, 200);
   }
 
   function show2() {
