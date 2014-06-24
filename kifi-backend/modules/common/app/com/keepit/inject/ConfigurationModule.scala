@@ -31,10 +31,10 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
 }
 
 trait CommonServiceModule {
-  val fortyTwoModule: FortyTwoModule
   val actorSystemModule: ActorSystemModule
   val discoveryModule: DiscoveryModule
 
+  val fortyTwoModule = FortyTwoModule()
   val cryptoModule = ShoeboxCryptoModule()
   val healthCheckModule = ProdHealthCheckModule()
   val httpClientModule = ProdHttpClientModule()
@@ -43,8 +43,6 @@ trait CommonServiceModule {
 }
 
 trait CommonProdModule extends CommonServiceModule {
-  val fortyTwoModule = ProdFortyTwoModule()
-
   val actorSystemModule = ProdActorSystemModule()
 
   val airbrakeModule = ProdAirbrakeModule()
@@ -52,8 +50,6 @@ trait CommonProdModule extends CommonServiceModule {
 }
 
 trait CommonDevModule extends CommonServiceModule {
-  val fortyTwoModule = ProdFortyTwoModule()
-
   val actorSystemModule = DevActorSystemModule()
   val discoveryModule = DevDiscoveryModule()
 

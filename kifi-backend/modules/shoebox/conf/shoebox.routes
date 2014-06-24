@@ -679,6 +679,16 @@ GET     /ng                        com.keepit.controllers.website.AngularDistAss
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/angular/img", file)
 
-GET     /about/*file               com.keepit.controllers.website.AboutAssets.at(path="/public/about_us", file)
+##########################################
+# Marketing site
+##########################################
+GET     /about/*file               @com.keepit.controllers.website.AboutAssets.at(path="/public/about_us", file)
+
+# Redirects for the old marketing site
+GET     /index.html                @com.keepit.controllers.website.AboutAssets.at(path="/", file="index.html")
+GET     /team.html                 @com.keepit.controllers.website.AboutAssets.at(path="/", file="team.html")
+GET     /culture.html              @com.keepit.controllers.website.AboutAssets.at(path="/", file="culture.html")
+GET     /investors.html            @com.keepit.controllers.website.AboutAssets.at(path="/", file="investors.html")
+GET     /join_us.html              @com.keepit.controllers.website.AboutAssets.at(path="/", file="join_us.html")
 
 ->  / common.Routes
