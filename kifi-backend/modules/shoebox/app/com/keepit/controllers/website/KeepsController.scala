@@ -148,14 +148,40 @@ class KeepsController @Inject() (
   }
 
   def exportKeeps() = HtmlAction.authenticated { request =>
-    val msg = "Exporting your Kifi bookmarks"
     // Given user request (authenticated user)
-    // query from SQL database for all user's bookmarks
-    // retrieve a list of keeps & bookmarks
-    // convert list of keeps to JSON format
+    // query from SQL database for all user's bookmarks & retrieve a list of keeps
+    val exports = db.readOnly { implicit ro =>
+      keepRepo.getKeepExports(request.userId) // returns Seq[KeepExport]
+    }
 
-    // send JSON result over Play to Angular front-end
-    Ok(msg)
+    var msg1 : String = "userId: " + request.userId + " exporting " + exports.length.toString() + " bookmarks!<br><br>"
+    var xmlFile : String = "<exports>"
+
+    for (e <- exports) {
+      msg1 += "    created_at: " + e.created_at + "<br>"
+      msg1 += "    url: " + e.url + "<br>"
+      if (e.title != None) msg1 += "    title: " + e.title + "<br>"
+      var tags = ""
+      if (e.tags != None) {
+        for (t <- e.tags) {
+          tags += t + ","
+        }
+      }
+      if (tags != "") msg1 += "    tags: " + tags + "<br>"
+      msg1 += "------------------------------<br>"
+
+      xmlFile += "<keep>"
+      xmlFile += "<created_at>" + e.created_at + "</created_at>"
+      xmlFile += "<url>" + e.url + "</url>"
+      if (e.title != None) xmlFile += "<title>" + e.title + "</title>"
+      if (tags != "") xmlFile += "<tags>" + tags + "</tags>"
+      xmlFile += "</keep>"
+    }
+
+    xmlFile += "</exports>"
+
+    //Ok(xmlFile) // does not print out correctly on browser because of <> tags
+    Ok(msg1)
   }
 
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
