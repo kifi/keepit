@@ -76,6 +76,8 @@ trait SearchServiceClient extends ServiceClient {
 
   def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]]
 
+  def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
+
   //
   // Distributed Search
   //
@@ -355,6 +357,13 @@ class SearchServiceClientImpl(
   def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]] = {
     call(Search.internal.getFeeds(userId, limit)).map{ r =>
       Json.fromJson[Seq[Feed]](r.json).get
+    }
+  }
+
+  //the return values here are external id's of threads, a model that is not available here. Need to rethink this a bit. -Stephen
+  def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]] = {
+    call(Search.internal.searchMessages(userId, query, page)).map{ r=>
+      Json.fromJson[Seq[String]](r.json).get
     }
   }
 
