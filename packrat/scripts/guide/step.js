@@ -22,6 +22,9 @@ guide.step = guide.step || function () {
       $steps = opts_.$guide.appendTo('body')
         .on('click', '.kifi-guide-x', hide);
       $steps.each(layout).data().updateProgress(opts_.done);
+      eventsToScreen.forEach(function (type) {
+        window.addEventListener(type, screenEvent, true);
+      });
       if (document.readyState === 'complete') {
         timeout = setTimeout(show2, 500);
       } else {
@@ -46,9 +49,6 @@ guide.step = guide.step || function () {
     spotlight.attach($.fn.before.bind($steps));
     $stage.insertBefore($steps);
     $(window).on('resize.guideStep', onWinResize);
-    eventsToScreen.forEach(function (type) {
-      window.addEventListener(type, screenEvent, true);
-    });
     showStep(0);
   }
 
