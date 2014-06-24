@@ -102,12 +102,6 @@ html[kifi-with-pane] .kifi-tagbox {
   padding: 0;
   /* 'cellpadding' equivalent */
 }
-.kifi-tagbox-input-box.kifi-focus .kifi-tagbox-input-placeholder {
-  color: #bfcbd6;
-}
-.kifi-tagbox-input-box.kifi-empty .kifi-tagbox-input-placeholder {
-  display: block;
-}
 .kifi-tagbox-tag-icon {
   display: block;
   float: left;
@@ -139,12 +133,17 @@ html[kifi-with-pane] .kifi-tagbox {
   background: transparent;
 }
 .kifi-tagbox-input-placeholder {
-  display: none;
   position: absolute;
   top: 0;
   left: 0;
   color: #b8c5d1;
   transition: color .2s linear;
+}
+.kifi-tagbox-input-box.kifi-focus .kifi-tagbox-input-placeholder {
+  color: #bfcbd6;
+}
+.kifi-tagbox-input-box:not(.kifi-empty) .kifi-tagbox-input-placeholder {
+  display: none;
 }
 .kifi-tagbox-suggest {
   position: relative;
