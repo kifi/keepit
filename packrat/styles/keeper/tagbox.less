@@ -128,14 +128,6 @@
       padding: 0; /* 'cellpadding' equivalent */
     }
   }
-
-  &.kifi-focus .kifi-tagbox-input-placeholder {
-    color: tint(@kifi-bluegray, 10%);
-  }
-
-  &.kifi-empty .kifi-tagbox-input-placeholder {
-    display: block;
-  }
 }
 
 .kifi-tagbox-tag-icon {
@@ -174,12 +166,19 @@
 }
 
 .kifi-tagbox-input-placeholder {
-  display: none;
   position: absolute;
   top: 0;
   left: 0;
   color: @kifi-bluegray;
   transition: color .2s linear;
+
+  .kifi-tagbox-input-box.kifi-focus & {
+    color: tint(@kifi-bluegray, 10%);
+  }
+
+  .kifi-tagbox-input-box:not(.kifi-empty) & {
+    display: none;
+  }
 }
 
 .kifi-tagbox-suggest {
