@@ -103,9 +103,9 @@ private class CortexDataIngestionUpdater @Inject()(
   def updateURIRepo(fetchSize: Int): Future[Int] = {
     val seq = db.readOnly{ implicit s => uriRepo.getMaxSeq}
 
-    shoebox.getIndexable(seq, fetchSize).map{ uris =>
-      db.readWrite{ implicit s =>
-        uris.map{CortexURI.fromURI(_)} foreach { uri =>
+    shoebox.getIndexable(seq, fetchSize).map { uris =>
+      uris.map { CortexURI.fromURI(_) } foreach { uri =>
+        db.readWrite { implicit s =>
           uriRepo.getByURIId(uri.uriId) match {
             case None => uriRepo.save(uri)
             case Some(cortexUri) => uriRepo.save(uri.copy(id = cortexUri.id))
@@ -120,9 +120,9 @@ private class CortexDataIngestionUpdater @Inject()(
 
     val seq = db.readOnly{ implicit s => keepRepo.getMaxSeq}
 
-    shoebox.getBookmarksChanged(seq, fetchSize).map{ keeps =>
-      db.readWrite { implicit s =>
-        keeps.map{CortexKeep.fromKeep(_)} foreach { keep =>
+    shoebox.getBookmarksChanged(seq, fetchSize).map { keeps =>
+      keeps.map { CortexKeep.fromKeep(_) } foreach { keep =>
+        db.readWrite { implicit s =>
           keepRepo.getByKeepId(keep.keepId) match {
             case None => keepRepo.save(keep)
             case Some(cortexKeep) => keepRepo.save(keep.copy(id = cortexKeep.id))
