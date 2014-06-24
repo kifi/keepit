@@ -25,7 +25,6 @@ import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.UriIdAndSeq
-import com.keepit.cortex.dbmodel._
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
