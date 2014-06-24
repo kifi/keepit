@@ -12,7 +12,7 @@ case class FortyTwoConfig(
   applicationName: String,
   applicationBaseUrl: String)
 
-case class FortyTwoModule() extends ScalaModule {
+trait FortyTwoModule extends ScalaModule {
 
   def configure(): Unit = {
     val appScope = new AppScope
@@ -22,6 +22,9 @@ case class FortyTwoModule() extends ScalaModule {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
   }
+}
+
+case class ProdFortyTwoModule() extends FortyTwoModule {
 
   @Provides @Singleton
   def fortyTwoServices(clock: Clock, fortytwoConfig: FortyTwoConfig): FortyTwoServices =
@@ -38,4 +41,5 @@ case class FortyTwoModule() extends ScalaModule {
     current.configuration.getString("application.name").get,
     current.configuration.getString("application.baseUrl").get
   )
+
 }
