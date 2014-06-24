@@ -61,7 +61,7 @@ angular.module('kifi.installService', [])
           return false;
         }
         var parts = version.split('.');
-        var minParts = (parts.length < 4 ? minVersion : minCanaryVersion).split('.');
+        var minParts = (parts.length > 3 && minCanaryVersion || minVersion).split('.');
         for (var i = 0; i < minParts.length; i++) {
           if (i >= parts.length || +parts[i] < +minParts[i]) {
             return false;
