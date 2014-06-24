@@ -11,16 +11,23 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.cortex.sql.CortexTypeMappers
+import scala.slick.jdbc.StaticQuery
 
 
 
-trait URILDATopicRepo extends DbRepo[URILDATopic]
+
+@ImplementedBy(classOf[URILDATopicRepoImpl])
+trait URILDATopicRepo extends DbRepo[URILDATopic] {
+  def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[Array[Float]]
+  def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
+}
 
 class URILDATopicRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock,
   airbrake: AirbrakeNotifier
-) extends DbRepo[URILDATopic] with URILDATopicRepo {
+) extends DbRepo[URILDATopic] with URILDATopicRepo with CortexTypeMappers{
 
   import db.Driver.simple._
 
@@ -30,8 +37,8 @@ class URILDATopicRepoImpl @Inject()(
     def uriId = column[Id[NormalizedURI]]("uri_id")
     def uriState = column[State[NormalizedURI]]("uri_state")
     def uriSeq = column[SequenceNumber[NormalizedURI]]("uri_seq")
-    def version = column[ModelVersion[DenseLDA]]("lda_version")
-    def feature = column[Array[Byte]]("feature")
+    def version = column[ModelVersion[DenseLDA]]("version")
+    def feature = column[Array[Float]]("feature")
     def * = (id.?, createdAt, updatedAt, uriId, uriState, uriSeq, version, feature, state ) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
@@ -41,6 +48,20 @@ class URILDATopicRepoImpl @Inject()(
   def deleteCache(model: URILDATopic)(implicit session: RSession): Unit = {}
   def invalidateCache(model: URILDATopic)(implicit session: RSession): Unit = {}
 
+  def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[Array[Float]] = {
+    val q = for{
+      r <- rows
+      if (r.uriId === uriId && r.version === version)
+    } yield r.feature
 
+    q.firstOption
+  }
+
+  def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI] = {
+    import StaticQuery.interpolation
+
+    val sql = sql"select max(uri_seq) from uri_lda_topic where version = ${version.version}"
+    SequenceNumber[NormalizedURI](sql.as[Long].first max 0L)
+  }
 
 }

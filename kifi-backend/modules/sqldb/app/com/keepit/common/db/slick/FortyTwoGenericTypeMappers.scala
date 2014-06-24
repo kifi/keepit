@@ -3,7 +3,7 @@ package com.keepit.common.db.slick
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import java.sql.{Clob, Date, Timestamp}
+import java.sql.{Blob, Clob, Date, Timestamp}
 import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedResult, GetResult, PositionedParameters, SetParameter}
 import play.api.libs.json._
@@ -14,7 +14,7 @@ import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
 import com.keepit.search.{ArticleSearchResult, SearchConfig, Lang}
-import javax.sql.rowset.serial.SerialClob
+import javax.sql.rowset.serial.{SerialClob, SerialBlob}
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
@@ -125,8 +125,6 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
       Json.parse(src)
     }
   })
-
-  implicit def modelVersionMapper[M <: StatModel] = MappedColumnType.base[ModelVersion[M], Int](_.version, ModelVersion[M])
 
   // SetParameter conversions to be used for interpolated query parameters
 

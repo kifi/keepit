@@ -9,17 +9,19 @@ import com.keepit.common.db.State
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.States
 import com.keepit.common.db.ModelWithState
+import com.keepit.common.time._
+
 
 case class URILDATopic(
-  id: Option[Id[URILDATopic]],
-  createdAt: DateTime,
-  updatedAt: DateTime,
+  id: Option[Id[URILDATopic]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
   uriId: Id[NormalizedURI],
   uriState: State[NormalizedURI],
   uriSeq: SequenceNumber[NormalizedURI],
   version: ModelVersion[DenseLDA],
-  feature: Array[Byte],
-  state: State[URILDATopic]
+  feature: Array[Float],
+  state: State[URILDATopic] = URILDATopicStates.ACTIVE
 ) extends ModelWithState[URILDATopic] {
   def withId(id: Id[URILDATopic]): URILDATopic = copy(id = Some(id))
   def withUpdateTime(time: DateTime): URILDATopic = copy(updatedAt = time)
