@@ -41,5 +41,4 @@ case class ProdFortyTwoModule() extends FortyTwoModule {
     current.configuration.getString("application.name").get,
     current.configuration.getString("application.baseUrl").get
   )
-
 }
