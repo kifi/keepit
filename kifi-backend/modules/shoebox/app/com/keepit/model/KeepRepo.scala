@@ -36,8 +36,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
-  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep]
-  def latestKeep(url: String)(implicit session: RSession): Option[Keep]
+  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession) : Map[Id[User], Seq[KeepSource]]
@@ -125,7 +124,7 @@ class KeepRepoImpl @Inject() (
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     bookmarkUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
-      val bookmarks = (for(b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.ACTIVE) yield b).list
+      val bookmarks = (for(b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
       assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
     }
@@ -307,24 +306,14 @@ class KeepRepoImpl @Inject() (
     q.list.distinct
   }
 
-  def latestKeep(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Keep] = {
+  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep] = {
     latestKeepUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
-      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId } yield bookmark
+      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId && bookmark.url === url } yield bookmark
       val max = bookmarks.map(_.createdAt).max
       val latest = for { bookmark <- bookmarks if bookmark.createdAt >= max } yield bookmark
       latest.sortBy(_.createdAt desc).firstOption
     }
   }
-
-  def latestKeep(url: String)(implicit session: RSession): Option[Keep] = {
-    latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
-      val keeps = for { keep <- rows if keep.url === url } yield keep
-      val max = keeps.map(_.createdAt).max
-      val latest = for { keep <- keeps if keep.createdAt >= max } yield keep
-      latest.sortBy(_.createdAt desc).firstOption
-    }
-  }
-
 
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for(b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined

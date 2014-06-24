@@ -34,11 +34,12 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
 import com.keepit.signal.TestReKeepStatsUpdaterModule
 import com.keepit.normalizer.{NormalizationServiceImpl, NormalizedURIInterner}
+import controllers.AssetsBuilder
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
   private def isShoeboxController(clazz: Class[_]): Boolean = {
-    if (classOf[Controller] isAssignableFrom clazz) {
+    if ((classOf[Controller] isAssignableFrom clazz) && !(classOf[AssetsBuilder] isAssignableFrom clazz)) {
       if (classOf[ServiceController] isAssignableFrom clazz) {
         classOf[ShoeboxServiceController] isAssignableFrom clazz
       } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")

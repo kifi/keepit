@@ -192,6 +192,7 @@ object Search extends Service {
     def reindexUserGraphs() = ServiceRoute(POST, "/internal/search/userGraphs/reindex")
     def updateUserIndex() = ServiceRoute(POST, "/internal/search/user/update")
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
+    def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")

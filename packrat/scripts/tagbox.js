@@ -253,7 +253,7 @@ this.tagbox = (function ($, win) {
 			case 13: // enter
 			case 9: // tab
 				this.select(null, 'key:' + (e.which === 9 ? 'tab' : 'enter'));
-				this.setInputValue();
+				this.clearInput();
 				e.preventDefault();
 				break;
 			}
@@ -263,7 +263,7 @@ this.tagbox = (function ($, win) {
 			if (!this.active) {
 				return;
 			}
-			var text = this.$input.val().trim();
+			var text = this.getInputValue();
 			if (text !== this.text) {
 				this.text = text;
 				this.$inputbox.toggleClass('kifi-empty', !text);
@@ -306,7 +306,7 @@ this.tagbox = (function ($, win) {
 		},
 
 		updateSuggestHeight: function (force) {
-			var px = (Math.min(5, this.tags.length - win.tags.length) + 1) * 32 + 51;
+			var px = Math.max(32 + 51, Math.min(6, this.tags.length - win.tags.length + 1) * 32);
 			var currPx = this.$suggest.data('height') || 0;
 			if (force || px > currPx) {
 				this.$suggest.height(px).data('height', px);
@@ -509,23 +509,11 @@ this.tagbox = (function ($, win) {
 		},
 
 		/**
-		 * Sets a value to the input.
-		 *
-		 * @param {string} new input value.
-		 *
-		 * @return {jQuery} An jQuery object of the input
+		 * Clears the input field.
 		 */
-		setInputValue: function (val) {
-			var $input = this.$input || null;
-			if ($input) {
-				if (!val) {
-					val = '';
-				}
-				$input.val(val);
-				$input.focus();
-				this.suggest(val);
-			}
-			return $input;
+		clearInput: function () {
+			this.$input.val('').focus();
+			this.handleInput();
 		},
 
 		/**
@@ -1222,7 +1210,7 @@ this.tagbox = (function ($, win) {
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion'),
 				tagId = this.getData($suggestion, 'id');
-			this.setInputValue();
+			this.clearInput();
 			this.addTagById(tagId, $suggestion, 'autocomplete');
 		},
 
@@ -1234,7 +1222,7 @@ this.tagbox = (function ($, win) {
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new'),
 				tagName = this.getData($suggestion, 'name');
-			this.setInputValue();
+			this.clearInput();
 			this.createTag(tagName, 'new');
 		},
 
