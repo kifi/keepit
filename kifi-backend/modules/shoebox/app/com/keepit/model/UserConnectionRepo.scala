@@ -49,9 +49,11 @@ class UserConnectionRepoImpl @Inject() (
 
   private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
 
+  private def deferredSeqNum(): SequenceNumber[UserConnection] = SequenceNumber[UserConnection](clock.now.getMillis() - Long.MaxValue)
+
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
     // setting a negative sequence number for deferred assignment
-    val seqNum = SequenceNumber[UserConnection](clock.now.getMillis() - Long.MaxValue)
+    val seqNum = deferredSeqNum()
     super.save(model.copy(seq = seqNum))
   }
 
@@ -128,7 +130,7 @@ class UserConnectionRepoImpl @Inject() (
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, deferredSeqNum())
     }
 
     (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
@@ -147,7 +149,7 @@ class UserConnectionRepoImpl @Inject() (
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- rows if c.id === id } yield (c.state,c.seq)).update(UserConnectionStates.ACTIVE, sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state,c.seq)).update(UserConnectionStates.ACTIVE, deferredSeqNum())
     }
 
     val toInsert = users -- {
@@ -162,7 +164,7 @@ class UserConnectionRepoImpl @Inject() (
 
     (users + userId) foreach invalidateCache
 
-    rows.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = sequence.incrementAndGet())}.toSeq: _*)
+    rows.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum())}.toSeq: _*)
   }
 
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
