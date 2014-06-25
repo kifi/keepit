@@ -18,6 +18,15 @@ class EmailAddressParserTest extends Specification {
     "parse an email address with tags" in {
       EmailAddressParser.parseOpt("a+b+c@d") === Some(ParsedEmailAddress(LocalPart(None, "a", Seq(Tag("b"), Tag("c")), None), Host("d")))
     }
+    "handle (simple) quoted string" in {
+      EmailAddressParser.parseOpt("\"abc\"@d") === Some(ParsedEmailAddress(LocalPart(None, "abc", Nil, None), Host("d")))
+      EmailAddressParser.parseOpt("\"abc_def\"@d") === Some(ParsedEmailAddress(LocalPart(None, "abc_def", Nil, None), Host("d")))
+    }
+    "reject address with unbalanced quotes" in {
+      EmailAddressParser.parseOpt("abc\"@d") === None
+      EmailAddressParser.parseOpt("abc\"de@f") === None
+
+    }
   }
 
 }
