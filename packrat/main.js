@@ -1586,13 +1586,11 @@ function awaitDeepLink(link, tabId, retrySec) {
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
-        if (guidePages) {
-          api.tabs.emit(tab, 'guide', {
-            step: +loc.substr(7, 1),
-            pages: guidePages,
-            page: +loc.substr(9, 1)
-          }, {queue: 1});
-        }
+        api.tabs.emit(tab, 'guide', {
+          step: +loc.substr(7, 1),
+          pages: guidePages,
+          page: +loc.substr(9, 1)
+        }, {queue: 1});
       } else {
         api.tabs.emit(tab, 'open_to', {
           trigger: 'deepLink',
