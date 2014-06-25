@@ -17,6 +17,4 @@ CREATE TABLE message_search_history (
 
 insert into evolutions (name, description) values('181.sql', 'adding message search hisotry table');
 
-
-
 # --- !Downs
