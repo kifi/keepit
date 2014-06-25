@@ -40,5 +40,5 @@ class UserEmailAddressTest extends Specification {
     }
   }
 
-  private def uea(addr: String): UserEmailAddress = UserEmailAddress(userId = null, address = EmailAddress(addr))
+  private def uea(addr: String) = UserEmailAddress(userId = null, address = EmailAddress(addr))
 }
