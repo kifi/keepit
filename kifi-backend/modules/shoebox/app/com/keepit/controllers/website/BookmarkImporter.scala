@@ -67,7 +67,7 @@ class BookmarkImporter @Inject() (
             (t, h, keepTags)
           }
           log.info(s"[bmFileImport:$id] Tags extracted in ${clock.getMillis()-startMillis}ms")
-          val (importId, rawKeeps) = createRawKeeps(request.userId, sourceOpt, taggedKeeps)
+          val (importId, rawKeeps) = createRawKeeps(request.userId, sourceOpt, taggedKeeps, public)
 
           log.info(s"[bmFileImport:$id] Raw keep start persisting in ${clock.getMillis()-startMillis}ms")
 
