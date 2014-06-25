@@ -18,7 +18,7 @@ class NotificationUpdater @Inject() (
   def update(rawNotification: RawNotification): Future[JsObject] =
     updateSendableNotification(rawNotification).get
 
-  def update(rawNotifications: List[RawNotification]): Future[Notifications] =
+  def update(rawNotifications: Seq[RawNotification]): Future[Notifications] =
     updateSendableNotifications(rawNotifications) map Notifications
 
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {

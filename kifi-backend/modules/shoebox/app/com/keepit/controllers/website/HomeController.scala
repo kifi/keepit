@@ -13,6 +13,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
 import com.keepit.heimdal._
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
@@ -29,6 +30,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import securesocial.core.{SecureSocial, Authenticator}
 
 import scala.Some
+import scala.concurrent.Future
 
 class HomeController @Inject() (
   db: Database,
@@ -46,7 +48,8 @@ class HomeController @Inject() (
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
   inviteCommander: InviteCommander,
-  heimdalServiceClient: HeimdalServiceClient)
+  heimdalServiceClient: HeimdalServiceClient,
+  applicationConfig: FortyTwoConfig)
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -125,7 +128,16 @@ class HomeController @Inject() (
     }
   }
 
-  def home = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
+  def home = {
+    val htmlAction = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
+    Action.async(htmlAction.parser) { request =>
+      if (request.host.contains("42go")) {
+        Future.successful(MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission.html"))
+      } else {
+        htmlAction(request)
+      }
+    }
+  }
 
   private def homeAuthed(implicit request: AuthenticatedRequest[_]): SimpleResult = {
     val linkWith = request.session.get(AuthController.LinkWithKey)

@@ -11,6 +11,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.serializer.TraversableFormat
 
+import scala.slick.jdbc.StaticQuery
+
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
@@ -47,8 +49,11 @@ class UserConnectionRepoImpl @Inject() (
 
   private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
 
+  private def deferredSeqNum(): SequenceNumber[UserConnection] = SequenceNumber[UserConnection](clock.now.getMillis() - Long.MaxValue)
+
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
-    val seqNum = sequence.incrementAndGet()
+    // setting a negative sequence number for deferred assignment
+    val seqNum = deferredSeqNum()
     super.save(model.copy(seq = seqNum))
   }
 
@@ -125,7 +130,7 @@ class UserConnectionRepoImpl @Inject() (
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state, c.seq)).update(UserConnectionStates.UNFRIENDED, deferredSeqNum())
     }
 
     (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
@@ -144,7 +149,7 @@ class UserConnectionRepoImpl @Inject() (
     } yield c.id).list
 
     ids.foreach{ id =>
-      (for { c <- rows if c.id === id } yield (c.state,c.seq)).update(UserConnectionStates.ACTIVE, sequence.incrementAndGet())
+      (for { c <- rows if c.id === id } yield (c.state,c.seq)).update(UserConnectionStates.ACTIVE, deferredSeqNum())
     }
 
     val toInsert = users -- {
@@ -159,8 +164,17 @@ class UserConnectionRepoImpl @Inject() (
 
     (users + userId) foreach invalidateCache
 
-    rows.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = sequence.incrementAndGet())}.toSeq: _*)
+    rows.insertAll(toInsert.map{connId => UserConnection(user1 = userId, user2 = connId, seq = deferredSeqNum())}.toSeq: _*)
   }
 
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection] = super.getBySequenceNumber(seq, fetchSize)
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "user_connection", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from user_connection where seq < 0""".as[Option[Long]].first
+  }
 }

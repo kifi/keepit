@@ -3,14 +3,11 @@ package com.keepit.model
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
 import com.keepit.common.db._
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.{EmailAddress, EmailAddressParser}
 import com.keepit.common.time._
 
 import org.joda.time.DateTime
-import scala.concurrent.duration.Duration
 
 case class UserEmailAddress (
   id: Option[Id[UserEmailAddress]] = None,

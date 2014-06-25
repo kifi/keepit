@@ -19,8 +19,11 @@
           <a href="https://pinboard.in/export/" ng-click="openExportPopup($event)">Pinboard</a> (the format should be HTML).</p>
           <p class="import-file-link">Step 2: <a ng-click="openBookmarkFileSelector($event)" href="javascript:">Click here to select the file you downloaded</a>.
           <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)"></p>
-          <div class="dialog-buttons">
-            <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }" ng-show="importFilename">Step 3: Upload your bookmarks</button>
+          <div ng-show="importFilename">Step 3: Upload your bookmarks
+            <div class="dialog-buttons">
+              <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }">Import privately</button>
+              <button ng-click="uploadBookmarkFile($event, true)" ng-class="{'disabled': disableBookmarkImport }">Import publicly</button>
+            </div>
           </div>
           <div ng-click="openBookmarkFileSelector($event)" class="import-file-status">
             <div ng-if="importFilename"><i>{{importFilename}}</i> selected.</div>

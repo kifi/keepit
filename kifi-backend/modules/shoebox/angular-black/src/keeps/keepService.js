@@ -49,6 +49,7 @@ angular.module('kifi.keepService', [
       hit.keepers = hit.users;
       hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
       hit.summary = hit.uriSummary;
+      hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
       buildKeep(hit, hit.isMyBookmark);
     }
 
@@ -77,7 +78,7 @@ angular.module('kifi.keepService', [
       return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
 
-    function uploadBookmarkFile(file) {
+    function uploadBookmarkFile(file, makePublic) {
       var deferred = $q.defer();
       if (file) {
         var xhr = new XMLHttpRequest();
@@ -94,7 +95,7 @@ angular.module('kifi.keepService', [
         xhr.addEventListener('loadend', function (e) {
           deferred.notify({'name': 'loadend', 'event': e});
         });
-        xhr.open('POST', routeService.uploadBookmarkFile, true);
+        xhr.open('POST', routeService.uploadBookmarkFile(makePublic), true);
         xhr.send(file);
       } else {
         deferred.reject({'error': 'no file'});
@@ -154,7 +155,11 @@ angular.module('kifi.keepService', [
       };
       return $http.post(url, data, config).then(function (res) {
         var keeps = (existingKeeps || []).concat(res.data.keeps || []);
-        keeps = _.uniq(keeps, function (keep) { return keep.id; });
+        keeps = _.uniq(keeps, function (keep) {
+          // todo(martin): we should have the backend return the external id
+          // this way we could compare ids instead of urls
+          return keep.url;
+        });
         _.forEach(keeps, buildKeep);
         $analytics.eventTrack('user_clicked_page', {
           'action': 'keep'
@@ -198,7 +203,9 @@ angular.module('kifi.keepService', [
       var nonExisting = [];
       keeps.forEach(function (keep) {
         var existingKeep = _.find(list, function (existingKeep) {
-          return keep.id === existingKeep.id;
+          // todo(martin): we should have the backend return the external id
+          // this way we could compare ids instead of urls
+          return keep.url === existingKeep.url;
         });
         if (existingKeep) {
           // todo(martin) should we update the existingKeep info?
@@ -494,9 +501,13 @@ angular.module('kifi.keepService', [
           });
 
           var message = keeps.length > 1 ? keeps.length + ' Keeps deleted.' : 'Keep deleted.';
-          undoService.add(message, function () {
-            api.keep(keeps);
-          });
+          if (keeps.length > 1 || keeps.some(function (keep) { return !keep.isProtected; })) {
+            // if it is only one unprotected keep, it will likely still be shown
+            // on screen with a "Keep" button, so no real need to use the undo service.
+            undoService.add(message, function () {
+              api.keep(keeps);
+            });
+          }
 
           $analytics.eventTrack('user_clicked_page', {
             'action': 'unkeep'

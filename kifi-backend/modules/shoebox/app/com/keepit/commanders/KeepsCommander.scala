@@ -22,7 +22,6 @@ import play.api.libs.json._
 import scala.concurrent.Future
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.store.S3ImageStore
 import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance._
@@ -130,8 +129,6 @@ class KeepsCommander @Inject() (
     scheduler: Scheduler,
     eliza: ElizaServiceClient,
     localUserExperimentCommander: LocalUserExperimentCommander,
-    imageRepo: ImageInfoRepo,
-    imageStore: S3ImageStore,
     airbrake: AirbrakeNotifier,
     uriSummaryCommander: URISummaryCommander,
     collectionCommander: CollectionCommander,

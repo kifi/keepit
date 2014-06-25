@@ -404,7 +404,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 
           scope.keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
-            $content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
+            //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
             element.find('.kf-keep-info').css({
               'height': calcTextHeight + 'px'

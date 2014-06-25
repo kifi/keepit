@@ -48,6 +48,9 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ReKeepStatsUpdaterPlugin] != null) //make sure its not lazy loaded
+
+    // DB sequencing plugins
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[UserConnectionSequencingPlugin] != null) //make sure its not lazy loaded
   }
 }
