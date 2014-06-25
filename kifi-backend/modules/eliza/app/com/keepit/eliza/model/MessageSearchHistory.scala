@@ -1,0 +1,34 @@
+package com.keepit.eliza.model
+
+
+import com.keepit.common.db.{Model, Id}
+import com.keepit.common.time._
+import com.keepit.model.User
+
+import org.joda.time.DateTime
+
+object MessageSearchHistory {
+  val MAX_HISTORY_LENGTH = 20
+}
+
+
+case class MessageSearchHistory(
+  id: Option[Id[MessageSearchHistory]] = None,
+  createdAt: DateTime = currentDateTime,
+  updateAt: DateTime = currentDateTime,
+  userId: Id[User],
+  optOut: Boolean = false,
+  queries: Seq[String] = Seq.empty
+) extends Model[MessageSearchHistory] {
+
+  def withId(id: Id[MessageSearchHistory]): MessageSearchHistory = this.copy(id = Some(id))
+  def withUpdateTime(updateTime: DateTime): MessageSearchHistory = this.copy(updateAt = updateTime)
+
+  def withNewQuery(q: String): MessageSearchHistory = { //Really inefficient, but it should do for a while -Stephen
+    this.copy(
+      queries = (q +: queries.filter(_!=q)).take(MessageSearchHistory.MAX_HISTORY_LENGTH)
+    )
+  }
+
+
+}
