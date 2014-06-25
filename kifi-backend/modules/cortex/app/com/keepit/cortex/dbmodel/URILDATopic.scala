@@ -8,6 +8,7 @@ import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.cortex.models.lda.LDATopicFeature
+import com.keepit.cortex.models.lda.SparseTopicRepresentation
 
 
 case class URILDATopic(
@@ -20,6 +21,7 @@ case class URILDATopic(
   firstTopic: Option[LDATopic],
   secondTopic: Option[LDATopic],
   thirdTopic: Option[LDATopic],
+  sparseFeature: SparseTopicRepresentation,
   feature: LDATopicFeature,
   state: State[URILDATopic] = URILDATopicStates.ACTIVE
 ) extends ModelWithState[URILDATopic] {

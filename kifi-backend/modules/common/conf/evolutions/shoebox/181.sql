@@ -12,6 +12,7 @@ CREATE TABLE uri_lda_topic(
   first_topic smallint(6) unsigned,
   second_topic smallint(6) unsigned,
   third_topic smallint(6) unsigned,
+  sparse_feature varchar(512) NOT NULL,
   feature blob NOT NULL,
   state varchar(20) NOT NULL,
 

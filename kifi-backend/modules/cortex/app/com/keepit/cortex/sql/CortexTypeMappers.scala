@@ -18,13 +18,12 @@ trait CortexTypeMappers {  self: {val db: DataBaseComponent} =>
   implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
 
   implicit def ldaTopicFeatureMapper = MappedColumnType.base[LDATopicFeature, Blob](
-    { feat =>  new SerialBlob(FloatArrayFormmater.toBinary(feat.value))},
+    { feat => new SerialBlob(FloatArrayFormmater.toBinary(feat.value))},
     { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(0, len)); LDATopicFeature(arr) }
   )
 
-  implicit def floatArrayMapper = MappedColumnType.base[Array[Float], Blob](
-    { floats => new SerialBlob(FloatArrayFormmater.toBinary(floats))},
-    { blob => val len = blob.length().toInt; FloatArrayFormmater.fromBinary(blob.getBytes(0, len)) }
+  implicit def sparseTopicRepresentationMapper = MappedColumnType.base[SparseTopicRepresentation, String](
+    { topic => Json.stringify(Json.toJson(topic)) },
+    { jstr => val js = Json.parse(jstr); js.as[SparseTopicRepresentation] }
   )
-
 }

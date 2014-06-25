@@ -14,7 +14,7 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda._
 
 
-class URILDARepoTest extends Specification with CortexTestInjector {
+class URILDATopicRepoTest extends Specification with CortexTestInjector {
   "uri lda repo" should {
     "persist and retrieve feature" in {
       withDb() { implicit injector =>
@@ -24,6 +24,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
           firstTopic = Some(LDATopic(2)),
           secondTopic = Some(LDATopic(1)),
           thirdTopic = None,
+          sparseFeature = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f)),
           feature = LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f)),
           version = ModelVersion[DenseLDA](1),
           uriSeq = SequenceNumber[NormalizedURI](1)
@@ -37,6 +38,8 @@ class URILDARepoTest extends Specification with CortexTestInjector {
           uriTopic.firstTopic.get.index === 2
           uriTopic.secondTopic.get.index === 1
           uriTopic.thirdTopic === None
+          uriTopic.sparseFeature.dimension === 4
+          uriTopic.sparseFeature.topics === Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f)
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](2)) === None
           uriTopicRepo.getFeature(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)) === None
         }
@@ -54,6 +57,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
+              sparseFeature = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f)),
               feature = LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f)),
               version = ModelVersion[DenseLDA](1),
               uriSeq = SequenceNumber[NormalizedURI](i)))
@@ -65,6 +69,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
+              sparseFeature = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f)),
               feature = LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f)),
               version = ModelVersion[DenseLDA](2),
               uriSeq = SequenceNumber[NormalizedURI](i)))
