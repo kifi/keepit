@@ -360,7 +360,10 @@ class KeepRepoImpl @Inject() (
 
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport] = {
     import StaticQuery.interpolation
-    val sql_query = sql"select k.created_at, k.title, k.url, group_concat(c.name) from bookmark k left join keep_to_collection kc on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId} group by url order by k.id desc"
+    val sql_query = sql"""select k.created_at, k.title, k.url, group_concat(c.name)
+      from bookmark k left join keep_to_collection kc
+      on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId}
+      group by url order by k.id desc"""
     sql_query.as[(DateTime, Option[String], String, Option[String])].list.map{ case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags)}
   }
 }

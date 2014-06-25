@@ -150,8 +150,8 @@ class KeepsController @Inject() (
   def exportKeeps() = AnyAction.authenticated { request =>
     // Given user request (authenticated user)
     // query from SQL database for all user's bookmarks & retrieve a list of keeps
-    val exports = db.readOnly { implicit ro =>
-      keepRepo.getKeepExports(request.userId) // returns Seq[KeepExport]
+    val exports : Seq[KeepExport] = db.readOnly { implicit ro =>
+      keepRepo.getKeepExports(request.userId)
     }
 
     Ok(KeepsController.assembleKeepXmlExport(exports))
@@ -382,9 +382,12 @@ object KeepsController {
       val tagString = keep.tags map { tags =>
         s""" TAGS="${tags.replace("&","&amp;").replace("\"","")}""""
       } getOrElse ""
-      val line = s"""<DT><A HREF="${keep.url}" ADD_DATE="${keep.created_at.getMillis()/1000}"${tagString}>${title.replace("&","&amp;")}</A>"""
+      val date = keep.created_at.getMillis()/1000
+      val line =
+        s"""<DT><A HREF="${keep.url}" ADD_DATE="${date}"${tagString}>${title.replace("&","&amp;")}</A>"""
+          .stripMargin
       line
     }
-    before + keepExports.map(x => CreateExportXML(x)).mkString("\n") + after
+    before + keepExports.map(CreateExportXML).mkString("\n") + after
   }
 }

@@ -769,8 +769,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val seconds2 = dateTime2.getMillis()/1000
 
         val keepExports =
-            KeepExport(created_at = dateTime0, title = Some("title 11"), url = "http://www.hi.com11", tags = Some("tagA")) ::
-            KeepExport(created_at = dateTime1, title = Some("title 21"), url = "http://www.hi.com21", tags = Some("tagA,tagB")) ::
+            KeepExport(created_at = dateTime0, title = Some("title 1&1"), url = "http://www.hi.com11", tags = Some("tagA")) ::
+            KeepExport(created_at = dateTime1, title = Some("title 21"), url = "http://www.hi.com21", tags = Some("tagA,tagB&tagC")) ::
             KeepExport(created_at = dateTime2, title = Some("title 31"), url = "http://www.hi.com31", tags = None) ::
             Nil
 
@@ -783,8 +783,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
              |<Title>Kifi Bookmarks Export</Title>
              |<H1>Bookmarks</H1>
              |<DL>
-             |<DT><A HREF="http://www.hi.com11" ADD_DATE="$seconds0" TAGS="tagA">title 11</A>
-             |<DT><A HREF="http://www.hi.com21" ADD_DATE="$seconds1" TAGS="tagA,tagB">title 21</A>
+             |<DT><A HREF="http://www.hi.com11" ADD_DATE="$seconds0" TAGS="tagA">title 1&amp;1</A>
+             |<DT><A HREF="http://www.hi.com21" ADD_DATE="$seconds1" TAGS="tagA,tagB&amp;tagC">title 21</A>
              |<DT><A HREF="http://www.hi.com31" ADD_DATE="$seconds2">title 31</A>
              |</DL>""".stripMargin
         result must equalTo(expected)
