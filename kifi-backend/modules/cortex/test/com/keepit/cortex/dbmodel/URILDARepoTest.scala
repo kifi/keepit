@@ -11,7 +11,8 @@ import com.keepit.common.db.State
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURIStates
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.cortex.models.lda._
+
 
 class URILDARepoTest extends Specification with CortexTestInjector {
   "uri lda repo" should {
@@ -20,8 +21,11 @@ class URILDARepoTest extends Specification with CortexTestInjector {
         val uriTopicRepo = inject[URILDATopicRepo]
         val feat = URILDATopic(
           uriId = Id[NormalizedURI](1),
-          uriState = NormalizedURIStates.SCRAPED,
-          feature = Array(0.3f, 0.5f, 0.2f),
+          firstTopic = Some(LDATopic(2)),
+          secondTopic = Some(LDATopic(1)),
+          thirdTopic = None,
+          sparseTopic = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f, LDATopic(3) -> 0.1f)),
+          feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
           version = ModelVersion[DenseLDA](1),
           uriSeq = SequenceNumber[NormalizedURI](1)
         )
@@ -29,7 +33,11 @@ class URILDARepoTest extends Specification with CortexTestInjector {
         db.readWrite{ implicit s => uriTopicRepo.save(feat)}
 
         db.readOnly{ implicit s =>
-          uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get.toList === List(0.3f, 0.5f, 0.2f)
+          uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get.toList === List(0.3f, 0.5f, 0.1f, 0.1f)
+          val uriTopic = uriTopicRepo.get(Id[URILDATopic](1))
+          uriTopic.firstTopic.get.index === 2
+          uriTopic.secondTopic.get.index === 1
+          uriTopic.thirdTopic === None
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](2)) === None
           uriTopicRepo.getFeature(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)) === None
         }
@@ -44,8 +52,11 @@ class URILDARepoTest extends Specification with CortexTestInjector {
           (1 to 5).map { i =>
             uriTopicRepo.save(URILDATopic(
               uriId = Id[NormalizedURI](i),
-              uriState = NormalizedURIStates.SCRAPED,
-              feature = Array(0.3f, 0.5f, 0.2f),
+              firstTopic = Some(LDATopic(2)),
+              secondTopic = Some(LDATopic(1)),
+              thirdTopic = None,
+              sparseTopic = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f, LDATopic(3) -> 0.1f)),
+              feature = Array(0.3f, 0.5f, 0.1f, 01f),
               version = ModelVersion[DenseLDA](1),
               uriSeq = SequenceNumber[NormalizedURI](i)))
           }
@@ -53,8 +64,11 @@ class URILDARepoTest extends Specification with CortexTestInjector {
           (6 to 10).map{ i =>
             uriTopicRepo.save(URILDATopic(
               uriId = Id[NormalizedURI](i),
-              uriState = NormalizedURIStates.SCRAPED,
-              feature = Array(0.3f, 0.5f, 0.2f),
+              firstTopic = Some(LDATopic(2)),
+              secondTopic = Some(LDATopic(1)),
+              thirdTopic = None,
+              sparseTopic = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f, LDATopic(3) -> 0.1f)),
+              feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
               version = ModelVersion[DenseLDA](2),
               uriSeq = SequenceNumber[NormalizedURI](i)))
           }

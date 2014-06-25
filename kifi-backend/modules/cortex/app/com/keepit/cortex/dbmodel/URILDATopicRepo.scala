@@ -13,8 +13,8 @@ import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.cortex.sql.CortexTypeMappers
 import scala.slick.jdbc.StaticQuery
-
-
+import com.keepit.cortex.models.lda.LDATopic
+import com.keepit.cortex.models.lda.SparseTopicRepresentation
 
 
 @ImplementedBy(classOf[URILDATopicRepoImpl])
@@ -35,11 +35,14 @@ class URILDATopicRepoImpl @Inject()(
 
   class URILDATopicTable(tag: Tag) extends RepoTable[URILDATopic](db, tag, "uri_lda_topic"){
     def uriId = column[Id[NormalizedURI]]("uri_id")
-    def uriState = column[State[NormalizedURI]]("uri_state")
     def uriSeq = column[SequenceNumber[NormalizedURI]]("uri_seq")
     def version = column[ModelVersion[DenseLDA]]("version")
+    def firstTopic = column[LDATopic]("first_topic", O.Nullable)
+    def secondTopic = column[LDATopic]("second_topic", O.Nullable)
+    def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
+    def sparseTopic = column[SparseTopicRepresentation]("sparse_topic")
     def feature = column[Array[Float]]("feature")
-    def * = (id.?, createdAt, updatedAt, uriId, uriState, uriSeq, version, feature, state ) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, firstTopic.?, secondTopic.?, thirdTopic.?, sparseTopic, feature, state ) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
   def table(tag:Tag) = new URILDATopicTable(tag)
