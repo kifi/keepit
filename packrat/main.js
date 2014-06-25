@@ -1532,11 +1532,10 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-var kifiSiteRe = /^https?:\/\/(?:(?:www\.|preview\.)?kifi\.com|dev.ezkeep.com)/;
 function updateKifiAppTabs() {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (url.lastIndexOf(prefix, 0) === 0 || kifiSiteRe.test(url)) {
+    if (url.lastIndexOf(prefix, 0) === 0 || url.lastIndexOf('https://preview.kifi.com', 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
         api.tabs.emit(tab, 'update_keeps');
       });
