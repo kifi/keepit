@@ -80,7 +80,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       });
     };
 
-    $scope.triggerOnboarding = function () {
+    $scope.triggerGuide = function () {
       $window.postMessage({
         type: 'start_guide',
         pages: [{
@@ -125,7 +125,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]}
         }]
       }, '*');
+      delete $window.document.documentElement.dataset.guide;
     };
+    if ('guide' in $window.document.documentElement.dataset) {
+      $scope.triggerGuide();
+    }
 
     // onboarding.js is using these functions
     $window.getMe = function () {
@@ -151,7 +155,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     });
 
     $scope.importBookmarks = function () {
-      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
 
       if (!kifiVersion) {
         $rootScope.$emit('showGlobalModal','installExtension');
@@ -167,6 +171,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
     $window.addEventListener('message', function (event) {
       switch (event.data) {
+        case 'get_guide':
+          $scope.triggerGuide();
+          break;
         case 'import_bookmarks':
           if (event.data.bookmarkCount > 0) {
             $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
