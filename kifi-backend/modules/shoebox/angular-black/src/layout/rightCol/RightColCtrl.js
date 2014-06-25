@@ -131,29 +131,6 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $scope.triggerGuide();
     }
 
-    // onboarding.js is using these functions
-    $window.getMe = function () {
-      return (profileService.me ? $q.when(profileService.me) : profileService.getMe()).then(function (me) {
-        me.pic200 = me.picUrl;
-        return me;
-      });
-    };
-
-    $window.exitOnboarding = function () {
-      $scope.data.showGettingStarted = false;
-      $http.post(env.xhrBase + '/user/prefs', {
-        onboarding_seen: 'true'
-      });
-      if (!profileService.prefs.onboarding_seen) {
-        $scope.importBookmarks();
-      }
-      $scope.$apply();
-    };
-
-    $rootScope.$on('showGettingStarted', function () {
-      $scope.data.showGettingStarted = true;
-    });
-
     $scope.importBookmarks = function () {
       var kifiVersion = $window.document.documentElement.dataset.kifiExt;
 
