@@ -2494,14 +2494,23 @@ api.timers.setTimeout(api.errors.wrap(function() {
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
-    var tab, siteUrl = 'https://preview.kifi.com'; //webBaseUri();
-    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: siteUrl});
-    if ((tab = api.tabs.anyAt(webBaseUri() + '/install'))) {
+    var siteUrl = webBaseUri() + '/';
+    var tab = api.tabs.anyAt(webBaseUri() + '/install') || api.tabs.anyAt(siteUrl);
+    if (~experiments.indexOf('kifi_black')) {
+      var url = 'https://preview.kifi.com';
+      var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: url});
+      if (tab) {
+        api.tabs.select(tab.id);
+        api.tabs.navigate(tab.id, url);
+        timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
+      } else {
+        api.tabs.open(url, await);
+      }
+    } else if (tab) {
       api.tabs.select(tab.id);
       api.tabs.navigate(tab.id, siteUrl);
-      await(tab.id);
     } else {
-      api.tabs.open(siteUrl, await);
+      api.tabs.open(siteUrl);
     }
   }
 }, 3000))();
