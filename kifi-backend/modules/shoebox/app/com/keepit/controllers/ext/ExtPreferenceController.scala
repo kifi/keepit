@@ -116,7 +116,7 @@ class ExtPreferenceController @Inject() (
   def getPrefs(version: Int) = JsonAction.authenticatedAsync { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
-    loadUserPrefs(request.user.id.get) map {prefs =>
+    loadUserPrefs(request.user.id.get, request.experiments) map {prefs =>
       if (version == 1) {
         Ok(Json.arr("prefs", prefs, encryptedIp))
       } else {
@@ -149,21 +149,22 @@ class ExtPreferenceController @Inject() (
     Ok
   }
 
-  private def loadUserPrefs(userId: Id[User]): Future[UserPrefs] = {
+  private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
     val userValsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
     val messagingEmailsFuture = db.readOnlyAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {
       userVals <- userValsFuture
       messagingEmails <- messagingEmailsFuture
     } yield {
+      val preview = experiments.contains(ExperimentType.KIFI_BLACK)
       UserPrefs(
         lookHereMode = UserValues.lookHereMode.parseFromMap(userVals),
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
-        showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals),
-        showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals),
-        showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
-        showFindFriends = UserValues.showFindFriends.parseFromMap(userVals),
+        showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals) && !preview,
+        showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals) && !preview,
+        showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals) && !preview,
+        showFindFriends = UserValues.showFindFriends.parseFromMap(userVals) && !preview,
         messagingEmails = messagingEmails)
     }
   }
