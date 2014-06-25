@@ -3,7 +3,7 @@ package com.keepit.common.db.slick
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import java.sql.{Blob, Clob, Date, Timestamp}
+import java.sql.{Clob, Date, Timestamp}
 import org.joda.time.{DateTime, LocalDate}
 import scala.slick.jdbc.{PositionedResult, GetResult, PositionedParameters, SetParameter}
 import play.api.libs.json._
@@ -14,7 +14,7 @@ import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
 import com.keepit.search.{ArticleSearchResult, SearchConfig, Lang}
-import javax.sql.rowset.serial.{SerialClob, SerialBlob}
+import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
@@ -25,8 +25,7 @@ import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.common.math.ProbabilityDensity
-import com.keepit.cortex.core.StatModel
-import com.keepit.cortex.core.ModelVersion
+
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
