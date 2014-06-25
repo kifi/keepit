@@ -389,7 +389,7 @@ angular.module('kifi.keepService', [
         }, {});
 
         _.forEach(keeps, function (keep) {
-          var newTagList = _.map(keep.collections || keep.tags, function (tagId) {
+          var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
             return idMap[tagId] || null;
           }).filter(function (tag) {
             return tag != null;
