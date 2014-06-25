@@ -12,13 +12,13 @@ CREATE TABLE uri_lda_topic(
   first_topic smallint(6) unsigned,
   second_topic smallint(6) unsigned,
   third_topic smallint(6) unsigned,
-  sparse_feature varchar(512) NOT NULL,
+  sparse_feature Text NOT NULL,
   feature blob NOT NULL,
   state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
   INDEX uri_id_version_index (uri_id, version),
-  INDEX uri_seq_version_index (uri_seq, version),
+  INDEX uri_seq_version_index (version, uri_seq),
   INDEX first_topic_version_index (first_topic, version),
   INDEX second_topic_version_index (second_topic, version),
   INDEX third_topic_version_index (third_topic, version)

@@ -24,6 +24,6 @@ trait CortexTypeMappers {  self: {val db: DataBaseComponent} =>
 
   implicit def sparseTopicRepresentationMapper = MappedColumnType.base[SparseTopicRepresentation, String](
     { topic => Json.stringify(Json.toJson(topic)) },
-    { jstr => val js = Json.parse(jstr); js.as[SparseTopicRepresentation] }
+    { jstr =>  Json.parse(jstr).as[SparseTopicRepresentation] }
   )
 }
