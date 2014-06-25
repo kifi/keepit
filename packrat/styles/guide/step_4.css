@@ -62,8 +62,9 @@
   display: none;
   position: fixed;
   width: 240px;
-  bottom: 20%;
+  bottom: 40%;
   right: 20%;
+  margin-bottom: -120px;
   text-align: center;
   opacity: 0;
   transition: opacity .26s linear;
