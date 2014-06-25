@@ -10,7 +10,6 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.States
 import com.keepit.common.db.ModelWithState
 import com.keepit.common.time._
-import com.keepit.cortex.models.lda.SparseTopicRepresentation
 import com.keepit.cortex.models.lda.LDATopic
 
 
@@ -24,7 +23,6 @@ case class URILDATopic(
   firstTopic: Option[LDATopic],
   secondTopic: Option[LDATopic],
   thirdTopic: Option[LDATopic],
-  sparseTopic: SparseTopicRepresentation,
   feature: Array[Float],
   state: State[URILDATopic] = URILDATopicStates.ACTIVE
 ) extends ModelWithState[URILDATopic] {

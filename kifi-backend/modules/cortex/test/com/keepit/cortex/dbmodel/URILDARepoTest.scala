@@ -24,7 +24,6 @@ class URILDARepoTest extends Specification with CortexTestInjector {
           firstTopic = Some(LDATopic(2)),
           secondTopic = Some(LDATopic(1)),
           thirdTopic = None,
-          sparseTopic = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f, LDATopic(3) -> 0.1f)),
           feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
           version = ModelVersion[DenseLDA](1),
           uriSeq = SequenceNumber[NormalizedURI](1)
@@ -55,8 +54,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
-              sparseTopic = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f, LDATopic(3) -> 0.1f)),
-              feature = Array(0.3f, 0.5f, 0.1f, 01f),
+              feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
               version = ModelVersion[DenseLDA](1),
               uriSeq = SequenceNumber[NormalizedURI](i)))
           }
@@ -67,7 +65,6 @@ class URILDARepoTest extends Specification with CortexTestInjector {
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
-              sparseTopic = SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f, LDATopic(3) -> 0.1f)),
               feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
               version = ModelVersion[DenseLDA](2),
               uriSeq = SequenceNumber[NormalizedURI](i)))
