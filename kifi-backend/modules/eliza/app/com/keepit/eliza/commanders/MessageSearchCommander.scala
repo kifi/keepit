@@ -30,9 +30,10 @@ class MessageSearchCommander @Inject() (
     //async update search history for the user
     SafeFuture("message search history update"){
       db.readWrite{ implicit session =>
-        historyRepo.save(
-          historyRepo.getOrCreate(userId).withNewQuery(query)
-        )
+        val history = historyRepo.getOrCreate(userId)
+        if (!history.optOut) {
+          historyRepo.save(history.withNewQuery(query))
+        }
       }
     }
     resultExtIdsFut.flatMap{ protoExtIds =>
@@ -51,6 +52,21 @@ class MessageSearchCommander @Inject() (
       historyRepo.getOrCreate(userId)
     }
     (history.queries, history.optOut)
+  }
+
+  def setHistoryOptOut(userId: Id[User], optOut: Boolean): Boolean = {
+    db.readWrite{ implicit session =>
+      historyRepo.save(
+        historyRepo.getOrCreate(userId).withOptOut(optOut)
+      )
+    }
+    optOut
+  }
+
+  def getHistoryOptOut(userId: Id[User]): Boolean = {
+    db.readWrite{ implicit session =>
+      historyRepo.getOrCreate(userId).optOut
+    }
   }
 
 

@@ -30,5 +30,13 @@ case class MessageSearchHistory(
     )
   }
 
+  def withOptOut(optOut: Boolean): MessageSearchHistory = {
+    if (optOut) {
+      this.copy(queries = Seq.empty, optOut = true)
+    } else {
+      this.copy(optOut = false)
+    }
+  }
+
 
 }
