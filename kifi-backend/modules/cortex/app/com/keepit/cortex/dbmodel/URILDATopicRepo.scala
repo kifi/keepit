@@ -15,11 +15,12 @@ import com.keepit.cortex.sql.CortexTypeMappers
 import scala.slick.jdbc.StaticQuery
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.cortex.models.lda.SparseTopicRepresentation
+import com.keepit.cortex.models.lda.LDATopicFeature
 
 
 @ImplementedBy(classOf[URILDATopicRepoImpl])
 trait URILDATopicRepo extends DbRepo[URILDATopic] {
-  def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[Array[Float]]
+  def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LDATopicFeature]
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
 }
 
@@ -40,7 +41,7 @@ class URILDATopicRepoImpl @Inject()(
     def firstTopic = column[LDATopic]("first_topic", O.Nullable)
     def secondTopic = column[LDATopic]("second_topic", O.Nullable)
     def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
-    def feature = column[Array[Float]]("feature")
+    def feature = column[LDATopicFeature]("feature")
     def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, firstTopic.?, secondTopic.?, thirdTopic.?, feature, state ) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
@@ -50,7 +51,7 @@ class URILDATopicRepoImpl @Inject()(
   def deleteCache(model: URILDATopic)(implicit session: RSession): Unit = {}
   def invalidateCache(model: URILDATopic)(implicit session: RSession): Unit = {}
 
-  def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[Array[Float]] = {
+  def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LDATopicFeature] = {
     val q = for{
       r <- rows
       if (r.uriId === uriId && r.version === version)

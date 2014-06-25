@@ -13,7 +13,7 @@ CREATE TABLE uri_lda_topic(
   second_topic smallint(6) unsigned,
   third_topic smallint(6) unsigned,
   feature blob NOT NULL,
-  state varchar(20) NOT NULL
+  state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
   INDEX uri_id_version_index (uri_id, version),

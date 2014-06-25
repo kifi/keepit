@@ -24,7 +24,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
           firstTopic = Some(LDATopic(2)),
           secondTopic = Some(LDATopic(1)),
           thirdTopic = None,
-          feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
+          feature = LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f)),
           version = ModelVersion[DenseLDA](1),
           uriSeq = SequenceNumber[NormalizedURI](1)
         )
@@ -32,7 +32,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
         db.readWrite{ implicit s => uriTopicRepo.save(feat)}
 
         db.readOnly{ implicit s =>
-          uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get.toList === List(0.3f, 0.5f, 0.1f, 0.1f)
+          uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get.value.toList === List(0.3f, 0.5f, 0.1f, 0.1f)
           val uriTopic = uriTopicRepo.get(Id[URILDATopic](1))
           uriTopic.firstTopic.get.index === 2
           uriTopic.secondTopic.get.index === 1
@@ -54,7 +54,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
-              feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
+              feature = LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f)),
               version = ModelVersion[DenseLDA](1),
               uriSeq = SequenceNumber[NormalizedURI](i)))
           }
@@ -65,7 +65,7 @@ class URILDARepoTest extends Specification with CortexTestInjector {
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
-              feature = Array(0.3f, 0.5f, 0.1f, 0.1f),
+              feature = LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f)),
               version = ModelVersion[DenseLDA](2),
               uriSeq = SequenceNumber[NormalizedURI](i)))
           }

@@ -8,6 +8,7 @@ import com.keepit.cortex.store.StoreUtil.FloatArrayFormmater
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.cortex.models.lda.SparseTopicRepresentation
 import play.api.libs.json._
+import com.keepit.cortex.models.lda.LDATopicFeature
 
 trait CortexTypeMappers {  self: {val db: DataBaseComponent} =>
   import db.Driver.simple._
@@ -16,10 +17,9 @@ trait CortexTypeMappers {  self: {val db: DataBaseComponent} =>
 
   implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
 
-  implicit def sparseTopicRepresentationMapper = MappedColumnType.base[SparseTopicRepresentation, String](
-      {topic => Json.stringify(Json.toJson(topic))},
-      {jstr => val js = Json.parse(jstr); js.as[SparseTopicRepresentation]}
-
+  implicit def ldaTopicFeatureMapper = MappedColumnType.base[LDATopicFeature, Blob](
+    { feat =>  new SerialBlob(FloatArrayFormmater.toBinary(feat.value))},
+    { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(0, len)); LDATopicFeature(arr) }
   )
 
   implicit def floatArrayMapper = MappedColumnType.base[Array[Float], Blob](

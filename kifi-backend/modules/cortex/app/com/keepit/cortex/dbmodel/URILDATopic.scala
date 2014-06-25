@@ -1,16 +1,13 @@
 package com.keepit.cortex.dbmodel
 
 import org.joda.time.DateTime
-import com.keepit.common.db.Id
+import com.keepit.common.db._
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.common.db.State
-import com.keepit.common.db.SequenceNumber
-import com.keepit.common.db.States
-import com.keepit.common.db.ModelWithState
 import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
+import com.keepit.cortex.models.lda.LDATopicFeature
 
 
 case class URILDATopic(
@@ -23,7 +20,7 @@ case class URILDATopic(
   firstTopic: Option[LDATopic],
   secondTopic: Option[LDATopic],
   thirdTopic: Option[LDATopic],
-  feature: Array[Float],
+  feature: LDATopicFeature,
   state: State[URILDATopic] = URILDATopicStates.ACTIVE
 ) extends ModelWithState[URILDATopic] {
   def withId(id: Id[URILDATopic]): URILDATopic = copy(id = Some(id))
