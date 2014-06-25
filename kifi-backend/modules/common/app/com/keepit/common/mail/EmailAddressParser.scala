@@ -57,7 +57,7 @@ object EmailAddressParser extends RegexParsers { // rudimentary; also see @URIPa
     case localPart ~ "@" ~ host => ParsedEmailAddress(localPart, host)
   }
 
-  val sanitized = """[^"~/?#()+@]+""".r
+  val sanitized = """[^"~/?#()+@ ]+""".r
   def comment: Parser[Comment] = "(" ~> commentBody <~ ")" ^^ { Comment(_) }
   def commentBody: Parser[String] = sanitized
   def tag: Parser[Tag] = "+" ~> sanitized ^^ { Tag(_) }
