@@ -3,7 +3,8 @@
 angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout', 'installService', '$rootScope', '$analytics', 'friendService', '$location',
+  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
+  'installService', '$rootScope', '$analytics', 'friendService', '$location',
   function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService, $location) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
@@ -84,39 +85,43 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
         type: 'start_guide',
         pages: [{
           url: 'http://realhealthyrecipes.com/2013/09/25/frosted-watermelon-cake/',
-          title: ['Frosted','Watermelon','Cake'],
+          name: ['Frosted','Watermelon','Cake'],
           site: 'realhealthyrecipes.com',
           thumb: '/img/guide/watermelon_cake.jpg',
           noun: 'recipe',
           tag: 'Recipe',
           query: 'watermelon',
+          title: 'Frosted Watermelon Cake | Real Healthy Recipes',
           matches: {title: [[8,10]], url: [[49,10]]}
         }, {
           url: 'https://www.etsy.com/listing/163215077/large-leather-tote-everyday-tote-bag',
-          title: ['Large','Leather','Tote'],
+          name: ['Large','Leather','Tote'],
           site: 'etsy.com',
           thumb: '/img/guide/leather_tote.jpg',
           noun: 'tote',
-          tag: 'Shopping Wishlist',
-          query: 'tote',
-          matches: {title: [[14,4]], url: [[53,4],[67,4]]}
+          tag: 'Wishlist',
+          query: 'tote+bag',
+          title: 'Large Leather Tote - Everyday tote bag',
+          matches: {title: [[14,4],[30,4],[35,3]], url: [[53,4],[67,4],[72,3]]}
         }, {
           url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
-          title: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
+          name: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
           site: 'lifehack.org',
           thumb: '/img/guide/love_life.jpg',
           noun: 'article',
           tag: 'Read Later',
           query: 'love+life',
-          matches: {title: [[27,4]], url: [[74,4],[85,5]]}
+          title: '10 Things People Who Truly Love Their Lives Do Differently',
+          matches: {title: [[27,4],[38,5]], url: [[11,4],[74,4],[85,5]]}
         }, {
           url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
-          title: ['Steve Jobs:','How to Live','Before You Die'],
+          name: ['Steve Jobs:','How to Live','Before You Die'],
           site: 'ted.com',
           thumb: '/img/guide/before_you_die.jpg',
           noun: 'video',
           tag: 'Inspiration',
           query: 'steve+jobs',
+          title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
           matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]}
         }]
       }, '*');

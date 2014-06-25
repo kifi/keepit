@@ -4,13 +4,10 @@ import java.math.BigInteger
 import java.security.SecureRandom
 
 import com.keepit.common.db._
+import com.keepit.common.mail.{EmailAddress, EmailAddressParser}
 import com.keepit.common.time._
+
 import org.joda.time.DateTime
-import com.keepit.common.mail.EmailAddress
-import com.keepit.abook.EmailParserUtils
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
-import com.keepit.common.logging.AccessLog
-import scala.concurrent.duration.Duration
 
 case class UserEmailAddress (
   id: Option[Id[UserEmailAddress]] = None,
@@ -27,24 +24,36 @@ case class UserEmailAddress (
   def withId(id: Id[UserEmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserEmailAddress]) = copy(state = state)
-  def withVerificationCode(now: DateTime) = this.copy(
-    lastVerificationSent = Some(now),
-    verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
+  def withVerificationCode(now: DateTime) = {
+    this.copy(
+      lastVerificationSent = Some(now),
+      verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
+  }
   def verified: Boolean = state == UserEmailAddressStates.VERIFIED
-  def isTestEmail() = EmailParserUtils.isTestEmail(address.address)
-  def isFakeEmail() = EmailParserUtils.isFakeEmail(address.address) // +test
-  def isAutoGenEmail() = EmailParserUtils.isAutoGenEmail(address.address)  // +autogen
+  def isKifi: Boolean = parsed.exists { a => UserEmailAddress.kifiDomains.contains(a.domain) }
+  def isTest: Boolean = parsed.exists { a => UserEmailAddress.testDomains.contains(a.domain) && (a.hasTagPrefix("test") || a.hasTagPrefix("utest")) }
+  def isAutoGen: Boolean = isKifi && parsed.exists(_.hasTagPrefix("autogen"))
+  def hasTag(tag: String): Boolean = parsed.exists(_.hasTag(tag))
+  private lazy val parsed = EmailAddressParser.parseOpt(address.address)
 }
 
 object UserEmailAddress {
   lazy val random = new SecureRandom()
+  val kifiDomains = Set("kifi.com", "42go.com")
+  val testDomains = kifiDomains ++ Set("tfbnw.net", "mailinator.com")  // tfbnw.net ???
 
-  def getTestExperiments(email: UserEmailAddress): Set[ExperimentType] = {
-    if (email.isTestEmail()) {
-      if (email.isAutoGenEmail()) Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
-      else Set(ExperimentType.FAKE)
-    } else
+  def getExperiments(email: UserEmailAddress): Set[ExperimentType] = {
+    (if (email.isAutoGen) {
+      Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
+    } else if (email.isTest) {
+      Set(ExperimentType.FAKE)
+    } else {
       Set.empty
+    }) ++ (if (email.hasTag("preview")) {
+      Set(ExperimentType.KIFI_BLACK)
+    } else {
+      Set.empty
+    })
   }
 }
 

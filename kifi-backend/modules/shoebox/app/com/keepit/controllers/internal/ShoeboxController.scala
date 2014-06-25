@@ -67,7 +67,8 @@ class ShoeboxController @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scraperHelper: ScraperCallbackHelper,
   scrapeScheduler: ScrapeSchedulerPlugin,
-  verifiedEmailUserIdCache: VerifiedEmailUserIdCache
+  verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
+  latestKeepUrlCache: LatestKeepUrlCache
 )
   (implicit private val clock: Clock,
    private val fortyTwoServices: FortyTwoServices)
@@ -418,8 +419,12 @@ class ShoeboxController @Inject() (
 
   def getLatestKeep() = Action(parse.json) { request =>
     val url = request.body.as[String]
-    val bookmarkOpt = db.readOnly(2, Database.Slave) { implicit session => // using cache + Slate database for scanning older keeps
-      keepRepo.latestKeep(url)
+    val bookmarkOpt = db.readOnly(2, Slave) { implicit session =>
+      latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
+        normUriRepo.getByNormalizedUrl(url).flatMap{ uri =>
+          keepRepo.latestKeep(uri.id.get, url)
+        }
+      }
     }
     log.debug(s"[getLatestKeep($url)] $bookmarkOpt")
     Ok(Json.toJson(bookmarkOpt))

@@ -8,7 +8,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.cache.{Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.common.db.Id
 import com.keepit.serializer.ArrayBinaryFormat
-import com.keepit.abook.{EmailParser, ABookServiceClient}
+import com.keepit.abook.ABookServiceClient
 import com.keepit.common.store.S3Bucket
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.{Duration, DurationInt}
@@ -16,6 +16,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.EmailAddressParser
 import play.api.Play
 import org.joda.time.{Minutes, Seconds}
 import scala.collection.mutable.ArrayBuffer
@@ -30,13 +31,13 @@ abstract class EContactTypeaheadBase(
 
   override protected def extractName(info: EContact):String = {
   val name = info.name.getOrElse("").trim
-    val pres = EmailParser.parse(EmailParser.email, info.email.address)
-    if (pres.successful) {
-      s"$name ${pres.get.toStrictString}"
-    } else {
-      airbrake.notify(s"[EContactTypeahead.extractName($info)] Failed to parse email ${info.email}")
-      val email = info.email.address.trim
-      s"$name $email"
+    EmailAddressParser.parseOpt(info.email.address) match {
+      case Some(addr) =>
+        s"$name ${addr.toStrictString}"
+      case None =>
+        airbrake.notify(s"[EContactTypeahead.extractName($info)] Failed to parse email ${info.email}")
+        val addr = info.email.address.trim
+        s"$name $addr"
     }
   }
 

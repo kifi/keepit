@@ -89,4 +89,6 @@ GET         /internal/search/spell/suggest        @com.keepit.controllers.search
 
 GET         /internal/search/feed        @com.keepit.controllers.search.FeedController.getFeeds(userId: Id[User], limit: Int)
 
+GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
+
 ->          /        common.Routes

@@ -34,7 +34,7 @@ class BookmarkImporter @Inject() (
 )  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
 
-  def uploadBookmarkFile() = JsonAction.authenticated(allowPending = true, parser = parse.maxLength(1024*1024*12, parse.temporaryFile)) { request =>
+  def uploadBookmarkFile(public: Boolean = false) = JsonAction.authenticated(allowPending = true, parser = parse.maxLength(1024*1024*12, parse.temporaryFile)) { request =>
     val startMillis = clock.getMillis()
     val id = humanFriendlyToken(8)
     log.info(s"[bmFileImport:$id] Processing bookmark file import for ${request.userId}")
@@ -67,7 +67,7 @@ class BookmarkImporter @Inject() (
             (t, h, keepTags)
           }
           log.info(s"[bmFileImport:$id] Tags extracted in ${clock.getMillis()-startMillis}ms")
-          val (importId, rawKeeps) = createRawKeeps(request.userId, sourceOpt, taggedKeeps)
+          val (importId, rawKeeps) = createRawKeeps(request.userId, sourceOpt, taggedKeeps, public)
 
           log.info(s"[bmFileImport:$id] Raw keep start persisting in ${clock.getMillis()-startMillis}ms")
 
@@ -141,7 +141,7 @@ class BookmarkImporter @Inject() (
     (source, extracted)
   }
 
-  def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: List[(String, String, List[Id[Collection]])]) = {
+  def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: List[(String, String, List[Id[Collection]])], public: Boolean) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map { case (title, href, tagIds) =>
       val titleOpt = if (title.nonEmpty) Some(title) else None
@@ -153,7 +153,7 @@ class BookmarkImporter @Inject() (
       RawKeep(userId = userId,
         title = titleOpt,
         url = href,
-        isPrivate = true,
+        isPrivate = !public,
         importId = Some(importId),
         source = source.getOrElse(KeepSource.bookmarkFileImport),
         originalJson = None,

@@ -6,6 +6,7 @@ import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.cortex.models.lda.LDAInfoStoreModule
+import com.keepit.cortex.dbmodel.CortexDataIngestionModule
 
 
 abstract class CortexModule(
@@ -15,7 +16,8 @@ abstract class CortexModule(
   val featureStoreModule: FeatureStoreModule,
   val statModelStoreModule: StatModelStoreModule,
   val modelModule: CortexModelModule,
-  val ldaInfoModule: LDAInfoStoreModule
+  val ldaInfoModule: LDAInfoStoreModule,
+  val dataIngestionModule: CortexDataIngestionModule
 ) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()

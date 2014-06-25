@@ -10,7 +10,7 @@
     <ul class="kf-sidebar-tag-list">
       <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tagsWithFakeLast" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
     </ul>
-    <div class="kf-tag-new" ng-show="showAddTag()" ng-click="createTag()">
+    <div class="kf-tag-new" ng-show="showAddTag()" ng-click="createTag()" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()">
       <div class="kf-tag-new-inner" ng-class="{ highlight: isHighlightNew() }">
         <div class="kf-tag-new-icon">
           <div class="sprite sprite-tag-add-plus"></div>
