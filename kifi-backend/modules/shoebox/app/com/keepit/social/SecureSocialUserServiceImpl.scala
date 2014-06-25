@@ -124,6 +124,7 @@ class SecureSocialUserPluginImpl @Inject() (
     val u = userCommander.createUser(
       identity.firstName,
       identity.lastName,
+      identity.email.map(EmailAddress.apply),
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")

@@ -248,10 +248,17 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User]) = {
-    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
+  def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
+    val newUser = db.readWrite { implicit session =>
+      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state))
+    }
     SafeFuture {
-      createDefaultKeeps(newUser.id.get)
+      val experiments = addrOpt.map { addr =>
+        UserEmailAddress.getExperiments(UserEmailAddress(userId = newUser.id.get, address = addr))
+      } getOrElse Set.empty
+      if (!experiments.contains(ExperimentType.KIFI_BLACK)) {
+        createDefaultKeeps(newUser.id.get)
+      }
       db.readWrite { implicit session =>
         userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
         userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
@@ -260,7 +267,6 @@ class UserCommander @Inject() (
       }
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
-
     }
     newUser
   }
