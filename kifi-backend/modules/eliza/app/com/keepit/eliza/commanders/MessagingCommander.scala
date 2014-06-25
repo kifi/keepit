@@ -14,7 +14,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUser
+import com.keepit.social.{BasicUser, NonUserKinds}
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
@@ -59,7 +59,8 @@ class MessagingCommander @Inject() (
   airbrake: AirbrakeNotifier,
   basicMessageCommander: MessageFetchingCommander,
   notificationCommander: NotificationCommander,
-  notificationUpdater: NotificationUpdater) extends Logging {
+  notificationUpdater: NotificationUpdater,
+  messageSearchHistoryRepo: MessageSearchHistoryRepo) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
     //get all involved users
@@ -195,7 +196,19 @@ class MessagingCommander @Inject() (
     Future.sequence(pimpedParticipants)
   }
 
+  private def updateMessageSearchHistoryWithEmailAddresses(userId: Id[User], nups: Seq[NonUserParticipant]) = {
+    SafeFuture("adding email address to message search history"){
+      db.readWrite{ implicit session =>
+        val history = messageSearchHistoryRepo.getOrCreate(userId)
+        if (!history.optOut) {
+          messageSearchHistoryRepo.save(history.withNewEmails(nups.filter(_.kind==NonUserKinds.email).map(_.identifier)))
+        }
+      }
+    }
+  }
+
   def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext) : (MessageThread, Message) = {
+    updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
