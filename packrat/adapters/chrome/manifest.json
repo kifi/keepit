@@ -1,6 +1,6 @@
 {
-  "name": "kifi Canary",
-  "short_name": "kifi Canary",
+  "name": "kifi",
+  "short_name": "kifi",
   "description": "Never lose the pages that matter to you most",
   "version": "see build.properties",
   "manifest_version": 2,
