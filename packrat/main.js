@@ -16,7 +16,7 @@ var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
 var tabsTagging = []; // [tab]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
-var deepLinkTimers = {}; // tabId => timeout identifier
+var timeouts = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
@@ -31,6 +31,7 @@ var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
 var tagsById;
+var guidePages;
 
 function clearDataCache() {
   log('[clearDataCache]');
@@ -38,10 +39,10 @@ function clearDataCache() {
   tabsByLocator = {};
   tabsTagging = [];
   threadReadAt = {};
-  for (var tabId in deepLinkTimers) {
-    api.timers.clearTimeout(deepLinkTimers[tabId]);
+  for (var tabId in timeouts) {
+    api.timers.clearTimeout(timeouts[tabId]);
   }
-  deepLinkTimers = {};
+  timeouts = {};
 
   pageData = {};
   threadLists = {};
@@ -54,6 +55,7 @@ function clearDataCache() {
   urlPatterns = null;
   tags = null;
   tagsById = null;
+  guidePages = null;
 }
 
 // ===== Error reporting
@@ -98,8 +100,25 @@ function clearDataCache() {
 
 var ThreadList = ThreadList || require('./threadlist').ThreadList;
 
-function PageData() {
+function PageData(o) {
+  this.update(o);
 }
+PageData.prototype = {
+  update: function (o) {
+    this.kept = o.kept;
+    this.keepId = o.keepId;
+    this.tags = o.tags || [];
+    this.position = o.position;
+    this.neverOnSite = o.neverOnSite;
+    this.sensitive = o.sensitive;
+    this.shown = o.shown;
+    this.keepers = o.keepers || [];
+    this.keeps = o.keeps || 0;
+  },
+  otherKeeps: function () {
+    return this.keeps - this.keepers.length - (this.kept === 'public');
+  }
+};
 
 function indexOfTag(tags, tagId) {
   for (var i = 0, len = tags.length; i < len; i++) {
@@ -613,11 +632,12 @@ var SUPPORT = {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', firstName: 'Tamila, K
 
 api.port.on({
   deauthenticate: deauthenticate,
+  prime_search: primeSearch,
   get_keeps: searchOnServer,
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
-    var d = pageData[tab.nUri] || {};
-    respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
+    var d = pageData[tab.nUri];
+    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: d.otherKeeps()} : {keepers: []});
   },
   keep: function(data, _, tab) {
     log('[keep]', data);
@@ -1131,7 +1151,7 @@ api.port.on({
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // pageâ€™s normalized URI may have changed
+      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page's normalized URI may have changed
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {
@@ -1155,6 +1175,46 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
+    if (guidePages && /^#guide\/\d\/\d/.test(link.locator)) {
+      var step = +link.locator.substr(7, 1);
+      switch (step) {
+        case 1:
+          pageData[link.url] = new PageData({shown: true});
+          tabsByUrl[link.url] = tabsByUrl[link.url] || [];
+          break;
+        case 2:
+          var page = guidePages[+link.locator.substr(9, 1)];
+          var tagId = link.locator.substr(11);
+          var query = page.query.replace(/\+/g, ' ');
+          var entry = searchPrefetchCache[query] = {
+            response: pimpSearchResponse({
+              uuid: '00000000-0000-0000-0000-000000000000',
+              query: query,
+              hits: [{
+                bookmark: {
+                  title: page.title,
+                  url: page.url,
+                  tags: tagId ? [tagId] : [],
+                  matches: page.matches
+                },
+                users: [],
+                count: 1,
+                score: 0,
+                isMyBookmark: true,
+                isPrivate: false
+              }],
+              myTotal: 1,
+              friendsTotal: 0,
+              othersTotal: 816,
+              mayHaveMore: false,
+              show: true,
+              context: 'guide'
+            })
+          };
+          entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
+          break;
+      }
+    }
   },
   get_tags: function(_, respond, tab) {
     var d = pageData[tab.nUri],
@@ -1226,6 +1286,24 @@ api.port.on({
   toggle_mode: function () {
     if (!api.isPackaged()) {
       api.mode.toggle();
+    }
+  },
+  start_guide: function (pages, _, tab) {
+    guidePages = pages;
+    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages});
+  },
+  resume_guide: function (step, _, tab) {
+    if (guidePages) {
+      api.tabs.emit(tab, 'guide', {
+        step: step,
+        pages: guidePages,
+        page: 0 // TODO: guess based on tab.url
+      });
+    }
+  },
+  end_guide: function () {
+    if (api.isPackaged()) {
+      guidePages = null;
     }
   }
 });
@@ -1506,20 +1584,28 @@ function sendPageThreadCount(tab, tl, load) {
 function awaitDeepLink(link, tabId, retrySec) {
   var loc = link.locator;
   if (loc) {
-    api.timers.clearTimeout(deepLinkTimers[tabId]);
-    delete deepLinkTimers[tabId];
+    api.timers.clearTimeout(timeouts[tabId]);
+    delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log('[awaitDeepLink]', tabId, link);
-      api.tabs.emit(tab, 'open_to', {
-        trigger: 'deepLink',
-        locator: loc.replace(/#.*/, ''),
-        compose: loc.indexOf('#compose') >= 0,
-        redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
-      }, {queue: 1});
+      if (loc.lastIndexOf('#guide/', 0) === 0) {
+        api.tabs.emit(tab, 'guide', {
+          step: +loc.substr(7, 1),
+          pages: guidePages,
+          page: +loc.substr(9, 1)
+        }, {queue: 1});
+      } else {
+        api.tabs.emit(tab, 'open_to', {
+          trigger: 'deepLink',
+          locator: loc.replace(/#.*/, ''),
+          compose: loc.indexOf('#compose') >= 0,
+          redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
+        }, {queue: 1});
+      }
     } else if ((retrySec = retrySec || .5) < 5) {
       log('[awaitDeepLink]', tabId, 'retrying in', retrySec, 'sec');
-      deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      timeouts[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
     if (loc.lastIndexOf('/messages/', 0) === 0) {
       var threadId = loc.substr(10);
@@ -1642,24 +1728,28 @@ function searchOnServer(request, respond) {
 
   ajax('search', 'GET', '/search', params, function (resp) {
     log('[searchOnServer] response:', resp);
-    resp.filter = request.filter;
-    resp.me = me;
-    resp.prefs = prefs || {maxResults: 1};
-    resp.origin = webBaseUri();
-    resp.experiments = experiments;
-    resp.admBaseUri = admBaseUri();
-    resp.myTotal = resp.myTotal || 0;
-    resp.friendsTotal = resp.friendsTotal || 0;
-    resp.hits.forEach(processSearchHit);
-    if (resp.hits.length < params.maxHits && (params.context || params.f)) {
-      resp.mayHaveMore = false;
-    }
-    respond(resp);
+    respond(pimpSearchResponse(resp, request.filter, resp.hits.length < params.maxHits && (params.context || params.f)));
   });
   return true;
 }
 
-function processSearchHit(hit) {
+function pimpSearchResponse(o, filter, noMore) {
+  o.filter = filter;
+  o.me = me;
+  o.prefs = prefs || {maxResults: 1};
+  o.origin = webBaseUri();
+  o.experiments = experiments;
+  o.admBaseUri = admBaseUri();
+  o.myTotal = o.myTotal || 0;
+  o.friendsTotal = o.friendsTotal || 0;
+  o.hits.forEach(pimpSearchHit);
+  if (noMore) {
+    o.mayHaveMore = false;
+  }
+  return o;
+}
+
+function pimpSearchHit(hit) {
   var tagIds = hit.bookmark && hit.bookmark.tags;
   if (tagIds && tagIds.length && tagsById) {
     var tags = hit.tags = [];
@@ -1783,21 +1873,15 @@ function gotPageDetailsFor(url, tab, resp) {
   log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url, resp);
 
   var nUri = resp.normalized;
-  var d = pageData[nUri] || new PageData;
-
-  d.kept = resp.kept;
-  d.keepId = resp.keepId;
-  d.tags = resp.tags || [];
-  d.position = resp.position;
-  d.neverOnSite = resp.neverOnSite;
-  d.sensitive = resp.sensitive;
-  d.shown = resp.shown;
-  d.keepers = resp.keepers || [];
-  d.keeps = resp.keeps || 0;
-  d.otherKeeps = d.keeps - d.keepers.length - (d.kept === 'public');
+  var d = pageData[nUri];
+  if (d) {
+    d.update(resp);
+  }
 
   if (!tabIsOld) {
-    pageData[nUri] = d;
+    if (!d) {
+      pageData[nUri] = d = new PageData(resp);
+    }
     stashTabByNormUri(tab, nUri);
     kififyWithPageData(tab, d);
   }
@@ -1991,11 +2075,12 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(function (whence) {
+api.on.beforeSearch.add(throttle(primeSearch, 50000));
+function primeSearch(whence) {
   if (me && enabled('search')) {
     ajax('search', 'GET', '/search/warmUp', {w: whence});
   }
-}, 50000));
+}
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 api.on.search.add(function prefetchResults(query, whence) {
@@ -2418,11 +2503,23 @@ api.timers.setTimeout(api.errors.wrap(function() {
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
-    var tab = api.tabs.anyAt(webBaseUri() + '/install');
-    if (tab) {
-      api.tabs.navigate(tab.id, webBaseUri() + '/');
+    var siteUrl = webBaseUri() + '/';
+    var tab = api.tabs.anyAt(webBaseUri() + '/install') || api.tabs.anyAt(siteUrl);
+    if (~experiments.indexOf('kifi_black')) {
+      var url = 'https://preview.kifi.com';
+      var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: url});
+      if (tab) {
+        api.tabs.select(tab.id);
+        api.tabs.navigate(tab.id, url);
+        timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
+      } else {
+        api.tabs.open(url, await);
+      }
+    } else if (tab) {
+      api.tabs.select(tab.id);
+      api.tabs.navigate(tab.id, siteUrl);
     } else {
-      api.tabs.open(webBaseUri() + '/');
+      api.tabs.open(siteUrl);
     }
   }
 }, 3000))();

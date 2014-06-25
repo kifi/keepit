@@ -1,6 +1,5 @@
 // @require styles/search_intro.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/html/search/search_intro.js
 
