@@ -18,7 +18,8 @@ case class MessageSearchHistory(
   updateAt: DateTime = currentDateTime,
   userId: Id[User],
   optOut: Boolean = false,
-  queries: Seq[String] = Seq.empty
+  queries: Seq[String] = Seq.empty,
+  emails: Seq[String] = Seq.empty
 ) extends Model[MessageSearchHistory] {
 
   def withId(id: Id[MessageSearchHistory]): MessageSearchHistory = this.copy(id = Some(id))
@@ -27,6 +28,12 @@ case class MessageSearchHistory(
   def withNewQuery(q: String): MessageSearchHistory = { //Really inefficient, but it should do for a while -Stephen
     this.copy(
       queries = (q +: queries.filter(_!=q)).take(MessageSearchHistory.MAX_HISTORY_LENGTH)
+    )
+  }
+
+  def withNewEmails(es: Seq[String]): MessageSearchHistory = { //Really inefficient, but it should do for a while -Stephen
+    this.copy(
+      queries = (es ++ emails.filter(!es.contains(_))).take(MessageSearchHistory.MAX_HISTORY_LENGTH) //ZZZ contains check
     )
   }
 

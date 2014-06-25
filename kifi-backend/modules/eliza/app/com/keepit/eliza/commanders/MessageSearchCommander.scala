@@ -47,11 +47,11 @@ class MessageSearchCommander @Inject() (
     }
   }
 
-  def getHistory(userId: Id[User]): (Seq[String], Boolean) = {
+  def getHistory(userId: Id[User]): (Seq[String], Seq[String], Boolean) = {
     val history = db.readWrite { implicit session =>
       historyRepo.getOrCreate(userId)
     }
-    (history.queries, history.optOut)
+    (history.queries, history.emails, history.optOut)
   }
 
   def setHistoryOptOut(userId: Id[User], optOut: Boolean): Boolean = {

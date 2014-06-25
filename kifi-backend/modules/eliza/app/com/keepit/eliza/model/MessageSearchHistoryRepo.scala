@@ -42,7 +42,8 @@ class MessageSearchHistoryRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.NotNull)
     def optOut = column[Boolean]("opt_out", O.NotNull)
     def queries = column[Seq[String]]("queries", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, optOut, queries) <> ((MessageSearchHistory.apply _).tupled, MessageSearchHistory.unapply _)
+    def emails = column[Seq[String]]("emails", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, userId, optOut, queries, emails) <> ((MessageSearchHistory.apply _).tupled, MessageSearchHistory.unapply _)
   }
   def table(tag: Tag) = new MessageSearchHistoryTable(tag)
 
