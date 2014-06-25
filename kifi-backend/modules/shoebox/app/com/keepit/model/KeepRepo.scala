@@ -43,6 +43,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
+  def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
 }
 
 @Singleton
@@ -338,5 +339,14 @@ class KeepRepoImpl @Inject() (
     else sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} and is_private = false order by created_at DESC limit ${limit}"
 
     sql.as[Id[NormalizedURI]].list
+  }
+
+  def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport] = {
+    import StaticQuery.interpolation
+    val sql_query = sql"""select k.created_at, k.title, k.url, group_concat(c.name)
+      from bookmark k left join keep_to_collection kc
+      on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId}
+      group by url order by k.id desc"""
+    sql_query.as[(DateTime, Option[String], String, Option[String])].list.map{ case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags)}
   }
 }

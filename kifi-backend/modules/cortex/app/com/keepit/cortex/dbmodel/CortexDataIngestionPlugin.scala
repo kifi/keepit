@@ -99,16 +99,19 @@ private class CortexDataIngestionUpdater @Inject()(
 ) {
   private implicit def toURISeq(seq: SequenceNumber[CortexURI]) = SequenceNumber[NormalizedURI](seq.value)
   private implicit def toKeepSeq(seq: SequenceNumber[CortexKeep]) = SequenceNumber[Keep](seq.value)
+  private val DB_BATCH_SIZE = 50
 
   def updateURIRepo(fetchSize: Int): Future[Int] = {
     val seq = db.readOnly{ implicit s => uriRepo.getMaxSeq}
 
     shoebox.getIndexable(seq, fetchSize).map { uris =>
-      uris.map { CortexURI.fromURI(_) } foreach { uri =>
+      uris.map { CortexURI.fromURI(_) } grouped (DB_BATCH_SIZE) foreach { uris =>
         db.readWrite { implicit s =>
-          uriRepo.getByURIId(uri.uriId) match {
-            case None => uriRepo.save(uri)
-            case Some(cortexUri) => uriRepo.save(uri.copy(id = cortexUri.id))
+          uris foreach { uri =>
+            uriRepo.getByURIId(uri.uriId) match {
+              case None => uriRepo.save(uri)
+              case Some(cortexUri) => uriRepo.save(uri.copy(id = cortexUri.id))
+            }
           }
         }
       }
@@ -121,11 +124,13 @@ private class CortexDataIngestionUpdater @Inject()(
     val seq = db.readOnly{ implicit s => keepRepo.getMaxSeq}
 
     shoebox.getBookmarksChanged(seq, fetchSize).map { keeps =>
-      keeps.map { CortexKeep.fromKeep(_) } foreach { keep =>
+      keeps.map { CortexKeep.fromKeep(_) } grouped (DB_BATCH_SIZE) foreach { keeps =>
         db.readWrite { implicit s =>
-          keepRepo.getByKeepId(keep.keepId) match {
-            case None => keepRepo.save(keep)
-            case Some(cortexKeep) => keepRepo.save(keep.copy(id = cortexKeep.id))
+          keeps foreach { keep =>
+            keepRepo.getByKeepId(keep.keepId) match {
+              case None => keepRepo.save(keep)
+              case Some(cortexKeep) => keepRepo.save(keep.copy(id = cortexKeep.id))
+            }
           }
         }
       }

@@ -14,7 +14,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.abook.{EmailParserUtils, ABookServiceClient}
+import com.keepit.abook.ABookServiceClient
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
@@ -248,19 +248,25 @@ class UserCommander @Inject() (
     segment
   }
 
-  def createUser(firstName: String, lastName: String, state: State[User]) = {
-    val newUser = db.readWrite { implicit session => userRepo.save(User(firstName = firstName, lastName = lastName, state = state)) }
+  def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
+    val newUser = db.readWrite { implicit session =>
+      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state))
+    }
     SafeFuture {
-      createDefaultKeeps(newUser.id.get)
-      db.readWrite { implicit session =>
-        userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
-        userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
-        userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
-        userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
+      val onNewSite = addrOpt.map { addr =>
+        UserEmailAddress.getExperiments(UserEmailAddress(userId = newUser.id.get, address = addr)).contains(ExperimentType.KIFI_BLACK)
+      } getOrElse false
+      if (!onNewSite) {
+        createDefaultKeeps(newUser.id.get)
+        db.readWrite { implicit session =>
+          userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
+          userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
+          userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
+          userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
+        }
       }
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
-
     }
     newUser
   }
