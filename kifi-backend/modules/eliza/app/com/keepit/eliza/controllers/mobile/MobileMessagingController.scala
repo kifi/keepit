@@ -193,4 +193,9 @@ class MobileMessagingController @Inject() (
       Ok(Json.toJson(notifs.jsons))
     }
   }
+
+  def getMessageSearchHistory() = JsonAction.authenticated { request =>
+    val (queries, optOut) = messageSearchCommander.getHistory(request.userId)
+    Ok(Json.obj("qs" -> queries, "optOut" -> optOut))
+  }
 }

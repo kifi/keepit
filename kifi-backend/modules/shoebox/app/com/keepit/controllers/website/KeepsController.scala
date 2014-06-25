@@ -147,15 +147,16 @@ class KeepsController @Inject() (
     }
   }
 
-  def exportKeeps() = HtmlAction.authenticated { request =>
-    val msg = "Exporting your Kifi bookmarks"
+  def exportKeeps() = AnyAction.authenticated { request =>
     // Given user request (authenticated user)
-    // query from SQL database for all user's bookmarks
-    // retrieve a list of keeps & bookmarks
-    // convert list of keeps to JSON format
+    // query from SQL database for all user's bookmarks & retrieve a list of keeps
+    val exports : Seq[KeepExport] = db.readOnly { implicit ro =>
+      keepRepo.getKeepExports(request.userId)
+    }
 
-    // send JSON result over Play to Angular front-end
-    Ok(msg)
+    Ok(KeepsController.assembleKeepXmlExport(exports))
+      .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.xml")
+      .as("application/xml")
   }
 
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
@@ -358,5 +359,35 @@ class KeepsController @Inject() (
     val doneOpt = Try(done.map(_.toInt)).toOption.flatten
     val totalOpt = Try(total.map(_.toInt)).toOption.flatten
     Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStart))
+  }
+}
+
+object KeepsController {
+
+  def assembleKeepXmlExport(keepExports: Seq[KeepExport]): String = {
+    // Not really XML format
+    val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+                   |<!--This is an automatically generated file.
+                   |It will be read and overwritten.
+                   |Do Not Edit! -->
+                   |<Title>Kifi Bookmarks Export</Title>
+                   |<H1>Bookmarks</H1>
+                   |<DL>
+                   |""".stripMargin
+    val after = "\n</DL>"
+
+    def CreateExportXML(keep : KeepExport): String = {
+      // Parse Tags
+      val title = keep.title getOrElse ""
+      val tagString = keep.tags map { tags =>
+        s""" TAGS="${tags.replace("&","&amp;").replace("\"","")}""""
+      } getOrElse ""
+      val date = keep.created_at.getMillis()/1000
+      val line =
+        s"""<DT><A HREF="${keep.url}" ADD_DATE="${date}"${tagString}>${title.replace("&","&amp;")}</A>"""
+          .stripMargin
+      line
+    }
+    before + keepExports.map(CreateExportXML).mkString("\n") + after
   }
 }

@@ -25,7 +25,7 @@ import com.keepit.common.performance._
 import scala.util.{Try, Failure, Success}
 import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{EmailAddress, EmailAddressParser}
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -96,11 +96,11 @@ class ContactsUpdater @Inject() (
     }
     val existingEmailSet = new mutable.TreeSet[String] // todo: use parsed email
     for (e <- existingContacts) {
-      val parseResult = EmailParser.parseAll(EmailParser.email, e.email.address) // handle 'dirty' data
-      if (parseResult.successful) {
-        existingEmailSet += parseResult.get.toString
-      } else {
-        log.warn(s"[upload($userId, $origin, ${abookInfo.id})] cannot parse Existing email ${e.email} for contact ${e}") // move along
+      EmailAddressParser.parseOpt(e.email.address) match { // handle 'dirty' data
+        case Some(addr) =>
+          existingEmailSet += addr.toString
+        case None =>
+          log.warn(s"[upload($userId, $origin, ${abookInfo.id})] cannot parse existing email ${e.email} for contact ${e}") // move along
       }
     }
     log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${existingEmailSet.size}): ${existingEmailSet.mkString(",")}")
@@ -150,21 +150,20 @@ class ContactsUpdater @Inject() (
                 })
               )
               emails.foreach { email =>
-                val parseResult = EmailParser.parseAll(EmailParser.email, email)
-                if (parseResult.successful) {
-                  val parsedEmail:Email = parseResult.get
-                  if (parsedEmail.host.domain.length <= 1) {
-                    log.warnP(s"$email domain=${parsedEmail.host.domain} not supported; discarded")
-                  } else if (existingEmails.contains(parsedEmail.toString)) {
-                    log.infoP(s"DUP $email; discarded")
-                  } else {
-                    val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
-                    val e = EContact(userId = userId, email = parsedEmail, name = nameOpt, firstName = fName, lastName = lName)
-                    existingEmails += parsedEmail.toString
-                    econtactsToAddBuilder += e
-                  }
-                } else {
-                  log.warnP(s"cannot parse $email; discarded") // todo: revisit
+                EmailAddressParser.parseOpt(email) match {
+                  case Some(addr) =>
+                    if (addr.host.domain.length <= 1) {
+                      log.warnP(s"$email domain=${addr.host.domain} not supported; discarded")
+                    } else if (existingEmails.contains(addr.toString)) {
+                      log.infoP(s"DUP $email; discarded")
+                    } else {
+                      val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
+                      val e = EContact(userId = userId, email = addr, name = nameOpt, firstName = fName, lastName = lName)
+                      existingEmails += addr.toString
+                      econtactsToAddBuilder += e
+                    }
+                  case None =>
+                    log.warnP(s"cannot parse $email; discarded") // todo: revisit
                 }
               }
 

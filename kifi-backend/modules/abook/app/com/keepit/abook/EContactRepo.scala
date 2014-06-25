@@ -16,7 +16,7 @@ import play.api.Play
 import scala.util.{Success, Try, Failure}
 import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
 import com.keepit.abook.typeahead.EContactABookTypeahead
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{EmailAddress, ParsedEmailAddress}
 
 
 @ImplementedBy(classOf[EContactRepoImpl])
@@ -174,13 +174,10 @@ class EContactRepoImpl @Inject() (
       (m.group(2), Some(name.getOrElse(m.group(1))))
     } getOrElse (email, name)
 
-    val parsedResult = EmailParser.parseAll(EmailParser.email, address)
-    if (!parsedResult.successful) throw new IllegalArgumentException(s"Invalid email: $address")
-
-    val parsedEmail = parsedResult.get
-    val c = EContact(userId = userId, email = parsedEmail, name = emailName, firstName = firstName, lastName = lastName)
+    val parsedAddr = ParsedEmailAddress(address)
+    val c = EContact(userId = userId, email = parsedAddr, name = emailName, firstName = firstName, lastName = lastName)
     insertOnDupUpdate(userId, c) // todo: optimize (if needed)
-    val cOpt = getByUserIdAndEmail(userId, parsedEmail)
+    val cOpt = getByUserIdAndEmail(userId, parsedAddr)
     cOpt match {
       case Some(e) => {
         invalidateCache(e)

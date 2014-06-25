@@ -107,8 +107,8 @@ class SecureSocialUserPluginImpl @Inject() (
       }
     }
     val emailAddresses = db.readWrite(attempts = 3) { implicit rw => emailRepo.getAllByUser(userId) }
-    val testExperiments = emailAddresses.flatMap(UserEmailAddress.getTestExperiments)
-    testExperiments.foreach(setExp)
+    val experiments = emailAddresses.flatMap(UserEmailAddress.getExperiments)
+    experiments.foreach(setExp)
   }
 
   private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean, Boolean) = {
@@ -124,6 +124,7 @@ class SecureSocialUserPluginImpl @Inject() (
     val u = userCommander.createUser(
       identity.firstName,
       identity.lastName,
+      identity.email.map(EmailAddress.apply),
       state = if (isComplete) newUserState else UserStates.INCOMPLETE_SIGNUP
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
