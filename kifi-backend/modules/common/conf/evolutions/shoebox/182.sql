@@ -7,7 +7,7 @@ CREATE TABLE uri_lda_topic(
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
   uri_id bigint(20) NOT NULL,
-  uri_seq bigint(20) DEFAULT NOT NULL,
+  uri_seq bigint(20) NOT NULL,
   version tinyint(3) unsigned NOT NULL,
   first_topic smallint(6) unsigned,
   second_topic smallint(6) unsigned,
