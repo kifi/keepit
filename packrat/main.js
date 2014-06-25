@@ -1216,6 +1216,10 @@ api.port.on({
     unstore('prompt_to_import_bookmarks');
     postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
   },
+  import_bookmarks_public: function () {
+    unstore('prompt_to_import_bookmarks');
+    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD', true);
+  },
   import_bookmarks_declined: function() {
     unstore('prompt_to_import_bookmarks')
   },
@@ -1882,9 +1886,14 @@ function updateIconSilence(tab) {
   }
 }
 
-function postBookmarks(supplyBookmarks, bookmarkSource) {
+function postBookmarks(supplyBookmarks, bookmarkSource, makePublic) {
   log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
+    if (makePublic) {
+      bookmarks.forEach(function (bookmark) {
+        bookmark.isPrivate = false;
+      });
+    }
     log("[postBookmarks] bookmarks:", bookmarks);
     ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
