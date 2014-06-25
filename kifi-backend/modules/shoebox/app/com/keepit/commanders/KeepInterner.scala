@@ -55,7 +55,7 @@ class KeepInterner @Inject() (
     log.info(s"[persistRawKeeps] persisting batch of ${rawKeeps.size} keeps")
     val newImportId = importId.getOrElse(UUID.randomUUID.toString)
 
-    val deduped = deDuplicateRawKeep(rawKeeps) map(_.copy(importId = Some(newImportId), isPrivate = true))
+    val deduped = deDuplicateRawKeep(rawKeeps) map(_.copy(importId = Some(newImportId)))
 
     if (deduped.nonEmpty) {
       val userId = deduped.head.userId

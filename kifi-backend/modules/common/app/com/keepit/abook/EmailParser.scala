@@ -1,8 +1,8 @@
 package com.keepit.abook
 
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.Host
 import scala.util.parsing.combinator.RegexParsers
-import com.keepit.common.mail.EmailAddress
 
 case class Email(local:LocalPart, host:Host) {
   val domain = host.domain.mkString(".").trim
@@ -25,13 +25,12 @@ case class Email(local:LocalPart, host:Host) {
 
   def isKifi = (domain == Email.FORTYTWO_DOMAIN) || (domain == Email.KIFI_DOMAIN)
   def isTest = isFake || isAutoGen
-  def isFake = isKifi && ((local.tag exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.UTEST))) || host.name == "tfbnw.net")
-  def isAutoGen = isKifi && (local.tag exists (tag => tag.t.startsWith(ETag.AUTOGEN)))
+  def isFake = isKifi && ((local.tags exists (tag => tag.t.startsWith(ETag.TEST) || tag.t.startsWith(ETag.UTEST))) || host.name == "tfbnw.net")
+  def isAutoGen = isKifi && (local.tags exists (tag => tag.t.startsWith(ETag.AUTOGEN)))
 }
 
 object Email {
-
-  val FORTYTWO_DOMAIN = "42go.com" // todo: kifi.com
+  val FORTYTWO_DOMAIN = "42go.com"
   val KIFI_DOMAIN = "kifi.com"
 
   def apply(s:String) = {
@@ -48,20 +47,17 @@ case class ETag(t:String) {
   override val toString = s"+$t"
 }
 object ETag {
-  val TEST    = "test"
+  val TEST = "test"
   val UTEST = "utest"
   val AUTOGEN = "autogen"
 }
 
-case class LocalPart(p:Option[EComment], s:String, tag:Option[ETag], t:Option[EComment]) {
+case class LocalPart(p:Option[EComment], s:String, tags:Seq[ETag], t:Option[EComment]) {
   val localName = s.trim.toLowerCase  // mysql is case-insensitive
-  override val toString = tag match { // todo: revisit default for tag handling
-    case Some(t) => s"${localName}${t.toString}"
-    case None => localName
-  }
-  def unparse = (p.getOrElse("") + localName + tag.getOrElse("") + t.getOrElse("")).trim
+  override val toString = s"${localName}${tags.mkString("")}"
+  def unparse = (p.getOrElse("") + localName + tags.mkString("") + t.getOrElse("")).trim
   def toStrictString = localName
-  def toDbgString = s"[LocalPart($p,$s,$tag,$t)]"
+  def toDbgString = s"[LocalPart($p,$s,$tags,$t)]"
 }
 
 case class EmailParserConfig(ignoreTags:Boolean = false, ignoreComments:Boolean = true) // todo: uptake config
@@ -74,8 +70,8 @@ object EmailParser extends RegexParsers { // rudimentary; also see @URIParser
   def comment:Parser[EComment] = "(" ~> commentBody <~ ")" ^^ { EComment(_) }
   def commentBody:Parser[String] = """[^~/?#()+@]+""".r
   def tag:Parser[ETag] = "+" ~> """[^~/?#()+@]+""".r ^^ { ETag(_) }
-  def localPart:Parser[LocalPart] = (comment?) ~ """[^~/?#()+@]+""".r ~ (tag?) ~ (comment?) ^^ {
-    case p ~ s ~ tag ~ t => LocalPart(p, s, tag, t)
+  def localPart:Parser[LocalPart] = (comment?) ~ """[^~/?#()+@]+""".r ~ (tag*) ~ (comment?) ^^ {
+    case p ~ s ~ tags ~ t => LocalPart(p, s, tags, t)
   }
   def host:Parser[Host] = (comment?) ~ rep1sep(domainPart, ".") ~ (comment?) ^^ {
     case p ~ domainList ~ t => new Host(domainList) // discard comment in domain
