@@ -38,6 +38,9 @@
       case 'import_bookmarks':
         api.port.emit('import_bookmarks');
         break;
+      case 'import_bookmarks_public':
+        api.port.emit('import_bookmarks_public');
+        break;
       case 'close_tab':
         api.port.emit('close_tab');
         break;

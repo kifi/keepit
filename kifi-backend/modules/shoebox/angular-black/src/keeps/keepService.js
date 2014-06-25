@@ -78,7 +78,7 @@ angular.module('kifi.keepService', [
       return diff / 1000 > 15; // conversation count is older than 15 seconds
     }
 
-    function uploadBookmarkFile(file) {
+    function uploadBookmarkFile(file, makePublic) {
       var deferred = $q.defer();
       if (file) {
         var xhr = new XMLHttpRequest();
@@ -95,7 +95,7 @@ angular.module('kifi.keepService', [
         xhr.addEventListener('loadend', function (e) {
           deferred.notify({'name': 'loadend', 'event': e});
         });
-        xhr.open('POST', routeService.uploadBookmarkFile, true);
+        xhr.open('POST', routeService.uploadBookmarkFile(makePublic), true);
         xhr.send(file);
       } else {
         deferred.reject({'error': 'no file'});
