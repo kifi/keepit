@@ -69,5 +69,13 @@ class MessageSearchCommander @Inject() (
     }
   }
 
+  def clearHistory(userId: Id[User]): Unit = {
+    db.readWrite{ implicit session =>
+      historyRepo.save(
+        historyRepo.getOrCreate(userId).withoutHistory()
+      )
+    }
+  }
+
 
 }

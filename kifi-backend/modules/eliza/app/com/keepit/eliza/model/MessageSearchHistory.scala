@@ -38,5 +38,9 @@ case class MessageSearchHistory(
     }
   }
 
+  def withoutHistory(): MessageSearchHistory = {
+    this.copy(queries = Seq.empty)
+  }
+
 
 }
