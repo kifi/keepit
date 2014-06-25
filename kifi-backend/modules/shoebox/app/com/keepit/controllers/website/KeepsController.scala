@@ -154,9 +154,9 @@ class KeepsController @Inject() (
       keepRepo.getKeepExports(request.userId)
     }
 
-    Ok(KeepsController.assembleKeepXmlExport(exports))
-      .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.xml")
-      .as("application/xml")
+    Ok(KeepsController.assembleKeepExport(exports))
+      .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.html")
+      .as("text/html")
   }
 
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
@@ -364,9 +364,10 @@ class KeepsController @Inject() (
 
 object KeepsController {
 
-  def assembleKeepXmlExport(keepExports: Seq[KeepExport]): String = {
-    // Not really XML format
+  def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
+    // HTML format that follows Delicious exports
     val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+                   |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
                    |<!--This is an automatically generated file.
                    |It will be read and overwritten.
                    |Do Not Edit! -->
@@ -376,7 +377,7 @@ object KeepsController {
                    |""".stripMargin
     val after = "\n</DL>"
 
-    def CreateExportXML(keep : KeepExport): String = {
+    def CreateExport(keep : KeepExport): String = {
       // Parse Tags
       val title = keep.title getOrElse ""
       val tagString = keep.tags map { tags =>
@@ -388,6 +389,6 @@ object KeepsController {
           .stripMargin
       line
     }
-    before + keepExports.map(CreateExportXML).mkString("\n") + after
+    before + keepExports.map(CreateExport).mkString("\n") + after
   }
 }

@@ -29,6 +29,8 @@ GET     /m/1/eliza/getThreadsByUrl        @com.keepit.eliza.controllers.mobile.M
 GET     /m/1/eliza/hasThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.hasThreadsByUrl(url: String)
 GET     /m/1/eliza/searchMessages         @com.keepit.eliza.controllers.mobile.MobileMessagingController.searchMessages(q: String, p: Int ?= 0)
 GET     /m/1/eliza/messageSearchHistory   @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageSearchHistory()
+GET     /m/1/eliza/messageSearchHistoryOptOut   @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageSearchHistoryOptOut()
+POST     /m/1/eliza/messageSearchHistoryOptOut  @com.keepit.eliza.controllers.mobile.MobileMessagingController.setMessageSearchHistoryOptOut()
 
 ## Deprecated, kill after Eduardo gives an OK
 POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)

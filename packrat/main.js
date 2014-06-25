@@ -633,7 +633,7 @@ api.port.on({
         og: data.og,
         isPrivate: data.how === 'private'
       }, function done(keep) {
-        log('[unkeep:done]', keep);
+        log('[keep:done]', keep);
         delete d.state;
         d.kept = data.how;
         d.keepId = keep.id;
@@ -1532,11 +1532,10 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-var kifiSiteRe = /^https?:\/\/(?:www\.)?kifi\.com/;
 function updateKifiAppTabs() {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (url.lastIndexOf(prefix, 0) === 0 || kifiSiteRe.test(url)) {
+    if (url.lastIndexOf(prefix, 0) === 0 || url.lastIndexOf('https://preview.kifi.com', 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
         api.tabs.emit(tab, 'update_keeps');
       });

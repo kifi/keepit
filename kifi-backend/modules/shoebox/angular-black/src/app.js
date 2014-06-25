@@ -151,18 +151,10 @@ angular.module('kifi', [
   'profileService', '$window', '$rootScope', 'friendService', '$timeout', 'env',
   function (profileService, $window, $rootScope, friendService, $timeout, env) {
     $timeout(function () {
-      profileService.fetchPrefs().then(function (res) {
-        // handle onboarding / imports
-        if (env.production) {
-          if (!res.onboarding_seen) {
-            $rootScope.$emit('showGettingStarted');
-          } else {
-            $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
-          }
-        }
-        return res;
-      });
+      profileService.fetchPrefs();
       friendService.getRequests();
+      // TODO: add a link for triggering a bookmark import
+      // $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
     });
   }
 ]);
