@@ -633,7 +633,7 @@ api.port.on({
         og: data.og,
         isPrivate: data.how === 'private'
       }, function done(keep) {
-        log('[unkeep:done]', keep);
+        log('[keep:done]', keep);
         delete d.state;
         d.kept = data.how;
         d.keepId = keep.id;
@@ -1532,7 +1532,7 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-var kifiSiteRe = /^https?:\/\/(?:www\.)?kifi\.com/;
+var kifiSiteRe = /^https?:\/\/(?:(?:www\.|preview\.)?kifi\.com|dev.ezkeep.com)/;
 function updateKifiAppTabs() {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {

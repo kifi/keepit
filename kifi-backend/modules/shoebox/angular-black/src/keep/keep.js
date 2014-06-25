@@ -285,7 +285,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         };
 
         scope.showTags = function () {
-          return scope.hasTag() || scope.addingTag.enabled;
+          return scope.isMyBookmark(scope.keep) && (scope.hasTag() || scope.addingTag.enabled);
         };
 
         scope.showAddTag = function () {

@@ -166,8 +166,15 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     };
 
     $window.addEventListener('message', function (event) {
-      if (event.data && event.data.bookmarkCount > 0) {
-        $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
+      switch (event.data) {
+        case 'import_bookmarks':
+          if (event.data.bookmarkCount > 0) {
+            $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
+          }
+          break;
+        case 'update_keeps':
+          location.reload();
+          break;
       }
     });
 
