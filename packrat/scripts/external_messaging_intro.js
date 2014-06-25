@@ -6,7 +6,7 @@
 // @require scripts/html/keeper/tile_tooltip.js
 
 api.port.emit('prefs', function (prefs) {
-  if (prefs.showExtMsgIntro && document.hasFocus() && !window.guide) {
+  if (prefs.showExtMsgIntro && document.hasFocus()) {
     var handlers = {
       hide_external_messaging_intro: hide.bind(null, null)
     };
