@@ -9,7 +9,7 @@ protected case class Comment(c: String) {
 protected case class Tag(t: String) {
   override val toString = s"+$t"
 }
-protected case class LocalPart(p: Option[Comment], s: String, tags: Seq[Tag], t: Option[Comment]) {
+protected case class LocalPart(p: Option[Comment], s: String, tags: Seq[Tag], t: Option[Comment]) { // TODO: eliminate comments (not part of address)
   val localName = s.trim.toLowerCase  // local part case insensitive (kifi policy)
   override val toString = s"${localName}${tags.mkString("")}"
   def unparse = (p.getOrElse("") + localName + tags.mkString("") + t.getOrElse("")).trim
