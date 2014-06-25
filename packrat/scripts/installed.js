@@ -10,11 +10,7 @@
 
   api.port.on({
     update_keeps: function () {
-      if (document.documentElement.hasAttribute('ng-app')) {
-        window.postMessage('update_keeps', origin);
-      } else {
-        location.href = location.href;  // TODO: remove when old site dies
-      }
+      window.postMessage('update_keeps', origin);
     }
   });
 
