@@ -3,13 +3,14 @@ package com.keepit.model
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import com.keepit.common.db._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import com.keepit.common.mail.EmailAddress
-import com.keepit.abook.EmailParserUtils
+import com.keepit.abook.EmailParser
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
+
+import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 case class UserEmailAddress (
@@ -31,20 +32,27 @@ case class UserEmailAddress (
     lastVerificationSent = Some(now),
     verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
   def verified: Boolean = state == UserEmailAddressStates.VERIFIED
-  def isTestEmail() = EmailParserUtils.isTestEmail(address.address)
-  def isFakeEmail() = EmailParserUtils.isFakeEmail(address.address) // +test
-  def isAutoGenEmail() = EmailParserUtils.isAutoGenEmail(address.address)  // +autogen
+  def isTagged(tag: String): Boolean = parsed.exists(_.isTagged(tag))
+  def isTest: Boolean = parsed.exists(_.isTest) // +test or +utest
+  def isAutoGen: Boolean = parsed.exists(_.isAutoGen)  // +autogen
+  private lazy val parsed = EmailParser.parseOpt(address.address)
 }
 
 object UserEmailAddress {
   lazy val random = new SecureRandom()
 
-  def getTestExperiments(email: UserEmailAddress): Set[ExperimentType] = {
-    if (email.isTestEmail()) {
-      if (email.isAutoGenEmail()) Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
-      else Set(ExperimentType.FAKE)
-    } else
+  def getExperiments(email: UserEmailAddress): Set[ExperimentType] = {
+    (if (email.isAutoGen) {
+      Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
+    } else if (email.isTest) {
+      Set(ExperimentType.FAKE)
+    } else {
       Set.empty
+    }) ++ (if (email.isTagged("preview")) {
+      Set(ExperimentType.KIFI_BLACK)
+    } else {
+      Set.empty
+    })
   }
 }
 

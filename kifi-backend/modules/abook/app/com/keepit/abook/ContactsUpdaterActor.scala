@@ -152,7 +152,7 @@ class ContactsUpdater @Inject() (
               emails.foreach { email =>
                 val parseResult = EmailParser.parseAll(EmailParser.email, email)
                 if (parseResult.successful) {
-                  val parsedEmail:Email = parseResult.get
+                  val parsedEmail: ParsedEmailAddress = parseResult.get
                   if (parsedEmail.host.domain.length <= 1) {
                     log.warnP(s"$email domain=${parsedEmail.host.domain} not supported; discarded")
                   } else if (existingEmails.contains(parsedEmail.toString)) {

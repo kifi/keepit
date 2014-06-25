@@ -14,7 +14,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.abook.{EmailParserUtils, ABookServiceClient}
+import com.keepit.abook.ABookServiceClient
 import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
