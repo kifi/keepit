@@ -147,41 +147,16 @@ class KeepsController @Inject() (
     }
   }
 
-  def exportKeeps() = HtmlAction.authenticated { request =>
+  def exportKeeps() = AnyAction.authenticated { request =>
     // Given user request (authenticated user)
     // query from SQL database for all user's bookmarks & retrieve a list of keeps
     val exports = db.readOnly { implicit ro =>
       keepRepo.getKeepExports(request.userId) // returns Seq[KeepExport]
     }
 
-    var msg1 : String = "userId: " + request.userId + " exporting " + exports.length.toString() + " bookmarks!<br><br>"
-    var xmlFile : String = "<exports>"
-
-    for (e <- exports) {
-      msg1 += "    created_at: " + e.created_at + "<br>"
-      msg1 += "    url: " + e.url + "<br>"
-      if (e.title != None) msg1 += "    title: " + e.title + "<br>"
-      var tags = ""
-      if (e.tags != None) {
-        for (t <- e.tags) {
-          tags += t + ","
-        }
-      }
-      if (tags != "") msg1 += "    tags: " + tags + "<br>"
-      msg1 += "------------------------------<br>"
-
-      xmlFile += "<keep>"
-      xmlFile += "<created_at>" + e.created_at + "</created_at>"
-      xmlFile += "<url>" + e.url + "</url>"
-      if (e.title != None) xmlFile += "<title>" + e.title + "</title>"
-      if (tags != "") xmlFile += "<tags>" + tags + "</tags>"
-      xmlFile += "</keep>"
-    }
-
-    xmlFile += "</exports>"
-
-    //Ok(xmlFile) // does not print out correctly on browser because of <> tags
-    Ok(msg1)
+    Ok(KeepsController.assembleKeepXmlExport(exports))
+      .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.xml")
+      .as("application/xml")
   }
 
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticated { request =>
@@ -384,5 +359,32 @@ class KeepsController @Inject() (
     val doneOpt = Try(done.map(_.toInt)).toOption.flatten
     val totalOpt = Try(total.map(_.toInt)).toOption.flatten
     Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStart))
+  }
+}
+
+object KeepsController {
+
+  def assembleKeepXmlExport(keepExports: Seq[KeepExport]): String = {
+    // Not really XML format
+    val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+                   |<!--This is an automatically generated file.
+                   |It will be read and overwritten.
+                   |Do Not Edit! -->
+                   |<Title>Kifi Bookmarks Export</Title>
+                   |<H1>Bookmarks</H1>
+                   |<DL>
+                   |""".stripMargin
+    val after = "\n</DL>"
+
+    def CreateExportXML(keep : KeepExport): String = {
+      // Parse Tags
+      val title = keep.title getOrElse ""
+      val tagString = keep.tags map { tags =>
+        s""" TAGS="${tags.replace("&","&amp;").replace("\"","")}""""
+      } getOrElse ""
+      val line = s"""<DT><A HREF="${keep.url}" ADD_DATE="${keep.created_at.getMillis()/1000}"${tagString}>${title.replace("&","&amp;")}</A>"""
+      line
+    }
+    before + keepExports.map(x => CreateExportXML(x)).mkString("\n") + after
   }
 }

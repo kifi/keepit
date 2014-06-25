@@ -1,9 +1,5 @@
 package com.keepit.model
 
-/**
- * Created by aaronhsu on 6/23/14.
- */
-
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import com.keepit.common.cache._
@@ -14,7 +10,6 @@ import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.heimdal.SanitizedKifiHit
-
 
 case class KeepExport (
   created_at: DateTime,
