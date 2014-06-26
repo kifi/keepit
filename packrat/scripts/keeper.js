@@ -296,8 +296,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     $slider.prependTo(tile);
     $(tile).on('mousedown click keydown keypress keyup', stopPropagation);
 
-    api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)})]);
-    api.port.emit('keeper_shown');
+    api.port.emit('keeper_shown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)}));
   }
 
   function growSlider(fromClass, toClass) {
