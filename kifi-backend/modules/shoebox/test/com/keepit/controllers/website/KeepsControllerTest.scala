@@ -760,7 +760,61 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
       }
     }
 
-    "keepExports" in  {
+    "export keeps" in {
+      val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+      val userRepo = inject[UserRepo]
+      val uriRepo = inject[NormalizedURIRepo]
+      val urlRepo = inject[URLRepo]
+      val keepRepo = inject[KeepRepo]
+      val keeper = KeepSource.keeper
+      val initLoad = KeepSource.bookmarkImport
+      val db = inject[Database]
+      val ColRepo = inject[CollectionRepo]
+      val Keep2ColRepo = inject[KeepToCollectionRepo]
+
+      val site1 = "http://www.google.com/"
+      val site2 = "http://www.amazon.com/"
+      val site3 = "http://www.kifi.com/"
+
+      db.readWrite{ implicit s =>
+
+        val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1))
+        val user2 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
+
+        val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
+        val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
+        val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("Kifi")))
+
+        val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+        val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+        val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+        val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3)))
+
+        val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9)))
+
+        val keep3 = keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
+          uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
+
+        val keep4 = keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
+          uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
+
+        val col1 = ColRepo.save(Collection(userId=user1.id.get, name="t1"))
+        Keep2ColRepo.save(KeepToCollection(keepId=keep1.id.get, collectionId=col1.id.get))
+      }
+
+      db.readOnly{ implicit s =>
+        val keepExports = keepRepo.getKeepExports(Id[User](1))
+        keepExports.length === 3
+        keepExports(0).title.get === KeepExport(title = Some("k3"), created_at = t1.plusMinutes(3), url=site3)
+        keepExports(1).title.get === KeepExport(title = Some("k2"), created_at = t1.plusMinutes(9), url=site2)
+        keepExports(2).title.get === KeepExport(title = Some("k1"), created_at = t1.plusMinutes(6), url=site1, tags=Some("t1"))
+      }
+    }
+
+    "assemble keep exports" in  {
         val dateTime0 = DateTime.now
         val dateTime1 = DateTime.now
         val dateTime2 = DateTime.now
