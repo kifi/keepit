@@ -100,9 +100,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           thumb: '/img/guide/leather_tote.jpg',
           noun: 'tote',
           tag: 'Wishlist',
-          query: 'tote+bag',
+          query: 'large+bag',
           title: 'Large Leather Tote - Everyday tote bag',
-          matches: {title: [[14,4],[30,4],[35,3]], url: [[53,4],[67,4],[72,3]]}
+          matches: {title: [[0,5],[35,3]], url: [[39,5],[72,3]]}
         }, {
           url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
           name: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
