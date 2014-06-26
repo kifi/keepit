@@ -8,7 +8,7 @@
 
   <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }" ng-class="{'kf-add-tag-shown': showAddTag()}">
     <ul class="kf-sidebar-tag-list" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
-      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tagsWithFakeLast | limitTo: tagLimit track by tag.id" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
+      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tags.concat([null]) | limitTo: tagLimit track by tag.id" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
     </ul>
     <div class="kf-tag-new" ng-show="showAddTag()" ng-click="createTag()" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()">
       <div class="kf-tag-new-inner" ng-class="{ highlight: isHighlightNew() }">
@@ -22,5 +22,4 @@
       </div>
     </div>
   </div>
-
 </div>

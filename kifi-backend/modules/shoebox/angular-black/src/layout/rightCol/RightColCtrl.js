@@ -4,8 +4,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
-  'installService', '$rootScope', '$analytics', 'friendService', '$location',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService, $location) {
+  'installService', '$rootScope', '$analytics', 'friendService', '$location', 'keepService', 'tagService',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout,
+    installService, $rootScope, $analytics, friendService, $location, keepService, tagService) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
     var friendsReady = false;
@@ -146,20 +147,28 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
     };
 
+    var refreshTimeout;
     $window.addEventListener('message', function (event) {
-      switch (event.data) {
-        case 'get_guide':
-          $scope.triggerGuide();
-          break;
-        case 'import_bookmarks':
-          if (event.data.bookmarkCount > 0) {
-            $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
-          }
-          break;
-        case 'update_keeps':
-          location.reload();
-          break;
-      }
+      $scope.$apply(function () {
+        switch (event.data) {
+          case 'get_guide':
+            $scope.triggerGuide();
+            break;
+          case 'import_bookmarks':
+            if (event.data.bookmarkCount > 0) {
+              $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
+            }
+            break;
+          case 'update_keeps':
+          case 'update_tags':
+            $timeout.cancel(refreshTimeout);
+            refreshTimeout = $timeout(function () {
+              tagService.fetchAll(true);
+              keepService.reset();
+            }, 1000); // Giving enough time for the services to be updated
+            break;
+        }
+      });
     });
 
     $scope.logout = function () {

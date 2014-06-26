@@ -566,6 +566,7 @@ function onAddTagResponse(nUri, result) {
         api.tabs.emit(tab, 'tagged', {tagged: true});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -580,6 +581,7 @@ function onRemoveTagResponse(nUri, tagId, result) {
         api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -594,6 +596,7 @@ function onClearTagsResponse(nUri, result) {
         api.tabs.emit(tab, 'tagged', {tagged: false});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -660,6 +663,7 @@ api.port.on({
         forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
           setIcon(tab, data.how);
         });
+        updateKifiAppTabs('update_keeps');
       }, function fail() {
         log('[keep:fail]', data.url);
         delete d.state;
@@ -670,7 +674,6 @@ api.port.on({
       forEachTabAt(tab.url, tab.nUri, function (tab) {
         api.tabs.emit(tab, 'kept', {kept: data.how});
       });
-      updateKifiAppTabs();
     }
   },
   unkeep: function(_, __, tab) {
@@ -687,6 +690,7 @@ api.port.on({
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           setIcon(tab, false);
         });
+        updateKifiAppTabs('update_keeps');
       }, function fail() {
         log('[unkeep:fail]', d.keepId);
         delete d.state;
@@ -1617,12 +1621,12 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function updateKifiAppTabs() {
+function updateKifiAppTabs(message) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
     if (url.lastIndexOf(prefix, 0) === 0 || url.lastIndexOf('https://preview.kifi.com', 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
-        api.tabs.emit(tab, 'update_keeps');
+        api.tabs.emit(tab, message);
       });
     }
   }
