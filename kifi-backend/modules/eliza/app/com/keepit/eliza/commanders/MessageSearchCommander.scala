@@ -25,14 +25,16 @@ class MessageSearchCommander @Inject() (
   notificationUpdater: NotificationUpdater,
   historyRepo: MessageSearchHistoryRepo) extends Logging {
 
-  def searchMessages(userId: Id[User], query: String, page: Int): Future[Notifications] = {
+  def searchMessages(userId: Id[User], query: String, page: Int, storeInHistory: Boolean): Future[Notifications] = {
     val resultExtIdsFut = search.searchMessages(userId, query, page)
     //async update search history for the user
-    SafeFuture("message search history update"){
-      db.readWrite{ implicit session =>
-        val history = historyRepo.getOrCreate(userId)
-        if (!history.optOut) {
-          historyRepo.save(history.withNewQuery(query))
+    if (storeInHistory) {
+      SafeFuture("message search history update"){
+        db.readWrite{ implicit session =>
+          val history = historyRepo.getOrCreate(userId)
+          if (!history.optOut) {
+            historyRepo.save(history.withNewQuery(query))
+          }
         }
       }
     }

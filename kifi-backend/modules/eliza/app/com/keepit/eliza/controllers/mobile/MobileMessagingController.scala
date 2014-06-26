@@ -188,8 +188,8 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def searchMessages(query: String, page: Int) = JsonAction.authenticatedAsync { request =>
-    messageSearchCommander.searchMessages(request.userId, query, page).map{ notifs =>
+  def searchMessages(query: String, page: Int, storeInHistory: Boolean) = JsonAction.authenticatedAsync { request =>
+    messageSearchCommander.searchMessages(request.userId, query, page, storeInHistory).map{ notifs =>
       Ok(Json.toJson(notifs.jsons))
     }
   }
