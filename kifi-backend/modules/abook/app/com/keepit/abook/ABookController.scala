@@ -304,6 +304,16 @@ class ABookController @Inject() (
     }
   }
 
+  def getOrCreateEContact(userId:Id[User]) = Action(parse.json) { request =>
+    val contact = request.body.as[BasicContact]
+    log.info(s"[getOrCreateEContact] userId=$userId contact=$contact")
+
+    abookCommander.getOrCreateEContact(userId, contact) match {
+      case Success(c) => Ok(Json.toJson(c))
+      case Failure(t) => BadRequest(t.getMessage)
+    }
+  }
+
   // todo(ray): move to commander
   def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
     @inline def mkId(email: EmailAddress) = s"email/${email.address}"
