@@ -128,11 +128,6 @@ class UserCommander @Inject() (
   bookmarkClicksRepo: UserBookmarkClicksRepo,
   userImageUrlCache: UserImageUrlCache) extends Logging {
 
-
-  def validateEmails(addresses: EmailInfo*): Boolean = {
-    !addresses.map(em => Try(EmailAddress.validate(em.address.address)).isSuccess).contains(false)
-  }
-
   def updateUserDescription(userId: Id[User], description: String): Unit = {
     db.readWrite { implicit session =>
       val trimmed = description.trim

@@ -9,13 +9,20 @@ import com.keepit.common.time._
 import com.keepit.commanders._
 
 import play.api.Play.current
-import play.api.libs.json.{JsObject, Json, JsValue}
+import play.api.libs.json._
 import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{Success, Failure}
 import securesocial.core.{SecureSocial, Authenticator}
+import play.api.libs.json.JsSuccess
+import com.keepit.common.controller.AuthenticatedRequest
+import scala.util.Failure
+import scala.Some
+import com.keepit.commanders.ConnectionInfo
+import scala.util.Success
+import play.api.libs.json.JsObject
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -62,18 +69,16 @@ class MobileUserController @Inject() (
   }
 
   def updateCurrentUser = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
-    request.body.asOpt[UpdatableUserInfo] map { userData =>
-      if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
-        BadRequest(Json.obj("error" -> "bad email addresses"))
-      } else {
+    request.body.validate[UpdatableUserInfo] match {
+      case JsSuccess(userData, _) => {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
         userData.description.foreach{ description =>
           userCommander.updateUserDescription(request.userId, description)
         }
         getUserInfo(request)
       }
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "could not parse user info from body"))
+      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } => BadRequest(Json.obj("error" -> "bad email addresses"))
+      case _ => BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
