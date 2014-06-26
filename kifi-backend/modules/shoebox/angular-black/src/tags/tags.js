@@ -350,7 +350,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           } else {
             increaseLimit();
           }
-        }
+        };
         scope.isScrollDisabled = function () {
           return scope.tagLimit > scope.tagsWithFakeLast.length;
         };
