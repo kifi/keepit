@@ -10,6 +10,8 @@ class ShardedServiceInstance[T](val serviceInstance: ServiceInstance) {
     case Some(spec) => Dispatcher.shardSpecParser.parse[T](spec)
     case None => Set()
   }
+
+  def size: Int = shards.size
 }
 
 object Dispatcher {
@@ -138,7 +140,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
 
     var remaining = allShards
     while (remaining.nonEmpty) {
-      next(table, remaining, maxShardsPerInstance) match {
+      next(table, remaining, maxShardsPerInstance, 2) match {
         case (Some(instance), shards) =>
           if (!instance.serviceInstance.reportedSentServiceUnavailable) {
             results += body(instance.serviceInstance, shards)
@@ -161,7 +163,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
     results
   }
 
-  private def next(instMap: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]], shards: Set[Shard[T]], maxShardsPerInstance: Int, numTrials: Int = 1): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
+  private def next(instMap: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]], shards: Set[Shard[T]], maxShardsPerInstance: Int, numTrials: Int): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
     var numEntries = 0
     val table = shards.toSeq.map{ shard =>
       instMap.get(shard) match {
@@ -173,14 +175,16 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       }
     }
     var bestInstance: Option[ShardedServiceInstance[T]] = None
+    var bestInstSize: Int = Int.MaxValue
     var bestCoverage = Set.empty[Shard[T]]
     var trials = numTrials
     while (trials > 0 && bestCoverage.size < maxShardsPerInstance) {
       getCandidate(table, numEntries) match {
-        case candidate @ Some(inst) =>
-          val thisCoverage = (inst.shards intersect shards).take(maxShardsPerInstance)
-          if (thisCoverage.size > bestCoverage.size) {
+        case candidate @ Some(thisInst) =>
+          val thisCoverage = (thisInst.shards intersect shards).take(maxShardsPerInstance)
+          if (thisCoverage.size > bestCoverage.size || (thisCoverage.size == bestCoverage.size && thisInst.size < bestInstSize)) {
             bestInstance = candidate
+            bestInstSize = thisInst.size
             bestCoverage = thisCoverage
           }
         case None =>
