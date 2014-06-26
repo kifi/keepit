@@ -71,7 +71,14 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       });
     };
 
-    $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      $scope.getNextKeeps();
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
 
     tagService.promiseById(tagId).then(function (tag) {
       $window.document.title = 'Kifi • ' + tag.name;

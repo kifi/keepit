@@ -19,11 +19,8 @@ angular.module('kifi.keepView', [])
 
     $scope.keeps = [];
     $scope.loading = true;
+    $scope.keepService = keepService;
     var keepId = $routeParams.keepId || '';
-    keepService.fetchKeepInfo(keepId).then(function (keep) {
-      $scope.keeps = [keep];
-      $scope.loading = false;
-    });
 
     $scope.getSubtitle = function () {
       if ($scope.loading) {
@@ -32,5 +29,17 @@ angular.module('kifi.keepView', [])
         return 'Showing 1 keep';
       }
     };
+
+    function initKeepList() {
+      keepService.getSingleKeep(keepId).then(function () {
+        $scope.keeps = keepService.list;
+        $scope.loading = false;
+      });
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
+
   }
 ]);

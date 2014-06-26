@@ -290,11 +290,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           scope.refreshScroll();
         });
 
-        scope.$watch('tags.length', function () {
-          scope.refreshScroll();
-          scope.tagsWithFakeLast = scope.tags.concat([null]);
-        });
-
         tagService.fetchAll();
 
         scope.watchTagReorder = function () {
@@ -353,7 +348,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           }
         };
         scope.isScrollDisabled = function () {
-          return scope.tagLimit > scope.tagsWithFakeLast.length;
+          return scope.tagLimit > scope.tags.length + 1;
         };
         scope.scrollDistance = '100%';
       }
