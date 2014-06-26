@@ -16,12 +16,16 @@ import scala.slick.jdbc.StaticQuery
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.cortex.models.lda.SparseTopicRepresentation
 import com.keepit.cortex.models.lda.LDATopicFeature
+import org.joda.time.DateTime
+
 
 
 @ImplementedBy(classOf[URILDATopicRepoImpl])
 trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LDATopicFeature]
+  def getByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
+  def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
 }
 
 class URILDATopicRepoImpl @Inject()(
@@ -41,9 +45,9 @@ class URILDATopicRepoImpl @Inject()(
     def firstTopic = column[LDATopic]("first_topic", O.Nullable)
     def secondTopic = column[LDATopic]("second_topic", O.Nullable)
     def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
-    def sparseFeature = column[SparseTopicRepresentation]("sparse_feature")
-    def feature = column[LDATopicFeature]("feature")
-    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, firstTopic.?, secondTopic.?, thirdTopic.?, sparseFeature, feature, state ) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
+    def sparseFeature = column[SparseTopicRepresentation]("sparse_feature", O.Nullable)
+    def feature = column[LDATopicFeature]("feature", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, firstTopic.?, secondTopic.?, thirdTopic.?, sparseFeature.?, feature.?, state ) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
   def table(tag:Tag) = new URILDATopicTable(tag)
@@ -55,8 +59,27 @@ class URILDATopicRepoImpl @Inject()(
   def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LDATopicFeature] = {
     val q = for{
       r <- rows
-      if (r.uriId === uriId && r.version === version)
+      if (r.uriId === uriId && r.version === version && r.state === URILDATopicStates.ACTIVE)
     } yield r.feature
+
+    q.firstOption
+  }
+
+  def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])] = {
+    val q = for{
+      r <- rows
+      if (r.uriId === uriId && r.version === version)
+    } yield (r.updatedAt, r.state)
+
+    q.firstOption
+  }
+
+
+  def getByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic] = {
+    val q = for{
+      r <- rows
+      if (r.uriId === uriId && r.version === version)
+    } yield r
 
     q.firstOption
   }

@@ -18,15 +18,17 @@ case class URILDATopic(
   uriId: Id[NormalizedURI],
   uriSeq: SequenceNumber[NormalizedURI],
   version: ModelVersion[DenseLDA],
-  firstTopic: Option[LDATopic],
-  secondTopic: Option[LDATopic],
-  thirdTopic: Option[LDATopic],
-  sparseFeature: SparseTopicRepresentation,
-  feature: LDATopicFeature,
-  state: State[URILDATopic] = URILDATopicStates.ACTIVE
+  firstTopic: Option[LDATopic] = None,
+  secondTopic: Option[LDATopic] = None,
+  thirdTopic: Option[LDATopic] = None,
+  sparseFeature: Option[SparseTopicRepresentation] = None,
+  feature: Option[LDATopicFeature] = None,
+  state: State[URILDATopic]
 ) extends ModelWithState[URILDATopic] {
   def withId(id: Id[URILDATopic]): URILDATopic = copy(id = Some(id))
   def withUpdateTime(time: DateTime): URILDATopic = copy(updatedAt = time)
 }
 
-object URILDATopicStates extends States[URILDATopic]
+object URILDATopicStates extends States[URILDATopic] {
+  val NOT_APPLICABLE = State[URILDATopic]("not_applicable")
+}
