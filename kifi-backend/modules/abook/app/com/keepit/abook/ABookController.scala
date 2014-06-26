@@ -304,7 +304,7 @@ class ABookController @Inject() (
     }
   }
 
-  def getOrCreateEContact(userId:Id[User]) = Action(parse.json) { request =>
+  def internContact(userId:Id[User]) = Action(parse.json) { request =>
     val contact = request.body.as[BasicContact]
     log.info(s"[getOrCreateEContact] userId=$userId contact=$contact")
 
