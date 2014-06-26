@@ -23,8 +23,8 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
-  function ($scope, $http, profileService, routeService, $window, socialService) {
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService', '$location',
+  function ($scope, $http, profileService, routeService, $window, socialService, $location) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
@@ -110,6 +110,22 @@ angular.module('kifi.profile', [
     $scope.confirmSaveEmail = function () {
       profileService.setNewPrimaryEmail(emailToBeSaved);
     };
+
+    $scope.exportKeeps = function() {
+      $scope.exported = true;
+    }
+
+    $scope.getExportUrl = function () {
+      return routeService.exportKeeps;
+    }
+
+    $scope.getExportButtonText = function() {
+      if ($scope.exported == true) {
+        return "Export Again"
+      } else {
+        return "Export Keeps"
+      }
+    }
 
     function showVerificationAlert(email) {
       $scope.emailForVerification = email;
@@ -214,6 +230,25 @@ angular.module('kifi.profile', [
     };
   }
 ])
+
+/*
+.directive('kfExportKeeps', [
+  'profileService', '$window', 'env', 'socialService',
+  function (profileService, $window, env, socialService) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {},
+      link: function (scope) {
+        scope.addressBookImportText = 'Export Keeps';
+        socialService.refresh().then(function () {
+
+        });
+        scope.exportKeeps = socialService.exportKeeps;
+      }
+    }
+  }
+])*/
 
 .directive('kfEmailImport', [
   'profileService', '$window', 'env', 'socialService',

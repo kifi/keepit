@@ -75,6 +75,17 @@
         </ul>
       </div>
       <div class="profile-section" kf-email-import></div>
+      <div class="profile-section">
+        <h3>Export Your Keeps</h3>
+        <h5>Keep URL, date kept, and any tags will be included in a HTML netscape format file</h5>
+
+        <a class="profile-export" ng-href="{{getExportUrl()}}" ng-click="exportKeeps()" target="_self" ng-class="{'exportFirst':!exported, 'exportAgain':exported}">{{getExportButtonText()}}</a>
+        <p>
+        <span class="profile-export-status" ng-show="exported">
+          <span class="profile-placeholder">&nbsp;</span>
+          <span class="profile-export-reply">You can find the file in your Download folder</span>
+        </span>
+      </div>
     </div>
   </div>
 </div>
