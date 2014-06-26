@@ -204,7 +204,7 @@ class MobileMessagingController @Inject() (
   }
 
   def setMessageSearchHistoryOptOut() = JsonAction.authenticatedParseJson { request =>
-    Ok(Json.obj("didOptOut" -> messageSearchCommander.setHistoryOptOut(request.userId, request.body.as[Boolean])))
+    Ok(Json.obj("didOptOut" -> messageSearchCommander.setHistoryOptOut(request.userId, (request.body \ "optOut").as[Boolean])))
   }
 
   def clearMessageSearchHistory() = JsonAction.authenticated { request =>
