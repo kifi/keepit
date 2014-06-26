@@ -59,7 +59,7 @@ guide.step1 = guide.step1 || function () {
 
   function show($guide, page, pageIdx) {
     if (!step) {
-      // TODO: handle already kept case well (different steps?)
+      tile.style.display = '';
       steps[3].arrow.to.sel = origSteps3ArrowToSel.replace('{{tag}}', page.tag);
       step = guide.step(steps, {
         $guide: $guide,

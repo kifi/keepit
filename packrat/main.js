@@ -41,8 +41,8 @@ function clearDataCache() {
   threadReadAt = {};
   for (var tabId in timeouts) {
     api.timers.clearTimeout(timeouts[tabId]);
+    delete timeouts[tabId];
   }
-  timeouts = {};
 
   pageData = {};
   threadLists = {};
@@ -1291,6 +1291,7 @@ api.port.on({
   start_guide: function (pages, _, tab) {
     guidePages = pages;
     api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages});
+    unsilence(false);
   },
   resume_guide: function (step, _, tab) {
     if (guidePages) {
