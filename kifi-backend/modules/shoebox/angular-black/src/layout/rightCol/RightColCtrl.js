@@ -105,7 +105,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           matches: {title: [[0,5],[35,3]], url: [[39,5],[72,3]]}
         }, {
           url: 'http://www.theverge.com/2014/6/26/5845996/watch-google-io-2014-keynote-on-demand',
-          name: ['Google I/O','2014 Keynote'],
+          name: ['Google I/O','2014','Keynote'],
           site: 'theverge.com',
           thumb: '/img/guide/google_io.jpg',
           noun: 'article',
