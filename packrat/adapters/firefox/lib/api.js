@@ -463,10 +463,10 @@ exports.tabs = {
 
 exports.timers = {
   setTimeout: function (f, ms) {
-    timers.setTimeout(errors.wrap(f), ms);
+    return timers.setTimeout(errors.wrap(f), ms);
   },
   setInterval: function (f, ms) {
-    timers.setInterval(errors.wrap(f), ms);
+    return timers.setInterval(errors.wrap(f), ms);
   },
   clearTimeout: timers.clearTimeout.bind(timers),
   clearInterval: timers.clearInterval.bind(timers)
