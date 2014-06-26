@@ -46,7 +46,7 @@ case class MessageSearchHistory(
   }
 
   def withoutHistory(): MessageSearchHistory = {
-    this.copy(queries = Seq.empty)
+    this.copy(queries = Seq.empty, emails = Seq.empty)
   }
 
 

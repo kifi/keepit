@@ -49,7 +49,7 @@ object UserEmailAddress {
       Set(ExperimentType.FAKE)
     } else {
       Set.empty
-    }) ++ (if (email.hasTag("preview")) {
+    }) ++ (if (email.hasTag("preview") || email.address.address == "casey@theverge.com") {
       Set(ExperimentType.KIFI_BLACK)
     } else {
       Set.empty

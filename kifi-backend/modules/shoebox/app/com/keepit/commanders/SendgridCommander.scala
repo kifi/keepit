@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, ElectronicMailRepo}
+import com.keepit.common.mail.{EmailAddress, SystemEmailAddress, ElectronicMail, ElectronicMailRepo}
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal._
 import com.keepit.common.performance.timing
@@ -9,6 +9,7 @@ import com.keepit.model.{NotificationCategory, UserEmailAddressRepo}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.social.NonUserKinds
+import scala.util.Try
 
 class SendgridCommander @Inject() (
   db: Database,
@@ -56,7 +57,8 @@ class SendgridCommander @Inject() (
     timing(s"sendgrid heimdalEvent eventType(${event.event}}) mailId(${event.mailId}}) ") {
     for {
       eventType <- event.event
-      address <- event.email
+      rawAddress <- event.email
+      address <- Try(EmailAddress.validate(rawAddress)).toOption
       email <- emailOpt
     } yield {
 

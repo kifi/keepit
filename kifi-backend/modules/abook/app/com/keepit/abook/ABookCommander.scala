@@ -243,12 +243,12 @@ class ABookCommander @Inject() (
     json
   }
 
-  def getOrCreateEContact(userId:Id[User], email: String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Try[EContact] = {
+  def getOrCreateEContact(userId:Id[User], contact: BasicContact):Try[EContact] = {
     val res = db.readWrite(attempts = 2) { implicit s =>
-      econtactRepo.getOrCreate(userId, email, name, firstName, lastName)
+      econtactRepo.getOrCreate(userId, contact)
     }
     econtactTypeahead.refresh(userId) // async
-    log.info(s"[getOrCreateEContact($userId,$email,${name.getOrElse("")})] res=$res")
+    log.info(s"[getOrCreateEContact($userId,${contact.email},${contact.name.getOrElse("")})] res=$res")
     res
   }
 

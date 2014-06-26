@@ -2,7 +2,6 @@
 // @require styles/login_dialog.css
 // @require styles/view_email_dialog.css
 // @require scripts/lib/jquery.js
-// @require scripts/lib/mustache.js
 // @require scripts/api_iframe.js
 // @require scripts/render.js
 

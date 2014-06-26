@@ -64,13 +64,13 @@ class EmailOptOutController @Inject() (
     }.getOrElse(BadRequest)
   }
 
-  def getUnsubscribeUrlForEmail(email: String) = Action { implicit request =>
-    Ok(s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(commander.generateOptOutToken(EmailAddress(email)))}")
+  def getUnsubscribeUrlForEmail(email: EmailAddress) = Action { implicit request =>
+    Ok(s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(commander.generateOptOutToken(email))}")
   }
 
   // for development only
-  def getToken(email: String) = Action {
-    Ok(commander.generateOptOutToken(EmailAddress(email)))
+  def getToken(email: EmailAddress) = Action {
+    Ok(commander.generateOptOutToken(email))
   }
 
 

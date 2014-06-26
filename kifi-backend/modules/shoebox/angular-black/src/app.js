@@ -148,8 +148,8 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$window', '$rootScope', 'friendService', '$timeout', 'env',
-  function (profileService, $window, $rootScope, friendService, $timeout, env) {
+  'profileService', '$window', '$rootScope', 'friendService', '$timeout',
+  function (profileService, $window, $rootScope, friendService, $timeout) {
     $timeout(function () {
       profileService.fetchPrefs();
       friendService.getRequests();

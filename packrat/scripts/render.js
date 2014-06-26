@@ -1,3 +1,5 @@
+// @require scripts/lib/mustache.js
+
 var cdnBase = api.dev ?
   "http://dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
   "//djty7jcqog9qu.cloudfront.net";

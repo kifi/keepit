@@ -196,8 +196,7 @@ class UserController @Inject() (
     }
   }
 
-  def getEmailInfo(emailString: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
-    val email = EmailAddress(emailString)
+  def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
@@ -221,18 +220,16 @@ class UserController @Inject() (
 
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
-    request.body.asOpt[UpdatableUserInfo] map { userData =>
-      if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
-        BadRequest(Json.obj("error" -> "bad email addresses"))
-      } else {
+    request.body.validate[UpdatableUserInfo] match {
+      case JsSuccess(userData, _) => {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
         userData.description.foreach{ description =>
           userCommander.updateUserDescription(request.userId, description)
         }
         getUserInfo(request.userId)
       }
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "could not parse user info from body"))
+      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } => BadRequest(Json.obj("error" -> "bad email addresses"))
+      case _ => BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
@@ -365,8 +362,7 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(emailString: String) = HtmlAction.authenticated { implicit request =>
-    val email = EmailAddress(emailString)
+  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticated { implicit request =>
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>

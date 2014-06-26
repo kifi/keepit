@@ -135,9 +135,8 @@ class ABookController @Inject() (
     Ok(Json.toJson[Seq[EContact]](contacts))
   }
 
-  def getEContactByEmail(userId:Id[User], email:String) = Action { request =>
-    // todo: parse email
-    abookCommander.getEContactByEmailDirect(userId, EmailAddress(email)) match {
+  def getEContactByEmail(userId:Id[User], email: EmailAddress) = Action { request =>
+    abookCommander.getEContactByEmailDirect(userId, email) match {
       case Some(js) => Ok(js)
       case _ => Ok(JsNull)
     }
@@ -296,9 +295,10 @@ class ABookController @Inject() (
     Ok(Json.toJson(tokenOpt))
   }
 
-  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName:Option[String], lastName:Option[String]) = Action { request =>
+  def getOrCreateEContact(userId:Id[User], email: EmailAddress, name:Option[String], firstName:Option[String], lastName:Option[String]) = Action { request =>
     log.info(s"[getOrCreateEContact] userId=$userId email=$email name=$name")
-    abookCommander.getOrCreateEContact(userId, email, name, firstName, lastName) match {
+
+    abookCommander.getOrCreateEContact(userId, BasicContact(email, name, firstName, lastName)) match {
       case Success(c) => Ok(Json.toJson(c))
       case Failure(t) => BadRequest(t.getMessage)
     }
