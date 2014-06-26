@@ -62,6 +62,7 @@ guide.step3 = guide.step3 || function () {
 
   function show($guide, page, pageIdx) {
     if (!step) {
+      tile.style.display = '';
       step = guide.step(steps, {
         $guide: $guide,
         page: page,
