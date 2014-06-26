@@ -16,6 +16,8 @@ object LDATopic {
   implicit val format = Json.format[LDATopic]
 }
 
+case class LDATopicFeature(value: Array[Float])
+
 case class SparseTopicRepresentation(
   dimension: Int,
   topics: Map[LDATopic, Float]

@@ -1,0 +1,113 @@
+.kifi-guide-4-stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 999999999993;
+}
+.kifi-guide-4-stage.kifi-gone {
+  opacity: 0;
+  transition: opacity .34s linear;
+}
+.kifi-guide-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: .8;
+}
+.kifi-guide-feature {
+  position: absolute;
+  display: none;
+  opacity: 0;
+  transition: opacity .26s linear;
+}
+.kifi-guide-feature.kifi-opaque {
+  opacity: 1;
+}
+
+.kifi-guide-4-h1 {
+  margin: 12px 0;
+  font: bold italic 26px/48px Georgia,Times,serif !important;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-4-h1+.kifi-guide-4-h1 {
+  margin-top: -20px;
+}
+.kifi-guide-feature>.kifi-guide-4-h1 {
+  margin-top: 0;
+}
+.kifi-guide-ul {
+  margin: -14px 0 0 4px;
+  list-style: disc;
+  font: 16px/24px 'Helvetica Neue',Arial,sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-li {
+  display: list-item;
+  text-indent: -2px;
+  color: #f99;
+}
+.kifi-guide-li-text {
+  color: #fff;
+  font-weight: 300;
+}
+.kifi-guide-em {
+  color: #f38283;
+}
+
+.kifi-guide-drum-roll {
+  display: none;
+  position: fixed;
+  width: 240px;
+  bottom: 40%;
+  right: 20%;
+  margin-bottom: -120px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .26s linear;
+}
+.kifi-guide-drum-roll.kifi-opaque {
+  opacity: 1;
+}
+.kifi-guide-4-next {
+  min-width: 140px;
+  margin-top: 3px;
+  display: inline-block;
+  border: 3px solid #fff;
+  border-radius: 7px;
+  padding: 0 32px;
+  line-height: 50px;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+}
+.kifi-guide-4-next:hover,
+.kifi-guide-4-next:focus {
+  color: #fff;
+  background-color: rgba(255,255,255,.05);
+}
+.kifi-guide-4-next:active {
+  color: #fff;
+  background-color: rgba(255,255,255,.15);
+}
+
+.kifi-guide-farewell {
+  display: none;
+  position: fixed;
+  top: 25%;
+  left: 50%;
+  width: 500px;
+  margin-left: -250px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .2s linear;
+}
+.kifi-guide-farewell.kifi-opaque {
+  opacity: 1;
+}
+.kifi-guide-farewell>.kifi-guide-4-next {
+  margin-top: 10px;
+}

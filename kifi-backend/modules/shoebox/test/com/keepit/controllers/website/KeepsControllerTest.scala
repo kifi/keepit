@@ -774,9 +774,10 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
             KeepExport(created_at = dateTime2, title = Some("title 31"), url = "http://www.hi.com31", tags = None) ::
             Nil
 
-        val result = KeepsController.assembleKeepXmlExport(keepExports)
+        val result = KeepsController.assembleKeepExport(keepExports)
 
         val expected = s"""<!DOCTYPE NETSCAPE-Bookmark-file-1>
+             |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
              |<!--This is an automatically generated file.
              |It will be read and overwritten.
              |Do Not Edit! -->
