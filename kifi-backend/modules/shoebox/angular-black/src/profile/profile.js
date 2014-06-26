@@ -111,6 +111,22 @@ angular.module('kifi.profile', [
       profileService.setNewPrimaryEmail(emailToBeSaved);
     };
 
+    $scope.exportKeeps = function() {
+      $scope.exported = true;
+    };
+
+    $scope.getExportUrl = function () {
+      return routeService.exportKeeps;
+    };
+
+    $scope.getExportButtonText = function() {
+      if ($scope.exported === true) {
+        return 'Export Again';
+      } else {
+        return 'Export Keeps';
+      }
+    };
+
     function showVerificationAlert(email) {
       $scope.emailForVerification = email;
       $scope.showResendVerificationEmailDialog.value = true;
