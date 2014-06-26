@@ -47,6 +47,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           tagDragSource: null,
           targetIdx: null
         };
+        scope.filter = {};
 
         var preventClearFilter = false;
         var w = angular.element($window);
@@ -90,7 +91,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
             res = false;
           if (name) {
             name = name.toLowerCase();
-            res = !scope.tags.some(function (tag) {
+            res = scope.isFilterFocused && !scope.tags.some(function (tag) {
               return tag.name.toLowerCase() === name;
             });
           }
@@ -116,6 +117,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         scope.viewTag = function (tagId) {
           if (tagId) {
             scope.viewedTagId = tagId;
+            scope.dehighlight();
             return $location.path('/tag/' + tagId);
           }
         };
@@ -155,6 +157,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         };
 
         scope.onFilterChange = function () {
+          resetTagLimit();
           tagService.filterList(scope.filter.name);
         };
 
@@ -332,6 +335,27 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           scope.blurFilter();
           return q;
         };
+
+        function resetTagLimit() {
+          scope.tagLimit = 40;
+        }
+        resetTagLimit();
+
+        function increaseLimit() {
+          scope.tagLimit += 30;
+        }
+
+        scope.scrollNext = function () {
+          if(!scope.$root.$$phase) {
+            scope.$apply(increaseLimit);
+          } else {
+            increaseLimit();
+          }
+        };
+        scope.isScrollDisabled = function () {
+          return scope.tagLimit > scope.tagsWithFakeLast.length;
+        };
+        scope.scrollDistance = '100%';
       }
     };
   }
