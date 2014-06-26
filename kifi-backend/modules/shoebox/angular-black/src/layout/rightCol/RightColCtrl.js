@@ -104,15 +104,15 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           title: 'Large Leather Tote - Everyday tote bag',
           matches: {title: [[0,5],[35,3]], url: [[39,5],[72,3]]}
         }, {
-          url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
-          name: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
-          site: 'lifehack.org',
-          thumb: '/img/guide/love_life.jpg',
+          url: 'http://www.theverge.com/2014/6/26/5845996/watch-google-io-2014-keynote-on-demand',
+          name: ['Google I/O','2014 Keynote'],
+          site: 'theverge.com',
+          thumb: '/img/guide/google_io.jpg',
           noun: 'article',
-          tag: 'Read Later',
-          query: 'love+life',
-          title: '10 Things People Who Truly Love Their Lives Do Differently',
-          matches: {title: [[27,4],[38,5]], url: [[11,4],[74,4],[85,5]]}
+          tag: 'Watch Later',
+          query: 'google+io',
+          title: 'You can now watch Google’s entire two-and-a-half-hour I/O keynote',
+          matches: {title: [[18,6],[54,3]], url: [[48,6],[55,2]]}
         }, {
           url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
           name: ['Steve Jobs:','How to Live','Before You Die'],
