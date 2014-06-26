@@ -23,8 +23,8 @@ angular.module('kifi.profile', [
 ])
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService', '$location',
-  function ($scope, $http, profileService, routeService, $window, socialService, $location) {
+  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, profileService, routeService, $window, socialService) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
@@ -113,19 +113,19 @@ angular.module('kifi.profile', [
 
     $scope.exportKeeps = function() {
       $scope.exported = true;
-    }
+    };
 
     $scope.getExportUrl = function () {
       return routeService.exportKeeps;
-    }
+    };
 
     $scope.getExportButtonText = function() {
-      if ($scope.exported == true) {
-        return "Export Again"
+      if ($scope.exported === true) {
+        return 'Export Again';
       } else {
-        return "Export Keeps"
+        return 'Export Keeps';
       }
-    }
+    };
 
     function showVerificationAlert(email) {
       $scope.emailForVerification = email;
