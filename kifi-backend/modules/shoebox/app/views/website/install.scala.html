@@ -23,7 +23,7 @@
   var isChrome = window.chrome && chrome.webstore && chrome.webstore.install;
   var isFirefox = !isChrome && ('MozBoxSizing' in el.style) || ~navigator.userAgent.indexOf('Firefox');
   var majorVersion = +(navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [,999])[1];
-  var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
+  var supported = isChrome && majorVersion >= 32 || isFirefox && majorVersion >= 20;
   el.className += (supported ? ' supported ' : ' unsupported ') + (isChrome ? 'chrome' : isFirefox ? 'firefox' : 'other');
 }(document.documentElement);
 </script>
