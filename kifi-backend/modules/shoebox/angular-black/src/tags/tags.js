@@ -91,7 +91,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
             res = false;
           if (name) {
             name = name.toLowerCase();
-            res = !scope.tags.some(function (tag) {
+            res = scope.isFilterFocused && !scope.tags.some(function (tag) {
               return tag.name.toLowerCase() === name;
             });
           }
@@ -117,6 +117,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         scope.viewTag = function (tagId) {
           if (tagId) {
             scope.viewedTagId = tagId;
+            scope.dehighlight();
             return $location.path('/tag/' + tagId);
           }
         };
