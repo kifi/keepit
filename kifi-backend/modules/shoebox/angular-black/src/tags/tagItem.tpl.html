@@ -11,7 +11,7 @@
         <div class="kf-tag-waiting" ng-show="isWaiting"></div>
       </div>
       <div class="kf-tag-tool kf-tag-dropdown-toggle" ng-click="toggleDropdown($event)"></div>
-      <div class="kf-tag-tool kf-tag-handle"></div>
+      <div class="kf-tag-tool kf-tag-handle" ng-show="watchTagReorder()"></div>
       <ul class="kf-dropdown-menu" ng-show="isDropdownOpen" ng-click="cancelNavigation($event)">
         <li>
           <a href="javascript:" ng-mousedown="setRenaming()">Rename</a>
