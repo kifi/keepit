@@ -220,7 +220,7 @@ angular.module('kifi.keepService', [
         }
       });
       insertFn.apply(list, nonExisting);
-      seqResult += 1;
+      seqResult++;
       existing.forEach(makeKept);
       before = list.length ? list[list.length - 1].id : null;
 
@@ -246,11 +246,23 @@ angular.module('kifi.keepService', [
     function makeKept(keep) {
       keep.unkept = false;
       keep.isMyBookmark = true;
+      keep.tagList && keep.tagList.forEach(function (tag) {
+        var tag = tagService.getById(tag.id);
+        if (tag) {
+          tag.keeps++;
+        }
+      });
     }
 
     function makeUnkept(keep) {
       keep.unkept = true;
       keep.isMyBookmark = false;
+      keep.tagList && keep.tagList.forEach(function (tag) {
+        var tag = tagService.getById(tag.id);
+        if (tag) {
+          tag.keeps--;
+        }
+      });
     }
 
     var api = {
@@ -355,7 +367,7 @@ angular.module('kifi.keepService', [
         selected = {};
         api.unselectAll();
         keepList.expireAll();
-        seqReset += 1;
+        seqReset++;
       },
 
       getList: function (params) {
