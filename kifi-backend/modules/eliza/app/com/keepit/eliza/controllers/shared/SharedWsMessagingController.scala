@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.common.db.{ExternalId, State}
-import com.keepit.model.{NotificationCategory, User, ExperimentType}
+import com.keepit.model.{BasicContact, NotificationCategory, User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -95,11 +95,11 @@ class SharedWsMessagingController @Inject() (
       val users = usersJson.map { s =>
         ExternalId[User](s.asInstanceOf[JsString].value)
       }
-      val emailAddresses = nonUsersJson.map { obj =>
-        (obj \ "email").as[String]
+      val emailContacts = nonUsersJson.map { obj =>
+        (obj \ "email").as[BasicContact]
       }
       implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailAddresses, source)
+      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, source)
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)

@@ -17,10 +17,10 @@ GET      /internal/abook/:userId/getEContacts                   @com.keepit.aboo
 GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.ABookController.getEContactCount(userId:Id[User])
 GET      /internal/abook/getEContactById                        @com.keepit.abook.ABookController.getEContactById(contactId:Id[EContact])
 POST     /internal/abook/getEContactsByIds                      @com.keepit.abook.ABookController.getEContactsByIds()
-GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email:String)
+GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email: EmailAddress)
 GET      /internal/abook/:userId/getSimpleContactInfos          @com.keepit.abook.ABookController.getSimpleContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
-GET      /internal/abook/:userId/getOrCreateEContact            @com.keepit.abook.ABookController.getOrCreateEContact(userId:Id[User], email:String, name:Option[String], firstName: Option[String], lastName: Option[String])
+GET      /internal/abook/:userId/getOrCreateEContact            @com.keepit.abook.ABookController.getOrCreateEContact(userId:Id[User], email: EmailAddress, name:Option[String], firstName: Option[String], lastName: Option[String])
 
 GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
 GET      /internal/abook/:userId/queryEContacts                 @com.keepit.abook.ABookController.queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
@@ -34,7 +34,7 @@ GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.aboo
 POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.ABookController.richConnectionUpdate()
 POST     /internal/abook/blockRichConnection                    @com.keepit.abook.ABookWTIController.blockRichConnection()
 GET      /internal/abook/ripestFruit                            @com.keepit.abook.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
-GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[String] ?= None)
+GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
 GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
 
 ->  / common.Routes

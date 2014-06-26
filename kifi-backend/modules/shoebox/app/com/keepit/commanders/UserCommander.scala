@@ -129,9 +129,8 @@ class UserCommander @Inject() (
   userImageUrlCache: UserImageUrlCache) extends Logging {
 
 
-  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def validateEmails(addresses: EmailInfo*): Boolean = {
-    !addresses.map(em => emailRegex.findFirstIn(em.address.address).isDefined).contains(false)
+    !addresses.map(em => Try(EmailAddress.validate(em.address.address)).isSuccess).contains(false)
   }
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {

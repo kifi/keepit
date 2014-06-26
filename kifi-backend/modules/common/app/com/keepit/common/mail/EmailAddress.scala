@@ -1,6 +1,9 @@
 package com.keepit.common.mail
 
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
+import com.keepit.model.Name
+import scala.util.{Failure, Success, Try}
 
 case class EmailAddress(address: String) extends AnyVal {
   override def toString = address
@@ -8,7 +11,29 @@ case class EmailAddress(address: String) extends AnyVal {
 
 object EmailAddress {
   implicit val format: Format[EmailAddress] =
-    Format(__.read[String].map(s => EmailAddress(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
+    Format(__.read[String].map(s => EmailAddress.validate(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[EmailAddress] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, EmailAddress]] = {
+      stringBinder.bind(key, params) map {
+        case Right(address) => Try(EmailAddress.validate(address)) match {
+          case Success(validEmail) => Right(validEmail)
+          case Failure(ex) => Left(ex.getMessage)
+        }
+        case _ => Left("Unable to bind an EmailAddress")
+      }
+    }
+    override def unbind(key: String, emailAddress: EmailAddress): String = {
+      stringBinder.unbind(key, emailAddress.address)
+    }
+  }
+
+  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+
+  def validate(address: String): EmailAddress = {
+    if (emailRegex.findFirstIn(address).isEmpty) { throw new IllegalArgumentException(s"Invalid email address: $address") }
+    EmailAddress(address.toLowerCase)
+  }
 }
 
 object SystemEmailAddress {

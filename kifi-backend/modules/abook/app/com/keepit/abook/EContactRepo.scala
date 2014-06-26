@@ -31,7 +31,7 @@ trait EContactRepo extends Repo[EContact] {
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
-  def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact]
+  def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact]
   def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int
 
   //used only for full resync
@@ -165,25 +165,17 @@ class EContactRepoImpl @Inject() (
     log.info(s"[insertOnDupUpdate(${userId.id}, ${c.email})]")
   }
 
-  def getOrCreate(userId:Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String])(implicit session: RWSession):Try[EContact] = Try {
-    if (userId == null || email == null) throw new IllegalArgumentException("userId and email cannot be null")
+  def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact] = Try {
 
-    // Parsing "email-like" expressions containing a name, such as "Douglas Adams <doug@kifi.com>"
-    val emailWithNameRe = """\s*([^\s<][^<]*[^\s<])\s+<(.*)>""".r
-    val (address, emailName) = emailWithNameRe.findFirstMatchIn(email) map { m =>
-      (m.group(2), Some(name.getOrElse(m.group(1))))
-    } getOrElse (email, name)
-
-    val parsedAddr = ParsedEmailAddress(address)
-    val c = EContact(userId = userId, email = parsedAddr, name = emailName, firstName = firstName, lastName = lastName)
+    val c = EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName)
     insertOnDupUpdate(userId, c) // todo: optimize (if needed)
-    val cOpt = getByUserIdAndEmail(userId, parsedAddr)
+    val cOpt = getByUserIdAndEmail(userId, contact.email)
     cOpt match {
       case Some(e) => {
         invalidateCache(e)
         e
       }
-      case None => throw new IllegalStateException(s"Failed to retrieve econtact for $address")
+      case None => throw new IllegalStateException(s"Failed to retrieve econtact for ${contact.email}")
     }
   }
 
