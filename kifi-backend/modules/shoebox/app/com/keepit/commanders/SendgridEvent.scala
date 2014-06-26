@@ -9,7 +9,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 
 case class SendgridEvent(
-  email: Option[EmailAddress],
+  email: Option[String],
   mailId: Option[ExternalId[ElectronicMail]],
   timestamp: DateTime,
   reason: Option[String],
@@ -23,7 +23,7 @@ case class SendgridEvent(
 
 object SendgridEvent {
   implicit val sendgridEventReads = (
-    (__ \ 'email).readNullable[EmailAddress] and
+    (__ \ 'email).readNullable[String] and
     (__ \ 'mail_id).readNullable[ExternalId[ElectronicMail]] and
     (__ \ 'timestamp).read[DateTime] and
     (__ \ 'reason).readNullable[String] and

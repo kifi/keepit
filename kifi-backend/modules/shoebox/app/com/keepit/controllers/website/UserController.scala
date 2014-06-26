@@ -196,8 +196,7 @@ class UserController @Inject() (
     }
   }
 
-  def getEmailInfo(emailString: String) = JsonAction.authenticated(allowPending = true) { implicit request =>
-    val email = EmailAddress(emailString)
+  def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
     db.readOnly { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
@@ -365,8 +364,7 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(emailString: String) = HtmlAction.authenticated { implicit request =>
-    val email = EmailAddress(emailString)
+  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticated { implicit request =>
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>

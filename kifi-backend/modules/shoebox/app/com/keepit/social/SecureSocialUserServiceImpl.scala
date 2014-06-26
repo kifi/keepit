@@ -140,7 +140,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
     for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
-      val email = EmailAddress(emailString)
+      val email = EmailAddress.validate(emailString)
       val emailAddress = emailRepo.getByAddressOpt(address = email) match {
         case Some(e) if e.state == UserEmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
           emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this

@@ -51,10 +51,10 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactCount(userId:Id[User]):Future[Int]
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactsByIds(contactIds:Seq[Id[EContact]]):Future[Seq[EContact]]
-  def getEContactByEmail(userId:Id[User], email:String):Future[Option[EContact]]
+  def getEContactByEmail(userId:Id[User], email: EmailAddress):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
-  def getOrCreateEContact(userId:Id[User], email:String, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
+  def getOrCreateEContact(userId:Id[User], email: EmailAddress, name:Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None):Future[Try[EContact]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
@@ -161,7 +161,7 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = {
+  def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = {
     call(ABook.internal.getEContactByEmail(userId, email), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Option[EContact]](r.json).get
     }
@@ -189,7 +189,7 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = {
+  def getOrCreateEContact(userId: Id[User], email: EmailAddress, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = {
     call(ABook.internal.getOrCreateEContact(userId, email, name, firstName, lastName)).map { r =>
       r.status match {
         case Status.OK => Success(r.json.as[EContact])
@@ -312,7 +312,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = ???
 
-  def getEContactByEmail(userId: Id[User], email: String): Future[Option[EContact]] = ???
+  def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = ???
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 
@@ -320,7 +320,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 
-  def getOrCreateEContact(userId: Id[User], email: String, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = ???
+  def getOrCreateEContact(userId: Id[User], email: EmailAddress, name: Option[String], firstName: Option[String], lastName: Option[String]): Future[Try[EContact]] = ???
 
   def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 

@@ -160,7 +160,8 @@ object ApplicationBuild extends Build {
     "com.keepit.social._",
     "com.keepit.search._",
     "com.keepit.cortex.core._",
-    "com.keepit.cortex.models.lda._"
+    "com.keepit.cortex.models.lda._",
+    "com.keepit.common.mail.EmailAddress"
   )
 
   lazy val commonResolvers = Seq(
