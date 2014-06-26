@@ -709,8 +709,9 @@ api.port.on({
   set_title: function(data, respond) {
     ajax('POST', '/bookmarks/update', data, respond.bind(null, true), respond.bind(null, false));
   },
-  keeper_shown: function(_, __, tab) {
-    (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
+  keeper_shown: function(data, _, tab) {
+    (pageData[tab.nUri] || {}).shown = true;
+    logEvent('slider', 'sliderShown', data);
   },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
@@ -788,9 +789,6 @@ api.port.on({
   set_show_search_intro: function(show) {
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
     if (prefs) prefs.showSearchIntro = show;
-  },
-  log_event: function(data) {
-    logEvent.apply(null, data);
   },
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
