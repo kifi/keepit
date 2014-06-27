@@ -21,7 +21,7 @@ import com.keepit.cortex.core.StatModelName
 
 @ImplementedBy(classOf[FeatureCommitInfoRepoImpl])
 trait FeatureCommitInfoRepo extends DbRepo[FeatureCommitInfo]{
-  def getCommitedSeqNumber(modelName: StatModelName, version: Int)(implicit session: RSession): Option[Long]
+  def getByModelAndVersion(modelName: StatModelName, version: Int)(implicit session: RSession): Option[FeatureCommitInfo]
 }
 
 @Singleton
@@ -48,12 +48,11 @@ class FeatureCommitInfoRepoImpl @Inject()(
   def deleteCache(model: FeatureCommitInfo)(implicit session: RSession): Unit = {}
   def invalidateCache(model: FeatureCommitInfo)(implicit session: RSession): Unit = {}
 
-  def getCommitedSeqNumber(modelName: StatModelName, version: Int)(implicit session: RSession): Option[Long] = {
+  def getByModelAndVersion(modelName: StatModelName, version: Int)(implicit session: RSession): Option[FeatureCommitInfo] = {
     val q = for{
       r <- rows if (r.modelName === modelName && r.modelVersion === version)
-    } yield r.seq
+    } yield r
 
     q.firstOption
-
   }
 }
