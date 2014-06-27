@@ -224,7 +224,15 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
       });
     };
 
-    $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      lastResult = null;
+      $scope.getNextKeeps();
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
 
     $scope.allowEdit = function () {
       return !$scope.isFilterSelected('f') && !$scope.isFilterSelected('a');

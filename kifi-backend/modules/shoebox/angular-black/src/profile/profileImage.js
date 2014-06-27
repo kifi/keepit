@@ -5,8 +5,8 @@ angular.module('kifi.profileImage', [
 ])
 
 .directive('kfProfileImage', [
-  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'profileService', '$analytics',
-  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, profileService, $analytics) {
+  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'profileService', '$analytics', '$location',
+  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, profileService, $analytics, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -249,7 +249,8 @@ angular.module('kifi.profileImage', [
                 scope.showImageUploadingModal.value = false;
                 scope.resetChooseImage();
                 $analytics.eventTrack('user_clicked_page', {
-                  'action': 'uploadImage'
+                  'action': 'uploadImage',
+                  'path': $location.path()
                 });
               }, imageUploadError);
             }, imageUploadError);

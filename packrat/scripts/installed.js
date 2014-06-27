@@ -1,4 +1,4 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:9\d{3}|(?:www|preview)\.kifi\.com)\/.*$/
+// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|(?:www|preview)\.kifi\.com)\/.*$/
 // @require scripts/api.js
 // @asap
 
@@ -11,6 +11,9 @@
   api.port.on({
     update_keeps: function () {
       window.postMessage('update_keeps', origin);
+    },
+    update_tags: function () {
+      window.postMessage('update_tags', origin);
     }
   });
 

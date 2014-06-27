@@ -1,6 +1,12 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
   <div ng-show="searchEnabled" ng-include="'search/mainSearchBar.tpl.html'"></div>
   <div ng-view></div>
+  <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
+    <span class="kf-small-tooltip-box">
+      <span class="kf-small-tooltip-message">{{undo.message || tooltipMessage}}</span>
+      <a class="kf-small-tooltip-link" href="javascript:" ng-click="undo.undo()" ng-if="undo.isSet()">Undo</a>
+    <span>
+  </div>
 
   <!-- Dialogs -->
   <div ng-if="modal">

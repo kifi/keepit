@@ -187,8 +187,8 @@ class MessagingCommander @Inject() (
 
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
     val pimpedParticipants = nonUsers.map { emailContact =>
-      abookServiceClient.getOrCreateEContact(userId, emailContact.email, emailContact.name).map {
-        case Success(eContact) => NonUserEmailParticipant(emailContact.email, eContact.id)
+      abookServiceClient.internContact(userId, emailContact).map {
+        case Success(eContact) => NonUserEmailParticipant(eContact.email, eContact.id)
         case Failure(_) => NonUserEmailParticipant(emailContact.email, None)
       }
     }
