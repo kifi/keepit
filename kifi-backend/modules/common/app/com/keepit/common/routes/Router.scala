@@ -265,6 +265,7 @@ object ABook extends Service {
       case Right(friendEmailAddress) => Param("friendEmailAddress", friendEmailAddress)
     })
     def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
+    def validateAllContacts(readOnly: Boolean) = ServiceRoute(GET, s"/internal/abook/validateAllContacts", Param("readOnly", readOnly))
   }
 }
 
