@@ -247,9 +247,9 @@ angular.module('kifi.keepService', [
       keep.unkept = false;
       keep.isMyBookmark = true;
       keep.tagList && keep.tagList.forEach(function (tag) {
-        var tag = tagService.getById(tag.id);
-        if (tag) {
-          tag.keeps++;
+        var existingTag = tagService.getById(tag.id);
+        if (existingTag) {
+          existingTag.keeps++;
         }
       });
     }
@@ -258,9 +258,9 @@ angular.module('kifi.keepService', [
       keep.unkept = true;
       keep.isMyBookmark = false;
       keep.tagList && keep.tagList.forEach(function (tag) {
-        var tag = tagService.getById(tag.id);
-        if (tag) {
-          tag.keeps--;
+        var existingTag = tagService.getById(tag.id);
+        if (existingTag) {
+          existingTag.keeps--;
         }
       });
     }
