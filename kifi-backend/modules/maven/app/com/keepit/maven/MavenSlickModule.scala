@@ -1,4 +1,4 @@
-package com.keepit.cortex
+package com.keepit.maven
 
 import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 
@@ -10,7 +10,7 @@ import play.api.Play
 import play.api.db.DB
 
 
-case class CortexDbInfo() extends DbInfo {
+case class MavenDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
 
   override def slaveDatabase = None
@@ -18,7 +18,7 @@ case class CortexDbInfo() extends DbInfo {
   def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 
-case class CortexSlickModule() extends SlickModule(CortexDbInfo()) {
+case class MavenSlickModule() extends SlickModule(MavenDbInfo()) {
   @Provides @Singleton
   def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext =
     DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
