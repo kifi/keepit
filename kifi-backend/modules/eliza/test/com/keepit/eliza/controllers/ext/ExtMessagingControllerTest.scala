@@ -70,11 +70,11 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
 
         val controller = inject[ExtMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
-        val input = Json.parse("""
+        val input = Json.parse(s"""
           {
             "title": "Search Experiments",
             "text": "test me out",
-            "recipients":["${shachaf.externalId.value}"],
+            "recipients":["${shachaf.externalId.id}"],
             "url": "https://admin.kifi.com/admin/searchExperiments",
             "extVersion": "2.6.65"
           }
