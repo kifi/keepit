@@ -11,7 +11,7 @@ object MavenGlobal extends FortyTwoGlobal(Prod) with MavenServices{
   val module = MavenProdModule()
 
   override def onStart(app: Application) {
-    log.info("starting cortex")
+    log.info("starting maven")
     startMavenServices()
     super.onStart(app)
     log.info("maven started")

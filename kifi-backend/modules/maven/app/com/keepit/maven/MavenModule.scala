@@ -11,5 +11,5 @@ abstract class MavenModule(
 ) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
-  val cortexSlickModule = MavenSlickModule()
+  val mavenSlickModule = MavenSlickModule()
 }
