@@ -37,6 +37,8 @@ GET      /internal/abook/ripestFruit                            @com.keepit.aboo
 GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
 GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
 
+GET      /internal/abook/validateAllContacts                    @com.keepit.abook.ABookController.validateAllContacts(readOnly: Boolean ?= true)
+
 ->  / common.Routes
 
 
