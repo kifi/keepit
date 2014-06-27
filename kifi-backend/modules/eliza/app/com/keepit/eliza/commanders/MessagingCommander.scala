@@ -633,13 +633,13 @@ class MessagingCommander @Inject() (
     resFut.flatten
   }
 
-  def validateUsers(rawUsers: JsValue): JsResult[Seq[ExternalId[User]]] = rawUsers.validate[Seq[ExternalId[User]]]
-  def validateEmailContacts(rawNonUsers: JsValue): JsResult[Seq[BasicContact]] = rawNonUsers.validate[Seq[JsObject]].map { rawNonUsers =>
-    rawNonUsers.collect { case obj if (obj \ "kind").asOpt[String] == Some("email") => (obj \ "email").as[BasicContact] }
-  }
-  def validateRecipients(rawRecipients: Seq[JsValue]): (JsResult[Seq[ExternalId[User]]], JsResult[Seq[BasicContact]]) = {
+  def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]] = rawUsers.map(_.validate[ExternalId[User]])
+  def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]] = rawNonUsers.map(_.validate[JsObject].map {
+    case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
+  })
+  def validateRecipients(rawRecipients: Seq[JsValue]): (Seq[JsResult[ExternalId[User]]], Seq[JsResult[BasicContact]]) = {
     val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
-    (validateUsers(JsArray(rawUsers)), validateEmailContacts(JsArray(rawNonUsers)))
+    (validateUsers(rawUsers), validateEmailContacts(rawNonUsers))
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {
