@@ -28,6 +28,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
 }
 
+@Singleton
 class URILDATopicRepoImpl @Inject()(
   val db: DataBaseComponent,
   val clock: Clock,
