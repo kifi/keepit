@@ -635,26 +635,13 @@ class MessagingCommander @Inject() (
     resFut.flatten
   }
 
-  def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact]) = {
-    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[BasicContact]())) { case ((externalUserIds, nonUserParticipants), elem) =>
-      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
-        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
-        case None =>
-          elem.asOpt[JsObject].flatMap { obj =>
-            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
-            (obj \ "kind").asOpt[String] match {
-              case Some("email") => (obj \ "email").asOpt[BasicContact]
-              case _ => // Unsupported kind
-                None
-            }
-          } match {
-            case Some(nonUser) =>
-              (externalUserIds, nonUserParticipants :+ nonUser)
-            case None =>
-              (externalUserIds, nonUserParticipants)
-          }
-      }
-    }
+  def validateUsers(rawUsers: JsValue): JsResult[Seq[ExternalId[User]]] = rawUsers.validate[Seq[ExternalId[User]]]
+  def validateEmailContacts(rawNonUsers: JsValue): JsResult[Seq[BasicContact]] = rawNonUsers.validate[Seq[JsObject]].map { rawNonUsers =>
+    rawNonUsers.collect { case obj if (obj \ "kind").asOpt[String] == Some("email") => (obj \ "email").as[BasicContact] }
+  }
+  def validateRecipients(rawRecipients: Seq[JsValue]): (JsResult[Seq[ExternalId[User]]], JsResult[Seq[BasicContact]]) = {
+    val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
+    (validateUsers(JsArray(rawUsers)), validateEmailContacts(JsArray(rawNonUsers)))
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {
