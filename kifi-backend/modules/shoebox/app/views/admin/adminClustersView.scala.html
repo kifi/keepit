@@ -11,12 +11,13 @@
         <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
-              <th>Type</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compiled At</th><th>Commit</th> <th>Type</th> <th>AWS Details</th>
+              <th>Type</th> <th>Name</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compiled At</th><th>Commit</th> <th>Type</th> <th>AWS Details</th>
             </thead>
             <tbody>
             @for(cmi <- data) {
                 <tr class="@(if (!(cmi.state.name=="up" || cmi.state.name=="backing_up")) "error" else "")" style="font-weight: @(if (cmi.isLeader) "bold" else "normal");">
                     <td>@cmi.serviceType.name</td>
+                    <td>@cmi.instanceInfo.name.getOrElse("")</td>
                     <td>@cmi.zkid</td>
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
