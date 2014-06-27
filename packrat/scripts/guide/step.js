@@ -74,12 +74,12 @@ guide.step = guide.step || function () {
       }
       (opts.hide || api.noop)();
 
+      api.port.emit('end_guide', [opts.index, stepIdx || 0]);
       spotlight = $stage = $steps = $loading = timeout = arrow = steps = opts = stepIdx = animTick = null;
       $(window).off('resize.guideStep');
       eventsToScreen.forEach(function (type) {
         window.removeEventListener(type, screenEvent, true);
       });
-      api.port.emit('end_guide');
       return ms;
     } else {
       return 0;
@@ -114,6 +114,7 @@ guide.step = guide.step || function () {
   function showStep(idx, ms, rectLit, rectTo) {
     if (idx > stepIdx || stepIdx == null) {
       log('[showStep] step:', stepIdx, '=>', idx);
+      api.port.emit('track_guide', [opts.index, idx]);
       var step = steps[idx];
       var t0 = Date.now();
       rectLit = rectLit || (step.lit ? getRect(step.lit) : (step.pos === 'center' ? 'center' : null));
