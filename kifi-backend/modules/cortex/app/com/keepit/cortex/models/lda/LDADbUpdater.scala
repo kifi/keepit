@@ -139,6 +139,7 @@ class LDADbUpdaterImpl @Inject()(
          secondTopic = Some(second),
          thirdTopic = Some(third),
          sparseFeature = Some(SparseTopicRepresentation(dimension = representer.dimension, topics = sparse.toMap)),
+         feature = Some(LDATopicFeature(arr)),
          state = URILDATopicStates.ACTIVE)
       }
     }
