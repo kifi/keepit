@@ -6,7 +6,7 @@
 // @require scripts/html/guide/step_0.js
 
 guide.step0 = guide.step0 || function () {
-  var $stage, $pages, $steps;
+  var $stage, $steps;
   var eventsToBlock = ['mousewheel','wheel'];
   return {show: show, remove: removeAll};
 
@@ -15,10 +15,11 @@ guide.step0 = guide.step0 || function () {
       $stage = $(render('html/guide/step_0', {me: me, pages: pages})).appendTo('body').layout().addClass('kifi-open');
       $steps = $guide.appendTo('body')
         .on('click', '.kifi-guide-x', hide);
-      $pages = $stage.find('.kifi-guide-pages')
+      $stage.find('.kifi-guide-pages')
         .on('click', '.kifi-guide-0-next', onClickNext)
         .on('click', '.kifi-guide-site-a', onClickSite);
       $(document).data('esc').add(hide);
+      api.port.emit('track_guide', [0, 0]);
       eventsToBlock.forEach(function (type) {
         window.addEventListener(type, blockEvent, true);
       });
@@ -29,12 +30,12 @@ guide.step0 = guide.step0 || function () {
     if ($stage) {
       $stage.one('transitionend', remove).removeClass('kifi-open');
       $steps.one('transitionend', remove).removeClass('kifi-showing');
-      $stage = $pages = $steps = null;
+      api.port.emit('end_guide', [0, +$stage.find('.kifi-guide-pages').attr('kifi-p')]);
+      $stage = $steps = null;
       $(document).data('esc').remove(hide);
       eventsToBlock.forEach(function (type) {
         window.removeEventListener(type, blockEvent, true);
       });
-      api.port.emit('end_guide');
     }
   }
 
@@ -42,16 +43,17 @@ guide.step0 = guide.step0 || function () {
     if ($stage) {
       $stage.remove();
       $steps.remove();
-      $stage = $pages = $steps = null;
+      $stage = $steps = null;
     }
   }
 
   function onClickNext() {
-    $pages.attr('kifi-p', '2');
+    $stage.find('.kifi-guide-pages').attr('kifi-p', '1');
     $steps.on('transitionend', function end() {
       $(this).off('transitionend', end)
         .data().updateProgress(.2);
     }).addClass('kifi-showing');
+    api.port.emit('track_guide', [0, 1]);
   }
 
   function onClickSite(e) {
@@ -59,6 +61,7 @@ guide.step0 = guide.step0 || function () {
       var url = this.href;
       var siteIdx = $(this).index('.kifi-guide-site-a');
       api.port.emit('await_deep_link', {locator: '#guide/1/' + siteIdx, url: url});
+      api.port.emit('track_guide_choice', siteIdx);
       window.location.href = url;
     }
   }

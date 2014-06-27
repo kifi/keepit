@@ -219,7 +219,7 @@ var mixpanel = {
   sendBatch: function () {
     if (this.batch.length > 0) {
       var json = JSON.stringify(this.batch);
-      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      var dataString = 'data=' + api.util.btoa(unescape(encodeURIComponent(json)));
       api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
       this.batch.length = 0;
     }
@@ -240,7 +240,7 @@ var mixpanel = {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
-      log("#aaa", "[mixpanel.track] %s %o", eventName, properties);
+      log('#aaa', '[mixpanel.track] %s %o', eventName, properties);
       properties.time = Date.now();
       var data = {
         'event': eventName,
@@ -1287,6 +1287,12 @@ api.port.on({
     api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages});
     unsilence(false);
   },
+  track_guide: function (stepParts) {
+    mixpanel.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
+  },
+  track_guide_choice: function (pageIdx) {
+    mixpanel.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
+  },
   resume_guide: function (step, _, tab) {
     if (guidePages) {
       api.tabs.emit(tab, 'guide', {
@@ -1296,7 +1302,8 @@ api.port.on({
       });
     }
   },
-  end_guide: function () {
+  end_guide: function (stepParts) {
+    mixpanel.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
       guidePages = null;
     }
