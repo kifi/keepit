@@ -15,7 +15,7 @@ import com.keepit.common.store.ImageSize
 @ImplementedBy(classOf[ImageInfoRepoImpl])
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
   def getByUri(id:Id[NormalizedURI])(implicit ro:RSession):Seq[ImageInfo]
-  def getByUriWithSize(id:Id[NormalizedURI], minSize: ImageSize)(implicit ro:RSession):List[ImageInfo]
+  def getByUriWithPriority(id:Id[NormalizedURI], minSize: ImageSize, provider: Option[ImageProvider])(implicit ro:RSession): Option[ImageInfo]
 }
 
 @Singleton
@@ -61,9 +61,19 @@ class ImageInfoRepoImpl @Inject() (
     (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE) yield f).list()
   }
 
-
-  def getByUriWithSize(id:Id[NormalizedURI], minSize: ImageSize)(implicit ro:RSession):List[ImageInfo] = {
-    (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
-      f.width > minSize.width && f.height > minSize.height) yield f).list()
+  def getByUriWithPriority(id:Id[NormalizedURI], minSize: ImageSize, providerOpt: Option[ImageProvider])(implicit ro:RSession): Option[ImageInfo] = {
+    val candidates = providerOpt match {
+      case Some(provider) =>
+        (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
+          f.width > minSize.width && f.height > minSize.height && f.provider === provider) yield f).list()
+      case None =>
+        (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
+          f.width > minSize.width && f.height > minSize.height) yield f).list()
+    }
+    if (candidates.nonEmpty) {
+      Some(candidates.minBy(_.priority.getOrElse(Int.MaxValue)))
+    } else {
+      None
+    }
   }
 }
