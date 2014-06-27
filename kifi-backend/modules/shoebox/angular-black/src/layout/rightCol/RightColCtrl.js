@@ -31,6 +31,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.yesLikeHelpRank = function () {
       $scope.data.showHelpRankHelp = false;
       $analytics.eventTrack('user_clicked_page', {
+        'type': 'HelpRankHelp',
         'action': 'yesLikeHelpRank'
       });
     };
@@ -38,27 +39,22 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.noLikeHelpRank = function () {
       $scope.data.showHelpRankHelp = false;
       $analytics.eventTrack('user_clicked_page', {
+        'type': 'HelpRankHelp',
         'action': 'noLikeHelpRank'
       });
     };
 
-    $scope.showClicks = function() {
-      $location.path('/helprank/click');
+    $scope.trackClickOnClicks = function() {
       $analytics.eventTrack('user_clicked_page', {
-        'action': 'helpRankClicks'
-      });
-      $analytics.eventTrack('user_viewed_page', {
-        'action': 'helpRankClicks'
+        'action': 'helpRankClicks',
+        'path': $location.path()
       });
     };
 
-    $scope.showReKeeps = function() {
-      $location.path('/helprank/rekeep');
+    $scope.trackClickOnReKeeps = function() {
       $analytics.eventTrack('user_clicked_page', {
-        'action': 'helpRankReKeeps'
-      });
-      $analytics.eventTrack('user_viewed_page', {
-        'action': 'helpRankReKeeps'
+        'action': 'helpRankReKeeps',
+        'path': $location.path()
       });
     };
 
@@ -80,7 +76,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       });
     };
 
-    $scope.triggerGuide = function () {
+    $scope.triggerGuide = function (linkClicked) {
       $window.postMessage({
         type: 'start_guide',
         pages: [{
@@ -125,6 +121,12 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]}
         }]
       }, '*');
+      if (linkClicked) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'startGuide',
+          'path': $location.path()
+        });
+      }
       delete $window.document.documentElement.dataset.guide;
     };
     if ('guide' in $window.document.documentElement.dataset) {

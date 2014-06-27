@@ -162,7 +162,8 @@ angular.module('kifi.keepService', [
         });
         _.forEach(keeps, buildKeep);
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'keep'
+          'action': 'keep',
+          'path': $location.path()
         });
         prependKeeps(keeps);
         return res.data;
@@ -251,7 +252,7 @@ angular.module('kifi.keepService', [
       list: list,
 
       buildKeep: buildKeep,
-      
+
       lastSearchContext: function () {
       return lastSearchContext;
       },
@@ -510,7 +511,8 @@ angular.module('kifi.keepService', [
           }
 
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'unkeep'
+            'action': 'unkeep',
+            'path': $location.path()
           });
           return keeps;
         });
@@ -591,7 +593,8 @@ angular.module('kifi.keepService', [
           $analytics.eventTrack('user_clicked_page', {
             'action': 'searchKifi',
             'hits': hits.size,
-            'mayHaveMore': resData.mayHaveMore
+            'mayHaveMore': resData.mayHaveMore,
+            'path': $location.path()
           });
 
           _.forEach(hits, processHit);
