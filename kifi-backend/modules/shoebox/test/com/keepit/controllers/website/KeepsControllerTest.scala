@@ -767,11 +767,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keeper = KeepSource.keeper
-        val initLoad = KeepSource.bookmarkImport
         val db = inject[Database]
-        val ColRepo = inject[CollectionRepo]
-        val Keep2ColRepo = inject[KeepToCollectionRepo]
+        val colRepo = inject[CollectionRepo]
+        val keep2ColRepo = inject[KeepToCollectionRepo]
 
         val site1 = "http://www.google.com/"
         val site2 = "http://www.amazon.com/"
@@ -793,17 +791,17 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3)))
 
-          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9)))
 
-          val keep3 = keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
+          keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
 
-          val keep4 = keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
+          keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
 
-          val col1 = ColRepo.save(Collection(userId = user1.id.get, name = "t1"))
-          Keep2ColRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
+          val col1 = colRepo.save(Collection(userId = user1.id.get, name = "t1"))
+          keep2ColRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
         }
 
         db.readOnly { implicit s =>
