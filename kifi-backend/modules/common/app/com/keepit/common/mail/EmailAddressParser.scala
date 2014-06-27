@@ -57,16 +57,21 @@ object EmailAddressParser extends RegexParsers { // rudimentary; also see @URIPa
     case localPart ~ "@" ~ host => ParsedEmailAddress(localPart, host)
   }
 
-  val sanitized = """[^"~/?#()+@ ]+""".r
+  // more restrictive than rfc
+  val sanitized  = """[^"~/?#()+@ ]+""".r
+  val quotedBody = """[^"~/?#()+@]+""".r
+  val DQ = '\"'
+
   def comment: Parser[Comment] = "(" ~> commentBody <~ ")" ^^ { Comment(_) }
   def commentBody: Parser[String] = sanitized
   def tag: Parser[Tag] = "+" ~> sanitized ^^ { Tag(_) }
   def localPart: Parser[LocalPart] = (quoted | obsLocalPart)
+
   def obsLocalPart: Parser[LocalPart] = (comment?) ~ sanitized ~ (tag*) ~ (comment?) ^^ { // todo: factor out comment
     case p ~ s ~ tags ~ t => LocalPart(p, s, tags, t)
   }
-  def quoted: Parser[LocalPart] = "\"" ~ obsLocalPart ~ "\"" ^^ {
-    case open ~ local ~ close => local
+  def quoted: Parser[LocalPart] = "\"" ~ quotedBody ~ "\"" ^^ {
+    case open ~ local ~ close => LocalPart(None, s"$DQ$local$DQ", Seq.empty, None)
   }
   def host: Parser[Host] = (comment?) ~ rep1sep(domainPart, ".") ~ (comment?) ^^ {
     case p ~ domainList ~ t => new Host(domainList) // discard comment in domain

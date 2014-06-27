@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.common.db.{ExternalId, State}
-import com.keepit.model.{BasicContact, NotificationCategory, User, ExperimentType}
+import com.keepit.model.{User, NotificationCategory, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -17,13 +17,12 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
+import play.api.libs.json._
 
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
-import scala.collection.mutable
 import com.keepit.common.store.KifInstallationStore
 
 class SharedWsMessagingController @Inject() (
@@ -76,30 +75,25 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "add_participants_to_thread" -> { case JsString(threadId) +: (data: JsValue) +: _ =>
-      val (usersJson, nonUsersJson, source) = data match {
+      val (users, emailContacts, source) = data match {
         case JsArray(whoDat) => {
-          val (usersJson, nonUsersJson) = whoDat.partition{ json =>
-            json match {
-              case JsString(_) => true
-              case _ => false
-            }
-          }
-          (usersJson, nonUsersJson, None)
+          val (users, emailContacts) = messagingCommander.validateRecipients(whoDat)
+          (users, emailContacts, None)
         }
         case _ => {
-          val usersJson = (data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq())
-          val nonUsersJson = (data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq())
-          (usersJson, nonUsersJson, (data \ "source").asOpt[MessageSource])
+          val users = messagingCommander.validateUsers((data \ "users").asOpt[Seq[JsValue]] getOrElse Seq.empty)
+          val emailContacts = messagingCommander.validateEmailContacts((data \ "nonUsers").asOpt[Seq[JsValue]] getOrElse Seq.empty)
+          (users, emailContacts, (data \ "source").asOpt[MessageSource])
         }
       }
-      val users = usersJson.map { s =>
-        ExternalId[User](s.asInstanceOf[JsString].value)
-      }
-      val emailContacts = nonUsersJson.map { obj =>
-        (obj \ "email").as[BasicContact]
-      }
-      implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, source)
+
+      val validUsers = users.collect { case JsSuccess(validUser, _) => validUser }
+      val validContacts = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
+
+      if (validUsers.nonEmpty || validContacts.nonEmpty) {
+        implicit val context = authenticatedWebSocketsContextBuilder(socket).build
+        messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), validUsers, validContacts, source)
+      } // todo(Martin, Jared, Léo): return meaningful error about invalid participants
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)

@@ -7,13 +7,13 @@
         <div class="kf-footer-help-rank-item">
           <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
           <span class="kf-footer-help-rank-description">
-            You've helped friends discover keeps <a class="kifi-footer-item-link" href="javascript:" ng-click="showClicks()">{{me.clickCount}} times</a> this month
+            You've helped friends discover keeps <a class="kifi-footer-item-link" href="/helprank/click" ng-click="trackClickOnClicks()">{{me.clickCount}} times</a> this month
           </span>
         </div>
         <div class="kf-footer-help-rank-item" ng-if="me.rekeepTotalCount > 0">
           <span class="kf-footer-help-rank-number">{{me.rekeepTotalCount}}</span>
           <span class="kf-footer-help-rank-description">
-            Your keeps have been rekept by others <a class="kifi-footer-item-link" href="javascript:" ng-click="showReKeeps()">{{me.rekeepTotalCount}} times</a>
+            Your keeps have been rekept by others <a class="kifi-footer-item-link" href="/helprank/rekeep" ng-click="trackClickOnReKeeps()">{{me.rekeepTotalCount}} times</a>
           </span>
         </div>
       </div>
@@ -29,7 +29,7 @@
     <h2 class="kf-footer-header">Essentials</h2>
     <ul class="kf-footer-essentials-list about-kifi">
       <li kf-min-version="3.0.13" min-canary="3.0.8" class="start-guide">
-        <a class="kf-footer-item-link kifi-tutorial" href="javascript:" ng-click="triggerGuide()">
+        <a class="kf-footer-item-link kifi-tutorial" href="javascript:" ng-click="triggerGuide(true)">
           <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
         </a>
       </li>

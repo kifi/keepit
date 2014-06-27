@@ -295,18 +295,9 @@ class ABookController @Inject() (
     Ok(Json.toJson(tokenOpt))
   }
 
-  def getOrCreateEContact(userId:Id[User], email: EmailAddress, name:Option[String], firstName:Option[String], lastName:Option[String]) = Action { request =>
-    log.info(s"[getOrCreateEContact] userId=$userId email=$email name=$name")
-
-    abookCommander.getOrCreateEContact(userId, BasicContact(email, name, firstName, lastName)) match {
-      case Success(c) => Ok(Json.toJson(c))
-      case Failure(t) => BadRequest(t.getMessage)
-    }
-  }
-
   def internContact(userId:Id[User]) = Action(parse.json) { request =>
     val contact = request.body.as[BasicContact]
-    log.info(s"[getOrCreateEContact] userId=$userId contact=$contact")
+    log.info(s"[internContact] userId=$userId contact=$contact")
 
     abookCommander.getOrCreateEContact(userId, contact) match {
       case Success(c) => Ok(Json.toJson(c))
