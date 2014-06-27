@@ -11,12 +11,16 @@ class EmailAddressParserTest extends Specification {
       EmailAddressParser.parseOpt("@") === None
       EmailAddressParser.parseOpt("@a") === None
       EmailAddressParser.parseOpt("a@") === None
+      EmailAddressParser.parseOpt("english@a.b.c.") === None
     }
     "parse an email address" in {
       EmailAddressParser.parseOpt("a@b") === Some(ParsedEmailAddress(LocalPart(None, "a", Nil, None), Host("b")))
     }
     "parse an email address with tags" in {
       EmailAddressParser.parseOpt("a+b+c@d") === Some(ParsedEmailAddress(LocalPart(None, "a", Seq(Tag("b"), Tag("c")), None), Host("d")))
+    }
+    "parse (simple) email field" in {
+      EmailAddressParser.parseOpt("Foo <foo@a.b>") === Some(ParsedEmailAddress(LocalPart(None, "foo", Nil, None), Host("a.b")))
     }
     "handle (simple) quoted string" in {
       EmailAddressParser.parseOpt("\"abc\"@d") === Some(ParsedEmailAddress(LocalPart(None, "\"abc\"", Nil, None), Host("d")))
