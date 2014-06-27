@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.common.db.{ExternalId, State}
-import com.keepit.model.{NotificationCategory, ExperimentType}
+import com.keepit.model.{User, NotificationCategory, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -81,18 +81,19 @@ class SharedWsMessagingController @Inject() (
           (users, emailContacts, None)
         }
         case _ => {
-          val users = messagingCommander.validateUsers(data \ "users")
-          val emailContacts = messagingCommander.validateEmailContacts(data \ "nonUsers")
+          val users = messagingCommander.validateUsers((data \ "users").asOpt[Seq[JsValue]] getOrElse Seq.empty)
+          val emailContacts = messagingCommander.validateEmailContacts((data \ "nonUsers").asOpt[Seq[JsValue]] getOrElse Seq.empty)
           (users, emailContacts, (data \ "source").asOpt[MessageSource])
         }
       }
 
-      (users, emailContacts) match {
-        case (JsSuccess(validUsers, _), JsSuccess(validContacts, _)) =>
-          implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), validUsers, validContacts, source)
-        case _ => socket.channel.push(Json.arr("server_error", threadId)) // todo(Martin, Léo): graceful error handling
-      }
+      val validUsers = users.collect { case JsSuccess(validUser, _) => validUser }
+      val validContacts = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
+
+      if (validUsers.nonEmpty || validContacts.nonEmpty) {
+        implicit val context = authenticatedWebSocketsContextBuilder(socket).build
+        messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), validUsers, validContacts, source)
+      } // todo(Martin, Jared, Léo): return meaningful error about invalid participants
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
