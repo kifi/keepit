@@ -33,7 +33,7 @@ abstract class EContactTypeaheadBase(
   val name = info.name.getOrElse("").trim
     EmailAddressParser.parseOpt(info.email.address) match {
       case Some(addr) =>
-        s"$name ${addr.toStrictString}"
+        s"$name ${addr.toString}"
       case None =>
         airbrake.notify(s"[EContactTypeahead.extractName($info)] Failed to parse email ${info.email}")
         val addr = info.email.address.trim
