@@ -81,6 +81,12 @@ angular.module('kifi.tagService', [
       });
     }
 
+    var options = {
+      keys: ['name'],
+      threshold: 0.3
+    };
+    var fuseSearch = new Fuse(allTags, options);
+
     var api = {
       allTags: allTags,
 
@@ -99,12 +105,7 @@ angular.module('kifi.tagService', [
       filterList: function (term) {
         var newList = allTags;
         if (term.length) {
-          var options = {
-            keys: ['name'],
-            threshold: 0.3
-          };
-          var f = new Fuse(allTags, options);
-          newList = f.search(term);
+          newList = fuseSearch.search(term);
         }
         util.replaceArrayInPlace(list, newList);
         return list;
