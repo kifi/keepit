@@ -70,11 +70,11 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
 
         val controller = inject[ExtMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
-        val input = Json.parse("""
+        val input = Json.parse(s"""
           {
             "title": "Search Experiments",
             "text": "test me out",
-            "recipients":["${shachaf.externalId.value}"],
+            "recipients":["${shachaf.externalId.id}"],
             "url": "https://admin.kifi.com/admin/searchExperiments",
             "extVersion": "2.6.65"
           }
@@ -106,6 +106,12 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
                   "firstName":"Shanee",
                   "lastName":"Smith",
                   "pictureName":"0.jpg"
+                },
+                {
+                  "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
+                  "firstName":"Shachaf",
+                  "lastName":"Smith",
+                  "pictureName":"0.jpg"
                 }
               ],
               "digest": "test me out",
@@ -132,9 +138,20 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
                   "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"
                 },
                 "participants":
-                  [
-                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"}
-                  ]
+                [
+                  {
+                    "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
+                    "firstName":"Shanee",
+                    "lastName":"Smith",
+                    "pictureName":"0.jpg"
+                  },
+                  {
+                    "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
+                    "firstName":"Shachaf",
+                    "lastName":"Smith",
+                    "pictureName":"0.jpg"
+                  }
+                ]
               }]
           }
           """)
@@ -152,11 +169,11 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
 
         val controller = inject[ExtMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
-        val createThreadJson = Json.parse("""
+        val createThreadJson = Json.parse(s"""
           {
             "title": "Search Experiments",
             "text": "test me out",
-            "recipients":["${shachaf.externalId.value}"],
+            "recipients":["${shachaf.externalId.id}"],
             "url": "https://admin.kifi.com/admin/searchExperiments",
             "extVersion": "2.6.65"
           }
@@ -169,11 +186,11 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
         val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId).toString
         path === s"/eliza/messages/${thread.externalId}"
 
-        val input = Json.parse("""
+        val input = Json.parse(s"""
           {
             "title": "Search Experiments",
             "text": "cool man!",
-            "recipients":["${shachaf.externalId.value}"],
+            "recipients":["${shachaf.externalId.id}"],
             "url": "https://admin.kifi.com/admin/searchExperiments",
             "extVersion": "2.6.65"
           }

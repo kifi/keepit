@@ -162,8 +162,6 @@ class MessagingCommander @Inject() (
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
-    "73b1134d-02d4-443f-b99b-e8bc571455e2", // chandler
-    "c82b0fa0-6438-4892-8738-7fa2d96f1365", // ketan
     "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
     "c1ce2ab6-8211-40f7-8187-1522086f0c2e"  // mark
   )
@@ -635,26 +633,13 @@ class MessagingCommander @Inject() (
     resFut.flatten
   }
 
-  def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact]) = {
-    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[BasicContact]())) { case ((externalUserIds, nonUserParticipants), elem) =>
-      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
-        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
-        case None =>
-          elem.asOpt[JsObject].flatMap { obj =>
-            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
-            (obj \ "kind").asOpt[String] match {
-              case Some("email") => (obj \ "email").asOpt[BasicContact]
-              case _ => // Unsupported kind
-                None
-            }
-          } match {
-            case Some(nonUser) =>
-              (externalUserIds, nonUserParticipants :+ nonUser)
-            case None =>
-              (externalUserIds, nonUserParticipants)
-          }
-      }
-    }
+  def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]] = rawUsers.map(_.validate[ExternalId[User]])
+  def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]] = rawNonUsers.map(_.validate[JsObject].map {
+    case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
+  })
+  def validateRecipients(rawRecipients: Seq[JsValue]): (Seq[JsResult[ExternalId[User]]], Seq[JsResult[BasicContact]]) = {
+    val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
+    (validateUsers(rawUsers), validateEmailContacts(rawNonUsers))
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {

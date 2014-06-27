@@ -6,7 +6,8 @@
   <table class="table table-condensed table-striped">
     <thead>
       <th> ZK Id</th>
-      <th>IPs</th>
+      <th>Name</th>
+      <th>Shards</th>
       <th style="text-align:right;">Total ArticleIndex Size</th>
       <th style="text-align:right;">Total Index Size</th>
     </thead>
@@ -14,7 +15,8 @@
     @totalSizeInfos.map{ case (cmi, asz, sz) =>
       <tr>
         <td>@{cmi.map(_.zkid).getOrElse("")}</td>
-        <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
+        <td>@{cmi.map(i => i.instanceInfo.name.getOrElse(i.instanceInfo.localIp + " / " + i.instanceInfo.publicIp)).getOrElse("")}</td>
+        <td>@{cmi.map(i => i.instanceInfo.tags.get("ShardSpec").getOrElse("-")).getOrElse("-")}</td>
         <td style="text-align:right;">@{asz}</td>
         <td style="text-align:right;">@{sz}</td>
       </tr>
@@ -25,8 +27,8 @@
   <table class="table table-condensed table-striped">
     <thead>
       <th> ZK Id</th>
-      <th>IPs</th>
       <th>Name</th>
+      <th>Index Name</th>
       <th style="text-align:right;">Number of Docs</th>
       <th style="text-align:right;">Index Size</th>
       <th style="text-align:right;">Sequence#</th>
@@ -35,7 +37,7 @@
     @indexInfos.map{ case (cmi, indexInfo) =>
       <tr>
         <td>@{cmi.map(_.zkid).getOrElse("")}</td>
-        <td>@{cmi.map(_.instanceInfo.localIp).getOrElse("")} / @{cmi.map(_.instanceInfo.publicIp).getOrElse("")}</td>
+        <td>@{cmi.map(i => i.instanceInfo.name.getOrElse(i.instanceInfo.localIp + " / " + i.instanceInfo.publicIp)).getOrElse("")}</td>
         <td>@{indexInfo.name}</td>
         <td style="text-align:right;">@{"%1$,d" format indexInfo.numDocs}</td>
         <td style="text-align:right;">@{indexInfo.indexSize.getOrElse("NA")}</td>
