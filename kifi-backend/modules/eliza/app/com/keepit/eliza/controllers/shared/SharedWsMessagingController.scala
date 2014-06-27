@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
 import com.keepit.common.db.{ExternalId, State}
-import com.keepit.model.{BasicContact, NotificationCategory, User, ExperimentType}
+import com.keepit.model.{NotificationCategory, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -23,13 +23,7 @@ import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
-import scala.collection.mutable
 import com.keepit.common.store.KifInstallationStore
-import play.api.libs.json.JsArray
-import com.keepit.eliza.controllers.SocketInfo
-import play.api.libs.json.JsString
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsObject
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
