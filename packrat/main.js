@@ -262,21 +262,13 @@ var mixpanel = {
   }
 };
 
-function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if (eventFamily !== 'slider') {
-    log("#800", "[logEvent] invalid event family:", eventFamily);
-    return;
-  }
+function logEvent(eventFamily, eventName, metaData) {
   var ev = {
-    installId: stored('installation_id'), // ExternalId[KifiInstallation]
-    eventFamily: eventFamily, // Category (see eventFamilies)
-    eventName: eventName}; // Any key for this event
-  if (metaData) {
-    ev.metaData = metaData; // Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc.
-  }
-  if (prevEvents && prevEvents.length) {
-    ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
-  }
+    installId: stored('installation_id'),
+    eventFamily: eventFamily,
+    eventName: eventName,
+    metaData: metaData
+  };
   log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
     socket.send(["log_event", ev]);
