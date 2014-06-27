@@ -246,23 +246,27 @@ angular.module('kifi.keepService', [
     function makeKept(keep) {
       keep.unkept = false;
       keep.isMyBookmark = true;
-      keep.tagList && keep.tagList.forEach(function (tag) {
-        var existingTag = tagService.getById(tag.id);
-        if (existingTag) {
-          existingTag.keeps++;
-        }
-      });
+      if (keep.tagList) {
+        keep.tagList.forEach(function (tag) {
+          var existingTag = tagService.getById(tag.id);
+          if (existingTag) {
+            existingTag.keeps++;
+          }
+        });
+      }
     }
 
     function makeUnkept(keep) {
       keep.unkept = true;
       keep.isMyBookmark = false;
-      keep.tagList && keep.tagList.forEach(function (tag) {
-        var existingTag = tagService.getById(tag.id);
-        if (existingTag) {
-          existingTag.keeps--;
-        }
-      });
+      if (keep.tagList) {
+        keep.tagList.forEach(function (tag) {
+          var existingTag = tagService.getById(tag.id);
+          if (existingTag) {
+            existingTag.keeps--;
+          }
+        });
+      }
     }
 
     var api = {
