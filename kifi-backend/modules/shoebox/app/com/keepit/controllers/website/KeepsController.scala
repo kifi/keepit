@@ -148,8 +148,6 @@ class KeepsController @Inject() (
   }
 
   def exportKeeps() = AnyAction.authenticated { request =>
-    // Given user request (authenticated user)
-    // query from SQL database for all user's bookmarks & retrieve a list of keeps
     val exports : Seq[KeepExport] = db.readOnly { implicit ro =>
       keepRepo.getKeepExports(request.userId)
     }
