@@ -53,7 +53,11 @@ class MobileMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (userExtRecipients, nonUserRecipients) = messagingCommander.recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
+    val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
+
+    val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
+    val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
+
     val url = (o \ "url").asOpt[String]
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
@@ -61,7 +65,7 @@ class MobileMessagingController @Inject() (
     contextBuilder += ("source", "mobile")
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-        userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
+      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
       Ok(Json.obj(
         "id" -> message.externalId.id,
         "parentId" -> message.threadExtId.id,
@@ -70,7 +74,7 @@ class MobileMessagingController @Inject() (
         "messages" -> messages.reverse))
     }
 
-    messageSubmitResponse
+    messageSubmitResponse // todo(JP, Eduardo, Léo): return meaningful error about invalid participants
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
@@ -188,8 +192,8 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def searchMessages(query: String, page: Int) = JsonAction.authenticatedAsync { request =>
-    messageSearchCommander.searchMessages(request.userId, query, page).map{ notifs =>
+  def searchMessages(query: String, page: Int, storeInHistory: Boolean) = JsonAction.authenticatedAsync { request =>
+    messageSearchCommander.searchMessages(request.userId, query, page, storeInHistory).map{ notifs =>
       Ok(Json.toJson(notifs.jsons))
     }
   }

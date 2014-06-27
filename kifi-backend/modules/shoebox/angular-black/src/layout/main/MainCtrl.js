@@ -108,7 +108,7 @@ angular.module('kifi.layout.main', [
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
     }
-    
+
     function initAddKeep() {
       $scope.modal = 'add_keeps';
       $scope.data.initAddKeeps = true;
@@ -155,15 +155,10 @@ angular.module('kifi.layout.main', [
         return;
       }
 
-      var analyticsData = {
-        'type': 'bookmarkImport'
-      };
-      if (makePublic) {
-        analyticsData.action = 'ImportPublic';
-      } else {
-        analyticsData.action = 'ImportPrivate';
-      }
-      $analytics.eventTrack('user_clicked_page', analyticsData);
+      $analytics.eventTrack('user_clicked_page', {
+        'type': 'bookmarkImport',
+        'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+      });
 
       var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
       var message = 'import_bookmarks';
@@ -214,16 +209,11 @@ angular.module('kifi.layout.main', [
         var file = $file && $file[0] && $file[0].files && $file[0].files[0];
         if (file) {
           $scope.disableBookmarkImport = true;
-              
-          var analyticsData = {
-            'type': '3rdPartyImport'
-          };
-          if (makePublic) {
-            analyticsData.action = 'ImportPublic';
-          } else {
-            analyticsData.action = 'ImportPrivate';
-          }
-          $analytics.eventTrack('user_clicked_page', analyticsData);
+
+          $analytics.eventTrack('user_clicked_page', {
+            'type': '3rdPartyImport',
+            'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+          });
 
           var tooSlowTimer = $timeout(function () {
             $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight.';

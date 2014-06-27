@@ -162,8 +162,6 @@ class MessagingCommander @Inject() (
   )
   val product = Seq (
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
-    "73b1134d-02d4-443f-b99b-e8bc571455e2", // chandler
-    "c82b0fa0-6438-4892-8738-7fa2d96f1365", // ketan
     "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
     "c1ce2ab6-8211-40f7-8187-1522086f0c2e"  // mark
   )
@@ -185,13 +183,12 @@ class MessagingCommander @Inject() (
     shoebox.getUserIdsByExternalIds(loadedUser.flatten)
   }
 
-  private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[NonUserParticipant]): Future[Seq[NonUserParticipant]] = {
-    val pimpedParticipants = nonUsers.map {
-      case email: NonUserEmailParticipant =>
-        abookServiceClient.getOrCreateEContact(userId, email.address.address).map {
-          case Success(eContact) => email.copy(econtactId = eContact.id)
-          case Failure(_) => email
-        }
+  private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
+    val pimpedParticipants = nonUsers.map { emailContact =>
+      abookServiceClient.internContact(userId, emailContact).map {
+        case Success(eContact) => NonUserEmailParticipant(eContact.email, eContact.id)
+        case Failure(_) => NonUserEmailParticipant(emailContact.email, None)
+      }
     }
     Future.sequence(pimpedParticipants)
   }
@@ -431,9 +428,9 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], addresses: Seq[String], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], source: Option[MessageSource])(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = constructUserRecipients(newParticipantsExtIds)
-    val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, addresses.map(s => NonUserEmailParticipant(EmailAddress(s),None)))
+    val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
     val haveBeenAdded = for {
       newUserParticipants <- newUserParticipantsFuture
@@ -606,7 +603,7 @@ class MessagingCommander @Inject() (
     text: String,
     source: Option[MessageSource],
     userExtRecipients: Seq[ExternalId[User]],
-    nonUserRecipients: Seq[NonUserParticipant],
+    nonUserRecipients: Seq[BasicContact],
     url: Option[String],
     urls: JsObject, //wtf its not Seq[String]?
     userId: Id[User],
@@ -636,27 +633,13 @@ class MessagingCommander @Inject() (
     resFut.flatten
   }
 
-  def recipientJsonToTypedFormat(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[NonUserParticipant]) = {
-    rawRecipients.foldLeft((Seq[ExternalId[User]](), Seq[NonUserParticipant]())) { case ((externalUserIds, nonUserParticipants), elem) =>
-      elem.asOpt[String].flatMap(ExternalId.asOpt[User]) match {
-        case Some(externalUserId) => (externalUserIds :+ externalUserId, nonUserParticipants)
-        case None =>
-          elem.asOpt[JsObject].flatMap { obj =>
-            // The strategy is to get the identifier in the correct wrapping type, and pimp it with `constructNonUserRecipients` later
-            (obj \ "kind").asOpt[String] match {
-              case Some("email") if (obj \ "email").asOpt[String].isDefined =>
-                Some(NonUserEmailParticipant(EmailAddress((obj \ "email").as[String]), None))
-              case _ => // Unsupported kind
-                None
-            }
-          } match {
-            case Some(nonUser) =>
-              (externalUserIds, nonUserParticipants :+ nonUser)
-            case None =>
-              (externalUserIds, nonUserParticipants)
-          }
-      }
-    }
+  def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]] = rawUsers.map(_.validate[ExternalId[User]])
+  def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]] = rawNonUsers.map(_.validate[JsObject].map {
+    case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
+  })
+  def validateRecipients(rawRecipients: Seq[JsValue]): (Seq[JsResult[ExternalId[User]]], Seq[JsResult[BasicContact]]) = {
+    val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
+    (validateUsers(rawUsers), validateEmailContacts(rawNonUsers))
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {

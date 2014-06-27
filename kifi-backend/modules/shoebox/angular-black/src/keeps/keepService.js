@@ -28,7 +28,9 @@ angular.module('kifi.keepService', [
       limit = 10,
       smallLimit = 4,
       previewUrls = {},
-      doc = $document[0];
+      doc = $document[0],
+      seqReset = 0,
+      seqResult = 0;
 
     $rootScope.$on('tags.remove', function (tagId) {
       var keeps = _.filter(list, function (keep) {
@@ -162,14 +164,15 @@ angular.module('kifi.keepService', [
         });
         _.forEach(keeps, buildKeep);
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'keep'
+          'action': 'keep',
+          'path': $location.path()
         });
         prependKeeps(keeps);
         return res.data;
       });
     }
 
-    function fetchKeepInfo(keepId) {
+    function getSingleKeep(keepId) {
       var url = routeService.getKeep(keepId);
       var config = {
         params: { withFullInfo: true }
@@ -177,7 +180,10 @@ angular.module('kifi.keepService', [
 
       return $http.get(url, config).then(function (result) {
         var keep = result.data;
+        end = true;
+        list.length = 0;
         buildKeep(keep);
+        appendKeeps([keep]);
         return keep;
       });
     }
@@ -215,6 +221,7 @@ angular.module('kifi.keepService', [
         }
       });
       insertFn.apply(list, nonExisting);
+      seqResult++;
       existing.forEach(makeKept);
       before = list.length ? list[list.length - 1].id : null;
 
@@ -240,18 +247,42 @@ angular.module('kifi.keepService', [
     function makeKept(keep) {
       keep.unkept = false;
       keep.isMyBookmark = true;
+      if (keep.tagList) {
+        keep.tagList.forEach(function (tag) {
+          var existingTag = tagService.getById(tag.id);
+          if (existingTag) {
+            existingTag.keeps++;
+          }
+        });
+      }
     }
 
     function makeUnkept(keep) {
       keep.unkept = true;
       keep.isMyBookmark = false;
+      if (keep.tagList) {
+        keep.tagList.forEach(function (tag) {
+          var existingTag = tagService.getById(tag.id);
+          if (existingTag) {
+            existingTag.keeps--;
+          }
+        });
+      }
     }
 
     var api = {
       list: list,
 
+      seqReset: function () {
+        return seqReset;
+      },
+
+      seqResult: function () {
+        return seqResult;
+      },
+
       buildKeep: buildKeep,
-      
+
       lastSearchContext: function () {
       return lastSearchContext;
       },
@@ -340,6 +371,8 @@ angular.module('kifi.keepService', [
         list.length = 0;
         selected = {};
         api.unselectAll();
+        keepList.expireAll();
+        seqReset++;
       },
 
       getList: function (params) {
@@ -510,7 +543,8 @@ angular.module('kifi.keepService', [
           }
 
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'unkeep'
+            'action': 'unkeep',
+            'path': $location.path()
           });
           return keeps;
         });
@@ -530,7 +564,7 @@ angular.module('kifi.keepService', [
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
       },
 
-      fetchKeepInfo: fetchKeepInfo,
+      getSingleKeep: getSingleKeep,
 
       fetchFullKeepInfo: fetchFullKeepInfo,
 
@@ -591,11 +625,12 @@ angular.module('kifi.keepService', [
           $analytics.eventTrack('user_clicked_page', {
             'action': 'searchKifi',
             'hits': hits.size,
-            'mayHaveMore': resData.mayHaveMore
+            'mayHaveMore': resData.mayHaveMore,
+            'path': $location.path()
           });
 
           _.forEach(hits, processHit);
-          list.push.apply(list, hits);
+          appendKeeps(hits);
 
           refinements++;
           lastSearchContext = {

@@ -4,8 +4,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
-  'installService', '$rootScope', '$analytics', 'friendService', '$location',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout, installService, $rootScope, $analytics, friendService, $location) {
+  'installService', '$rootScope', '$analytics', 'friendService', '$location', 'keepService', 'tagService',
+  function ($scope, $element, $window, profileService, $q, $http, env, $timeout,
+    installService, $rootScope, $analytics, friendService, $location, keepService, tagService) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
     var friendsReady = false;
@@ -31,6 +32,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.yesLikeHelpRank = function () {
       $scope.data.showHelpRankHelp = false;
       $analytics.eventTrack('user_clicked_page', {
+        'type': 'HelpRankHelp',
         'action': 'yesLikeHelpRank'
       });
     };
@@ -38,27 +40,22 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.noLikeHelpRank = function () {
       $scope.data.showHelpRankHelp = false;
       $analytics.eventTrack('user_clicked_page', {
+        'type': 'HelpRankHelp',
         'action': 'noLikeHelpRank'
       });
     };
 
-    $scope.showClicks = function() {
-      $location.path('/helprank/click');
+    $scope.trackClickOnClicks = function() {
       $analytics.eventTrack('user_clicked_page', {
-        'action': 'helpRankClicks'
-      });
-      $analytics.eventTrack('user_viewed_page', {
-        'action': 'helpRankClicks'
+        'action': 'helpRankClicks',
+        'path': $location.path()
       });
     };
 
-    $scope.showReKeeps = function() {
-      $location.path('/helprank/rekeep');
+    $scope.trackClickOnReKeeps = function() {
       $analytics.eventTrack('user_clicked_page', {
-        'action': 'helpRankReKeeps'
-      });
-      $analytics.eventTrack('user_viewed_page', {
-        'action': 'helpRankReKeeps'
+        'action': 'helpRankReKeeps',
+        'path': $location.path()
       });
     };
 
@@ -80,7 +77,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       });
     };
 
-    $scope.triggerGuide = function () {
+    $scope.triggerGuide = function (linkClicked) {
       $window.postMessage({
         type: 'start_guide',
         pages: [{
@@ -92,7 +89,8 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           tag: 'Recipe',
           query: 'watermelon',
           title: 'Frosted Watermelon Cake | Real Healthy Recipes',
-          matches: {title: [[8,10]], url: [[49,10]]}
+          matches: {title: [[8,10]], url: [[49,10]]},
+          track: 'watermelonCake'
         }, {
           url: 'https://www.etsy.com/listing/163215077/large-leather-tote-everyday-tote-bag',
           name: ['Large','Leather','Tote'],
@@ -100,19 +98,21 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           thumb: '/img/guide/leather_tote.jpg',
           noun: 'tote',
           tag: 'Wishlist',
-          query: 'tote+bag',
+          query: 'large+bag',
           title: 'Large Leather Tote - Everyday tote bag',
-          matches: {title: [[14,4],[30,4],[35,3]], url: [[53,4],[67,4],[72,3]]}
+          matches: {title: [[0,5],[35,3]], url: [[39,5],[72,3]]},
+          track: 'leatherTote'
         }, {
-          url: 'http://www.lifehack.org/articles/communication/10-things-people-who-truly-love-their-lives-differently.html',
-          name: ['10 Things','People Who Truly','Love Their Lives','Do Differently'],
-          site: 'lifehack.org',
-          thumb: '/img/guide/love_life.jpg',
+          url: 'http://www.theverge.com/2014/6/26/5845996/watch-google-io-2014-keynote-on-demand',
+          name: ['Google I/O','2014','Keynote'],
+          site: 'theverge.com',
+          thumb: '/img/guide/google_io.jpg',
           noun: 'article',
-          tag: 'Read Later',
-          query: 'love+life',
-          title: '10 Things People Who Truly Love Their Lives Do Differently',
-          matches: {title: [[27,4],[38,5]], url: [[11,4],[74,4],[85,5]]}
+          tag: 'Watch Later',
+          query: 'google+io',
+          title: 'You can now watch Google’s entire two-and-a-half-hour I/O keynote',
+          matches: {title: [[18,6],[54,3]], url: [[48,6],[55,2]]},
+          track: 'googleIoKeynote'
         }, {
           url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
           name: ['Steve Jobs:','How to Live','Before You Die'],
@@ -122,9 +122,16 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           tag: 'Inspiration',
           query: 'steve+jobs',
           title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
-          matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]}
+          matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]},
+          track: 'steveJobsSpeech'
         }]
       }, '*');
+      if (linkClicked) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'startGuide',
+          'path': $location.path()
+        });
+      }
       delete $window.document.documentElement.dataset.guide;
     };
     if ('guide' in $window.document.documentElement.dataset) {
@@ -146,20 +153,28 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
     };
 
+    var refreshTimeout;
     $window.addEventListener('message', function (event) {
-      switch (event.data) {
-        case 'get_guide':
-          $scope.triggerGuide();
-          break;
-        case 'import_bookmarks':
-          if (event.data.bookmarkCount > 0) {
-            $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
-          }
-          break;
-        case 'update_keeps':
-          location.reload();
-          break;
-      }
+      $scope.$apply(function () {
+        switch (event.data) {
+          case 'get_guide':
+            $scope.triggerGuide();
+            break;
+          case 'import_bookmarks':
+            if (event.data.bookmarkCount > 0) {
+              $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
+            }
+            break;
+          case 'update_keeps':
+          case 'update_tags':
+            $timeout.cancel(refreshTimeout);
+            refreshTimeout = $timeout(function () {
+              tagService.fetchAll(true);
+              keepService.reset();
+            }, 1000); // Giving enough time for the services to be updated
+            break;
+        }
+      });
     });
 
     $scope.logout = function () {

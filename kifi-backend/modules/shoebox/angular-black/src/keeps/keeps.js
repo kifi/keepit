@@ -9,7 +9,7 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
     $scope.data = {draggedKeeps: []};
 
     $scope.$watch(function () {
-      return ($scope.keeps && $scope.keeps.length || 0) + ',' + tagService.allTags.length;
+      return keepService.seqResult() + ',' + tagService.allTags.length;
     }, function () {
       if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
         keepService.joinTags($scope.keeps, tagService.allTags);
@@ -28,7 +28,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
       var draggedKeepsElement = $scope.getDraggedKeepsElement();
       draggedKeepsElement.find('.kf-keep').css('background', 'rgba(255,255,255,.7)');
       event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
-      //event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
     };
 
     $scope.stopDraggingKeeps = function () {
@@ -86,10 +85,6 @@ angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
 
         scope.isShowMore = function () {
           return !scope.keepsLoading && scope.keepsHasMore;
-        };
-
-        scope.isScrollDisabled = function () {
-          return scope.scrollDisabled;
         };
 
         scope.getDraggedKeepsElement = function () {

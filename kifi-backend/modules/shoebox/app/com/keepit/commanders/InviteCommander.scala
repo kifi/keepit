@@ -43,7 +43,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.commanders.emails.EmailOptOutCommander
 
-case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress]) {
+case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress], name: Option[String] = None) {
   override def toString(): String = s"${network.name}/${identifier.left.map(_.id).right.map(_.address).merge}"
 }
 
@@ -51,11 +51,14 @@ object FullSocialId {
   def apply(fullSocialId: String): FullSocialId = {
     val Array(networkName, idString) = fullSocialId.split("/")
     val network = SocialNetworkType(networkName)
-    val identifier = network match {
-      case SocialNetworks.EMAIL => Right(EmailAddress(idString))
-      case _ => Left(SocialId(idString))
+    val (identifier, name) = network match {
+      case SocialNetworks.EMAIL => {
+        val contact = BasicContact.fromString(idString)
+        (Right(contact.email), contact.name)
+      }
+      case _ => (Left(SocialId(idString)), None)
     }
-    new FullSocialId(network, identifier)
+    FullSocialId(network, identifier, name)
   }
   implicit val format: Format[FullSocialId] = Format(Reads.of[String].map(FullSocialId.apply), Writes(fullSocialId => JsString(fullSocialId.toString())))
 }
@@ -402,7 +405,7 @@ class InviteCommander @Inject() (
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
-        val friendEContactFuture = abook.getOrCreateEContact(userId, emailAddress.address).map(eContactTry => Right(eContactTry.get))
+        val friendEContactFuture = abook.internContact(userId, BasicContact(emailAddress, fullSocialId.name)).map(eContactTry => Right(eContactTry.get))
         val invitationsSentFuture = countInvitationsSent(userId, Right(emailAddress))
         (friendEContactFuture, invitationsSentFuture)
       }

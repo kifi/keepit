@@ -1,6 +1,7 @@
 package com.keepit.common.mail
 
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 case class EmailAddress(address: String) extends AnyVal {
   override def toString = address
@@ -8,7 +9,29 @@ case class EmailAddress(address: String) extends AnyVal {
 
 object EmailAddress {
   implicit val format: Format[EmailAddress] =
-    Format(__.read[String].map(s => EmailAddress(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
+    Format(__.read[String].map(s => EmailAddress.validate(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[EmailAddress] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, EmailAddress]] = {
+      stringBinder.bind(key, params) map {
+        case Right(address) if isValid(address)=> Right(EmailAddress(address))
+        case _ => Left("Unable to bind a valid EmailAddress")
+      }
+    }
+    override def unbind(key: String, emailAddress: EmailAddress): String = {
+      stringBinder.unbind(key, emailAddress.address)
+    }
+  }
+
+  // Regex from http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html
+  private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+
+  def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
+
+  def validate(address: String): EmailAddress = {
+    if (!isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
+    EmailAddress(address.toLowerCase)
+  }
 }
 
 object SystemEmailAddress {

@@ -7,8 +7,8 @@ angular.module('kifi.profileService', [
 ])
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$window', '$rootScope', 'Clutch',
-  function ($http, env, $q, util, routeService, socialService, $analytics, $window, $rootScope, Clutch) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch',
+  function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch) {
 
     var me = {
       seqNum: 0
@@ -50,7 +50,8 @@ angular.module('kifi.profileService', [
     function postMe(data) {
       return $http.post(routeService.profileUrl, data).then(function (res) {
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'updateProfile'
+          'action': 'updateProfile',
+          'path': $location.path()
         });
         return updateMe(res.data);
       });
@@ -193,7 +194,8 @@ angular.module('kifi.profileService', [
         newPassword: newPassword
       }).then(function () {
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'changePassword'
+          'action': 'changePassword',
+          'path': $location.path()
         });
       });
     }

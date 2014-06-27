@@ -27,12 +27,13 @@ guide.step4 = guide.step4 || function () {
       $stage = $(render('html/guide/step_4', me)).appendTo('body');
       cutScreen = new CutScreen([], $stage[0], $stage[0].firstChild);
       $steps = $guide.appendTo('body')
-        .on('click', '.kifi-guide-x', hide);
+        .one('click', '.kifi-guide-x', hide);
       $steps.layout().data().updateProgress(.2);
       $feats = $stage.find('.kifi-guide-feature');
       $(document).data('esc').add(hide);
       arrows = [];
       timeout = setTimeout(cutHole, 600);
+      api.port.emit('track_guide', [4, 0]);
     }
   }
 
@@ -47,9 +48,9 @@ guide.step4 = guide.step4 || function () {
       if (timeout) {
         clearTimeout(timeout);
       }
+      api.port.emit('end_guide', [4, $stage.find('.kifi-guide-farewell').hasClass('kifi-opaque') ? 1 : 0]);
       $stage = cutScreen = $feats = arrows = $steps = timeout = null;
       $(document).data('esc').remove(hide);
-      api.port.emit('end_guide');
     }
   }
 
@@ -105,8 +106,9 @@ guide.step4 = guide.step4 || function () {
     $stage.find('.kifi-guide-drum-roll')
       .show()
       .each(layout)
-      .addClass('kifi-opaque');
-    $stage.find('.kifi-guide-4-next').click(farewell);
+      .addClass('kifi-opaque')
+    .find('.kifi-guide-4-next')
+      .one('click', farewell);
   }
 
   function farewell() {
@@ -125,11 +127,12 @@ guide.step4 = guide.step4 || function () {
             .each(layout)
             .addClass('kifi-opaque')
           .find('.kifi-guide-4-next')
-            .click(hide);
+            .one('click', hide);
         }
       })
       .removeClass('kifi-opaque');
     $steps.data().updateProgress(1);
+    api.port.emit('track_guide', [4, 1]);
   }
 
   function toClientRect(r) {

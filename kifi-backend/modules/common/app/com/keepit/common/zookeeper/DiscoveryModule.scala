@@ -36,7 +36,7 @@ object DiscoveryModule {
 
   val LOCAL_AMZN_INFO = AmazonInstanceInfo(AmazonInstanceId("i-f168c1a8"),
     localHostname = "localhost",
-    name = None,
+    name = Some("dev"),
     service = None,
     publicHostname = "localhost",
     localIp = IpAddress("127.0.0.1"),
