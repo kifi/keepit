@@ -17,7 +17,7 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsString, JsNumber}
+import play.api.libs.json._
 
 import akka.actor.ActorSystem
 
@@ -25,6 +25,11 @@ import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
 import scala.collection.mutable
 import com.keepit.common.store.KifInstallationStore
+import play.api.libs.json.JsArray
+import com.keepit.eliza.controllers.SocketInfo
+import play.api.libs.json.JsString
+import play.api.libs.json.JsNumber
+import play.api.libs.json.JsObject
 
 class SharedWsMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -76,30 +81,24 @@ class SharedWsMessagingController @Inject() (
       }
     },
     "add_participants_to_thread" -> { case JsString(threadId) +: (data: JsValue) +: _ =>
-      val (usersJson, nonUsersJson, source) = data match {
+      val (users, emailContacts, source) = data match {
         case JsArray(whoDat) => {
-          val (usersJson, nonUsersJson) = whoDat.partition{ json =>
-            json match {
-              case JsString(_) => true
-              case _ => false
-            }
-          }
-          (usersJson, nonUsersJson, None)
+          val (users, emailContacts) = messagingCommander.validateRecipients(whoDat)
+          (users, emailContacts, None)
         }
         case _ => {
-          val usersJson = (data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq())
-          val nonUsersJson = (data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq())
-          (usersJson, nonUsersJson, (data \ "source").asOpt[MessageSource])
+          val users = messagingCommander.validateUsers(data \ "users")
+          val emailContacts = messagingCommander.validateEmailContacts(data \ "nonUsers")
+          (users, emailContacts, (data \ "source").asOpt[MessageSource])
         }
       }
-      val users = usersJson.map { s =>
-        ExternalId[User](s.asInstanceOf[JsString].value)
+
+      (users, emailContacts) match {
+        case (JsSuccess(validUsers, _), JsSuccess(validContacts, _)) =>
+          implicit val context = authenticatedWebSocketsContextBuilder(socket).build
+          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), validUsers, validContacts, source)
+        case _ => socket.channel.push(Json.arr("server_error", threadId)) // todo(Martin, Léo): graceful error handling
       }
-      val emailContacts = nonUsersJson.map { obj =>
-        (obj \ "email").as[BasicContact]
-      }
-      implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-      messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, source)
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)

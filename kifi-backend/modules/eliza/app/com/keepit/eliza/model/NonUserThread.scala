@@ -32,7 +32,7 @@ object NonUserParticipant {
       // r == "referenceId"
       ((json \ "k").asOpt[String], (json \ "i").asOpt[String]) match {
         case (Some(NonUserKinds.email.name), Some(emailAddress)) =>
-          val addr = EmailAddress(emailAddress)
+          val addr = EmailAddress.validate(emailAddress)
           val id = (json \ "r").asOpt[String].map(i => Id[EContact](i.toLong))
           JsSuccess(NonUserEmailParticipant(addr, id))
         case _ => JsError()

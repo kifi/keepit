@@ -16,12 +16,13 @@ import com.keepit.common.mail.RemotePostOffice
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import play.api.libs.json.{Json, JsValue, JsObject}
+import play.api.libs.json.{JsSuccess, Json, JsValue, JsObject}
 
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
+import scala.concurrent.Future
 
 class ExtMessagingController @Inject() (
     postOffice: RemotePostOffice,
@@ -50,26 +51,32 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (userExtRecipients, nonUserRecipients) = messagingCommander.recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
-    val url = (o \ "url").asOpt[String]
-    val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
+    messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]]) match {
 
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    contextBuilder += ("source", "extension")
-    extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
-    contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
+      case (JsSuccess(userExtRecipients, _), JsSuccess(nonUserRecipients, _)) => {
+        val url = (o \ "url").asOpt[String]
+        val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
-    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-        userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
-      Ok(Json.obj(
-        "id" -> message.externalId.id,
-        "parentId" -> message.threadExtId.id,
-        "createdAt" -> message.createdAt,
-        "threadInfo" -> threadInfoOpt,
-        "messages" -> messages.reverse))
+        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+        contextBuilder += ("source", "extension")
+        extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
+        contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
+
+        val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
+            userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
+          Ok(Json.obj(
+            "id" -> message.externalId.id,
+            "parentId" -> message.threadExtId.id,
+            "createdAt" -> message.createdAt,
+            "threadInfo" -> threadInfoOpt,
+            "messages" -> messages.reverse))
+        }
+
+        messageSubmitResponse
+      }
+
+      case _ => Future.successful(BadRequest("0")) // todo(Martin, Léo): graceful error handling
     }
-
-    messageSubmitResponse
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
