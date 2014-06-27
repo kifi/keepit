@@ -2,7 +2,7 @@
   <div class="kf-nav-group-name">TAGS</div>
   <div class="kf-tag-input-box" ng-class="{'focused': isFilterFocused}">
     <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
-    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilter()">
+    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." maxlength="32" ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilter()">
   </div>
   <div class="kf-tag-list-hidden"></div>
 

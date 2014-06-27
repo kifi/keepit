@@ -120,11 +120,7 @@ angular.module('kifi.profile', [
     };
 
     $scope.getExportButtonText = function() {
-      if ($scope.exported === true) {
-        return 'Export Again';
-      } else {
-        return 'Export Keeps';
-      }
+      return $scope.exported ? 'Export Again' : 'Export Keeps';
     };
 
     function showVerificationAlert(email) {
