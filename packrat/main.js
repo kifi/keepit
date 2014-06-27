@@ -225,7 +225,7 @@ var mixpanel = {
     }
   },
   augmentAndBatch: function (data) {
-    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    data.properties.token = api.isPackaged() && !api.mode.isDev() ? 'cff752ff16ee39eda30ae01bb6fa3bd6' : 'abb7e1226370392c849ec16fadff2584';
     data.properties.distinct_id = me.id;
     data.properties.source = 'extension';
     data.properties.browser = api.browser.name;
