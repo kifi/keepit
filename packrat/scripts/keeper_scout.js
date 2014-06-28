@@ -60,9 +60,9 @@ var tile = tile || function() {  // idempotent for Chrome
       }
       tags = o.tags || [];
       window.addEventListener('resize', onResize);
-      api.require(["styles/insulate.css", "styles/keeper/tile.css"], function() {
+      api.require(['styles/insulate.css', 'styles/keeper/tile.css'], function() {
         if (!o.hide) {
-          tile.style.display = "";
+          tile.style.display = '';
           if (o.showKeeperIntro && !/\.(?:kifi|google)\./.test(location.hostname) && document.hasFocus()) {
             setTimeout(api.require.bind(api, 'scripts/keeper_intro.js', api.noop), 5000);
           }

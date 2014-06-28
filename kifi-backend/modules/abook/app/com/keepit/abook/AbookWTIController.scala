@@ -19,8 +19,8 @@ class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookSer
     Ok(Json.toJson(wtiCommander.ripestFruit(Id[User](userId),howMany)))
   }
 
-  def countInvitationsSent(userId: Id[User], friendSocialId: Option[Long], friendEmailAddress: Option[String]) = Action { request =>
-    val friendId = friendSocialId.map(id => Left(Id[SocialUserInfo](id))) getOrElse Right(EmailAddress(friendEmailAddress.get))
+  def countInvitationsSent(userId: Id[User], friendSocialId: Option[Long], friendEmailAddress: Option[EmailAddress]) = Action { request =>
+    val friendId = friendSocialId.map(id => Left(Id[SocialUserInfo](id))) getOrElse Right(friendEmailAddress.get)
     Ok(JsNumber(wtiCommander.countInvitationsSent(userId, friendId)))
   }
 

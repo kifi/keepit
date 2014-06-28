@@ -23,9 +23,11 @@ guide.step3 = guide.step3 || function () {
       pad: [128, 100, 112, 20],
       arrow: {dx: 160, dy: 80, from: {angle: -80, gap: 10}, to: {angle: 0, gap: 5, along: [0, .45], sel: '.kifi-compose>.kifi-ti-list'}},
       allow: [
-        {type: /^key/, target: '.kifi-compose input', unless: function (e) {return e.keyCode === 27 || e.keyCode >= 37 && e.keyCode <= 40}},  // esc, arrows
+        {type: /^key/, target: '.kifi-compose input', unless: function (e) {
+          return e.keyCode === 27 || e.keyCode === 13 && $('.kifi-ti-dropdown-tip').hasClass('kifi-ti-dropdown-item-selected');
+        }},
         {type: /^key/, target: '.kifi-compose-draft', unless: function (e) {return e.keyCode === 27}},  // esc
-        {type: 'mousedown', target: '.kifi-ti-dropdown-item'}
+        {type: 'mousedown', target: '.kifi-ti-dropdown-item-token'}
       ],
       afterTransition: '.kifi-toast'
     },
@@ -62,6 +64,7 @@ guide.step3 = guide.step3 || function () {
 
   function show($guide, page, pageIdx) {
     if (!step) {
+      tile.style.display = '';
       step = guide.step(steps, {
         $guide: $guide,
         page: page,

@@ -54,8 +54,6 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
       }
     };
 
-    $scope.scrollDisabled = false;
-
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
         return $q.when([]);
@@ -74,8 +72,15 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
       });
     };
 
-    $scope.getNextKeeps().then(function () {
-      return $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      $scope.getNextKeeps().then(function () {
+        return $scope.getNextKeeps();
+      });
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
     });
   }
 ]);

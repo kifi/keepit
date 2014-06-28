@@ -40,7 +40,7 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
 
 
       val email1 = emailRepo.save(UserEmailAddress(userId=user1.id.get, address=EmailAddress("username@42go.com")))
-      val email2 = emailRepo.save(UserEmailAddress(userId=user2.id.get, address=EmailAddress("peteG@42go.com")))
+      val email2 = emailRepo.save(UserEmailAddress(userId=user2.id.get, address=EmailAddress("peteg@42go.com")))
       val email3 = emailRepo.save(UserEmailAddress(userId=user3.id.get, address=EmailAddress("superreporter@42go.com")))
 
       user1 = userRepo.save(user1.copy(primaryEmail = Some(email1.address), pictureName = Some("dfkjiyert")))
@@ -74,7 +74,7 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         outbox.size === 0
         userCommander.tellAllFriendsAboutNewUserImmediate(user1.id.get, Seq(user2.id.get))
         outbox.size === 2
-        val forUser2 = outbox.all.filter( email => email.to.length==1 && email.to.head.address=="peteG@42go.com")
+        val forUser2 = outbox.all.filter( email => email.to.length==1 && email.to.head.address=="peteg@42go.com")
         val forUser3 = outbox.all.filter( email => email.to.length==1 && email.to.head.address=="superreporter@42go.com")
         forUser2.length===1
         forUser3.length===1
@@ -98,7 +98,7 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         outbox(0).to.length === 1
         outbox(1).to.length === 1
 
-        outbox(0).to(0).address === "peteG@42go.com"
+        outbox(0).to(0).address === "peteg@42go.com"
         outbox(1).to(0).address === "superreporter@42go.com"
       }
     }

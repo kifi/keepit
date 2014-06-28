@@ -2,12 +2,19 @@ package com.keepit.cortex.core
 
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
+import com.keepit.cortex.models.lda.DenseLDA
 
 trait StatModel
 
 case class ModelVersion[M <: StatModel](version: Int) extends Ordered[ModelVersion[M]] {
   def compare(that: ModelVersion[M]) = version compare that.version
   override def toString = version.toString
+}
+
+case class StatModelName(name: String)
+
+object StatModelName {
+  val LDA = StatModelName("lda")
 }
 
 object ModelVersion{

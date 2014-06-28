@@ -54,3 +54,16 @@ case class EContactKey(id: Id[EContact]) extends Key[EContact] {
   override val version = 1
   def toKey(): String = id.id.toString
 }
+
+case class BasicContact(email: EmailAddress, name: Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None)
+
+object BasicContact {
+  implicit val format: Format[BasicContact] = Format(Json.reads[BasicContact] orElse { __.read[String].map(fromString) }, Json.writes[BasicContact])
+
+  // Parsing "email-like" expressions containing a name, such as "Douglas Adams <doug@kifi.com>"
+  private val contactRegex = """\s*([^\s<][^<]*[^\s<])\s+<(.*)>""".r
+  def fromString(contact: String): BasicContact = contact match {
+    case contactRegex(name, address) => BasicContact(EmailAddress.validate(address), name = Some(name))
+    case _ => BasicContact(EmailAddress.validate(contact))
+  }
+}

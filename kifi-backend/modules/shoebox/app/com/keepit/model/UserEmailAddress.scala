@@ -4,7 +4,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 
 import com.keepit.common.db._
-import com.keepit.common.mail.{EmailAddress, EmailAddressParser}
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 
 import org.joda.time.DateTime
@@ -30,26 +30,25 @@ case class UserEmailAddress (
       verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
   }
   def verified: Boolean = state == UserEmailAddressStates.VERIFIED
-  def isKifi: Boolean = parsed.exists { a => UserEmailAddress.kifiDomains.contains(a.domain) }
-  def isTest: Boolean = parsed.exists { a => UserEmailAddress.testDomains.contains(a.domain) && (a.hasTagPrefix("test") || a.hasTagPrefix("utest")) }
-  def isAutoGen: Boolean = isKifi && parsed.exists(_.hasTagPrefix("autogen"))
-  def hasTag(tag: String): Boolean = parsed.exists(_.hasTag(tag))
-  private lazy val parsed = EmailAddressParser.parseOpt(address.address)
 }
 
 object UserEmailAddress {
   lazy val random = new SecureRandom()
   val kifiDomains = Set("kifi.com", "42go.com")
   val testDomains = kifiDomains ++ Set("tfbnw.net", "mailinator.com")  // tfbnw.net ???
+  val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
 
   def getExperiments(email: UserEmailAddress): Set[ExperimentType] = {
-    (if (email.isAutoGen) {
+    val Array(local, host) = email.address.address.split('@')
+    val tags = tagRe.findAllIn(local).toSet
+
+    (if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {
       Set(ExperimentType.FAKE, ExperimentType.AUTO_GEN)
-    } else if (email.isTest) {
+    } else if (testDomains.contains(host) && tags.exists { t => t.startsWith("test") || t.startsWith("utest") }) {
       Set(ExperimentType.FAKE)
     } else {
       Set.empty
-    }) ++ (if (email.hasTag("preview")) {
+    }) ++ (if (tags.contains("preview") || local == "casey" && host == "theverge.com") {
       Set(ExperimentType.KIFI_BLACK)
     } else {
       Set.empty

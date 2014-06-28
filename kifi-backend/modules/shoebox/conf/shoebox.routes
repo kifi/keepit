@@ -54,7 +54,7 @@ POST    /disconnect/:provider       @com.keepit.controllers.website.HomeControll
 
 GET     /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOut(token: String)
 POST    /unsubscribe/*token         @com.keepit.controllers.website.EmailOptOutController.optOutAction(token: String)
-GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutController.getToken(email: String)
+GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutController.getToken(email: EmailAddress)
 
 GET     /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOut(publicId: String)
 POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOutAction(publicId: String)
@@ -251,7 +251,7 @@ POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsCont
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
-GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: String)
+GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)
 POST    /site/user/password         @com.keepit.controllers.website.UserController.changePassword()
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
 POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
@@ -280,7 +280,7 @@ GET     /site/user/prefs            @com.keepit.controllers.website.UserControll
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
-POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: String)
+POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 GET     /site/friends/wti           @com.keepit.controllers.website.WTIController.getRipestInvitees(page: Int ?= 0, pageSize: Int ?= 20)
 POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block()
 POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
@@ -555,6 +555,7 @@ GET     /admin/graph/wander                                @com.keepit.controlle
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
+GET     /admin/validateAllContacts                             @com.keepit.controllers.admin.AdminUserController.validateAllContacts()
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
@@ -672,7 +673,7 @@ POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.int
 POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getURISummaries()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
 
-GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: String)
+GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
 # New site, temporary
 GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home

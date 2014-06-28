@@ -71,7 +71,14 @@ angular.module('kifi.helprank', ['util', 'kifi.keepService'])
       });
     };
 
-    $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      $scope.getNextKeeps();
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
 
   }
 ]);

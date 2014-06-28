@@ -150,6 +150,8 @@ object ApplicationBuild extends Build {
 
   lazy val graphDependencies = Seq()
 
+  lazy val mavenDependencies = Seq()
+
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
     "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
@@ -160,7 +162,8 @@ object ApplicationBuild extends Build {
     "com.keepit.social._",
     "com.keepit.search._",
     "com.keepit.cortex.core._",
-    "com.keepit.cortex.models.lda._"
+    "com.keepit.cortex.models.lda._",
+    "com.keepit.common.mail.EmailAddress"
   )
 
   lazy val commonResolvers = Seq(
@@ -269,6 +272,10 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
 
+  lazy val maven = play.Project("maven", appVersion, mavenDependencies, path=file("modules/maven")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-maven.conf"): _*
+  ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
+
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
     .settings(
       aggregate in update := false,
@@ -289,12 +296,13 @@ object ApplicationBuild extends Build {
       abook % "test->test;compile->compile",
       scraper % "test->test;compile->compile",
       cortex % "test->test;compile->compile",
-      graph % "test->test;compile->compile")
-    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
+      graph % "test->test;compile->compile",
+      maven % "test->test;compile->compile")
+    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, maven)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, maven)
 
   override def rootProject = Some(kifiBackend)
 }

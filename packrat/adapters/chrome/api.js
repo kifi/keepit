@@ -730,10 +730,10 @@ var api = (function createApi() {
     },
     timers: {
       setTimeout: function (f, ms) {
-        window.setTimeout(errors.wrap(f), ms);
+        return window.setTimeout(errors.wrap(f), ms);
       },
       setInterval: function (f, ms) {
-        window.setInterval(errors.wrap(f), ms);
+        return window.setInterval(errors.wrap(f), ms);
       },
       clearTimeout: window.clearTimeout.bind(window),
       clearInterval: window.clearInterval.bind(window)

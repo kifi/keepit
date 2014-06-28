@@ -41,8 +41,8 @@ function clearDataCache() {
   threadReadAt = {};
   for (var tabId in timeouts) {
     api.timers.clearTimeout(timeouts[tabId]);
+    delete timeouts[tabId];
   }
-  timeouts = {};
 
   pageData = {};
   threadLists = {};
@@ -219,13 +219,13 @@ var mixpanel = {
   sendBatch: function () {
     if (this.batch.length > 0) {
       var json = JSON.stringify(this.batch);
-      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      var dataString = 'data=' + api.util.btoa(unescape(encodeURIComponent(json)));
       api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
       this.batch.length = 0;
     }
   },
   augmentAndBatch: function (data) {
-    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    data.properties.token = api.isPackaged() && !api.mode.isDev() ? 'cff752ff16ee39eda30ae01bb6fa3bd6' : 'abb7e1226370392c849ec16fadff2584';
     data.properties.distinct_id = me.id;
     data.properties.source = 'extension';
     data.properties.browser = api.browser.name;
@@ -240,7 +240,7 @@ var mixpanel = {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
-      log("#aaa", "[mixpanel.track] %s %o", eventName, properties);
+      log('#aaa', '[mixpanel.track] %s %o', eventName, properties);
       properties.time = Date.now();
       var data = {
         'event': eventName,
@@ -262,21 +262,13 @@ var mixpanel = {
   }
 };
 
-function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if (eventFamily !== 'slider') {
-    log("#800", "[logEvent] invalid event family:", eventFamily);
-    return;
-  }
+function logEvent(eventFamily, eventName, metaData) {
   var ev = {
-    installId: stored('installation_id'), // ExternalId[KifiInstallation]
-    eventFamily: eventFamily, // Category (see eventFamilies)
-    eventName: eventName}; // Any key for this event
-  if (metaData) {
-    ev.metaData = metaData; // Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc.
-  }
-  if (prevEvents && prevEvents.length) {
-    ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
-  }
+    installId: stored('installation_id'),
+    eventFamily: eventFamily,
+    eventName: eventName,
+    metaData: metaData
+  };
   log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
     socket.send(["log_event", ev]);
@@ -566,6 +558,7 @@ function onAddTagResponse(nUri, result) {
         api.tabs.emit(tab, 'tagged', {tagged: true});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -580,6 +573,7 @@ function onRemoveTagResponse(nUri, tagId, result) {
         api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -594,6 +588,7 @@ function onClearTagsResponse(nUri, result) {
         api.tabs.emit(tab, 'tagged', {tagged: false});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -660,6 +655,7 @@ api.port.on({
         forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
           setIcon(tab, data.how);
         });
+        updateKifiAppTabs('update_keeps');
       }, function fail() {
         log('[keep:fail]', data.url);
         delete d.state;
@@ -670,7 +666,6 @@ api.port.on({
       forEachTabAt(tab.url, tab.nUri, function (tab) {
         api.tabs.emit(tab, 'kept', {kept: data.how});
       });
-      updateKifiAppTabs();
     }
   },
   unkeep: function(_, __, tab) {
@@ -687,6 +682,7 @@ api.port.on({
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           setIcon(tab, false);
         });
+        updateKifiAppTabs('update_keeps');
       }, function fail() {
         log('[unkeep:fail]', d.keepId);
         delete d.state;
@@ -709,8 +705,9 @@ api.port.on({
   set_title: function(data, respond) {
     ajax('POST', '/bookmarks/update', data, respond.bind(null, true), respond.bind(null, false));
   },
-  keeper_shown: function(_, __, tab) {
-    (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
+  keeper_shown: function(data, _, tab) {
+    (pageData[tab.nUri] || {}).shown = true;
+    logEvent('slider', 'sliderShown', data);
   },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
@@ -788,9 +785,6 @@ api.port.on({
   set_show_search_intro: function(show) {
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
     if (prefs) prefs.showSearchIntro = show;
-  },
-  log_event: function(data) {
-    logEvent.apply(null, data);
   },
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
@@ -1291,6 +1285,13 @@ api.port.on({
   start_guide: function (pages, _, tab) {
     guidePages = pages;
     api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages});
+    unsilence(false);
+  },
+  track_guide: function (stepParts) {
+    mixpanel.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
+  },
+  track_guide_choice: function (pageIdx) {
+    mixpanel.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
   },
   resume_guide: function (step, _, tab) {
     if (guidePages) {
@@ -1301,7 +1302,8 @@ api.port.on({
       });
     }
   },
-  end_guide: function () {
+  end_guide: function (stepParts) {
+    mixpanel.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
       guidePages = null;
     }
@@ -1618,12 +1620,12 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function updateKifiAppTabs() {
+function updateKifiAppTabs(message) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
     if (url.lastIndexOf(prefix, 0) === 0 || url.lastIndexOf('https://preview.kifi.com', 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
-        api.tabs.emit(tab, 'update_keeps');
+        api.tabs.emit(tab, message);
       });
     }
   }

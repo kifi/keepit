@@ -9,7 +9,7 @@ protected case class Comment(c: String) {
 protected case class Tag(t: String) {
   override val toString = s"+$t"
 }
-protected case class LocalPart(p: Option[Comment], s: String, tags: Seq[Tag], t: Option[Comment]) {  // TODO: eliminate comments (not part of address)
+protected case class LocalPart(p: Option[Comment], s: String, tags: Seq[Tag], t: Option[Comment]) { // TODO: eliminate comments (not part of address)
   val localName = s.trim.toLowerCase  // local part case insensitive (kifi policy)
   override val toString = s"${localName}${tags.mkString("")}"
   def unparse = (p.getOrElse("") + localName + tags.mkString("") + t.getOrElse("")).trim
@@ -56,15 +56,26 @@ object EmailAddressParser extends RegexParsers { // rudimentary; also see @URIPa
   def emailAddress: Parser[ParsedEmailAddress] = localPart ~ "@" ~ host ^^ {
     case localPart ~ "@" ~ host => ParsedEmailAddress(localPart, host)
   }
+
+  // more restrictive than rfc
+  val sanitized  = """[^"~/?#()+@ ]+""".r
+  val quotedBody = """[^"~/?#()+@]+""".r
+  val DQ = '\"'
+
   def comment: Parser[Comment] = "(" ~> commentBody <~ ")" ^^ { Comment(_) }
-  def commentBody: Parser[String] = """[^~/?#()+@]+""".r
-  def tag: Parser[Tag] = "+" ~> """[^~/?#()+@]+""".r ^^ { Tag(_) }
-  def localPart: Parser[LocalPart] = (comment?) ~ """[^~/?#()+@]+""".r ~ (tag*) ~ (comment?) ^^ {
+  def commentBody: Parser[String] = sanitized
+  def tag: Parser[Tag] = "+" ~> sanitized ^^ { Tag(_) }
+  def localPart: Parser[LocalPart] = (quoted | obsLocalPart)
+
+  def obsLocalPart: Parser[LocalPart] = (comment?) ~ sanitized ~ (tag*) ~ (comment?) ^^ { // todo: factor out comment
     case p ~ s ~ tags ~ t => LocalPart(p, s, tags, t)
+  }
+  def quoted: Parser[LocalPart] = "\"" ~ quotedBody ~ "\"" ^^ {
+    case open ~ local ~ close => LocalPart(None, s"$DQ$local$DQ", Seq.empty, None)
   }
   def host: Parser[Host] = (comment?) ~ rep1sep(domainPart, ".") ~ (comment?) ^^ {
     case p ~ domainList ~ t => new Host(domainList) // discard comment in domain
   }
   def domainPart: Parser[String] = """[^~/?#@:\.]+""".r ^^ (_.toLowerCase)
-  // todo: quotes, dots, nameprep?
+  // todo: quotes (full support), dots, nameprep?
 }

@@ -70,7 +70,8 @@ angular.module('kifi.routeService', [])
       socialSearch: function (name, limit) {
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
-      }
+      },
+      exportKeeps: route('/keeps/export')
     };
   }
 ]);
