@@ -32,6 +32,6 @@ class ContentAwareHttpRequestExecutor extends HttpRequestExecutor with Logging {
   def parsableContent(contentTypes: Seq[String]): Boolean = contentTypes.isEmpty || contentTypes.exists(parsableContent)
 
   private def parsableContent(contentType: String): Boolean = {
-    contentType.startsWith("text/") || contentType == "application/pdf"
+    contentType != "application/ogg" && contentType != "application/mp4" && !contentType.startsWith("audio/") && !contentType.startsWith("video/")
   }
 }
