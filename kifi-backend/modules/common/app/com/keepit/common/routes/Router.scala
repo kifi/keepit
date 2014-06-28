@@ -313,6 +313,11 @@ object Graph extends Service {
   }
 }
 
+object Maven extends Service {
+  object internal {
+  }
+}
+
 object Common {
   object internal {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")
