@@ -24,7 +24,7 @@ import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactABookTypeahead
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{BasicContact, EmailAddress}
 
 class ABookCommander @Inject() (
   db:Database,

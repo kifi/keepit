@@ -30,12 +30,12 @@ object NonUserParticipant {
       // k == "kind"
       // i == "identifier"
       // r == "referenceId"
-      ((json \ "k").asOpt[String], (json \ "i").asOpt[String]) match {
-        case (Some(NonUserKinds.email.name), Some(emailAddress)) =>
-          val addr = EmailAddress.validate(emailAddress)
-          val id = (json \ "r").asOpt[String].map(i => Id[EContact](i.toLong))
-          JsSuccess(NonUserEmailParticipant(addr, id))
-        case _ => JsError()
+      (json \ "k").validate[String].flatMap {
+        case NonUserKinds.email.name => for {
+          email <- (json \ "i").validate[EmailAddress]
+          eContact <- (json \ "r").validate[Option[Id[EContact]]]
+        } yield NonUserEmailParticipant(email, eContact)
+        case unsupportedKind => JsError(s"Unsupported NonUserKind: $unsupportedKind")
       }
     }
     def writes(p: NonUserParticipant): JsValue = {

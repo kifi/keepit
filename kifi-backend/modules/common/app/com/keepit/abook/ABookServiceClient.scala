@@ -24,13 +24,8 @@ import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{Success, Failure, Try}
 import play.api.http.Status
-import play.api.libs.json.JsArray
-import scala.util.Failure
-import scala.Some
-import com.keepit.common.net.HttpClientImpl
-import scala.util.Success
 import com.keepit.abook.model.RichSocialConnection
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{EmailAddress, BasicContact}
 
 trait ABookServiceClient extends ServiceClient {
 

@@ -94,14 +94,7 @@ class ContactsUpdater @Inject() (
     val existingContacts = db.readOnly(attempts = 2) { implicit s =>
         econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
     }
-    val existingEmailSet = new mutable.HashSet[EmailAddress]
-    for (e <- existingContacts) {
-      if (EmailAddress.isValid(e.email.address)) {
-        existingEmailSet += e.email
-      } else {
-        log.warn(s"[upload($userId, $origin, ${abookInfo.id})] invalid email ${e.email} for contact ${e}") // move along
-      }
-    }
+    val existingEmailSet = new mutable.HashSet[EmailAddress] ++ existingContacts.map(_.email)
     log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${existingEmailSet.size}): ${existingEmailSet.mkString(",")}")
     existingEmailSet
   }
