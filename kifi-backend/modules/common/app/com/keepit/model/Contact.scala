@@ -16,7 +16,7 @@ case class Contact(
                     updatedAt: DateTime = currentDateTime,
                     userId: Id[User],
                     abookId: Id[ABookInfo],
-                    email: EmailAddress,
+                    email: String,
                     altEmails: Option[String] = None,
                     origin: ABookOriginType,
                     name: Option[String] = None,
@@ -32,9 +32,9 @@ case class Contact(
 object Contact extends Logging {
   def newInstance(userId:Id[User], abookId:Id[ABookInfo], email:EmailAddress, altEmails:Seq[EmailAddress], origin:ABookOriginType, name:Option[String], firstName:Option[String], lastName:Option[String], pictureUrl:Option[String]):Contact = {
     if (altEmails.isEmpty) {
-      new Contact(userId = userId, abookId = abookId, email = email, origin = origin, name = name, firstName = firstName, lastName = lastName, pictureUrl = pictureUrl)
+      new Contact(userId = userId, abookId = abookId, email = email.address, origin = origin, name = name, firstName = firstName, lastName = lastName, pictureUrl = pictureUrl)
     } else {
-      new Contact(userId = userId, abookId = abookId, email = email, altEmails = Some(Json.stringify(Json.toJson(altEmails))), origin = origin, name = name, firstName = firstName, lastName = lastName, pictureUrl = pictureUrl)
+      new Contact(userId = userId, abookId = abookId, email = email.address, altEmails = Some(Json.stringify(Json.toJson(altEmails))), origin = origin, name = name, firstName = firstName, lastName = lastName, pictureUrl = pictureUrl)
     }
   }
   implicit val format = (
@@ -43,7 +43,7 @@ object Contact extends Logging {
       (__ \ 'updatedAt).format[DateTime] and
       (__ \ 'userId).format(Id.format[User]) and
       (__ \ 'abookId).format(Id.format[ABookInfo]) and
-      (__ \ 'email).format[EmailAddress] and
+      (__ \ 'email).format[String] and
       (__ \ 'altEmails).formatNullable[String] and
       (__ \ 'origin).format[ABookOriginType] and
       (__ \ 'name).formatNullable[String] and
