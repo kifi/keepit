@@ -90,11 +90,11 @@ class ContactsUpdater @Inject() (
     }
     )
 
-  private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo): mutable.TreeSet[EmailAddress] = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
+  private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo): mutable.Set[EmailAddress] = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
     val existingContacts = db.readOnly(attempts = 2) { implicit s =>
         econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
     }
-    val existingEmailSet = new mutable.TreeSet[EmailAddress]
+    val existingEmailSet = new mutable.HashSet[EmailAddress]
     for (e <- existingContacts) {
       if (EmailAddress.isValid(e.email.address)) {
         existingEmailSet += e.email
