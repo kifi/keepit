@@ -15,7 +15,6 @@ import play.api.Play.current
 import play.api.Play
 import scala.util.{Success, Try, Failure}
 import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
-import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.common.mail.{EmailAddress, ParsedEmailAddress}
 
 
