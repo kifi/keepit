@@ -2,6 +2,7 @@ package com.keepit.common.mail
 
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
+import play.api.data.validation.ValidationError
 
 case class EmailAddress(address: String) extends AnyVal {
   override def toString = address
@@ -9,7 +10,7 @@ case class EmailAddress(address: String) extends AnyVal {
 
 object EmailAddress {
   implicit val format: Format[EmailAddress] =
-    Format(__.read[String].map(s => EmailAddress.validate(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
+    Format(__.read[String].filter(ValidationError("Invalid email address"))(EmailAddress.isValid).map(EmailAddress(_)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[EmailAddress] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, EmailAddress]] = {
