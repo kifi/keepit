@@ -25,9 +25,7 @@ import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.commanders.LocalRichConnectionCommander
-import com.keepit.common.mail.{BasicContact, SystemEmailAddress, ElectronicMail, EmailAddress}
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.mail.{BasicContact, EmailAddress}
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -66,8 +64,7 @@ class ABookController @Inject() (
   typeahead:EContactABookTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin,
-  richConnectionCommander: LocalRichConnectionCommander,
-  shoebox: ShoeboxServiceClient
+  richConnectionCommander: LocalRichConnectionCommander
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
   // gmail
@@ -386,44 +383,7 @@ class ABookController @Inject() (
   }
 
   def validateAllContacts(readOnly: Boolean = true) = Action { request =>
-    log.info("[EContact Validation] Starting validation of all EContacts.")
-    val invalidContacts = mutable.Map[Id[EContact], String]()
-    val upperCaseContacts = mutable.Map[Id[EContact], String]()
-    val pageSize = 1000
-    var lastPageSize = -1
-    var nextPage = 0
-
-    do {
-      db.readWrite { implicit session =>
-        val batch = econtactRepo.page(nextPage, pageSize, Set.empty)
-        batch.foreach { contact =>
-          EmailAddress.validate(contact.email.address) match {
-            case Failure(invalidEmail) => {
-              log.error(s"[EContact Validation] Found invalid email contact: ${contact.email}")
-              invalidContacts += (contact.id.get -> contact.email.address)
-              if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
-            }
-            case Success(validEmail) => {
-              if (validEmail != contact.email) {
-                log.warn(s"[EContact Validation] Found upper case email contact: ${contact.email}")
-                upperCaseContacts += (contact.id.get -> contact.email.address)
-                if (!readOnly) { econtactRepo.save(contact.copy(email = validEmail)) }
-              }
-            }
-          }
-        }
-        lastPageSize = batch.length
-        nextPage += 1
-      }
-    } while (lastPageSize == pageSize)
-
-    log.info("[EContact Validation] Done with EContact validation.")
-
-    val title = s"Email Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidContacts.size}. Uppercase Contacts: ${upperCaseContacts.size}"
-    val msg = s"Invalid Contacts: \n\n ${invalidContacts.mkString("\n")} \n\n Uppercase Contacts: \n\n ${upperCaseContacts.mkString("\n")}"
-    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN
-    ))
+    SafeFuture { abookCommander.validateAllContacts(readOnly) }
     Ok
   }
 }
