@@ -25,7 +25,7 @@ import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.commanders.LocalRichConnectionCommander
-import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, EmailAddress}
+import com.keepit.common.mail.{BasicContact, SystemEmailAddress, ElectronicMail, EmailAddress}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 
@@ -396,18 +396,19 @@ class ABookController @Inject() (
     do {
       db.readWrite { implicit session =>
         val batch = econtactRepo.page(nextPage, pageSize, Set.empty)
-        batch.foreach {
-          case invalidContact if !EmailAddress.isValid(invalidContact.email.address) => {
-            log.error(s"[EContact Validation] Found invalid email contact: ${invalidContact.email}")
-            invalidContacts += (invalidContact.id.get -> invalidContact.email.address)
-            if (!readOnly) { econtactRepo.save(invalidContact.copy(state = EContactStates.INACTIVE)) }
-          }
-          case validContact if EmailAddress.isValid(validContact.email.address) => {
-            val validEmail = EmailAddress.validate(validContact.email.address)
-            if (validEmail != validContact.email) {
-              log.warn(s"[EContact Validation] Found upper case email contact: ${validContact.email}")
-              upperCaseContacts += (validContact.id.get -> validContact.email.address)
-              if (!readOnly) { econtactRepo.save(validContact.copy(email = validEmail)) }
+        batch.foreach { contact =>
+          EmailAddress.validate(contact.email.address) match {
+            case Failure(invalidEmail) => {
+              log.error(s"[EContact Validation] Found invalid email contact: ${contact.email}")
+              invalidContacts += (contact.id.get -> contact.email.address)
+              if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
+            }
+            case Success(validEmail) => {
+              if (validEmail != contact.email) {
+                log.warn(s"[EContact Validation] Found upper case email contact: ${contact.email}")
+                upperCaseContacts += (contact.id.get -> contact.email.address)
+                if (!readOnly) { econtactRepo.save(contact.copy(email = validEmail)) }
+              }
             }
           }
         }
