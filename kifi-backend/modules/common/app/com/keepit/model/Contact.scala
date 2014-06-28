@@ -8,6 +8,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 
 case class Contact(
                     id: Option[Id[Contact]] = None,
@@ -15,7 +16,7 @@ case class Contact(
                     updatedAt: DateTime = currentDateTime,
                     userId: Id[User],
                     abookId: Id[ABookInfo],
-                    email: String,
+                    email: EmailAddress,
                     altEmails: Option[String] = None,
                     origin: ABookOriginType,
                     name: Option[String] = None,
@@ -29,7 +30,7 @@ case class Contact(
 }
 
 object Contact extends Logging {
-  def newInstance(userId:Id[User], abookId:Id[ABookInfo], email:String, altEmails:Seq[String], origin:ABookOriginType, name:Option[String], firstName:Option[String], lastName:Option[String], pictureUrl:Option[String]):Contact = {
+  def newInstance(userId:Id[User], abookId:Id[ABookInfo], email:EmailAddress, altEmails:Seq[EmailAddress], origin:ABookOriginType, name:Option[String], firstName:Option[String], lastName:Option[String], pictureUrl:Option[String]):Contact = {
     if (altEmails.isEmpty) {
       new Contact(userId = userId, abookId = abookId, email = email, origin = origin, name = name, firstName = firstName, lastName = lastName, pictureUrl = pictureUrl)
     } else {
@@ -42,7 +43,7 @@ object Contact extends Logging {
       (__ \ 'updatedAt).format[DateTime] and
       (__ \ 'userId).format(Id.format[User]) and
       (__ \ 'abookId).format(Id.format[ABookInfo]) and
-      (__ \ 'email).format[String] and
+      (__ \ 'email).format[EmailAddress] and
       (__ \ 'altEmails).formatNullable[String] and
       (__ \ 'origin).format[ABookOriginType] and
       (__ \ 'name).formatNullable[String] and
