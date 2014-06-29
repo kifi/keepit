@@ -328,7 +328,7 @@ class ABookCommander @Inject() (
     log.info("[EContact Validation] Done with EContact validation.")
 
     val title = s"Email Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidContacts.size}. Fixable Contacts: ${fixableContacts.size}"
-    val msg = s"Invalid Contacts: \n\n ${invalidContacts.mkString("\n")} \n\n Uppercase Contacts: \n\n ${fixableContacts.mkString("\n")}"
+    val msg = s"Invalid Contacts: \n\n ${invalidContacts.mkString("\n")} \n\n Fixable Contacts: \n\n ${fixableContacts.mkString("\n")}"
     shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN
     ))
