@@ -35,6 +35,6 @@ case class ShoeboxProdModule() extends ShoeboxModule (
   externalServiceModule = ProdExternalServiceModule(),
   rekeepStatsUpdaterModule = ProdReKeepStatsUpdaterModule()
 ) with CommonProdModule {
-  private val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.MAVEN :: Nil
+  private val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: Nil
   val discoveryModule = new ProdDiscoveryModule(ServiceType.SHOEBOX, servicesToListenOn)
 }
