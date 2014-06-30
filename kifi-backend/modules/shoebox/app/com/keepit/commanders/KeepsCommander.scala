@@ -111,16 +111,16 @@ object KeepInfosWithCollection {
 }
 
 
-case class KeepSet(
+case class BulkKeepSelection(
   keeps: Option[Seq[ExternalId[Keep]]],
-  tags: Option[Seq[ExternalId[Collection]]],
+  tag: Option[ExternalId[Collection]],
   exclude: Option[Seq[ExternalId[Keep]]])
-object KeepSet {
+object BulkKeepSelection {
   implicit val format =  (
     (__ \ 'keeps).formatNullable[Seq[ExternalId[Keep]]] and
-    (__ \ 'tags).formatNullable[Seq[ExternalId[Collection]]] and
+    (__ \ 'tag).formatNullable[ExternalId[Collection]] and
     (__ \ 'exclude).formatNullable[Seq[ExternalId[Keep]]]
-    )(KeepSet.apply _, unlift(KeepSet.unapply))
+    )(BulkKeepSelection.apply _, unlift(BulkKeepSelection.unapply))
 }
 
 class KeepsCommander @Inject() (
@@ -273,20 +273,19 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getKeepsInSet(keepSet: KeepSet, userId: Id[User]): Seq[Keep] = {
+  def getKeepsInSet(keepSet: BulkKeepSelection, userId: Id[User]): Seq[Keep] = {
     val MAX_KEEPS_IN_COLLECTION = 1000
-    var incomplete = false
     val (collectionKeeps, individualKeeps) = db.readOnly { implicit s =>
-      val collectionKeeps = keepSet.tags map { tagExtIds =>
-        val tags = tagExtIds map { collectionRepo.getByUserAndExternalId(userId, _) } flatten
-        val tagIds = tags map (_.id) flatten
-        val keepCountMap = collectionRepo.getBookmarkCounts(tagIds.toSet)
-        tagIds flatMap { tagId =>
-          keepCountMap.get(tagId) match {
-            case Some(count) => incomplete |= count <= MAX_KEEPS_IN_COLLECTION
-            case None => incomplete = true
+      val collectionKeeps = keepSet.tag flatMap { tagExtId =>
+        val tagIdOpt = collectionRepo.getByUserAndExternalId(userId, tagExtId).flatMap(_.id)
+        tagIdOpt map { tagId =>
+          val keepCount = collectionRepo.getBookmarkCount(tagId)
+          if (keepCount <= MAX_KEEPS_IN_COLLECTION) {
+            airbrake.notify(s"Maximum number of keeps in collection reached for user $userId and collection $tagId")
+            Seq()
+          } else {
+            keepRepo.getByUserAndCollection(userId, tagId, None, None, MAX_KEEPS_IN_COLLECTION)
           }
-          keepRepo.getByUserAndCollection(userId, tagId, None, None, MAX_KEEPS_IN_COLLECTION)
         }
       } getOrElse Seq()
       val individualKeeps = keepSet.keeps map { keepExtIds =>
@@ -295,10 +294,6 @@ class KeepsCommander @Inject() (
         }
       } getOrElse Seq()
       (collectionKeeps, individualKeeps)
-    }
-    if (incomplete) {
-      airbrake.notify(s"Maximum number of keeps in collection reached for user $userId and keepSet $keepSet")
-      return Seq()
     }
     // Get distinct keeps
     val filter: (Keep => Boolean) = keepSet.exclude match {
@@ -370,7 +365,7 @@ class KeepsCommander @Inject() (
     deactivatedKeepInfos
   }
 
-  def unkeepSet(keepSet: KeepSet, userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+  def unkeepSet(keepSet: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
     val keeps = db.readWrite { implicit s =>
       val keeps = getKeepsInSet(keepSet, userId)
       keeps.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
@@ -405,7 +400,7 @@ class KeepsCommander @Inject() (
     keeps map KeepInfo.fromBookmark
   }
 
-  def rekeepSet(keepSet: KeepSet, userId: Id[User])(implicit context: HeimdalContext): Int = {
+  def rekeepSet(keepSet: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
     val keeps = db.readWrite { implicit s =>
       val keeps = getKeepsInSet(keepSet, userId).filter(_.state != KeepStates.ACTIVE)
       keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
@@ -422,7 +417,7 @@ class KeepsCommander @Inject() (
     saved
   }
 
-  def setKeepSetPrivacy(keepSet: KeepSet, userId: Id[User], isPrivate: Boolean)(implicit context: HeimdalContext): Int = {
+  def setKeepSetPrivacy(keepSet: BulkKeepSelection, userId: Id[User], isPrivate: Boolean)(implicit context: HeimdalContext): Int = {
     val (oldKeeps, newKeeps) = db.readWrite { implicit s =>
       val keeps = getKeepsInSet(keepSet, userId)
       val oldKeeps = keeps.filter(_.isPrivate != isPrivate)
@@ -450,7 +445,7 @@ class KeepsCommander @Inject() (
     keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle))
   }
 
-  def editKeepSetTag(collectionId: ExternalId[Collection], keepSet: KeepSet, userId: Id[User], isAdd: Boolean)
+  def editKeepSetTag(collectionId: ExternalId[Collection], keepSet: BulkKeepSelection, userId: Id[User], isAdd: Boolean)
                     (implicit context: HeimdalContext): Int = {
     db.readOnly { implicit s =>
       collectionRepo.getByUserAndExternalId(userId, collectionId) map { collection =>

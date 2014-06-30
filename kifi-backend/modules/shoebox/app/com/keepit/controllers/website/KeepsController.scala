@@ -208,7 +208,7 @@ class KeepsController @Inject() (
   }
 
   def unkeepSet() = JsonAction.authenticatedParseJson { request =>
-    Json.fromJson[KeepSet](request.body).asOpt map { keepSet =>
+    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val deactivatedKeepInfos = bookmarksCommander.unkeepSet(keepSet, request.userId)
       Ok(Json.obj(
@@ -220,7 +220,7 @@ class KeepsController @Inject() (
   }
 
   def rekeepSet() = JsonAction.authenticatedParseJson { request =>
-    Json.fromJson[KeepSet](request.body).asOpt map { keepSet =>
+    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val numRekept = bookmarksCommander.rekeepSet(keepSet, request.userId)
       Ok(Json.obj("numRekept" -> numRekept))
@@ -238,7 +238,7 @@ class KeepsController @Inject() (
   }
 
   private def setKeepSetPrivacy(request: AuthenticatedRequest[JsValue], isPrivate: Boolean) = {
-    Json.fromJson[KeepSet](request.body).asOpt map { keepSet =>
+    Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val numUpdated = bookmarksCommander.setKeepSetPrivacy(keepSet, request.userId, isPrivate)
       Ok(Json.obj("numUpdated" -> numUpdated))
@@ -253,10 +253,10 @@ class KeepsController @Inject() (
 
   private def editKeepSetTag(request: AuthenticatedRequest[JsValue], isAdd: Boolean) = {
     val collectionId = (request.body \ "collectionId").asOpt[ExternalId[Collection]]
-    val keepSet = (request.body \ "keeps").asOpt[KeepSet]
+    val keepSet = (request.body \ "keeps").asOpt[BulkKeepSelection]
     val res = for {
       collectionId <- (request.body \ "collectionId").asOpt[ExternalId[Collection]]
-      keepSet <- (request.body \ "keeps").asOpt[KeepSet]
+      keepSet <- (request.body \ "keeps").asOpt[BulkKeepSelection]
     } yield {
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val numEdited = bookmarksCommander.editKeepSetTag(collectionId, keepSet, request.userId, isAdd)
