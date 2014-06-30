@@ -250,7 +250,7 @@ object ABook extends Service {
     def getEContactByEmail(userId:Id[User], email: EmailAddress) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactByEmail", Param("email", email))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
-    def internContact(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/internContact")
+    def internContact(userId:Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internContact")
     def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/queryEContacts", Param("limit", limit), Param("search", search), Param("after", after))
     def prefixSearch(userId:Id[User], query:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/prefixSearch", Param("query", query))
     def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/prefixQuery", Param("limit", limit), Param("search", search), Param("after", after))
