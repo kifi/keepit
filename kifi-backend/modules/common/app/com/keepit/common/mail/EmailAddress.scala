@@ -5,7 +5,7 @@ import play.api.mvc.QueryStringBindable
 import scala.util.Try
 
 case class EmailAddress(address: String) {
-  if (!EmailAddress.isValid(address)) { new IllegalArgumentException(s"Invalid email address: $address") }
+  if (!EmailAddress.isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
   override def toString = address
 }
 
