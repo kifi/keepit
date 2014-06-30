@@ -102,7 +102,7 @@ setTimeout(function () {
   $phone.addEventListener('webkitTransitionEnd', function () {
     var $iframe = document.createElement('iframe');
     $iframe.className = 'k-video';
-    $iframe.src = 'https://player.vimeo.com/video/84696926?title=0&byline=0&portrait=0&color=ffffff';
+    $iframe.src = 'https://player.vimeo.com/video/99569714?title=0&byline=0&portrait=0&color=ffffff';
     $iframe.setAttribute('webkitallowfullscreen', '');
     $iframe.setAttribute('allowfullscreen', '');
     var $play = document.getElementsByClassName('k-play')[0];
