@@ -808,20 +808,20 @@ api.port.on({
       canvas.width = bounds.width;
       canvas.height = bounds.height;
       var ctx = canvas.getContext('2d');
-      // ctx.fillStyle = 'rgb(200,0,0)';
-      // ctx.fillRect(0, 0, winWidth, winHeight);
       for (var i = 0; i < data.rects.length; i++) {
         var rect = data.rects[i];
-        ctx.drawImage(
-          drawableEl,
-          rect.left * hScale,
-          rect.top * vScale,
-          rect.width * hScale,
-          rect.height * vScale,
-          rect.left - bounds.left,
-          rect.top - bounds.top,
-          rect.width,
-          rect.height);
+        if (rect.width > 0 && rect.height > 0) {
+          ctx.drawImage(
+            drawableEl,
+            rect.left * hScale,
+            rect.top * vScale,
+            rect.width * hScale,
+            rect.height * vScale,
+            rect.left - bounds.left,
+            rect.top - bounds.top,
+            rect.width,
+            rect.height);
+        }
       }
       respond(canvas.toDataURL('image/png'));
     });
