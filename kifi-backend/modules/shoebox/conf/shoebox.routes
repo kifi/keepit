@@ -240,12 +240,12 @@ POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsControl
 POST    /site/keeps/imageUrl        @com.keepit.controllers.website.KeepsController.getImageUrl()
 POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
 
-POST    /site/keeps/unkeep          @com.keepit.controllers.website.KeepsController.unkeepSet()
-POST    /site/keeps/rekeep          @com.keepit.controllers.website.KeepsController.rekeepSet()
-POST    /site/keeps/public          @com.keepit.controllers.website.KeepsController.makeSetPublic()
-POST    /site/keeps/private         @com.keepit.controllers.website.KeepsController.makeSetPrivate()
-POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepSet()
-POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepSet()
+POST    /site/keeps/unkeep          @com.keepit.controllers.website.KeepsController.unkeepBulk()
+POST    /site/keeps/rekeep          @com.keepit.controllers.website.KeepsController.rekeepBulk()
+POST    /site/keeps/public          @com.keepit.controllers.website.KeepsController.makePublicBulk()
+POST    /site/keeps/private         @com.keepit.controllers.website.KeepsController.makePrivateBulk()
+POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
+POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
 
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()

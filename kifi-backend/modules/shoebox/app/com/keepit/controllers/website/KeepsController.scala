@@ -207,10 +207,10 @@ class KeepsController @Inject() (
     }
   }
 
-  def unkeepSet() = JsonAction.authenticatedParseJson { request =>
+  def unkeepBulk() = JsonAction.authenticatedParseJson { request =>
     Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val deactivatedKeepInfos = bookmarksCommander.unkeepSet(keepSet, request.userId)
+      val deactivatedKeepInfos = bookmarksCommander.unkeepBulk(keepSet, request.userId)
       Ok(Json.obj(
         "removedKeeps" -> deactivatedKeepInfos
       ))
@@ -219,39 +219,39 @@ class KeepsController @Inject() (
     }
   }
 
-  def rekeepSet() = JsonAction.authenticatedParseJson { request =>
+  def rekeepBulk() = JsonAction.authenticatedParseJson { request =>
     Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numRekept = bookmarksCommander.rekeepSet(keepSet, request.userId)
+      val numRekept = bookmarksCommander.rekeepBulk(keepSet, request.userId)
       Ok(Json.obj("numRekept" -> numRekept))
     } getOrElse {
       BadRequest(Json.obj("error" -> "Could not parse JSON keep set from request body"))
     }
   }
 
-  def makeSetPublic() = JsonAction.authenticatedParseJson { request =>
-    setKeepSetPrivacy(request, false)
+  def makePublicBulk() = JsonAction.authenticatedParseJson { request =>
+    setKeepPrivacyBulk(request, false)
   }
 
-  def makeSetPrivate() = JsonAction.authenticatedParseJson { request =>
-    setKeepSetPrivacy(request, true)
+  def makePrivateBulk() = JsonAction.authenticatedParseJson { request =>
+    setKeepPrivacyBulk(request, true)
   }
 
-  private def setKeepSetPrivacy(request: AuthenticatedRequest[JsValue], isPrivate: Boolean) = {
+  private def setKeepPrivacyBulk(request: AuthenticatedRequest[JsValue], isPrivate: Boolean) = {
     Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numUpdated = bookmarksCommander.setKeepSetPrivacy(keepSet, request.userId, isPrivate)
+      val numUpdated = bookmarksCommander.setKeepPrivacyBulk(keepSet, request.userId, isPrivate)
       Ok(Json.obj("numUpdated" -> numUpdated))
     } getOrElse {
       BadRequest(Json.obj("error" -> "Could not parse JSON keep set from request body"))
     }
   }
 
-  def tagKeepSet() = JsonAction.authenticatedParseJson(editKeepSetTag(_, true))
+  def tagKeepBulk() = JsonAction.authenticatedParseJson(editKeepTagBulk(_, true))
 
-  def untagKeepSet() = JsonAction.authenticatedParseJson(editKeepSetTag(_, false))
+  def untagKeepBulk() = JsonAction.authenticatedParseJson(editKeepTagBulk(_, false))
 
-  private def editKeepSetTag(request: AuthenticatedRequest[JsValue], isAdd: Boolean) = {
+  private def editKeepTagBulk(request: AuthenticatedRequest[JsValue], isAdd: Boolean) = {
     val collectionId = (request.body \ "collectionId").asOpt[ExternalId[Collection]]
     val keepSet = (request.body \ "keeps").asOpt[BulkKeepSelection]
     val res = for {
@@ -259,7 +259,7 @@ class KeepsController @Inject() (
       keepSet <- (request.body \ "keeps").asOpt[BulkKeepSelection]
     } yield {
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numEdited = bookmarksCommander.editKeepSetTag(collectionId, keepSet, request.userId, isAdd)
+      val numEdited = bookmarksCommander.editKeepTagBulk(collectionId, keepSet, request.userId, isAdd)
       Ok(Json.obj("numEdited" -> numEdited))
     }
     res getOrElse BadRequest(Json.obj("error" -> "Could not parse keep set and/or collection id from request body"))

@@ -273,10 +273,10 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getKeepsInSet(keepSet: BulkKeepSelection, userId: Id[User]): Seq[Keep] = {
+  def getKeepsInBulkSelection(selection: BulkKeepSelection, userId: Id[User]): Seq[Keep] = {
     val MAX_KEEPS_IN_COLLECTION = 1000
     val (collectionKeeps, individualKeeps) = db.readOnly { implicit s =>
-      val collectionKeeps = keepSet.tag flatMap { tagExtId =>
+      val collectionKeeps = selection.tag flatMap { tagExtId =>
         val tagIdOpt = collectionRepo.getByUserAndExternalId(userId, tagExtId).flatMap(_.id)
         tagIdOpt map { tagId =>
           val keepCount = collectionRepo.getBookmarkCount(tagId)
@@ -288,7 +288,7 @@ class KeepsCommander @Inject() (
           }
         }
       } getOrElse Seq()
-      val individualKeeps = keepSet.keeps map { keepExtIds =>
+      val individualKeeps = selection.keeps map { keepExtIds =>
         keepExtIds flatMap { keepExtId =>
           keepRepo.getByExtIdAndUser(keepExtId, userId)
         }
@@ -296,7 +296,7 @@ class KeepsCommander @Inject() (
       (collectionKeeps, individualKeeps)
     }
     // Get distinct keeps
-    val filter: (Keep => Boolean) = keepSet.exclude match {
+    val filter: (Keep => Boolean) = selection.exclude match {
       case Some(excluded) => { keep => keep.id.nonEmpty && !excluded.contains(keep) }
       case None => _.id.nonEmpty
     }
@@ -365,9 +365,9 @@ class KeepsCommander @Inject() (
     deactivatedKeepInfos
   }
 
-  def unkeepSet(keepSet: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+  def unkeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
     val keeps = db.readWrite { implicit s =>
-      val keeps = getKeepsInSet(keepSet, userId)
+      val keeps = getKeepsInBulkSelection(selection, userId)
       keeps.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
     }
     finalizeUnkeeping(keeps, userId)
@@ -400,9 +400,9 @@ class KeepsCommander @Inject() (
     keeps map KeepInfo.fromBookmark
   }
 
-  def rekeepSet(keepSet: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
+  def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
     val keeps = db.readWrite { implicit s =>
-      val keeps = getKeepsInSet(keepSet, userId).filter(_.state != KeepStates.ACTIVE)
+      val keeps = getKeepsInBulkSelection(selection, userId).filter(_.state != KeepStates.ACTIVE)
       keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
     }
     keptAnalytics.rekeptPages(userId, keeps, context)
@@ -417,9 +417,9 @@ class KeepsCommander @Inject() (
     saved
   }
 
-  def setKeepSetPrivacy(keepSet: BulkKeepSelection, userId: Id[User], isPrivate: Boolean)(implicit context: HeimdalContext): Int = {
+  def setKeepPrivacyBulk(selection: BulkKeepSelection, userId: Id[User], isPrivate: Boolean)(implicit context: HeimdalContext): Int = {
     val (oldKeeps, newKeeps) = db.readWrite { implicit s =>
-      val keeps = getKeepsInSet(keepSet, userId)
+      val keeps = getKeepsInBulkSelection(selection, userId)
       val oldKeeps = keeps.filter(_.isPrivate != isPrivate)
       val newKeeps = oldKeeps.map(updateKeepWithSession(_, Some(isPrivate), None))
       (oldKeeps, newKeeps)
@@ -445,11 +445,11 @@ class KeepsCommander @Inject() (
     keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle))
   }
 
-  def editKeepSetTag(collectionId: ExternalId[Collection], keepSet: BulkKeepSelection, userId: Id[User], isAdd: Boolean)
+  def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)
                     (implicit context: HeimdalContext): Int = {
     db.readOnly { implicit s =>
       collectionRepo.getByUserAndExternalId(userId, collectionId) map { collection =>
-        val keeps = getKeepsInSet(keepSet, userId)
+        val keeps = getKeepsInBulkSelection(selection, userId)
         (keeps, collection)
       }
     } map { case (keeps, collection) =>
