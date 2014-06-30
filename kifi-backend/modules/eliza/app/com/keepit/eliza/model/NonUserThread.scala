@@ -33,8 +33,7 @@ object NonUserParticipant {
       (json \ "k").validate[String].flatMap {
         case NonUserKinds.email.name => for {
           email <- (json \ "i").validate[EmailAddress]
-          eContact <- (json \ "r").validate[Option[Id[EContact]]]
-        } yield NonUserEmailParticipant(email, eContact)
+        } yield NonUserEmailParticipant(email)
         case unsupportedKind => JsError(s"Unsupported NonUserKind: $unsupportedKind")
       }
     }
@@ -49,9 +48,9 @@ object NonUserParticipant {
   }
 }
 
-case class NonUserEmailParticipant(address: EmailAddress, econtactId: Option[Id[EContact]]) extends NonUserParticipant {
+case class NonUserEmailParticipant(address: EmailAddress) extends NonUserParticipant {
   val identifier = address.address
-  val referenceId = econtactId.map(_.id.toString)
+  val referenceId = Some(address.address)
   val kind = NonUserKinds.email
 
   def shortName = identifier
