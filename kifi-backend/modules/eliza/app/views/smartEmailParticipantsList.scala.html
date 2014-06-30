@@ -13,9 +13,7 @@
   names.filterNot(exclude.contains(_))
 }
 
-@if(filteredNames.length==1) {
-  @preformat(filteredNames.head)
-} else {
+@if(filteredNames.length > 0) {
   @for(name <- filteredNames.dropRight(1)) {
     @preformat(name + ", ")
   }

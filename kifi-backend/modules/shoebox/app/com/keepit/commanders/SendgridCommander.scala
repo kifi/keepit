@@ -58,7 +58,7 @@ class SendgridCommander @Inject() (
     for {
       eventType <- event.event
       rawAddress <- event.email
-      address <- Try(EmailAddress.validate(rawAddress)).toOption
+      address <- EmailAddress.validate(rawAddress).toOption
       email <- emailOpt
     } yield {
 

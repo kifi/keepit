@@ -27,6 +27,8 @@ case class URILDATopic(
 ) extends ModelWithState[URILDATopic] {
   def withId(id: Id[URILDATopic]): URILDATopic = copy(id = Some(id))
   def withUpdateTime(time: DateTime): URILDATopic = copy(updatedAt = time)
+  def withState(state: State[URILDATopic]): URILDATopic = copy(state = state)
+  def withSeq(seq: SequenceNumber[NormalizedURI]): URILDATopic = copy(uriSeq = seq)
 }
 
 object URILDATopicStates extends States[URILDATopic] {

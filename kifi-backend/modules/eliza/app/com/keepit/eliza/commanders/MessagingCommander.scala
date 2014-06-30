@@ -8,7 +8,7 @@ import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{BasicContact}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -186,8 +186,8 @@ class MessagingCommander @Inject() (
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
     val pimpedParticipants = nonUsers.map { emailContact =>
       abookServiceClient.internContact(userId, emailContact).map {
-        case Success(eContact) => NonUserEmailParticipant(eContact.email, eContact.id)
-        case Failure(_) => NonUserEmailParticipant(emailContact.email, None)
+        case Success(eContact) => NonUserEmailParticipant(eContact.email) // todo(Léo) we may want to get a name here, otherwise don't really need to wait for this call
+        case Failure(_) => NonUserEmailParticipant(emailContact.email)
       }
     }
     Future.sequence(pimpedParticipants)

@@ -555,6 +555,7 @@ GET     /admin/graph/wander                                @com.keepit.controlle
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
+GET     /admin/validateAllContacts                             @com.keepit.controllers.admin.AdminUserController.validateAllContacts(readOnly: Boolean ?= true)
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
