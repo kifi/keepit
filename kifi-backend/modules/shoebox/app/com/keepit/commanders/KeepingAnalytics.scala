@@ -131,6 +131,27 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
     }
   }
 
+  def rekeptPages(userId: Id[User], keeps: Seq[Keep], context: HeimdalContext): Unit = {
+    val rekeptAt = currentDateTime
+
+    SafeFuture {
+      keeps.foreach { keep =>
+        val contextBuilder = new HeimdalContextBuilder
+        contextBuilder.data ++= context.data
+        contextBuilder += ("action", "rekeptPage")
+        contextBuilder += ("keepSource", keep.source.value)
+        contextBuilder += ("isPrivate", keep.isPrivate)
+        contextBuilder += ("hasTitle", keep.title.isDefined)
+        contextBuilder += ("uriId", keep.uriId.toString)
+        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, rekeptAt))
+      }
+      val rekept = keeps.length
+      val rekeptPrivate = keeps.count(_.isPrivate)
+      val rekeptPublic = rekept - rekeptPrivate
+      heimdal.incrementUserProperties(userId, "keeps" -> rekept, "privateKeeps" -> rekeptPrivate, "publicKeeps" -> rekeptPublic)
+    }
+  }
+
   def updatedKeep(oldKeep: Keep, updatedKeep: Keep, context: HeimdalContext): Unit = SafeFuture {
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= context.data
