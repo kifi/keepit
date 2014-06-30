@@ -86,6 +86,6 @@ class EmailAccountUpdaterPlugin @Inject() (
 
   override def onStart() {
     log.info(s"starting $this")
-    scheduleTaskOnLeader(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100))
+    // scheduleTaskOnLeader(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100))
   }
 }
