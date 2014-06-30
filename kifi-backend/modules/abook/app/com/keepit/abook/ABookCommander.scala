@@ -184,20 +184,6 @@ class ABookCommander @Inject() (
     }
   }
 
-  def getContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
-    val ts = System.currentTimeMillis
-    val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly(attempts = 2) {
-      implicit session =>
-        contactRepo.getByUserIdIter(userId, maxRows).foreach {
-          jsonBuilder += Json.toJson(_)
-        } // TODO: paging & caching
-    }
-    val contacts = jsonBuilder.result
-    log.info(s"[getContacts($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
-    JsArray(contacts)
-  }
-
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
     val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
       econtactRepo.getById(contactId)

@@ -41,7 +41,6 @@ trait ABookServiceClient extends ServiceClient {
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Future[Option[ABookInfo]]
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]]
-  def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
@@ -124,12 +123,6 @@ class ABookServiceClientImpl @Inject() (
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]] = {
     call(ABook.internal.getABookInfoByExternalId(id)).map { r =>
       Json.fromJson[Option[ABookInfo]](r.json).get
-    }
-  }
-
-  def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = {
-    call(ABook.internal.getContacts(userId, maxRows), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Seq[Contact]](r.json).get
     }
   }
 

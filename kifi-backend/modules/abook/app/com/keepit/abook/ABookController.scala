@@ -114,10 +114,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
-  def getContacts(userId:Id[User], maxRows:Int) = Action { request =>
-    Ok(abookCommander.getContactsDirect(userId, maxRows))
-  }
-
   def getEContactById(contactId:Id[EContact]) = Action { request =>
     // todo: parse email
     abookCommander.getEContactByIdDirect(contactId) match {
