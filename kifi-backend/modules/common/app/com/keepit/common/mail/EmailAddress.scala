@@ -2,20 +2,28 @@ package com.keepit.common.mail
 
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
+import scala.util.Try
 
-case class EmailAddress(address: String) extends AnyVal {
+case class EmailAddress(address: String) {
+  if (!EmailAddress.isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
   override def toString = address
 }
 
 object EmailAddress {
-  implicit val format: Format[EmailAddress] =
-    Format(__.read[String].map(s => EmailAddress.validate(s)), new Writes[EmailAddress]{ def writes(o: EmailAddress) = JsString(o.address) })
+  implicit val format = new Format[EmailAddress] {
+    def reads(json: JsValue) = for {
+      address <- json.validate[String]
+      validAddress <- validate(address).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
+    } yield validAddress
+
+    def writes(email: EmailAddress) = JsString(email.address)
+  }
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[EmailAddress] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, EmailAddress]] = {
       stringBinder.bind(key, params) map {
-        case Right(address) if isValid(address)=> Right(EmailAddress(address))
-        case _ => Left("Unable to bind a valid EmailAddress")
+        case Right(address) => validate(address).map(Right(_)).recover { case ex: Throwable => Left(ex.getMessage) }.get
+        case _ => Left("Unable to bind a valid email address String")
       }
     }
     override def unbind(key: String, emailAddress: EmailAddress): String = {
@@ -26,12 +34,9 @@ object EmailAddress {
   // Regex from http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
-  def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
-
-  def validate(address: String): EmailAddress = {
-    if (!isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
-    EmailAddress(address.toLowerCase)
-  }
+  private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
+  private def canonicalize(address: String): EmailAddress = EmailAddress(address.toLowerCase)
+  def validate(address: String): Try[EmailAddress] = Try { canonicalize(address) }
 }
 
 object SystemEmailAddress {
@@ -63,7 +68,24 @@ object SystemEmailAddress {
 
   def discussion(id: String): EmailAddress = EmailAddress("discuss+" + id + "@kifi.com")
 
-  def validate(email: EmailAddress): Boolean = {
+  def isValid(email: EmailAddress): Boolean = {
     ALL_EMAILS.contains(email) || (email.address.startsWith("discuss+") && email.address.endsWith("@kifi.com"))
   }
+}
+
+case class BasicContact(email: EmailAddress, name: Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None)
+
+object BasicContact {
+
+  // Parsing "email-like" expressions containing a name, such as "Douglas Adams <doug@kifi.com>"
+  private val contactRegex = """\s*([^\s<][^<]*[^\s<])\s+<(.*)>""".r
+  def fromString(contact: String): Try[BasicContact] = contact match {
+    case contactRegex(name, address) => EmailAddress.validate(address).map { validEmail => BasicContact(validEmail, name = Some(name)) }
+    case _ => EmailAddress.validate(contact).map(BasicContact(_))
+  }
+
+  private val readsFromString = Reads[BasicContact](_.validate[String].flatMap { contact =>
+    fromString(contact).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage()) }.get
+  })
+  implicit val format: Format[BasicContact] = Format(Json.reads[BasicContact] orElse readsFromString, Json.writes[BasicContact])
 }

@@ -102,17 +102,15 @@ class URISummaryCommander @Inject()(
       case ImageType.SCREENSHOT => Some(ImageProvider.PAGEPEEKER)
       case ImageType.IMAGE => Some(ImageProvider.EMBEDLY)
     }
-    val storedImagesOpt = nUri.id map { id =>
-      db.readOnly { implicit session => imageInfoRepo.getByUriWithSize(id, minSize) }
-    }
-    val storedSummaryOpt = storedImagesOpt flatMap { list =>
-      val candidates = list.filter(targetProvider.isEmpty || targetProvider == _.provider)
-      if (candidates.nonEmpty) {
-        val imageInfo = candidates.minBy(_.priority.getOrElse(Int.MaxValue))
+    db.readOnly { implicit session =>
+      val storedImageInfos = nUri.id flatMap { id =>
+        imageInfoRepo.getByUriWithPriority(id, minSize, targetProvider)
+      }
+      val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
           for {
             nUriId <- nUri.id
-            pageInfo <- db.readOnly { implicit session => pageInfoRepo.getByUri(nUriId) }
+            pageInfo <- pageInfoRepo.getByUri(nUriId)
           } yield {
             URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height)
           }
@@ -120,9 +118,9 @@ class URISummaryCommander @Inject()(
         else {
           Some(URISummary(imageUrl = getS3URL(imageInfo, nUri), imageWidth = imageInfo.width, imageHeight = imageInfo.height))
         }
-      } else None
+      }
+      storedSummaryOpt getOrElse URISummary()
     }
-    storedSummaryOpt getOrElse URISummary()
   }
 
   /**

@@ -74,9 +74,10 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
       case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
       case _ => invalidateCache(result)
     }
+
     if (changeListener.isDefined) session.onTransactionSuccess{
-     if(newItem) changeListener.get(RepoEntryAdded(result))
-     else changeListener.get(RepoEntryUpdated(result))
+       if(newItem) changeListener.get(RepoEntryAdded(result))
+       else changeListener.get(RepoEntryUpdated(result))
     }
     result
   } catch {
@@ -226,6 +227,8 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
     else if (lowerBound == upperBound) Seq()
     else (for(t <- rowsWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list
   }
+
+  protected def deferredSeqNum(): SequenceNumber[M] = SequenceNumber[M](clock.now.getMillis() - Long.MaxValue)
 
   def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int = {
     throw new UnsupportedOperationException("deferred sequence number assignment is not supported")

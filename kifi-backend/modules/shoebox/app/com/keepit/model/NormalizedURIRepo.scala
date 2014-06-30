@@ -113,8 +113,6 @@ extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunc
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =
     (for(f <- rows if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
-  private def deferredSeqNum(): SequenceNumber[NormalizedURI] = SequenceNumber[NormalizedURI](clock.now.getMillis() - Long.MaxValue)
-
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
     log.info(s"about to persist $uri")
 

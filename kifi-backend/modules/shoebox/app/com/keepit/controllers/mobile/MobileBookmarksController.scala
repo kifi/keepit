@@ -102,10 +102,10 @@ class MobileBookmarksController @Inject() (
     val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
     idsOpt map { ids =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-      val (deactivatedKeepInfos, errors) = bookmarksCommander.unkeepBatch(ids, request.userId).partition(_._2.isDefined)
+      val (successes, failures) = bookmarksCommander.unkeepBatch(ids, request.userId)
       Ok(Json.obj(
-        "removedKeeps" -> deactivatedKeepInfos.map(s => s._2.get),
-        "errors" -> errors.map(e => Json.obj("id" -> e._1, "error" -> "not_found"))
+        "removedKeeps" -> successes,
+        "errors" -> failures.map(id => Json.obj("id" -> id, "error" -> "not_found"))
       ))
     } getOrElse {
       BadRequest(Json.obj("error" -> "parse_error"))

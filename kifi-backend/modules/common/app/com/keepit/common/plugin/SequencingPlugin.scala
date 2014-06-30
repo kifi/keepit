@@ -24,9 +24,11 @@ trait SequencingPlugin extends SchedulerPlugin {
   // plugin lifecycle methods
   override def enabled: Boolean = true
 
+  val interval: FiniteDuration = 5 seconds
+
   override def onStart() {
     log.info(s"starting $name")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 5 seconds, actor.ref, SequencingPluginMessages.Process)
+    scheduleTaskOnLeader(actor.system, 30 seconds, interval, actor.ref, SequencingPluginMessages.Process)
     scheduleTaskOnAllMachines(actor.system, 100 seconds, 180 seconds, actor.ref, SequencingPluginMessages.SanityCheck)
   }
 
