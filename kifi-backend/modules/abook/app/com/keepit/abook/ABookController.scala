@@ -145,38 +145,6 @@ class ABookController @Inject() (
     Ok(res)
   }
 
-  // cache
-  def getMergedContactInfos(userId:Id[User], maxRows:Int) = Action { request =>
-    val res = {
-      val m = new mutable.HashMap[String, Set[String]]()
-      val iter = db.readOnly(attempts = 2) { implicit session =>
-        contactRepo.getByUserIdIter(userId, maxRows)
-      }
-      iter.foreach { c => // assume c.name exists (fix import)
-        val emails = Set(c.email) ++ {
-          c.altEmails.map { s =>
-            val js = Json.parse(s)
-            js.validate[Seq[String]].fold(
-              valid = (res => res.seq.toSet),
-              invalid = ( e => {
-                log.error(s"[getMergedContactInfos] cannot parse $s error: $e")
-                Set.empty[String]
-              })
-            )
-          }.getOrElse(Set.empty[String])
-        }
-        m.put(c.name.get, m.get(c.name.get).getOrElse(Set.empty[String]) ++ emails)
-      }
-      val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-      m.keysIterator.foreach { k =>
-        jsonBuilder += Json.obj("name" -> JsString(k), "emails" -> JsArray(m.get(k).getOrElse(Set.empty[String]).toSeq.map(JsString(_))))
-      }
-      val contacts = jsonBuilder.result
-      JsArray(contacts)
-    }
-    Ok(res)
-  }
-
   def getABookRawInfos(userId:Id[User]) = Action { request =>
     val rawInfos = abookCommander.getABookRawInfosDirect(userId)
     Ok(rawInfos)
