@@ -26,7 +26,7 @@ import scala.util.{Success, Failure}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance._
 import com.keepit.common.domain.DomainToNameMapper
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 
@@ -108,6 +108,19 @@ object KeepInfosWithCollection {
       .map(_.map[Either[ExternalId[Collection], String]](Right(_))) and
     (__ \ 'keeps).read[Seq[KeepInfo]]
   )(KeepInfosWithCollection.apply _)
+}
+
+
+case class KeepSet(
+  keeps: Option[Seq[ExternalId[Keep]]],
+  tags: Option[Seq[ExternalId[Collection]]],
+  exclude: Option[Seq[ExternalId[Keep]]])
+object KeepSet {
+  implicit val format =  (
+    (__ \ 'keeps).formatNullable[Seq[ExternalId[Keep]]] and
+    (__ \ 'tags).formatNullable[Seq[ExternalId[Collection]]] and
+    (__ \ 'exclude).formatNullable[Seq[ExternalId[Keep]]]
+    )(KeepSet.apply _, unlift(KeepSet.unapply))
 }
 
 class KeepsCommander @Inject() (
@@ -260,6 +273,41 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def getKeepsInSet(keepSet: KeepSet, userId: Id[User]): Seq[Keep] = {
+    val MAX_KEEPS_IN_COLLECTION = 1000
+    var incomplete = false
+    val (collectionKeeps, individualKeeps) = db.readOnly { implicit s =>
+      val collectionKeeps = keepSet.tags map { tagExtIds =>
+        val tags = tagExtIds map { collectionRepo.getByUserAndExternalId(userId, _) } flatten
+        val tagIds = tags map (_.id) flatten
+        val keepCountMap = collectionRepo.getBookmarkCounts(tagIds.toSet)
+        tagIds flatMap { tagId =>
+          keepCountMap.get(tagId) match {
+            case Some(count) => incomplete |= count <= MAX_KEEPS_IN_COLLECTION
+            case None => incomplete = true
+          }
+          keepRepo.getByUserAndCollection(userId, tagId, None, None, MAX_KEEPS_IN_COLLECTION)
+        }
+      } getOrElse Seq()
+      val individualKeeps = keepSet.keeps map { keepExtIds =>
+        keepExtIds flatMap { keepExtId =>
+          keepRepo.getByExtIdAndUser(keepExtId, userId)
+        }
+      } getOrElse Seq()
+      (collectionKeeps, individualKeeps)
+    }
+    if (incomplete) {
+      airbrake.notify(s"Maximum number of keeps in collection reached for user $userId and keepSet $keepSet")
+      return Seq()
+    }
+    // Get distinct keeps
+    val filter: (Keep => Boolean) = keepSet.exclude match {
+      case Some(excluded) => { keep => keep.id.nonEmpty && !excluded.contains(keep) }
+      case None => _.id.nonEmpty
+    }
+    (individualKeeps ++ collectionKeeps).filter(filter).groupBy(_.id.get).values.flatten.toSeq
+  }
+
   def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $keepJson")
     val rawBookmark = rawBookmarkFactory.toRawBookmark(keepJson)
@@ -322,38 +370,98 @@ class KeepsCommander @Inject() (
     deactivatedKeepInfos
   }
 
-  def unkeepBatch(ids: Seq[ExternalId[Keep]], userId: Id[User])(implicit context: HeimdalContext): Seq[(ExternalId[Keep], Option[KeepInfo])] = {
-    ids map { id =>
-      id -> unkeep(id, userId)
-    } // todo: optimize
+  def unkeepSet(keepSet: KeepSet, userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+    val keeps = db.readWrite { implicit s =>
+      val keeps = getKeepsInSet(keepSet, userId)
+      keeps.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
+    }
+    finalizeUnkeeping(keeps, userId)
+  }
+
+  def unkeepBatch(ids: Seq[ExternalId[Keep]], userId: Id[User])(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[ExternalId[Keep]]) = {
+    val (keeps, failures) = db.readWrite { implicit s =>
+      val keepMap = ids map { id =>
+        id -> keepRepo.getByExtIdAndUser(id, userId)
+      }
+      val (successes, failures) = keepMap.partition(_._2.nonEmpty)
+      val keeps = successes.map(_._2).flatten.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
+      (keeps, failures.map(_._1))
+    }
+    (finalizeUnkeeping(keeps, userId), failures)
   }
 
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
-    db.readWrite { implicit s =>
-      keepRepo.getByExtIdAndUser(extId, userId) map { keep =>
-        val saved = keepRepo.save(keep withActive false)
-        log.info(s"[unkeep($userId)] deactivated keep=$saved")
-        keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
-        saved
-      }
-    } map { saved =>
-      // TODO: broadcast over any open user channels
-      keptAnalytics.unkeptPages(userId, Seq(saved), context)
-      searchClient.updateURIGraph()
-      KeepInfo.fromBookmark(saved)
+    db.readWrite { implicit session =>
+      keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
+    } flatMap { keep =>
+      finalizeUnkeeping(Seq(keep), userId).headOption
     }
+  }
+
+  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+    // TODO: broadcast over any open user channels
+    keptAnalytics.unkeptPages(userId, keeps, context)
+    searchClient.updateURIGraph()
+    keeps map KeepInfo.fromBookmark
+  }
+
+  def rekeepSet(keepSet: KeepSet, userId: Id[User])(implicit context: HeimdalContext): Int = {
+    val keeps = db.readWrite { implicit s =>
+      val keeps = getKeepsInSet(keepSet, userId).filter(_.state != KeepStates.ACTIVE)
+      keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
+    }
+    keptAnalytics.rekeptPages(userId, keeps, context)
+    searchClient.updateURIGraph()
+    keeps.length
+  }
+
+  private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
+    val saved = keepRepo.save(keep withActive false)
+    log.info(s"[unkeep($userId)] deactivated keep=$saved")
+    keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+    saved
+  }
+
+  def setKeepSetPrivacy(keepSet: KeepSet, userId: Id[User], isPrivate: Boolean)(implicit context: HeimdalContext): Int = {
+    val (oldKeeps, newKeeps) = db.readWrite { implicit s =>
+      val keeps = getKeepsInSet(keepSet, userId)
+      val oldKeeps = keeps.filter(_.isPrivate != isPrivate)
+      val newKeeps = oldKeeps.map(updateKeepWithSession(_, Some(isPrivate), None))
+      (oldKeeps, newKeeps)
+    }
+    (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => keptAnalytics.updatedKeep(oldKeep, newKeep, context) }
+    searchClient.updateURIGraph()
+    newKeeps.length
   }
 
   def updateKeep(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext): Option[Keep] = {
     val shouldBeUpdated = (isPrivate.isDefined && keep.isPrivate != isPrivate.get) || (title.isDefined && keep.title != title)
     if (shouldBeUpdated) Some {
-      val updatedPrivacy = isPrivate getOrElse keep.isPrivate
-      val updatedTitle = title orElse keep.title
-      val updatedKeep = db.readWrite { implicit s => keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle)) }
+      val updatedKeep = db.readWrite { implicit s => updateKeepWithSession(keep, isPrivate, title) }
       searchClient.updateURIGraph()
       keptAnalytics.updatedKeep(keep, updatedKeep, context)
       updatedKeep
     } else None
+  }
+
+  private def updateKeepWithSession(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext, session: RWSession): Keep = {
+    val updatedPrivacy = isPrivate getOrElse keep.isPrivate
+    val updatedTitle = title orElse keep.title
+    keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle))
+  }
+
+  def editKeepSetTag(collectionId: ExternalId[Collection], keepSet: KeepSet, userId: Id[User], isAdd: Boolean)
+                    (implicit context: HeimdalContext): Int = {
+    db.readOnly { implicit s =>
+      collectionRepo.getByUserAndExternalId(userId, collectionId) map { collection =>
+        val keeps = getKeepsInSet(keepSet, userId)
+        (keeps, collection)
+      }
+    } map { case (keeps, collection) =>
+        assert(collection.id.nonEmpty, s"Collection id is undefined: $collection")
+        if (isAdd) addToCollection(collection.id.get, keeps) else removeFromCollection(collection, keeps)
+        keeps.length
+    } getOrElse 0
   }
 
   def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
