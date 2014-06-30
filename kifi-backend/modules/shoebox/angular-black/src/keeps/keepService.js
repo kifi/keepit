@@ -167,6 +167,7 @@ angular.module('kifi.keepService', [
           'action': 'keep',
           'path': $location.path()
         });
+        tagService.addToKeepCount(res.data.keeps.length);
         prependKeeps(keeps);
         return res.data;
       });
@@ -541,6 +542,7 @@ angular.module('kifi.keepService', [
               api.keep(keeps);
             });
           }
+          tagService.addToKeepCount(-1 * keeps.length);
 
           $analytics.eventTrack('user_clicked_page', {
             'action': 'unkeep',
