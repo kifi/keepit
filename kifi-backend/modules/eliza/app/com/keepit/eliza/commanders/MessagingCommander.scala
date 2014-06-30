@@ -8,7 +8,7 @@ import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{BasicContact}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -186,8 +186,8 @@ class MessagingCommander @Inject() (
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
     val pimpedParticipants = nonUsers.map { emailContact =>
       abookServiceClient.internContact(userId, emailContact).map {
-        case Success(eContact) => NonUserEmailParticipant(eContact.email, eContact.id)
-        case Failure(_) => NonUserEmailParticipant(emailContact.email, None)
+        case Success(eContact) => NonUserEmailParticipant(eContact.email) // todo(Léo) we may want to get a name here, otherwise don't really need to wait for this call
+        case Failure(_) => NonUserEmailParticipant(emailContact.email)
       }
     }
     Future.sequence(pimpedParticipants)
@@ -633,13 +633,13 @@ class MessagingCommander @Inject() (
     resFut.flatten
   }
 
-  def validateUsers(rawUsers: JsValue): JsResult[Seq[ExternalId[User]]] = rawUsers.validate[Seq[ExternalId[User]]]
-  def validateEmailContacts(rawNonUsers: JsValue): JsResult[Seq[BasicContact]] = rawNonUsers.validate[Seq[JsObject]].map { rawNonUsers =>
-    rawNonUsers.collect { case obj if (obj \ "kind").asOpt[String] == Some("email") => (obj \ "email").as[BasicContact] }
-  }
-  def validateRecipients(rawRecipients: Seq[JsValue]): (JsResult[Seq[ExternalId[User]]], JsResult[Seq[BasicContact]]) = {
+  def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]] = rawUsers.map(_.validate[ExternalId[User]])
+  def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]] = rawNonUsers.map(_.validate[JsObject].map {
+    case obj if (obj \ "kind").as[String] == "email" => (obj \ "email").as[BasicContact]
+  })
+  def validateRecipients(rawRecipients: Seq[JsValue]): (Seq[JsResult[ExternalId[User]]], Seq[JsResult[BasicContact]]) = {
     val (rawUsers, rawNonUsers) = rawRecipients.partition(_.asOpt[JsString].isDefined)
-    (validateUsers(JsArray(rawUsers)), validateEmailContacts(JsArray(rawNonUsers)))
+    (validateUsers(rawUsers), validateEmailContacts(rawNonUsers))
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {

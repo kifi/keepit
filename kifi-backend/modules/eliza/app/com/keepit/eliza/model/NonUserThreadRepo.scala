@@ -18,8 +18,6 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getThreadsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[MessageThread]]
 
-  def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]]
-
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread]
 
   def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread]
@@ -57,7 +55,6 @@ class NonUserThreadRepoImpl @Inject() (
     def createdBy = column[Id[User]]("created_by", O.NotNull)
     def kind = column[NonUserKind]("kind", O.NotNull)
     def emailAddress = column[EmailAddress]("email_address", O.Nullable)
-    def econtactId = column[Id[EContact]]("econtact_id", O.Nullable)
     def threadId = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
     def notifiedCount = column[Int]("notified_count", O.NotNull)
@@ -66,22 +63,22 @@ class NonUserThreadRepoImpl @Inject() (
     def muted = column[Boolean]("muted", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress.?, econtactId.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedByOtherAt.?, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
+    def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress.?, threadId, uriId.?, notifiedCount, lastNotifiedAt.?, threadUpdatedByOtherAt.?, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
 
-    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddress], Option[Id[EContact]], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
+    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddress], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
       val participant = t._5 match {
         case NonUserKinds.email =>
-          NonUserEmailParticipant(t._6.get, t._7)
+          NonUserEmailParticipant(t._6.get)
       }
-      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, threadId = t._8, uriId = t._9, notifiedCount = t._10, lastNotifiedAt = t._11, threadUpdatedByOtherAt = t._12, muted = t._13, state = t._14, accessToken = t._15)
+      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, threadId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedByOtherAt = t._11, muted = t._12, state = t._13, accessToken = t._14)
     }
 
     private def objToRow(n: NonUserThread) = {
-      val (kind, emailAddress, econtactId) = n.participant match {
+      val (kind, emailAddress) = n.participant match {
         case ep: NonUserEmailParticipant =>
-          (ep.kind, Option(ep.address), ep.econtactId)
+          (ep.kind, Option(ep.address))
       }
-      Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, econtactId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedByOtherAt, n.muted, n.state, n.accessToken))
+      Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedByOtherAt, n.muted, n.state, n.accessToken))
     }
   }
   def table(tag: Tag) = new NonUserThreadTable(tag)
@@ -92,9 +89,6 @@ class NonUserThreadRepoImpl @Inject() (
 
   def getThreadsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[MessageThread]] =
     (for (row <- rows if row.emailAddress === emailAddress) yield row.threadId).list
-
-  def getThreadsByEContactId(econtactId: Id[EContact])(implicit session: RSession): Seq[Id[MessageThread]] =
-    (for (row <- rows if row.econtactId === econtactId) yield row.threadId).list
 
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread] =
     (for (row <- rows if row.lastNotifiedAt.isNull || (row.lastNotifiedAt < lastNotifiedBefore && row.threadUpdatedByOtherAt > threadUpdatedByOtherAfter && row.lastNotifiedAt < row.threadUpdatedByOtherAt && !row.muted)) yield row).list

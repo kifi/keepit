@@ -61,7 +61,7 @@ case class ElectronicMail (
     throw new IllegalArgumentException(s"email subject length is ${subject.length} (more then 1024 chars): $subject")
   }
 
-  if (!SystemEmailAddress.validate(from)) {
+  if (!SystemEmailAddress.isValid(from)) {
     throw new IllegalArgumentException(s"$from is not a system email.")
   }
 

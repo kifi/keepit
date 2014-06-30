@@ -25,7 +25,7 @@ import com.keepit.common.queue.RichConnectionUpdateMessage
 import java.text.Normalizer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.commanders.LocalRichConnectionCommander
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{BasicContact, EmailAddress}
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)
@@ -382,4 +382,8 @@ class ABookController @Inject() (
     Ok("")
   }
 
+  def validateAllContacts(readOnly: Boolean) = Action { request =>
+    SafeFuture { abookCommander.validateAllContacts(readOnly) }
+    Ok
+  }
 }

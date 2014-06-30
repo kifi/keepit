@@ -9,8 +9,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.EmailAddress
-import com.keepit.model.BasicContact
+import com.keepit.common.mail.{BasicContact}
 
 class ExtInviteController @Inject() (
   actionAuthenticator: ActionAuthenticator,

@@ -1,22 +1,24 @@
 package com.keepit.abook
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import scala.slick.util.CloseableIterator
-import com.keepit.common.db.slick._
-import com.keepit.model._
-import com.keepit.common.performance._
+import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import scala.slick.jdbc.{StaticQuery => Q, StaticQuery0}
-import Q.interpolation
-import com.keepit.common.time._
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{BasicContact, EmailAddress}
+import com.keepit.common.performance._
+import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
+
 import play.api.Play.current
 import play.api.Play
-import scala.util.{Success, Try, Failure}
-import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
-import com.keepit.common.mail.{EmailAddress, ParsedEmailAddress}
 
+import scala.slick.jdbc.{StaticQuery => Q, StaticQuery0}
+import Q.interpolation
+import scala.slick.util.CloseableIterator
+import scala.util.{Success, Try, Failure}
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {

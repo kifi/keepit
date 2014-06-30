@@ -53,30 +53,28 @@ class MobileMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]]) match {
+    val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
 
-      case (JsSuccess(userExtRecipients, _), JsSuccess(nonUserRecipients, _)) => {
-        val url = (o \ "url").asOpt[String]
-        val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
+    val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
+    val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
 
-        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-        contextBuilder += ("source", "mobile")
+    val url = (o \ "url").asOpt[String]
+    val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
-        val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-            userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
-          Ok(Json.obj(
-            "id" -> message.externalId.id,
-            "parentId" -> message.threadExtId.id,
-            "createdAt" -> message.createdAt,
-            "threadInfo" -> threadInfoOpt,
-            "messages" -> messages.reverse))
-        }
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    contextBuilder += ("source", "mobile")
 
-        messageSubmitResponse
-      }
-
-      case _ => Future.successful(BadRequest("0")) // todo(Martin, Léo): graceful error handling
+    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
+      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
+      Ok(Json.obj(
+        "id" -> message.externalId.id,
+        "parentId" -> message.threadExtId.id,
+        "createdAt" -> message.createdAt,
+        "threadInfo" -> threadInfoOpt,
+        "messages" -> messages.reverse))
     }
+
+    messageSubmitResponse // todo(JP, Eduardo, Léo): return meaningful error about invalid participants
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>

@@ -53,7 +53,7 @@ object FullSocialId {
     val network = SocialNetworkType(networkName)
     val (identifier, name) = network match {
       case SocialNetworks.EMAIL => {
-        val contact = BasicContact.fromString(idString)
+        val contact = BasicContact.fromString(idString).get
         (Right(contact.email), contact.name)
       }
       case _ => (Left(SocialId(idString)), None)
