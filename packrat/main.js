@@ -225,9 +225,12 @@ var mixpanel = {
     }
   },
   augmentAndBatch: function (data) {
+    var exp = experiments || [];
     data.properties.token = api.isPackaged() && !api.mode.isDev() ? 'cff752ff16ee39eda30ae01bb6fa3bd6' : 'abb7e1226370392c849ec16fadff2584';
     data.properties.distinct_id = me.id;
     data.properties.source = 'extension';
+    data.properties.experiments = exp;
+    data.properties.userStatus = ~exp.indexOf('fake') ? 'fake' : ~exp.indexOf('admin') ? 'admin' : 'standard';
     data.properties.browser = api.browser.name;
     data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
