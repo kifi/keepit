@@ -7,7 +7,7 @@ import com.keepit.model._
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.abook.store.ABookRawInfoStore
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.db.slick.Database
 import play.api.{Play, Plugin}
@@ -25,7 +25,7 @@ import com.keepit.common.performance._
 import scala.util.{Try, Failure, Success}
 import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.{EmailAddress, EmailAddressParser}
+import com.keepit.common.mail.{EmailAddress}
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -81,7 +81,7 @@ class ContactsUpdater @Inject() (
     def trimOpt = o collect { case s:String if (s!= null && !s.trim.isEmpty) => s }
   }
 
-  private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String], email:String) = name orElse (
+  private def mkName(name:Option[String], firstName:Option[String], lastName:Option[String]) = name orElse (
     (firstName, lastName) match {
       case (Some(f), Some(l)) => Some(s"$f $l")
       case (Some(f), None) => Some(f)
@@ -90,19 +90,11 @@ class ContactsUpdater @Inject() (
     }
     )
 
-  private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo) = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
+  private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo): mutable.Set[EmailAddress] = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
     val existingContacts = db.readOnly(attempts = 2) { implicit s =>
         econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
     }
-    val existingEmailSet = new mutable.TreeSet[String] // todo: use parsed email
-    for (e <- existingContacts) {
-      EmailAddressParser.parseOpt(e.email.address) match { // handle 'dirty' data
-        case Some(addr) =>
-          existingEmailSet += addr.toString
-        case None =>
-          log.warn(s"[upload($userId, $origin, ${abookInfo.id})] cannot parse existing email ${e.email} for contact ${e}") // move along
-      }
-    }
+    val existingEmailSet = new mutable.HashSet[EmailAddress] ++ existingContacts.map(_.email)
     log.info(s"[upload($userId, $origin, ${abookInfo.id})] existing contacts(sz=${existingEmailSet.size}): ${existingEmailSet.mkString(",")}")
     existingEmailSet
   }
@@ -142,33 +134,28 @@ class ContactsUpdater @Inject() (
             g.foreach { contact =>
               val fName = (contact \ "firstName").asOpt[String] trimOpt
               val lName = (contact \ "lastName").asOpt[String] trimOpt
-              val emails = (contact \ "emails").validate[Seq[String]].fold(
-                valid = ( res => res),
-                invalid = ( e => {
-                  log.warn(s"[upload($userId,$origin)] Cannot parse $e")
-                  Seq.empty[String]
-                })
-              )
+              val emails = (contact \ "emails").asOpt[Seq[JsValue]].getOrElse(Seq.empty[JsValue]).foldLeft(Seq[EmailAddress]()) { case (validEmails, nextValue) =>
+                nextValue.validate[EmailAddress] match {
+                  case JsSuccess(validEmail, _) => validEmails :+ validEmail
+                  case JsError(errors) =>
+                    log.warn(s"[upload($userId,$origin)] Json parsing errors: $errors")
+                    validEmails
+                }
+              }
+
               emails.foreach { email =>
-                EmailAddressParser.parseOpt(email) match {
-                  case Some(addr) =>
-                    if (addr.host.domain.length <= 1) {
-                      log.warnP(s"$email domain=${addr.host.domain} not supported; discarded")
-                    } else if (existingEmails.contains(addr.toString)) {
-                      log.infoP(s"DUP $email; discarded")
-                    } else {
-                      val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
-                      val e = EContact(userId = userId, email = addr, name = nameOpt, firstName = fName, lastName = lName)
-                      existingEmails += addr.toString
-                      econtactsToAddBuilder += e
-                    }
-                  case None =>
-                    log.warnP(s"cannot parse $email; discarded") // todo: revisit
+                if (existingEmails.contains(email)) {
+                  log.infoP(s"DUP $email; discarded")
+                } else {
+                  val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName)
+                  val e = EContact(userId = userId, email = email, name = nameOpt, firstName = fName, lastName = lName)
+                  existingEmails += email
+                  econtactsToAddBuilder += e
                 }
               }
 
               for (email <- emails.headOption) {
-                val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName, email)
+                val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName)
                 val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, nameOpt, fName, lName, None)
                 log.debugP(s"$c")
                 cBuilder += c

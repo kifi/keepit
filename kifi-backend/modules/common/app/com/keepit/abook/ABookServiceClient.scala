@@ -24,13 +24,8 @@ import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{Success, Failure, Try}
 import play.api.http.Status
-import play.api.libs.json.JsArray
-import scala.util.Failure
-import scala.Some
-import com.keepit.common.net.HttpClientImpl
-import scala.util.Success
 import com.keepit.abook.model.RichSocialConnection
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{EmailAddress, BasicContact}
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -66,7 +61,7 @@ trait ABookServiceClient extends ServiceClient {
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
-  def validateAllContacts(readOnly: Boolean = true): Unit
+  def validateAllContacts(readOnly: Boolean): Unit
 }
 
 
@@ -280,7 +275,7 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getRipestFruits(userId, page, pageSize)).map(_.json.as[Seq[RichSocialConnection]])
   }
 
-  def validateAllContacts(readOnly: Boolean = true): Unit = {
+  def validateAllContacts(readOnly: Boolean): Unit = {
     call(ABook.internal.validateAllContacts(readOnly))
   }
 

@@ -841,7 +841,7 @@ class AdminUserController @Inject() (
     Ok(JsString(inactiveEmail.toString))
   }
 
-  def validateAllContacts(readOnly: Boolean = true) = AdminJsonAction.authenticated { request =>
+  def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticated { request =>
     abookClient.validateAllContacts(readOnly)
     Ok("Check your emails!")
   }

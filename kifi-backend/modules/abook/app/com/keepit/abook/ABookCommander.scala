@@ -24,7 +24,8 @@ import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactABookTypeahead
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress}
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class ABookCommander @Inject() (
   db:Database,
@@ -34,7 +35,8 @@ class ABookCommander @Inject() (
   abookInfoRepo:ABookInfoRepo,
   contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
-  contactsUpdater:ContactsUpdaterPlugin
+  contactsUpdater:ContactsUpdaterPlugin,
+  shoebox: ShoeboxServiceClient
 ) extends Logging {
 
   def toS3Key(userId:Id[User], origin:ABookOriginType, abookOwnerInfo:Option[ABookOwnerInfo]):String = {
@@ -291,4 +293,44 @@ class ABookCommander @Inject() (
     eContacts
   }
 
+  def validateAllContacts(readOnly: Boolean): Unit = {
+    log.info("[EContact Validation] Starting validation of all EContacts.")
+    val invalidContacts = mutable.Map[Id[EContact], String]()
+    val fixableContacts = mutable.Map[Id[EContact], String]()
+    val pageSize = 1000
+    var lastPageSize = -1
+    var nextPage = 0
+
+    do {
+      db.readWrite { implicit session =>
+        val batch = econtactRepo.page(nextPage, pageSize, Set.empty)
+        batch.foreach { contact =>
+          EmailAddress.validate(contact.email.address) match {
+            case Failure(invalidEmail) => {
+              log.error(s"[EContact Validation] Found invalid email contact: ${contact.email}")
+              invalidContacts += (contact.id.get -> contact.email.address)
+              if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
+            }
+            case Success(validEmail) => {
+              if (validEmail != contact.email) {
+                log.warn(s"[EContact Validation] Found fixable email contact: ${contact.email}")
+                fixableContacts += (contact.id.get -> contact.email.address)
+                if (!readOnly) { econtactRepo.save(contact.copy(email = validEmail)) }
+              }
+            }
+          }
+        }
+        lastPageSize = batch.length
+        nextPage += 1
+      }
+    } while (lastPageSize == pageSize)
+
+    log.info("[EContact Validation] Done with EContact validation.")
+
+    val title = s"Email Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidContacts.size}. Fixable Contacts: ${fixableContacts.size}"
+    val msg = s"Invalid Contacts: \n\n ${invalidContacts.mkString("\n")} \n\n Fixable Contacts: \n\n ${fixableContacts.mkString("\n")}"
+    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+      subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN
+    ))
+  }
 }
