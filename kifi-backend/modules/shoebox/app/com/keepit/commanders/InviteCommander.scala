@@ -177,7 +177,7 @@ class InviteCommander @Inject() (
                 emailInvite.senderUserId.foreach { senderId =>
                   session.onTransactionSuccess { shoeboxRichConnectionCommander.processUpdate(CancelInvitation(senderId, None, Some(invitedEmailAddress))) }
                 }
-                val fortyTwoInvite = invitationRepo.save(emailInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id, recipientEContactId = None, recipientEmailAddress = None))
+                val fortyTwoInvite = invitationRepo.save(emailInvite.copy(recipientSocialUserId = fortyTwoSocialAccount.id, recipientEmailAddress = None))
                 fortyTwoInvite -> SocialNetworks.EMAIL
               }
             }
@@ -432,14 +432,13 @@ class InviteCommander @Inject() (
     val existingInvitation = db.readOnly() { implicit session =>
       inviteInfo.friend match {
         case Left(friendSocialUserInfo) => invitationRepo.getBySenderIdAndRecipientSocialUserId(inviteInfo.userId, friendSocialUserInfo.id.get)
-        case Right(friendEContact) => invitationRepo.getBySenderIdAndRecipientEContactId(inviteInfo.userId, friendEContact.id.get)
+        case Right(friendEContact) => invitationRepo.getBySenderIdAndRecipientEmailAddress(inviteInfo.userId, friendEContact.email)
       }
     }
 
     existingInvitation getOrElse Invitation(
       senderUserId = Some(inviteInfo.userId),
       recipientSocialUserId = inviteInfo.friend.left.toOption.map(_.id.get),
-      recipientEContactId = inviteInfo.friend.right.toOption.map(_.id.get),
       recipientEmailAddress = inviteInfo.friend.right.toOption.map(_.email),
       state = InvitationStates.INACTIVE
     )
@@ -460,7 +459,7 @@ class InviteCommander @Inject() (
     contextBuilder += ("inviteId", invite.externalId.id)
     contextBuilder += ("invitationNumber", inviteInfo.invitationNumber)
     contextBuilder += ("source", inviteInfo.source)
-    invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
+    invite.recipientEmailAddress.foreach { emailAddress => contextBuilder += ("recipientEmailAddress", emailAddress.toString) }
     invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
     heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
   }
@@ -475,7 +474,7 @@ class InviteCommander @Inject() (
         val contextBuilder = new HeimdalContextBuilder
         contextBuilder += ("socialNetwork", invitedVia.toString)
         contextBuilder += ("inviteId", invite.externalId.id)
-        invite.recipientEContactId.foreach { eContactId => contextBuilder += ("recipientEContactId", eContactId.toString) }
+        invite.recipientEmailAddress.foreach { emailAddress => contextBuilder += ("recipientEmailAddress", emailAddress.toString) }
         invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
 
         if (actuallyAccepted) {

@@ -15,7 +15,6 @@ case class Invitation(
   externalId: ExternalId[Invitation] = ExternalId(),
   senderUserId: Option[Id[User]],
   recipientSocialUserId: Option[Id[SocialUserInfo]],
-  recipientEContactId: Option[Id[EContact]] = None,
   recipientEmailAddress: Option[EmailAddress] = None,
   state: State[Invitation] = InvitationStates.ACTIVE,
   seq: SequenceNumber[Invitation] = SequenceNumber.ZERO
@@ -44,7 +43,6 @@ object Invitation {
       (__ \ 'externalId).format(ExternalId.format[Invitation]) and
       (__ \ 'sendUserId).formatNullable(Id.format[User]) and
       (__ \ 'recipientSocialUserId).formatNullable(Id.format[SocialUserInfo]) and
-      (__ \ 'recipientEContactId).formatNullable(Id.format[EContact]) and
       (__ \ 'recipientEmailAddress).formatNullable[EmailAddress] and
       (__ \ 'state).format(State.format[Invitation]) and
       (__ \ 'seq).format(SequenceNumber.format[Invitation])

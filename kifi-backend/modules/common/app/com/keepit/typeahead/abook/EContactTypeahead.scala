@@ -16,7 +16,6 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.EmailAddressParser
 import play.api.Play
 import org.joda.time.{Minutes, Seconds}
 import scala.collection.mutable.ArrayBuffer
@@ -25,33 +24,27 @@ abstract class EContactTypeaheadBase(
   override val airbrake:AirbrakeNotifier,
   cache: EContactTypeaheadCache,
   store: EContactTypeaheadStore
-)extends Typeahead[EContact, EContact] with Logging {
+) extends Typeahead[EContact, EContact] with Logging {
 
   val MYSQL_MAX_ROWS = 50000000
 
-  override protected def extractName(info: EContact):String = {
-  val name = info.name.getOrElse("").trim
-    EmailAddressParser.parseOpt(info.email.address) match {
-      case Some(addr) =>
-        s"$name ${addr.toStrictString}"
-      case None =>
-        airbrake.notify(s"[EContactTypeahead.extractName($info)] Failed to parse email ${info.email}")
-        val addr = info.email.address.trim
-        s"$name $addr"
-    }
+  override protected def extractName(info: EContact): String = {
+    val name = info.name.getOrElse("").trim
+    s"$name ${info.email.address}"
   }
 
-  override protected def extractId(info: EContact):Id[EContact] = info.id.get
+  override protected def extractId(info: EContact): Id[EContact] = info.id.get
 
-  override protected def getAllInfosForUser(id: Id[User]):Seq[EContact] = {
+  override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {
     Await.result(asyncGetAllInfosForUser(id), Duration.Inf)
+      .filter(EContactTypeaheadBase.isLikelyHuman)
   }
 
-  override protected def getInfos(ids: Seq[Id[EContact]]):Seq[EContact] = {
+  override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = {
     Await.result(asyncGetInfos(ids), Duration.Inf)
   }
 
-  def refresh(userId:Id[User]):Future[PrefixFilter[EContact]] = {
+  def refresh(userId: Id[User]): Future[PrefixFilter[EContact]] = {
     build(userId).map { filter =>
       cache.set(EContactTypeaheadKey(userId), filter.data)
       store += (userId -> filter.data)
@@ -78,6 +71,16 @@ abstract class EContactTypeaheadBase(
 
 }
 
+object EContactTypeaheadBase {
+  // might also consider these indicators in the future:
+  // support feedback comment notification tickets? bugs? buganizer system nobody lists? announce(ments?)?
+  // discuss help careers jobs reports? bounces? updates?
+  val botEmailAddressRe = """(?:\+[^@]|\d{10}|\b(?i)(?:(?:no)?reply|(?:un)?subscribe)\b)""".r
+  protected[abook] def isLikelyHuman(contact: EContact): Boolean = {
+    botEmailAddressRe.findFirstIn(contact.email.address).isEmpty
+  }
+}
+
 // "Remote"; uses abookServiceClient
 class EContactTypeahead @Inject() (
   override val airbrake:AirbrakeNotifier,
@@ -85,7 +88,7 @@ class EContactTypeahead @Inject() (
   store: EContactTypeaheadStore,
   econtactCache: EContactCache,
   abookClient:ABookServiceClient
-)extends EContactTypeaheadBase(airbrake, cache, store) {
+) extends EContactTypeaheadBase(airbrake, cache, store) {
 
   override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, MYSQL_MAX_ROWS) // MySQL limit
 
