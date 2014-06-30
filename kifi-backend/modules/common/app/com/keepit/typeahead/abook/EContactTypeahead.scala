@@ -72,7 +72,10 @@ abstract class EContactTypeaheadBase(
 }
 
 object EContactTypeaheadBase {
-  val botEmailAddressRe = """\b(?:\+|(?:no)?reply|(?:un)?subscribe)\b""".r
+  // might also consider these indicators in the future:
+  // support feedback comment notification tickets? bugs? buganizer system nobody lists? announce(ments?)?
+  // discuss help careers jobs reports? bounces? updates?
+  val botEmailAddressRe = """(?:\+[^@]|\d{10}|\b(?i)(?:(?:no)?reply|(?:un)?subscribe)\b)""".r
   protected[abook] def isLikelyHuman(contact: EContact): Boolean = {
     botEmailAddressRe.findFirstIn(contact.email.address).isEmpty
   }
