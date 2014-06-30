@@ -142,12 +142,13 @@ class InviteController @Inject() (db: Database,
           if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
             resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id)))
           } else {
-            val nameOpt = (invite.recipientSocialUserId, invite.recipientEContactId) match {
+            val senderUserId = invite.senderUserId.get
+            val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
               case (Some(socialUserId), _) =>
                 val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
                 Promise.successful(Option(name)).future
-              case (_, Some(eContactId)) =>
-                abookServiceClient.getEContactById(eContactId).map { cOpt => cOpt.map(_.name.getOrElse("")) }
+              case (_, Some(emailAddress)) =>
+                abookServiceClient.getEContactByEmail(senderUserId, emailAddress).map { cOpt => cOpt.map(_.name.getOrElse("")) }
               case _ =>
                 Promise.successful(None).future
             }

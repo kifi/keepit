@@ -78,9 +78,9 @@ class TypeaheadCommander @Inject()(
       val allEmailInvites = db.readOnly { implicit ro =>
         invitationRepo.getEmailInvitesBySenderId(userId)
       }
-      val invitesMap = allEmailInvites.map{ inv => inv.recipientEContactId.get -> inv }.toMap // overhead
+      val invitesMap = allEmailInvites.map{ inv => inv.recipientEmailAddress.get -> inv }.toMap // overhead
       contacts map { c =>
-        val invited = invitesMap.get(c.id.get) map { _.state != InvitationStates.INACTIVE } getOrElse false
+        val invited = invitesMap.get(c.email) map { _.state != InvitationStates.INACTIVE } getOrElse false
         (c, invited)
       }
     }
@@ -317,7 +317,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def joinWithInviteStatus(userId:Id[User], top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[Id[EContact], Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
+  private def joinWithInviteStatus(userId:Id[User], top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[EmailAddress, Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
     val frMap = if (top.exists(t => t._1 == SocialNetworks.FORTYTWO_NF)) db.readOnly { implicit ro =>
       friendRequestRepo.getBySender(userId).map{ fr => fr.recipientId -> fr }.toMap
     } else Map.empty[Id[User], FriendRequest]
@@ -327,7 +327,7 @@ class TypeaheadCommander @Inject()(
         snType match {
           case SocialNetworks.EMAIL =>
             val e = hit.info.asInstanceOf[EContact]
-            val (status, lastSentAt) = emailInvitesMap.get(e.id.get) map { inv => inviteStatus(inv) } getOrElse ("", None)
+            val (status, lastSentAt) = emailInvitesMap.get(e.email) map { inv => inviteStatus(inv) } getOrElse ("", None)
             ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
           case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN =>
             val sci = hit.info.asInstanceOf[SocialUserBasicInfo]
@@ -372,7 +372,7 @@ class TypeaheadCommander @Inject()(
               emailInvites  <- emailInvitesF
             } yield {
               val socialInvitesMap = socialInvites.map{ inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
-              val emailInvitesMap  = emailInvites.map{ inv => inv.recipientEContactId.get -> inv }.toMap
+              val emailInvitesMap  = emailInvites.map{ inv => inv.recipientEmailAddress.get -> inv }.toMap
               val resWithStatus = joinWithInviteStatus(userId, top, emailInvitesMap, socialInvitesMap, pictureUrl)
               val res = limit.map{ n =>
                 resWithStatus.take(n)

@@ -395,19 +395,17 @@ class UserCommander @Inject() (
 
   def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email: EmailAddress) = s"email/${email.address}"
-    @inline def getEInviteStatus(contactIdOpt:Option[Id[EContact]]):String = { // todo: batch
-      contactIdOpt flatMap { contactId =>
-        db.readOnly { implicit s =>
-          invitationRepo.getBySenderIdAndRecipientEContactId(userId, contactId) map { inv =>
-            if (inv.state != InvitationStates.INACTIVE) "invited" else ""
-          }
+    @inline def getEInviteStatus(contactEmail: EmailAddress): String = { // todo: batch
+      db.readOnly { implicit s =>
+        invitationRepo.getBySenderIdAndRecipientEmailAddress(userId, contactEmail) map { inv =>
+          if (inv.state != InvitationStates.INACTIVE) "invited" else ""
         }
       } getOrElse ""
     }
 
     abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
       val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.id))
+        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.email))
       }
       log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
       objs
