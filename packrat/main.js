@@ -225,9 +225,12 @@ var mixpanel = {
     }
   },
   augmentAndBatch: function (data) {
+    var exp = experiments || [];
     data.properties.token = api.isPackaged() && !api.mode.isDev() ? 'cff752ff16ee39eda30ae01bb6fa3bd6' : 'abb7e1226370392c849ec16fadff2584';
     data.properties.distinct_id = me.id;
     data.properties.source = 'extension';
+    data.properties.experiments = exp;
+    data.properties.userStatus = ~exp.indexOf('fake') ? 'fake' : ~exp.indexOf('admin') ? 'admin' : 'standard';
     data.properties.browser = api.browser.name;
     data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
@@ -843,6 +846,7 @@ api.port.on({
     discardDraft([tab.nUri, tab.url]);
     data.extVersion = api.version;
     data.source = api.browser.name;
+    data.eip = eip;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
@@ -856,6 +860,7 @@ api.port.on({
     discardDraft([threadId]);
     data.extVersion = api.version;
     data.source = api.browser.name;
+    data.eip = eip;
     ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
       log('[send_reply] resp:', o);
