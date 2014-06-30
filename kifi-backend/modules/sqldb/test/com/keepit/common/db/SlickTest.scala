@@ -109,16 +109,6 @@ class SlickTest extends Specification with DbTestInjector {
           a.head === "A"
         }
 
-        inject[Database].readOnly{ implicit session =>
-          val a = repo.getByNameSqlInterpulationSqlInjection("A';drop table foo;select * from foo where name ='")
-          a.size === 1
-          a.head === "A"
-        }
-
-        inject[Database].readOnly{ implicit session =>
-          repo.getByName("A") == 1 throwA classOf[JdbcSQLException]
-        }
-
         inject[Database].readOnly(Database.Master){ implicit session =>
           repo.count(session) === 2
         }
@@ -130,6 +120,11 @@ class SlickTest extends Specification with DbTestInjector {
         inject[Database].readOnly{ implicit session =>
           repo.count(session) === 2
         }(Database.Slave, Location.capture)
+
+        inject[Database].readOnly{ implicit session =>
+          repo.getByNameSqlInterpulationSqlInjection("A';drop table foo;select * from foo where name ='") must throwA[JdbcSQLException]
+        }
+
       }
     }
 
