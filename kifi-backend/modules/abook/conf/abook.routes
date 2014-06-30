@@ -17,7 +17,6 @@ GET      /internal/abook/:userId/getEContactCount               @com.keepit.aboo
 GET      /internal/abook/getEContactById                        @com.keepit.abook.ABookController.getEContactById(contactId:Id[EContact])
 POST     /internal/abook/getEContactsByIds                      @com.keepit.abook.ABookController.getEContactsByIds()
 GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email: EmailAddress)
-GET      /internal/abook/:userId/getSimpleContactInfos          @com.keepit.abook.ABookController.getSimpleContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
 POST     /internal/abook/:userId/internContact                  @com.keepit.abook.ABookController.internContact(userId:Id[User])
 
