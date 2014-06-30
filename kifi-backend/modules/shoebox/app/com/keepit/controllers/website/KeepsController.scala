@@ -215,7 +215,7 @@ class KeepsController @Inject() (
         "removedKeeps" -> deactivatedKeepInfos
       ))
     } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep set from request body"))
+      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
     }
   }
 
@@ -225,7 +225,7 @@ class KeepsController @Inject() (
       val numRekept = bookmarksCommander.rekeepBulk(keepSet, request.userId)
       Ok(Json.obj("numRekept" -> numRekept))
     } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep set from request body"))
+      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
     }
   }
 
@@ -243,7 +243,7 @@ class KeepsController @Inject() (
       val numUpdated = bookmarksCommander.setKeepPrivacyBulk(keepSet, request.userId, isPrivate)
       Ok(Json.obj("numUpdated" -> numUpdated))
     } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON keep set from request body"))
+      BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
     }
   }
 
@@ -252,8 +252,6 @@ class KeepsController @Inject() (
   def untagKeepBulk() = JsonAction.authenticatedParseJson(editKeepTagBulk(_, false))
 
   private def editKeepTagBulk(request: AuthenticatedRequest[JsValue], isAdd: Boolean) = {
-    val collectionId = (request.body \ "collectionId").asOpt[ExternalId[Collection]]
-    val keepSet = (request.body \ "keeps").asOpt[BulkKeepSelection]
     val res = for {
       collectionId <- (request.body \ "collectionId").asOpt[ExternalId[Collection]]
       keepSet <- (request.body \ "keeps").asOpt[BulkKeepSelection]
@@ -262,7 +260,7 @@ class KeepsController @Inject() (
       val numEdited = bookmarksCommander.editKeepTagBulk(collectionId, keepSet, request.userId, isAdd)
       Ok(Json.obj("numEdited" -> numEdited))
     }
-    res getOrElse BadRequest(Json.obj("error" -> "Could not parse keep set and/or collection id from request body"))
+    res getOrElse BadRequest(Json.obj("error" -> "Could not parse keep selection and/or collection id from request body"))
   }
 
   def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = JsonAction.authenticatedAsync { request =>
