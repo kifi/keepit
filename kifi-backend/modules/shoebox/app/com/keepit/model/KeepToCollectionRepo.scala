@@ -62,7 +62,7 @@ class KeepToCollectionRepoImpl @Inject() (
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]] =
     collectionsForKeepCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
       (for (c <- rows if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
-      yield c.collectionId).list
+      yield c).sortBy(c => c.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
     }
 
   def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]] =
