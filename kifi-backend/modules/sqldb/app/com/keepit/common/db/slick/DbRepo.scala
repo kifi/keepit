@@ -227,6 +227,8 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
     else (for(t <- rowsWithSeq if t.seq > lowerBound && t.seq <= upperBound) yield t).sortBy(_.seq).list
   }
 
+  protected def deferredSeqNum(): SequenceNumber[M] = SequenceNumber[M](clock.now.getMillis() - Long.MaxValue)
+
   def assignSequenceNumbers(limit: Int)(implicit session: RWSession): Int = {
     throw new UnsupportedOperationException("deferred sequence number assignment is not supported")
   }

@@ -11,6 +11,8 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.store.ImageSize
+import com.keepit.common.time._
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[ImageInfoRepoImpl])
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
@@ -51,11 +53,58 @@ class ImageInfoRepoImpl @Inject() (
   override def invalidateCache(model: ImageInfo)(implicit session: RSession):Unit = {}
 
   override def save(model: ImageInfo)(implicit session: RWSession): ImageInfo = {
-    val toSave = model.copy(seq = sequence.incrementAndGet())
+    val info = if (model.id.isDefined) {
+      // We are updating a specific row
+      model
+    } else {
+      // No ID specified. We are saving a new image. Try purging old images first and reuse an existing row if possible
+      purgeOldImages(model) match {
+        case Some(id) => model.withId(id)
+        case None => model
+      }
+    }
+    // setting a negative sequence number for deferred assignment
+    val seqNum = deferredSeqNum()
+    val toSave = info.copy(seq = seqNum)
     log.info(s"[ImageRepo.save] $toSave")
     super.save(toSave)
   }
 
+  private def purgeOldImages(info: ImageInfo)(implicit session: RWSession): Option[Id[ImageInfo]] = {
+    import StaticQuery.interpolation
+    import ImageInfoStates._
+    import ImageProvider._
+
+    val seqNum = deferredSeqNum()
+    info.provider match {
+      case Some(PAGEPEEKER) =>
+        (info.width, info.height) match {
+          case (Some(w), Some(h)) =>
+            // deactivate images with the same size
+            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value} where uri_id=${info.uriId} and provider=${PAGEPEEKER.value} and state=${ACTIVE.value} and width=$w and height=$h".first
+          case _ =>
+            log.error(s"no width/height specified for pagepeeker image: $info")
+            airbrake.notify(s"no width/height specified for pagepeeker image: $info")
+        }
+      case Some(EMBEDLY) =>
+        info.url match {
+          case Some(url) =>
+            // deactivate images older than a day
+            val yesterday = clock.now.minusDays(1)
+            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and updated_at < $yesterday".first
+            // deactivate
+            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value} where uri_id=${info.uriId} and provider is null and state=${ACTIVE.value}".first
+          case _ =>
+            log.error(s"no url specified for embedly image: $info")
+            airbrake.notify(s"no url specified for embedly image: $info")
+        }
+      case _ =>
+        log.error(s"no provider specified for image: $info")
+        airbrake.notify(s"no provider specified for image: $info")
+    }
+    // pick the latest inactive row for update
+    (for(f <- rows if f.uriId === info.uriId && f.state === INACTIVE) yield f).sortBy(_.updatedAt desc).map(_.id).firstOption()
+  }
 
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo] = {
     (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE) yield f).list()
@@ -75,5 +124,14 @@ class ImageInfoRepoImpl @Inject() (
     } else {
       None
     }
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "image_info", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from image_info where seq < 0""".as[Option[Long]].first
   }
 }
