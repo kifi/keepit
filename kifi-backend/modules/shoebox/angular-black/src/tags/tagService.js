@@ -81,11 +81,11 @@ angular.module('kifi.tagService', [
       });
     }
 
-    /*var options = {
+    var options = {
       keys: ['name'],
       threshold: 0.3
     };
-    var fuseSearch = new Fuse(allTags, options);*/
+    var fuseSearch = new Fuse(allTags, options);
 
     var api = {
       allTags: allTags,
@@ -103,24 +103,10 @@ angular.module('kifi.tagService', [
       },
 
       filterList: function (term) {
-        /*var newList = allTags;
+        var newList = allTags;
         if (term.length) {
           newList = fuseSearch.search(term);
-        }*/
-
-        var lowerTerm = term.toLowerCase();
-        var searchList = term.indexOf(prevFilter) === 0 && prevFilter.length > 0 ? list : allTags;
-
-        var newList = [];
-
-        for (var i = 0, ins = 0, sz = searchList.length; i < sz; i++) {
-          var tag = searchList[i];
-          if (tag.lowerName.indexOf(lowerTerm) !== -1) {
-            newList.push(tag);
-            ins++;
-          }
         }
-        prevFilter = term;
 
         util.replaceArrayInPlace(list, newList);
         return list;
