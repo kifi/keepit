@@ -41,21 +41,17 @@ object ParsedEmailAddress {
 }
 
 object EmailAddressParser extends RegexParsers { // rudimentary; also see @URIParser
-  def parseOpt(s: String): Option[ParsedEmailAddress] = Option(parseAll(email, s).getOrElse(null))
+  def parseOpt(s: String): Option[ParsedEmailAddress] = Option(parseAll(emailAddress, s).getOrElse(null))
 
   override def skipWhitespace = false
 
-  def email: Parser[ParsedEmailAddress] = (emailAddress | emailField)
-  def emailField: Parser[ParsedEmailAddress] = withSpaces ~ "<" ~ emailAddress ~ ">" ^^ {
-    case name ~ "<" ~ addr ~ ">" => addr // discard name for now
-  }
   def emailAddress: Parser[ParsedEmailAddress] = localPart ~ "@" ~ host ^^ {
     case localPart ~ "@" ~ host => ParsedEmailAddress(localPart, host)
   }
 
   // more restrictive than rfc
-  val sanitized  = """[^"~/?#()+@<>. ]+""".r
-  val withSpaces = """[^"~/?#()+<>@]+""".r
+  val sanitized  = """[^"~/?#()+@ ]+""".r
+  val quotedBody = """[^"~/?#()+@]+""".r
   val DQ = '\"'
 
   def comment: Parser[Comment] = "(" ~> commentBody <~ ")" ^^ { Comment(_) }
@@ -66,12 +62,12 @@ object EmailAddressParser extends RegexParsers { // rudimentary; also see @URIPa
   def obsLocalPart: Parser[LocalPart] = (comment?) ~ sanitized ~ (tag*) ~ (comment?) ^^ { // todo: factor out comment
     case p ~ s ~ tags ~ t => LocalPart(p, s, tags, t)
   }
-  def quoted: Parser[LocalPart] = "\"" ~ withSpaces ~ "\"" ^^ {
+  def quoted: Parser[LocalPart] = "\"" ~ quotedBody ~ "\"" ^^ {
     case open ~ local ~ close => LocalPart(None, s"$DQ$local$DQ", Seq.empty, None)
   }
   def host: Parser[Host] = (comment?) ~ rep1sep(domainPart, ".") ~ (comment?) ^^ {
     case p ~ domainList ~ t => new Host(domainList) // discard comment in domain
   }
-  def domainPart: Parser[String] = sanitized ^^ (_.toLowerCase)
+  def domainPart: Parser[String] = """[^~/?#@:\.]+""".r ^^ (_.toLowerCase)
   // todo: quotes (full support), dots, nameprep?
 }
