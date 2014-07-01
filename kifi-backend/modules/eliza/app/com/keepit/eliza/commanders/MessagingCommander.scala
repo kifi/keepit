@@ -120,6 +120,25 @@ class MessagingCommander @Inject() (
     })
   }
 
+  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI]): Seq[UserThread] = {
+    db.readOnly { implicit session =>
+      userThreadRepo.getUserThreads(userId, uriId)
+    }
+  }
+
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = {
+    val threads = getUserThreads(userId, uriId)
+    val otherStarters = threads.filter { userThread =>
+      userThread.lastSeen.exists( dt => dt.plusDays(3).isAfterNow ) // tweak
+    } map { userThread =>
+      db.readOnly { implicit session =>
+        userThreadRepo.getThreadStarter(userThread.threadId)
+      }
+    } filter { _ != userId }
+    log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=${otherStarters}")
+    otherStarters
+  }
+
   def hasThreads(userId: Id[User], url: String): Future[Boolean] = {
     shoebox.getNormalizedURIByURL(url).map {
       case Some(nUri) => db.readOnly { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
@@ -230,7 +249,7 @@ class MessagingCommander @Inject() (
           ))
         }
         userParticipants.foreach { userId =>
-          userThreadRepo.save(UserThread(
+          val userThread = userThreadRepo.save(UserThread(
             user = userId,
             threadId = thread.id.get,
             uriId = uriIdOpt,
@@ -240,6 +259,7 @@ class MessagingCommander @Inject() (
             unread = false,
             started = userId == from
           ))
+          println(s"sendNewMessage(from:$from) saved=$userThread")
         }
       }
       else{

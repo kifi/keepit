@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.controller.{ActionsBuilder, ElizaServiceController}
 
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
@@ -137,6 +137,9 @@ class MessagingController @Inject() (
     Ok(Json.toJson(result))
   }
 
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(messagingCommander.keepAttribution(userId, uriId)))
+  }
 
 }
 

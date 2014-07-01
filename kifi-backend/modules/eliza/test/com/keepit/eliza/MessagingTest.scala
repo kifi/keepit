@@ -33,6 +33,7 @@ import com.keepit.common.aws.AwsModule
 import com.keepit.scraper.FixedResultScraperModule
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.store.ElizaFakeStoreModule
+import com.keepit.common.time._
 
 
 class MessagingTest extends Specification with DbTestInjector {
@@ -176,6 +177,24 @@ class MessagingTest extends Specification with DbTestInjector {
       }
     }
 
+    "process keepAttribution correctly" in {
+      withDb(modules:_*) { implicit injector =>
+        val (user1, user2, _, user2n3Seq, _) = setup()
+        val messagingCommander = inject[MessagingCommander]
+        val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "https://kifi.com"), Some("title"), "Search!", None)
+        val user2Threads = messagingCommander.getUserThreads(user2, thread1.uriId.get)
+        user2Threads.foreach { t =>
+          messagingCommander.setLastSeen(user2, t.threadId)
+        }
+
+        val otherStarters1 = messagingCommander.keepAttribution(user1, thread1.uriId.get)
+        otherStarters1.isEmpty === true
+
+        val otherStarters2 = messagingCommander.keepAttribution(user2, thread1.uriId.get)
+        otherStarters2.isEmpty === false
+        otherStarters2.head === user1
+      }
+    }
   }
 
 }
