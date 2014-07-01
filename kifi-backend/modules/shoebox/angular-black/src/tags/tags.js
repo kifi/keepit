@@ -292,7 +292,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         tagService.fetchAll();
 
         scope.watchTagReorder = function () {
-          return !util.isIE() && !getFilterValue();
+          return !getFilterValue();
         };
 
         scope.removeTag = function (tag) {
