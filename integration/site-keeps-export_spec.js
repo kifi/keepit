@@ -25,7 +25,8 @@ frisby.globalSetup({
     headers: {},
     inspectOnFailure: true,
     json: true
-  }
+  },
+  timeout: 10000
 });
 
 frisby.create('export keeps for download (api.kifi.com/site/keeps/export)')

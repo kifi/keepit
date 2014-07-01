@@ -8,7 +8,8 @@ frisby.globalSetup({
     headers: {},
     inspectOnFailure: true,
     json: true
-  }
+  },
+  timeout: 10000
 });
 
 frisby.create('get user information for site (api.kifi.com/site/user/me)')
