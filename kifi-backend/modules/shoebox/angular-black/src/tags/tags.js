@@ -310,17 +310,14 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         };
 
         scope.disableClearFilter = function () {
-          console.log('disabling');
           preventClearFilter = true;
         };
 
         scope.enableClearFilter = function () {
-          console.log('enabling');
           preventClearFilter = false;
         };
 
         scope.blurFilter = function () {
-          console.log('blurring');
           scope.isFilterFocused = false;
           if (!preventClearFilter) {
             scope.dehighlight();
