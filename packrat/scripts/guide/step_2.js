@@ -24,7 +24,7 @@ guide.step2 = guide.step2 || function () {
     }
   };
 
-  function show($guide, page, pageIdx) {
+  function show($guide, page, pageIdx, allowEsc) {
     if (!step) {
       step = guide.step(steps, {
         $guide: $guide,
@@ -34,7 +34,8 @@ guide.step2 = guide.step2 || function () {
         done: .5,
         anchor: 'tl',
         opacity: .65,
-        hide: onHide
+        hide: onHide,
+        esc: allowEsc
       });
     }
   }
