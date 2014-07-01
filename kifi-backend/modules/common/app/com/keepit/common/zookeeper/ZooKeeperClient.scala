@@ -480,14 +480,11 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
 
   def getSubtree(path: String): ZooKeeperSubtree = {
     val data = getData[String](Node(path)).map { s =>
-      if (s.equals("None"))
-        s
-      else
-        try {
-          Json.parse(s.substring(s.indexOf("(") + 1, s.lastIndexOf(")")))
-        } catch {
-          case e : Exception => JsString(s)
-        }
+      try {
+        Json.parse(s.substring(s.indexOf("(") + 1, s.lastIndexOf(")")))
+      } catch {
+        case e : Exception => JsString(s)
+      }
     }
 
     ZooKeeperSubtree(path, data, getChildren(Node(path)).map(node => getSubtree(node.path)))
