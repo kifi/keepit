@@ -12,13 +12,11 @@ GET      /internal/abooksCount/                                 @com.keepit.aboo
 GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.ABookController.getABookInfos(userId:Id[User])
 GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
 GET      /internal/abook/getABookInfoByExternalId               @com.keepit.abook.ABookController.getABookInfoByExternalId(externalId:ExternalId[ABookInfo])
-GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.ABookController.getContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getEContacts                   @com.keepit.abook.ABookController.getEContacts(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.ABookController.getEContactCount(userId:Id[User])
 GET      /internal/abook/getEContactById                        @com.keepit.abook.ABookController.getEContactById(contactId:Id[EContact])
 POST     /internal/abook/getEContactsByIds                      @com.keepit.abook.ABookController.getEContactsByIds()
 GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email: EmailAddress)
-GET      /internal/abook/:userId/getSimpleContactInfos          @com.keepit.abook.ABookController.getSimpleContactInfos(userId:Id[User], maxRows:Int)
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
 POST     /internal/abook/:userId/internContact                  @com.keepit.abook.ABookController.internContact(userId:Id[User])
 
