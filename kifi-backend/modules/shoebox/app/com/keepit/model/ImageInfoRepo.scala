@@ -24,6 +24,7 @@ trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
 class ImageInfoRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  uriSummaryCache: URISummaryCache,
   airbrake: AirbrakeNotifier)
   extends DbRepo[ImageInfo] with ImageInfoRepo with SeqNumberDbFunction[ImageInfo] with Logging {
 
@@ -49,8 +50,12 @@ class ImageInfoRepoImpl @Inject() (
   def table(tag:Tag) = new ImageInfoTable(tag)
   initTable()
 
-  override def deleteCache(model: ImageInfo)(implicit session: RSession):Unit = {}
-  override def invalidateCache(model: ImageInfo)(implicit session: RSession):Unit = {}
+  override def deleteCache(model: ImageInfo)(implicit session: RSession): Unit = {
+    uriSummaryCache.remove(URISummaryKey(model.uriId))
+  }
+  override def invalidateCache(model: ImageInfo)(implicit session: RSession): Unit = {
+    uriSummaryCache.remove(URISummaryKey(model.uriId))
+  }
 
   override def save(model: ImageInfo)(implicit session: RWSession): ImageInfo = {
     val info = if (model.id.isDefined) {
