@@ -398,7 +398,7 @@ guide.step = guide.step || function () {
       if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && e.keyCode !== 9) { // allow browser shortcuts, tab
         e.preventDefault();
         e.stopImmediatePropagation();
-        if (e.keyCode === 27) { // esc
+        if (e.keyCode === 27 && opts.esc) {
           hide();
         }
       } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && ~[75,79,83].indexOf(e.keyCode)) {  // block kifi shortcuts

@@ -15,7 +15,7 @@ var guide = guide || {
       }
     } else {
       api.require('scripts/guide/step_' + o.step + '.js', function () {
-        var params = {showing: o.step > 0};
+        var params = {showing: o.step > 0, x: o.x};
         params['p' + Math.max(1, o.step)] = true;
         var $steps = $(render('html/guide/steps', params))
           .data('updateProgress', function (frac) {
@@ -31,7 +31,7 @@ var guide = guide || {
           });
         var $bar = $steps.find('.kifi-gs-bar');
         var guideStep = guide['step' + o.step];
-        guideStep.show($steps, o.page >= 0 ? o.pages[o.page] : o.pages, o.page);
+        guideStep.show($steps, o.page >= 0 ? o.pages[o.page] : o.pages, o.page, o.x);
         api.onEnd.push(guideStep.remove);
       });
     }

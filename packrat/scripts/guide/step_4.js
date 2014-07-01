@@ -22,7 +22,7 @@ guide.step4 = guide.step4 || function () {
   ];
   return {show: show, remove: removeAll};
 
-  function show($guide) {
+  function show($guide, __, ___, allowEsc) {
     if (!$stage) {
       $stage = $(render('html/guide/step_4', me)).appendTo('body');
       cutScreen = new CutScreen([], $stage[0], $stage[0].firstChild);
@@ -30,7 +30,9 @@ guide.step4 = guide.step4 || function () {
         .one('click', '.kifi-guide-x', hide);
       $steps.layout().data().updateProgress(.2);
       $feats = $stage.find('.kifi-guide-feature');
-      $(document).data('esc').add(hide);
+      if (allowEsc) {
+        $(document).data('esc').add(hide);
+      }
       arrows = [];
       timeout = setTimeout(cutHole, 600);
       api.port.emit('track_guide', [4, 0]);
