@@ -244,6 +244,13 @@ angular.module('kifi.tagService', [
         return totalKeepCount;
       },
 
+      addToKeepCount: function (num) {
+        totalKeepCount += num;
+        if (totalKeepCount < 0) {
+          totalKeepCount = 0;
+        }
+      },
+
       rename: function (tagId, name) {
         function renameTag(id, name) {
           var allIndex = indexById(allTags, id);
