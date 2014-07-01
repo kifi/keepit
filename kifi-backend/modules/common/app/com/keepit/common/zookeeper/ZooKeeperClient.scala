@@ -15,6 +15,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.util.concurrent.atomic.AtomicReference
 
+case class ZooKeeperSubtree(path: String, data: Option[mutable.ArrayOps[Byte]], children: Seq[ZooKeeperSubtree])
 
 object Node {
   def apply(path: String): Node = {
@@ -92,6 +93,8 @@ trait ZooKeeperSession {
 
   def delete(node: Node): Unit
   def deleteRecursive(node: Node): Unit
+
+  def getSubtree(path: String): ZooKeeperSubtree
 }
 
 /**
@@ -471,5 +474,9 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
         if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
     }
     doWatchChildren(children)
+  }
+
+  def getSubtree(path: String): ZooKeeperSubtree = {
+    ZooKeeperSubtree(path, getData(Node(path)), getChildren(Node(path)).map(node => getSubtree(node.path)))
   }
 }
