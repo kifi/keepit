@@ -10,7 +10,6 @@ import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.serializer.TraversableFormat
-
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
@@ -48,8 +47,6 @@ class UserConnectionRepoImpl @Inject() (
   import db.Driver.simple._
 
   private val sequence = db.getSequence[UserConnection]("user_connection_sequence")
-
-  private def deferredSeqNum(): SequenceNumber[UserConnection] = SequenceNumber[UserConnection](clock.now.getMillis() - Long.MaxValue)
 
   override def save(model: UserConnection)(implicit session: RWSession): UserConnection = {
     // setting a negative sequence number for deferred assignment

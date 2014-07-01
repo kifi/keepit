@@ -61,6 +61,7 @@ class HttpFetcherImpl(val airbrake:AirbrakeNotifier, userAgent: String, connecti
   httpClientBuilder.setDefaultRequestConfig(defaultRequestConfig)
   httpClientBuilder.setConnectionManager(cm)
   httpClientBuilder.setUserAgent(userAgent)
+  httpClientBuilder.setRequestExecutor(new ContentAwareHttpRequestExecutor())
 
   // track redirects
   val redirectInterceptor = new HttpResponseInterceptor() {

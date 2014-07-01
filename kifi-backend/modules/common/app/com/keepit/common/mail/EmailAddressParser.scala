@@ -13,25 +13,17 @@ protected case class LocalPart(p: Option[Comment], s: String, tags: Seq[Tag], t:
   val localName = s.trim.toLowerCase  // local part case insensitive (kifi policy)
   override val toString = s"${localName}${tags.mkString("")}"
   def unparse = (p.getOrElse("") + localName + tags.mkString("") + t.getOrElse("")).trim
-  def toStrictString = localName
   def toDbgString = s"[LocalPart($p,$s,$tags,$t)]"
 }
 
 case class ParsedEmailAddress(local: LocalPart, host: Host) {
   val domain = host.domain.mkString(".").trim
   override val toString = s"$local@$domain"
-  def toStrictString = s"${local.toStrictString}@$domain"
   def toDbgString = s"[ParsedEmailAddress(${local.toDbgString} host=${host})]"
   override def hashCode = toString.hashCode
   override def equals(o: Any) = {
     o match {
       case e: ParsedEmailAddress => (toString == e.toString)
-      case _ => false
-    }
-  }
-  def strictEquals(o:Any) = {
-    o match {
-      case e: ParsedEmailAddress => (toStrictString == e.toStrictString)
       case _ => false
     }
   }

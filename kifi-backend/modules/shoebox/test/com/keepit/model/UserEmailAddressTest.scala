@@ -2,7 +2,7 @@ package com.keepit.model
 
 import org.specs2.mutable.Specification
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.ExperimentType.{AUTO_GEN, FAKE, KIFI_BLACK}
+import com.keepit.model.ExperimentType.{AUTO_GEN, FAKE, GUIDE, KIFI_BLACK}
 
 class UserEmailAddressTest extends Specification {
 
@@ -24,7 +24,7 @@ class UserEmailAddressTest extends Specification {
       exp("eishay+autogen@42go.com") === Set(FAKE, AUTO_GEN)
       exp("eishay+autogen123@42go.com") === Set(FAKE, AUTO_GEN)
       exp("eishay+autogen_123@42go.com") === Set(FAKE, AUTO_GEN)
-      exp("a+preview@b") === Set(KIFI_BLACK)
+      exp("a+preview@b") === Set(KIFI_BLACK, GUIDE)
       exp("a+preview2@b") === Set.empty
       exp("a+preview+test2@kifi.com") === Set(FAKE, KIFI_BLACK)
       exp("a+test2+preview@kifi.com") === Set(FAKE, KIFI_BLACK)
