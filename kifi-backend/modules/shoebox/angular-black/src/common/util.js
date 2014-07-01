@@ -51,6 +51,14 @@ angular.module('util', [])
         var _x = rawDom.getBoundingClientRect().left + scrollX;
         var _y = rawDom.getBoundingClientRect().top + scrollY;
         return { left: _x, top: _y };
+      },
+      isIE: function() {
+        // Feature detection should be preferred to browser detection, so this function should be avoided.
+        return (
+          (navigator.appName === 'Microsoft Internet Explorer') ||
+          ((navigator.appName === 'Netscape') &&
+           (/Trident/.exec(navigator.userAgent) != null))
+        );
       }
     };
   }

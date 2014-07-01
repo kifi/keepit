@@ -49,7 +49,6 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         };
         scope.filter = {};
 
-        var preventClearFilter = false;
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
         var tagList = element.find('.kf-sidebar-tag-list');
@@ -293,7 +292,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
         tagService.fetchAll();
 
         scope.watchTagReorder = function () {
-          return !getFilterValue();
+          return !util.isIE() && !getFilterValue();
         };
 
         scope.removeTag = function (tag) {
@@ -309,20 +308,10 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
           scope.isFilterFocused = true;
         };
 
-        scope.disableClearFilter = function () {
-          preventClearFilter = true;
-        };
-
-        scope.enableClearFilter = function () {
-          preventClearFilter = false;
-        };
-
         scope.blurFilter = function () {
           scope.isFilterFocused = false;
-          if (!preventClearFilter) {
-            scope.dehighlight();
-            scope.clearFilter();
-          }
+          scope.dehighlight();
+          scope.clearFilter();
         };
 
         scope.createTag = function () {
