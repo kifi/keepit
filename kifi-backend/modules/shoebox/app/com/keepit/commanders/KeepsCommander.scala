@@ -204,14 +204,7 @@ class KeepsCommander @Inject() (
   }
 
   private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
-    val request = URISummaryRequest(
-      url = keep.url,
-      imageType = ImageType.ANY,
-      withDescription = true,
-      waiting = waiting,
-      silent = false
-    )
-    uriSummaryCommander.getURISummaryForRequest(request)
+    uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
   }
 
   def allKeeps(
