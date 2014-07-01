@@ -153,7 +153,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
 
         element.on('dragstart', function (e) {
           // Firefox requires data to be set
-          e.dataTransfer.setData('text/plain', '');
+          e.dataTransfer.setData('text', '');
           //e.dataTransfer.effectAllowed = 'none';
           scope.$apply(function () {
             if (!scope.watchTagReorder()) { return; }
@@ -177,7 +177,9 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
               .addClass('kf-dragged-clone-mask');
             element.addClass('kf-dragged')
               .after(clone, cloneMask);
-            e.dataTransfer.setDragImage(clone[0], 0, 0);
+            if (typeof(e.dataTransfer.setDragImage) === 'function') {
+              e.dataTransfer.setDragImage(clone[0], 0, 0);
+            }
           });
         })
         .on('dragend', function (e) {
