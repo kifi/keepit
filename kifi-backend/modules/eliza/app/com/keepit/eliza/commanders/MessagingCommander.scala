@@ -120,14 +120,10 @@ class MessagingCommander @Inject() (
     })
   }
 
-  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI]): Seq[UserThread] = {
-    db.readOnly { implicit session =>
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = {
+    val threads = db.readOnly { implicit session =>
       userThreadRepo.getUserThreads(userId, uriId)
     }
-  }
-
-  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = {
-    val threads = getUserThreads(userId, uriId)
     val otherStarters = threads.filter { userThread =>
       userThread.lastSeen.exists( dt => dt.plusDays(3).isAfterNow ) // tweak
     } map { userThread =>

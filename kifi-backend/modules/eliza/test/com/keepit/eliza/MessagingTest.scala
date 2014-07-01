@@ -179,12 +179,13 @@ class MessagingTest extends Specification with DbTestInjector {
     "process keepAttribution correctly" in {
       withDb(modules:_*) { implicit injector =>
         val (user1, user2, _, user2n3Seq, _) = setup()
+        val userThreadRepo = inject[UserThreadRepo]
         val messagingCommander = inject[MessagingCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "https://kifi.com"), Some("title"), "Search!", None)
-        val user2Threads = messagingCommander.getUserThreads(user2, thread1.uriId.get)
-        user2Threads.foreach { t =>
-          messagingCommander.setLastSeen(user2, t.threadId)
-        }
+
+        val user2Threads = db.readOnly { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get)  }
+        user2Threads.size === 1
+        messagingCommander.setLastSeen(user2, user2Threads.head.threadId)
 
         val otherStarters1 = messagingCommander.keepAttribution(user1, thread1.uriId.get)
         otherStarters1.isEmpty === true
