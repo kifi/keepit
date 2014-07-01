@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.common.cache._
+import com.keepit.common.logging.AccessLog
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.db._
@@ -9,6 +11,7 @@ import com.keepit.common.json.JsonFormatters._
 import org.apache.commons.lang3.RandomStringUtils
 import com.keepit.common.store.ImageSize
 import com.keepit.scraper.embedly.EmbedlyKeyword
+import scala.concurrent.duration.Duration
 
 trait PageSafetyInfo {
   def safe:Option[Boolean]
@@ -61,6 +64,16 @@ object PageInfo {
     (__ \ 'imageInfoId).formatNullable(Id.format[ImageInfo])
   )(PageInfo.apply _, unlift(PageInfo.unapply))
 }
+
+case class PageInfoUriKey(val id: Id[NormalizedURI]) extends Key[PageInfo] {
+  override val version = 1
+  val namespace = "page_info_by_uri_id"
+  def toKey(): String = id.id.toString
+}
+
+class PageInfoUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[PageInfoUriKey, PageInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 
 object ImageInfoStates extends States[ImageInfo]
 
