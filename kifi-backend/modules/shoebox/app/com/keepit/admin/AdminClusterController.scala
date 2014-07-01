@@ -7,7 +7,7 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.routes.Common
 import com.keepit.common.net.HttpClient
 import com.google.inject.{Inject, Singleton}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsNull, JsValue, Json}
 import views.html
 import java.net.InetAddress
 import scala.collection.mutable.WeakHashMap
@@ -48,7 +48,7 @@ class AdminClusterController @Inject() (
     def zooKeeperData : JsValue = zooKeeperClient.session{ session =>
       val tree = session.getSubtree("/fortytwo")
       def convertData(tree: ZooKeeperSubtree) : JsValue = {
-        Json.obj("path" -> tree.path, "data" -> tree.data.toString)
+        Json.obj("path" -> tree.path, "data" -> tree.data.getOrElse(JsNull), "children" -> tree.children.map(child => convertData(child)))
       }
       convertData(tree)
     }
