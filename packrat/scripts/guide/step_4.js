@@ -24,19 +24,37 @@ guide.step4 = guide.step4 || function () {
 
   function show($guide, __, ___, allowEsc) {
     if (!$stage) {
-      $stage = $(render('html/guide/step_4', me)).appendTo('body');
-      cutScreen = new CutScreen([], $stage[0], $stage[0].firstChild);
-      $steps = $guide.appendTo('body')
-        .one('click', '.kifi-guide-x', hide);
-      $steps.layout().data().updateProgress(.2);
-      $feats = $stage.find('.kifi-guide-feature');
-      if (allowEsc) {
-        $(document).data('esc').add(hide);
+      var show2Bound = show2.bind(null, $guide, allowEsc);
+      var $html = $('html');
+      if ($html.hasClass('kf-sidebar-active')) {
+        show2Bound();
+      } else {
+        window.postMessage('show_left_column', location.origin);
+        $html.on('transitionend.guideStep4', '.kf-sidebar', function (e) {
+          if (e.target === this) {
+            show2Bound();
+          }
+        });
+        timeout = setTimeout(show2Bound, 900);
       }
-      arrows = [];
-      timeout = setTimeout(cutHole, 600);
-      api.port.emit('track_guide', [4, 0]);
     }
+  }
+
+  function show2($guide, allowEsc) {
+    $('html').off('transitionend.guideStep4');
+    $stage = $(render('html/guide/step_4', me)).appendTo('body');
+    cutScreen = new CutScreen([], $stage[0], $stage[0].firstChild);
+    $steps = $guide.appendTo('body')
+      .one('click', '.kifi-guide-x', hide);
+    $steps.layout().data().updateProgress(.2);
+    $feats = $stage.find('.kifi-guide-feature');
+    if (allowEsc) {
+      $(document).data('esc').add(hide);
+    }
+    arrows = [];
+    clearTimeout(timeout);
+    timeout = setTimeout(cutHole, 600);
+    api.port.emit('track_guide', [4, 0]);
   }
 
   function hide() {
