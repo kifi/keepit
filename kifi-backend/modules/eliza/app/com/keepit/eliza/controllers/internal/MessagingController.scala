@@ -137,6 +137,9 @@ class MessagingController @Inject() (
     Ok(Json.toJson(result))
   }
 
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(messagingCommander.keepAttribution(userId, uriId)))
+  }
 
 }
 

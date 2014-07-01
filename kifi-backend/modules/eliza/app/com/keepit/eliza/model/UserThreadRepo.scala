@@ -23,6 +23,8 @@ object UserThreadRepo {
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
+  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
+
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
   def markAllRead(user: Id[User])(implicit session: RWSession) : Unit
@@ -152,6 +154,10 @@ class UserThreadRepoImpl @Inject() (
     val saved = super.save(model)
     log.info(s"persisting: ${model.summary}")
     saved
+  }
+
+  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
+    (for (r <- rows if r.user === userId && r.uriId === uriId) yield r).list()
   }
 
   def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]] = {
