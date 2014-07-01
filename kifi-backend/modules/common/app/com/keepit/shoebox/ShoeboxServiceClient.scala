@@ -488,7 +488,6 @@ class ShoeboxServiceClientImpl @Inject() (
     val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
     call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = timeout).map { r =>
       ScalaMessagePack.read[UriIdAndSeqBatch](r.bytes).batch
-      Seq.empty
     }
   }
 
