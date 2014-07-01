@@ -537,7 +537,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }).on('click', '.kifi-filter[href]', function (e, alreadySearched) {
       if (e.which > 1) return;
       var $v = $(this).removeAttr('href');
-      $v.siblings(':not([href])').attr('href', 'javascript:').filter('.kifi-filter-all').removeAttr('data-n');
+      $v.siblings(':not([href])').attr('href', 'javascript:');
       if (!alreadySearched) {
         var val = $v.data('val');
         search(false, {who: val});
