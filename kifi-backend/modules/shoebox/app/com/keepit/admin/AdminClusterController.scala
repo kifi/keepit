@@ -48,7 +48,7 @@ class AdminClusterController @Inject() (
     def zooKeeperData : JsValue = zooKeeperClient.session{ session =>
       val tree = session.getSubtree("/fortytwo")
       def convertData(tree: ZooKeeperSubtree) : JsValue = {
-        Json.obj("path" -> tree.path, "data" -> tree.data.toString, "children" -> tree.children.map(child => convertData(child)))
+        Json.obj("path" -> tree.path, "data" -> tree.data.toString)
       }
       convertData(tree)
     }
