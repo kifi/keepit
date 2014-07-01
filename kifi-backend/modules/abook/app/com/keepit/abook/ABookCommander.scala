@@ -33,7 +33,6 @@ class ABookCommander @Inject() (
   s3:ABookRawInfoStore,
   econtactTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
-  contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   contactsUpdater:ContactsUpdaterPlugin,
   shoebox: ShoeboxServiceClient

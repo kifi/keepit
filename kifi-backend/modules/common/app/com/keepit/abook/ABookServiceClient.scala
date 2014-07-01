@@ -296,8 +296,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getABooksCount(): Future[Int] = ???
 
-  def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
-
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = Future.successful(Seq.empty[EContact])
 
   def getEContactCount(userId: Id[User]): Future[Int] = ???
