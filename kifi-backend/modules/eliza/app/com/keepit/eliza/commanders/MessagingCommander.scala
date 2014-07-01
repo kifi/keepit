@@ -249,7 +249,7 @@ class MessagingCommander @Inject() (
           ))
         }
         userParticipants.foreach { userId =>
-          val userThread = userThreadRepo.save(UserThread(
+          userThreadRepo.save(UserThread(
             user = userId,
             threadId = thread.id.get,
             uriId = uriIdOpt,
@@ -259,7 +259,6 @@ class MessagingCommander @Inject() (
             unread = false,
             started = userId == from
           ))
-          println(s"sendNewMessage(from:$from) saved=$userThread")
         }
       }
       else{
