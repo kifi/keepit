@@ -525,6 +525,7 @@ GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLab
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
+GET     /admin/clusters/zooKeeperInspector        @com.keepit.controllers.admin.AdminClusterController.zooKeeperInspector
 
 GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
