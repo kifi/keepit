@@ -33,7 +33,6 @@ import com.keepit.common.aws.AwsModule
 import com.keepit.scraper.FixedResultScraperModule
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.store.ElizaFakeStoreModule
-import com.keepit.common.time._
 
 
 class MessagingTest extends Specification with DbTestInjector {
