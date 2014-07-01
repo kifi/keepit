@@ -156,7 +156,7 @@ class HomeController @Inject() (
     } else {
       if ((request.experiments.contains(ExperimentType.ADMIN) || request.experiments.contains(ExperimentType.KIFI_BLACK)) && request.domain.startsWith("preview.")) {
         if (agentOpt.exists(_.isPreviewWebsiteEnabled)) {
-          Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)).withSession(request.session + ("preview", "true")) as HTML
+          Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular-black/index.html").get)) as HTML
         } else {
           Redirect(routes.HomeController.unsupported())
         }
