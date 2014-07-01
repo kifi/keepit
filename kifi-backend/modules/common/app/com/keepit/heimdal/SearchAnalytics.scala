@@ -194,10 +194,24 @@ class SearchAnalytics @Inject() (
     }
   }
 
+  private def getArticleSearchResult(uuid: ExternalId[ArticleSearchResult], maxAttempt: Int = 3): ArticleSearchResult = {
+    var attempt = 1
+    while (attempt < maxAttempt) {
+      try {
+        return articleSearchResultStore.get(uuid).get
+      } catch {
+        case ex: Exception =>
+      } finally {
+        attempt += 1
+      }
+    }
+    articleSearchResultStore.get(uuid).get
+  }
+
   private def processBasicSearchContext(userId: Id[User], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {
-    val latestSearchResult = articleSearchResultStore.get(searchContext.uuid).get
+    val latestSearchResult = getArticleSearchResult(searchContext.uuid)
     val initialSearchId = articleSearchResultStore.getInitialSearchId(latestSearchResult)
-    val initialSearchResult = articleSearchResultStore.get(initialSearchId).get
+    val initialSearchResult = getArticleSearchResult(initialSearchId)
 
     // Search Context
     addOriginInformation(contextBuilder, searchContext.origin)
