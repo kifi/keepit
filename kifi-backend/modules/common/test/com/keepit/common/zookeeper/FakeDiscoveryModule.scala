@@ -97,5 +97,9 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
     descendants.foreach{ db.remove(_) }
     db.remove(node)
   }
+
+  def getSubtree(path: String): ZooKeeperSubtree = {
+    ZooKeeperSubtree(path, getData(Node(path)), getChildren(Node(path)).map(node => getSubtree(node.path)))
+  }
 }
 

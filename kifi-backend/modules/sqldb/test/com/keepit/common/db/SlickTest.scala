@@ -1,5 +1,7 @@
 package com.keepit.common.db
 
+import scala.slick.jdbc.StaticQuery.interpolation
+
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -17,6 +19,7 @@ import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
+import org.h2.jdbc.JdbcSQLException
 
 class SlickTest extends Specification with DbTestInjector {
 
@@ -37,6 +40,8 @@ class SlickTest extends Specification with DbTestInjector {
         trait BarRepo extends Repo[Bar] {
           //here you may have model specific queries...
           def getByName(name: String)(implicit session: ROSession): Seq[Bar]
+          def getByNameSqlInterpulation(name: String)(implicit session: ROSession): Seq[String]
+          def getByNameSqlInterpulationSqlInjection(name: String)(implicit session: ROSession): Seq[String]
           def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[Bar]
         }
 
@@ -66,6 +71,17 @@ class SlickTest extends Specification with DbTestInjector {
             val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
             q.list
           }
+
+          def getByNameSqlInterpulation(name: String)(implicit session: ROSession): Seq[String] = {
+            val q = sql"select name from foo where name=$name".as[String]
+            q.list
+          }
+
+          def getByNameSqlInterpulationSqlInjection(name: String)(implicit session: ROSession): Seq[String] = {
+            val q = sql"select name from foo where name='#$name'".as[String]
+            println(q.getStatement)
+            q.list
+          }
         }
 
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
@@ -87,6 +103,12 @@ class SlickTest extends Specification with DbTestInjector {
           a.head.name === "A"
         }
 
+        inject[Database].readOnly{ implicit session =>
+          val a = repo.getByNameSqlInterpulation("A")
+          a.size === 1
+          a.head === "A"
+        }
+
         inject[Database].readOnly(Database.Master){ implicit session =>
           repo.count(session) === 2
         }
@@ -98,6 +120,11 @@ class SlickTest extends Specification with DbTestInjector {
         inject[Database].readOnly{ implicit session =>
           repo.count(session) === 2
         }(Database.Slave, Location.capture)
+
+        inject[Database].readOnly{ implicit session =>
+          repo.getByNameSqlInterpulationSqlInjection("A';drop table foo;select * from foo where name ='") must throwA[JdbcSQLException]
+        }
+
       }
     }
 
