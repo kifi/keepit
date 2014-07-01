@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.{BasicUserLikeEntity, BasicNonUser, BasicUser}
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ActionsBuilder, ElizaServiceController}
+import com.keepit.common.controller.ElizaServiceController
 
 import scala.concurrent.{Promise, Await, Future}
 import scala.concurrent.duration._
