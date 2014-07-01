@@ -102,4 +102,3 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
     ZooKeeperSubtree(path, getData(Node(path)), getChildren(Node(path)).map(node => getSubtree(node.path)))
   }
 }
-
