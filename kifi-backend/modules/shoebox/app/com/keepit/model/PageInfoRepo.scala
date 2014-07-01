@@ -20,6 +20,8 @@ trait PageInfoRepo extends Repo[PageInfo] with SeqNumberFunction[PageInfo] {
 class PageInfoRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  pageInfoUriCache: PageInfoUriCache,
+  uriSummaryCache: URISummaryCache,
   airbrake: AirbrakeNotifier)
 extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] with Logging {
 
@@ -42,8 +44,19 @@ extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] wi
   def table(tag:Tag) = new PageInfoTable(tag)
   initTable()
 
-  override def deleteCache(model: PageInfo)(implicit session: RSession):Unit = {}
-  override def invalidateCache(model: PageInfo)(implicit session: RSession):Unit = {}
+  override def deleteCache(model: PageInfo)(implicit session: RSession):Unit = {
+    pageInfoUriCache.remove(PageInfoUriKey(model.uriId))
+    uriSummaryCache.remove(URISummaryKey(model.uriId))
+  }
+
+  override def invalidateCache(model: PageInfo)(implicit session: RSession):Unit = {
+    if (model.state == ImageInfoStates.INACTIVE) {
+      deleteCache(model)
+    } else{
+      pageInfoUriCache.set(PageInfoUriKey(model.uriId), model)
+      uriSummaryCache.remove(URISummaryKey(model.uriId))
+    }
+  }
 
   override def save(model: PageInfo)(implicit session: RWSession): PageInfo = {
     val toSave = model.copy(seq = sequence.incrementAndGet())
@@ -52,6 +65,8 @@ extends DbRepo[PageInfo] with PageInfoRepo with SeqNumberDbFunction[PageInfo] wi
   }
 
   override def getByUri(uriId: Id[NormalizedURI])(implicit ro: RSession): Option[PageInfo] = {
-    (for(f <- rows if f.uriId === uriId && f.state === PageInfoStates.ACTIVE) yield f).firstOption
+    pageInfoUriCache.getOrElseOpt(PageInfoUriKey(uriId)) {
+      (for(f <- rows if f.uriId === uriId && f.state === PageInfoStates.ACTIVE) yield f).firstOption
+    }
   }
 }
