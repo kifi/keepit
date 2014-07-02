@@ -22,4 +22,5 @@ abstract class ABookModule(
   val abookSlickModule = ABookSlickModule()
 
   val repoChangeListenerModule = AbookRepoChangeListenerModule()
+  val dbSequencingModule = ABookDbSequencingModule()
 }
