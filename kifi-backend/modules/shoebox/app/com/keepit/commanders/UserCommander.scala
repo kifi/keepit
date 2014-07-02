@@ -208,13 +208,13 @@ class UserCommander @Inject() (
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
 
-    def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address == user.primaryEmail.get
+    def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
     val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).map { email =>
       EmailInfo(
         address = email.address,
         isVerified = email.verified,
         isPrimary = isPrimary(email.address),
-        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get == email.address
+        isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
