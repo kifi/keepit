@@ -15,6 +15,7 @@ case class FakeElizaServiceClientModule(attributionInfo:collection.mutable.Map[I
 
   def configure() {}
 
+  @Singleton
   @Provides
   def elizaServiceClient(airbrakeNotifier: AirbrakeNotifier): ElizaServiceClient = {
     new FakeElizaServiceClientImpl(airbrakeNotifier, new FakeScheduler(), attributionInfo)
