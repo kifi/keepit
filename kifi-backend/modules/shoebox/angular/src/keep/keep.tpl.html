@@ -21,8 +21,9 @@
         <div class="kf-keep-info-wrap">
           <div class="kf-keep-info">
             <div class="kf-keep-subtitle">
-              <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-              <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+              <div class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
+              <time class="kf-keep-subtitle-element kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+              <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount"><span class="sprite sprite-small-clock"></span>{{getKeepReadTime()}}</div>
             </div>
             <div class="kf-keep-description">
               {{keep.summary.description}}
