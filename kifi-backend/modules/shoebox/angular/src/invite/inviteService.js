@@ -59,7 +59,7 @@ angular.module('kifi.inviteService', [
     }
 
     function populateWithCustomEmail(name, results) {
-      if (name.indexOf('@') > 0) {
+      if (/^[^@\s]+@[^@\s]+$/.test(name)) {
         var last = results[results.length - 1];
         if (last && last.custom) {
           if (last.label === name) {

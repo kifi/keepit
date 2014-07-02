@@ -13,7 +13,7 @@ guide.step4 = guide.step4 || function () {
   var holes = [
     {sel: '.kf-sidebar-nav,.kf-sidebar-tag-list', pad: [-5, -5, 30, 0], maxHeight: 246},
     {sel: '.kf-query', pad: [6, 8], maxWidth: 320},
-    {sel: '.kf-header-right>*', pad: [-6, 24]}
+    {sel: '.kf-header-right>*', pad: [-6, 24], anchor: 'tr'}
   ];
   var arcs = [
     {dx: -63, dy: -40, from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1]}},
@@ -92,28 +92,31 @@ guide.step4 = guide.step4 || function () {
 
   function cutHole() {
     var i = arrows.length;
-    var rHead = toClientRect(cutScreen.cut(holes[i], 200));
+    var hole = holes[i];
+    var anchor = createAnchor(hole.anchor || 'tl');
+    var rHead = anchor.translate(toClientRect(cutScreen.cut(hole, 200)));
     var arc = arcs[i];
 
     var headAngleRad = Math.PI / 180 * arc.to.angle;
     var H = pointOutsideRect(rHead, arc.to.along, headAngleRad + Math.PI, arc.to.gap);
     var T = {x: H.x - arc.dx, y: H.y - arc.dy};
 
-    // compute T_ (T with feature positioned at top-left window corner)
+    // compute T_ (T with stage positioned at appropriate window corner)
     var $feat = $feats.eq(i)
-      .css({top: 0, left: 0, display: 'block'});
-    var rTail = $feat[0].getBoundingClientRect();
+      .css(anchor.css)
+      .css('display', 'block');
+    var rTail = anchor.translate($feat[0].getBoundingClientRect());
     var tailAngleRad = Math.PI / 180 * arc.from.angle;
     var T_ = pointOutsideRect(rTail, arc.from.along, tailAngleRad, arc.from.gap);
 
     $feat
-      .css({left: T.x - T_.x, top: T.y - T_.y})
+      .css(translatePos(anchor.css, T.x - T_.x, T.y - T_.y))
       .each(layout)
       .one('transitionend', function () {
         var arrow = new CurvedArrow(
           {x: T.x, y: T.y, angle: arc.from.angle, spacing: arc.from.spacing},
           {x: H.x, y: H.y, angle: arc.to.angle, draw: false},
-          {top: 0, left: 0});
+          anchor.css);
         arrow.reveal(400);
         arrows.push(arrow);
         timeout = setTimeout(arrows.length < holes.length ? cutHole : drumRoll, 1200);
@@ -163,6 +166,46 @@ guide.step4 = guide.step4 || function () {
       bottom: r.y + r.h,
       width: r.w,
       height: r.h
+    };
+  }
+
+function createAnchor(code) {  // also in step.js
+    var dx = code[1] === 'r' ? -window.innerWidth : 0;
+    var dy = code[0] === 'b' ? -window.innerHeight : 0;
+    return {
+      translate: function (o) {
+        var o2 = {};
+        for (var name in o) {
+          var val = o[name];
+          if (typeof val === 'number') {
+            if (/^(?:x|left|right)$/.test(name)) {
+              o2[name] = val + dx;
+              continue;
+            }
+            if (/^(?:y|top|bottom)$/.test(name)) {
+              o2[name] = val + dy;
+              continue;
+            }
+          }
+          o2[name] = val;
+        }
+        return o2;
+      },
+      css: {
+        top: dy ? 'auto' : 0,
+        left: dx ? 'auto' : 0,
+        right: dx ? 0 : 'auto',
+        bottom: dy ? 0 : 'auto'
+      }
+    };
+  }
+
+  function translatePos(pos, dx, dy) {  // also in step.js
+    return {
+      top: typeof pos.top === 'number' ? pos.top + dy : pos.top,
+      left: typeof pos.left === 'number' ? pos.left + dx : pos.left,
+      right: typeof pos.right === 'number' ? pos.right - dx : pos.right,
+      bottom: typeof pos.bottom === 'number' ? pos.bottom - dy : pos.bottom
     };
   }
 
