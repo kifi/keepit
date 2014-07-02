@@ -41,7 +41,6 @@
       ],
       "matches": [
         "*://www.kifi.com/*",
-        "*://preview.kifi.com/*",
         "*://dev.ezkeep.com/*"
       ],
       "run_at": "document_start"

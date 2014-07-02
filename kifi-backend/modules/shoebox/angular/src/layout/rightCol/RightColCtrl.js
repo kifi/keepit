@@ -156,13 +156,14 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     var refreshTimeout;
     $window.addEventListener('message', function (event) {
       $scope.$apply(function () {
-        switch (event.data) {
+        var data = event.data || '';
+        switch (data.type || data) {
           case 'get_guide':
             $scope.triggerGuide();
             break;
           case 'import_bookmarks':
-            if (event.data.bookmarkCount > 0) {
-              $rootScope.$emit('showGlobalModal', 'importBookmarks', event.data.bookmarkCount, event);
+            if (data.count > 0) {
+              $rootScope.$emit('showGlobalModal', 'importBookmarks', data.count, event);
             }
             break;
           case 'update_keeps':
