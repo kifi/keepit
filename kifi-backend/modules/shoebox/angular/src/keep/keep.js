@@ -298,6 +298,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           return scope.toggleSelect();
         };
 
+        var read_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];
+        scope.getKeepReadTime = function () {
+          var wc = scope.keep && scope.keep.summary && scope.keep.summary.wordCount;
+          if (wc < 0) {
+            return null;
+          } else {
+            var minutesEstimate = wc / 250;
+            var found = _.find(read_times, function (t) { return minutesEstimate < t; });
+            return found ? found + ' min' : '> 1 h';
+          }
+        };
+
         var tagDragMask = element.find('.kf-tag-drag-mask');
         scope.isDragTarget = false;
 
