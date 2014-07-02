@@ -12,6 +12,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
 
 import play.api.libs.json.{JsArray, Json, JsObject}
@@ -148,7 +149,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 }
 
-class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
+class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo:mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient{
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, ()=>{})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -194,5 +195,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = Future.successful(SequenceNumber.ZERO)
 
-  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
+    Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
+  }
 }
