@@ -106,7 +106,7 @@ class KeepInterner @Inject() (
     }
   }
 
-  def keepAttribution(userId:Id[User], newKeeps: Seq[Keep]):Future[Unit] = {
+  def keepAttribution(userId:Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
     SafeFuture {
       val builder = collection.mutable.ArrayBuilder.make[Keep]
       newKeeps.foreach { keep =>
@@ -123,7 +123,7 @@ class KeepInterner @Inject() (
     }
   }
 
-  def searchAttribution(userId: Id[User], keep: Keep):Seq[ReKeep] = {
+  def searchAttribution(userId: Id[User], keep: Keep): Seq[ReKeep] = {
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
       val res = db.readWrite { implicit rw =>
@@ -138,7 +138,7 @@ class KeepInterner @Inject() (
     } getOrElse Seq.empty
   }
 
-  def chatAttribution(userId: Id[User], keep: Keep):Future[Unit] = {
+  def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
     elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
       log.info(s"chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
       otherStarters.foreach { chatUserId =>
