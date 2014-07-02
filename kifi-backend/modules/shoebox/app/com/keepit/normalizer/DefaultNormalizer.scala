@@ -2,6 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{Query, URI}
+import com.keepit.model.Normalization
 
 object DefaultNormalizer extends StaticNormalizer with Logging {
 
@@ -10,10 +11,12 @@ object DefaultNormalizer extends StaticNormalizer with Logging {
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
     "trk", "goback", "icid", "ncid", "zenid")
 
-  def isDefinedAt(uri: URI) = true // default normalizer should always be applicable
+  val validSchemes = Normalization.schemes.flatMap(_.scheme.split("://").headOption)
+
+  def isDefinedAt(uri: URI) = uri.scheme.exists(validSchemes.contains(_))
   def apply(uri: URI) = {
     uri match {
-      case URI(scheme, userInfo, host, port, path, query, fragment) =>
+      case URI(scheme, userInfo, host, port, path, query, fragment) if scheme.exists(validSchemes.contains(_)) =>
         try {
           val newQuery = query.flatMap{ query =>
             val newParams = query.params.filter{ param => !stopParams.contains(param.name) }
