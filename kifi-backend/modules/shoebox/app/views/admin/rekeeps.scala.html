@@ -36,7 +36,7 @@
                 <td>@rekeep.srcKeep.id.get</td>
                 <td>@rekeep.attributionFactor</td>
                 <td>@rekeep.uri.id</td>
-                <td><a href="@rekeep.uri.url">@rekeep.uri.title</a></td>
+                <td><a href="@rekeep.uri.url">@if(rekeep.uri.title.getOrElse("").trim.nonEmpty){ @rekeep.uri.title } else { @rekeep.uri.url }</a></td>
                 @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
             </tr>
             }
