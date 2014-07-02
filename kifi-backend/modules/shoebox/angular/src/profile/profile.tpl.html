@@ -1,7 +1,8 @@
 <div ng-controller="ProfileCtrl">
-  <div class="profile-wrapper" antiscroll="{ autoHide: false }">
+  <div class="profile-wrapper">
     <div class="profile">
       <h2>Settings</h2>
+      <a href="javascript:" class="profile-logout" ng-click="logout()">LOG OUT</a>
       <div class="profile-container">
         <div kf-profile-image pic-url="me.picUrl"></div>
         <div class="profile-input-wrapper">
@@ -12,16 +13,6 @@
             </span>
             <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{me.firstName}}" novalidate>
             <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{me.lastName}}" novalidate>
-          </div>
-        </div>
-        <div class="profile-input-wrapper">
-          <div class="profile-input-title">Description tagline <span class="profile-input-remaining-chars"></span></div>
-          <div kf-profile-input input-state="descInput" input-save-action="saveDescription(value)" explicit-enabling="true">
-            <input class="profile-input-input profile-description-input"
-              ng-disabled="!descInput.editing"
-              kf-focus-if focus-cond="descInput.editing"
-              ng-model="descInput.value"
-              type="text" name="description" placeholder="Enter your description tagline" maxlength="50">
           </div>
         </div>
         <div class="profile-input-wrapper profile-email">
@@ -83,8 +74,19 @@
           </li>
         </ul>
       </div>
-      <hr class="profile-section-divider">
       <div class="profile-section" kf-email-import></div>
+      <div class="profile-section">
+        <h3>Export Your Keeps</h3>
+        <h5>For all of your Keeps, the URL, date kept, and tags <br> will be included in a HTML netscape format file</h5>
+
+        <a class="profile-export" ng-href="{{getExportUrl()}}" ng-click="exportKeeps()" target="_self" ng-class="{'export-first':!exported, 'export-again':exported}">{{getExportButtonText()}}</a>
+        <p>
+        <span class="profile-export-status" ng-show="exported">
+          <span class="profile-placeholder">&nbsp;</span>
+          <span>You can find the file in your Downloads folder</span>
+        </span>
+        </p>
+      </div>
     </div>
   </div>
 </div>

@@ -1,12 +1,11 @@
 <div class="profile-email-addresses">
   <a class="profile-email-addresses-title-wrapper" href="javascript:" ng-click="toggle()">
-    <span class="profile-setting-arrow-right" ng-show="!isOpen"></span>
-    <span class="profile-setting-arrow-down" ng-show="isOpen"></span>
-    <span class="profile-email-addresses-title">Manage your email addresses</span>
+    <div class="profile-setting-arrow" ng-class="{'active':isOpen}"></div>
+    <div class="profile-email-addresses-title" ng-class="{'active':isOpen}">Manage your email addresses</div>
   </a>
   <div class="profile-email-address-manage" ng-show="isOpen">
-    <div class="profile-email-address-manage-description" ng-if="emailList.length > 0">
-      These are the email addresses associated with your Kifi account.
+    <div class="profile-email-address-manage-description" ng-show="emailList.length > 0">
+      NOTE: These are the email addresses associated with your Kifi account.
       You may log in with them and Kifi members can find you using these email addresses via search.
     </div>
     <ul class="profile-email-address-list">
@@ -16,6 +15,7 @@
         <span class="profile-email-address-item-pending-primary" ng-if="email.isPendingPrimary && !email.isPrimary && !email.isPlaceholderPrimary">(pending primary)</span>
         <span class="profile-email-address-item-unverified" ng-if="!email.isVerified">(<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail(email.address)">unverified</a>)</span>
         <div class="profile-email-address-item-arrow" href="javascript:" ng-if="!(email.isPrimary || email.isPendingPrimary || email.isPlaceholderPrimary)" ng-click="openDropdownForEmail($event, email.address)">
+          <img class="profile-email-address-item-arrow-image" src="../img/placeholder-icon.png">
           <ul class="profile-email-address-item-dropdown" ng-show="emailWithActiveDropdown === email.address">
             <li>
               <a class="profile-email-address-item-make-primary" href="javascript:" ng-if="email.isVerified" ng-click="makePrimary(email.address)">Make primary</a>
@@ -45,5 +45,6 @@
         </ul>
       </div>
     </div>
+    <div class="profile-email-address-manage-footer"></div>
   </div>
 </div>

@@ -1,27 +1,23 @@
 <div>
   <h3>Import your email contacts to Kifi</h3>
-  <h5>Message your email contact directly from Kifi</h5>
+  <h5>Message your email contacts directly from Kifi</h5>
   <a class="profile-nw nw-email import-gmail" href="javascript:" ng-click="importGmailContacts()" ng-bind="addressBookImportText"></a>
   <div ng-if="addressBooks">
-    <div class="profile-email-accounts-title">
-      <span>Your imported accounts: </span>
-      <!-- <a class="profile-email-accounts-refresh" href="javascript:">Refresh all</a> -->
+    <div class="profile-email-accounts-wrapper">
+      <div class="profile-email-accounts-overview">
+        <span>Your imported accounts: </span>
+        <table class="profile-email-accounts">
+          <tbody>
+            <tr ng-repeat="addressBook in addressBooks" class="profile-email-account {{addressBook.state}}" data-id="{{addressBook.id}}">
+              <td class="profile-email-status"></td>
+              <td class="profile-email-address">{{addressBook.ownerEmail}}</td>
+              <td class="profile-email-separator">|</td>
+              <td class="profile-email-contact-count">{{addressBook.numContacts}} contacts imported</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <table class="profile-email-accounts">
-      <tbody>
-        <tr ng-repeat="addressBook in addressBooks" class="profile-email-account {{addressBook.state}}" data-id="{{addressBook.id}}">
-          <td class="profile-email-status"></td>
-          <td class="profile-email-address">{{addressBook.ownerEmail}}</td>
-          <td class="profile-email-separator">|</td>
-          <td class="profile-email-contact-count">{{addressBook.numProcessed}} out of {{addressBook.numContacts}} contacts imported</td>
-          <!--
-          <td class="profile-email-separator">|</td>
-          <td class="profile-email-remove">
-            <a href="javascript:">Remove</a>
-          </td>
-          -->
-        </tr>
-      </tbody>
-    </table>
+
   </div>
 </div>
