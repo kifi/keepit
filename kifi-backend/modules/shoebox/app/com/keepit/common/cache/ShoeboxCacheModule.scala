@@ -260,14 +260,18 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   def econtactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new EContactTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
-
   @Singleton
   @Provides
   def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new EContactCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
 
-
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def pageInfoUri(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PageInfoUriCache(stats, accessLog, (outerRepo, 10 days))
+
 }

@@ -4,8 +4,8 @@ import org.joda.time.DateTime
 import com.keepit.common.logging.{Logging, AccessLog}
 
 case class KeepExport (
-  created_at: DateTime,
+  createdAt: DateTime,
   title: Option[String] = None,
-  url: String, // denormalized for efficiency
+  url: String,
   tags: Option[String] = None
 )

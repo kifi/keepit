@@ -16,8 +16,8 @@ var CutScreen = CutScreen || (function (window, document) {
        gc.mozBackingStorePixelRatio ||
        gc.backingStorePixelRatio || 1);
     size.call(this);
+    this.onWinResize = _.throttle(onWinResize.bind(null, this), 80, {leading: false});
     this.attach(parent, nextSibling);
-    this.onWinResize = _.throttle(onWinResize.bind(null, this), 100, {leading: false});
   }
 
   CutScreen.prototype = {

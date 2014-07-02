@@ -2,12 +2,15 @@ package com.keepit.common.zookeeper
 
 import com.keepit.common.service.ServiceType
 import com.google.inject.{Singleton, Provides}
+import play.api.libs.json.{JsValue, JsString, Json}
 import scala.collection.mutable
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooKeeper
 import com.keepit.common.actor.{FakeSchedulerModule, TestActorSystemModule}
 import org.apache.zookeeper.KeeperException
+import com.keepit.common.strings.fromByteArray
 
+case class ZooKeeperSubtree(path: String, data: Option[JsValue], children: Seq[ZooKeeperSubtree])
 
 case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
 
@@ -97,5 +100,16 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
     descendants.foreach{ db.remove(_) }
     db.remove(node)
   }
-}
 
+  def getSubtree(path: String): ZooKeeperSubtree = {
+    val data = getData[String](Node(path)).map { s =>
+      try {
+        Json.parse(s)
+      } catch {
+        case e : Exception => JsString(s)
+      }
+    }
+
+    ZooKeeperSubtree(path, data, getChildren(Node(path)).map(node => getSubtree(node.path)))
+  }
+}

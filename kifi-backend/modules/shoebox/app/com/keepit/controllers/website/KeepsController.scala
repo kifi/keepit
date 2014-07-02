@@ -152,7 +152,7 @@ class KeepsController @Inject() (
       keepRepo.getKeepExports(request.userId)
     }
 
-    Ok(KeepsController.assembleKeepExport(exports))
+    Ok(bookmarksCommander.assembleKeepExport(exports))
       .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.html")
       .as("text/html")
   }
@@ -413,36 +413,5 @@ class KeepsController @Inject() (
     val doneOpt = Try(done.map(_.toInt)).toOption.flatten
     val totalOpt = Try(total.map(_.toInt)).toOption.flatten
     Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStart))
-  }
-}
-
-object KeepsController {
-
-  def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
-    // HTML format that follows Delicious exports
-    val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
-                   |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-                   |<!--This is an automatically generated file.
-                   |It will be read and overwritten.
-                   |Do Not Edit! -->
-                   |<Title>Kifi Bookmarks Export</Title>
-                   |<H1>Bookmarks</H1>
-                   |<DL>
-                   |""".stripMargin
-    val after = "\n</DL>"
-
-    def CreateExport(keep : KeepExport): String = {
-      // Parse Tags
-      val title = keep.title getOrElse ""
-      val tagString = keep.tags map { tags =>
-        s""" TAGS="${tags.replace("&","&amp;").replace("\"","")}""""
-      } getOrElse ""
-      val date = keep.created_at.getMillis()/1000
-      val line =
-        s"""<DT><A HREF="${keep.url}" ADD_DATE="${date}"${tagString}>${title.replace("&","&amp;")}</A>"""
-          .stripMargin
-      line
-    }
-    before + keepExports.map(CreateExport).mkString("\n") + after
   }
 }

@@ -33,7 +33,6 @@ class ABookCommander @Inject() (
   s3:ABookRawInfoStore,
   econtactTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
-  contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   contactsUpdater:ContactsUpdaterPlugin,
   shoebox: ShoeboxServiceClient
@@ -182,20 +181,6 @@ class ABookCommander @Inject() (
       }
       Some(updatedEntry)
     }
-  }
-
-  def getContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
-    val ts = System.currentTimeMillis
-    val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly(attempts = 2) {
-      implicit session =>
-        contactRepo.getByUserIdIter(userId, maxRows).foreach {
-          jsonBuilder += Json.toJson(_)
-        } // TODO: paging & caching
-    }
-    val contacts = jsonBuilder.result
-    log.info(s"[getContacts($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
-    JsArray(contacts)
   }
 
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {

@@ -2,7 +2,7 @@
   <div class="kf-footer" ng-show="readyToDraw()">
 
     <div class="kf-helprank" ng-if="me.clickCount > 0 || me.rekeepTotalCount > 0">
-      <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your help rank</span></h2>
+      <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your most helpful keeps</span></h2>
       <div class="kf-footer-help-rank-wrapper" ng-if="me.clickCount > 0">
         <div class="kf-footer-help-rank-item">
           <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
@@ -28,7 +28,7 @@
 
     <h2 class="kf-footer-header">Essentials</h2>
     <ul class="kf-footer-essentials-list about-kifi">
-      <li kf-min-version="3.0.13" min-canary="3.0.8" class="start-guide">
+      <li kf-min-version="3.1" class="start-guide">
         <a class="kf-footer-item-link kifi-tutorial" href="javascript:" ng-click="triggerGuide(true)">
           <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
         </a>

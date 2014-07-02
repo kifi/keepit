@@ -2,6 +2,7 @@ package com.keepit.common.zookeeper
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.logging.Logging
+import play.api.libs.json.{JsString, JsValue, Json}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -14,7 +15,9 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.util.concurrent.atomic.AtomicReference
+import com.keepit.common.strings.fromByteArray
 
+case class ZooKeeperSubtree(path: String, data: Option[JsValue], children: Seq[ZooKeeperSubtree])
 
 object Node {
   def apply(path: String): Node = {
@@ -92,6 +95,8 @@ trait ZooKeeperSession {
 
   def delete(node: Node): Unit
   def deleteRecursive(node: Node): Unit
+
+  def getSubtree(path: String): ZooKeeperSubtree
 }
 
 /**
@@ -471,5 +476,17 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
         if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
     }
     doWatchChildren(children)
+  }
+
+  def getSubtree(path: String): ZooKeeperSubtree = {
+    val data = getData[String](Node(path)).map { s =>
+      try {
+        Json.parse(s)
+      } catch {
+        case e : Exception => JsString(s)
+      }
+    }
+
+    ZooKeeperSubtree(path, data, getChildren(Node(path)).map(node => getSubtree(node.path)))
   }
 }

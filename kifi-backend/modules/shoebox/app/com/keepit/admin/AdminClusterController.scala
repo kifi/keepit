@@ -1,12 +1,13 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceInstanceId}
+import com.keepit.common.zookeeper._
 import com.keepit.common.service.{ServiceUri, ServiceType, ServiceStatus, ServiceVersion}
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.routes.Common
 import com.keepit.common.net.HttpClient
 import com.google.inject.{Inject, Singleton}
+import play.api.libs.json.{JsNull, JsValue, Json}
 import views.html
 import java.net.InetAddress
 import scala.collection.mutable.WeakHashMap
@@ -17,7 +18,8 @@ case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, 
 class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     serviceVersionMap: ServiceVersionMap,
-    serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
+    serviceDiscovery: ServiceDiscovery,
+    zooKeeperClient: ZooKeeperClient) extends AdminController(actionAuthenticator) {
 
     val machineNames = Map[String, String](
         "50.18.183.73"    -> "b01",
@@ -43,8 +45,21 @@ class AdminClusterController @Inject() (
       }
     }
 
+    def zooKeeperData : JsValue = zooKeeperClient.session{ session =>
+      val tree = session.getSubtree("/fortytwo")
+      def convertData(tree: ZooKeeperSubtree) : JsValue = {
+        val jsData : JsValue = tree.data.getOrElse(JsNull)
+        Json.obj("path" -> tree.path, "data" -> jsData, "children" -> tree.children.map(child => convertData(child)))
+      }
+      convertData(tree)
+    }
+
     def clustersView = AdminHtmlAction.authenticated { implicit request =>
       Ok(html.admin.adminClustersView(clustersInfo))
+    }
+
+    def zooKeeperInspector = AdminHtmlAction.authenticated { implicit request =>
+      Ok(zooKeeperData)
     }
 }
 

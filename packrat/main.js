@@ -1264,7 +1264,12 @@ api.port.on({
     socket.send(['unmute_thread', threadId]);
     setMuted(threadId, false);
   },
-  get_bookmark_count_if_should_import: function(_, respond) {
+  count_bookmarks: function(_, respond) {
+    api.bookmarks.getAll(function (bms) {
+      respond(bms.length);
+    });
+  },
+  get_bookmark_count_if_should_import: function(_, respond) {  // TODO: remove (obsolete)
     if (stored('prompt_to_import_bookmarks')) {
       api.bookmarks.getAll(function (bms) {
         respond(bms.length);
@@ -1289,7 +1294,7 @@ api.port.on({
   },
   start_guide: function (pages, _, tab) {
     guidePages = pages;
-    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages});
+    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages, x: !experiments || experiments.indexOf('guide_forced') < 0});
     unsilence(false);
   },
   track_guide: function (stepParts) {
@@ -1600,7 +1605,8 @@ function awaitDeepLink(link, tabId, retrySec) {
         api.tabs.emit(tab, 'guide', {
           step: +loc.substr(7, 1),
           pages: guidePages,
-          page: +loc.substr(9, 1)
+          page: +loc.substr(9, 1),
+          x: !experiments || experiments.indexOf('guide_forced') < 0
         }, {queue: 1});
       } else {
         api.tabs.emit(tab, 'open_to', {
@@ -1628,7 +1634,7 @@ function awaitDeepLink(link, tabId, retrySec) {
 function updateKifiAppTabs(message) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (url.lastIndexOf(prefix, 0) === 0 || url.lastIndexOf('https://preview.kifi.com', 0) === 0) {
+    if (url.lastIndexOf(prefix, 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
         api.tabs.emit(tab, message);
       });
@@ -2510,23 +2516,15 @@ api.timers.setTimeout(api.errors.wrap(function() {
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
-    var siteUrl = webBaseUri() + '/';
-    var tab = api.tabs.anyAt(webBaseUri() + '/install') || api.tabs.anyAt(siteUrl);
-    if (~experiments.indexOf('kifi_black')) {
-      var url = 'https://preview.kifi.com';
-      var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: url});
-      if (tab) {
-        api.tabs.select(tab.id);
-        api.tabs.navigate(tab.id, url);
-        timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
-      } else {
-        api.tabs.open(url, await);
-      }
-    } else if (tab) {
+    var baseUri = webBaseUri();
+    var tab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
+    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: baseUri});
+    if (tab) {
       api.tabs.select(tab.id);
-      api.tabs.navigate(tab.id, siteUrl);
+      api.tabs.navigate(tab.id, baseUri);
+      timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
     } else {
-      api.tabs.open(siteUrl);
+      api.tabs.open(baseUri, await);
     }
   }
 }, 3000))();

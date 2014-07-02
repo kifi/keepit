@@ -28,18 +28,15 @@
 
 .kifi-guide-4-h1 {
   margin: 12px 0;
-  font: bold italic 26px/48px Georgia,Times,serif !important;
+  font: bold italic 26px/36px Georgia,Times,serif !important;
   -webkit-font-smoothing: antialiased;
   color: #fff;
 }
-.kifi-guide-4-h1+.kifi-guide-4-h1 {
-  margin-top: -20px;
-}
 .kifi-guide-feature>.kifi-guide-4-h1 {
-  margin-top: 0;
+  margin: 0;
 }
 .kifi-guide-ul {
-  margin: -14px 0 0 4px;
+  margin: 3px 0 0 4px;
   list-style: disc;
   font: 16px/24px 'Helvetica Neue',Arial,sans-serif !important;
   -webkit-font-smoothing: antialiased;
@@ -61,10 +58,10 @@
 .kifi-guide-drum-roll {
   display: none;
   position: fixed;
-  width: 240px;
-  bottom: 40%;
-  right: 20%;
-  margin-bottom: -120px;
+  width: 18%;
+  bottom: 45%;
+  right: 45%;
+  margin: 0 -270px -120px 0;
   text-align: center;
   opacity: 0;
   transition: opacity .26s linear;
@@ -72,13 +69,14 @@
 .kifi-guide-drum-roll.kifi-opaque {
   opacity: 1;
 }
+.kifi-guide-drum-roll>.kifi-guide-4-next {
+  min-width: 40px;
+}
 .kifi-guide-4-next {
-  min-width: 140px;
-  margin-top: 3px;
-  display: inline-block;
+  display: block;
   border: 3px solid #fff;
   border-radius: 7px;
-  padding: 0 32px;
+  padding: 0 40px;
   line-height: 50px;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
@@ -109,5 +107,18 @@
   opacity: 1;
 }
 .kifi-guide-farewell>.kifi-guide-4-next {
-  margin-top: 10px;
+  margin: 0 auto;
+  max-width: 190px;
+}
+.kifi-guide-farewell>.kifi-guide-4-import {
+  margin: 36px auto 20px;
+  border-color: transparent;
+  background-color: #449fcc;
+}
+.kifi-guide-4-import:hover,
+.kifi-guide-4-import:focus {
+  background-color: #60add4;
+}
+.kifi-guide-4-import:active {
+  background-color: #367fa3;
 }

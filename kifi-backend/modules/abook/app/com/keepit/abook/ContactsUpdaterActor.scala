@@ -1,31 +1,27 @@
 package com.keepit.abook
 
-import com.google.inject.{Provider, ImplementedBy, Inject, Singleton}
+import com.google.inject.{Provider, Inject, Singleton}
 import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessage}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.abook.store.ABookRawInfoStore
-import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
+import play.api.libs.json.{JsError, JsSuccess, JsValue}
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.db.slick.Database
-import play.api.{Play, Plugin}
+import play.api.Plugin
 import scala.ref.WeakReference
 import akka.actor.{Props, ActorSystem}
-import play.api.Play.current
 import com.keepit.common.actor.ActorInstance
-import akka.routing.{SmallestMailboxRouter, RoundRobinRouter}
-import scala.concurrent._
+import akka.routing.SmallestMailboxRouter
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.sql.SQLException
-import play.api.libs.iteratee.{Step, Iteratee}
 import com.keepit.common.performance._
-import scala.util.{Try, Failure, Success}
 import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.{EmailAddress}
+import com.keepit.common.mail.EmailAddress
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -71,7 +67,6 @@ class ContactsUpdater @Inject() (
   s3:ABookRawInfoStore,
   econtactABookTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
-  contactRepo:ContactRepo,
   econtactRepo:EContactRepo,
   airbrake:AirbrakeNotifier,
   abookUploadConf:ABookUploadConf,
@@ -127,7 +122,7 @@ class ContactsUpdater @Inject() (
           val existingEmails = existingEmailSet(userId, origin, abookInfo)
 
           log.infoP(s"abookRawInfo=$abookRawInfo existingEmails=$existingEmails")
-          val cBuilder = mutable.ArrayBuilder.make[Contact]
+
           abookRawInfo.contacts.value.grouped(abookUploadConf.batchSize).foreach { g =>
             val econtactsToAddBuilder = mutable.ArrayBuilder.make[EContact]
             batchNum += 1
@@ -152,13 +147,6 @@ class ContactsUpdater @Inject() (
                   existingEmails += email
                   econtactsToAddBuilder += e
                 }
-              }
-
-              for (email <- emails.headOption) {
-                val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName)
-                val c = Contact.newInstance(userId, abookInfo.id.get, email, emails.tail, origin, nameOpt, fName, lName, None)
-                log.debugP(s"$c")
-                cBuilder += c
               }
             }
             val econtactsToAdd = econtactsToAddBuilder.result
@@ -202,11 +190,6 @@ class ContactsUpdater @Inject() (
             econtactRepo.bulkInvalidateCache(userId, econtacts)
           }
           econtactABookTypeahead.refresh(userId) // async
-
-          val contacts = cBuilder.result
-          if (!contacts.isEmpty) {
-            asyncUpdateContactsRepo(userId, abookInfo, origin, contacts)
-          }
         }
       }
     } catch {
@@ -225,21 +208,5 @@ class ContactsUpdater @Inject() (
       }
     }
   }
-
-  def asyncUpdateContactsRepo(userId: Id[User], abookInfo: ABookInfo, origin: ABookOriginType, contacts: Array[Contact]) {
-    SafeFuture {
-      Try {
-        db.readWrite(attempts = 2) { implicit session =>
-          contactRepo.deleteAndInsertAll(userId, abookInfo.id.get, origin, contacts)
-        }
-      }
-    } onComplete { tr =>
-      tr match {
-        case Failure(t) => airbrake.notify(s"[upload($userId,$origin)] (minor) failed to update contacts table") // email?
-        case Success(n) => log.info(s"[upload($userId,$origin)] contacts table updated")
-      }
-    }
-  }
-
 }
 

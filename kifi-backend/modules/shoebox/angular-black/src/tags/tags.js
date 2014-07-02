@@ -323,6 +323,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
             scope.dehighlight();
             scope.clearFilter();
           }
+
         };
 
         scope.createTag = function () {

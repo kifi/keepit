@@ -331,7 +331,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
         $slider.remove(), $slider = null;
       }
-      if (justKept) {
+      if (justKept && !window.guide) {
         api.port.emit('prefs', function (prefs) {
           if (prefs.showExtMsgIntro) {
             setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);

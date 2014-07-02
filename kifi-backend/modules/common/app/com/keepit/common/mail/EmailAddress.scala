@@ -7,6 +7,8 @@ import scala.util.Try
 case class EmailAddress(address: String) {
   if (!EmailAddress.isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
   override def toString = address
+  def equalsIgnoreCase(other: EmailAddress): Boolean = compareToIgnoreCase(other) == 0
+  def compareToIgnoreCase(other: EmailAddress): Int = address.compareToIgnoreCase(other.address)
 }
 
 object EmailAddress {
@@ -35,7 +37,10 @@ object EmailAddress {
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
   private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
-  private def canonicalize(address: String): EmailAddress = EmailAddress(address.toLowerCase)
+  private def canonicalize(address: String): EmailAddress = {
+    val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
+    EmailAddress(localAt + host.toLowerCase)
+  }
   def validate(address: String): Try[EmailAddress] = Try { canonicalize(address) }
 }
 
