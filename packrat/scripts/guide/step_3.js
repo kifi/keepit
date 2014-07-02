@@ -135,7 +135,7 @@ guide.step3 = guide.step3 || function () {
     if (stepIdx === 4) {
       step.show(5);
     } else {
-      step.nav('https://preview.kifi.com');
+      step.nav('https://www.kifi.com');
     }
   }
 
