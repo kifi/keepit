@@ -45,6 +45,7 @@ guide.step3 = guide.step3 || function () {
     },
     {
       afterTransition: '.kifi-pane-box-cart',
+      litFor: 1000,
       pos: {bottom: 300, right: 390},
       transition: 'opacity'
     },
