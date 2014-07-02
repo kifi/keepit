@@ -11,6 +11,7 @@ import Q.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {
+  def getReKeep(keeperId: Id[User], uriId: Id[NormalizedURI], rekeeperId: Id[User])(implicit r:RSession):Option[ReKeep]
   def getReKeepsByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Seq[ReKeep]
   def getAllReKeepsByKeeper(userId:Id[User])(implicit r:RSession):Seq[ReKeep]
   def getReKeepsByReKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Seq[ReKeep]
@@ -47,6 +48,10 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def deleteCache(model: ReKeep)(implicit session: RSession): Unit = {}
   def invalidateCache(model: ReKeep)(implicit session: RSession): Unit = {}
+
+  def getReKeep(keeperId: Id[User], uriId: Id[NormalizedURI], rekeeperId: Id[User])(implicit r: RSession): Option[ReKeep] = {
+    (for (r <- rows if (r.keeperId === keeperId && r.uriId === uriId && r.srcUserId === rekeeperId)) yield r).firstOption()
+  }
 
   def getReKeepsByKeeper(userId: Id[User], since:DateTime)(implicit r:RSession): Seq[ReKeep] = {
     (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).list()
