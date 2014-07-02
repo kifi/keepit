@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', 'jun.smartScroll'])
+angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
 
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
@@ -14,7 +14,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 
             $timeout(function () {
               delete tag.isNew;
-            }, 3000);
+            }, 2600);
 
             return tag;
           });
@@ -24,8 +24,8 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
 ])
 
 .directive('kfTags', [
-  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'profileService',
-  function ($timeout, $window, $rootScope, $location, util, dom, tagService, profileService) {
+  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService',
+  function ($timeout, $window, $rootScope, $location, util, dom, tagService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,
@@ -41,26 +41,45 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
       controller: 'TagsCtrl',
       link: function (scope, element) {
         scope.tags = tagService.list;
-        scope.newLocationTagId = null;
         scope.viewedTagId = null;
+        scope.isFilterFocused = false;
+        scope.data = {
+          tagDragSource: null,
+          targetIdx: null
+        };
+        scope.filter = {};
 
-        scope.clearFilter = function (focus) {
+        var preventClearFilter = false;
+        var w = angular.element($window);
+        var scrollableTagList = element.find('.kf-scrollable-tags');
+        var tagList = element.find('.kf-sidebar-tag-list');
+        var antiscroll = element.find('.antiscroll-inner');
+
+        tagList.on('mousewheel', function(e) {
+            var d = e.originalEvent.deltaY;
+            var visibleHeight = scrollableTagList.innerHeight();
+            var totalHeight = tagList.innerHeight();
+            var maxScroll = totalHeight - visibleHeight;
+            var scroll = antiscroll.scrollTop();
+            if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
+              e.preventDefault();
+            }
+        });
+
+        w.bind('resize', function () {
+          scope.$apply(function () {
+            setTagListHeight();
+          });
+        });
+
+        function setTagListHeight() {
+          scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+        }
+        $timeout(setTagListHeight);
+
+        scope.clearFilter = function () {
           scope.filter.name = '';
-          if (focus) {
-            scope.focusFilter = true;
-          }
-        };
-
-        scope.unfocus = function () {
-          scope.lastHighlight = scope.highlight;
-        };
-
-        scope.refocus = function () {
-          if (scope.lastHighlight && !scope.highlight) {
-            scope.highlight = scope.lastHighlight;
-          }
-          scope.lastHighlight = null;
-          scope.focusFilter = true;
+          scope.onFilterChange();
         };
 
         function getFilterValue() {
@@ -72,7 +91,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
             res = false;
           if (name) {
             name = name.toLowerCase();
-            res = !scope.tags.some(function (tag) {
+            res = scope.isFilterFocused && !scope.tags.some(function (tag) {
               return tag.name.toLowerCase() === name;
             });
           }
@@ -81,7 +100,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.isActiveTag = function (tag) {
-          return util.startsWith($location.path(), '/tag/' + tag.id);
+          return tag && util.startsWith($location.path(), '/tag/' + tag.id);
         };
 
         scope.getShownTags = function () {
@@ -98,6 +117,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         scope.viewTag = function (tagId) {
           if (tagId) {
             scope.viewedTagId = tagId;
+            scope.dehighlight();
             return $location.path('/tag/' + tagId);
           }
         };
@@ -106,7 +126,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           if (scope.highlight) {
             return scope.viewTag(scope.highlight.id);
           }
-          return scope.create(getFilterValue()).then(function (tag) {
+          return scope.createTag().then(function (tag) {
             scope.viewTag(tag.id);
           });
         };
@@ -123,12 +143,9 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
             scope.select();
             break;
           case KEY_ESC:
-            if (scope.highlight) {
-              scope.dehighlight();
-            }
-            else {
-              scope.clearFilter();
-            }
+            setTimeout(function () {
+              element.find('.kf-tag-filter-input').blur(); // 
+            });
             break;
           case KEY_DEL:
             scope.remove(scope.highlight);
@@ -140,6 +157,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.onFilterChange = function () {
+          resetTagLimit();
           tagService.filterList(scope.filter.name);
         };
 
@@ -162,7 +180,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
         };
 
         scope.isHighlight = function (tag) {
-          return scope.highlight === tag;
+          return tag && scope.highlight === tag;
         };
 
         scope.isHighlightNew = function () {
@@ -263,34 +281,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           return scope.highlightAt(index - 1);
         };
 
-        var list = element.find('.kf-tag-list');
-        var hidden = element.find('.kf-tag-list-hidden');
-
-        function positionTagsList() {
-          list.css({
-            position: 'absolute',
-            top: hidden.position().top,
-            bottom: 0
-          });
-        }
-        $timeout(positionTagsList);
-
-        scope.$watch(function () {
-          return profileService.me.seqNum;
-        }, function () {
-          // This is a bit hacky, would love to improve.
-          // Normally, we can position the tags list immediately (and doing so
-          // avoids a reflow flash). However, when `me` comes in too slow,
-          // if we run positionTagsList synchronously, it's too soon.
-
-          // I still don't like it because we can still hit the reflow flash.
-
-          positionTagsList();
-          $timeout(positionTagsList); // use $timeout so that `me` is drawn first, before resizing tags
-        });
-
         angular.element($window).resize(_.throttle(function () {
-          positionTagsList();
           scope.refreshScroll();
         }, 150));
 
@@ -299,19 +290,10 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
           scope.refreshScroll();
         });
 
-        scope.$watch('tags.length', function () {
-          scope.refreshScroll();
-        });
-
         tagService.fetchAll();
 
         scope.watchTagReorder = function () {
           return !getFilterValue();
-        };
-
-        scope.reorderTag = function (isTop, srcTag, dstTag) {
-          tagService.reorderTag(isTop, srcTag, dstTag);
-          scope.newLocationTagId = srcTag.id;
         };
 
         scope.removeTag = function (tag) {
@@ -322,6 +304,54 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem', '
             }
           });
         };
+
+        scope.focusFilter = function () {
+          scope.isFilterFocused = true;
+        };
+
+        scope.disableClearFilter = function () {
+          preventClearFilter = true;
+        };
+
+        scope.enableClearFilter = function () {
+          preventClearFilter = false;
+        };
+
+        scope.blurFilter = function () {
+          scope.isFilterFocused = false;
+          if (!preventClearFilter) {
+            scope.dehighlight();
+            scope.clearFilter();
+          }
+
+        };
+
+        scope.createTag = function () {
+          var q = scope.create(getFilterValue());
+          scope.blurFilter();
+          return q;
+        };
+
+        function resetTagLimit() {
+          scope.tagLimit = 40;
+        }
+        resetTagLimit();
+
+        function increaseLimit() {
+          scope.tagLimit += 30;
+        }
+
+        scope.scrollNext = function () {
+          if(!scope.$root.$$phase) {
+            scope.$apply(increaseLimit);
+          } else {
+            increaseLimit();
+          }
+        };
+        scope.isScrollDisabled = function () {
+          return scope.tagLimit > scope.tags.length + 1;
+        };
+        scope.scrollDistance = '100%';
       }
     };
   }

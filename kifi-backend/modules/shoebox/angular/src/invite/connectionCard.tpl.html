@@ -1,11 +1,14 @@
 <div class="kf-connection-card" ng-class="{'kf-connection-invited': invited}" ng-hide="hidden"> <!-- Should really be ng-if but that causes some error for some reason -->
-  <img class="kf-connection-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}" ng-class="{'kf-connection-card-email-image': email}"></img>
+  <img class="kf-connection-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}" ng-class="{'kf-connection-card-email-image': email}">
   <span class="kf-connection-card-who">
     <span class="kf-main-label" title="{{mainLabel}}">{{mainLabel}}</span>
     <span class="kf-byline-icon kf-icon-micro" ng-hide="email" ng-class="{'kf-facebook-icon-micro': facebook, 'kf-linkedin-icon-micro': linkedin}"></span>
     <span class="kf-byline" title="{{byline}}">{{byline}}</span>
     <span class="kf-byline">{{byline2}}</span>
   </span>
-  <span class="kf-connection-card-action" ng-class="{'kf-connection-invited': invited}" ng-click="action()">{{actionText}}</span>
+  <span class="kf-connection-card-action" ng-class="{'kf-connection-invited': invited}" ng-click="action()">
+    <span class="sprite sprite-tag-new-plus-icon" ng-if="actionText=='Invite'"></span>
+    {{actionText}}
+  </span>
   <span class="kf-connection-card-close" ng-click="closeAction()">✕</span>
 </div>

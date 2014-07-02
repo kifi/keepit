@@ -1,9 +1,5 @@
 .kf-main-keeps:before
   content: " "
-  position: absolute
-  top: 0
-  left: 18px
-  right: 18px
   border-top: 1px none #f9f9f9
   z-index: 1
 
@@ -30,7 +26,126 @@
   margin: 21px 50%
 
 .kf-shadow-dragged-keeps
+.kf-my-keeps
+  padding: 0 25px 20px 30px
+
+.kf-shadow-dragged-keeps
   position: absolute
   left: 0
   top: 0
+  width: 100%
   z-index: -1
+  box-sizing: border-box
+
+  &.two
+    .kf-shadow-keep-last
+      top: 40px
+    
+  &.three
+    .kf-shadow-keep-second
+      top: 40px
+    .kf-shadow-keep-last
+      top: 80px
+    
+  &.more
+    .kf-shadow-keep-ellipsis
+      top: 40px
+    .kf-shadow-keep-last
+      top: 80px
+
+.kf-shadow-keep-ellipsis
+  display: none
+  position: absolute
+  height: 40px
+  top: 0
+  left: 3px
+  width: calc(100% - 28px)
+  border-radius: 3px 3px 0 0
+  border: defaultBorder
+  border-bottom: none
+  background-color: #fafafa
+  box-sizing: border-box
+
+  &.active
+    display: block
+
+.kf-shadow-keep-ellipsis-line
+  position: relative
+  top: 50%
+  height: 50%
+  width: 100%
+  border: inherit
+  border-left: none
+  border-right: none
+  margin-top: -1px
+
+.kf-shadow-keep-ellipsis-counter
+.kf-shadow-keep-ellipsis-counter-hidden
+  position: absolute
+  font-size: 16px
+  color: black
+  background-color: inherit
+  line-height: 40px
+  top: 0
+  padding: 0 3px
+  font-family: "Georgia", Arial, sans-serif
+
+.kf-shadow-keep-ellipsis-counter-hidden
+  visibility: hidden
+
+.kf-shadow-keep-first
+.kf-shadow-keep-second
+.kf-shadow-keep-last
+  position: absolute
+  top: 0
+  width: calc(100% - 55px) // (100% - total left/right padding)
+
+  .kf-keep
+    margin-top: 0
+
+.kf-add-keep-body
+  width: 500px
+  text-align: left
+  padding: 5px
+
+.kf-add-keep-input
+  width: 100%
+
+.kf-add-keep-hint
+.kf-add-keep-error
+  color: textLightGrey
+  font-size: 15px
+
+.kf-add-keep-hint
+  color: textLightGrey
+
+.kf-add-keep-error
+  color: redColor
+
+.kf-add-keep-private-container
+  border: 1px dotted transparent
+  padding: 2px
+  display: inline-block
+  
+.kf-add-keep-private-container:focus
+  border-color: #ddd
+
+.kf-add-keep-private-label
+  margin-left: 10px
+
+.kf-add-keep-modal
+  input
+    border: defaultBorder
+    border-radius: 3px
+    font-size: 14px
+    padding: 10px
+    box-sizing: border-box
+    margin: 10px 0
+  /*[placeholder]:focus::-webkit-input-placeholder
+    color: transparent*/ // This makes it difficult to figure out what "Add a keep" is for
+
+  .dialog-body-wrap
+    margin-bottom: 0
+
+.kf-add-keep-private-checkbox
+  user-select: none

@@ -42,11 +42,21 @@ angular.module('kifi.scrollbar', [])
       return w1 - w2;
     }
 
-    var antiWidth = null,
-        $ = angular.element;
+    var antiWidth = null;
+    //var $ = angular.element;
 
     function scrollbarSize() {
-      var div = $(
+      /**
+       * Overriding for now - seems like it doesn't work in Firefox anymore
+       * - the parent of 'antiscroll-inner' should have 'overflow: hidden'
+       * - children of 'antiscroll-inner' should have 'width: calc(100% - 30px)'
+       * 
+       * Known issue:
+       * - the scrollbar may remain in the 'thin' state all the time
+       */
+      return 30;
+
+      /*var div = $(
           '<div class="antiscroll-inner" style="width:50px;height:50px;overflow-y:scroll;' +
           'position:absolute;top:-200px;left:-200px;"><div style="height:100px;width:100%"/>' +
           '</div>'
@@ -57,7 +67,7 @@ angular.module('kifi.scrollbar', [])
       var w2 = $('div', div).innerWidth();
       $(div).remove();
 
-      return w1 - w2;
+      return w1 - w2;*/
     }
 
     return {

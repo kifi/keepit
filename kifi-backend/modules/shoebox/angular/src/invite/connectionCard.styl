@@ -18,38 +18,45 @@
 
 
 .kf-connection-card-container
+  padding-right: 4px
+  @media screen and (max-width: 1365px)
+    padding-right: 7px
+
   .kf-connection-card
     @media screen and (min-width: 1365px)
-      width: calc(50% - 22px)
+      width: calc(50% - 28px)
 
     @media screen and (max-width: 1365px)
-      width: calc(100% - 20px)
+      width: calc(100% - 25px)
 
-  .kf-show-more
-    float: right
-    text-decoration: underline
-    cursor: pointer
-    color: #4B6F9F
-    font-weight: 300
-    font-size: 13px
-    letter-spacing: .5px
-    margin-right: 5px
+.kf-show-more
+  float: right
+  text-decoration: underline
+  cursor: pointer
+  color: #4B6F9F
+  font-weight: 300
+  font-size: 13px
+  letter-spacing: .5px
+  margin-right: 5px
 
 
 .kf-connection-card
-  background-color: #EFF2F7
+  background-color: #FFFFFF
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
   display: inline-block
   margin: 5px 6px
+  margin-left: 10px
   padding: 5px
   min-width: 250px
   position: relative
   transition: opacity 0.4s ease
   opacity: 1
-  height: 80px
+  height: 90px
   border-radius: 5px
 
   &:hover
-    background-color: #DEEBFC
+    background-color: #E5F1FF
 
   &.ng-hide
     opacity: 0
@@ -58,23 +65,25 @@
     display: inline-block !important
 
   &.kf-connection-invited
-    background-color: #BDD8FA
+    background-color: #E5F1FF
 
   .kf-connection-card-image
     float: left
     margin-right: 12px
-    height: 80px
-    width: 80px
+    margin-top: 15px
+    margin-left: 5px
+    height: 60px
+    width: 60px
     border-radius: 3px
 
     &.kf-connection-card-email-image
       width: 60px
       height: initial
-      padding: 21px 10px
+      padding: 10px
 
   .kf-connection-card-who
 
-    padding-top: 10px
+    padding-top: 20px
     display: inline-block
     width: 60%
 
@@ -110,7 +119,7 @@
     cursor: pointer
     position: absolute
     right: 10px
-    bottom: 10px
+    bottom: 39px
     background-color: #6FA6EF
     border-radius: 3px
     color: #FFFFFF
@@ -122,11 +131,11 @@
     padding 4px 0px
 
 
-
     &.kf-connection-invited
       background-color: initial
       text-decoration: underline
       color: #4B6F9F
+      bottom: 7px
 
 
   .kf-connection-card-close

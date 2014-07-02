@@ -5,8 +5,8 @@ angular.module('kifi.socialService', [
 ])
 
 .factory('socialService', [
-  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q', '$analytics', '$timeout',
-  function (routeService, $http, util, $rootScope, Clutch, $window, $q, $analytics, $timeout) {
+  'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q', '$analytics', '$location', '$timeout',
+  function (routeService, $http, util, $rootScope, Clutch, $window, $q, $analytics, $location, $timeout) {
 
     var networks = [],
         facebook = {},
@@ -127,21 +127,24 @@ angular.module('kifi.socialService', [
 
       connectFacebook: function () {
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'connectFacebook'
+          'action': 'connectFacebook',
+          'path': $location.path()
         });
         $window.location.href = routeService.linkNetwork('facebook');
       },
 
       connectLinkedIn: function () {
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'connectLinkedIn'
+          'action': 'connectLinkedIn',
+          'path': $location.path()
         });
         $window.location.href = routeService.linkNetwork('linkedin');
       },
 
       importGmail: function () {
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'importGmail'
+          'action': 'importGmail',
+          'path': $location.path()
         });
         $window.location.href = routeService.importGmail();
       },
@@ -150,7 +153,8 @@ angular.module('kifi.socialService', [
         return $http.post(routeService.disconnectNetwork('facebook')).then(function (res) {
           util.replaceObjectInPlace(facebook, {});
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'disconnectFacebook'
+            'action': 'disconnectFacebook',
+            'path': $location.path()
           });
           return res;
         });
@@ -160,7 +164,8 @@ angular.module('kifi.socialService', [
         return $http.post(routeService.disconnectNetwork('linkedin')).then(function (res) {
           util.replaceObjectInPlace(linkedin, {});
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'disconnectLinkedin'
+            'action': 'disconnectLinkedin',
+            'path': $location.path()
           });
           return res;
         });

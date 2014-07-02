@@ -1,22 +1,26 @@
 <div class="kf-main-search">
   <div class="kf-main-head">
+    <div class="kf-search-filters">
+      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">Your keeps ({{results.myTotal}})</a>
+      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ng-href="{{getFilterUrl('f')}}">Friends keeps ({{results.friendsTotal}})</a>
+      <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All keeps</a>
+    </div>
     <div class="kf-subtitle">
-      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll(), 'multi-checked': isMultiChecked() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
-      <span class="kf-search-filters">
-        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ng-href="{{getFilterUrl('m')}}">Your keeps ({{results.myTotal}})</a>
-        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ng-href="{{getFilterUrl('f')}}">Friends keeps ({{results.friendsTotal}})</a>
-        <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All keeps</a>
-      </span>
+      <div class="kf-edit-keeps" ng-click="toggleEdit()" ng-show="allowEdit()">
+        <span class="sprite sprite-edit-pencil-icon"></span>
+        <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
+      </div>
     </div>
   </div>
   <div kf-keeps
     keeps="keeps"
     keeps-loading="loading"
     keeps-has-more="hasMore()"
-    scroll-distance="scrollDistance"
     scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"
     keep-click="analyticsTrack"
+    edit-mode="editMode"
+    toggle-edit="toggleEdit"
   ></div>
 </div>
