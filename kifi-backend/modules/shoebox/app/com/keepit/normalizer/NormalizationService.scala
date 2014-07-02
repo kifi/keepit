@@ -32,11 +32,12 @@ class NormalizationServiceImpl @Inject() (
   airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
   def prenormalize(uriString: String): Try[String] = {
-    URI.parse(uriString).map { uri =>
-      val uriWithStandardPrenormalization = Prenormalizer(uri)
-      val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(uriWithStandardPrenormalization))
-      val prenormalizedUri = uriWithPreferredSchemeOption getOrElse uriWithStandardPrenormalization
-      prenormalizedUri.toString
+    URI.parse(uriString).flatMap { parsedUri =>
+      Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
+        val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
+        val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
+        result.toString
+      }
     }.recoverWith {
       case cause: Throwable => Failure(PrenormalizationException(cause))
     }

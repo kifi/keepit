@@ -14,9 +14,13 @@ object Prenormalizer extends StaticNormalizer {
 
   def isDefinedAt(uri: URI) = parallelNormalizers.exists(_.isDefinedAt(uri))
   def apply(uri: URI) = applyAll(applyFirst(uri, parallelNormalizers), serialNormalizers)
-  def apply(url: String): Try[String] = URI.parse(url).map(Prenormalizer(_).toString())
 
   private def applyAll(uri: URI, normalizers: Seq[StaticNormalizer]) = normalizers.foldLeft(uri)((u, n) => n.applyOrElse(u, identity[URI]))
   private def applyFirst(uri: URI, normalizers: Seq[StaticNormalizer]) = normalizers.find(_.isDefinedAt(uri)).map(_.apply(uri)).get
 
+  // For convenient testing / debugging:
+  def apply(url: String): Try[String] = for {
+    parsedUri <- URI.parse(url)
+    prenormalizedUri <- Try { Prenormalizer(parsedUri) }
+  } yield prenormalizedUri.toString()
 }
