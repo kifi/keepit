@@ -35,7 +35,10 @@ object EmailAddress {
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
   private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
-  private def canonicalize(address: String): EmailAddress = EmailAddress(address.toLowerCase)
+  private def canonicalize(address: String): EmailAddress = {
+    val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
+    EmailAddress(localAt + host.toLowerCase)
+  }
   def validate(address: String): Try[EmailAddress] = Try { canonicalize(address) }
 }
 
