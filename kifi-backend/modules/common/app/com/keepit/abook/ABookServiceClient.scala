@@ -66,14 +66,10 @@ trait ABookServiceClient extends ServiceClient {
 
 class ABookServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
-  htpClient: HttpClient,
+  val httpClient: HttpClient, // todo(ray/eng): revisit handling of non-200 responses in service calls
   val serviceCluster: ServiceCluster
 )
   extends ABookServiceClient with Logging {
-
-  val httpClient =
-    if (!htpClient.isInstanceOf[HttpClientImpl]) htpClient
-    else htpClient.asInstanceOf[HttpClientImpl].copy(silentFail = true) // todo: revisit default behavior
 
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxJsonParseTime = Some(30000))
 
