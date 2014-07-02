@@ -31,14 +31,22 @@ class EmailAddressTest extends Specification {
       readFromJson("Michelle.HernandezRosa@AMC.COM") === JsSuccess(EmailAddress("Michelle.HernandezRosa@amc.com"))
     }
     "reject invalid email addresses when reading from JSON" in {
+      readFromJson("a") must haveClass[JsError]
+      readFromJson("@") must haveClass[JsError]
       readFromJson("a@") must haveClass[JsError]
+      readFromJson("@a") must haveClass[JsError]
+      readFromJson("@@") must haveClass[JsError]
     }
     "canonicalize (lowercase) domains when binding from query parameter" in {
       bindFromQueryParameter("a@b") === Some(Right(EmailAddress("a@b")))
       bindFromQueryParameter("Michelle.HernandezRosa@AMC.COM") === Some(Right(EmailAddress("Michelle.HernandezRosa@amc.com")))
     }
     "reject invalid email addresses when binding from query parameter" in {
+      bindFromQueryParameter("a") === Some(Left("Invalid email address: a"))
+      bindFromQueryParameter("@") === Some(Left("Invalid email address: @"))
       bindFromQueryParameter("a@") === Some(Left("Invalid email address: a@"))
+      bindFromQueryParameter("@a") === Some(Left("Invalid email address: @a"))
+      bindFromQueryParameter("@@") === Some(Left("Invalid email address: @@"))
     }
   }
 
