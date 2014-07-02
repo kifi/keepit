@@ -191,6 +191,9 @@ guide.step = guide.step || function () {
           if (arrow) {
             arrow.reveal(stepIdx === 0 ? 600 : 400);
           }
+          if (step.litFor) {
+            setTimeout(animateSpotlightTo.bind(null, null, null, 600), step.litFor);
+          }
         }
       })
       .addClass('kifi-open');
@@ -263,7 +266,7 @@ guide.step = guide.step || function () {
   }
 
   function animateSpotlightTo(rect, pad, ms) {
-    if (rect === 'center') {
+    if (rect == null || rect.left == null) {
       return spotlight.animateTo(null, {brightness: 0, opacity: 1, ms: ms});
     } else {
       var padT = pad[0];
