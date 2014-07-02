@@ -156,7 +156,7 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     var refreshTimeout;
     $window.addEventListener('message', function (event) {
       $scope.$apply(function () {
-        var data = event.data || {};
+        var data = event.data || '';
         switch (data.type || data) {
           case 'get_guide':
             $scope.triggerGuide();
