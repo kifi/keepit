@@ -1,43 +1,56 @@
-<li class="kf-keep" ng-click="clickAction({keep: keep, event: $event})"
-  ng-hide="keep.unkept"
-  ui-draggable="true" drag-channel="keepDragChannel" ui-on-drop="onTagDrop($data)" drop-channel="tagDragChannel" drag-enter-class="kf-candidate-drag-target"
-  ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }">
-  <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
-  <div class="kf-keep-handle">
-    <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
-  </div>
-  <div class="kf-keep-title">
-    <span class="kf-example-tag">Example keep</span>
-    <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
-    </a>
-  </div>
-  <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-  <div class="kf-keep-tags">
-    <span class="kf-keep-tag" ng-class="{ example: isExampleTag(tag) }" ng-repeat="tag in getTags()">
-      <a class="kf-keep-tag-link" ng-href="/tag/{{tag.id}}">{{tag.name}}</a>
-    </span>
-  </div>
-  <div class="kf-keep-who">
-    <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
-    <span class="kf-keep-who-others" ng-if="showOthers()"></span>
-    <span kf-keep-who-text keep="keep"></span>
-  </div>
-  <div class="kf-keep-arrow-1">
-    <div class="kf-keep-arrow-2">
-      <div class="kf-keep-arrow-3">
-        <div class="kf-keep-arrow-4"></div>
-      </div>
+<li class="kf-keep" ng-click="clickAction({keep: keep, event: $event})" ng-hide="keep.unkept && !keep.isProtected"
+  ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget , 'editing': editMode.enabled }">
+  <div class="kf-keep-edit-tools">
+    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected()" ng-click="toggleSelect({keep: keep})"></div>
+    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected()" ng-click="toggleSelect({keep: keep})"></div>
+    <div class="kf-keep-handle sprite sprite-grabbericon">
+      <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
     </div>
   </div>
-  <div class="kf-keep-hover-button-wrapper">
-    <div class="kf-keep-hover-button-table">
-      <div class="kf-keep-hover-button-cell">
-        <div class="kf-keep-hover-button">
-          <span class="kf-keep-button-preview">Preview</span>
-          <span class="kf-keep-button-close">Close</span>
+  <div class="kf-keep-body">
+    <div class="kf-keep-contents">
+      <div class="kf-keep-title">
+        <div class="kf-keep-loader" ng-show="keep.isLoading"></div>
+        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
+        </a>
+      </div>
+      <div class="kf-keep-content-line">
+        <div class="kf-keep-small-image" ng-if="hasSmallImage()">
+          <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}"></a>
+        </div>
+        <div class="kf-keep-info-wrap">
+          <div class="kf-keep-info">
+            <div class="kf-keep-subtitle">
+              <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
+              <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+            </div>
+            <div class="kf-keep-description">
+              {{keep.summary.description}}
+            </div>
+          </div>
         </div>
       </div>
+      <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></a>
     </div>
+    <div class="kf-keep-who" ng-if="showSocial()">
+      <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
+      <span class="kf-keep-who-others" ng-if="showOthers()"></span>
+      <span kf-keep-who-text keep="keep"></span>
+    </div>
+    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
   </div>
-  <div class="kf-drag-mask"></div>
+  <div class="kf-keep-footer">
+    <span class="kf-keep-footer-link">
+      <a ng-if="canSend()" ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a>
+      <a ng-if="!canSend()" href="javascript:" ng-click="triggerInstall()">Send</a>
+    </span>
+    <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Keep Privately</a></span>
+    <div class="kf-keep-private" ng-if="isMine() && isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
+  </div>
+  <div class="kf-keep-drag-mask"></div>
 </li>

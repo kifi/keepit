@@ -3,8 +3,8 @@
 angular.module('kifi.layout.nav', ['util'])
 
 .directive('kfNav', [
-  '$location', 'util', 'keepService', 'friendService',
-  function ($location, util, keepService, friendService) {
+  '$location', 'util', 'keepService', 'friendService', 'tagService',
+  function ($location, util, keepService, friendService, tagService) {
     return {
       //replace: true,
       restrict: 'A',
@@ -26,9 +26,7 @@ angular.module('kifi.layout.nav', ['util'])
           scope.counts.friendsCount = value;
         });
 
-        scope.$watch(function () {
-          return keepService.totalKeepCount;
-        }, function (val) {
+        scope.$watch(tagService.getTotalKeepCount, function (val) {
           scope.counts.keepCount = val;
         });
 

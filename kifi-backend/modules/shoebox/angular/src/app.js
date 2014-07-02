@@ -6,7 +6,6 @@ angular.module('kifi', [
   'ngRoute',
   'ngSanitize',
   'ngAnimate',
-  'ui.bootstrap',
   //'ui.router',
   'util',
   'dom',
@@ -17,11 +16,14 @@ angular.module('kifi', [
   'kifi.home',
   'kifi.search',
   'kifi.tagKeeps',
+  'kifi.keepView',
+  'kifi.helprank',
   'kifi.profile',
   'kifi.friends',
   'kifi.friendService',
   'kifi.friends.friendCard',
   'kifi.friends.friendRequestCard',
+  'kifi.friends.compactFriendsView',
   'kifi.social',
   'kifi.social.networksNeedAttention',
   'kifi.socialService',
@@ -31,25 +33,26 @@ angular.module('kifi', [
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
-  'kifi.profileCard',
   'kifi.profileService',
-  'kifi.detail',
   'kifi.tags',
   'kifi.keeps',
   'kifi.keep',
-  'kifi.layout.leftCol',
+  'kifi.addKeep',
+  'kifi.tagList',
+  'kifi.layout.header',
   'kifi.layout.main',
   'kifi.layout.nav',
   'kifi.layout.rightCol',
   'kifi.undo',
-  'kifi.addKeeps',
   'kifi.installService',
+  'kifi.dragService',
   'jun.facebook',
-  'ngDragDrop',
   'ui.slider',
   'angulartics',
   'kifi.mixpanel',
-  'kifi.alertBanner'
+  'kifi.alertBanner',
+  'kifi.minVersion',
+  'kifi.sticky'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -97,7 +100,7 @@ angular.module('kifi', [
   '$location',
   function ($location) {
     var host = $location.host(),
-      dev = /^.+\.ezkeep\.com|localhost$/.test(host),
+      dev = /^dev\.ezkeep\.com|localhost$/.test(host),
       local = $location.port() === 9000,
       origin = local ? $location.protocol() + '://' + host  + ':' + $location.port() : 'https://www.kifi.com';
 
@@ -146,21 +149,13 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$rootScope', '$window', 'friendService', '$timeout', 'env',
-  function (profileService, $rootScope, $window, friendService, $timeout, env) {
+  'profileService', '$window', '$rootScope', 'friendService', '$timeout',
+  function (profileService, $window, $rootScope, friendService, $timeout) {
     $timeout(function () {
-      profileService.fetchPrefs().then(function (res) {
-        // handle onboarding / imports
-        if (env.production) {
-          if (!res.onboarding_seen) {
-            $rootScope.$emit('showGettingStarted');
-          } else {
-            $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
-          }
-        }
-        return res;
-      });
+      profileService.fetchPrefs();
       friendService.getRequests();
+      // TODO: add a link for triggering a bookmark import
+      // $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
     });
   }
 ]);

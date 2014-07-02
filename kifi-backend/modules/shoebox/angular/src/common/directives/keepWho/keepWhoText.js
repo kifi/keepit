@@ -16,6 +16,13 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
 
         scope.me = profileService.me;
 
+        scope.helprankEnabled = false;
+        scope.$watch(function () {
+          return profileService.me.seqNum;
+        }, function () {
+          scope.helprankEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('helprank') > -1;
+        });
+
         scope.isPrivate = function () {
           return scope.keep.isPrivate || false;
         };
@@ -36,12 +43,13 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
             text;
           if (len === 1) {
             text = '1 friend';
+          } else {
+            text = len + ' friends';
           }
-          text = len + ' friends';
           if (!scope.keep.isMyBookmark) {
             return text;
           }
-          return '+ ' + text;
+          return 'and ' + text;
         };
 
         scope.getOthersText = function () {
@@ -53,7 +61,7 @@ angular.module('kifi.keepWhoText', ['kifi.profileService'])
             text = others + ' others';
           }
           if (scope.keep.isMyBookmark || scope.keep.keepers.length > 0) {
-            text = '+ ' + text;
+            text = 'and ' + text;
           }
           return text;
         };

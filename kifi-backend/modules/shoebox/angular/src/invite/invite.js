@@ -22,8 +22,8 @@ angular.module('kifi.invite', [
 ])
 
 .controller('InviteCtrl', [
-  '$scope', '$http', '$rootScope', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
-  function ($scope, $http, $rootScope, profileService, routeService, $window, wtiService, socialService) {
+  '$scope', '$rootScope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
+  function ($scope, $rootScope, $http, profileService, routeService, $window, wtiService, socialService) {
     $window.document.title = 'Kifi • Invite your friends';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
@@ -56,19 +56,35 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteWell', [
+  function () {
+    return {
+      scope: {
+        'showFindFriends': '='
+      },
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/inviteWell.tpl.html',
+      link: function (/*scope, element, attrs*/) {
+
+      }
+    };
+  }
+])
+
+.directive('kfSocialNetworksStatus', [
   'socialService', '$rootScope',
   function (socialService, $rootScope) {
     return {
       scope: {},
       replace: true,
       restrict: 'A',
-      templateUrl: 'invite/inviteWell.tpl.html',
+      templateUrl: 'invite/socialNetworkStatus.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        scope.networks = socialService.networks;
+        scope.numNetworks = socialService.networks.length;
         scope.$watch(function () {
           return socialService.networks.length;
         }, function (networksLength) {
-          scope.networkText = networksLength === 1 ? '1 network connected' : networksLength + ' networks connected';
+          scope.numNetworks = networksLength;
         });
 
 

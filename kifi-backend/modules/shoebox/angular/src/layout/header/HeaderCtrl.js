@@ -8,13 +8,13 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
 
     $scope.toggleMenu = function () {
       $rootElement.toggleClass('kf-sidebar-active');
+      //element.on('animationend webkitAnimationEnd oanimationend MSAnimationEnd', removeAnimate);
+      //    element.addClass('animate');
     };
 
     $window.addEventListener('message', function (event) {
       if (event.data === 'show_left_column') {  // for guide
-        $scope.$apply(function () {
-          $rootElement.addClass('kf-sidebar-active');
-        });
+        $scope.$apply($scope.toggleMenu);
       }
     });
 
