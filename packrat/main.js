@@ -1264,7 +1264,12 @@ api.port.on({
     socket.send(['unmute_thread', threadId]);
     setMuted(threadId, false);
   },
-  get_bookmark_count_if_should_import: function(_, respond) {
+  count_bookmarks: function(_, respond) {
+    api.bookmarks.getAll(function (bms) {
+      respond(bms.length);
+    });
+  },
+  get_bookmark_count_if_should_import: function(_, respond) {  // TODO: remove (obsolete)
     if (stored('prompt_to_import_bookmarks')) {
       api.bookmarks.getAll(function (bms) {
         respond(bms.length);

@@ -57,13 +57,14 @@ guide.step4 = guide.step4 || function () {
     api.port.emit('track_guide', [4, 0]);
   }
 
-  function hide() {
+  function hide(e) {
     if ($stage) {
       $stage.one('transitionend', remove).addClass('kifi-gone');
       $steps.one('transitionend', remove).removeClass('kifi-showing');
-      cutScreen.fadeAndDetach(340);
+      var ms = 340;
+      cutScreen.fadeAndDetach(ms);
       arrows.forEach(function (arrow) {
-        arrow.fadeAndDetach(340);
+        arrow.fadeAndDetach(ms);
       });
       if (timeout) {
         clearTimeout(timeout);
@@ -71,6 +72,12 @@ guide.step4 = guide.step4 || function () {
       api.port.emit('end_guide', [4, $stage.find('.kifi-guide-farewell').hasClass('kifi-opaque') ? 1 : 0]);
       $stage = cutScreen = $feats = arrows = $steps = timeout = null;
       $(document).data('esc').remove(hide);
+
+      if (e && $(e.target).hasClass('kifi-guide-4-import')) {
+        api.port.emit('count_bookmarks', function (n) {
+          window.postMessage({type: 'import_bookmarks', count: n}, location.origin);
+        });
+      }
     }
   }
 
