@@ -48,6 +48,21 @@ class EmailAddressTest extends Specification {
       bindFromQueryParameter("@a") === Some(Left("Invalid email address: @a"))
       bindFromQueryParameter("@@") === Some(Left("Invalid email address: @@"))
     }
+    "have case-sensitive equality" in {
+      EmailAddress("a@b") == EmailAddress("a@b") === true
+      EmailAddress("A@b") == EmailAddress("a@b") === false
+    }
+    "support case-insensitive equality checks" in {
+      EmailAddress("a@b").equalsIgnoreCase(EmailAddress("a@b")) === true
+      EmailAddress("a@b").equalsIgnoreCase(EmailAddress("A@b")) === true
+      EmailAddress("a@b").equalsIgnoreCase(EmailAddress("a@c")) === false
+    }
+    "support case-insensitive comparisons" in {
+      EmailAddress("a@b").compareToIgnoreCase(EmailAddress("a@b")) === 0
+      EmailAddress("a@b").compareToIgnoreCase(EmailAddress("A@b")) === 0
+      EmailAddress("a@b").compareToIgnoreCase(EmailAddress("a@c")) must be_<(0)
+      EmailAddress("a@c").compareToIgnoreCase(EmailAddress("a@b")) must be_>(0)
+    }
   }
 
   private def readFromJson(addr: String) = EmailAddress.format.reads(JsString(addr))

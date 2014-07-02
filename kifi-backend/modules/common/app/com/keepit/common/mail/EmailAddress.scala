@@ -7,6 +7,8 @@ import scala.util.Try
 case class EmailAddress(address: String) {
   if (!EmailAddress.isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
   override def toString = address
+  def equalsIgnoreCase(other: EmailAddress): Boolean = compareToIgnoreCase(other) == 0
+  def compareToIgnoreCase(other: EmailAddress): Int = address.compareToIgnoreCase(other.address)
 }
 
 object EmailAddress {
