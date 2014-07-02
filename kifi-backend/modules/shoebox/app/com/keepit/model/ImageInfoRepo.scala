@@ -1,7 +1,7 @@
 package com.keepit.model
 
 
-import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.google.inject.Inject
 import com.keepit.common.time.Clock
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -24,6 +24,7 @@ trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
 class ImageInfoRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  uriSummaryCache: URISummaryCache,
   airbrake: AirbrakeNotifier)
   extends DbRepo[ImageInfo] with ImageInfoRepo with SeqNumberDbFunction[ImageInfo] with Logging {
 
@@ -49,8 +50,12 @@ class ImageInfoRepoImpl @Inject() (
   def table(tag:Tag) = new ImageInfoTable(tag)
   initTable()
 
-  override def deleteCache(model: ImageInfo)(implicit session: RSession):Unit = {}
-  override def invalidateCache(model: ImageInfo)(implicit session: RSession):Unit = {}
+  override def deleteCache(model: ImageInfo)(implicit session: RSession): Unit = {
+    uriSummaryCache.remove(URISummaryKey(model.uriId))
+  }
+  override def invalidateCache(model: ImageInfo)(implicit session: RSession): Unit = {
+    uriSummaryCache.remove(URISummaryKey(model.uriId))
+  }
 
   override def save(model: ImageInfo)(implicit session: RWSession): ImageInfo = {
     val info = if (model.id.isDefined) {
@@ -75,13 +80,14 @@ class ImageInfoRepoImpl @Inject() (
     import ImageInfoStates._
     import ImageProvider._
 
+    val now = clock.now()
     val seqNum = deferredSeqNum()
     info.provider match {
       case Some(PAGEPEEKER) =>
         (info.width, info.height) match {
           case (Some(w), Some(h)) =>
             // deactivate images with the same size
-            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value} where uri_id=${info.uriId} and provider=${PAGEPEEKER.value} and state=${ACTIVE.value} and width=$w and height=$h".first
+            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider=${PAGEPEEKER.value} and state=${ACTIVE.value} and width=$w and height=$h".first
           case _ =>
             log.error(s"no width/height specified for pagepeeker image: $info")
             airbrake.notify(s"no width/height specified for pagepeeker image: $info")
@@ -91,9 +97,9 @@ class ImageInfoRepoImpl @Inject() (
           case Some(url) =>
             // deactivate images older than a day
             val yesterday = clock.now.minusDays(1)
-            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and updated_at < $yesterday".first
-            // deactivate
-            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value} where uri_id=${info.uriId} and provider is null and state=${ACTIVE.value}".first
+            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider=${EMBEDLY.value} and state=${ACTIVE.value} and updated_at < $yesterday".first
+            // deactivate rows with null provider
+            sqlu"update image_info set state=${INACTIVE.value}, seq=${seqNum.value}, updated_at=${now} where uri_id=${info.uriId} and provider is null and state=${ACTIVE.value}".first
           case _ =>
             log.error(s"no url specified for embedly image: $info")
             airbrake.notify(s"no url specified for embedly image: $info")
@@ -110,7 +116,7 @@ class ImageInfoRepoImpl @Inject() (
     (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE) yield f).list()
   }
 
-  def getByUriWithPriority(id:Id[NormalizedURI], minSize: ImageSize, providerOpt: Option[ImageProvider])(implicit ro:RSession): Option[ImageInfo] = {
+  def getByUriWithPriority(id: Id[NormalizedURI], minSize: ImageSize, providerOpt: Option[ImageProvider])(implicit ro:RSession): Option[ImageInfo] = {
     val candidates = providerOpt match {
       case Some(provider) =>
         (for(f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&

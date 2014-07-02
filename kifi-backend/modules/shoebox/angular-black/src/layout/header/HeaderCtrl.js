@@ -3,12 +3,20 @@
 angular.module('kifi.layout.header', ['kifi.profileService'])
 
 .controller('HeaderCtrl', [
-  '$scope', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices',
-  function ($scope, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices) {
+  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices',
+  function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices) {
 
     $scope.toggleMenu = function () {
       $rootElement.toggleClass('kf-sidebar-active');
     };
+
+    $window.addEventListener('message', function (event) {
+      if (event.data === 'show_left_column') {  // for guide
+        $scope.$apply(function () {
+          $rootElement.addClass('kf-sidebar-active');
+        });
+      }
+    });
 
     $scope.me = profileService.me;
     profileService.getMe();
@@ -42,11 +50,12 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
     $scope.friendRequests = friendService.requests;
 
     $scope.navigateToFriends = function () {
-      $location.path('/friends');
+      $location.path('/friends');  // TODO: put directly in <a href="">
     };
 
     $scope.navigateToInvite = function () {
-      $location.path('/invite');
+      $location.path('/invite');  // TODO: put directly in <a href="">
     };
+
   }
 ]);

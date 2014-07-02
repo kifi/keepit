@@ -3,6 +3,9 @@
 var frisby = require('frisby'); // http://frisbyjs.com/
 var headers = require('./auth_headers.js')
 
+frisby.globalSetup({
+  timeout: 10000
+});
 
 frisby.create('Basic kifi.com check, logged in (www.kifi.com/)')
   .get('https://www.kifi.com/')
