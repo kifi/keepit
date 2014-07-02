@@ -78,7 +78,9 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
           isMyBookmark: keep.isMyBookmark,
           isPrivate: keep.isPrivate,
           count: keeps.length,
-          keepers: keep.keepers.map(function(elem) { return elem.id; }),
+          keepers: keep.keepers.map(function (elem) {
+            return elem.id;
+          }),
           tags: keep.tags,
           title: keep.bookmark.title,
           titleMatches: (matches.title || []).length,
