@@ -1634,7 +1634,7 @@ function awaitDeepLink(link, tabId, retrySec) {
 function updateKifiAppTabs(message) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (url.lastIndexOf(prefix, 0) === 0 || url.lastIndexOf('https://preview.kifi.com', 0) === 0) {
+    if (url.lastIndexOf(prefix, 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
         api.tabs.emit(tab, message);
       });
@@ -2516,23 +2516,15 @@ api.timers.setTimeout(api.errors.wrap(function() {
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
-    var siteUrl = webBaseUri() + '/';
-    var tab = api.tabs.anyAt(webBaseUri() + '/install') || api.tabs.anyAt(siteUrl);
-    if (~experiments.indexOf('kifi_black')) {
-      var url = 'https://preview.kifi.com';
-      var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: url});
-      if (tab) {
-        api.tabs.select(tab.id);
-        api.tabs.navigate(tab.id, url);
-        timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
-      } else {
-        api.tabs.open(url, await);
-      }
-    } else if (tab) {
+    var baseUri = webBaseUri();
+    var tab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
+    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: baseUri});
+    if (tab) {
       api.tabs.select(tab.id);
-      api.tabs.navigate(tab.id, siteUrl);
+      api.tabs.navigate(tab.id, baseUri);
+      timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
     } else {
-      api.tabs.open(siteUrl);
+      api.tabs.open(baseUri, await);
     }
   }
 }, 3000))();
