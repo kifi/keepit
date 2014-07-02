@@ -300,7 +300,7 @@ guide.step = guide.step || function () {
     window.location.href = url;
   }
 
-  function createAnchor(el) {
+  function createAnchor(el) {  // also in step_4.js
     el = $(el).closest('.kifi-root')[0] || el;
     var cs = window.getComputedStyle(el);
     var dx = cs.right !== 'auto' ? -window.innerWidth : 0;
@@ -333,7 +333,7 @@ guide.step = guide.step || function () {
     };
   }
 
-  function translatePos(pos, dx, dy) {
+  function translatePos(pos, dx, dy) {  // also in step_4.js
     return {
       top: typeof pos.top === 'number' ? pos.top + dy : pos.top,
       left: typeof pos.left === 'number' ? pos.left + dx : pos.left,
