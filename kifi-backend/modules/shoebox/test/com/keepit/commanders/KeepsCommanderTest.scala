@@ -60,13 +60,11 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
         }
 
-        db.readOnly { implicit s =>
-          val keepExports = keepRepo.getKeepExports(Id[User](1))
-          keepExports.length === 3
-          keepExports(0) === KeepExport(title = Some("k3"), createdAt = t1.plusMinutes(6), url = site3)
-          keepExports(1) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)
-          keepExports(2) === KeepExport(title = Some("k1"), createdAt = t1.plusMinutes(3), url = site1, tags = Some("t1"))
-        }
+        val keepExports = db.readOnly { implicit s => keepRepo.getKeepExports(Id[User](1)) }
+        keepExports.length === 3
+        keepExports(0) === KeepExport(title = Some("k3"), createdAt = t1.plusMinutes(6), url = site3)
+        keepExports(1) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)
+        keepExports(2) === KeepExport(title = Some("k1"), createdAt = t1.plusMinutes(3), url = site1, tags = Some("t1"))
       }
     }
 
