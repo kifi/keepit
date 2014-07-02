@@ -18,33 +18,40 @@ angular.module('kifi.sticky', ['kifi.sticky'])
           return parseInt(element.css(name), 10);
         }
 
-        element.css('boxSizing', 'content-box');
+        var marginTop, marginLeft,
+          borderLeftWidth, borderTopWidth, borderRightWidth, borderBottomWidth,
+          offsetTop, offsetLeft,
+          width, height;
 
-        var marginLeft = getCssPixelProperty('marginLeft'),
+        function updateProperties() {
+          marginLeft = getCssPixelProperty('marginLeft'),
           marginTop = getCssPixelProperty('marginTop'),
-          marginRight = getCssPixelProperty('marginRight'),
-          marginBottom = getCssPixelProperty('marginBottom'),
+          borderLeftWidth = getCssPixelProperty('borderLeftWidth'),
+          borderTopWidth = getCssPixelProperty('borderTopWidth'),
+          borderRightWidth = getCssPixelProperty('borderRightWidth'),
+          borderBottomWidth = getCssPixelProperty('borderBottomWidth'),
           offsetTop = element.offset().top - marginTop,
           offsetLeft = element.offset().left - marginLeft,
-          width = element.width(),
-          height = element.height();
+          width = element.width() + borderLeftWidth + borderRightWidth,
+          height = element.height() + borderTopWidth + borderBottomWidth;
+        }
+        updateProperties();
         /*
           TODO: test & cover wider variety of cases:
           * border-box vs content-box
           * padding, border, margin
         }*/
 
-        var filler = angular.element('<div />');
-        filler.css({
-          width: element.outerWidth() + marginLeft + marginRight,
-          height: element.outerHeight() + marginTop + marginBottom,
-          visibility: 'hidden'
-        });
+        var filler = element.clone();
+        filler.css('visibility', 'hidden');
+
+        var unregister;
 
         function onScroll(e) {
           var originalWindowTopOffset = offsetTop - ($win.scrollTop() + e.originalEvent.deltaY);
           if (originalWindowTopOffset <= scope.maxTop) {
             if (!sticking) {
+              updateProperties();
               element.css({
                 position: 'fixed',
                 top: scope.maxTop,
@@ -53,7 +60,19 @@ angular.module('kifi.sticky', ['kifi.sticky'])
                 height: height,
                 zIndex: 1
               });
+
               element.after(filler);
+
+              unregister = scope.$watch(function () {
+                return {
+                  width: filler.width(),
+                  left: filler.offset().left
+                };
+              }, function (attributes) {
+                element.css('width', attributes.width + borderLeftWidth + borderRightWidth);
+                element.css('left', attributes.left - marginLeft);
+              }, true);
+
               sticking = true;
             }
           } else {
@@ -66,7 +85,11 @@ angular.module('kifi.sticky', ['kifi.sticky'])
                 height: '',
                 zIndex: ''
               });
+
               filler.remove();
+
+              unregister();
+
               sticking = false;
             }
           }
@@ -75,7 +98,7 @@ angular.module('kifi.sticky', ['kifi.sticky'])
         $win.on('mousewheel', onScroll);
 
         scope.$on('$destroy', function () {
-          $win.off(onScroll);
+          $win.off('mousewheel', onScroll);
         });
       }
     };
