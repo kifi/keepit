@@ -8,8 +8,8 @@ import com.keepit.model.{NormalizedURI, NormalizedURIWordCountCache, NormalizedU
 import com.keepit.scraper.ScraperServiceClient
 import com.keepit.search.ArticleStore
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.commanders.TimeToReadCommander
 import com.keepit.scraper.ScrapeProcessor
+import com.keepit.common.logging.Logging
 
 @ImplementedBy(classOf[WordCountCommanderImpl])
 trait WordCountCommander {
@@ -21,11 +21,11 @@ class WordCountCommanderImpl @Inject()(
   articleStore: ArticleStore,
   wordCountCache: NormalizedURIWordCountCache,
   scrapeProcessor: ScrapeProcessor
-) extends WordCountCommander {
+) extends WordCountCommander with Logging{
 
   implicit def toWordCountKey(id: Id[NormalizedURI]): NormalizedURIWordCountKey = NormalizedURIWordCountKey(id)
 
-  private def wordCount(content: String): Int = content.split(" ").filter(!_.isEmpty()).size
+  private def wordCount(content: String): Int = content.split(" ").count(!_.isEmpty())
 
   private def getFromCache(id: Id[NormalizedURI]): Option[Int] = {
     wordCountCache.get(id)
@@ -35,6 +35,7 @@ class WordCountCommanderImpl @Inject()(
     articleStore.get(id).map{ article =>
       val wc = wordCount(article.content)
       wordCountCache.set(id, wc)
+      log.info(s"get from article store. set word count cache for ${id.id}: $wc")
       wc
     }
   }
@@ -45,6 +46,7 @@ class WordCountCommanderImpl @Inject()(
         case None => -1
         case Some(basicArticle) => wordCount(basicArticle.content)
       }
+      log.info(s"called scraper on the fly. set word count cache for ${id.id}: $wc")
       wordCountCache.set(id, wc)
       wc
     }
