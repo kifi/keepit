@@ -59,7 +59,7 @@ case class EmbedlyInfo(
       id = None,
       uriId = nuriId,
       title = this.title,
-      description = this.description,
+      description = this.description.orElse(Some("")),
       safe = this.safe,
       lang = this.lang,
       faviconUrl = (this.faviconUrl.collect{ case f:String if f.startsWith("http") => f }) // embedly bug
