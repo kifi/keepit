@@ -672,7 +672,6 @@ POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controll
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
-POST     /internal/shoebox/database/getVerifiedAddressOwners  @com.keepit.controllers.internal.ShoeboxController.getVerifiedAddressOwners()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxController.getAllURLPatternRules()
 
 GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateUriScreenshotsForUriId(id: Id[NormalizedURI])
