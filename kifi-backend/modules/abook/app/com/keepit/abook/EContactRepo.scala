@@ -34,6 +34,7 @@ trait EContactRepo extends Repo[EContact] {
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact]
   def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Int
 
   //used only for full resync
   def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
@@ -182,6 +183,10 @@ class EContactRepoImpl @Inject() (
 
   def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int = {
     (for { row <- rows if row.email === email && row.contactUserId.isNull } yield row.contactUserId).update(contactUserId)
+  }
+
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Int = {
+    (for { row <- rows if row.email === email } yield row.state).update(EContactStates.HIDDEN)
   }
 
   //used only for full resync

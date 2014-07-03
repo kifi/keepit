@@ -6,7 +6,7 @@ import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.common.db.Id
 import com.keepit.common.performance._
 import com.keepit.model._
-import play.api.libs.json.{JsObject, JsArray, Json, JsValue}
+import play.api.libs.json._
 import scala.ref.WeakReference
 import com.keepit.common.logging.{LogPrefix, Logging}
 import scala.collection.mutable
@@ -196,6 +196,16 @@ class ABookCommander @Inject() (
     val contacts = jsonBuilder.result
     log.info(s"[getContacts($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
     JsArray(contacts)
+  }
+
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Boolean = {
+    val result = db.readWrite(attempts = 2) {
+      implicit session =>
+        econtactRepo.hideEmailFromUser(userId, email)
+    }
+    econtactTypeahead.refresh(userId)
+    log.info(s"[hideEmailFromUser($userId, $email)] res=$result")
+    result
   }
 
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {

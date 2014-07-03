@@ -13,6 +13,7 @@ import scala.util.{Failure, Try}
 
 object EContactStates extends States[EContact] {
   val PARSE_FAILURE = State[EContact]("parse_failure")
+  val HIDDEN = State[EContact]("hidden")
 }
 
 case class EContact(

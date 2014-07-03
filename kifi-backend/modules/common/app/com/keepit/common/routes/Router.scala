@@ -266,6 +266,7 @@ object ABook extends Service {
     })
     def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
     def validateAllContacts(readOnly: Boolean) = ServiceRoute(GET, s"/internal/abook/validateAllContacts", Param("readOnly", readOnly))
+    def hideEmailFromUser(userId: Id[User], email: EmailAddress) = ServiceRoute(POST, s"/internal/abook/${userId.id}/hideEmailFromUser", Param("email", email))
   }
 }
 

@@ -62,6 +62,7 @@ trait ABookServiceClient extends ServiceClient {
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
 }
 
 
@@ -279,6 +280,10 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.validateAllContacts(readOnly))
   }
 
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
+    call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Boolean])
+  }
+
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -346,4 +351,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
 
   def validateAllContacts(readOnly: Boolean = true): Unit = ???
+
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = ???
 }
