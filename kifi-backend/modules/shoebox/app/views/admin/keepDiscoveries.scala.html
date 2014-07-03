@@ -1,16 +1,15 @@
 @(keepInfos:Seq[(com.keepit.model.RichKeepClick, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)
 
-@otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(page, pageSize, showImage)}
+@otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepDiscoveriesView(page, pageSize, showImage)}
 
-@admin(keepInfosCount + " Keep Clicks") {
+@admin(keepInfosCount + " Keep Discoveries") {
 
-    <h2>Showing @keepInfos.length keep clicks (page @(page + 1))</h2>
+    <h2>Showing @keepInfos.length keep discoveries (page @(page + 1))</h2>
     <ul>
-        <li>The following shows a <i>global</i> list of, essentially, <i>keep_click</i> events.</li>
-        <li>In other words, if a user does a search on (say) google.com, and then click on one of the <b>kifi</b> results, the event is registered.</li>
-        <li><b>Privacy</b>: the clicker's ID is <b>not</b> recorded, to honor our current privacy policy.</li>
-        <li><b>ReKeeps</b>: if, after clicking on a <i>kifi</i> result, the user subsequently <b>keeps</b> the result,
-            it's recognized as a <b>ReKeep</b>. See the <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0, 50, false)">ReKeeps page</a> for details.</li>
+        <li>The following shows a <i>global</i> list of, essentially keep <i>discovery</i> events.</li>
+        <li>There are current two sources of keep discoveries: Search and Messaging</li>
+        <li><b>Privacy</b>: the clicker's (or message recipient's) ID is <b>not</b> recorded, to honor our current privacy policy.</li>
+        <li>See <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0, 50, false)">ReKeeps page</a> for the <i>global</i> rekeep time line.</li>
     </ul>
 
     @adminHelper.pagination(page, keepInfosCount, pageSize, otherPagesRoute _) {
