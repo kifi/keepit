@@ -20,6 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.sql.SQLException
 import com.keepit.common.performance._
 import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.model.EmailAccountRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.EmailAddress
 
@@ -68,6 +69,7 @@ class ContactsUpdater @Inject() (
   econtactABookTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
+  emailAccountRepo: EmailAccountRepo,
   airbrake:AirbrakeNotifier,
   abookUploadConf:ABookUploadConf,
   shoeboxClient: ShoeboxServiceClient) extends Logging {
@@ -95,11 +97,10 @@ class ContactsUpdater @Inject() (
   }
 
   private def recordContactUserIds(contactAddresses: Seq[EmailAddress]): Unit = {
-    shoeboxClient.getVerifiedAddressOwners(contactAddresses).foreach { case owners =>
-      if (owners.nonEmpty) db.readWrite { implicit session =>
-        owners.foreach { case (address, contactUserId) =>
-          econtactRepo.recordVerifiedEmail(address, contactUserId)
-        }
+    contactAddresses.foreach { case address =>
+      db.readWrite { implicit session =>
+        val owner = emailAccountRepo.getVerifiedOwner(address)
+        econtactRepo.updateOwnership(address, owner)
       }
     }
   }

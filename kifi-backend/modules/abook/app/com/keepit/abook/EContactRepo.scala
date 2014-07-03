@@ -33,7 +33,7 @@ trait EContactRepo extends Repo[EContact] {
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact]
-  def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int
+  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
 
   //used only for full resync
   def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
@@ -180,8 +180,13 @@ class EContactRepoImpl @Inject() (
     }
   }
 
-  def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int = {
-    (for { row <- rows if row.email === email && row.contactUserId.isNull } yield row.contactUserId).update(contactUserId)
+  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
+    val updated = (for { row <- rows if row.email === email && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId).update(verifiedOwner.orNull)
+    if (updated > 0) {
+      val updatedContacts = for { row <- rows if row.email === email } yield row
+      updatedContacts.foreach(invalidateCache)
+    }
+    updated
   }
 
   //used only for full resync

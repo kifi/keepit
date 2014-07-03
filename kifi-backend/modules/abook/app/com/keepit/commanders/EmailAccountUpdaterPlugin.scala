@@ -13,6 +13,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.abook.EContactRepo
 
 sealed trait EmailAccountUpdaterActorMessage
 object EmailAccountUpdaterActorMessage {
@@ -23,6 +24,7 @@ object EmailAccountUpdaterActorMessage {
 class EmailAccountUpdaterActor @Inject() (
   shoebox: ShoeboxServiceClient,
   emailAccountRepo: EmailAccountRepo,
+  contactRepo: EContactRepo,
   sequenceNumberRepo: EmailAccountUpdateSequenceNumberRepo,
   db: Database,
   airbrake: AirbrakeNotifier
@@ -53,13 +55,17 @@ class EmailAccountUpdaterActor @Inject() (
 
           case update if !update.deleted => {
             val emailAccount = emailAccountRepo.getByAddress(update.emailAddress) getOrElse EmailAccount(address = update.emailAddress)
-            emailAccountRepo.save(emailAccount.copy(userId = Some(update.userId), verified = update.verified))
+            val savedAccount = emailAccountRepo.save(emailAccount.copy(userId = Some(update.userId), verified = update.verified))
+            if (savedAccount.verified && (!emailAccount.verified || savedAccount.userId != emailAccount.userId)) {
+              contactRepo.updateOwnership(savedAccount.address, savedAccount.userId)
+            }
           }
 
           case deletion => {
             emailAccountRepo.getByAddress(deletion.emailAddress).foreach { emailAccount =>
               if (emailAccount.userId == Some(deletion.userId)) {
                 emailAccountRepo.save(emailAccount.copy(userId = None, verified = false))
+                if (emailAccount.verified) { contactRepo.updateOwnership(emailAccount.address, None) }
               }
             }
           }
