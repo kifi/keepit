@@ -41,7 +41,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def imageInfo(implicit injector: Injector) = inject[ImageInfoRepo]
-  def keepClickRepo(implicit injector: Injector) = inject[KeepClickRepo]
+  def keepDiscoveryRepo(implicit injector: Injector) = inject[KeepDiscoveryRepo]
   def rekeepRepo(implicit injector: Injector) = inject[ReKeepRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 }

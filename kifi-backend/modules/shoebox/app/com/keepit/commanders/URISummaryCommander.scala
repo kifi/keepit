@@ -127,11 +127,14 @@ class URISummaryCommander @Inject()(
       }
       val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
+          val wordCountOpt = nUri.id flatMap { id =>
+            scraper.getURIWordCountOpt(id, Some(nUri.url))
+          }
           for {
             nUriId <- nUri.id
             pageInfo <- pageInfoRepo.getByUri(nUriId)
           } yield {
-            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height)
+            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height, wordCountOpt)
           }
         }
         else {

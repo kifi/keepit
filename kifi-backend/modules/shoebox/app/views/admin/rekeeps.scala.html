@@ -8,8 +8,7 @@
 
     <ul>
         <li>The following shows a <i>global</i> list of recognized <i>rekeep</i> events.</li>
-        <li>Currently, a rekeep is recognized when a user does a search (say on google), clicks on a <b>kifi</b> results, and <i>then</i> <b>keeps</b> the result.
-        <li>See the <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(0,50,false)">Keep Clicks page</a> for more information.</li>
+        <li>See the <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.keepDiscoveriesView(0,50,false)">Keep Discoveries page</a> for more information.</li>
     </ul>
 
     @adminHelper.pagination(page, rekeepsCount, pageSize, otherPagesRoute _) {
@@ -36,7 +35,7 @@
                 <td>@rekeep.srcKeep.id.get</td>
                 <td>@rekeep.attributionFactor</td>
                 <td>@rekeep.uri.id</td>
-                <td><a href="@rekeep.uri.url">@rekeep.uri.title</a></td>
+                <td><a href="@rekeep.uri.url">@if(rekeep.uri.title.getOrElse("").trim.nonEmpty){ @rekeep.uri.title } else { @rekeep.uri.url }</a></td>
                 @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
             </tr>
             }

@@ -14,8 +14,8 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 ])
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window',
-  function ($scope, tagService, keepService, $q, $timeout, $window) {
+  '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window', 'installService', '$rootScope',
+  function ($scope, tagService, keepService, $q, $timeout, $window, installService, $rootScope) {
     keepService.reset();
 
     $window.document.title = 'Kifi • Your Keeps';
@@ -23,6 +23,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
     $scope.enableSearch();
+    $scope.hasLoaded = false;
 
     $scope.hasMore = function () {
       return !keepService.isEnd();
@@ -63,6 +64,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 
       return keepService.getList().then(function (list) {
         $scope.loading = false;
+        $scope.hasLoaded = true;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
@@ -82,5 +84,34 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
     $scope.$watch('keepService.seqReset()', function () {
       initKeepList();
     });
+
+    $scope.showEmptyState = function () {
+      return tagService.getTotalKeepCount() === 0;
+    };
+
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $rootScope.$emit('showGlobalModal', 'installExtensionError');
+      });
+    };
+
+    $scope.importBookmarks = function () {
+      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
+
+      if (!kifiVersion) {
+        $rootScope.$emit('showGlobalModal','installExtension');
+        return;
+      }
+
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
+    };
+
+    $scope.importBookmarkFile = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+    };
+
+    $scope.addKeeps = function () {
+      $rootScope.$emit('showGlobalModal', 'addKeeps');
+    };
   }
 ]);

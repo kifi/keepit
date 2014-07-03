@@ -68,12 +68,9 @@ object UserValues {
   val lookHereMode = UserValueBooleanHandler("ext_look_here_mode", true)
   val enterToSend = UserValueBooleanHandler("enter_to_send", true)
   val maxResults = UserValueIntHandler("ext_max_results", 1)
-  val showKeeperIntro = UserValueBooleanHandler("ext_show_keeper_intro", false)
-  val showSearchIntro = UserValueBooleanHandler("ext_show_search_intro", false)
   val showExtMsgIntro = UserValueBooleanHandler("ext_show_ext_msg_intro", true)
-  val showFindFriends = UserValueBooleanHandler("ext_show_find_friends", false)  // TODO: delete after all users have extensions w/external messaging
 
-  val UserInitPrefs: Seq[String] = Seq(lookHereMode, enterToSend, maxResults, showKeeperIntro, showSearchIntro, showExtMsgIntro, showFindFriends).map(_.name)
+  val UserInitPrefs: Seq[String] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro).map(_.name)
 
   val availableInvites = UserValueIntHandler("availableInvites", 1000)
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)

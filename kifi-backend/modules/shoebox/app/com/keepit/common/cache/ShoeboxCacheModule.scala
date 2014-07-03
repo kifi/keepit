@@ -274,4 +274,8 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   def pageInfoUri(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new PageInfoUriCache(stats, accessLog, (outerRepo, 10 days))
 
+  @Provides @Singleton
+  def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 60 days))
+
 }

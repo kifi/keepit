@@ -22,7 +22,7 @@ class AttributionCommander @Inject() (
   collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   userBookmarkClicksRepo: UserBookmarkClicksRepo,
-  keepClicksRepo: KeepClickRepo,
+  keepClicksRepo: KeepDiscoveryRepo,
   rekeepRepo: ReKeepRepo,
   kifiHitCache: KifiHitCache
 ) extends Logging {

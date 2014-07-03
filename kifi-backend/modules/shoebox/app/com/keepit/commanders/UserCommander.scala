@@ -99,7 +99,7 @@ class UserCommander @Inject() (
   userConnectionRepo: UserConnectionRepo,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
-  keepClickRepo: KeepClickRepo,
+  keepClickRepo: KeepDiscoveryRepo,
   rekeepRepo: ReKeepRepo,
   userExperimentCommander: LocalUserExperimentCommander,
   socialUserInfoRepo: SocialUserInfoRepo,
@@ -225,11 +225,11 @@ class UserCommander @Inject() (
     db.readOnly { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
-  def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (clickCount, rekeepCount, rekeepTotalCount)
+  def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
     db.readOnly(dbMasterSlave = Slave) { implicit ro =>
-      val clickCount = keepClickRepo.getClickCountByKeeper(userId)
+      val discoveryCount = keepClickRepo.getDiscoveryCountByKeeper(userId)
       val (rekeepCount, rekeepTotalCount) = bookmarkClicksRepo.getReKeepCounts(userId)
-      (clickCount, rekeepCount, rekeepTotalCount)
+      (discoveryCount, rekeepCount, rekeepTotalCount)
     }
   }
 
@@ -247,17 +247,8 @@ class UserCommander @Inject() (
       userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state))
     }
     SafeFuture {
-      val onNewSite = addrOpt.map { addr =>
-        UserEmailAddress.getExperiments(UserEmailAddress(userId = newUser.id.get, address = addr)).contains(ExperimentType.KIFI_BLACK)
-      } getOrElse false
-      if (!onNewSite) {
-        createDefaultKeeps(newUser.id.get)
-        db.readWrite { implicit session =>
-          userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
-          userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
-          userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
-          userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
-        }
+      db.readWrite { implicit session =>
+        userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
       }
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()

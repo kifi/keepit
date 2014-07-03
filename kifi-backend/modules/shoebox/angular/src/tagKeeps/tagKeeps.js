@@ -20,6 +20,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
     keepService.reset();
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
+    $scope.hasLoaded = false;
 
     var tagId = $routeParams.tagId || '';
 
@@ -62,6 +63,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       $scope.loading = true;
       return keepService.getKeepsByTagId(tagId).then(function (list) {
         $scope.loading = false;
+        $scope.hasLoaded = true;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
@@ -84,6 +86,10 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       $window.document.title = 'Kifi • ' + tag.name;
       $scope.tag = tag || null;
     });
+
+    $scope.showEmptyState = function () {
+      return $scope.keeps.length === 0 && !$scope.hasMore();
+    };
 
   }
 ]);

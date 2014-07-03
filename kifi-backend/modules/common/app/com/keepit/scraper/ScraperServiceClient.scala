@@ -130,12 +130,19 @@ trait ScraperServiceClient extends ServiceClient {
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
+  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int]
 }
+
+case class ScraperCacheProvider @Inject()(
+  wordCountCache: NormalizedURIWordCountCache
+)
 
 class ScraperServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
   defaultHttpClient: HttpClient,
-  val serviceCluster: ServiceCluster
+  val serviceCluster: ServiceCluster,
+  val cacheProvider: ScraperCacheProvider
 ) extends ScraperServiceClient with Logging {
 
   val longTimeout = CallTimeouts(responseTimeout = Some(60000))
@@ -197,6 +204,36 @@ class ScraperServiceClientImpl @Inject() (
       r.json.as[Option[URISummary]]
     }
   }
+
+  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+    cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
+      case Some(cnt) => Future.successful(cnt)
+      case None => {
+        val payload = Json.obj("uriId" -> uriId, "url" -> url)
+        call(Scraper.internal.getURIWordCount, payload) map { r => r.json.as[Int] }
+      }
+    }
+  }
+
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+    log.info(s"Requesting word count from cache for uri $uriId with url $url")
+    cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
+      case Some(cnt) => {
+        log.info(s"Found word count $cnt for uri $uriId with url $url")
+        Some(cnt)
+      }
+      case None => {
+        log.info(s"Requesting word count from scraper for uri $uriId with url $url")
+        val payload = Json.obj("uriId" -> uriId, "url" -> url)
+        call(Scraper.internal.getURIWordCount, payload) // Word count will be added to cache
+        None
+      }
+    }
+  }
 }
 
 class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
@@ -222,4 +259,8 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = ???
 
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = ???
+
+  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = ???
+
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = ???
 }

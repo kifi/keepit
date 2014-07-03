@@ -1,9 +1,9 @@
 @(n:Int, grouped:Seq[(NormalizedURI, Seq[(Keep, Seq[Set[User]])])])
 
-@admin("Keep Attribution Stats") {
+@admin("Top ReKeeps") {
 
 <ul>
-    <li>The following shows a <i>global</i> list of rekeeps</li>
+    <li>The following shows a <i>global</i> list of top rekeeps</li>
     <li>See <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.myReKeeps()"><b>My</b>ReKeeps</a> page for a <i>personalized</i> list of rekeeps</li>
     <li>See <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0, 50, false)">ReKeeps Timeline</a> page for a timeline-based <i>global</i> view</li>
 </ul>

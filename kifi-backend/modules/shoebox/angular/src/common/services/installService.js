@@ -60,14 +60,19 @@ angular.module('kifi.installService', [])
         if (!version) {
           return false;
         }
+        if (!minVersion) {
+          return true;
+        }
         var parts = version.split('.');
         var minParts = (parts.length > 3 && minCanaryVersion || minVersion).split('.');
-        for (var i = 0; i < minParts.length; i++) {
-          if (i >= parts.length || +parts[i] < +minParts[i]) {
+        for (var i = 0; i < parts.length; i++) {
+          if (i >= minParts.length || +parts[i] > +minParts[i]) {
+            return true;
+          } else if (+parts[i] < +minParts[i]) {
             return false;
           }
         }
-        return true;
+        return false;
       }
     };
 
