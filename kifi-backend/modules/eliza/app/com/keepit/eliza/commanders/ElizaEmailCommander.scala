@@ -34,6 +34,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.eliza.util.{MessageFormatter, TextSegment}
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.scraper.ScraperServiceClient
+import com.keepit.commanders.TimeToReadCommander
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -43,7 +45,7 @@ class ElizaEmailCommander @Inject() (
     messageFetchingCommander: MessageFetchingCommander,
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
-    wordCountCommander: WordCountCommander,
+    scraper: ScraperServiceClient,
     clock: Clock
   ) extends Logging {
 
@@ -142,7 +144,7 @@ class ElizaEmailCommander @Inject() (
       nUrlId <- thread.uriId
       url <- thread.url
     } yield {
-      wordCountCommander.getReadTimeMinutes(nUrlId, url)
+      scraper.getURIWordCount(nUrlId, url) map { cnt => TimeToReadCommander.wordCountToReadTimeMinutes(cnt)}
     }) getOrElse Future.successful(None)
   }
 

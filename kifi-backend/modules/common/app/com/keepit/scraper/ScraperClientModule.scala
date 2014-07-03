@@ -20,11 +20,13 @@ case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
   def ScraperServiceClient(
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
-    airbrakeNotifier: AirbrakeNotifier): ScraperServiceClient = {
+    airbrakeNotifier: AirbrakeNotifier,
+    cacheProvider: ScraperCacheProvider): ScraperServiceClient = {
     new ScraperServiceClientImpl(
       airbrakeNotifier,
       client,
-      serviceDiscovery.serviceCluster(ServiceType.SCRAPER)
+      serviceDiscovery.serviceCluster(ServiceType.SCRAPER),
+      cacheProvider
     )
   }
 

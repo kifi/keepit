@@ -1,4 +1,4 @@
-package com.keepit.eliza.commanders
+package com.keepit.commander
 
 import org.specs2.mutable.Specification
 import com.keepit.common.actor.StandaloneTestActorSystemModule
@@ -6,18 +6,23 @@ import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.db.Id
 import com.keepit.common.time.{DEFAULT_DATE_TIME_ZONE, currentDateTime}
 import com.keepit.inject.ApplicationInjector
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIStates.SCRAPED
-import com.keepit.model.NormalizedURIWordCountCache
+import com.keepit.model._
+import com.keepit.model.NormalizedURIStates._
 import com.keepit.scraper.{TestScraperServiceClientModule, ScraperServiceClient}
 import com.keepit.search.{Article, ArticleStore, Lang}
-import com.keepit.test.ElizaApplication
 import akka.actor.ActorSystem
 import play.api.test.Helpers.running
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.scraper.FixedResultScraperModule
-
+import com.keepit.scraper.TestScraperServiceModule
+import com.keepit.scraper.extractor._
+import scala.concurrent.Future
+import com.keepit.scraper.BasicArticle
+import com.keepit.commanders.WordCountCommanderImpl
+import com.keepit.scraper.ScrapeProcessor
+import com.keepit.test.TestApplication
+import com.keepit.scraper.Signature
 
 
 class WordCountCommanderTest extends Specification with ApplicationInjector{
@@ -43,15 +48,24 @@ class WordCountCommanderTest extends Specification with ApplicationInjector{
       contentLang = Some(english))
   }
 
+  val fakeScrapeProcessor = new ScrapeProcessor {
+    def fetchBasicArticle(url:String, proxyOpt:Option[HttpProxy], extractorProviderTypeOpt:Option[ExtractorProviderType]):Future[Option[BasicArticle]] = {
+      val content = if (url == "http://twoWords.com") "two words" else "na"
+      Future.successful(Some(BasicArticle(title = "not important", content = content, signature = Signature("fixedSignature"), destinationUrl = url)))
+    }
+    def asyncScrape(uri:NormalizedURI, info:ScrapeInfo, pageInfo:Option[PageInfo], proxyOpt:Option[HttpProxy]):Unit = {}
+  }
+
   "WordCountCommander" should {
     "get word count" in {
-      running(new ElizaApplication(FixedResultScraperModule())){
+      running(new TestApplication(TestScraperServiceModule())){
         val store = inject[ArticleStore]
+        val countCache = inject[NormalizedURIWordCountCache]
         val uids = (1 to 3).map{ i => Id[NormalizedURI](i)}
         val a1 = mkArticle(uids(0), title = "", content = "1 2 3 4 5")
         store.+=(uids(0), a1)
 
-        val wcCommander = inject[WordCountCommander]
+        val wcCommander = new WordCountCommanderImpl(store, countCache, fakeScrapeProcessor)
         Await.result(wcCommander.getWordCount(uids(0), url = ""), Duration(1, SECONDS)) === 5
 
         // delete article, then get word count from cache
@@ -59,18 +73,12 @@ class WordCountCommanderTest extends Specification with ApplicationInjector{
         Await.result(wcCommander.getWordCount(uids(0), url = ""), Duration(1, SECONDS)) === 5
 
         // get from scraper
-        Await.result(wcCommander.getWordCount(uids(1), url = "http://fixedResult.com"), Duration(1, SECONDS)) === 2
+        Await.result(wcCommander.getWordCount(uids(1), url = "http://twoWords.com"), Duration(1, SECONDS)) === 2
         Await.result(wcCommander.getWordCount(uids(2), url = "http://singleWord.com"), Duration(1, SECONDS)) === 1
 
         // from cache
         Await.result(wcCommander.getWordCount(uids(1), url = "http://singleWord.com"), Duration(1, SECONDS)) === 2
       }
-    }
-
-    "get read time estimate" in {
-      val wordCounts = Seq(-3, -1, 0, 1, 2, 34, 123, 250, 300, 500, 5345, 15000, 15001, 10000000)
-      val readTimes = Seq(None, None, None, Some(1), Some(1), Some(1), Some(1), Some(1), Some(2), Some(2), Some(30), Some(60), Some(60), Some(60))
-      (wordCounts map WordCountCommander.wordCountToReadTimeMinutes) === readTimes
     }
   }
 }
