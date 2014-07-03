@@ -32,7 +32,7 @@ guide.step1 = guide.step1 || function () {
       arrow: {dx: 100, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-input-box'}},
       allow: [
         {type: /^key/, target: '.kifi-tagbox-input', unless: function (e) {return e.keyCode === 27}},  // esc
-        {type: /^(?:mouse|click$)/, target: '.kifi-tagbox-suggestion'}
+        {type: /^(?:mouse|click$)/, target: '.kifi-tagbox-suggestion,.kifi-tagbox-new'}
       ]
     },
     {
