@@ -135,7 +135,6 @@ object Shoebox extends Service {
     def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int)  = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def isSensitiveURI() = ServiceRoute(POST, "/internal/shoebox/database/isSensitiveURI")
     def updateURIRestriction() = ServiceRoute(POST, "/internal/shoebox/database/updateURIRestriction")
-    def getVerifiedAddressOwners() = ServiceRoute(POST, "/internal/shoebox/database/getVerifiedAddressOwners")
     def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
     def updateScreenshots(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/screenshots/update", Param("id", id))

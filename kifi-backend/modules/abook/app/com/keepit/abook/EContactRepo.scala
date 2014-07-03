@@ -10,15 +10,10 @@ import com.keepit.common.mail.{BasicContact, EmailAddress}
 import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.typeahead.abook.{EContactTypeaheadKey, EContactTypeaheadCache}
-
-import play.api.Play.current
-import play.api.Play
-
-import scala.slick.jdbc.{StaticQuery => Q, StaticQuery0}
-import Q.interpolation
+import scala.slick.jdbc.{StaticQuery => Q}
 import scala.slick.util.CloseableIterator
-import scala.util.{Success, Try, Failure}
+import play.api.Mode
+import play.api.Mode.Mode
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
@@ -30,9 +25,8 @@ trait EContactRepo extends Repo[EContact] {
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
-  def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
-  def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
-  def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact]
+  def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Seq[EContact]
+  def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
 
   //used only for full resync
@@ -43,8 +37,8 @@ trait EContactRepo extends Repo[EContact] {
 class EContactRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val econtactTypeaheadCache: EContactTypeaheadCache,
-  val econtactCache: EContactCache,
+  econtactCache: EContactCache,
+  mode: Mode,
   override protected val changeListener: Option[RepoModification.Listener[EContact]]
 ) extends DbRepo[EContact] with EContactRepo with Logging {
 
@@ -68,25 +62,11 @@ class EContactRepoImpl @Inject() (
     e.id map { id =>
       econtactCache.remove(EContactKey(id))
     }
-    econtactTypeaheadCache.remove(EContactTypeaheadKey(e.userId))
   }
 
   override def invalidateCache(e: EContact)(implicit session: RSession): Unit = { // eager
     econtactCache.set(EContactKey(e.id.get), e)
     log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
-  }
-
-  def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit = { // special handling for bulk insert/delete (i.e. insertAll)
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-    contacts.foreach { e =>
-      e.id match {
-        case Some(id) => econtactCache.set(EContactKey(id), e)
-        case None =>
-          log.warn(s"[bulkInvalidateCache($userId)] $e does not have id set")
-          // moving on
-      }
-    }
-    log.info(s"[bulkInvalidateCache($userId)] #contacts=${contacts.length}; ${contacts.take(20).mkString(",")}")
   }
 
   def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
@@ -136,52 +116,35 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], contacts: Seq[EContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
-    var i = 0
-    contacts.grouped(500).foreach { g =>
-      val t = System.currentTimeMillis
-      i += 1
-      timing(s"econtactRepo.batchInsertAll($userId,batch($i,sz=${g.length}))") { rows.insertAll(g: _*) }
-    }
-  }
-
-  private[this] def deleteByUserId(userId: Id[User])(implicit session: RWSession): Int = {
-    Q.updateNA(s"delete from econtact where user_id=${userId.id}").first
-  }
-
-  val NULL = "NULL"
-
-  private[this] def insertOnDupUpdate(userId: Id[User], c: EContact)(implicit session: RWSession): Unit = {
-    val cdt = currentDateTime
-    if (Play.maybeApplication.isDefined && Play.isProd) {
-      sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}) on duplicate key update id=id".execute
-    } else { // test-only branch (H2 workarounds)
-      getByUserIdAndEmail(userId, c.email) match {
-        case Some(e) => 0
-        case None => {
-          sqlu"insert into econtact (user_id, created_at, updated_at, email, name, first_name, last_name, state) values (${userId.id}, $cdt, $cdt, ${c.email}, ${c.name}, ${c.firstName}, ${c.lastName}, 'active')".execute
+  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Seq[EContact] = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
+    val toBeInserted = contacts.map { contact => EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
+    try {
+      mode match {
+        case Mode.Prod => {
+          val insertedContacts = (rows returning rows).insertAll(toBeInserted: _*)
+          insertedContacts.foreach(invalidateCache)
+          insertedContacts
         }
+        case _ => toBeInserted.map(save)
       }
+    } catch { case ex: Throwable =>
+      log.error(s"Failed to insert mutiple contacts: $ex")
+      toBeInserted.map(save)
     }
-    log.info(s"[insertOnDupUpdate(${userId.id}, ${c.email})]")
   }
 
-  def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact] = Try {
-
-    val c = EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName)
-    insertOnDupUpdate(userId, c) // todo: optimize (if needed)
-    val cOpt = getByUserIdAndEmail(userId, contact.email)
-    cOpt match {
-      case Some(e) => {
-        invalidateCache(e)
-        e
+  def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact = {
+    getByUserIdAndEmail(userId, contact.email) match {
+      case None => save(EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName))
+      case Some(existingContact) => existingContact.updateWith(contact) match {
+        case modifiedContact if modifiedContact != existingContact => save(modifiedContact)
+        case _ => existingContact
       }
-      case None => throw new IllegalStateException(s"Failed to retrieve econtact for ${contact.email}")
     }
   }
 
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
-    val updated = (for { row <- rows if row.email === email && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId).update(verifiedOwner.orNull)
+    val updated = (for { row <- rows if row.email === email && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
     if (updated > 0) {
       val updatedContacts = for { row <- rows if row.email === email } yield row
       updatedContacts.foreach(invalidateCache)

@@ -48,7 +48,7 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactByEmail(userId:Id[User], email: EmailAddress):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
-  def internContact(userId:Id[User], contact: BasicContact):Future[Try[EContact]]
+  def internContact(userId:Id[User], contact: BasicContact):Future[EContact]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
@@ -174,12 +174,9 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def internContact(userId:Id[User], contact: BasicContact):Future[Try[EContact]] = {
+  def internContact(userId:Id[User], contact: BasicContact):Future[EContact] = {
     call(ABook.internal.internContact(userId), Json.toJson(contact)).map { r =>
-      r.status match {
-        case Status.OK => Success(r.json.as[EContact])
-        case _ => Failure(new IllegalArgumentException(r.body)) // can do better
-      }
+      r.json.as[EContact]
     }
   }
 
@@ -308,7 +305,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 
-  def internContact(userId: Id[User], contact: BasicContact): Future[Try[EContact]] = ???
+  def internContact(userId: Id[User], contact: BasicContact): Future[EContact] = ???
 
   def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 

@@ -8,7 +8,7 @@ import play.api.libs.functional.syntax._
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{BasicContact, EmailAddress}
 import scala.util.{Failure, Try}
 
 object EContactStates extends States[EContact] {
@@ -30,6 +30,15 @@ case class EContact(
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
   def withName(name: Option[String]) = this.copy(name = name)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def updateWith(contactInfo: BasicContact): EContact = {
+    require(email.equalsIgnoreCase(contactInfo.email), s"Supplied info $contactInfo does not represent the same email address as $this.")
+    this.copy(
+      email = contactInfo.email,
+      name = contactInfo.name orElse name,
+      firstName = contactInfo.firstName orElse firstName,
+      lastName = contactInfo.lastName orElse lastName
+    )
+  }
 }
 
 object EContact {
