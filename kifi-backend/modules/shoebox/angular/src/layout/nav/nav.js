@@ -11,7 +11,6 @@ angular.module('kifi.layout.nav', ['util'])
       templateUrl: 'layout/nav/nav.tpl.html',
       link: function (scope /*, element, attrs*/ ) {
         scope.counts = {
-          keepCount: keepService.totalKeepCount,
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };

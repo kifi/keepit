@@ -8,7 +8,7 @@ angular.module('kifi.minVersion', ['kifi.installService'])
     return {
       restrict: 'A',
       link: function (scope, element, attrs) {
-        if (!installService.hasMinimumVersion(attrs.kfMinVersion, attrs.minCanary)) {
+        if (!installService.hasMinimumVersion(attrs.kfMinVersion || "0", attrs.minCanary)) {
           element.remove();
         }
       }
@@ -22,7 +22,7 @@ angular.module('kifi.minVersion', ['kifi.installService'])
     return {
       restrict: 'A',
       link: function (scope, element, attrs) {
-        if (installService.hasMinimumVersion(attrs.kfMaxVersion, attrs.minCanary)) {
+        if (installService.hasMinimumVersion(attrs.kfMaxVersion || "0", attrs.minCanary)) {
           element.remove();
         }
       }
