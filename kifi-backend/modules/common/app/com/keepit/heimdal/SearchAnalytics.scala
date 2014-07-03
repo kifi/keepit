@@ -113,7 +113,7 @@ object KifiHitContext {
 }
 
 case class SanitizedKifiHit(
-  uuid:ExternalId[SanitizedKifiHit],
+  uuid:ExternalId[ArticleSearchResult],
   origin:String,
   url:String,
   uriId:Id[NormalizedURI],
@@ -122,7 +122,7 @@ case class SanitizedKifiHit(
 
 object SanitizedKifiHit {
   implicit val format = (
-    (__ \ 'uuid).format(ExternalId.format[SanitizedKifiHit]) and
+    (__ \ 'uuid).format(ExternalId.format[ArticleSearchResult]) and
     (__ \ 'origin).format[String] and
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and

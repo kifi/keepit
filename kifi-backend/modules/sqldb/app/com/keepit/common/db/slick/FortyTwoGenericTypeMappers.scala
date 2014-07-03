@@ -23,7 +23,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
-import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.search.ArticleSearchResult
 import com.keepit.common.math.ProbabilityDensity
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
@@ -64,7 +64,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
   implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
-  implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[SanitizedKifiHit], String](_.id, ExternalId[SanitizedKifiHit])
+  implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
   implicit val uriImageFormatTypeMapper = MappedColumnType.base[ImageProvider, String](_.value, ImageProvider.apply)
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](

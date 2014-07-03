@@ -18,7 +18,8 @@ import com.keepit.common.service.FortyTwoServices
 import com.google.inject.{Inject, Singleton}
 import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 import java.util.UUID
-import com.keepit.heimdal.{SanitizedKifiHit, HeimdalContext}
+import com.keepit.heimdal.HeimdalContext
+import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.util.{Try, Success, Failure, Random}
@@ -149,11 +150,11 @@ class KeepInterner @Inject() (
               None
             case None =>
               keepRepo.getByUriAndUser(keep.uriId, chatUserId) map { chatUserKeep =>
-                val click = KeepDiscovery(hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging"))
-                val savedDiscovery = keepDiscoveryRepo.save(click)
+                val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
+                val savedDiscovery = keepDiscoveryRepo.save(discovery)
                 val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
                 val saved = rekeepRepo.save(rekeep)
-                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; click=$savedDiscovery")
+                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
                 saved
               }
           }
