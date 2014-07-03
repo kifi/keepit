@@ -24,15 +24,15 @@ angular.module('kifi.sticky', ['kifi.sticky'])
           width, height;
 
         function updateProperties() {
-          marginLeft = getCssPixelProperty('marginLeft'),
-          marginTop = getCssPixelProperty('marginTop'),
-          borderLeftWidth = getCssPixelProperty('borderLeftWidth'),
-          borderTopWidth = getCssPixelProperty('borderTopWidth'),
-          borderRightWidth = getCssPixelProperty('borderRightWidth'),
-          borderBottomWidth = getCssPixelProperty('borderBottomWidth'),
-          offsetTop = element.offset().top - marginTop,
-          offsetLeft = element.offset().left - marginLeft,
-          width = element.width() + borderLeftWidth + borderRightWidth,
+          marginLeft = getCssPixelProperty('marginLeft');
+          marginTop = getCssPixelProperty('marginTop');
+          borderLeftWidth = getCssPixelProperty('borderLeftWidth');
+          borderTopWidth = getCssPixelProperty('borderTopWidth');
+          borderRightWidth = getCssPixelProperty('borderRightWidth');
+          borderBottomWidth = getCssPixelProperty('borderBottomWidth');
+          offsetTop = element.offset().top - marginTop;
+          offsetLeft = element.offset().left - marginLeft;
+          width = element.width() + borderLeftWidth + borderRightWidth;
           height = element.height() + borderTopWidth + borderBottomWidth;
         }
         updateProperties();
