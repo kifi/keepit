@@ -38,6 +38,7 @@ object EmailAccountStates extends States[EmailAccount]
 trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount] {
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount]
   def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount
+  def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
 }
 
 @Singleton
@@ -78,6 +79,10 @@ class EmailAccountRepoImpl @Inject() (
       case None => save(EmailAccount(address = address))
       case Some(emailAccount) => emailAccount
     }
+  }
+
+  def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
+    getByAddress(address).filter(_.verified).flatMap(_.userId)
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

@@ -29,8 +29,7 @@ class UserEmailAddressRepoImpl @Inject() (
   val clock: Clock,
   userValueRepo: UserValueRepo,
   userRepo: UserRepo,
-  verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
-  override protected val changeListener: Option[RepoModification.Listener[UserEmailAddress]]
+  verifiedEmailUserIdCache: VerifiedEmailUserIdCache
 ) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
 
   import db.Driver.simple._

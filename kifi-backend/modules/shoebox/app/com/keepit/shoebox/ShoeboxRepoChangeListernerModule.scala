@@ -18,9 +18,7 @@ import com.keepit.commanders.{
   InvitationModification,
   InvitationModificationActor,
   SocialUserInfoModification,
-  SocialUserInfoModificationActor,
-  EmailAddressModificationActor,
-  EmailAddressModification
+  SocialUserInfoModificationActor
 }
 
 import net.codingwell.scalaguice.ScalaModule
@@ -56,13 +54,6 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   def socialUserChangeListener(socialUserInfoMoficationActor: ActorInstance[SocialUserInfoModificationActor]): Option[RepoModification.Listener[SocialUserInfo]] = Some({
     repoModification => socialUserInfoMoficationActor.ref ! SocialUserInfoModification(repoModification)
   })
-
-  @Provides
-  @Singleton
-  def emailAddressChangeListener(emailAddressMoficationActor: ActorInstance[EmailAddressModificationActor]): Option[RepoModification.Listener[UserEmailAddress]] = Some({
-    repoModification => emailAddressMoficationActor.ref ! EmailAddressModification(repoModification)
-  })
-
 }
 
 case class FakeShoeboxRepoChangeListenerModule() extends ScalaModule {
