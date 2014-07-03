@@ -30,7 +30,6 @@ import akka.actor.ActorSystem
 import com.keepit.scraper.TestScraperServiceClientModule
 import com.keepit.common.store.ElizaDevStoreModule
 import com.keepit.common.aws.AwsModule
-import com.keepit.scraper.FixedResultScraperModule
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.store.ElizaFakeStoreModule
 

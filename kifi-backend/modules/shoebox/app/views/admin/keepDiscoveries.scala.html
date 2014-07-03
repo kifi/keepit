@@ -1,4 +1,4 @@
-@(keepInfos:Seq[(com.keepit.model.RichKeepClick, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)
+@(keepInfos:Seq[(com.keepit.model.RichKeepDiscovery, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)
 
 @otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepDiscoveriesView(page, pageSize, showImage)}
 
@@ -8,7 +8,7 @@
     <ul>
         <li>The following shows a <i>global</i> list of, essentially keep <i>discovery</i> events.</li>
         <li>There are current two sources of keep discoveries: Search and Messaging</li>
-        <li><b>Privacy</b>: the clicker's (or message recipient's) ID is <b>not</b> recorded, to honor our current privacy policy.</li>
+        <li><b>Privacy</b>: the discoverer's ID is <b>not</b> recorded, to honor our current privacy policy.</li>
         <li>See <a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0, 50, false)">ReKeeps page</a> for the <i>global</i> rekeep time line.</li>
     </ul>
 
@@ -26,17 +26,17 @@
                 <td>origin</td>
                 @if(showImage){ <td>image</td> }
             </tr></th>
-            @for((click, pageOpt, imgOpt) <- keepInfos){
+            @for((keepDisc, pageOpt, imgOpt) <- keepInfos){
             <tr>
-                <td>@click.id</td>
-                <td>@adminHelper.dateDisplay(click.createdAt)</td>
-                <td>@click.hitUUID.toString().takeRight(5)</td>
-                <td>@click.numKeepers</td>
-                <td>@adminHelper.userDisplay(click.keeper)</td>
-                <td>@click.keep.id.get</td>
-                <td>@click.uri.id.get</td>
-                <td><a href="@click.uri.url">@if(click.uri.title.getOrElse("").trim.nonEmpty){ @click.uri.title } else { @click.uri.url }</a></td>
-                <td>@click.origin.getOrElse("")</td>
+                <td>@keepDisc.id</td>
+                <td>@adminHelper.dateDisplay(keepDisc.createdAt)</td>
+                <td>@keepDisc.hitUUID.toString().takeRight(5)</td>
+                <td>@keepDisc.numKeepers</td>
+                <td>@adminHelper.userDisplay(keepDisc.keeper)</td>
+                <td>@keepDisc.keep.id.get</td>
+                <td>@keepDisc.uri.id.get</td>
+                <td><a href="@keepDisc.uri.url">@if(keepDisc.uri.title.getOrElse("").trim.nonEmpty){ @keepDisc.uri.title } else { @keepDisc.uri.url }</a></td>
+                <td>@keepDisc.origin.getOrElse("")</td>
                 @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
             </tr>
             }

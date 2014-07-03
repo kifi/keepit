@@ -37,7 +37,7 @@ class KeepInterner @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
   kifiHitCache: KifiHitCache,
-  keepClickRepo: KeepClickRepo,
+  keepDiscoveryRepo: KeepDiscoveryRepo,
   rekeepRepo: ReKeepRepo,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
@@ -127,7 +127,7 @@ class KeepInterner @Inject() (
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
       val res = db.readWrite { implicit rw =>
-        keepClickRepo.getClicksByUUID(hit.uuid) collect { case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
+        keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect { case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
           val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
           val saved = rekeepRepo.save(rekeep)
           log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
@@ -149,11 +149,11 @@ class KeepInterner @Inject() (
               None
             case None =>
               keepRepo.getByUriAndUser(keep.uriId, chatUserId) map { chatUserKeep =>
-                val click = KeepClick(hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging"))
-                val savedClick = keepClickRepo.save(click)
+                val click = KeepDiscovery(hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging"))
+                val savedDiscovery = keepDiscoveryRepo.save(click)
                 val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
                 val saved = rekeepRepo.save(rekeep)
-                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; click=$savedClick")
+                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; click=$savedDiscovery")
                 saved
               }
           }
