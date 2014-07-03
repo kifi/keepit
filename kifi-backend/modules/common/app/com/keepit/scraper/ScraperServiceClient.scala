@@ -206,8 +206,10 @@ class ScraperServiceClientImpl @Inject() (
   }
 
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = {
-    getURIWordCountOpt(uriId, url) match {
-      case Some(count) => Future.successful(count)
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+    cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
+      case Some(cnt) => Future.successful(cnt)
       case None => {
         val payload = Json.obj("uriId" -> uriId, "url" -> url)
         call(Scraper.internal.getURIWordCount, payload) map { r => r.json.as[Int] }
@@ -218,9 +220,14 @@ class ScraperServiceClientImpl @Inject() (
   def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
+    log.info(s"Requesting word count from cache for uri $uriId with url $url")
     cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
-      case Some(cnt) => Some(cnt)
+      case Some(cnt) => {
+        log.info(s"Found word count $cnt for uri $uriId with url $url")
+        Some(cnt)
+      }
       case None => {
+        log.info(s"Requesting word count from scraper for uri $uriId with url $url")
         val payload = Json.obj("uriId" -> uriId, "url" -> url)
         call(Scraper.internal.getURIWordCount, payload) // Word count will be added to cache
         None

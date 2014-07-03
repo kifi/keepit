@@ -127,7 +127,6 @@ class URISummaryCommander @Inject()(
       }
       val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
-          // todo: get word count from scraper here
           val wordCountOpt = nUri.id flatMap { id =>
             scraper.getURIWordCountOpt(id, Some(nUri.url))
           }
