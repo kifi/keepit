@@ -33,7 +33,6 @@ trait EContactRepo extends Repo[EContact] {
   def insertAll(userId:Id[User], contacts:Seq[EContact])(implicit session:RWSession):Unit
   def bulkInvalidateCache(userId:Id[User], contacts:Seq[EContact]): Unit // special handling for bulk insert/delete (i.e. insertAll)
   def getOrCreate(userId:Id[User], contact: BasicContact)(implicit session: RWSession):Try[EContact]
-  def recordVerifiedEmail(email: EmailAddress, contactUserId: Id[User])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Int
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
 
