@@ -32,6 +32,6 @@ class URISummaryController @Inject()(
     val js = request.body
     val uriId = (js \ "uriId").as[Id[NormalizedURI]]
     val url = (js \ "url").as[String]
-    wordCountCmdr.getWordCount(uriId, url) map { cnt => Ok(Json.toJson(cnt)) }
+    wordCountCmdr.getWordCount(uriId, Some(url)) map { cnt => Ok(Json.toJson(cnt)) }
   }
 }
