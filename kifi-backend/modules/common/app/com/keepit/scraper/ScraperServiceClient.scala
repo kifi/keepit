@@ -211,7 +211,7 @@ class ScraperServiceClientImpl @Inject() (
       case Some(cnt) => Future.successful(cnt)
       case None =>
         val payload = Json.obj("uriId" -> uriId, "url" -> url)
-        call(Scraper.internal.getURISummaryFromEmbedly, payload) map { r => r.json.as[Int] }
+        call(Scraper.internal.getURIWordCount, payload) map { r => r.json.as[Int] }
     }
   }
 }
