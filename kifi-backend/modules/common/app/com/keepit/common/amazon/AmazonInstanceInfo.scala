@@ -85,7 +85,7 @@ object AmazonInstanceType {
   case object C1Medium extends AmazonInstanceType("c1.medium", 2, 5)
   case object C3Large  extends AmazonInstanceType("c3.large", 2, 7)
   case object C3XXLarge extends AmazonInstanceType("c3.2xlarge", 8, 24)
-  case object M3XLarge extends AmazonInstanceType("m3.large", 2, 6)
+  case object M3Large extends AmazonInstanceType("m3.large", 2, 6)
   case object M3XLarge extends AmazonInstanceType("m3.xlarge", 4, 13)
   case object M3XXLarge extends AmazonInstanceType("m3.2xlarge", 8, 26)
   case object M1Large  extends AmazonInstanceType("m1.large", 2, 4)
